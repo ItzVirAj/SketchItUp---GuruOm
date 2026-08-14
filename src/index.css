@@ -1,0 +1,197 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-noto: 'Noto Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --color-navy-950: #121316;
+  --color-navy-900: #16171B;
+  --color-navy-800: #1C1E24;
+  --color-navy-700: #282A34;
+  --color-teal-500: #5B75F8;
+  --color-teal-400: #7B92FF;
+  --color-teal-300: #A3B3FF;
+  --color-amber-500: #F59E0B;
+  --color-dark-base: #121316;
+  --color-dark-surface: #1C1E24;
+  --color-dark-elevated: #16171B;
+  --color-dark-border: #282A34;
+  --color-dark-muted: #9CA3AF;
+  --color-dark-text: #F3F4F6;
+}
+
+/* Explicit ByteBoost Dark Mode Global Theme Overrides */
+.dark {
+  background-color: #121316;
+  color: #F3F4F6;
+}
+
+.dark .bg-slate-950,
+.dark .bg-slate-950\/80,
+.dark .bg-slate-950\/70,
+.dark .bg-slate-950\/60,
+.dark .bg-slate-950\/40 {
+  background-color: #121316 !important;
+}
+
+.dark .bg-slate-900,
+.dark .bg-slate-900\/95,
+.dark .bg-slate-900\/80,
+.dark .bg-slate-900\/70,
+.dark .bg-slate-900\/60,
+.dark .bg-slate-900\/50,
+.dark .bg-slate-900\/40,
+.dark .bg-slate-800,
+.dark .bg-slate-800\/80,
+.dark .bg-slate-800\/60,
+.dark .bg-slate-800\/50,
+.dark .bg-slate-800\/40 {
+  background-color: #1C1E24 !important;
+}
+
+.dark .border-slate-800,
+.dark .border-slate-800\/80,
+.dark .border-slate-800\/60,
+.dark .border-slate-800\/50,
+.dark .border-slate-800\/40,
+.dark .border-slate-700 {
+  border-color: #282A34 !important;
+}
+
+.dark .bg-teal-600,
+.dark .bg-teal-500 {
+  background-color: #5B75F8 !important;
+}
+
+.dark .text-teal-400,
+.dark .text-teal-300,
+.dark .text-teal-500 {
+  color: #7B92FF !important;
+}
+
+.dark .bg-teal-500\/10,
+.dark .bg-teal-500\/15,
+.dark .bg-teal-500\/20,
+.dark .bg-teal-600\/20 {
+  background-color: rgba(91, 117, 248, 0.15) !important;
+}
+
+.dark .border-teal-500\/30,
+.dark .border-teal-500\/40 {
+  border-color: rgba(91, 117, 248, 0.3) !important;
+}
+
+/* Explicit Google Noto Sans Font & Scaled Styling for all tables across the application */
+table, 
+th, 
+td, 
+.font-table {
+  font-family: 'Noto Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-feature-settings: "tnum" 1, "cv05" 1;
+}
+
+/* Enhancing table readability and typography scale */
+table {
+  font-size: 0.875rem !important;
+}
+
+th {
+  letter-spacing: 0.03em;
+  font-weight: 700;
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.75rem !important;
+  padding-left: 0.875rem !important;
+  padding-right: 0.875rem !important;
+}
+
+td {
+  font-weight: 400;
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.75rem !important;
+  padding-left: 0.875rem !important;
+  padding-right: 0.875rem !important;
+}
+
+tbody tr {
+  transition: background-color 0.15s ease-in-out;
+}
+
+/* Custom subtle grid background */
+.bg-grid-pattern {
+  background-size: 32px 32px;
+  background-image: 
+    linear-gradient(to right, rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+}
+
+.dark .bg-grid-pattern {
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+}
+
+/* Custom sleek scrollbar matching ByteBoost theme */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #121316;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #282A34;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #5B75F8;
+}
+
+/* Lenis butter-smooth delayed momentum scrolling rules */
+html.lenis, html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+.lenis.lenis-smooth iframe {
+  pointer-events: none;
+}
+
+/* Custom smooth scrollbar utility */
+html, .scroll-smooth {
+  scroll-behavior: smooth;
+}
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+

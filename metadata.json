@@ -1,0 +1,6 @@
+{
+  "name": "GuruOm OS",
+  "description": "GuruOm Owner OS — An AI-Enabled Business Operating System connecting orders, inventory, production, finance and people.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

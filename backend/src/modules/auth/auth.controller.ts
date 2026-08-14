@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { authService } from './auth.service';
 import { recordFailedLogin, clearFailedLogin } from '../../middleware/rateLimit';
+import { GeoLocationService } from '../../utils/geolocation';
 import { ENV } from '../../config/env';
 
 const REFRESH_COOKIE_NAME = 'owner_os_refresh_token';
@@ -30,7 +31,7 @@ export class AuthController {
    */
   async login(req: Request, res: Response) {
     const { email, password } = req.body;
-    const ip = req.ip || req.socket.remoteAddress || 'unknown-ip';
+    const ip = GeoLocationService.extractClientIp(req);
     const userAgent = req.headers['user-agent'];
 
     if (!email) {
@@ -38,14 +39,15 @@ export class AuthController {
     }
 
     try {
-      const result = await authService.login(email, password, ip, userAgent);
+      const result = await authService.login(email, password, ip, userAgent, req.headers);
       clearFailedLogin(ip, email);
 
       setRefreshTokenCookie(res, result.refreshToken, result.expiresAt);
 
       return res.json({
         access_token: result.accessToken,
-        user: result.user
+        user: result.user,
+        risk_info: result.riskInfo
       });
     } catch (err: any) {
       recordFailedLogin(ip, email);
@@ -63,7 +65,7 @@ export class AuthController {
     const tokenFromCookie = req.cookies?.[REFRESH_COOKIE_NAME];
     const tokenFromBody = req.body?.refreshToken;
     const refreshToken = tokenFromCookie || tokenFromBody;
-    const ip = req.ip || req.socket.remoteAddress || 'unknown-ip';
+    const ip = GeoLocationService.extractClientIp(req);
     const userAgent = req.headers['user-agent'];
 
     if (!refreshToken) {
@@ -74,7 +76,7 @@ export class AuthController {
     }
 
     try {
-      const result = await authService.refreshSession(refreshToken, ip, userAgent);
+      const result = await authService.refreshSession(refreshToken, ip, userAgent, req.headers);
       setRefreshTokenCookie(res, result.refreshToken, result.expiresAt);
 
       return res.json({
@@ -117,6 +119,155 @@ export class AuthController {
       return res.json({ user });
     } catch (err: any) {
       return res.status(404).json({ error: 'NotFound', message: err.message || 'User record not found.' });
+    }
+  }
+
+  /**
+   * GET /api/v1/auth/sessions
+   * Returns active sessions for the currently authenticated user.
+   */
+  async getSessions(req: Request, res: Response) {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required.' });
+    }
+
+    const currentRefreshToken = req.cookies?.[REFRESH_COOKIE_NAME] || req.body?.refreshToken;
+
+    try {
+      const sessions = await authService.getActiveSessions(userId, currentRefreshToken);
+      return res.json({ sessions });
+    } catch (err: any) {
+      return res.status(500).json({ error: 'InternalServerError', message: err.message });
+    }
+  }
+
+  /**
+   * DELETE /api/v1/auth/sessions/:id
+   * Revokes a specific active session.
+   */
+  async revokeSession(req: Request, res: Response) {
+    const userId = req.user?.id;
+    const sessionId = req.params.id;
+
+    if (!userId || !sessionId) {
+      return res.status(400).json({ error: 'BadRequest', message: 'Session ID is required.' });
+    }
+
+    try {
+      const result = await authService.revokeSession(sessionId, userId);
+      return res.json(result);
+    } catch (err: any) {
+      return res.status(400).json({ error: 'BadRequest', message: err.message });
+    }
+  }
+
+  /**
+   * POST /api/v1/auth/sessions/revoke-others
+   * Revokes all active sessions for user except current.
+   */
+  async revokeOtherSessions(req: Request, res: Response) {
+    const userId = req.user?.id;
+    const currentRefreshToken = req.cookies?.[REFRESH_COOKIE_NAME] || req.body?.refreshToken;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required.' });
+    }
+
+    if (!currentRefreshToken) {
+      return res.status(400).json({ error: 'BadRequest', message: 'Current session verification token is missing.' });
+    }
+
+    try {
+      const result = await authService.revokeOtherSessions(userId, currentRefreshToken);
+      return res.json(result);
+    } catch (err: any) {
+      return res.status(400).json({ error: 'BadRequest', message: err.message });
+    }
+  }
+
+  /**
+   * POST /api/v1/auth/sessions/revoke-all
+   * High security trigger: revokes all active sessions including current.
+   */
+  async revokeAllSessions(req: Request, res: Response) {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required.' });
+    }
+
+    try {
+      const result = await authService.revokeAllSessions(userId);
+      clearRefreshTokenCookie(res);
+      return res.json(result);
+    } catch (err: any) {
+      return res.status(500).json({ error: 'InternalServerError', message: err.message });
+    }
+  }
+
+  /**
+   * GET /api/v1/auth/security-events
+   * Returns user's own login and security history.
+   */
+  async getSecurityEvents(req: Request, res: Response) {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required.' });
+    }
+
+    const limit = parseInt(String(req.query.limit || '50'), 10);
+    const offset = parseInt(String(req.query.offset || '0'), 10);
+
+    try {
+      const events = await authService.getUserSecurityEvents(userId, limit, offset);
+      return res.json({ events });
+    } catch (err: any) {
+      return res.status(500).json({ error: 'InternalServerError', message: err.message });
+    }
+  }
+
+  /**
+   * GET /api/v1/auth/security-events/admin
+   * Super Admin security audit stream.
+   */
+  async getAdminSecurityAudit(req: Request, res: Response) {
+    if (req.user?.role !== 'SUPER ADMIN') {
+      return res.status(403).json({ error: 'Forbidden', message: 'Super Admin access required for security audit stream.' });
+    }
+
+    const limit = parseInt(String(req.query.limit || '100'), 10);
+    const offset = parseInt(String(req.query.offset || '0'), 10);
+    const severity = req.query.severity ? String(req.query.severity) : undefined;
+
+    try {
+      const events = await authService.getAdminSecurityAudit(limit, offset, severity);
+      return res.json({ events });
+    } catch (err: any) {
+      return res.status(500).json({ error: 'InternalServerError', message: err.message });
+    }
+  }
+
+  /**
+   * POST /api/v1/auth/change-password
+   */
+  async changePassword(req: Request, res: Response) {
+    const userId = req.user?.id;
+    const { oldPassword, newPassword } = req.body;
+    const currentRefreshToken = req.cookies?.[REFRESH_COOKIE_NAME] || req.body?.refreshToken;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required.' });
+    }
+
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({ error: 'BadRequest', message: 'Current password and new password are required.' });
+    }
+
+    try {
+      const result = await authService.changePassword(userId, oldPassword, newPassword, currentRefreshToken);
+      return res.json(result);
+    } catch (err: any) {
+      return res.status(400).json({ error: 'BadRequest', message: err.message });
     }
   }
 

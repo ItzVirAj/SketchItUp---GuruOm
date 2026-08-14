@@ -23,6 +23,8 @@ import vendorBillsRoutes from './backend/src/modules/vendor-bills/vendor-bills.r
 import auditRoutes from './backend/src/modules/audit/audit.routes';
 import approvalsRoutes from './backend/src/modules/approvals/approvals.routes';
 import notificationsRoutes from './backend/src/modules/notifications/notifications.routes';
+import attachmentsRoutes from './backend/src/modules/attachments/attachments.routes';
+import { getRedisClient, closeRedis } from './backend/src/lib/redis';
 
 dotenv.config();
 
@@ -30,6 +32,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 async function startServer() {
+  // Initialize shared Redis fast-layer connection
+  getRedisClient();
+
   const app = express();
   const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
@@ -88,6 +93,9 @@ async function startServer() {
   // Mount Seventh Batch Realtime Notification System (SSE Stream & Resend Email Service)
   app.use('/api/v1/notifications', notificationsRoutes);
 
+  // Mount Eighth Batch File Storage & Attachment Management
+  app.use('/api/v1/attachments', attachmentsRoutes);
+
   // Gemini Executive AI Copilot API
   app.post('/api/gemini/analyze', async (req, res) => {
     try {
@@ -130,9 +138,20 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server listening on http://localhost:${PORT}`);
   });
+
+  const shutdown = async () => {
+    console.log('Shutting down server gracefully...');
+    server.close(async () => {
+      await closeRedis();
+      process.exit(0);
+    });
+  };
+
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
 }
 
 startServer();

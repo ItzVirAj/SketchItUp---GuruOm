@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   LayoutGrid, 
@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { ConsoleView, UserRole, ConsoleUser } from '../../types/console';
 import { isViewAllowedForRole } from '../../utils/permissions';
+import { useSmoothScroll } from '../../hooks/useSmoothScroll';
 
 interface ConsoleSidebarProps {
   currentView: ConsoleView;
@@ -37,6 +38,7 @@ interface ConsoleSidebarProps {
   currentUser?: ConsoleUser | null;
   userName?: string;
   onSignOut?: () => void;
+  onOpenSecurityModal?: () => void;
   isOpenMobile?: boolean;
   setIsOpenMobile?: (open: boolean) => void;
 }
@@ -60,9 +62,13 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
   currentUser,
   userName = 'Pramod Parshi',
   onSignOut,
+  onOpenSecurityModal,
   isOpenMobile,
   setIsOpenMobile
 }) => {
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
   // Shrink / Expand state (persisted in localStorage)
   const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
     try {
@@ -81,7 +87,7 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
     });
   };
 
-  // Section Groups Definition (Orders-to-Reports, Quality & Dispatch, Finance, Admin)
+  // Section Groups Definition (Operations, Quality & Dispatch, Finance, Admin)
   const dropdownSections: DropdownSection[] = [
     {
       id: 'operations-reports',
@@ -151,6 +157,13 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
     };
   });
 
+  // Attach Butter-Smooth Container Inertial Scrolling
+  useSmoothScroll(scrollContainerRef, [openSections, isCollapsed], {
+    duration: 1.1,
+    wheelMultiplier: 0.95,
+    touchMultiplier: 1.25
+  });
+
   // Automatically keep parent section open when active view changes
   useEffect(() => {
     const parent = findParentSection(currentView);
@@ -162,11 +175,50 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
     }
   }, [currentView]);
 
+  /**
+   * Smoothly scrolls only when a section expands and is partially or fully hidden under the UI.
+   */
+  const ensureSectionVisible = (sectionId: string) => {
+    const el = sectionRefs.current[sectionId];
+    const container = scrollContainerRef.current;
+    if (!el || !container) return;
+
+    const elRect = el.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+
+    // Check if the bottom of the expanded section is hidden below the container view
+    if (elRect.bottom > containerRect.bottom) {
+      const overflowDistance = elRect.bottom - containerRect.bottom + 16;
+      container.scrollBy({
+        top: overflowDistance,
+        behavior: 'smooth'
+      });
+    } else if (elRect.top < containerRect.top) {
+      const underflowDistance = elRect.top - containerRect.top - 8;
+      container.scrollBy({
+        top: underflowDistance,
+        behavior: 'smooth'
+      });
+    }
+  };
+
   const toggleSection = (sectionId: string) => {
-    setOpenSections(prev => ({
-      ...prev,
-      [sectionId]: !prev[sectionId]
-    }));
+    setOpenSections(prev => {
+      const isOpening = !prev[sectionId];
+      const nextState = { ...prev, [sectionId]: isOpening };
+
+      if (isOpening) {
+        // Trigger smooth scroll check as the section expands
+        setTimeout(() => {
+          ensureSectionVisible(sectionId);
+        }, 150);
+        setTimeout(() => {
+          ensureSectionVisible(sectionId);
+        }, 320);
+      }
+
+      return nextState;
+    });
   };
 
   // Hover Popover Flyout Menu State for Collapsed Mode
@@ -199,16 +251,16 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
       )}
 
       <aside className={`
-        fixed md:static inset-y-0 left-0 z-50 shrink-0 border-r flex flex-col justify-between select-none font-sans transition-all duration-300 ease-in-out
+        fixed md:static inset-y-0 left-0 z-50 shrink-0 border-r flex flex-col justify-between select-none font-sans transition-all duration-300 ease-in-out h-full max-h-screen overflow-hidden
         ${isOpenMobile ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         ${isCollapsed ? 'w-[78px]' : 'w-[290px]'}
         ${isDarkMode ? 'bg-[#16171B] border-[#262832] text-slate-300' : 'bg-[#ebedf0] border-[#d8dde8] text-slate-800'}
       `}>
       
-        {/* Top Header Section */}
-        <div className="flex flex-col">
+        {/* Top Header & Scrollable Nav Section */}
+        <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
           {/* Brand Logo & Collapse Toggle */}
-          <div className={`px-4 py-3.5 border-b border-[#d8dde8] dark:border-[#262832] flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} gap-2`}>
+          <div className={`px-4 py-3.5 border-b border-[#d8dde8] dark:border-[#262832] flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} gap-2 shrink-0`}>
             {!isCollapsed ? (
               <>
                 <div className="flex items-center gap-2.5 overflow-hidden">
@@ -251,8 +303,12 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
             )}
           </div>
 
-          {/* Navigation Items List */}
-          <div className="p-3 space-y-1.5 overflow-y-auto scroll-smooth no-scrollbar max-h-[calc(100vh-210px)]">
+          {/* Navigation Items List with Butter Smooth Momentum Scrolling & Zero Scrollbar UI */}
+          <div 
+            ref={scrollContainerRef}
+            data-lenis-prevent="true"
+            className="p-3 space-y-1.5 overflow-y-auto overscroll-contain no-scrollbar scroll-smooth flex-1 min-h-0 select-none"
+          >
             
             {/* 1. COMMAND CENTRE (Direct link item) */}
             <div className="relative">
@@ -301,6 +357,7 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
               return (
                 <div 
                   key={section.id} 
+                  ref={el => { sectionRefs.current[section.id] = el; }}
                   className="space-y-0.5 relative"
                   onMouseEnter={() => isCollapsed && setHoveredSection(section.id)}
                   onMouseLeave={() => isCollapsed && setHoveredSection(null)}
@@ -312,6 +369,7 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
                       if (isCollapsed) {
                         setIsCollapsed(false);
                         setOpenSections(prev => ({ ...prev, [section.id]: true }));
+                        setTimeout(() => ensureSectionVisible(section.id), 150);
                       } else {
                         toggleSection(section.id);
                       }
@@ -353,7 +411,7 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
                     )}
                   </button>
 
-                  {/* Expanded Sub-items List with Butter Smooth Animation */}
+                  {/* Expanded Sub-items List with Butter Smooth Animation & Auto-Scroll */}
                   <AnimatePresence initial={false}>
                     {!isCollapsed && isOpen && (
                       <motion.div
@@ -362,6 +420,11 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
                         transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+                        onAnimationComplete={() => {
+                          if (openSections[section.id]) {
+                            ensureSectionVisible(section.id);
+                          }
+                        }}
                         className="overflow-hidden"
                       >
                         <div className="pl-2 pr-0.5 py-1 space-y-1 border-l-2 border-[#5B75F8]/30 dark:border-[#5B75F8]/30 ml-2.5 my-1">
@@ -410,7 +473,7 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
                         <SectionIcon className="w-4 h-4" />
                         <span>{section.label}</span>
                       </div>
-                      <div className="pt-1 space-y-0.5 max-h-60 overflow-y-auto">
+                      <div className="pt-1 space-y-0.5 max-h-60 overflow-y-auto no-scrollbar">
                         {section.items.map((item) => {
                           const ItemIcon = item.icon;
                           const isActive = currentView === item.id || (currentView === 'order-detail' && item.id === 'orders');
@@ -443,7 +506,7 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
         </div>
 
         {/* Footer: User Profile + Sign Out + Expand Button */}
-        <div className="p-3 border-t border-[#d8dde8] dark:border-[#262832] space-y-2">
+        <div className="p-3 border-t border-[#d8dde8] dark:border-[#262832] space-y-2 shrink-0">
           
           {/* User Profile Card (Placed above Log Out) */}
           {!isCollapsed ? (
@@ -483,6 +546,19 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
                 {initials}
               </div>
             </div>
+          )}
+
+          {/* Security & Sessions Trigger */}
+          {onOpenSecurityModal && (
+            <button
+              type="button"
+              onClick={onOpenSecurityModal}
+              className={`w-full flex items-center ${isCollapsed ? 'justify-center px-2 py-2' : 'justify-start gap-3 px-3.5 py-2'} rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-[#20222A] hover:text-[#5B75F8] dark:hover:text-[#7B92FF] border border-[#d8dde8] dark:border-[#262832] transition-all cursor-pointer shadow-2xs group mb-1.5`}
+              title="Security & Active Sessions"
+            >
+              <ShieldCheck className="w-4 h-4 text-emerald-500 group-hover:text-[#5B75F8] transition-colors shrink-0" />
+              {!isCollapsed && <span>Security & Sessions</span>}
+            </button>
           )}
 
           {/* Log Out / Sign Out Button */}

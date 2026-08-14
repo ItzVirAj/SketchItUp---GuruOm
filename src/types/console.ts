@@ -302,9 +302,19 @@ export interface AuditLogEntry {
   id: string;
   when: string;
   user: string;
+  actorId?: string;
+  actorEmail?: string;
   entity: string;
+  entityType?: string;
+  entityId?: string;
   action: string;
   details: string;
+  beforeState?: Record<string, any> | null;
+  afterState?: Record<string, any> | null;
+  ipAddress?: string;
+  userAgent?: string;
+  metadata?: Record<string, any>;
+  createdAt?: string;
 }
 
 export interface CompanyProfile {
@@ -403,4 +413,43 @@ export interface PurchaseOrder {
   createdBy: string;
   notes?: string;
   items: PurchaseOrderItem[];
+}
+
+export interface ActiveSession {
+  id: string;
+  userId: string;
+  device: string;
+  deviceType: 'desktop' | 'mobile' | 'tablet' | 'unknown';
+  browser: string;
+  os: string;
+  location: string;
+  ip: string;
+  createdAt: string;
+  lastActiveAt: string;
+  isCurrent: boolean;
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  riskScore: number;
+  flaggedReasons?: string[];
+}
+
+export interface SecurityEvent {
+  id: string;
+  user_id: string;
+  session_id?: string | null;
+  event_type: string;
+  severity: 'INFO' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  ip_address?: string | null;
+  user_agent?: string | null;
+  device_name?: string | null;
+  device_type?: string | null;
+  browser?: string | null;
+  os?: string | null;
+  country?: string | null;
+  region?: string | null;
+  city?: string | null;
+  risk_score: number;
+  risk_level: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  flagged_reasons: string[];
+  metadata?: any;
+  created_at: string;
 }

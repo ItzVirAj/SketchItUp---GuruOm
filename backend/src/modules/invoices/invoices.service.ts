@@ -2,6 +2,7 @@ import { getDbClient } from '../../config/database';
 import { z } from 'zod';
 import { CustomerInvoiceSchema, RecordPaymentSchema } from './invoices.schema';
 import { dispatchService } from '../dispatch/dispatch.service';
+import { logAudit } from '../../services/auditLog';
 
 const SEED_INVOICES = [
   {
@@ -135,7 +136,7 @@ export class InvoicesService {
     }
 
     try {
-      const { error } = await this.db.from('customer_invoices').insert({
+      const invoiceRecord = {
         id: invId,
         invoice_no: validated.invoiceNo,
         customer_name: validated.customerName,
@@ -147,8 +148,11 @@ export class InvoicesService {
         total_amount: totalAmount,
         paid_amount: paidAmount,
         balance_amount: balanceAmount,
+        pdf_status: 'pending_pdf',
         created_at: new Date().toISOString()
-      });
+      };
+
+      const { error } = await this.db.from('customer_invoices').insert(invoiceRecord);
 
       if (error) throw error;
     } catch (err) {
@@ -166,11 +170,44 @@ export class InvoicesService {
       dueDate: validated.dueDate,
       totalAmount,
       paidAmount,
-      balanceAmount
+      balanceAmount,
+      pdfStatus: 'pending_pdf'
     };
 
     SEED_INVOICES.unshift(created as any);
+
+    // Record immutable audit log
+    await logAudit({
+      actorEmail: 'system@guruom.in',
+      action: 'CREATE_INVOICE',
+      entityType: 'invoice',
+      entityId: validated.invoiceNo,
+      beforeState: null,
+      afterState: {
+        invoiceNo: validated.invoiceNo,
+        customerName: validated.customerName,
+        totalAmount,
+        status
+      }
+    }).catch(() => {});
+
     return created;
+  }
+
+  async retryProcessing(invoiceNo: string) {
+    const existing = await this.getInvoiceByNo(invoiceNo);
+    if (!existing) {
+      throw new Error(`Invoice ${invoiceNo} not found.`);
+    }
+
+    try {
+      await this.db.from('customer_invoices').update({
+        pdf_status: 'pending_pdf',
+        updated_at: new Date().toISOString()
+      }).eq('invoice_no', invoiceNo);
+    } catch (_) {}
+
+    return existing;
   }
 
   async recordPayment(invoiceNo: string, paymentData: z.infer<typeof RecordPaymentSchema>) {
@@ -189,6 +226,18 @@ export class InvoicesService {
     if (newBalance <= 0) {
       newStatus = 'PAID';
     }
+
+    const beforeState = {
+      paidAmount: existing.paidAmount,
+      balanceAmount: existing.balanceAmount,
+      status: existing.status
+    };
+
+    const afterState = {
+      paidAmount: newPaidAmount,
+      balanceAmount: newBalance,
+      status: newStatus
+    };
 
     try {
       await this.db
@@ -210,6 +259,17 @@ export class InvoicesService {
       local.balanceAmount = newBalance;
       local.status = newStatus;
     }
+
+    // Record immutable audit log
+    await logAudit({
+      actorEmail: 'finance@guruom.in',
+      action: 'RECORD_PAYMENT',
+      entityType: 'invoice',
+      entityId: invoiceNo,
+      beforeState,
+      afterState,
+      metadata: { paymentAmount: amountToPay }
+    }).catch(() => {});
 
     return {
       invoiceNo,

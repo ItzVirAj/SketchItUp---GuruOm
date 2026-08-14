@@ -149,17 +149,30 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
   const [userDepartment, setUserDepartment] = useState('Shop Floor Operations');
   const [userPhone, setUserPhone] = useState('');
 
+  // Audit Logs Pagination & Diff Inspector State
+  const [expandedLogIds, setExpandedLogIds] = useState<Record<string, boolean>>({});
+  const [auditPage, setAuditPage] = useState<number>(1);
+  const AUDIT_PAGE_SIZE = 50;
+
+  const toggleExpandLog = (id: string) => {
+    setExpandedLogIds(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
   const getSectionInfo = (entity: string) => {
-    switch (entity) {
+    const cleanEntity = (entity || '').toLowerCase();
+    switch (cleanEntity) {
       case 'security':
       case 'user_admin':
+      case 'user':
+      case 'users':
         return { 
           category: 'SECURITY' as SectionCategory, 
           label: 'Security & Users', 
           icon: Shield, 
-          badgeClass: 'bg-teal-500/10 text-teal-400 border-teal-500/30' 
+          badgeClass: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' 
         };
       case 'order':
+      case 'customer order':
         return { 
           category: 'ORDERS' as SectionCategory, 
           label: 'Sales Orders', 
@@ -167,6 +180,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
           badgeClass: 'bg-teal-500/10 text-teal-400 border-teal-500/30' 
         };
       case 'job_card':
+      case 'production':
         return { 
           category: 'PRODUCTION' as SectionCategory, 
           label: 'Production Jobs', 
@@ -174,6 +188,8 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
           badgeClass: 'bg-amber-500/10 text-amber-400 border-amber-500/30' 
         };
       case 'stock_movement':
+      case 'inventory':
+      case 'stock':
         return { 
           category: 'INVENTORY' as SectionCategory, 
           label: 'Stock & Inventory', 
@@ -182,6 +198,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
         };
       case 'qc_inspection':
       case 'pdi_report':
+      case 'quality control':
         return { 
           category: 'QUALITY' as SectionCategory, 
           label: 'QC & Inspection', 
@@ -218,15 +235,21 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
   };
 
   const filteredLogs = auditLogs.filter(log => {
-    const matchesSearch = 
-      log.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.details.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.entity.toLowerCase().includes(searchTerm.toLowerCase());
+    const actor = (log.user || log.actorEmail || '').toLowerCase();
+    const act = (log.action || '').toLowerCase();
+    const det = (log.details || '').toLowerCase();
+    const ent = (log.entity || log.entityType || '').toLowerCase();
+    const search = searchTerm.toLowerCase();
+
+    const matchesSearch = actor.includes(search) || act.includes(search) || det.includes(search) || ent.includes(search);
     
     if (selectedSection === 'ALL') return matchesSearch;
-    const secInfo = getSectionInfo(log.entity);
+    const secInfo = getSectionInfo(log.entity || log.entityType || '');
     return matchesSearch && secInfo.category === selectedSection;
   });
+
+  const totalAuditPages = Math.max(1, Math.ceil(filteredLogs.length / AUDIT_PAGE_SIZE));
+  const paginatedLogs = filteredLogs.slice((auditPage - 1) * AUDIT_PAGE_SIZE, auditPage * AUDIT_PAGE_SIZE);
 
   const filteredUsers = users.filter(usr => {
     const matchesSearch = 
@@ -516,51 +539,234 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
 
       {/* TAB 1: AUDIT TRAIL STREAM */}
       {activeTab === 'AUDIT' && (
-        <div className={`rounded-3xl border overflow-hidden shadow-2xl transition-all ${
-          isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200'
-        }`}>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse font-sans">
-              <thead>
-                <tr className={`border-b font-mono font-bold text-[10px] uppercase tracking-wider ${
-                  isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'
-                }`}>
-                  <th className="py-4 px-5">Timestamp ↕</th>
-                  <th className="py-4 px-5">Actor / User</th>
-                  <th className="py-4 px-5">Category</th>
-                  <th className="py-4 px-5">Action</th>
-                  <th className="py-4 px-5">Event Details</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800/60 font-sans">
-                {filteredLogs.map((log) => {
-                  const secInfo = getSectionInfo(log.entity);
-                  const Icon = secInfo.icon;
-                  return (
-                    <tr key={log.id} className={isDarkMode ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50/80'}>
-                      <td className={`py-4 px-5 font-mono text-[11px] whitespace-nowrap ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                        {log.when}
-                      </td>
-                      <td className="py-4 px-5 font-bold">
-                        <span className={isDarkMode ? 'text-slate-100' : 'text-slate-900'}>{log.user}</span>
-                      </td>
-                      <td className="py-4 px-5">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${secInfo.badgeClass}`}>
-                          <Icon className="w-3 h-3" />
-                          <span>{secInfo.label}</span>
-                        </span>
-                      </td>
-                      <td className="py-4 px-5 font-mono text-xs text-blue-500 font-bold uppercase">
-                        {log.action}
-                      </td>
-                      <td className={`py-4 px-5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                        {log.details}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        <div className="space-y-4">
+          {/* Append-Only Immutability Security Banner */}
+          <div className={`p-4 rounded-2xl border flex flex-wrap items-center justify-between gap-3 text-xs ${
+            isDarkMode ? 'bg-indigo-950/20 border-indigo-500/30 text-indigo-200' : 'bg-indigo-50/80 border-indigo-200 text-indigo-900'
+          }`}>
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-400">
+                <Lock className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="font-bold font-mono tracking-tight flex items-center gap-2">
+                  <span>Append-Only Immutable Security Ledger</span>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[9px] font-bold">
+                    DB TRIGGER ENFORCED
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-400 mt-0.5">
+                  Records full WHO, WHAT, WHEN, WHERE, BEFORE, and AFTER history. Mutation or deletion of logs is strictly prohibited.
+                </div>
+              </div>
+            </div>
+
+            <div className="font-mono text-[11px] text-slate-400">
+              Total Recorded Events: <span className="font-bold text-white">{filteredLogs.length}</span>
+            </div>
+          </div>
+
+          <div className={`rounded-3xl border overflow-hidden shadow-2xl transition-all ${
+            isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200'
+          }`}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse font-sans">
+                <thead>
+                  <tr className={`border-b font-mono font-bold text-[10px] uppercase tracking-wider ${
+                    isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'
+                  }`}>
+                    <th className="py-4 px-4 w-10 text-center"></th>
+                    <th className="py-4 px-4">Timestamp (WHEN)</th>
+                    <th className="py-4 px-4">Actor (WHO)</th>
+                    <th className="py-4 px-4">Entity & ID</th>
+                    <th className="py-4 px-4">Action (WHAT)</th>
+                    <th className="py-4 px-5">State Transition / Details</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800/60 font-sans">
+                  {paginatedLogs.map((log) => {
+                    const secInfo = getSectionInfo(log.entity || log.entityType || '');
+                    const Icon = secInfo.icon;
+                    const isExpanded = !!expandedLogIds[log.id];
+
+                    // Determine changed keys if before/after states exist
+                    const allKeys = Array.from(new Set([
+                      ...Object.keys(log.beforeState || {}),
+                      ...Object.keys(log.afterState || {})
+                    ]));
+                    const changedKeys = allKeys.filter(k => {
+                      const b = log.beforeState ? log.beforeState[k] : undefined;
+                      const a = log.afterState ? log.afterState[k] : undefined;
+                      return JSON.stringify(b) !== JSON.stringify(a);
+                    });
+
+                    return (
+                      <React.Fragment key={log.id}>
+                        <tr 
+                          onClick={() => toggleExpandLog(log.id)}
+                          className={`cursor-pointer transition-colors ${
+                            isDarkMode ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50/80'
+                          } ${isExpanded ? (isDarkMode ? 'bg-slate-800/20' : 'bg-slate-50/50') : ''}`}
+                        >
+                          <td className="py-4 px-4 text-center">
+                            <button
+                              type="button"
+                              className="p-1 rounded-lg hover:bg-slate-800 text-slate-400"
+                              title={isExpanded ? 'Collapse Diff' : 'Inspect State Diff'}
+                            >
+                              <span className="font-mono text-xs font-bold">{isExpanded ? '▼' : '▶'}</span>
+                            </button>
+                          </td>
+                          <td className={`py-4 px-4 font-mono text-[11px] whitespace-nowrap ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                            {log.when}
+                          </td>
+                          <td className="py-4 px-4">
+                            <div className="font-bold text-xs truncate max-w-[160px] text-slate-900 dark:text-slate-100">
+                              {log.user || log.actorEmail}
+                            </div>
+                            {log.ipAddress && (
+                              <div className="text-[10px] font-mono text-slate-500">
+                                IP: {log.ipAddress}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-4 px-4">
+                            <div className="flex items-center gap-1.5">
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold uppercase border ${secInfo.badgeClass}`}>
+                                <Icon className="w-2.5 h-2.5" />
+                                <span>{secInfo.label}</span>
+                              </span>
+                            </div>
+                            {log.entityId && (
+                              <span className="text-[10px] font-mono text-slate-400 block mt-0.5 truncate max-w-[120px]">
+                                ID: #{log.entityId}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-4 px-4 font-mono text-xs text-blue-500 font-bold uppercase whitespace-nowrap">
+                            {log.action}
+                          </td>
+                          <td className={`py-4 px-5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                            <div>{log.details}</div>
+                            {changedKeys.length > 0 && !isExpanded && (
+                              <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                                {changedKeys.slice(0, 3).map(k => (
+                                  <span key={k} className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] font-mono">
+                                    Δ {k}: {String(log.beforeState?.[k] ?? 'null')} → {String(log.afterState?.[k] ?? 'null')}
+                                  </span>
+                                ))}
+                                {changedKeys.length > 3 && (
+                                  <span className="text-[10px] font-mono text-slate-500">
+                                    +{changedKeys.length - 3} more
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+
+                        {/* Expandable State Transition Diff Row */}
+                        {isExpanded && (
+                          <tr className={isDarkMode ? 'bg-slate-950/60' : 'bg-slate-100/60'}>
+                            <td colSpan={6} className="p-4 pl-12 pr-6">
+                              <div className="space-y-3 font-mono">
+                                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] pb-2 border-b border-slate-800">
+                                  <div className="flex items-center gap-4 text-slate-400">
+                                    <span><strong>Actor:</strong> {log.user || log.actorEmail}</span>
+                                    {log.actorId && <span><strong>Actor ID:</strong> {log.actorId}</span>}
+                                    {log.ipAddress && <span><strong>IP:</strong> {log.ipAddress}</span>}
+                                    {log.userAgent && <span><strong>Client:</strong> {log.userAgent}</span>}
+                                  </div>
+                                  <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold uppercase">
+                                    Append-Only Immutability Verified
+                                  </span>
+                                </div>
+
+                                {/* Before vs After Visual Diff */}
+                                {changedKeys.length > 0 ? (
+                                  <div className="space-y-2">
+                                    <div className="text-[11px] font-bold uppercase text-slate-400">
+                                      Changed State Fields ({changedKeys.length}):
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                      <div className="p-3 rounded-xl bg-rose-950/20 border border-rose-500/30 space-y-1.5">
+                                        <div className="text-[10px] uppercase font-bold text-rose-400">
+                                          - BEFORE STATE (Previous)
+                                        </div>
+                                        {changedKeys.map(k => (
+                                          <div key={`before-${k}`} className="text-xs">
+                                            <span className="text-slate-400 font-bold">{k}: </span>
+                                            <span className="text-rose-300 font-bold">
+                                              {typeof log.beforeState?.[k] === 'object' 
+                                                ? JSON.stringify(log.beforeState?.[k]) 
+                                                : String(log.beforeState?.[k] ?? 'null')}
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+
+                                      <div className="p-3 rounded-xl bg-emerald-950/20 border border-emerald-500/30 space-y-1.5">
+                                        <div className="text-[10px] uppercase font-bold text-emerald-400">
+                                          + AFTER STATE (Mutated)
+                                        </div>
+                                        {changedKeys.map(k => (
+                                          <div key={`after-${k}`} className="text-xs">
+                                            <span className="text-slate-400 font-bold">{k}: </span>
+                                            <span className="text-emerald-300 font-bold">
+                                              {typeof log.afterState?.[k] === 'object' 
+                                                ? JSON.stringify(log.afterState?.[k]) 
+                                                : String(log.afterState?.[k] ?? 'null')}
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="text-xs text-slate-400 italic">
+                                    Initial creation or atomic event without prior baseline state.
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Controls Footer (50 rows/page) */}
+            {totalAuditPages > 1 && (
+              <div className={`p-4 border-t flex items-center justify-between text-xs font-mono ${
+                isDarkMode ? 'border-slate-800 bg-slate-950/40 text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-600'
+              }`}>
+                <div>
+                  Showing <strong>{(auditPage - 1) * AUDIT_PAGE_SIZE + 1}</strong> to <strong>{Math.min(auditPage * AUDIT_PAGE_SIZE, filteredLogs.length)}</strong> of <strong>{filteredLogs.length}</strong> events
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={auditPage === 1}
+                    onClick={() => setAuditPage(p => Math.max(1, p - 1))}
+                    className="px-3 py-1.5 rounded-xl border border-slate-700 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    Previous
+                  </button>
+                  <span>Page {auditPage} of {totalAuditPages}</span>
+                  <button
+                    type="button"
+                    disabled={auditPage === totalAuditPages}
+                    onClick={() => setAuditPage(p => Math.min(totalAuditPages, p + 1))}
+                    className="px-3 py-1.5 rounded-xl border border-slate-700 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

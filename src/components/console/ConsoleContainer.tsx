@@ -43,6 +43,7 @@ import { UsersAuditView } from './views/UsersAuditView';
 import { CompanyProfileView } from './views/CompanyProfileView';
 import { AccessRestrictedGate } from '../common/AccessRestrictedGate';
 import { SwitchUserModal } from '../common/SwitchUserModal';
+import { SecuritySessionsModal } from './modals/SecuritySessionsModal';
 import { isViewAllowedForRole } from '../../utils/permissions';
 import { useAuth } from '../../context/AuthContext';
 import { useOwnerOSData } from '../../hooks/useOwnerOSData';
@@ -116,6 +117,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
   const [showCustomizeModal, setShowCustomizeModal] = useState<boolean>(false);
   const [isOpenMobile, setIsOpenMobile] = useState<boolean>(false);
   const [isSwitchUserOpen, setIsSwitchUserOpen] = useState<boolean>(false);
+  const [isSecurityModalOpen, setIsSecurityModalOpen] = useState<boolean>(false);
   const [currentUserId, setCurrentUserId] = useState<string>(authProfile?.id || '');
   const [isRealtimeStreaming, setIsRealtimeStreaming] = useState<boolean>(true);
 
@@ -343,6 +345,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
         scope={scope}
         setScope={setScope}
         onOpenCustomize={() => setShowCustomizeModal(true)}
+        onOpenSecurityModal={() => setIsSecurityModalOpen(true)}
         isDarkMode={isDarkMode}
         setIsDarkMode={setIsDarkMode}
         currentRole={currentRole}
@@ -373,6 +376,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
           currentUser={currentUser}
           userName={currentUser ? currentUser.name : "Pramod Parshi"}
           onSignOut={onSignOut}
+          onOpenSecurityModal={() => setIsSecurityModalOpen(true)}
           isOpenMobile={isOpenMobile}
           setIsOpenMobile={setIsOpenMobile}
         />
@@ -598,6 +602,14 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
         onRestoreUser={handleRestoreUser}
         onAddUser={handleAddUser}
         isDarkMode={isDarkMode}
+      />
+
+      {/* Active Sessions & Suspicious Login Security Center Modal */}
+      <SecuritySessionsModal
+        isOpen={isSecurityModalOpen}
+        onClose={() => setIsSecurityModalOpen(false)}
+        isDarkMode={isDarkMode}
+        currentUser={currentUser}
       />
     </div>
   );

@@ -754,14 +754,36 @@ export async function removeApproval(id: string): Promise<void> {
   await approveApproval(id);
 }
 
-// ----------------------------------------------------
-// Audit Logs Services (via REST API)
-// ----------------------------------------------------
-export async function fetchAuditLogs(): Promise<AuditLogEntry[]> {
+export async function fetchAuditLogs(filters?: {
+  actorEmail?: string;
+  entityType?: string;
+  entityId?: string;
+  action?: string;
+  from?: number;
+  limit?: number;
+}): Promise<AuditLogEntry[]> {
   try {
-    const res = await apiClient.get<{ data: AuditLogEntry[] }>('/audit');
-    if (res?.data && res.data.length > 0) {
-      return res.data;
+    const res = await apiClient.get<any>('/audit', { params: filters });
+    const list = res?.logs || res?.data || (Array.isArray(res) ? res : []);
+    if (list && list.length > 0) {
+      return list.map((item: any) => ({
+        id: item.id,
+        when: item.created_at ? new Date(item.created_at).toLocaleString('en-IN', { hour12: true }) : item.when || 'Just now',
+        user: item.actorEmail || item.actor_email || item.user || 'System User',
+        actorId: item.actorId || item.actor_id,
+        actorEmail: item.actorEmail || item.actor_email,
+        entity: item.entityType || item.entity_type || item.entity || 'General',
+        entityType: item.entityType || item.entity_type,
+        entityId: item.entityId || item.entity_id,
+        action: item.action,
+        details: item.metadata?.details || item.details || `${item.action} on ${item.entityType || item.entity || 'item'}`,
+        beforeState: item.beforeState || item.before_state,
+        afterState: item.afterState || item.after_state,
+        ipAddress: item.ipAddress || item.ip_address,
+        userAgent: item.userAgent || item.user_agent,
+        metadata: item.metadata,
+        createdAt: item.created_at || item.createdAt
+      }));
     }
   } catch (err) {
     console.warn('fetchAuditLogs REST API error, falling back:', err);
@@ -772,10 +794,10 @@ export async function fetchAuditLogs(): Promise<AuditLogEntry[]> {
 export async function insertAuditLog(entity: string, action: string, details: string, userName: string): Promise<void> {
   try {
     await apiClient.post('/audit', {
-      entity,
+      entityType: entity,
       action,
       details,
-      user: userName
+      actorEmail: userName
     });
   } catch (err) {
     console.warn('insertAuditLog REST API error:', err);

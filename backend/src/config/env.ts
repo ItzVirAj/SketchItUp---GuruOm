@@ -19,6 +19,25 @@ export const ENV = {
   ACCESS_TOKEN_EXPIRES_IN: '15m',
   REFRESH_TOKEN_EXPIRES_IN_DAYS: 7,
 
+  // Redis Fast-Layer Configuration
+  REDIS_URL: process.env.REDIS_URL || 'redis://127.0.0.1:6379',
+  REDIS_ENABLED: process.env.REDIS_ENABLED !== 'false',
+  REDIS_FAIL_CLOSED: process.env.REDIS_FAIL_CLOSED === 'true',
+
+  // Rate Limiting Parameters (Configurable, defaults to enterprise specs)
+  RATE_LIMIT_LOGIN_MAX: parseInt(process.env.RATE_LIMIT_LOGIN_MAX || '5', 10),
+  RATE_LIMIT_LOGIN_WINDOW_SEC: parseInt(process.env.RATE_LIMIT_LOGIN_WINDOW_SEC || '900', 10), // 15 min
+  RATE_LIMIT_LOGIN_IP_MAX: parseInt(process.env.RATE_LIMIT_LOGIN_IP_MAX || '20', 10),
+  
+  RATE_LIMIT_REFRESH_MAX: parseInt(process.env.RATE_LIMIT_REFRESH_MAX || '30', 10),
+  RATE_LIMIT_REFRESH_WINDOW_SEC: parseInt(process.env.RATE_LIMIT_REFRESH_WINDOW_SEC || '60', 10), // 1 min
+
+  RATE_LIMIT_PASSWORD_CHANGE_MAX: parseInt(process.env.RATE_LIMIT_PASSWORD_CHANGE_MAX || '5', 10),
+  RATE_LIMIT_PASSWORD_CHANGE_WINDOW_SEC: parseInt(process.env.RATE_LIMIT_PASSWORD_CHANGE_WINDOW_SEC || '900', 10), // 15 min
+
+  RATE_LIMIT_SESSION_REVOKE_MAX: parseInt(process.env.RATE_LIMIT_SESSION_REVOKE_MAX || '10', 10),
+  RATE_LIMIT_SESSION_REVOKE_WINDOW_SEC: parseInt(process.env.RATE_LIMIT_SESSION_REVOKE_WINDOW_SEC || '60', 10), // 1 min
+
   // Resend Secrets (Server Only)
   RESEND_API_KEY: process.env.RESEND_API_KEY || ''
 };

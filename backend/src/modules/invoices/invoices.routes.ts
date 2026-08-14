@@ -10,6 +10,7 @@ router.use(requireAuth);
 router.get('/', (req, res) => invoicesController.getInvoices(req, res));
 router.get('/:invoiceNo', (req, res) => invoicesController.getInvoiceByNo(req, res));
 router.post('/', requireRole(['SUPER ADMIN', 'FINANCE_MANAGER']), (req, res) => invoicesController.createInvoice(req, res));
+router.post('/:invoiceNo/retry-processing', requireRole(['SUPER ADMIN', 'FINANCE_MANAGER']), (req, res) => invoicesController.retryInvoiceProcessing(req, res));
 router.post('/:invoiceNo/pay', requireRole(['SUPER ADMIN', 'FINANCE_MANAGER']), (req, res) => invoicesController.recordPayment(req, res));
 
 export default router;

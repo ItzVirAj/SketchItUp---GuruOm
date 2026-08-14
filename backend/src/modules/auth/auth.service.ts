@@ -1,8 +1,12 @@
+import crypto from 'crypto';
 import { getDbClient } from '../../config/database';
 import { hashPassword, verifyPassword } from '../../utils/password';
 import { generateTokens, hashToken, verifyRefreshToken, JwtUserPayload } from '../../utils/jwt';
+import { parseUserAgent, ParsedDeviceInfo } from '../../utils/deviceParser';
+import { GeoLocationService, GeoLocationResult } from '../../utils/geolocation';
+import { RiskService, RiskEvaluationResult, PriorSessionData } from './risk.service';
 import { notificationsService } from '../notifications/notifications.service';
-import { recordAuditLog } from '../audit/audit.service';
+import { logAudit } from '../../services/auditLog';
 
 export interface UserRecord {
   id: string;
@@ -19,6 +23,71 @@ export interface UserRecord {
   lockout_until?: string;
   last_login_at?: string;
   created_at?: string;
+}
+
+export interface SessionRecord {
+  id: string;
+  user_id: string;
+  token_family_id: string;
+  refresh_token_hash: string;
+  device_type: 'desktop' | 'mobile' | 'tablet' | 'unknown';
+  device_name: string;
+  browser: string;
+  browser_version: string;
+  os: string;
+  os_version: string;
+  ip_address: string;
+  country: string;
+  region: string;
+  city: string;
+  latitude: number | null;
+  longitude: number | null;
+  risk_score: number;
+  risk_level: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  last_used_at: string;
+  expires_at: string;
+  revoked_at?: string | null;
+  revoked_reason?: string | null;
+  created_at: string;
+}
+
+export interface SecurityEventRecord {
+  id: string;
+  user_id: string;
+  session_id?: string | null;
+  event_type: string;
+  severity: 'INFO' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  ip_address?: string | null;
+  user_agent?: string | null;
+  device_name?: string | null;
+  device_type?: string | null;
+  browser?: string | null;
+  os?: string | null;
+  country?: string | null;
+  region?: string | null;
+  city?: string | null;
+  risk_score: number;
+  risk_level: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  flagged_reasons: string[];
+  metadata: any;
+  created_at: string;
+}
+
+export interface ActiveSessionItem {
+  id: string;
+  userId: string;
+  device: string;
+  deviceType: 'desktop' | 'mobile' | 'tablet' | 'unknown';
+  browser: string;
+  os: string;
+  location: string;
+  ip: string;
+  createdAt: string;
+  lastActiveAt: string;
+  isCurrent: boolean;
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  riskScore: number;
+  flaggedReasons?: string[];
 }
 
 // In-Memory Seed Directory for instant offline support and zero-latency access
@@ -113,6 +182,10 @@ const SEED_USERS: UserRecord[] = [
   }
 ];
 
+// Resilient memory cache for sessions and security events
+const IN_MEMORY_SESSIONS: SessionRecord[] = [];
+const IN_MEMORY_SECURITY_EVENTS: SecurityEventRecord[] = [];
+
 export class AuthService {
   private db = getDbClient();
 
@@ -168,25 +241,193 @@ export class AuthService {
   }
 
   /**
-   * Authenticates user, generates tokens, and creates a session record.
+   * Records a security event to both database and in-memory audit store.
    */
-  async login(email: string, password = '1234567890', ipAddress?: string, userAgent?: string) {
+  async logSecurityEvent(event: Omit<SecurityEventRecord, 'id' | 'created_at'>): Promise<SecurityEventRecord> {
+    const newEvent: SecurityEventRecord = {
+      id: crypto.randomUUID(),
+      ...event,
+      created_at: new Date().toISOString()
+    };
+
+    IN_MEMORY_SECURITY_EVENTS.unshift(newEvent);
+    if (IN_MEMORY_SECURITY_EVENTS.length > 500) {
+      IN_MEMORY_SECURITY_EVENTS.pop();
+    }
+
+    try {
+      await this.db.from('security_events').insert({
+        id: newEvent.id,
+        user_id: newEvent.user_id,
+        session_id: newEvent.session_id,
+        event_type: newEvent.event_type,
+        severity: newEvent.severity,
+        ip_address: newEvent.ip_address,
+        user_agent: newEvent.user_agent,
+        device_name: newEvent.device_name,
+        device_type: newEvent.device_type,
+        browser: newEvent.browser,
+        os: newEvent.os,
+        country: newEvent.country,
+        region: newEvent.region,
+        city: newEvent.city,
+        risk_score: newEvent.risk_score,
+        risk_level: newEvent.risk_level,
+        flagged_reasons: newEvent.flagged_reasons,
+        metadata: newEvent.metadata,
+        created_at: newEvent.created_at
+      });
+    } catch (e) {
+      console.warn('Database logSecurityEvent fallback:', e);
+    }
+
+    // Broadcast critical or high security events
+    if (newEvent.severity === 'HIGH' || newEvent.severity === 'CRITICAL') {
+      notificationsService.broadcastEvent('security_alert', {
+        id: newEvent.id,
+        userId: newEvent.user_id,
+        type: newEvent.event_type,
+        severity: newEvent.severity,
+        deviceName: newEvent.device_name,
+        location: `${newEvent.city || 'Unknown'}, ${newEvent.country || ''}`,
+        reasons: newEvent.flagged_reasons,
+        createdAt: newEvent.created_at
+      });
+    }
+
+    return newEvent;
+  }
+
+  /**
+   * Retrieves prior sessions for a user to evaluate risk heuristics.
+   */
+  private async getPriorSessionsForUser(userId: string): Promise<PriorSessionData[]> {
+    try {
+      const { data, error } = await this.db
+        .from('sessions')
+        .select('id, ip_address, device_name, browser, os, country, city, latitude, longitude, created_at, last_used_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (data && !error && data.length > 0) {
+        return data as PriorSessionData[];
+      }
+    } catch (err) {
+      console.warn('Database getPriorSessions fallback:', err);
+    }
+
+    return IN_MEMORY_SESSIONS
+      .filter(s => s.user_id === userId)
+      .map(s => ({
+        id: s.id,
+        ip_address: s.ip_address,
+        device_name: s.device_name,
+        browser: s.browser,
+        os: s.os,
+        country: s.country,
+        city: s.city,
+        latitude: s.latitude,
+        longitude: s.longitude,
+        created_at: s.created_at,
+        last_used_at: s.last_used_at
+      }));
+  }
+
+  /**
+   * Authenticates user, evaluates risk, generates tokens with family ID, and creates a session record.
+   */
+  async login(email: string, password = '1234567890', ipAddress?: string, userAgent?: string, reqHeaders?: Record<string, any>) {
     const cleanEmail = email.trim().toLowerCase();
     const user = await this.findUserByEmail(cleanEmail);
+    const clientIp = ipAddress || '127.0.0.1';
+    const parsedDevice = parseUserAgent(userAgent);
+    const geo = GeoLocationService.lookupLocation(clientIp, reqHeaders);
 
     if (!user) {
+      // Record failed login event without revealing account existence
+      await this.logSecurityEvent({
+        user_id: '00000000-0000-0000-0000-000000000000',
+        event_type: 'LOGIN_FAILED',
+        severity: 'LOW',
+        ip_address: clientIp,
+        user_agent: userAgent,
+        device_name: parsedDevice.deviceName,
+        device_type: parsedDevice.deviceType,
+        browser: parsedDevice.browser,
+        os: parsedDevice.os,
+        country: geo.country,
+        region: geo.region,
+        city: geo.city,
+        risk_score: 10,
+        risk_level: 'LOW',
+        flagged_reasons: ['INVALID_CREDENTIALS'],
+        metadata: { attemptedEmail: cleanEmail }
+      });
       throw new Error('Invalid email or password credentials.');
     }
 
     if (user.status === 'REVOKED' || user.status === 'SUSPENDED') {
+      await this.logSecurityEvent({
+        user_id: user.id,
+        event_type: 'LOGIN_FAILED',
+        severity: 'MEDIUM',
+        ip_address: clientIp,
+        user_agent: userAgent,
+        device_name: parsedDevice.deviceName,
+        device_type: parsedDevice.deviceType,
+        browser: parsedDevice.browser,
+        os: parsedDevice.os,
+        country: geo.country,
+        region: geo.region,
+        city: geo.city,
+        risk_score: 30,
+        risk_level: 'MEDIUM',
+        flagged_reasons: ['ACCOUNT_SUSPENDED'],
+        metadata: { status: user.status }
+      });
       throw new Error(`Account "${user.full_name}" is revoked or suspended. Contact Super Admin.`);
     }
 
     const isValidPassword = await verifyPassword(password, user.password_hash);
     if (!isValidPassword) {
+      const failedCount = (user.failed_login_attempts || 0) + 1;
+      try {
+        await this.db.from('users').update({ failed_login_attempts: failedCount }).eq('id', user.id);
+      } catch (_) {}
+
+      await this.logSecurityEvent({
+        user_id: user.id,
+        event_type: 'LOGIN_FAILED',
+        severity: failedCount >= 3 ? 'HIGH' : 'LOW',
+        ip_address: clientIp,
+        user_agent: userAgent,
+        device_name: parsedDevice.deviceName,
+        device_type: parsedDevice.deviceType,
+        browser: parsedDevice.browser,
+        os: parsedDevice.os,
+        country: geo.country,
+        region: geo.region,
+        city: geo.city,
+        risk_score: failedCount >= 3 ? 40 : 15,
+        risk_level: failedCount >= 3 ? 'HIGH' : 'LOW',
+        flagged_reasons: ['INVALID_PASSWORD'],
+        metadata: { failedAttempts: failedCount }
+      });
       throw new Error('Invalid email or password credentials.');
     }
 
+    // 1. Evaluate Suspicious Login Risk
+    const priorSessions = await this.getPriorSessionsForUser(user.id);
+    const riskResult = RiskService.evaluateLoginRisk(
+      parsedDevice,
+      geo,
+      clientIp,
+      priorSessions,
+      user.failed_login_attempts || 0
+    );
+
+    // 2. Generate Tokens with new Token Family
     const jwtPayload: JwtUserPayload = {
       id: user.id,
       email: user.email,
@@ -196,18 +437,63 @@ export class AuthService {
       orgId: user.org_id
     };
 
-    const { accessToken, refreshToken, expiresAt } = generateTokens(jwtPayload);
+    const tokenFamilyId = crypto.randomUUID();
+    const { accessToken, refreshToken, expiresAt } = generateTokens(jwtPayload, tokenFamilyId);
     const tokenHash = hashToken(refreshToken);
+    const sessionId = crypto.randomUUID();
 
-    // Save session in database
+    const newSessionRecord: SessionRecord = {
+      id: sessionId,
+      user_id: user.id,
+      token_family_id: tokenFamilyId,
+      refresh_token_hash: tokenHash,
+      device_type: parsedDevice.deviceType,
+      device_name: parsedDevice.deviceName,
+      browser: parsedDevice.browser,
+      browser_version: parsedDevice.browserVersion,
+      os: parsedDevice.os,
+      os_version: parsedDevice.osVersion,
+      ip_address: clientIp,
+      country: geo.country,
+      region: geo.region,
+      city: geo.city,
+      latitude: geo.latitude,
+      longitude: geo.longitude,
+      risk_score: riskResult.riskScore,
+      risk_level: riskResult.riskLevel,
+      last_used_at: new Date().toISOString(),
+      expires_at: expiresAt.toISOString(),
+      revoked_at: null,
+      created_at: new Date().toISOString()
+    };
+
+    // Store in memory
+    IN_MEMORY_SESSIONS.unshift(newSessionRecord);
+
+    // Store in Supabase DB
     try {
       await this.db.from('sessions').insert({
-        user_id: user.id,
-        refresh_token_hash: tokenHash,
-        ip_address: ipAddress || null,
-        user_agent: userAgent || null,
-        expires_at: expiresAt.toISOString(),
-        created_at: new Date().toISOString()
+        id: newSessionRecord.id,
+        user_id: newSessionRecord.user_id,
+        token_family_id: newSessionRecord.token_family_id,
+        refresh_token_hash: newSessionRecord.refresh_token_hash,
+        device_type: newSessionRecord.device_type,
+        device_name: newSessionRecord.device_name,
+        browser: newSessionRecord.browser,
+        browser_version: newSessionRecord.browser_version,
+        os: newSessionRecord.os,
+        os_version: newSessionRecord.os_version,
+        ip_address: newSessionRecord.ip_address,
+        country: newSessionRecord.country,
+        region: newSessionRecord.region,
+        city: newSessionRecord.city,
+        latitude: newSessionRecord.latitude,
+        longitude: newSessionRecord.longitude,
+        risk_score: newSessionRecord.risk_score,
+        risk_level: newSessionRecord.risk_level,
+        last_used_at: newSessionRecord.last_used_at,
+        expires_at: newSessionRecord.expires_at,
+        created_at: newSessionRecord.created_at
       });
 
       await this.db.from('users').update({
@@ -219,10 +505,46 @@ export class AuthService {
       console.warn('Database session record fallback:', e);
     }
 
+    // 3. Log Login Security Event
+    const isSuspicious = riskResult.riskLevel === 'HIGH' || riskResult.riskLevel === 'CRITICAL';
+    await this.logSecurityEvent({
+      user_id: user.id,
+      session_id: sessionId,
+      event_type: isSuspicious ? 'SUSPICIOUS_LOGIN' : 'LOGIN_SUCCESS',
+      severity: isSuspicious ? (riskResult.riskLevel === 'CRITICAL' ? 'CRITICAL' : 'HIGH') : (riskResult.riskLevel === 'MEDIUM' ? 'MEDIUM' : 'INFO'),
+      ip_address: clientIp,
+      user_agent: userAgent,
+      device_name: parsedDevice.deviceName,
+      device_type: parsedDevice.deviceType,
+      browser: parsedDevice.browser,
+      os: parsedDevice.os,
+      country: geo.country,
+      region: geo.region,
+      city: geo.city,
+      risk_score: riskResult.riskScore,
+      risk_level: riskResult.riskLevel,
+      flagged_reasons: riskResult.flaggedReasons,
+      metadata: {
+        isNewDevice: riskResult.isNewDevice,
+        isNewCountry: riskResult.isNewCountry,
+        isImpossibleTravel: riskResult.isImpossibleTravel,
+        travelDetails: riskResult.travelDetails
+      }
+    });
+
     return {
       accessToken,
       refreshToken,
       expiresAt,
+      sessionId,
+      riskInfo: {
+        score: riskResult.riskScore,
+        riskScore: riskResult.riskScore,
+        level: riskResult.riskLevel,
+        riskLevel: riskResult.riskLevel,
+        flaggedReasons: riskResult.flaggedReasons,
+        isSuspicious
+      },
       user: {
         id: user.id,
         name: user.full_name,
@@ -237,14 +559,14 @@ export class AuthService {
   }
 
   /**
-   * Validates rotating refresh token and issues a new token pair.
+   * Validates rotating refresh token, detects reuse, and issues a new token pair in the same token family.
    */
-  async refreshSession(refreshToken: string, ipAddress?: string, userAgent?: string) {
+  async refreshSession(refreshToken: string, ipAddress?: string, userAgent?: string, reqHeaders?: Record<string, any>) {
     if (!refreshToken) {
       throw new Error('Refresh token is required.');
     }
 
-    let decoded: { sub: string; email: string; jti: string };
+    let decoded: { sub: string; email: string; jti: string; fid?: string };
     try {
       decoded = verifyRefreshToken(refreshToken);
     } catch (e) {
@@ -252,34 +574,123 @@ export class AuthService {
     }
 
     const oldTokenHash = hashToken(refreshToken);
+    const clientIp = ipAddress || '127.0.0.1';
+    const parsedDevice = parseUserAgent(userAgent);
+    const geo = GeoLocationService.lookupLocation(clientIp, reqHeaders);
 
-    // Verify session exists and is not revoked
+    // 1. Locate session by token hash
+    let sessionData: SessionRecord | null = null;
+
     try {
-      const { data: sessionData, error } = await this.db
+      const { data, error } = await this.db
         .from('sessions')
         .select('*')
         .eq('refresh_token_hash', oldTokenHash)
-        .is('revoked_at', null)
         .maybeSingle();
 
-      if (error || !sessionData) {
-        // Fallback for demo session if DB is offline
-        console.warn('Session verification fallback active.');
-      } else {
-        // Revoke the used refresh token (token rotation security)
-        await this.db.from('sessions').update({
-          revoked_at: new Date().toISOString()
-        }).eq('id', sessionData.id);
+      if (data && !error) {
+        sessionData = data as SessionRecord;
       }
-    } catch (e) {
-      console.warn('Session rotation database check fallback:', e);
+    } catch (err) {
+      console.warn('Database session query fallback:', err);
     }
 
+    if (!sessionData) {
+      sessionData = IN_MEMORY_SESSIONS.find(s => s.refresh_token_hash === oldTokenHash) || null;
+    }
+
+    // 2. Refresh Token Reuse Detection
+    // If a session exists with this token hash AND it has ALREADY been revoked:
+    // Compromise detected -> Immediately invalidate entire token family!
+    if (sessionData && sessionData.revoked_at != null) {
+      const compromisedFamilyId = sessionData.token_family_id || decoded.fid;
+
+      if (compromisedFamilyId) {
+        // Revoke all sessions in the family in DB
+        try {
+          await this.db
+            .from('sessions')
+            .update({
+              revoked_at: new Date().toISOString(),
+              revoked_reason: 'TOKEN_REUSE_DETECTED'
+            })
+            .eq('token_family_id', compromisedFamilyId);
+        } catch (e) {
+          console.warn('Database token family revocation fallback:', e);
+        }
+
+        // Revoke all in memory
+        IN_MEMORY_SESSIONS.forEach(s => {
+          if (s.token_family_id === compromisedFamilyId) {
+            s.revoked_at = new Date().toISOString();
+            s.revoked_reason = 'TOKEN_REUSE_DETECTED';
+          }
+        });
+      }
+
+      // Log CRITICAL security alert
+      await this.logSecurityEvent({
+        user_id: sessionData.user_id || decoded.sub,
+        session_id: sessionData.id,
+        event_type: 'REFRESH_TOKEN_REUSE',
+        severity: 'CRITICAL',
+        ip_address: clientIp,
+        user_agent: userAgent,
+        device_name: parsedDevice.deviceName,
+        device_type: parsedDevice.deviceType,
+        browser: parsedDevice.browser,
+        os: parsedDevice.os,
+        country: geo.country,
+        region: geo.region,
+        city: geo.city,
+        risk_score: 100,
+        risk_level: 'CRITICAL',
+        flagged_reasons: ['TOKEN_REUSE_COMPROMISE_DETECTED'],
+        metadata: {
+          compromisedFamilyId,
+          originalRevokedReason: sessionData.revoked_reason,
+          reusedAt: new Date().toISOString()
+        }
+      });
+
+      throw new Error('Security Alert: Refresh token reuse detected. All sessions in this family have been terminated. Please log in again.');
+    }
+
+    // 3. If session not found at all, reject
+    if (!sessionData) {
+      throw new Error('Session expired or invalidated. Please log in again.');
+    }
+
+    // 4. Check if session has expired
+    if (new Date(sessionData.expires_at).getTime() < Date.now()) {
+      throw new Error('Session has expired. Please log in again.');
+    }
+
+    // 5. Rotate Token: Revoke the old token
+    const tokenFamilyId = sessionData.token_family_id || decoded.fid || crypto.randomUUID();
+    const nowIso = new Date().toISOString();
+
+    sessionData.revoked_at = nowIso;
+    sessionData.revoked_reason = 'ROTATED';
+    sessionData.last_used_at = nowIso;
+
+    try {
+      await this.db.from('sessions').update({
+        revoked_at: nowIso,
+        revoked_reason: 'ROTATED',
+        last_used_at: nowIso
+      }).eq('id', sessionData.id);
+    } catch (e) {
+      console.warn('Database update session rotation fallback:', e);
+    }
+
+    // 6. Verify User is still active
     const user = await this.findUserById(decoded.sub);
-    if (!user || user.status === 'REVOKED') {
+    if (!user || user.status === 'REVOKED' || user.status === 'SUSPENDED') {
       throw new Error('User account no longer active or revoked.');
     }
 
+    // 7. Issue new token pair in the SAME token family
     const jwtPayload: JwtUserPayload = {
       id: user.id,
       email: user.email,
@@ -289,27 +700,70 @@ export class AuthService {
       orgId: user.org_id
     };
 
-    const { accessToken, refreshToken: newRefreshToken, expiresAt } = generateTokens(jwtPayload);
+    const { accessToken, refreshToken: newRefreshToken, expiresAt } = generateTokens(jwtPayload, tokenFamilyId);
     const newTokenHash = hashToken(newRefreshToken);
+    const newSessionId = crypto.randomUUID();
 
-    // Save new session in database
+    const rotatedSessionRecord: SessionRecord = {
+      id: newSessionId,
+      user_id: user.id,
+      token_family_id: tokenFamilyId,
+      refresh_token_hash: newTokenHash,
+      device_type: parsedDevice.deviceType || sessionData.device_type,
+      device_name: parsedDevice.deviceName || sessionData.device_name,
+      browser: parsedDevice.browser || sessionData.browser,
+      browser_version: parsedDevice.browserVersion || sessionData.browser_version,
+      os: parsedDevice.os || sessionData.os,
+      os_version: parsedDevice.osVersion || sessionData.os_version,
+      ip_address: clientIp || sessionData.ip_address,
+      country: geo.country || sessionData.country,
+      region: geo.region || sessionData.region,
+      city: geo.city || sessionData.city,
+      latitude: geo.latitude ?? sessionData.latitude,
+      longitude: geo.longitude ?? sessionData.longitude,
+      risk_score: sessionData.risk_score,
+      risk_level: sessionData.risk_level,
+      last_used_at: nowIso,
+      expires_at: expiresAt.toISOString(),
+      revoked_at: null,
+      created_at: nowIso
+    };
+
+    IN_MEMORY_SESSIONS.unshift(rotatedSessionRecord);
+
     try {
       await this.db.from('sessions').insert({
-        user_id: user.id,
-        refresh_token_hash: newTokenHash,
-        ip_address: ipAddress || null,
-        user_agent: userAgent || null,
-        expires_at: expiresAt.toISOString(),
-        created_at: new Date().toISOString()
+        id: rotatedSessionRecord.id,
+        user_id: rotatedSessionRecord.user_id,
+        token_family_id: rotatedSessionRecord.token_family_id,
+        refresh_token_hash: rotatedSessionRecord.refresh_token_hash,
+        device_type: rotatedSessionRecord.device_type,
+        device_name: rotatedSessionRecord.device_name,
+        browser: rotatedSessionRecord.browser,
+        browser_version: rotatedSessionRecord.browser_version,
+        os: rotatedSessionRecord.os,
+        os_version: rotatedSessionRecord.os_version,
+        ip_address: rotatedSessionRecord.ip_address,
+        country: rotatedSessionRecord.country,
+        region: rotatedSessionRecord.region,
+        city: rotatedSessionRecord.city,
+        latitude: rotatedSessionRecord.latitude,
+        longitude: rotatedSessionRecord.longitude,
+        risk_score: rotatedSessionRecord.risk_score,
+        risk_level: rotatedSessionRecord.risk_level,
+        last_used_at: rotatedSessionRecord.last_used_at,
+        expires_at: rotatedSessionRecord.expires_at,
+        created_at: rotatedSessionRecord.created_at
       });
     } catch (e) {
-      console.warn('Database insert session fallback:', e);
+      console.warn('Database insert rotated session fallback:', e);
     }
 
     return {
       accessToken,
       refreshToken: newRefreshToken,
       expiresAt,
+      sessionId: newSessionId,
       user: {
         id: user.id,
         name: user.full_name,
@@ -324,19 +778,412 @@ export class AuthService {
   }
 
   /**
-   * Logs out a session by revoking the refresh token hash.
+   * Logs out a session by revoking the specific refresh token hash.
    */
   async logout(refreshToken?: string) {
     if (!refreshToken) return;
     const tokenHash = hashToken(refreshToken);
+    const nowIso = new Date().toISOString();
+
+    const memSession = IN_MEMORY_SESSIONS.find(s => s.refresh_token_hash === tokenHash);
+    if (memSession) {
+      memSession.revoked_at = nowIso;
+      memSession.revoked_reason = 'USER_LOGOUT';
+
+      await this.logSecurityEvent({
+        user_id: memSession.user_id,
+        session_id: memSession.id,
+        event_type: 'LOGOUT',
+        severity: 'INFO',
+        device_name: memSession.device_name,
+        ip_address: memSession.ip_address,
+        country: memSession.country,
+        city: memSession.city,
+        risk_score: 0,
+        risk_level: 'LOW',
+        flagged_reasons: [],
+        metadata: { loggedOutAt: nowIso }
+      });
+    }
 
     try {
       await this.db.from('sessions').update({
-        revoked_at: new Date().toISOString()
+        revoked_at: nowIso,
+        revoked_reason: 'USER_LOGOUT'
       }).eq('refresh_token_hash', tokenHash);
     } catch (e) {
       console.warn('Database logout session update fallback:', e);
     }
+  }
+
+  /**
+   * Retrieves all currently active sessions for an authenticated user.
+   */
+  async getActiveSessions(userId: string, currentRefreshToken?: string): Promise<ActiveSessionItem[]> {
+    const currentTokenHash = currentRefreshToken ? hashToken(currentRefreshToken) : null;
+    let sessions: SessionRecord[] = [];
+
+    try {
+      const { data, error } = await this.db
+        .from('sessions')
+        .select('*')
+        .eq('user_id', userId)
+        .is('revoked_at', null)
+        .gt('expires_at', new Date().toISOString())
+        .order('last_used_at', { ascending: false });
+
+      if (data && !error) {
+        sessions = data as SessionRecord[];
+      }
+    } catch (err) {
+      console.warn('Database getActiveSessions fallback:', err);
+    }
+
+    if (sessions.length === 0) {
+      const now = Date.now();
+      sessions = IN_MEMORY_SESSIONS.filter(
+        s => s.user_id === userId && s.revoked_at == null && new Date(s.expires_at).getTime() > now
+      );
+    }
+
+    // Deduplicate by token_family_id so that rapid rotations show 1 card per device family
+    const familyMap = new Map<string, SessionRecord>();
+    for (const s of sessions) {
+      const key = s.token_family_id || s.id;
+      if (!familyMap.has(key)) {
+        familyMap.set(key, s);
+      }
+    }
+
+    const uniqueSessions = Array.from(familyMap.values());
+
+    return uniqueSessions.map(s => {
+      const isCurrent = Boolean(
+        currentTokenHash &&
+        (s.refresh_token_hash === currentTokenHash ||
+         IN_MEMORY_SESSIONS.some(m => m.token_family_id === s.token_family_id && m.refresh_token_hash === currentTokenHash))
+      );
+
+      return {
+        id: s.id,
+        userId: s.user_id,
+        device: s.device_name || 'Chrome — Windows',
+        deviceType: s.device_type || 'desktop',
+        browser: s.browser || 'Chrome',
+        os: s.os || 'Windows',
+        location: `${s.city || 'Mumbai'}, ${s.country || 'India'}`,
+        ip: GeoLocationService.maskIp(s.ip_address),
+        createdAt: s.created_at,
+        lastActiveAt: s.last_used_at || s.created_at,
+        isCurrent,
+        riskLevel: s.risk_level || 'LOW',
+        riskScore: s.risk_score || 0
+      };
+    });
+  }
+
+  /**
+   * Revokes an individual session belonging to the authenticated user.
+   */
+  async revokeSession(sessionId: string, userId: string): Promise<{ success: boolean; message: string }> {
+    const nowIso = new Date().toISOString();
+
+    // Verify ownership and find session
+    let targetSession: SessionRecord | null = null;
+    try {
+      const { data } = await this.db
+        .from('sessions')
+        .select('*')
+        .eq('id', sessionId)
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (data) targetSession = data as SessionRecord;
+    } catch (_) {}
+
+    if (!targetSession) {
+      targetSession = IN_MEMORY_SESSIONS.find(s => s.id === sessionId && s.user_id === userId) || null;
+    }
+
+    if (!targetSession) {
+      throw new Error('Session not found or not authorized to revoke.');
+    }
+
+    // Revoke the session and its entire family
+    const familyId = targetSession.token_family_id;
+
+    try {
+      if (familyId) {
+        await this.db.from('sessions').update({
+          revoked_at: nowIso,
+          revoked_reason: 'USER_REVOKED'
+        }).eq('token_family_id', familyId);
+      } else {
+        await this.db.from('sessions').update({
+          revoked_at: nowIso,
+          revoked_reason: 'USER_REVOKED'
+        }).eq('id', sessionId);
+      }
+    } catch (e) {
+      console.warn('Database revokeSession fallback:', e);
+    }
+
+    IN_MEMORY_SESSIONS.forEach(s => {
+      if (s.id === sessionId || (familyId && s.token_family_id === familyId)) {
+        s.revoked_at = nowIso;
+        s.revoked_reason = 'USER_REVOKED';
+      }
+    });
+
+    await this.logSecurityEvent({
+      user_id: userId,
+      session_id: sessionId,
+      event_type: 'SESSION_REVOKED',
+      severity: 'LOW',
+      device_name: targetSession.device_name,
+      ip_address: targetSession.ip_address,
+      country: targetSession.country,
+      city: targetSession.city,
+      risk_score: 0,
+      risk_level: 'LOW',
+      flagged_reasons: [],
+      metadata: { revokedSessionId: sessionId, familyId }
+    });
+
+    return { success: true, message: 'Session revoked successfully.' };
+  }
+
+  /**
+   * Revokes all other active sessions for the user except the current one.
+   */
+  async revokeOtherSessions(userId: string, currentRefreshToken?: string): Promise<{ revokedCount: number; message: string }> {
+    if (!currentRefreshToken) {
+      throw new Error('Current session verification token is missing.');
+    }
+
+    const currentTokenHash = hashToken(currentRefreshToken);
+    const nowIso = new Date().toISOString();
+
+    // Find current session to preserve its family
+    let currentSession = IN_MEMORY_SESSIONS.find(s => s.refresh_token_hash === currentTokenHash);
+    let currentFamilyId = currentSession?.token_family_id;
+
+    if (!currentFamilyId) {
+      try {
+        const { data } = await this.db
+          .from('sessions')
+          .select('token_family_id')
+          .eq('refresh_token_hash', currentTokenHash)
+          .maybeSingle();
+        if (data) currentFamilyId = data.token_family_id;
+      } catch (_) {}
+    }
+
+    let revokedCount = 0;
+
+    // Update in database
+    try {
+      let query = this.db
+        .from('sessions')
+        .update({
+          revoked_at: nowIso,
+          revoked_reason: 'REVOKE_ALL_OTHERS'
+        })
+        .eq('user_id', userId)
+        .is('revoked_at', null);
+
+      if (currentFamilyId) {
+        query = query.neq('token_family_id', currentFamilyId);
+      } else {
+        query = query.neq('refresh_token_hash', currentTokenHash);
+      }
+
+      const { data } = await query.select('id');
+      if (data) revokedCount = data.length;
+    } catch (e) {
+      console.warn('Database revokeOtherSessions fallback:', e);
+    }
+
+    // Update in memory
+    IN_MEMORY_SESSIONS.forEach(s => {
+      if (s.user_id === userId && s.revoked_at == null) {
+        const isCurrentFamily = currentFamilyId ? s.token_family_id === currentFamilyId : s.refresh_token_hash === currentTokenHash;
+        if (!isCurrentFamily) {
+          s.revoked_at = nowIso;
+          s.revoked_reason = 'REVOKE_ALL_OTHERS';
+          revokedCount++;
+        }
+      }
+    });
+
+    await this.logSecurityEvent({
+      user_id: userId,
+      event_type: 'ALL_OTHER_SESSIONS_REVOKED',
+      severity: 'INFO',
+      risk_score: 0,
+      risk_level: 'LOW',
+      flagged_reasons: [],
+      metadata: { revokedCount, preservedFamilyId: currentFamilyId }
+    });
+
+    return { revokedCount, message: `${revokedCount} other active sessions have been signed out.` };
+  }
+
+  /**
+   * Revokes all active sessions for a user (High-Security Trigger e.g. compromised account or password reset).
+   */
+  async revokeAllSessions(userId: string): Promise<{ revokedCount: number; message: string }> {
+    const nowIso = new Date().toISOString();
+    let count = 0;
+
+    try {
+      const { data } = await this.db
+        .from('sessions')
+        .update({
+          revoked_at: nowIso,
+          revoked_reason: 'REVOKE_ALL'
+        })
+        .eq('user_id', userId)
+        .is('revoked_at', null)
+        .select('id');
+
+      if (data) count = data.length;
+    } catch (e) {
+      console.warn('Database revokeAllSessions fallback:', e);
+    }
+
+    IN_MEMORY_SESSIONS.forEach(s => {
+      if (s.user_id === userId && s.revoked_at == null) {
+        s.revoked_at = nowIso;
+        s.revoked_reason = 'REVOKE_ALL';
+        count++;
+      }
+    });
+
+    await this.logSecurityEvent({
+      user_id: userId,
+      event_type: 'ALL_SESSIONS_REVOKED',
+      severity: 'HIGH',
+      risk_score: 50,
+      risk_level: 'HIGH',
+      flagged_reasons: ['HIGH_SECURITY_REVOKE_ALL_INVOKED'],
+      metadata: { revokedCount: count }
+    });
+
+    return { revokedCount: count, message: 'All active sessions have been revoked. Fresh login required.' };
+  }
+
+  /**
+   * Changes user password, verifies old password with Argon2id, and invalidates other sessions.
+   */
+  async changePassword(userId: string, oldPassword: string, newPassword: string, currentRefreshToken?: string) {
+    if (!newPassword || newPassword.length < 8) {
+      throw new Error('New password must be at least 8 characters long.');
+    }
+
+    const user = await this.findUserById(userId);
+    if (!user) {
+      throw new Error('User not found.');
+    }
+
+    const isValidOld = await verifyPassword(oldPassword, user.password_hash);
+    if (!isValidOld) {
+      throw new Error('Incorrect current password.');
+    }
+
+    const newHash = await hashPassword(newPassword);
+
+    try {
+      await this.db.from('users').update({
+        password_hash: newHash,
+        is_temporary_password: false,
+        updated_at: new Date().toISOString()
+      }).eq('id', userId);
+    } catch (e) {
+      console.warn('Database changePassword update fallback:', e);
+    }
+
+    // Update in memory
+    const seed = SEED_USERS.find(u => u.id === userId);
+    if (seed) {
+      seed.password_hash = newHash;
+      seed.is_temporary_password = false;
+    }
+
+    // High security: Invalidate other sessions
+    if (currentRefreshToken) {
+      await this.revokeOtherSessions(userId, currentRefreshToken);
+    }
+
+    await this.logSecurityEvent({
+      user_id: userId,
+      event_type: 'PASSWORD_CHANGED',
+      severity: 'MEDIUM',
+      risk_score: 0,
+      risk_level: 'LOW',
+      flagged_reasons: [],
+      metadata: { changedAt: new Date().toISOString() }
+    });
+
+    return { success: true, message: 'Password updated successfully. Other active sessions have been signed out.' };
+  }
+
+  /**
+   * Retrieves paginated security events for the authenticated user.
+   */
+  async getUserSecurityEvents(userId: string, limit = 50, offset = 0) {
+    try {
+      const { data, error } = await this.db
+        .from('security_events')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+
+      if (data && !error && data.length > 0) {
+        return data as SecurityEventRecord[];
+      }
+    } catch (err) {
+      console.warn('Database getUserSecurityEvents fallback:', err);
+    }
+
+    return IN_MEMORY_SECURITY_EVENTS
+      .filter(e => e.user_id === userId)
+      .slice(offset, offset + limit);
+  }
+
+  /**
+   * Super Admin Audit Stream: Retrieves global security events with user enrichment.
+   */
+  async getAdminSecurityAudit(limit = 100, offset = 0, severityFilter?: string) {
+    let events: SecurityEventRecord[] = [];
+
+    try {
+      let query = this.db
+        .from('security_events')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+
+      if (severityFilter && severityFilter !== 'ALL') {
+        query = query.eq('severity', severityFilter);
+      }
+
+      const { data, error } = await query;
+      if (data && !error) {
+        events = data as SecurityEventRecord[];
+      }
+    } catch (err) {
+      console.warn('Database getAdminSecurityAudit fallback:', err);
+    }
+
+    if (events.length === 0) {
+      events = IN_MEMORY_SECURITY_EVENTS
+        .filter(e => !severityFilter || severityFilter === 'ALL' || e.severity === severityFilter)
+        .slice(offset, offset + limit);
+    }
+
+    return events;
   }
 
   /**
@@ -356,132 +1203,98 @@ export class AuthService {
       department: user.department,
       phone: user.phone,
       status: user.status,
+      isTemporaryPassword: user.is_temporary_password || false,
       lastLogin: user.last_login_at || new Date().toLocaleString('en-IN', { hour12: true })
     };
   }
 
   /**
-   * Registers/provisions a new user with Argon2id password hash.
+   * Registers a new user.
    */
-  async register(data: {
+  async register(params: {
     email: string;
     password?: string;
     name?: string;
     role?: string;
     department?: string;
     phone?: string;
+    orgId?: string;
   }) {
-    const cleanEmail = data.email.trim().toLowerCase();
+    const cleanEmail = params.email.trim().toLowerCase();
     const existing = await this.findUserByEmail(cleanEmail);
     if (existing) {
-      throw new Error(`A user with email "${cleanEmail}" already exists.`);
+      throw new Error(`User with email "${cleanEmail}" already exists.`);
     }
 
-    const rawPassword = data.password || '1234567890';
-    const passwordHash = await hashPassword(rawPassword);
+    const passwordToHash = params.password || '1234567890';
+    const passwordHash = await hashPassword(passwordToHash);
+    const userId = crypto.randomUUID();
 
-    const newUserRecord: UserRecord = {
-      id: `usr-${Date.now()}`,
+    const newUser: UserRecord = {
+      id: userId,
       email: cleanEmail,
       password_hash: passwordHash,
-      full_name: data.name || cleanEmail.split('@')[0],
-      role: data.role || 'OPERATOR',
-      department: data.department || 'Operations',
-      phone: data.phone || '',
+      full_name: params.name || 'New Enterprise User',
+      role: params.role || 'OPERATOR',
+      department: params.department || 'Operations',
+      phone: params.phone || '',
       status: 'ACTIVE',
-      is_temporary_password: false,
+      org_id: params.orgId || '00000000-0000-0000-0000-000000000001',
+      is_temporary_password: true,
       created_at: new Date().toISOString()
     };
 
+    SEED_USERS.push(newUser);
+
     try {
-      const { data: created, error } = await this.db
-        .from('users')
-        .insert({
-          email: newUserRecord.email,
-          password_hash: newUserRecord.password_hash,
-          full_name: newUserRecord.full_name,
-          role: newUserRecord.role,
-          department: newUserRecord.department,
-          phone: newUserRecord.phone,
-          status: newUserRecord.status,
-          created_at: newUserRecord.created_at
-        })
-        .select()
-        .single();
-
-      if (!error && created) {
-        // Record audit log
-        try {
-          await recordAuditLog(
-            'usr-admin',
-            'ADD_USER',
-            'users',
-            created.id,
-            { email: created.email, role: created.role, timestamp: new Date().toISOString() }
-          );
-        } catch (_) {}
-
-        const mappedCreated = {
-          id: created.id,
-          name: created.full_name,
-          email: created.email,
-          role: created.role,
-          status: created.status,
-          department: created.department,
-          phone: created.phone,
-          lastLogin: 'Never'
-        };
-        notificationsService.broadcastEvent('user_created', mappedCreated);
-        return created;
-      }
+      await this.db.from('users').insert({
+        id: newUser.id,
+        email: newUser.email,
+        password_hash: newUser.password_hash,
+        full_name: newUser.full_name,
+        role: newUser.role,
+        department: newUser.department,
+        phone: newUser.phone,
+        status: newUser.status,
+        org_id: newUser.org_id,
+        is_temporary_password: true
+      });
     } catch (e) {
-      console.warn('Database register user insert fallback:', e);
+      console.warn('Database insert user fallback:', e);
     }
 
-    SEED_USERS.push(newUserRecord);
+    notificationsService.broadcastEvent('user_created', {
+      id: newUser.id,
+      name: newUser.full_name,
+      email: newUser.email,
+      role: newUser.role
+    });
 
-    // Record audit log
-    try {
-      await recordAuditLog(
-        'usr-admin',
-        'ADD_USER',
-        'users',
-        newUserRecord.id,
-        { email: newUserRecord.email, role: newUserRecord.role, timestamp: new Date().toISOString() }
-      );
-    } catch (_) {}
-
-    const mappedUser = {
-      id: newUserRecord.id,
-      name: newUserRecord.full_name,
-      email: newUserRecord.email,
-      role: newUserRecord.role,
-      status: newUserRecord.status,
-      department: newUserRecord.department,
-      phone: newUserRecord.phone,
-      lastLogin: 'Never'
+    return {
+      id: newUser.id,
+      name: newUser.full_name,
+      email: newUser.email,
+      role: newUser.role,
+      department: newUser.department,
+      phone: newUser.phone,
+      status: newUser.status
     };
-    notificationsService.broadcastEvent('user_created', mappedUser);
-
-    return newUserRecord;
   }
 
-  /**
-   * Retrieves all users/profiles.
-   */
   async getAllUsers() {
     try {
-      const { data, error } = await this.db.from('users').select('*').order('created_at', { ascending: true });
-      if (!error && data && data.length > 0) {
-        return data.map(u => ({
+      const { data, error } = await this.db.from('users').select('*').order('created_at', { ascending: false });
+      if (data && !error && data.length > 0) {
+        return data.map((u: any) => ({
           id: u.id,
           name: u.full_name,
           email: u.email,
           role: u.role,
-          status: u.status,
           department: u.department,
           phone: u.phone,
-          lastLogin: u.last_login_at || new Date().toLocaleString('en-IN', { hour12: true })
+          status: u.status,
+          isTemporaryPassword: u.is_temporary_password || false,
+          lastLogin: u.last_login_at || 'Never'
         }));
       }
     } catch (err) {
@@ -493,14 +1306,19 @@ export class AuthService {
       name: u.full_name,
       email: u.email,
       role: u.role,
-      status: u.status,
       department: u.department,
       phone: u.phone,
-      lastLogin: u.last_login_at || new Date().toLocaleString('en-IN', { hour12: true })
+      status: u.status,
+      isTemporaryPassword: u.is_temporary_password || false,
+      lastLogin: u.last_login_at || 'Never'
     }));
   }
 
   async updateUserRole(id: string, role: string, actorId?: string) {
+    const existing = await this.findUserById(id);
+    const beforeState = existing ? { role: existing.role, status: existing.status } : null;
+    const afterState = { role, status: existing?.status };
+
     try {
       await this.db.from('users').update({ role, updated_at: new Date().toISOString() }).eq('id', id);
     } catch (err) {
@@ -509,53 +1327,71 @@ export class AuthService {
     const user = SEED_USERS.find(u => u.id === id);
     if (user) user.role = role;
 
-    // Record audit log
     try {
-      await recordAuditLog(
-        actorId || 'usr-admin',
-        'UPDATE_ROLE',
-        'users',
-        id,
-        { role, timestamp: new Date().toISOString() }
-      );
+      await logAudit({
+        actorId: actorId || 'usr-admin',
+        actorEmail: 'admin@guruom.in',
+        action: 'UPDATE_ROLE',
+        entityType: 'user',
+        entityId: id,
+        beforeState,
+        afterState,
+        metadata: { role }
+      });
     } catch (_) {}
 
-    // Broadcast realtime event
     notificationsService.broadcastEvent('user_updated', { id, role });
-
     return { id, role };
   }
 
   async updateUserStatus(id: string, status: string, actorId?: string) {
+    const nowIso = new Date().toISOString();
+    const existing = await this.findUserById(id);
+    const beforeState = existing ? { status: existing.status, role: existing.role } : null;
+    const afterState = { status, role: existing?.role };
+
     try {
-      await this.db.from('users').update({ status, updated_at: new Date().toISOString() }).eq('id', id);
-      if (status === 'REVOKED') {
-        await this.db.from('sessions').update({ revoked_at: new Date().toISOString() }).eq('user_id', id);
+      await this.db.from('users').update({ status, updated_at: nowIso }).eq('id', id);
+      if (status === 'REVOKED' || status === 'SUSPENDED') {
+        await this.db.from('sessions').update({ revoked_at: nowIso, revoked_reason: 'USER_ACCOUNT_REVOKED' }).eq('user_id', id);
       }
     } catch (err) {
       console.warn('Database updateUserStatus fallback:', err);
     }
+
     const user = SEED_USERS.find(u => u.id === id);
     if (user) user.status = status;
 
-    // Record audit log
+    if (status === 'REVOKED' || status === 'SUSPENDED') {
+      IN_MEMORY_SESSIONS.forEach(s => {
+        if (s.user_id === id) {
+          s.revoked_at = nowIso;
+          s.revoked_reason = 'USER_ACCOUNT_REVOKED';
+        }
+      });
+    }
+
     try {
-      await recordAuditLog(
-        actorId || 'usr-admin',
-        status === 'REVOKED' ? 'REVOKE_USER' : 'RESTORE_USER',
-        'users',
-        id,
-        { status, timestamp: new Date().toISOString() }
-      );
+      await logAudit({
+        actorId: actorId || 'usr-admin',
+        actorEmail: 'admin@guruom.in',
+        action: status === 'REVOKED' ? 'REVOKE_USER' : 'RESTORE_USER',
+        entityType: 'user',
+        entityId: id,
+        beforeState,
+        afterState,
+        metadata: { status }
+      });
     } catch (_) {}
 
-    // Broadcast realtime event
     notificationsService.broadcastEvent('user_updated', { id, status });
-
     return { id, status };
   }
 
   async deleteUser(id: string, actorId?: string) {
+    const existing = await this.findUserById(id);
+    const beforeState = existing ? { email: existing.email, name: existing.full_name, role: existing.role, status: existing.status } : null;
+
     try {
       await this.db.from('sessions').delete().eq('user_id', id);
       await this.db.from('users').delete().eq('id', id);
@@ -568,20 +1404,20 @@ export class AuthService {
       SEED_USERS.splice(index, 1);
     }
 
-    // Record audit log
     try {
-      await recordAuditLog(
-        actorId || 'usr-admin',
-        'DELETE_USER',
-        'users',
-        id,
-        { deletedId: id, timestamp: new Date().toISOString() }
-      );
+      await logAudit({
+        actorId: actorId || 'usr-admin',
+        actorEmail: 'admin@guruom.in',
+        action: 'DELETE_USER',
+        entityType: 'user',
+        entityId: id,
+        beforeState,
+        afterState: null,
+        metadata: { deletedId: id }
+      });
     } catch (_) {}
 
-    // Broadcast realtime event
     notificationsService.broadcastEvent('user_deleted', { id });
-
     return { id, success: true };
   }
 }

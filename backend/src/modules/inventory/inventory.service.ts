@@ -1,6 +1,7 @@
 import { getDbClient } from '../../config/database';
 import { z } from 'zod';
 import { AdjustStockSchema } from './inventory.schema';
+import { logAudit } from '../../services/auditLog';
 
 export class InventoryService {
   private db = getDbClient();
@@ -38,7 +39,7 @@ export class InventoryService {
   /**
    * Adjusts on-hand quantity for a stock item, recomputing availability and status.
    */
-  async adjustStock(code: string, data: z.infer<typeof AdjustStockSchema>) {
+  async adjustStock(code: string, data: z.infer<typeof AdjustStockSchema>, actorEmail = 'inventory@guruom.in') {
     const { newOnHand } = AdjustStockSchema.parse(data);
 
     try {
@@ -48,21 +49,42 @@ export class InventoryService {
         .eq('code', code)
         .maybeSingle();
 
-      if (!current) {
-        return { code, onHand: newOnHand, available: newOnHand, status: 'OK' };
+      let prevOnHand = 0;
+      let prevAvailable = 0;
+      let prevStatus = 'OK';
+      let reserved = 0;
+      let reorderLevel = 25;
+
+      if (current) {
+        prevOnHand = Number(current.on_hand || 0);
+        prevAvailable = Number(current.available || 0);
+        prevStatus = current.status || 'OK';
+        reserved = Number(current.reserved || 0);
+        reorderLevel = Number(current.reorder_level || 25);
       }
 
-      const reserved = Number(current.reserved || 0);
-      const reorderLevel = Number(current.reorder_level || 0);
       const available = newOnHand - reserved;
       const status = available < 0 ? 'CRITICAL' : available < reorderLevel ? 'SHORTAGE' : 'OK';
 
-      await this.db.from('stock_items').update({
-        on_hand: newOnHand,
-        available,
-        status,
-        updated_at: new Date().toISOString()
-      }).eq('code', code);
+      if (current) {
+        await this.db.from('stock_items').update({
+          on_hand: newOnHand,
+          available,
+          status,
+          updated_at: new Date().toISOString()
+        }).eq('code', code);
+      }
+
+      // Record immutable audit log
+      await logAudit({
+        actorEmail,
+        action: 'ADJUST_STOCK',
+        entityType: 'inventory',
+        entityId: code,
+        beforeState: { onHand: prevOnHand, available: prevAvailable, status: prevStatus },
+        afterState: { onHand: newOnHand, available, status },
+        metadata: { reserved, reorderLevel }
+      }).catch(() => {});
 
       return {
         code,

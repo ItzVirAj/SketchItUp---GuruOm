@@ -2,24 +2,49 @@ import { Request, Response } from 'express';
 import { auditService } from './audit.service';
 
 export class AuditController {
+  /**
+   * Retrieves paginated audit logs with search/entity filters (Admin only).
+   */
   async getAuditLogs(req: Request, res: Response) {
     try {
-      const data = await auditService.getAuditLogs(req.query as any);
-      return res.json({ data });
+      const { actorEmail, entityType, entityId, action, from, to, limit } = req.query;
+      const data = await auditService.getAuditLogs({
+        actorEmail: actorEmail as string,
+        entityType: entityType as string,
+        entityId: entityId as string,
+        action: action as string,
+        from: from ? parseInt(from as string, 10) : 0,
+        to: to ? parseInt(to as string, 10) : undefined,
+        limit: limit ? parseInt(limit as string, 10) : 50
+      });
+      return res.json(data);
     } catch (err: any) {
       return res.status(500).json({ error: 'InternalServerError', message: err.message });
     }
   }
 
+  /**
+   * Records an audit log entry deriving actor identity securely from session.
+   */
   async createAuditLog(req: Request, res: Response) {
     try {
       const user = (req as any).user;
-      const payload = {
-        ...req.body,
-        user: req.body.user || user?.name || user?.email || 'System User',
-        userId: req.body.userId || user?.id
-      };
-      const data = await auditService.createAuditLog(payload);
+      const ipAddress = (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress || '127.0.0.1';
+      const userAgent = req.headers['user-agent'] || 'Unknown';
+
+      const data = await auditService.recordAuditLog({
+        actorId: user?.userId || user?.id,
+        actorEmail: user?.email || 'system@guruom.in',
+        action: req.body.action || 'CUSTOM_ACTION',
+        entityType: req.body.entityType || req.body.entity || 'general',
+        entityId: req.body.entityId || 'system',
+        beforeState: req.body.beforeState || null,
+        afterState: req.body.afterState || null,
+        ipAddress,
+        userAgent,
+        metadata: req.body.metadata || {}
+      });
+
       return res.status(201).json({ message: 'Audit log recorded successfully', data });
     } catch (err: any) {
       return res.status(400).json({ error: 'ValidationError', message: err.message });

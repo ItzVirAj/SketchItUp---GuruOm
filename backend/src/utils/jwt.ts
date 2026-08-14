@@ -15,13 +15,15 @@ export interface TokenPair {
   accessToken: string;
   refreshToken: string;
   expiresAt: Date;
+  familyId: string;
 }
 
 /**
  * Generates short-lived Access Token (15 min) and rotating Refresh Token (7 days).
  */
-export function generateTokens(user: JwtUserPayload): TokenPair {
+export function generateTokens(user: JwtUserPayload, existingFamilyId?: string): TokenPair {
   const tokenId = crypto.randomUUID();
+  const familyId = existingFamilyId || crypto.randomUUID();
 
   const accessToken = jwt.sign(
     {
@@ -45,7 +47,8 @@ export function generateTokens(user: JwtUserPayload): TokenPair {
     {
       sub: user.id,
       email: user.email,
-      jti: tokenId
+      jti: tokenId,
+      fid: familyId
     },
     ENV.JWT_REFRESH_SECRET,
     {
@@ -56,7 +59,8 @@ export function generateTokens(user: JwtUserPayload): TokenPair {
   return {
     accessToken,
     refreshToken,
-    expiresAt
+    expiresAt,
+    familyId
   };
 }
 

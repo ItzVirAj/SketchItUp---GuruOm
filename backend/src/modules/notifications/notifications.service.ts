@@ -133,9 +133,33 @@ const SEED_LOGS = [
   }
 ];
 
+import { publishTenantEvent, subscribeTenantEvents } from '../../lib/pubsub';
+
 export class NotificationsService {
   private db = getDbClient();
   private sseClients: Map<string, SSEClient> = new Map();
+  private isSubscribed = false;
+
+  constructor() {
+    this.initPubSubSubscription();
+  }
+
+  private async initPubSubSubscription() {
+    if (this.isSubscribed) return;
+    this.isSubscribed = true;
+
+    try {
+      await subscribeTenantEvents('t_default', ({ eventType, payload, originNode }) => {
+        // Forward cross-instance event to local SSE connections
+        const data = JSON.stringify(payload);
+        for (const [, client] of this.sseClients) {
+          try {
+            client.res.write(`event: ${eventType}\ndata: ${data}\n\n`);
+          } catch (_) {}
+        }
+      });
+    } catch (_) {}
+  }
 
   /**
    * Register a new client for Server-Sent Events stream.
@@ -165,6 +189,9 @@ export class NotificationsService {
         console.warn('Failed to push SSE to client:', client.id, err);
       }
     }
+
+    // Publish to other backend instances via Redis Pub/Sub
+    publishTenantEvent('t_default', 'notification', notification).catch(() => {});
   }
 
   /**
@@ -179,6 +206,9 @@ export class NotificationsService {
         console.warn(`Failed to push SSE event ${eventName} to client:`, client.id, err);
       }
     }
+
+    // Publish to other backend instances via Redis Pub/Sub
+    publishTenantEvent('t_default', eventName, payload).catch(() => {});
   }
 
   /**

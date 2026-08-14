@@ -196,6 +196,8 @@ export class OrdersService {
    */
   async updateOrderStatus(orderId: string, data: z.infer<typeof UpdateOrderStatusSchema>, actorName = 'System User') {
     const validated = UpdateOrderStatusSchema.parse(data);
+    const existing = await this.getOrderById(orderId);
+    const beforeState = existing ? { status: existing.status, progressStep: existing.progressStep } : null;
 
     const payload: any = {
       status: validated.status,
@@ -204,6 +206,11 @@ export class OrdersService {
     if (validated.progressStep !== undefined) {
       payload.progress_step = validated.progressStep;
     }
+
+    const afterState = {
+      status: validated.status,
+      progressStep: validated.progressStep ?? existing?.progressStep
+    };
 
     try {
       const { error } = await this.db
@@ -214,11 +221,15 @@ export class OrdersService {
       if (error) throw error;
 
       await auditService.recordAuditLog({
-        userName: actorName,
-        entity: `Customer Order`,
+        actorEmail: actorName.includes('@') ? actorName : 'operations@guruom.in',
+        entityType: 'order',
         entityId: orderId,
         action: 'UPDATE_ORDER_STATUS',
-        details: `Updated status of Order #${orderId} to ${validated.status}`
+        beforeState,
+        afterState,
+        metadata: {
+          details: `Updated status of Order #${orderId} from ${beforeState?.status || 'N/A'} to ${validated.status}`
+        }
       });
     } catch (err) {
       console.warn('Database updateOrderStatus error:', err);

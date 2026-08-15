@@ -15,7 +15,8 @@ export type ConsoleView =
   | 'payables'
   | 'masters'
   | 'users-audit'
-  | 'company-profile';
+  | 'company-profile'
+  | 'workflow-testing';
 
 export type UserRole = 'SUPER ADMIN' | 'OPERATOR' | 'QC_MANAGER' | 'DISPATCH_CLERK' | 'FINANCE_MANAGER';
 
@@ -93,6 +94,45 @@ export interface ShortageItem {
   availableQty: number;
   deficit: number;
   unit: string;
+}
+
+export type MovementType = 
+  | 'OPENING_BALANCE'
+  | 'GRN'
+  | 'PRODUCTION_CONSUMPTION'
+  | 'PRODUCTION_OUTPUT'
+  | 'DISPATCH'
+  | 'RETURN'
+  | 'ADJUSTMENT'
+  | 'TRANSFER_IN'
+  | 'TRANSFER_OUT'
+  | 'DAMAGE_WRITE_OFF'
+  | 'CORRECTION';
+
+export interface InventoryMovement {
+  id: string;
+  itemCode: string;
+  location: string;
+  quantityChange: number;
+  movementType: MovementType;
+  referenceId?: string | null;
+  referenceType: string;
+  balanceAfter: number;
+  actorId?: string | null;
+  actorEmail: string;
+  notes?: string | null;
+  metadata?: Record<string, any>;
+  createdAt: string;
+}
+
+export interface StockReconciliationReport {
+  itemCode: string;
+  description: string;
+  ledgerBalance: number;
+  cachedOnHand: number;
+  discrepancy: number;
+  status: 'MATCHED' | 'DISCREPANCY';
+  lastMovementAt?: string;
 }
 
 export interface JobCard {

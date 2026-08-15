@@ -24,7 +24,8 @@ import {
   PanelLeftOpen,
   Layers,
   CircleDollarSign,
-  Settings
+  Settings,
+  FlaskConical
 } from 'lucide-react';
 import { ConsoleView, UserRole, ConsoleUser } from '../../types/console';
 import { isViewAllowedForRole } from '../../utils/permissions';
@@ -130,6 +131,7 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
         { id: 'masters', label: 'Master Catalogs', icon: Database },
         { id: 'users-audit', label: 'Users & Audit Logs', icon: Users },
         { id: 'company-profile', label: 'Company Profile', icon: Building2 },
+        { id: 'workflow-testing', label: 'Workflow Testing', icon: FlaskConical },
       ]
     }
   ];

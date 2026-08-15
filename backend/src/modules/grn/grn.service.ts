@@ -1,6 +1,7 @@
 import { getDbClient } from '../../config/database';
 import { z } from 'zod';
 import { GoodsReceiptNoteSchema, UpdateGrnStatusSchema } from './grn.schema';
+import { inventoryMovementsService } from '../inventory/inventory_movements.service';
 
 const SEED_GRNS = [
   {
@@ -191,6 +192,24 @@ export class GrnService {
       }
     } catch (err) {
       console.warn('Database createGrn error:', err);
+    }
+
+    // Record inbound movements into immutable inventory ledger
+    if (validated.items && validated.items.length > 0) {
+      for (const item of validated.items) {
+        const qty = item.acceptedQty !== undefined ? item.acceptedQty : item.receivedQty;
+        if (qty > 0) {
+          await inventoryMovementsService.recordMovement({
+            itemCode: item.itemCode,
+            quantityChange: qty,
+            movementType: 'GRN',
+            referenceId: validated.grnNo,
+            referenceType: 'grn',
+            actorEmail: validated.receivedBy.includes('@') ? validated.receivedBy : 'warehouse@guruom.in',
+            notes: `Goods receipt from ${validated.vendorName} (Challan #${validated.challanNo})`
+          }).catch(() => {});
+        }
+      }
     }
 
     const createdGrn = { id: grnId, ...validated };

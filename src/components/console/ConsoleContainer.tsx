@@ -41,6 +41,7 @@ import { PayablesView } from './views/PayablesView';
 import { MastersView } from './views/MastersView';
 import { UsersAuditView } from './views/UsersAuditView';
 import { CompanyProfileView } from './views/CompanyProfileView';
+import { WorkflowTestingView } from './views/WorkflowTestingView';
 import { AccessRestrictedGate } from '../common/AccessRestrictedGate';
 import { SwitchUserModal } from '../common/SwitchUserModal';
 import { SecuritySessionsModal } from './modals/SecuritySessionsModal';
@@ -92,6 +93,8 @@ const getPathForView = (view: ConsoleView, orderId?: string | null): string => {
       return '/users-audit';
     case 'company-profile':
       return '/company-profile';
+    case 'workflow-testing':
+      return '/workflow-testing';
     default:
       return '/command-center';
   }
@@ -268,6 +271,8 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
       setCurrentView('users-audit');
     } else if (path === '/company-profile') {
       setCurrentView('company-profile');
+    } else if (path === '/workflow-testing') {
+      setCurrentView('workflow-testing');
     }
   }, [location.pathname, orders]);
 
@@ -583,6 +588,12 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
               profile={companyProfile}
               isDarkMode={isDarkMode}
               onSaveProfile={handleSaveCompanyProfile}
+            />
+          )}
+
+          {currentView === 'workflow-testing' && (
+            <WorkflowTestingView
+              isDarkMode={isDarkMode}
             />
           )}
               </>

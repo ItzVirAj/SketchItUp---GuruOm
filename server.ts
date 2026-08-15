@@ -24,6 +24,7 @@ import auditRoutes from './backend/src/modules/audit/audit.routes';
 import approvalsRoutes from './backend/src/modules/approvals/approvals.routes';
 import notificationsRoutes from './backend/src/modules/notifications/notifications.routes';
 import attachmentsRoutes from './backend/src/modules/attachments/attachments.routes';
+import testingRoutes from './backend/src/modules/testing/testing.routes';
 import { getRedisClient, closeRedis } from './backend/src/lib/redis';
 
 dotenv.config();
@@ -95,6 +96,9 @@ async function startServer() {
 
   // Mount Eighth Batch File Storage & Attachment Management
   app.use('/api/v1/attachments', attachmentsRoutes);
+
+  // Mount Temporary Developer Workflow Testing Dashboard Router
+  app.use('/api/v1/testing', testingRoutes);
 
   // Gemini Executive AI Copilot API
   app.post('/api/gemini/analyze', async (req, res) => {

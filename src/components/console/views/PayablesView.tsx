@@ -32,8 +32,11 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
   const handleDisbursementClick = (billNo: string) => {
-    if (onRecordDisbursement) onRecordDisbursement(billNo);
-    if (onRecordPayment) onRecordPayment(billNo);
+    if (onRecordDisbursement) {
+      onRecordDisbursement(billNo);
+    } else if (onRecordPayment) {
+      onRecordPayment(billNo);
+    }
   };
 
   const filtered = payables.filter(bill => {
@@ -245,7 +248,7 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                     </span>
                   </td>
                   <td className="py-4 px-5 text-center">
-                    {bill.balanceAmount > 0 && (
+                    {bill.status !== 'PAID' && bill.balanceAmount > 0 && (
                       <button
                         onClick={() => handleDisbursementClick(bill.billNo)}
                         className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer ${

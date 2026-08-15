@@ -18,7 +18,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, ConsoleView[]> = {
     'payables',
     'masters',
     'users-audit',
-    'company-profile'
+    'company-profile',
+    'workflow-testing'
   ],
   'OPERATOR': [
     'command-centre',

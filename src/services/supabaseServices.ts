@@ -426,6 +426,79 @@ export async function fetchShortages(): Promise<ShortageItem[]> {
 }
 
 // ----------------------------------------------------
+// Inventory Movement Ledger Services (via REST API)
+// ----------------------------------------------------
+export async function fetchInventoryMovements(filters?: {
+  itemCode?: string;
+  movementType?: string;
+  referenceId?: string;
+  from?: number;
+  limit?: number;
+}): Promise<{ movements: any[]; total: number }> {
+  try {
+    const res = await apiClient.get<any>('/inventory/movements', { params: filters });
+    if (res?.movements) {
+      return res;
+    }
+  } catch (err) {
+    console.warn('Backend fetchInventoryMovements fallback:', err);
+  }
+  return { movements: [], total: 0 };
+}
+
+export async function fetchItemStockHistory(code: string): Promise<any[]> {
+  try {
+    const res = await apiClient.get<{ itemCode: string; history: any[] }>(`/inventory/movements/${encodeURIComponent(code)}/history`);
+    if (res?.history) {
+      return res.history;
+    }
+  } catch (err) {
+    console.warn(`Backend fetchItemStockHistory(${code}) fallback:`, err);
+  }
+  return [];
+}
+
+export async function recordInventoryMovement(payload: {
+  itemCode: string;
+  location?: string;
+  quantityChange: number;
+  movementType: string;
+  referenceId?: string;
+  referenceType?: string;
+  notes?: string;
+}): Promise<any> {
+  try {
+    const res = await apiClient.post<any>('/inventory/movements', payload);
+    return res?.data;
+  } catch (err) {
+    console.warn('Backend recordInventoryMovement error:', err);
+    throw err;
+  }
+}
+
+export async function fetchStockReconciliation(): Promise<any[]> {
+  try {
+    const res = await apiClient.get<{ report: any[] }>('/inventory/reconciliation');
+    if (res?.report) {
+      return res.report;
+    }
+  } catch (err) {
+    console.warn('Backend fetchStockReconciliation fallback:', err);
+  }
+  return [];
+}
+
+export async function reverseInventoryMovement(id: string, reason: string): Promise<any> {
+  try {
+    const res = await apiClient.post<any>(`/inventory/movements/${id}/reverse`, { reason });
+    return res?.data;
+  } catch (err) {
+    console.warn(`Backend reverseInventoryMovement(${id}) error:`, err);
+    throw err;
+  }
+}
+
+// ----------------------------------------------------
 // Job Cards Services (via REST API)
 // ----------------------------------------------------
 export async function fetchJobCards(): Promise<JobCard[]> {
@@ -660,6 +733,13 @@ export async function insertCustomerInvoice(inv: CustomerInvoice): Promise<void>
 }
 
 export async function payInvoice(invoiceNo: string, paymentAmount?: number): Promise<void> {
+  const local = initialInvoices.find(i => i.id === invoiceNo || i.invoiceNo === invoiceNo);
+  if (local) {
+    const payAmt = paymentAmount !== undefined ? paymentAmount : local.balanceAmount;
+    local.paidAmount = Math.min(local.totalAmount, local.paidAmount + payAmt);
+    local.balanceAmount = Math.max(0, local.totalAmount - local.paidAmount);
+    local.status = local.balanceAmount <= 0 ? 'PAID' : 'PARTIAL';
+  }
   try {
     await apiClient.post(`/invoices/${encodeURIComponent(invoiceNo)}/pay`, {
       paymentAmount,
@@ -701,6 +781,13 @@ export async function insertVendorBill(bill: VendorBill): Promise<void> {
 }
 
 export async function payVendorBill(billNo: string, paymentAmount?: number): Promise<void> {
+  const local = initialPayables.find(b => b.id === billNo || b.billNo === billNo);
+  if (local) {
+    const payAmt = paymentAmount !== undefined ? paymentAmount : local.balanceAmount;
+    local.paidAmount = Math.min(local.amount, local.paidAmount + payAmt);
+    local.balanceAmount = Math.max(0, local.amount - local.paidAmount);
+    local.status = local.balanceAmount <= 0 ? 'PAID' : 'OPEN';
+  }
   try {
     await apiClient.post(`/vendor-bills/${encodeURIComponent(billNo)}/disburse`, {
       paymentAmount,

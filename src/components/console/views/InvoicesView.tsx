@@ -243,7 +243,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                     </span>
                   </td>
                   <td className="py-4 px-5 text-center">
-                    {inv.balanceAmount > 0 && onRecordPayment && (
+                    {inv.status !== 'PAID' && inv.balanceAmount > 0 && onRecordPayment && (
                       <button
                         onClick={() => onRecordPayment(inv.invoiceNo)}
                         className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer ${

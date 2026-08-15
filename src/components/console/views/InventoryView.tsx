@@ -21,14 +21,21 @@ import {
   ChevronRight,
   ShieldCheck,
   XCircle,
-  FileText
+  FileText,
+  History,
+  RotateCcw,
+  FileDiff,
+  TrendingUp
 } from 'lucide-react';
 import { 
   StockItem, 
   ShortageItem, 
   PurchaseOrder, 
   GoodsReceiptNote, 
-  BillOfMaterials 
+  BillOfMaterials,
+  InventoryMovement,
+  StockReconciliationReport,
+  MovementType
 } from '../../../types/console';
 import { 
   fetchPurchaseOrders, 
@@ -38,7 +45,12 @@ import {
   insertGrn,
   updateGrnStatus,
   fetchBOMs,
-  saveBOM
+  saveBOM,
+  fetchInventoryMovements,
+  fetchItemStockHistory,
+  recordInventoryMovement,
+  fetchStockReconciliation,
+  reverseInventoryMovement
 } from '../../../services/supabaseServices';
 import { useAuth } from '../../../context/AuthContext';
 
@@ -56,16 +68,22 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   onAdjustStock
 }) => {
   const { user } = useAuth();
-  const [subTab, setSubTab] = useState<'stock' | 'shortages' | 'purchases' | 'grn' | 'bom'>('stock');
+  const [subTab, setSubTab] = useState<'stock' | 'shortages' | 'purchases' | 'grn' | 'bom' | 'movements' | 'reconciliation'>('stock');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStockForAdjust, setSelectedStockForAdjust] = useState<StockItem | null>(null);
   const [adjustQty, setAdjustQty] = useState<number>(0);
   const [adjustReason, setAdjustReason] = useState<string>('Physical Audit Adjustment');
 
-  // Async states for Purchasing, GRN, and BOM
+  // Async states for Purchasing, GRN, BOM, Movements & Reconciliation
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [grnList, setGrnList] = useState<GoodsReceiptNote[]>([]);
   const [boms, setBoms] = useState<BillOfMaterials[]>([]);
+  const [movements, setMovements] = useState<InventoryMovement[]>([]);
+  const [reconciliationReport, setReconciliationReport] = useState<StockReconciliationReport[]>([]);
+  const [movementTypeFilter, setMovementTypeFilter] = useState<string>('ALL');
+  const [selectedItemHistory, setSelectedItemHistory] = useState<{ itemCode: string; description?: string; history: InventoryMovement[] } | null>(null);
+  const [selectedMovementForCorrection, setSelectedMovementForCorrection] = useState<InventoryMovement | null>(null);
+  const [correctionReason, setCorrectionReason] = useState<string>('');
   const [isLoadingModuleData, setIsLoadingModuleData] = useState(false);
   const [expandedBomCode, setExpandedBomCode] = useState<string | null>(null);
 
@@ -92,11 +110,46 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       } else if (subTab === 'bom') {
         const data = await fetchBOMs();
         setBoms(data);
+      } else if (subTab === 'movements') {
+        const res = await fetchInventoryMovements({ limit: 100 });
+        setMovements(res.movements || []);
+      } else if (subTab === 'reconciliation') {
+        const data = await fetchStockReconciliation();
+        setReconciliationReport(data);
       }
     } catch (err) {
       console.warn('Error loading module data:', err);
     } finally {
       setIsLoadingModuleData(false);
+    }
+  };
+
+  const handleOpenItemHistory = async (stk: StockItem) => {
+    try {
+      const history = await fetchItemStockHistory(stk.code);
+      setSelectedItemHistory({
+        itemCode: stk.code,
+        description: stk.description,
+        history
+      });
+    } catch (err) {
+      console.warn('Failed to load item stock history:', err);
+    }
+  };
+
+  const handleReverseMovement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedMovementForCorrection) return;
+    setActionError(null);
+    setActionSuccess(null);
+    try {
+      await reverseInventoryMovement(selectedMovementForCorrection.id, correctionReason || 'Physical stock audit correction');
+      setActionSuccess(`Reversal movement appended for ${selectedMovementForCorrection.id}`);
+      setSelectedMovementForCorrection(null);
+      setCorrectionReason('');
+      loadModuleData();
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to append correction movement');
     }
   };
 
@@ -297,6 +350,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
           {[
             { id: 'stock', label: 'Stock Master' },
+            { id: 'movements', label: 'Movement Ledger' },
+            { id: 'reconciliation', label: 'Stock Reconciliation' },
             { id: 'shortages', label: 'Material Shortages' },
             { id: 'purchases', label: 'Purchase Orders' },
             { id: 'grn', label: 'Goods-in (GRN)' },
@@ -396,14 +451,25 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                         </span>
                       </td>
                       <td className="py-4 px-5 text-center">
-                        <button
-                          onClick={() => setSelectedStockForAdjust(stk)}
-                          className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer ${
-                            isDarkMode ? 'bg-[#5B75F8]/10 text-[#7B92FF] hover:bg-[#5B75F8]/20 border border-[#5B75F8]/30' : 'bg-[#5B75F8]/10 text-[#5B75F8] hover:bg-[#5B75F8]/20 border border-[#5B75F8]/20'
-                          }`}
-                        >
-                          Adjust
-                        </button>
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => setSelectedStockForAdjust(stk)}
+                            className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer ${
+                              isDarkMode ? 'bg-[#5B75F8]/10 text-[#7B92FF] hover:bg-[#5B75F8]/20 border border-[#5B75F8]/30' : 'bg-[#5B75F8]/10 text-[#5B75F8] hover:bg-[#5B75F8]/20 border border-[#5B75F8]/20'
+                            }`}
+                          >
+                            Adjust
+                          </button>
+                          <button
+                            onClick={() => handleOpenItemHistory(stk)}
+                            title="View Append-Only Movement History"
+                            className={`p-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer ${
+                              isDarkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                            }`}
+                          >
+                            <History className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -679,6 +745,233 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* 5. Append-Only Inventory Movements Ledger Sub-View */}
+      {subTab === 'movements' && (
+        <div className="space-y-4">
+          {/* Security & Immutability Badge Banner */}
+          <div className={`p-4 rounded-3xl border flex items-center justify-between gap-4 ${
+            isDarkMode ? 'bg-slate-900/80 border-slate-800/80 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+          }`}>
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-2xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="font-bold text-xs">Append-Only Inventory Ledger (Single Source of Truth)</h4>
+                <p className="text-[11px] text-slate-400 font-mono">
+                  Stock is calculated as the sum of immutable movement entries. Updates/deletions are locked at the database trigger level.
+                </p>
+              </div>
+            </div>
+
+            {/* Filter Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+              {['ALL', 'OPENING_BALANCE', 'GRN', 'PRODUCTION_CONSUMPTION', 'PRODUCTION_OUTPUT', 'DISPATCH', 'ADJUSTMENT', 'CORRECTION'].map(t => (
+                <button
+                  key={t}
+                  onClick={() => setMovementTypeFilter(t)}
+                  className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    movementTypeFilter === t
+                      ? 'bg-[#5B75F8] text-white shadow-xs'
+                      : isDarkMode ? 'bg-slate-800/80 text-slate-400 hover:text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                  }`}
+                >
+                  {t.replace('_', ' ')}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className={`rounded-3xl border overflow-hidden transition-all shadow-xl ${
+            isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200'
+          }`}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse font-mono">
+                <thead>
+                  <tr className={`border-b font-bold uppercase tracking-wider text-[10px] ${
+                    isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'
+                  }`}>
+                    <th className="py-3.5 px-4">Timestamp</th>
+                    <th className="py-3.5 px-4">Part Code</th>
+                    <th className="py-3.5 px-4">Movement Type</th>
+                    <th className="py-3.5 px-4 text-right">Qty Delta</th>
+                    <th className="py-3.5 px-4 text-right">Balance After</th>
+                    <th className="py-3.5 px-4">Reference Doc</th>
+                    <th className="py-3.5 px-4">Actor</th>
+                    <th className="py-3.5 px-4">Notes</th>
+                    <th className="py-3.5 px-4 text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
+                  {movements
+                    .filter(m => movementTypeFilter === 'ALL' || m.movementType === movementTypeFilter)
+                    .filter(m => !searchQuery || m.itemCode.toLowerCase().includes(searchQuery.toLowerCase()) || m.referenceId?.toLowerCase().includes(searchQuery.toLowerCase()))
+                    .map((mov) => {
+                      const isInbound = mov.quantityChange > 0;
+                      const isCorrection = mov.movementType === 'CORRECTION';
+                      const isAdjustment = mov.movementType === 'ADJUSTMENT';
+
+                      return (
+                        <tr key={mov.id} className={isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}>
+                          <td className="py-3 px-4 text-slate-400 text-[11px]">
+                            {new Date(mov.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                          </td>
+                          <td className="py-3 px-4 font-bold text-[#5B75F8] dark:text-[#7B92FF]">
+                            {mov.itemCode}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase border ${
+                              isCorrection
+                                ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                                : isAdjustment
+                                  ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                                  : isInbound
+                                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                                    : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                            }`}>
+                              {mov.movementType}
+                            </span>
+                          </td>
+                          <td className={`py-3 px-4 text-right font-bold text-xs ${
+                            isCorrection
+                              ? 'text-amber-400'
+                              : isInbound ? 'text-emerald-400' : 'text-rose-400'
+                          }`}>
+                            {isInbound ? `+${mov.quantityChange}` : mov.quantityChange}
+                          </td>
+                          <td className={`py-3 px-4 text-right font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                            {mov.balanceAfter}
+                          </td>
+                          <td className="py-3 px-4 text-slate-300">
+                            {mov.referenceId ? (
+                              <span className="px-2 py-0.5 rounded bg-slate-800 text-[10px] text-slate-300 border border-slate-700">
+                                {mov.referenceId}
+                              </span>
+                            ) : (
+                              <span className="text-slate-500">—</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-slate-400 text-[11px] truncate max-w-[140px]" title={mov.actorEmail}>
+                            {mov.actorEmail}
+                          </td>
+                          <td className="py-3 px-4 text-slate-400 text-[11px] truncate max-w-[200px]" title={mov.notes || ''}>
+                            {mov.notes || '—'}
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            {mov.movementType !== 'CORRECTION' && (
+                              <button
+                                onClick={() => {
+                                  setSelectedMovementForCorrection(mov);
+                                  setCorrectionReason(`Offset error in movement ${mov.id}`);
+                                }}
+                                title="Record Offset Reversal Movement"
+                                className="px-2 py-1 rounded-lg text-[10px] font-bold bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/30 cursor-pointer"
+                              >
+                                Reversal
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  {movements.length === 0 && (
+                    <tr>
+                      <td colSpan={9} className="py-8 text-center text-slate-500">
+                        No ledger movements recorded yet. Movements automatically generate from GRNs, Job Cards, and Dispatches.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6. Stock Reconciliation & Discrepancy Audit Sub-View */}
+      {subTab === 'reconciliation' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className={`p-4 rounded-3xl border ${isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'}`}>
+              <div className="text-xs text-slate-400 font-mono">Audited Items</div>
+              <div className="text-2xl font-bold font-mono mt-1 text-[#5B75F8]">{reconciliationReport.length}</div>
+            </div>
+            <div className={`p-4 rounded-3xl border ${isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'}`}>
+              <div className="text-xs text-slate-400 font-mono">100% Ledger Matched</div>
+              <div className="text-2xl font-bold font-mono mt-1 text-emerald-400">
+                {reconciliationReport.filter(r => r.status === 'MATCHED').length}
+              </div>
+            </div>
+            <div className={`p-4 rounded-3xl border ${isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'}`}>
+              <div className="text-xs text-slate-400 font-mono">Discrepancies Flagged</div>
+              <div className="text-2xl font-bold font-mono mt-1 text-rose-400">
+                {reconciliationReport.filter(r => r.status === 'DISCREPANCY').length}
+              </div>
+            </div>
+          </div>
+
+          <div className={`rounded-3xl border overflow-hidden transition-all shadow-xl ${
+            isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200'
+          }`}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse font-mono">
+                <thead>
+                  <tr className={`border-b font-bold uppercase tracking-wider text-[10px] ${
+                    isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'
+                  }`}>
+                    <th className="py-3.5 px-5">Part Code</th>
+                    <th className="py-3.5 px-5">Description</th>
+                    <th className="py-3.5 px-5 text-right">Ledger Derived Sum</th>
+                    <th className="py-3.5 px-5 text-right">Physical / Cache Count</th>
+                    <th className="py-3.5 px-5 text-right">Discrepancy (Δ)</th>
+                    <th className="py-3.5 px-5 text-center">Status</th>
+                    <th className="py-3.5 px-5 text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
+                  {reconciliationReport.map((rec) => {
+                    const isDiscrepancy = rec.status === 'DISCREPANCY';
+                    return (
+                      <tr key={rec.itemCode} className={isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}>
+                        <td className="py-4 px-5 font-bold text-[#5B75F8] dark:text-[#7B92FF]">{rec.itemCode}</td>
+                        <td className="py-4 px-5 text-slate-200 font-sans font-medium">{rec.description}</td>
+                        <td className="py-4 px-5 text-right font-bold text-emerald-400">{rec.ledgerBalance}</td>
+                        <td className={`py-4 px-5 text-right font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{rec.cachedOnHand}</td>
+                        <td className={`py-4 px-5 text-right font-bold ${isDiscrepancy ? 'text-rose-400' : 'text-emerald-400'}`}>
+                          {rec.discrepancy > 0 ? `+${rec.discrepancy}` : rec.discrepancy}
+                        </td>
+                        <td className="py-4 px-5 text-center">
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-bold uppercase border ${
+                            isDiscrepancy
+                              ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                              : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${isDiscrepancy ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+                            <span>{rec.status}</span>
+                          </span>
+                        </td>
+                        <td className="py-4 px-5 text-center">
+                          <button
+                            onClick={() => {
+                              onAdjustStock(rec.itemCode, rec.discrepancy, 'Reconciliation Correction');
+                            }}
+                            className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer ${
+                              isDarkMode ? 'bg-[#5B75F8]/10 text-[#7B92FF] hover:bg-[#5B75F8]/20 border border-[#5B75F8]/30' : 'bg-[#5B75F8]/10 text-[#5B75F8] hover:bg-[#5B75F8]/20 border border-[#5B75F8]/20'
+                            }`}
+                          >
+                            Reconcile
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1115,6 +1408,159 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               <div className="pt-4 border-t border-slate-800 flex justify-end gap-3 font-sans">
                 <button type="button" onClick={() => setIsCreateBomOpen(false)} className="px-4 py-2 rounded-xl border border-slate-800 text-slate-300">Cancel</button>
                 <button type="submit" className="px-5 py-2 rounded-xl bg-[#5B75F8] hover:bg-[#4A64E7] text-white font-bold">Save BOM</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Item Stock Movement History (Chronological Ledger) */}
+      {selectedItemHistory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md font-sans">
+          <div className={`relative w-full max-w-3xl rounded-3xl border p-7 space-y-6 shadow-2xl transition-all ${
+            isDarkMode 
+              ? 'bg-slate-900/95 border-slate-800/80 text-white backdrop-blur-2xl' 
+              : 'bg-white border-slate-200 text-slate-900 shadow-2xl'
+          }`}>
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-[#5B75F8]/15 text-[#7B92FF] border border-[#5B75F8]/30">
+                  <History className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base font-mono">
+                    Stock Movement History — {selectedItemHistory.itemCode}
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    {selectedItemHistory.description || 'Precision Engineered Component'} • Chronological Running Balance
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setSelectedItemHistory(null)} 
+                className="p-2 rounded-2xl border border-slate-800 text-slate-400 hover:text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="max-h-[60vh] overflow-y-auto space-y-2 pr-1 font-mono text-xs">
+              {selectedItemHistory.history.map((h) => {
+                const isInbound = h.quantityChange > 0;
+                const isCorrection = h.movementType === 'CORRECTION';
+                const isAdjustment = h.movementType === 'ADJUSTMENT';
+
+                return (
+                  <div 
+                    key={h.id}
+                    className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 ${
+                      isDarkMode ? 'bg-slate-950/70 border-slate-800/80' : 'bg-slate-50 border-slate-200'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-xl border text-[10px] font-bold uppercase ${
+                        isCorrection 
+                          ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                          : isAdjustment
+                            ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                            : isInbound
+                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                              : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                      }`}>
+                        {h.movementType}
+                      </div>
+                      <div>
+                        <div className="font-bold text-slate-200 flex items-center gap-2">
+                          <span className={isInbound ? 'text-emerald-400' : 'text-rose-400'}>
+                            {isInbound ? `+${h.quantityChange}` : h.quantityChange}
+                          </span>
+                          {h.referenceId && (
+                            <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                              Ref: {h.referenceId}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-slate-400 mt-0.5">
+                          {h.notes || 'Ledger event recorded'} • <span className="text-slate-500">{h.actorEmail}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <div className="text-[10px] text-slate-500 uppercase font-bold">Running Balance</div>
+                      <div className="text-sm font-bold text-white mt-0.5">{h.balanceAfter} Units</div>
+                      <div className="text-[10px] text-slate-500 mt-0.5">
+                        {new Date(h.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {selectedItemHistory.history.length === 0 && (
+                <div className="p-8 text-center text-slate-500">
+                  No historical movements found for this SKU.
+                </div>
+              )}
+            </div>
+
+            <div className="pt-4 border-t border-slate-800 flex justify-end">
+              <button 
+                onClick={() => setSelectedItemHistory(null)}
+                className="px-5 py-2 rounded-xl bg-slate-800 text-white font-bold text-xs cursor-pointer hover:bg-slate-700"
+              >
+                Close Ledger
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Reverse / Correct Movement */}
+      {selectedMovementForCorrection && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md font-sans">
+          <div className="relative w-full max-w-md rounded-3xl border border-slate-800 bg-slate-900/95 p-7 space-y-6 text-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                  <RotateCcw className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base">Append Correction Movement</h3>
+                  <p className="text-xs text-slate-400">Offset target movement without mutating history</p>
+                </div>
+              </div>
+              <button onClick={() => setSelectedMovementForCorrection(null)} className="p-2 rounded-2xl border border-slate-800 text-slate-400 hover:text-white cursor-pointer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleReverseMovement} className="space-y-4 font-mono text-xs">
+              <div className="p-3 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-1.5">
+                <div className="text-[10px] text-slate-400 uppercase font-bold">Target Movement</div>
+                <div className="text-slate-200 font-bold">{selectedMovementForCorrection.id} ({selectedMovementForCorrection.itemCode})</div>
+                <div className="text-amber-400 text-[11px]">
+                  Original: {selectedMovementForCorrection.quantityChange > 0 ? `+${selectedMovementForCorrection.quantityChange}` : selectedMovementForCorrection.quantityChange} • Offset: {-selectedMovementForCorrection.quantityChange > 0 ? `+${-selectedMovementForCorrection.quantityChange}` : -selectedMovementForCorrection.quantityChange}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Reason for Reversal / Correction *</label>
+                <input 
+                  type="text" 
+                  required 
+                  value={correctionReason} 
+                  onChange={(e) => setCorrectionReason(e.target.value)}
+                  placeholder="e.g. Inward counting error or damaged box returned"
+                  className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-white outline-none"
+                />
+              </div>
+
+              <div className="pt-4 border-t border-slate-800 flex justify-end gap-3 font-sans">
+                <button type="button" onClick={() => setSelectedMovementForCorrection(null)} className="px-4 py-2 rounded-xl border border-slate-800 text-slate-300 cursor-pointer">Cancel</button>
+                <button type="submit" className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold cursor-pointer">
+                  Append Correction
+                </button>
               </div>
             </form>
           </div>

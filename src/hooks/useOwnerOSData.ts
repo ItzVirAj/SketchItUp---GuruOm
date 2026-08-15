@@ -322,6 +322,17 @@ export function useOwnerOSData(currentUser?: SystemUser) {
   };
 
   const handleRecordInvoicePayment = async (invoiceNo: string) => {
+    setInvoices(prev => prev.map(inv => {
+      if (inv.id === invoiceNo || inv.invoiceNo === invoiceNo) {
+        return {
+          ...inv,
+          paidAmount: inv.totalAmount,
+          balanceAmount: 0,
+          status: 'PAID'
+        };
+      }
+      return inv;
+    }));
     await payInvoice(invoiceNo);
     await addAuditLog('invoice', 'payment', `Recorded payment for invoice #${invoiceNo}`);
     await loadAllData();
@@ -334,6 +345,17 @@ export function useOwnerOSData(currentUser?: SystemUser) {
   };
 
   const handleRecordPayablePayment = async (billNo: string) => {
+    setPayables(prev => prev.map(bill => {
+      if (bill.id === billNo || bill.billNo === billNo) {
+        return {
+          ...bill,
+          paidAmount: bill.amount,
+          balanceAmount: 0,
+          status: 'PAID'
+        };
+      }
+      return bill;
+    }));
     await payVendorBill(billNo);
     await addAuditLog('payable', 'payment', `Recorded payment for vendor bill #${billNo}`);
     await loadAllData();

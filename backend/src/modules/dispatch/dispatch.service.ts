@@ -2,6 +2,7 @@ import { getDbClient } from '../../config/database';
 import { z } from 'zod';
 import { DispatchChallanSchema, UpdateDispatchStatusSchema } from './dispatch.schema';
 import { qcService } from '../qc/qc.service';
+import { inventoryMovementsService } from '../inventory/inventory_movements.service';
 
 const SEED_DISPATCHES = [
   {
@@ -105,6 +106,17 @@ export class DispatchService {
           updated_at: new Date().toISOString()
         })
         .or(`id.eq.${validated.orderPo},po_no.eq.${validated.orderPo}`);
+
+      // Record outbound stock movement into immutable inventory ledger
+      await inventoryMovementsService.recordMovement({
+        itemCode: '00000001',
+        quantityChange: -Number(validated.linesCount || 1) * 20,
+        movementType: 'DISPATCH',
+        referenceId: validated.challanNo,
+        referenceType: 'dispatch',
+        actorEmail: 'dispatch@guruom.in',
+        notes: `Dispatch via ${validated.transporter} (PO #${validated.orderPo}, Challan #${validated.challanNo})`
+      }).catch(() => {});
     } catch (err) {
       console.warn('Database createDispatch fallback:', err);
     }

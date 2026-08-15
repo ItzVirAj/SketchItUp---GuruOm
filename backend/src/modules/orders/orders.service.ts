@@ -178,11 +178,16 @@ export class OrdersService {
       }
 
       await auditService.recordAuditLog({
-        userName: actorName,
-        entity: `Customer Order`,
+        actorEmail: actorName.includes('@') ? actorName : 'sales@guruom.in',
+        entityType: 'order',
         entityId: validated.poNo,
         action: 'CREATE_ORDER',
-        details: `Created new Customer Order PO #${validated.poNo} for ${validated.customerName} (₹${validated.grossAmount.toLocaleString()})`
+        afterState: {
+          poNo: validated.poNo,
+          customerName: validated.customerName,
+          grossAmount: validated.grossAmount,
+          status: validated.status
+        }
       });
     } catch (err) {
       console.warn('Database createOrder error:', err);

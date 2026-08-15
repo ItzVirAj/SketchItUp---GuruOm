@@ -1,4 +1,5 @@
 # ---- Dependencies ----
+AGENTS.md
 node_modules/
 .pnp
 .pnp.js
@@ -65,6 +66,7 @@ supabase/.temp/
 .parcel-cache/
 
 # ---- Package manager locks (uncomment ONE if you want to ignore it) ----
-# package-lock.json
-# yarn.lock
-# pnpm-lock.yaml
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.aider*

@@ -13,6 +13,9 @@ import {
   CustomerInvoice,
   VendorBill,
   MasterItem,
+  CustomerMaster,
+  VendorMaster,
+  MachineMaster,
   SystemUser,
   AuditLogEntry,
   CompanyProfile,
@@ -31,12 +34,14 @@ import {
   insertMaster,
   fetchOrders,
   insertOrder,
+  updateOrder,
+  confirmOrder,
   updateOrderStatus,
   fetchStock,
   adjustStockItem,
   fetchShortages,
   fetchJobCards,
-  insertJobCard,
+  createJobCardForOrder,
   fetchProductionLogs,
   insertProductionLogAndQC,
   fetchQCQueue,
@@ -72,47 +77,6 @@ import {
 } from '../services/supabaseServices';
 import { getAccessToken } from '../lib/apiClient';
 
-import {
-  initialOrders,
-  initialStock,
-  initialShortages,
-  initialJobCards,
-  initialFinishedGoods,
-  initialOutworkSendOuts,
-  initialProductionLogs,
-  initialQCQueue,
-  initialPDIQueue,
-  initialDispatches,
-  initialInvoices,
-  initialPayables,
-  initialMasters,
-  initialCustomers,
-  initialVendors,
-  initialMachines,
-  initialUsers,
-  initialAuditLogs,
-  initialCompanyProfile
-} from '../data/consoleData';
-import { CustomerMaster, VendorMaster, MachineMaster } from '../types/console';
-
-const getInitialCompanyProfile = (): CompanyProfile => {
-  try {
-    const saved = localStorage.getItem('stratum_company_profile');
-    if (saved) return JSON.parse(saved);
-  } catch (e) {
-    console.error('Failed to parse saved company profile:', e);
-  }
-  return {
-    legalName: 'GuruOm Industries LLP',
-    address: 'Plot 42, GIDC Industrial Estate, Metoda, Rajkot, Gujarat - 360021',
-    phone: '+91 98250 12345',
-    email: 'contact@guruom.in',
-    gstin: '24AAAFG1234C1Z9',
-    pan: 'AAAFG1234C',
-    state: 'Gujarat',
-    stateCode: '24'
-  };
-};
 
 export function useOwnerOSData(currentUser?: SystemUser) {
   const [loading, setLoading] = useState<boolean>(true);
@@ -129,12 +93,12 @@ export function useOwnerOSData(currentUser?: SystemUser) {
   const [invoices, setInvoices] = useState<CustomerInvoice[]>([]);
   const [payables, setPayables] = useState<VendorBill[]>([]);
   const [masters, setMasters] = useState<MasterItem[]>([]);
-  const [customers, setCustomers] = useState<CustomerMaster[]>(initialCustomers);
-  const [vendors, setVendors] = useState<VendorMaster[]>(initialVendors);
-  const [machines, setMachines] = useState<MachineMaster[]>(initialMachines);
-  const [users, setUsers] = useState<SystemUser[]>(initialUsers);
-  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(initialAuditLogs);
-  const [companyProfile, setCompanyProfile] = useState<CompanyProfile>(getInitialCompanyProfile);
+  const [customers, setCustomers] = useState<CustomerMaster[]>([]);
+  const [vendors, setVendors] = useState<VendorMaster[]>([]);
+  const [machines, setMachines] = useState<MachineMaster[]>([]);
+  const [users, setUsers] = useState<SystemUser[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
+  const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
   const [approvals, setApprovals] = useState<PendingApproval[]>([]);
   const [lastSynced, setLastSynced] = useState<string>(() => new Date().toLocaleString('en-IN', { hour12: true }));
 
@@ -217,6 +181,11 @@ export function useOwnerOSData(currentUser?: SystemUser) {
   useEffect(() => {
     loadAllData();
 
+    // 3-Minute Background Reconciliation
+    const reconciliationInterval = setInterval(() => {
+      loadAllData();
+    }, 3 * 60 * 1000);
+
     const token = getAccessToken();
     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
     const streamUrl = `${apiBaseUrl}/notifications/stream${token ? `?token=${encodeURIComponent(token)}` : ''}`;
@@ -225,6 +194,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     try {
       eventSource = new EventSource(streamUrl, { withCredentials: true });
 
+      // User events
       eventSource.addEventListener('user_created', (event: MessageEvent) => {
         try {
           const newUser = JSON.parse(event.data);
@@ -245,9 +215,202 @@ export function useOwnerOSData(currentUser?: SystemUser) {
           setUsers(prev => prev.filter(u => u.id !== deleted.id));
         } catch (_) {}
       });
+
+      // Order events
+      eventSource.addEventListener('order_created', (event: MessageEvent) => {
+        try {
+          const newOrder = JSON.parse(event.data);
+          setOrders(prev => [newOrder, ...prev.filter(o => o.id !== newOrder.id && o.poNo !== newOrder.poNo)]);
+        } catch (_) {}
+      });
+
+      eventSource.addEventListener('order_updated', (event: MessageEvent) => {
+        try {
+          const updated = JSON.parse(event.data);
+          setOrders(prev => prev.map(o => (o.id === updated.id || o.poNo === updated.poNo || o.id === updated.poNo) ? { ...o, ...updated } : o));
+        } catch (_) {}
+      });
+
+      eventSource.addEventListener('order_transitioned', (event: MessageEvent) => {
+        try {
+          const payload = JSON.parse(event.data);
+          setOrders(prev => prev.map(o => {
+            if (o.id === payload.orderId || o.poNo === payload.poNo) {
+              return {
+                ...o,
+                status: payload.status || payload.newStage,
+                stage: payload.stage || payload.newStage,
+                progressStep: payload.progressStep ?? o.progressStep,
+                heatLotNumber: payload.heatLotNumber || o.heatLotNumber
+              };
+            }
+            return o;
+          }));
+        } catch (_) {}
+      });
+
+      // Inventory & Shortage events
+      eventSource.addEventListener('stock_updated', () => {
+        fetchStock().then(setStock).catch(() => {});
+      });
+
+      eventSource.addEventListener('shortage_updated', () => {
+        fetchShortages().then(setShortages).catch(() => {});
+      });
+
+      eventSource.addEventListener('finished_goods_updated', () => {
+        fetchFinishedGoods().then(setFinishedGoods).catch(() => {});
+      });
+
+      // GRN events
+      eventSource.addEventListener('grn_created', () => {
+        fetchStock().then(setStock).catch(() => {});
+        fetchOrders().then(setOrders).catch(() => {});
+      });
+
+      // Item Catalog events — Stock Master mirrors the Masters catalog in realtime
+      eventSource.addEventListener('master_item_created', (event: MessageEvent) => {
+        try {
+          const newItem = JSON.parse(event.data);
+          setMasters(prev => prev.some(m => m.code === newItem.code) ? prev : [newItem, ...prev]);
+        } catch (_) {}
+        fetchMasters().then(setMasters).catch(() => {});
+      });
+
+      // Audit trail events — every backend-recorded system change streams in realtime
+      eventSource.addEventListener('audit_log_created', (event: MessageEvent) => {
+        try {
+          const record = JSON.parse(event.data);
+          const entry = {
+            id: record.id,
+            when: record.created_at ? new Date(record.created_at).toLocaleString('en-IN', { hour12: true }) : 'Just now',
+            user: record.actorEmail || record.actor_email || 'System',
+            actorId: record.actorId || record.actor_id,
+            actorEmail: record.actorEmail || record.actor_email,
+            entity: record.entityType || record.entity_type || record.entity || 'General',
+            entityType: record.entityType || record.entity_type,
+            entityId: record.entityId || record.entity_id,
+            action: record.action,
+            details: record.metadata?.details || record.details || `${record.action} on ${record.entityType || 'item'}`,
+            beforeState: record.beforeState || record.before_state,
+            afterState: record.afterState || record.after_state,
+            ipAddress: record.ipAddress || record.ip_address,
+            userAgent: record.userAgent || record.user_agent,
+            metadata: record.metadata,
+            createdAt: record.created_at
+          };
+          setAuditLogs(prev => prev.some(l => l.id === entry.id) ? prev : [entry, ...prev]);
+        } catch (_) {}
+      });
+
+      eventSource.addEventListener('grn_updated', () => {
+        fetchStock().then(setStock).catch(() => {});
+      });
+
+      // Production & Job Card events
+      eventSource.addEventListener('job_card_created', (event: MessageEvent) => {
+        try {
+          const newJob = JSON.parse(event.data);
+          setJobCards(prev => [newJob, ...prev.filter(j => j.id !== newJob.id && j.jobNo !== newJob.jobNo)]);
+        } catch (_) {}
+      });
+
+      eventSource.addEventListener('job_card_updated', (event: MessageEvent) => {
+        try {
+          const updatedJob = JSON.parse(event.data);
+          setJobCards(prev => prev.map(j => (j.id === updatedJob.id || j.jobNo === updatedJob.jobNo) ? { ...j, ...updatedJob } : j));
+        } catch (_) {}
+      });
+
+      eventSource.addEventListener('operation_completed', () => {
+        fetchJobCards().then(setJobCards).catch(() => {});
+        fetchQCQueue().then(setQcQueue).catch(() => {});
+      });
+
+      // QC & PDI events
+      eventSource.addEventListener('qc_created', (event: MessageEvent) => {
+        try {
+          const newQc = JSON.parse(event.data);
+          setQcQueue(prev => [newQc, ...prev.filter(q => q.id !== newQc.id && q.jobNo !== newQc.jobNo)]);
+        } catch (_) {}
+      });
+
+      eventSource.addEventListener('qc_updated', (event: MessageEvent) => {
+        try {
+          const updatedQc = JSON.parse(event.data);
+          setQcQueue(prev => prev.map(q => q.id === updatedQc.id ? { ...q, ...updatedQc } : q));
+        } catch (_) {}
+      });
+
+      eventSource.addEventListener('pdi_created', (event: MessageEvent) => {
+        try {
+          const newPdi = JSON.parse(event.data);
+          setPdiQueue(prev => [newPdi, ...prev.filter(p => p.id !== newPdi.id && !(p.orderPo === newPdi.orderPo && p.jobNo === newPdi.jobNo))]);
+        } catch (_) {}
+      });
+
+      eventSource.addEventListener('pdi_updated', (event: MessageEvent) => {
+        try {
+          const updatedPdi = JSON.parse(event.data);
+          setPdiQueue(prev => prev.map(p => p.id === updatedPdi.id ? { ...p, ...updatedPdi } : p));
+        } catch (_) {}
+      });
+
+      // Dispatch events
+      eventSource.addEventListener('dispatch_created', (event: MessageEvent) => {
+        try {
+          const newDispatch = JSON.parse(event.data);
+          setDispatches(prev => [newDispatch, ...prev.filter(d => d.id !== newDispatch.id && d.challanNo !== newDispatch.challanNo)]);
+        } catch (_) {}
+      });
+
+      // Invoice & Payment events
+      eventSource.addEventListener('invoice_created', (event: MessageEvent) => {
+        try {
+          const newInvoice = JSON.parse(event.data);
+          setInvoices(prev => [newInvoice, ...prev.filter(i => i.id !== newInvoice.id && i.invoiceNo !== newInvoice.invoiceNo)]);
+        } catch (_) {}
+      });
+
+      eventSource.addEventListener('invoice_updated', (event: MessageEvent) => {
+        try {
+          const updatedInv = JSON.parse(event.data);
+          setInvoices(prev => prev.map(i => (i.id === updatedInv.id || i.invoiceNo === updatedInv.invoiceNo) ? { ...i, ...updatedInv } : i));
+        } catch (_) {}
+      });
+
+      eventSource.addEventListener('payment_recorded', () => {
+        fetchInvoices().then(setInvoices).catch(() => {});
+        fetchOrders().then(setOrders).catch(() => {});
+      });
+
+      // Vendor Bills
+      eventSource.addEventListener('vendor_bill_created', (event: MessageEvent) => {
+        try {
+          const newBill = JSON.parse(event.data);
+          setPayables(prev => [newBill, ...prev.filter(b => b.id !== newBill.id && b.billNo !== newBill.billNo)]);
+        } catch (_) {}
+      });
+
+      eventSource.addEventListener('vendor_bill_disbursed', (event: MessageEvent) => {
+        try {
+          const disbursed = JSON.parse(event.data);
+          setPayables(prev => prev.map(b => (b.id === disbursed.billNo || b.billNo === disbursed.billNo) ? { ...b, ...disbursed } : b));
+        } catch (_) {}
+      });
+
+      // Approvals
+      eventSource.addEventListener('approval_created', () => {
+        fetchApprovals().then(setApprovals).catch(() => {});
+      });
+
+      eventSource.addEventListener('approval_updated', () => {
+        fetchApprovals().then(setApprovals).catch(() => {});
+      });
     } catch (_) {}
 
     return () => {
+      clearInterval(reconciliationInterval);
       if (eventSource) eventSource.close();
     };
   }, [loadAllData]);
@@ -268,8 +431,55 @@ export function useOwnerOSData(currentUser?: SystemUser) {
   };
 
   const handleCreateOrder = async (order: CustomerOrder) => {
+    // Immediately prepend to local state so newest order appears at the top of the table
+    setOrders(prev => [order, ...prev.filter(o => o.id !== order.id && o.poNo !== order.poNo)]);
     await insertOrder(order);
     await addAuditLog('order', 'create', `Created order #${order.poNo} for ${order.customerName}`);
+    await loadAllData();
+  };
+
+  const handleUpdateOrder = async (orderId: string, updates: Partial<CustomerOrder>) => {
+    const targetOrder = orders.find(o => o.id === orderId || o.poNo === orderId);
+    const targetId = targetOrder?.id || orderId;
+    const targetPo = targetOrder?.poNo || orderId;
+
+    if (updates.status === 'CONFIRMED' || updates.stage === 'CONFIRMED') {
+      return handleConfirmOrder(targetId);
+    }
+
+    setOrders(prev => prev.map(o => (o.id === targetId || o.poNo === targetPo) ? { ...o, ...updates } : o));
+    try {
+      await updateOrder(targetId, updates);
+    } catch (err) {
+      console.warn('Backend updateOrder warning:', err);
+    }
+    await addAuditLog('order', 'update', `Updated order #${updates.poNo || targetPo}`);
+    await loadAllData();
+  };
+
+  const handleConfirmOrder = async (orderId: string) => {
+    const targetOrder = orders.find(o => o.id === orderId || o.poNo === orderId);
+    const targetId = targetOrder?.id || orderId;
+    const targetPo = targetOrder?.poNo || orderId;
+
+    const updates: Partial<CustomerOrder> = {
+      status: 'CONFIRMED',
+      stage: 'CONFIRMED',
+      progressStep: 2
+    };
+    setOrders(prev => prev.map(o => (o.id === targetId || o.poNo === targetPo) ? { ...o, ...updates } : o));
+    try {
+      const confirmed = await confirmOrder(targetId);
+      if (confirmed) {
+        setOrders(prev => prev.map(o => (o.id === targetId || o.poNo === targetPo) ? { ...o, ...confirmed, status: 'CONFIRMED', stage: 'CONFIRMED', progressStep: 2 } : o));
+      }
+    } catch (err) {
+      console.warn('Backend handleConfirmOrder fallback:', err);
+      // Re-sync on failure
+      await loadAllData();
+      throw err;
+    }
+    await addAuditLog('order', 'confirm', `Executive authorized and confirmed order #${targetPo} for ${targetOrder?.customerName || 'Customer'}`);
     await loadAllData();
   };
 
@@ -285,15 +495,25 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     await loadAllData();
   };
 
-  const handleAdjustStock = async (code: string, newOnHand: number) => {
-    await adjustStockItem(code, newOnHand);
-    await addAuditLog('stock', 'adjust', `Adjusted stock for item ${code} to ${newOnHand}`);
+  const handleAdjustStock = async (code: string, newOnHand: number, reason?: string) => {
+    await adjustStockItem(code, newOnHand, reason);
+    await addAuditLog('stock', 'adjust', `Adjusted stock for item ${code} to ${newOnHand}${reason ? ` (${reason})` : ''}`);
     await loadAllData();
   };
 
   const handleCreateJobCard = async (job: JobCard) => {
-    await insertJobCard(job);
-    await addAuditLog('job_card', 'create', `Created job card ${job.jobNo} for PO ${job.orderPo}`);
+    // Manual creation from the Production floor form — posts to the job card release API
+    await createJobCardForOrder({
+      orderPo: job.orderPo,
+      partCode: job.partCode,
+      partDescription: job.partDescription,
+      drawingRevision: job.drawingRevision || 'REV-A',
+      targetQty: Number(job.targetQty ?? job.qty ?? 0),
+      materialIssuedLot: job.materialIssuedLot || 'HEAT-LOT-NA',
+      targetDate: job.targetDate,
+      remarks: `Manually created on Production floor for PO ${job.orderPo}${job.machine ? ` (${job.machine})` : ''}`
+    });
+    await addAuditLog('job_card', 'create', `Created job card ${job.jobNo} for PO ${job.orderPo} (${job.partCode} x ${Number(job.targetQty ?? job.qty ?? 0)})`);
     await loadAllData();
   };
 
@@ -304,12 +524,73 @@ export function useOwnerOSData(currentUser?: SystemUser) {
   };
 
   const handleUpdateQC = async (id: string, qcStatus: 'PASS' | 'QC_HOLD' | 'REJECTED', notes?: string) => {
+    const target = qcQueue.find(q => q.id === id);
+    const targetOrderPo = target?.orderPo;
+    const targetJobNo = target?.jobNo;
+
+    // Synchronize all QC entries for this order/job to prevent conflicting statuses
+    setQcQueue(prev => prev.map(q => {
+      if (q.id === id || (targetOrderPo && q.orderPo === targetOrderPo)) {
+        return { 
+          ...q, 
+          qcStatus, 
+          inspectorNotes: notes || q.inspectorNotes,
+          inspectedAt: new Date().toISOString()
+        };
+      }
+      return q;
+    }));
+
+    if (targetOrderPo) {
+      setOrders(prev => prev.map(ord => {
+        if (ord.poNo === targetOrderPo || ord.id === targetOrderPo) {
+          return {
+            ...ord,
+            hasOpenNcr: qcStatus !== 'PASS',
+            stage: qcStatus === 'PASS' ? 'QC_INSPECTION' : ord.stage,
+            status: qcStatus === 'PASS' ? 'QC_INSPECTION' : ord.status,
+            progressStep: qcStatus === 'PASS' ? Math.max(ord.progressStep || 1, 6) : ord.progressStep
+          };
+        }
+        return ord;
+      }));
+    }
+
+    if (targetJobNo) {
+      setJobCards(prev => prev.map(j => {
+        if (j.jobNo === targetJobNo || j.id === targetJobNo) {
+          return {
+            ...j,
+            status: qcStatus === 'PASS' ? 'COMPLETED' : 'QC_HOLD'
+          };
+        }
+        return j;
+      }));
+    }
+
     await updateQCInspection(id, qcStatus, notes);
-    await addAuditLog('qc', 'inspect', `QC status updated to ${qcStatus} for inspection #${id}`);
+    await addAuditLog('qc', 'inspect', `QC status updated to ${qcStatus} for inspection #${id} (PO: ${targetOrderPo || 'N/A'})`);
     await loadAllData();
   };
 
   const handlePassPDI = async (id: string) => {
+    const target = pdiQueue.find(p => p.id === id);
+    setPdiQueue(prev => prev.map(p => p.id === id ? { ...p, pdiStatus: 'PASS', certificateNo: `PDI-2026-${Math.floor(1000 + Math.random() * 9000)}` } : p));
+
+    if (target?.orderPo) {
+      setOrders(prev => prev.map(ord => {
+        if (ord.poNo === target.orderPo || ord.id === target.orderPo) {
+          return {
+            ...ord,
+            stage: 'READY_TO_DISPATCH',
+            status: 'READY_TO_DISPATCH',
+            progressStep: Math.max(ord.progressStep || 1, 7)
+          };
+        }
+        return ord;
+      }));
+    }
+
     await passPDIInspection(id);
     await addAuditLog('pdi', 'pass', `Passed PDI inspection #${id}`);
     await loadAllData();
@@ -449,34 +730,25 @@ export function useOwnerOSData(currentUser?: SystemUser) {
   };
 
   const handleResetAllData = async () => {
-    try {
-      const savedProfile = localStorage.getItem('stratum_company_profile');
-      if (savedProfile) {
-        setCompanyProfile(JSON.parse(savedProfile));
-      } else {
-        setCompanyProfile(initialCompanyProfile);
-      }
-    } catch (e) {
-      setCompanyProfile(initialCompanyProfile);
-    }
-    setUsers(initialUsers);
-    setMasters(initialMasters);
-    setCustomers(initialCustomers);
-    setVendors(initialVendors);
-    setMachines(initialMachines);
-    setOrders(initialOrders);
-    setStock(initialStock);
-    setShortages(initialShortages);
-    setJobCards(initialJobCards);
-    setFinishedGoods(initialFinishedGoods);
-    setOutworkSendOuts(initialOutworkSendOuts);
-    setProductionLogs(initialProductionLogs);
-    setQcQueue(initialQCQueue);
-    setPdiQueue(initialPDIQueue);
-    setDispatches(initialDispatches);
-    setInvoices(initialInvoices);
-    setPayables(initialPayables);
-    setAuditLogs(initialAuditLogs);
+    // Clear all local state, then reload everything from the backend
+    setOrders([]);
+    setStock([]);
+    setShortages([]);
+    setJobCards([]);
+    setFinishedGoods([]);
+    setOutworkSendOuts([]);
+    setProductionLogs([]);
+    setQcQueue([]);
+    setPdiQueue([]);
+    setDispatches([]);
+    setInvoices([]);
+    setPayables([]);
+    setAuditLogs([]);
+    setUsers([]);
+    setMasters([]);
+    setCustomers([]);
+    setVendors([]);
+    setMachines([]);
 
     await seedAllDataToSupabase();
     await addAuditLog('system', 'seed_all', 'Reset and seeded complete demonstration dataset across all sections.');
@@ -576,6 +848,8 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     lastSynced,
     handleSaveCompanyProfile,
     handleCreateOrder,
+    handleUpdateOrder,
+    handleConfirmOrder,
     handleCloseOrder,
     handleCancelOrder,
     handleAdjustStock,

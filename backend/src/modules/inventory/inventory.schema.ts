@@ -14,7 +14,8 @@ export const StockItemSchema = z.object({
 });
 
 export const AdjustStockSchema = z.object({
-  newOnHand: z.coerce.number().nonnegative('On hand quantity must be non-negative')
+  newOnHand: z.coerce.number().nonnegative('On hand quantity must be non-negative'),
+  reason: z.string().optional()
 });
 
 export const ShortageItemSchema = z.object({

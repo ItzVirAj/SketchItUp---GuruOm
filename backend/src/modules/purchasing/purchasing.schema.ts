@@ -37,3 +37,64 @@ export const ApprovalDecisionSchema = z.object({
   decision: z.enum(['APPROVE', 'REJECT']),
   reason: z.string().optional()
 });
+
+export const PurchaseRequisitionSchema = z.object({
+  id: z.string().optional(),
+  reqNumber: z.string().optional(),
+  source: z.enum(['LOW_STOCK_ALERT', 'PRODUCTION_SHORTAGE', 'MANUAL']).default('LOW_STOCK_ALERT'),
+  orderId: z.string().optional(),
+  orderPo: z.string().optional(),
+  itemCode: z.string().min(1, 'Item code is required'),
+  itemDescription: z.string().min(1, 'Item description is required'),
+  requiredQty: z.coerce.number().positive('Required quantity must be positive'),
+  availableStock: z.coerce.number().nonnegative().default(0),
+  deficitQty: z.coerce.number().nonnegative().default(0),
+  unit: z.string().default('KG'),
+  urgency: z.enum(['NORMAL', 'URGENT', 'CRITICAL']).default('NORMAL'),
+  status: z.string().default('PENDING_APPROVAL'),
+  requestedBy: z.string().min(1, 'Requested by is required'),
+  notes: z.string().optional()
+});
+
+export const GrnEntrySchema = z.object({
+  id: z.string().optional(),
+  grnNo: z.string().optional(),
+  poNo: z.string().min(1, 'PO number is required'),
+  supplierName: z.string().min(1, 'Supplier name is required'),
+  itemCode: z.string().min(1, 'Item code is required'),
+  itemDescription: z.string().min(1, 'Item description is required'),
+  poExpectedQty: z.coerce.number().positive('Expected quantity must be positive'),
+  receivedQty: z.coerce.number().positive('Received quantity must be positive'),
+  unit: z.string().default('KG'),
+  unitPrice: z.coerce.number().nonnegative().default(0),
+  heatLotNumber: z.string().min(1, 'Mill Heat/Lot number is mandatory for raw material receipt'),
+  deliveryChallanNo: z.string().min(1, 'Delivery challan number is required'),
+  carrier: z.string().optional().default('Direct Transporter'),
+  storeKeeperName: z.string().min(1, 'Store keeper name is required'),
+  notes: z.string().optional()
+});
+
+export const IncomingQcInspectionSchema = z.object({
+  grnNo: z.string().min(1, 'GRN number is required'),
+  acceptedQty: z.coerce.number().nonnegative('Accepted quantity must be non-negative'),
+  rejectedQty: z.coerce.number().nonnegative('Rejected quantity must be non-negative'),
+  inspectionStatus: z.enum(['PASSED', 'PARTIAL_REJECT', 'REJECTED']),
+  inspectedBy: z.string().min(1, 'Inspector name is required'),
+  inspectionNotes: z.string().optional(),
+  defectCategory: z.string().optional()
+});
+
+export const VendorReturnSchema = z.object({
+  id: z.string().optional(),
+  returnNo: z.string().optional(),
+  grnNo: z.string().min(1, 'GRN number is required'),
+  poNo: z.string().min(1, 'PO number is required'),
+  supplierName: z.string().min(1, 'Supplier name is required'),
+  itemCode: z.string().min(1, 'Item code is required'),
+  itemDescription: z.string().min(1, 'Item description is required'),
+  rejectedQty: z.coerce.number().positive('Rejected quantity must be positive'),
+  defectCategory: z.string().min(1, 'Defect category is required'),
+  defectNotes: z.string().min(1, 'Defect notes are required'),
+  initiatedBy: z.string().min(1, 'Initiator name is required'),
+  debitAmount: z.coerce.number().nonnegative().optional().default(0)
+});

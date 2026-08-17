@@ -247,24 +247,28 @@ export function Card1({
   }, [isRealtime]);
 
   // Derive real active order & job card data
-  const sampleOrder = orders[0] || { poNo: 'PO-2026-901', customerName: 'Larsen & Toubro Ltd', grossAmount: 145000 };
-  const sampleJobCard = jobCards[0] || { jobNo: 'JC/0002/26-27', status: 'IN_PRODUCTION' as const };
+  const sampleOrder = orders[0] || null;
+  const sampleJobCard = jobCards[0] || null;
   const activeOrdersCount = orders.filter(o => o.status !== 'CLOSED' && o.status !== 'CANCELLED').length;
 
   const stepStatusText = useMemo(() => {
     switch (step) {
       case "request":
-        return `Ingesting ${sampleOrder.poNo || 'PO-2026'} from ${sampleOrder.customerName || 'Customer'} (${activeOrdersCount} POs)`;
+        return sampleOrder 
+          ? `Ingesting ${sampleOrder.poNo} from ${sampleOrder.customerName} (${activeOrdersCount} active POs)`
+          : `Listening for new customer purchase orders...`;
       case "router":
         return `Routing to CNC Machining Cell & Raw Material Allocation`;
       case "agent":
-        return `Gemini Planner scheduling ${sampleJobCard.jobNo || 'JC-26-27'} with BOM parameters`;
+        return sampleJobCard 
+          ? `Gemini Planner scheduling ${sampleJobCard.jobNo} with BOM parameters`
+          : `Autonomous scheduler standby — ready for incoming jobs`;
       case "memory":
         return `Retrieving CAD drawings & ISO-9001 quality tolerance limits`;
       case "tools":
-        return `Writing Supabase records & streaming spindle telemetry to CNC-01`;
+        return `Writing Supabase records & streaming telemetry to shopfloor`;
       case "response":
-        return `Job Card confirmed — automated shopfloor work order released`;
+        return `Autonomous ERP swarm standing by for operational events`;
       default:
         return "Autonomous ERP swarm active";
     }
@@ -653,8 +657,8 @@ export function Card3({
     } else {
       list.push({
         agent: "Order Planner",
-        action: "PO-2026-901 auto-scheduled for Larsen & Toubro",
-        status: "done",
+        action: "Order ingestion engine standby (0 active POs)",
+        status: "waiting",
         t: "0.2s"
       });
     }
@@ -665,14 +669,14 @@ export function Card3({
       const statusStr = q.qcStatus === 'PASS' ? 'PASS' : (q.qcStatus === 'QC_HOLD' ? 'HOLD' : 'INSPECT');
       list.push({
         agent: "QC Inspector",
-        action: `Tolerance check on ${q.partDescription || 'Flange Housing'} — ${statusStr}`,
+        action: `Tolerance check on ${q.partDescription || 'Part'} — ${statusStr}`,
         status: q.qcStatus === 'PASS' ? 'done' : 'running',
         t: "1.1s"
       });
     } else {
       list.push({
         agent: "QC Inspector",
-        action: "Tolerance check on Tower Pivoting Section — PASS (98.5%)",
+        action: "Quality control queue clear (0 pending inspections)",
         status: "done",
         t: "1.1s"
       });
@@ -690,7 +694,7 @@ export function Card3({
     } else {
       list.push({
         agent: "Shopfloor I/O",
-        action: "Streaming spindle load from CNC VMC-01 (2400 RPM)",
+        action: "Shopfloor CNC machine monitoring active",
         status: "running",
         t: "2.4s"
       });
@@ -701,14 +705,14 @@ export function Card3({
       const d = dispatches[0];
       list.push({
         agent: "Dispatch Router",
-        action: `Issued challan ${d.challanNo || 'CHL/0002'} for ${d.orderPo || 'PO-2026-901'}`,
+        action: `Issued challan ${d.challanNo} for ${d.orderPo}`,
         status: "waiting",
         t: "3.8s"
       });
     } else {
       list.push({
         agent: "Dispatch Router",
-        action: "Challan CHL/0002/26-27 awaiting e-Way bill signoff",
+        action: "Dispatch bay clear (0 pending challans)",
         status: "waiting",
         t: "3.8s"
       });
@@ -880,17 +884,17 @@ export function Card4({
 
   // Derive retrieval queries with real order names, items & parts
   const dynamicRetrievalQueries = useMemo(() => {
-    const cust1 = orders[0]?.customerName?.split(' ')[0] || "Larsen";
-    const part1 = orders[0]?.lines?.[0]?.itemDescription || "TOWER PIVOTING SECTION";
-    const part2 = stock[0]?.description || "FLANGE HOUSING AL-6061";
-    const po1 = orders[0]?.poNo || "PO-2026-901";
+    const cust1 = orders[0]?.customerName?.split(' ')[0] || "Active Master";
+    const part1 = orders[0]?.lines?.[0]?.itemDescription || stock[0]?.description || "Precision Components";
+    const part2 = stock[0]?.description || "CNC Machining Spec";
+    const po1 = orders[0]?.poNo || "Active PO";
 
     return [
-      { ns: "cad_drawings", q: `${part2} CNC step machining program #42`, t: "0.2s" },
+      { ns: "cad_drawings", q: `${part2} CNC program & tooling specs`, t: "0.2s" },
       { ns: "qc_standards", q: `ISO 9001:2026 tolerance bounds ±0.02mm for ${part1}`, t: "0.9s" },
-      { ns: "orders_db", q: `${po1} (${cust1}) delivery schedule & bill of materials`, t: "1.8s" },
+      { ns: "orders_db", q: `${po1} (${cust1}) delivery schedule & BOM`, t: "1.8s" },
       { ns: "telemetry", q: "Spindle load & vibration telemetry CNC-VMC-01", t: "3.2s" },
-      { ns: "cad_drawings", q: "Upper Block assembly heat treatment metallurgical spec", t: "4.7s" },
+      { ns: "cad_drawings", q: "Assembly heat treatment metallurgical spec", t: "4.7s" },
       { ns: "qc_standards", q: "PDI visual inspection checklist & challan validation", t: "6.1s" },
     ];
   }, [orders, stock]);

@@ -90,6 +90,17 @@ export interface ActiveSessionItem {
   flaggedReasons?: string[];
 }
 
+export interface PasswordResetToken {
+  token_hash: string;
+  user_id: string;
+  email: string;
+  expires_at: number;
+  used_at?: string | null;
+  created_at: string;
+}
+
+const IN_MEMORY_RESET_TOKENS: PasswordResetToken[] = [];
+
 // In-Memory Seed Directory for instant offline support and zero-latency access
 const SEED_USERS: UserRecord[] = [
   {
@@ -1209,6 +1220,154 @@ export class AuthService {
   }
 
   /**
+   * Generates a signed, time-limited, single-use reset token and dispatches reset instructions.
+   * Responds with identical generic message regardless of email existence to prevent user enumeration.
+   */
+  async requestPasswordReset(email: string, ip = '127.0.0.1', userAgent = 'Unknown') {
+    const cleanEmail = email.trim().toLowerCase();
+    const user = await this.findUserByEmail(cleanEmail);
+
+    if (user) {
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+      const expiresAt = Date.now() + 60 * 60 * 1000; // 60 minutes
+
+      IN_MEMORY_RESET_TOKENS.push({
+        token_hash: tokenHash,
+        user_id: user.id,
+        email: user.email,
+        expires_at: expiresAt,
+        used_at: null,
+        created_at: new Date().toISOString()
+      });
+
+      await this.logSecurityEvent({
+        user_id: user.id,
+        event_type: 'PASSWORD_RESET_REQUESTED',
+        severity: 'LOW',
+        ip_address: ip,
+        user_agent: userAgent,
+        risk_score: 0,
+        risk_level: 'LOW',
+        flagged_reasons: [],
+        metadata: { email: user.email, requestedAt: new Date().toISOString() }
+      });
+
+      try {
+        await logAudit({
+          actorId: user.id,
+          actorEmail: user.email,
+          action: 'PASSWORD_RESET_REQUESTED',
+          entityType: 'user',
+          entityId: user.id,
+          ipAddress: ip,
+          userAgent,
+          details: `Password reset requested for ${user.email}`
+        });
+      } catch (_) {}
+
+      // Optional email notification dispatch
+      const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${rawToken}`;
+      try {
+        await notificationsService.sendEmail({
+          to: user.email,
+          subject: 'Reset your Owner OS Password',
+          html: `<p>Hello ${user.full_name},</p><p>We received a request to reset your password. Click the link below to set a new password (valid for 60 minutes):</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>If you did not request this, you can safely ignore this email.</p>`
+        });
+      } catch (err) {
+        console.warn('Email dispatch warning for reset password:', err);
+      }
+    }
+
+    return {
+      success: true,
+      message: 'If this email address is registered with Owner OS, a password reset link has been dispatched to your inbox.'
+    };
+  }
+
+  /**
+   * Resets password using a single-use verification token.
+   * Validates token expiration, hashes password with Argon2id, marks token as used, and revokes all active sessions.
+   */
+  async resetPasswordWithToken(token: string, newPassword: string, ip = '127.0.0.1', userAgent = 'Unknown') {
+    if (!token) {
+      throw new Error('Reset token is required.');
+    }
+    if (!newPassword || newPassword.length < 8) {
+      throw new Error('New password must be at least 8 characters long and contain at least one letter and one number.');
+    }
+    if (!/(?=.*[a-zA-Z])(?=.*\d)/.test(newPassword)) {
+      throw new Error('Password must contain at least one letter and one number.');
+    }
+
+    const tokenHash = crypto.createHash('sha256').update(token.trim()).digest('hex');
+    const tokenRecord = IN_MEMORY_RESET_TOKENS.find(t => t.token_hash === tokenHash && !t.used_at);
+
+    if (!tokenRecord || tokenRecord.expires_at < Date.now()) {
+      throw new Error('This password reset link is invalid, has expired, or has already been used. Please request a new one.');
+    }
+
+    const user = await this.findUserById(tokenRecord.user_id);
+    if (!user) {
+      throw new Error('Associated user account was not found.');
+    }
+
+    const newHash = await hashPassword(newPassword);
+
+    try {
+      await this.db.from('users').update({
+        password_hash: newHash,
+        is_temporary_password: false,
+        updated_at: new Date().toISOString()
+      }).eq('id', user.id);
+    } catch (e) {
+      console.warn('Database resetPassword update fallback:', e);
+    }
+
+    const seed = SEED_USERS.find(u => u.id === user.id);
+    if (seed) {
+      seed.password_hash = newHash;
+      seed.is_temporary_password = false;
+    }
+
+    // Invalidate the token (single use)
+    tokenRecord.used_at = new Date().toISOString();
+
+    // Revoke all existing sessions for security
+    await this.revokeAllSessions(user.id);
+
+    await this.logSecurityEvent({
+      user_id: user.id,
+      event_type: 'PASSWORD_RESET_COMPLETED',
+      severity: 'MEDIUM',
+      ip_address: ip,
+      user_agent: userAgent,
+      risk_score: 0,
+      risk_level: 'LOW',
+      flagged_reasons: [],
+      metadata: { completedAt: new Date().toISOString() }
+    });
+
+    try {
+      await logAudit({
+        actorId: user.id,
+        actorEmail: user.email,
+        action: 'PASSWORD_RESET_COMPLETED',
+        entityType: 'user',
+        entityId: user.id,
+        ipAddress: ip,
+        userAgent,
+        details: `Password reset successfully completed for ${user.email}`
+      });
+    } catch (_) {}
+
+    return {
+      success: true,
+      message: 'Your password has been reset successfully. Please log in with your new password.'
+    };
+  }
+
+  /**
    * Registers a new user.
    */
   async register(params: {
@@ -1219,6 +1378,7 @@ export class AuthService {
     department?: string;
     phone?: string;
     orgId?: string;
+    requirePasswordChangeFirstLogin?: boolean;
   }) {
     const cleanEmail = params.email.trim().toLowerCase();
     const existing = await this.findUserByEmail(cleanEmail);
@@ -1226,9 +1386,14 @@ export class AuthService {
       throw new Error(`User with email "${cleanEmail}" already exists.`);
     }
 
-    const passwordToHash = params.password || '1234567890';
-    const passwordHash = await hashPassword(passwordToHash);
+    const rawPassword = params.password || '1234567890';
+    if (rawPassword.length < 8 || !/(?=.*[a-zA-Z])(?=.*\d)/.test(rawPassword)) {
+      throw new Error('Password must be at least 8 characters long and contain at least one letter and one number.');
+    }
+
+    const passwordHash = await hashPassword(rawPassword);
     const userId = crypto.randomUUID();
+    const isTemp = params.requirePasswordChangeFirstLogin !== undefined ? params.requirePasswordChangeFirstLogin : true;
 
     const newUser: UserRecord = {
       id: userId,
@@ -1240,7 +1405,7 @@ export class AuthService {
       phone: params.phone || '',
       status: 'ACTIVE',
       org_id: params.orgId || '00000000-0000-0000-0000-000000000001',
-      is_temporary_password: true,
+      is_temporary_password: isTemp,
       created_at: new Date().toISOString()
     };
 
@@ -1257,7 +1422,7 @@ export class AuthService {
         phone: newUser.phone,
         status: newUser.status,
         org_id: newUser.org_id,
-        is_temporary_password: true
+        is_temporary_password: isTemp
       });
     } catch (e) {
       console.warn('Database insert user fallback:', e);
@@ -1277,7 +1442,8 @@ export class AuthService {
       role: newUser.role,
       department: newUser.department,
       phone: newUser.phone,
-      status: newUser.status
+      status: newUser.status,
+      isTemporaryPassword: isTemp
     };
   }
 

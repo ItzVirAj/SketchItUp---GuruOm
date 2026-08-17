@@ -209,13 +209,14 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                 <th className="py-4 px-5 text-right">Bill Amount</th>
                 <th className="py-4 px-5 text-right">Paid Amount</th>
                 <th className="py-4 px-5 text-right">Outstanding Dues</th>
+                <th className="py-4 px-5 text-center">3-Way Match</th>
                 <th className="py-4 px-5 text-center">Status</th>
                 <th className="py-4 px-5 text-center">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
               {filtered.map((bill) => (
-                <tr key={bill.id || bill.billNo} className={isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}>
+                <tr key={bill.billNo} className={isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}>
                   <td className="py-4 px-5 font-bold font-mono text-[#5B75F8] dark:text-[#7B92FF]">
                     {bill.billNo}
                   </td>
@@ -236,6 +237,17 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                   </td>
                   <td className="py-4 px-5 text-right font-bold font-mono text-rose-500">
                     ₹{bill.balanceAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </td>
+                  <td className="py-4 px-5 text-center">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-mono font-bold uppercase border ${
+                      bill.matchStatus === 'MATCHED' || bill.isThreeWayMatched
+                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                        : bill.matchStatus === 'PRICE_VARIANCE_FLAGGED' || bill.matchStatus === 'QTY_VARIANCE_FLAGGED'
+                        ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                        : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30'
+                    }`}>
+                      {bill.matchStatus || 'MATCHED'}
+                    </span>
                   </td>
                   <td className="py-4 px-5 text-center">
                     <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${

@@ -353,6 +353,46 @@ export class AuthController {
       return res.status(400).json({ error: 'BadRequest', message: err.message });
     }
   }
+
+  /**
+   * POST /api/v1/auth/forgot-password
+   */
+  async forgotPassword(req: Request, res: Response) {
+    const { email } = req.body;
+    const ip = GeoLocationService.extractClientIp(req);
+    const userAgent = req.headers['user-agent'] as string;
+
+    if (!email) {
+      return res.status(400).json({ error: 'BadRequest', message: 'Email address is required.' });
+    }
+
+    try {
+      const result = await authService.requestPasswordReset(email, ip, userAgent);
+      return res.json(result);
+    } catch (err: any) {
+      return res.status(500).json({ error: 'InternalServerError', message: err.message });
+    }
+  }
+
+  /**
+   * POST /api/v1/auth/reset-password
+   */
+  async resetPassword(req: Request, res: Response) {
+    const { token, newPassword } = req.body;
+    const ip = GeoLocationService.extractClientIp(req);
+    const userAgent = req.headers['user-agent'] as string;
+
+    if (!token || !newPassword) {
+      return res.status(400).json({ error: 'BadRequest', message: 'Reset token and new password are required.' });
+    }
+
+    try {
+      const result = await authService.resetPasswordWithToken(token, newPassword, ip, userAgent);
+      return res.json(result);
+    } catch (err: any) {
+      return res.status(400).json({ error: 'BadRequest', message: err.message });
+    }
+  }
 }
 
 export const authController = new AuthController();

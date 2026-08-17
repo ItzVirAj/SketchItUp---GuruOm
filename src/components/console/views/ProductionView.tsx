@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { 
   Factory, 
   List, 
@@ -17,24 +17,30 @@ import {
   Wrench,
   Activity
 } from 'lucide-react';
-import { JobCard, ProductionLogReport, QCInspection } from '../../../types/console';
+import { JobCard, ProductionLogReport, QCInspection, CustomerOrder } from '../../../types/console';
 
 interface ProductionViewProps {
   jobCards: JobCard[];
+  orders?: CustomerOrder[];
   productionLogs?: ProductionLogReport[];
   qcItems?: QCInspection[];
   isDarkMode: boolean;
   onCreateJobCard: (newCard: Partial<JobCard>) => void;
   onLogProduction?: (log: Partial<ProductionLogReport>) => void;
+  preselectedOrderPo?: string;
+  onJobCardModalOpened?: () => void;
 }
 
 export const ProductionView: React.FC<ProductionViewProps> = ({
   jobCards,
+  orders = [],
   productionLogs = [],
   qcItems = [],
   isDarkMode,
   onCreateJobCard,
-  onLogProduction
+  onLogProduction,
+  preselectedOrderPo,
+  onJobCardModalOpened
 }) => {
   const [viewMode, setViewMode] = useState<'list' | 'board' | 'machine' | 'timeline'>('list');
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,13 +48,72 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
   const [showNewJobModal, setShowNewJobModal] = useState(false);
   const [selectedJobForLog, setSelectedJobForLog] = useState<JobCard | null>(null);
 
+  // Filter orders eligible for manual Job Card release (7-stage flow: Confirmed or later, before dispatch)
+  const eligibleOrders = orders.filter(o => {
+    const st = (o.status || o.stage || '').toUpperCase();
+    if (['DRAFT', 'SUBMITTED', 'PO_RECEIVED'].includes(st)) return false;
+    if (['PARTIALLY_DISPATCHED', 'DISPATCHED', 'IN_TRANSIT', 'DELIVERED', 'PAYMENT_PENDING', 'INVOICED', 'INVOICE_GENERATED', 'COMPLETED', 'CLOSED', 'CANCELLED', 'PAID'].includes(st)) return false;
+    return true;
+  }).sort((a, b) => {
+    const timeB = new Date(b.createdAt || b.poDate || 0).getTime();
+    const timeA = new Date(a.createdAt || a.poDate || 0).getTime();
+    return timeB - timeA;
+  });
+
   // New Job Form State
-  const [newOrderPo, setNewOrderPo] = useState('PO-2026-901');
-  const [newPartCode, setNewPartCode] = useState('00000003');
-  const [newPartDesc, setNewPartDesc] = useState('TOWER PIVOTING SECTION');
+  const [newOrderPo, setNewOrderPo] = useState('');
+  const [newPartCode, setNewPartCode] = useState('00000001');
+  const [newPartDesc, setNewPartDesc] = useState('MAIN SPINDLE HOUSING 120MM');
+  const [newDrawingRev, setNewDrawingRev] = useState('REV-A');
+  const [newHeatLot, setNewHeatLot] = useState('');
   const [newQty, setNewQty] = useState(100);
   const [newMachine, setNewMachine] = useState('VMC-01 (Vertical Milling)');
   const [newTargetDate, setNewTargetDate] = useState('2026-08-20');
+
+  const handleSelectOrder = (poNo: string) => {
+    setNewOrderPo(poNo);
+    const ord = eligibleOrders.find(o => o.poNo === poNo || o.id === poNo);
+    if (ord) {
+      const primaryLine = ord.lines?.[0];
+      if (primaryLine) {
+        setNewPartCode(primaryLine.itemCode || '00000001');
+        setNewPartDesc(primaryLine.itemDescription || 'MANUFACTURED COMPONENT');
+        setNewQty(Number(primaryLine.pendingQty ?? primaryLine.orderQty ?? 100));
+        setNewDrawingRev(primaryLine.drawingRevision || ord.drawingRevision || 'REV-A');
+      }
+      if (ord.heatLotNumber) {
+        setNewHeatLot(ord.heatLotNumber);
+      }
+    }
+  };
+
+  const openNewJobModal = () => {
+    if (eligibleOrders.length > 0) {
+      const first = eligibleOrders[0];
+      handleSelectOrder(first.poNo);
+    } else {
+      setNewOrderPo('');
+      setNewPartCode('00000001');
+      setNewPartDesc('');
+      setNewHeatLot('');
+    }
+    setShowNewJobModal(true);
+  };
+
+  // Redirect from Order Detail "Create Job Card" CTA: open the manual form with the order preselected
+  const preselectHandled = useRef<string | null>(null);
+  useEffect(() => {
+    if (!preselectedOrderPo || preselectHandled.current === preselectedOrderPo) return;
+    preselectHandled.current = preselectedOrderPo;
+    if (eligibleOrders.some(o => o.poNo === preselectedOrderPo || o.id === preselectedOrderPo)) {
+      handleSelectOrder(preselectedOrderPo);
+    } else {
+      setNewOrderPo(preselectedOrderPo);
+    }
+    setShowNewJobModal(true);
+    onJobCardModalOpened?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preselectedOrderPo]);
 
   // Log Production Form State
   const [logStepNo, setLogStepNo] = useState<number>(1);
@@ -75,13 +140,27 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
       orderPo: newOrderPo,
       partCode: newPartCode,
       partDescription: newPartDesc,
+      drawingRevision: newDrawingRev,
+      materialIssuedLot: newHeatLot,
       orderStatus: 'IN_PRODUCTION',
       qty: Number(newQty),
+      targetQty: Number(newQty),
       machine: newMachine,
       targetDate: newTargetDate,
       status: 'SCHEDULED'
     });
     setShowNewJobModal(false);
+  };
+
+  // Per-item job cards: fill the form from one of the selected order's line items
+  const selectedOrderForForm = eligibleOrders.find(o => o.poNo === newOrderPo || o.id === newOrderPo);
+  const handleSelectLineItem = (lineId: string) => {
+    const line = selectedOrderForForm?.lines?.find(l => l.id === lineId);
+    if (!line) return;
+    setNewPartCode(line.itemCode || '00000001');
+    setNewPartDesc(line.itemDescription || 'MANUFACTURED COMPONENT');
+    setNewQty(Number(line.pendingQty ?? line.orderQty ?? 100));
+    setNewDrawingRev(line.drawingRevision || selectedOrderForForm?.drawingRevision || 'REV-A');
   };
 
   const handleLogSubmit = (e: React.FormEvent) => {
@@ -128,7 +207,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
 
           <div className="flex items-center gap-3">
             <button
-              onClick={() => setShowNewJobModal(true)}
+              onClick={openNewJobModal}
               className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
               <Plus className="w-4 h-4" />
@@ -295,35 +374,57 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                 {filteredCards.map((jc) => (
                   <tr key={jc.jobNo} className={isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}>
                     <td className="py-4 px-5 font-bold font-mono text-[#5B75F8] dark:text-[#7B92FF]">
-                      {jc.jobNo}
+                      <div>{jc.jobNo}</div>
+                      {jc.drawingRevision && (
+                        <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[9px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                          Rev: {jc.drawingRevision} (Locked)
+                        </span>
+                      )}
                     </td>
                     <td className="py-4 px-5 font-mono text-slate-400">
-                      {jc.orderPo}
+                      <div>{jc.orderPo}</div>
+                      {jc.materialIssuedLot && (
+                        <div className="text-[10px] text-slate-500">
+                          Heat: {jc.materialIssuedLot}
+                        </div>
+                      )}
                     </td>
                     <td className={`py-4 px-5 font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
-                      {jc.partCode} — {jc.partDescription}
+                      <div>{jc.partCode} — {jc.partDescription}</div>
+                      {jc.hasOpenNcr && (
+                        <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40">
+                          <AlertTriangle className="w-3 h-3" />
+                          <span>Hold: {jc.ncrReference || 'Open NCR'}</span>
+                        </span>
+                      )}
                     </td>
                     <td className={`py-4 px-5 text-right font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                      {jc.qty} NOS
+                      {jc.targetQty || jc.qty} NOS
                     </td>
                     <td className="py-4 px-5 font-mono text-purple-400 font-medium">
-                      {jc.machine}
+                      {jc.machine || jc.currentOperation || 'Machine Center'}
                     </td>
                     <td className="py-4 px-5 font-mono text-amber-500">
                       {jc.targetDate}
                     </td>
                     <td className="py-4 px-5 text-center">
                       <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
-                        jc.status === 'RUNNING' || jc.status === 'IN_PROGRESS'
+                        jc.jobStatus === 'QC_HOLD' || jc.status === 'QC_HOLD'
+                          ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                          : jc.jobStatus === 'IN_PROGRESS' || jc.status === 'RUNNING' || jc.status === 'IN_PROGRESS'
                           ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
-                          : jc.status === 'COMPLETED'
+                          : jc.jobStatus === 'COMPLETED' || jc.status === 'COMPLETED'
                             ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
                             : 'bg-[#5B75F8]/10 text-[#7B92FF] border-[#5B75F8]/30'
                       }`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${
-                          jc.status === 'RUNNING' ? 'bg-purple-500 animate-pulse' : 'bg-[#5B75F8]'
+                          jc.jobStatus === 'QC_HOLD' || jc.status === 'QC_HOLD' 
+                            ? 'bg-rose-500' 
+                            : jc.jobStatus === 'IN_PROGRESS' || jc.status === 'RUNNING' 
+                            ? 'bg-purple-500 animate-pulse' 
+                            : 'bg-[#5B75F8]'
                         }`} />
-                        <span>{jc.status}</span>
+                        <span>{jc.jobStatus || jc.status}</span>
                       </span>
                     </td>
                     <td className="py-4 px-5 text-center">
@@ -412,21 +513,72 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
             </div>
 
             <form onSubmit={handleCreateJobSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              {eligibleOrders.length === 0 ? (
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-mono flex items-start gap-2.5">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="font-bold block">No Confirmed Orders Ready</strong>
+                    <span>No orders currently available for job card creation — an order must be Confirmed (Stage 1 complete) before job cards can be released.</span>
+                  </div>
+                </div>
+              ) : null}
+
+              {selectedOrderForForm && (selectedOrderForForm.lines || []).length > 0 ? (
                 <div>
-                  <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Order PO *</label>
-                  <input
-                    type="text"
-                    required
-                    value={newOrderPo}
-                    onChange={(e) => setNewOrderPo(e.target.value)}
-                    placeholder="e.g. PO-2026-901"
-                    className={`w-full rounded-2xl border px-4 py-3 text-xs font-mono outline-none transition-all ${
-                      isDarkMode 
-                        ? 'bg-slate-950/80 border-slate-800 text-white focus:border-[#5B75F8]' 
+                  <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">
+                    Line Item (per-item job card) *
+                  </label>
+                  <select
+                    value={(selectedOrderForForm.lines || []).find(l => l.itemCode === newPartCode)?.id || ''}
+                    onChange={(e) => handleSelectLineItem(e.target.value)}
+                    className={`w-full rounded-2xl border px-3.5 py-3 text-xs font-mono font-bold outline-none transition-all cursor-pointer ${
+                      isDarkMode
+                        ? 'bg-slate-950/80 border-slate-800 text-white focus:border-[#5B75F8]'
                         : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#5B75F8]'
                     }`}
-                  />
+                  >
+                    <option value="">— Custom (edit fields below) —</option>
+                    {(selectedOrderForForm.lines || []).map(l => (
+                      <option key={l.id} value={l.id}>
+                        {l.itemCode} — {l.itemDescription} ({l.pendingQty ?? l.orderQty} {l.unit || 'NOS'} pending)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">
+                    Order / PO Selection * {eligibleOrders.length > 0 && <span className="text-emerald-500 text-[10px]">({eligibleOrders.length} Ready)</span>}
+                  </label>
+                  {eligibleOrders.length > 0 ? (
+                    <select
+                      required
+                      value={newOrderPo}
+                      onChange={(e) => handleSelectOrder(e.target.value)}
+                      className={`w-full rounded-2xl border px-3.5 py-3 text-xs font-mono font-bold outline-none transition-all cursor-pointer ${
+                        isDarkMode 
+                          ? 'bg-slate-950/80 border-slate-800 text-white focus:border-[#5B75F8]' 
+                          : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#5B75F8]'
+                      }`}
+                    >
+                      {eligibleOrders.map(ord => (
+                        <option key={ord.id || ord.poNo} value={ord.poNo}>
+                          {ord.poNo} — {ord.customerName} ({ord.lines?.[0]?.itemCode || 'PART'} • {ord.lines?.[0]?.orderQty || ord.orderedQty || 0} NOS)
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      disabled
+                      placeholder="No material-verified orders available"
+                      className={`w-full rounded-2xl border px-4 py-3 text-xs font-mono opacity-60 cursor-not-allowed ${
+                        isDarkMode ? 'bg-slate-950/80 border-slate-800 text-slate-500' : 'bg-slate-100 border-slate-200 text-slate-400'
+                      }`}
+                    />
+                  )}
                 </div>
                 <div>
                   <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Job Quantity *</label>
@@ -444,6 +596,45 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                 </div>
               </div>
 
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Part Code *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newPartCode}
+                    onChange={(e) => setNewPartCode(e.target.value)}
+                    className={`w-full rounded-2xl border px-3.5 py-2.5 text-xs font-mono outline-none transition-all ${
+                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                    }`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Drawing Rev *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newDrawingRev}
+                    onChange={(e) => setNewDrawingRev(e.target.value)}
+                    className={`w-full rounded-2xl border px-3.5 py-2.5 text-xs font-mono outline-none transition-all ${
+                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                    }`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Heat/Lot #</label>
+                  <input
+                    type="text"
+                    value={newHeatLot}
+                    onChange={(e) => setNewHeatLot(e.target.value)}
+                    placeholder="Optional — e.g. HEAT-LOT-9821"
+                    className={`w-full rounded-2xl border px-3.5 py-2.5 text-xs font-mono outline-none transition-all ${
+                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                    }`}
+                  />
+                </div>
+              </div>
+
               <div>
                 <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Part Description *</label>
                 <input
@@ -451,7 +642,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                   required
                   value={newPartDesc}
                   onChange={(e) => setNewPartDesc(e.target.value)}
-                  placeholder="e.g. Aluminum Flange Housing"
+                  placeholder="e.g. MAIN SPINDLE HOUSING 120MM"
                   className={`w-full rounded-2xl border px-4 py-3 text-xs outline-none transition-all ${
                     isDarkMode 
                       ? 'bg-slate-950/80 border-slate-800 text-white focus:border-[#5B75F8]' 

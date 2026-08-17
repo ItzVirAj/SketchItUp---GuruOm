@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Mail, 
@@ -14,9 +14,10 @@ import {
   X,
   Building2
 } from 'lucide-react';
-import { initialUsers } from '../../data/consoleData';
 import { getRoleColor } from '../../utils/permissions';
 import { useAuth } from '../../context/AuthContext';
+import { fetchProfiles } from '../../services/supabaseServices';
+import type { SystemUser } from '../../types/console';
 
 interface LoginPageProps {
   onLoginSuccess?: (email: string) => void;
@@ -40,6 +41,20 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   const [forgotEmail, setForgotEmail] = useState('');
   const [isResetting, setIsResetting] = useState(false);
   const [isSignUpModalOpen, setIsSignUpModalOpen] = useState(false);
+  const [demoUsers, setDemoUsers] = useState<SystemUser[]>([]);
+  const [isDemoLoading, setIsDemoLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsDemoLoading(true);
+    fetchProfiles().then(users => {
+      if (!cancelled) {
+        setDemoUsers(users);
+        setIsDemoLoading(false);
+      }
+    }).catch(() => { if (!cancelled) setIsDemoLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -479,8 +494,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   <span>Standard Password for all demo accounts: <strong className="font-mono px-2 py-0.5 rounded bg-white text-[#1A1B2E] border border-[#6C63FF]/30 font-bold ml-1">1234567890</strong></span>
                 </div>
 
+                {isDemoLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="w-6 h-6 border-2 border-[#6C63FF]/30 border-t-[#6C63FF] rounded-full animate-spin" />
+                  </div>
+                ) : (
                 <div className="space-y-2.5 pt-2">
-                  {initialUsers.map((usr) => {
+                  {demoUsers.map((usr) => {
                     const roleColors = getRoleColor(usr.role);
 
                     return (
@@ -520,6 +540,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     );
                   })}
                 </div>
+                )}
               </div>
 
               {/* Modal Footer */}

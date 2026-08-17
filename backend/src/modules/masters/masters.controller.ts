@@ -8,13 +8,14 @@ export class MastersController {
   // Core Item Masters
   async getMasters(req: Request, res: Response) {
     const tenant = extractTenantId(req);
-    const key = CacheService.buildKey(tenant, 'masters', 'items');
+    const onlyActive = req.query.active === 'true';
+    const key = CacheService.buildKey(tenant, 'masters', `items:${onlyActive}`);
 
     try {
       const { data, isCached } = await CacheService.getOrSetWithMeta(
         key,
         MASTER_CACHE_TTL_SEC,
-        () => mastersService.getMasters()
+        () => mastersService.getMasters(onlyActive)
       );
       res.setHeader('X-Cache', isCached ? 'HIT' : 'MISS');
       return res.json({ data });
@@ -27,7 +28,6 @@ export class MastersController {
     const tenant = extractTenantId(req);
     try {
       const result = await mastersService.createMaster(req.body);
-      // Invalidate master item cache
       await CacheService.invalidatePattern(`cache:${tenant}:masters:*`);
       return res.status(201).json({ message: 'Master item saved successfully', data: result });
     } catch (err: any) {
@@ -38,13 +38,14 @@ export class MastersController {
   // Customers
   async getCustomers(req: Request, res: Response) {
     const tenant = extractTenantId(req);
-    const key = CacheService.buildKey(tenant, 'masters', 'customers');
+    const onlyActive = req.query.active === 'true';
+    const key = CacheService.buildKey(tenant, 'masters', `customers:${onlyActive}`);
 
     try {
       const { data, isCached } = await CacheService.getOrSetWithMeta(
         key,
         MASTER_CACHE_TTL_SEC,
-        () => mastersService.getCustomers()
+        () => mastersService.getCustomers(onlyActive)
       );
       res.setHeader('X-Cache', isCached ? 'HIT' : 'MISS');
       return res.json({ data });
@@ -67,13 +68,15 @@ export class MastersController {
   // Vendors
   async getVendors(req: Request, res: Response) {
     const tenant = extractTenantId(req);
-    const key = CacheService.buildKey(tenant, 'masters', 'vendors');
+    const onlyActive = req.query.active === 'true';
+    const maskBank = req.query.unmask !== 'true';
+    const key = CacheService.buildKey(tenant, 'masters', `vendors:${onlyActive}:${maskBank}`);
 
     try {
       const { data, isCached } = await CacheService.getOrSetWithMeta(
         key,
         MASTER_CACHE_TTL_SEC,
-        () => mastersService.getVendors()
+        () => mastersService.getVendors(onlyActive, maskBank)
       );
       res.setHeader('X-Cache', isCached ? 'HIT' : 'MISS');
       return res.json({ data });
@@ -96,13 +99,14 @@ export class MastersController {
   // Machines
   async getMachines(req: Request, res: Response) {
     const tenant = extractTenantId(req);
-    const key = CacheService.buildKey(tenant, 'masters', 'machines');
+    const onlyActive = req.query.active === 'true';
+    const key = CacheService.buildKey(tenant, 'masters', `machines:${onlyActive}`);
 
     try {
       const { data, isCached } = await CacheService.getOrSetWithMeta(
         key,
         MASTER_CACHE_TTL_SEC,
-        () => mastersService.getMachines()
+        () => mastersService.getMachines(onlyActive)
       );
       res.setHeader('X-Cache', isCached ? 'HIT' : 'MISS');
       return res.json({ data });
@@ -119,6 +123,46 @@ export class MastersController {
       return res.status(201).json({ message: 'Machine saved successfully', data: result });
     } catch (err: any) {
       return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
+
+  // Users
+  async getUsers(req: Request, res: Response) {
+    const tenant = extractTenantId(req);
+    const onlyActive = req.query.active === 'true';
+    const key = CacheService.buildKey(tenant, 'masters', `users:${onlyActive}`);
+
+    try {
+      const { data, isCached } = await CacheService.getOrSetWithMeta(
+        key,
+        MASTER_CACHE_TTL_SEC,
+        () => mastersService.getUsers(onlyActive)
+      );
+      res.setHeader('X-Cache', isCached ? 'HIT' : 'MISS');
+      return res.json({ data });
+    } catch (err: any) {
+      return res.status(500).json({ error: 'InternalServerError', message: err.message });
+    }
+  }
+
+  async createUser(req: Request, res: Response) {
+    const tenant = extractTenantId(req);
+    try {
+      const result = await mastersService.createUser(req.body);
+      await CacheService.invalidatePattern(`cache:${tenant}:masters:*`);
+      return res.status(201).json({ message: 'User saved successfully', data: result });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
+
+  // Reference Dropdowns
+  async getDropdowns(req: Request, res: Response) {
+    try {
+      const data = await mastersService.getReferenceDropdowns();
+      return res.json({ data });
+    } catch (err: any) {
+      return res.status(500).json({ error: 'InternalServerError', message: err.message });
     }
   }
 

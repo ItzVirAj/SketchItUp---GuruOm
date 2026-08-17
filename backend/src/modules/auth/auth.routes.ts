@@ -14,6 +14,8 @@ const router = Router();
 router.post('/login', loginRateLimiter, (req, res) => authController.login(req, res));
 router.post('/refresh', refreshRateLimiter, (req, res) => authController.refresh(req, res));
 router.post('/logout', (req, res) => authController.logout(req, res));
+router.post('/forgot-password', (req, res) => authController.forgotPassword(req, res));
+router.post('/reset-password', (req, res) => authController.resetPassword(req, res));
 
 // 2. User Provisioning (Self-registration or Admin user setup)
 router.post('/register', (req, res) => authController.register(req, res));

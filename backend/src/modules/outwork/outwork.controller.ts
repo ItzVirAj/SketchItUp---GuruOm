@@ -2,42 +2,41 @@ import { Request, Response } from 'express';
 import { outworkService } from './outwork.service';
 
 export class OutworkController {
-  async getOutworkList(req: Request, res: Response) {
+  async getSubcontractOrders(req: Request, res: Response) {
     try {
-      const data = await outworkService.getOutworkList();
+      const data = await outworkService.getSubcontractOrders();
       return res.json({ data });
     } catch (err: any) {
       return res.status(500).json({ error: 'InternalServerError', message: err.message });
     }
   }
 
-  async getOutworkById(req: Request, res: Response) {
+  async dispatchGateOut(req: Request, res: Response) {
     try {
-      const data = await outworkService.getOutworkById(req.params.id);
-      if (!data) {
-        return res.status(404).json({ error: 'NotFound', message: `Outwork record ${req.params.id} not found` });
-      }
+      const actorName = req.rbacScope?.userName || req.user?.name || 'Production Planner';
+      const data = await outworkService.dispatchSubcontractGateOut(req.body, actorName);
+      return res.status(201).json({ message: 'Job-work Gate-Out pass generated & material transferred to Subcon WIP', data });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
+
+  async receiveGateIn(req: Request, res: Response) {
+    try {
+      const actorName = req.rbacScope?.userName || req.user?.name || 'Quality Inspector';
+      const data = await outworkService.receiveSubcontractGateIn(req.body, actorName);
+      return res.json({ message: 'Job-work Gate-In received, QC inspected & stock returned to factory inventory', data });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
+
+  async getOverdueAlerts(req: Request, res: Response) {
+    try {
+      const data = await outworkService.getOverdueSubcontractAlerts();
       return res.json({ data });
     } catch (err: any) {
       return res.status(500).json({ error: 'InternalServerError', message: err.message });
-    }
-  }
-
-  async createOutworkSendOut(req: Request, res: Response) {
-    try {
-      const data = await outworkService.createOutworkSendOut(req.body);
-      return res.status(201).json({ message: 'Outwork send-out created successfully', data });
-    } catch (err: any) {
-      return res.status(400).json({ error: 'ValidationError', message: err.message });
-    }
-  }
-
-  async receiveOutworkReturn(req: Request, res: Response) {
-    try {
-      const data = await outworkService.receiveOutworkReturn(req.params.id, req.body);
-      return res.json({ message: 'Outwork vendor return processed successfully', data });
-    } catch (err: any) {
-      return res.status(400).json({ error: 'ValidationError', message: err.message });
     }
   }
 }

@@ -25,60 +25,7 @@ export interface InventoryMovementRecord {
 }
 
 // In-Memory Immutable Ledger Journal for fallback / offline testing
-const IN_MEMORY_MOVEMENTS: InventoryMovementRecord[] = [
-  {
-    id: 'mov-init-1',
-    item_code: '00000001',
-    location: 'MAIN-WAREHOUSE',
-    quantity_change: 150,
-    movement_type: 'OPENING_BALANCE',
-    reference_id: 'INIT-2026-001',
-    reference_type: 'system',
-    balance_after: 150,
-    actor_email: 'system@guruom.in',
-    notes: 'Initial opening stock balance',
-    created_at: new Date(Date.now() - 86400000 * 3).toISOString()
-  },
-  {
-    id: 'mov-init-2',
-    item_code: '00000002',
-    location: 'MAIN-WAREHOUSE',
-    quantity_change: 80,
-    movement_type: 'OPENING_BALANCE',
-    reference_id: 'INIT-2026-002',
-    reference_type: 'system',
-    balance_after: 80,
-    actor_email: 'system@guruom.in',
-    notes: 'Initial opening stock balance',
-    created_at: new Date(Date.now() - 86400000 * 3).toISOString()
-  },
-  {
-    id: 'mov-init-3',
-    item_code: '00000003',
-    location: 'MAIN-WAREHOUSE',
-    quantity_change: 200,
-    movement_type: 'OPENING_BALANCE',
-    reference_id: 'INIT-2026-003',
-    reference_type: 'system',
-    balance_after: 200,
-    actor_email: 'system@guruom.in',
-    notes: 'Initial opening stock balance',
-    created_at: new Date(Date.now() - 86400000 * 3).toISOString()
-  },
-  {
-    id: 'mov-init-4',
-    item_code: '00000004',
-    location: 'MAIN-WAREHOUSE',
-    quantity_change: 10,
-    movement_type: 'OPENING_BALANCE',
-    reference_id: 'INIT-2026-004',
-    reference_type: 'system',
-    balance_after: 10,
-    actor_email: 'system@guruom.in',
-    notes: 'Initial opening stock balance',
-    created_at: new Date(Date.now() - 86400000 * 3).toISOString()
-  }
-];
+const IN_MEMORY_MOVEMENTS: InventoryMovementRecord[] = [];
 
 export class InventoryMovementsService {
   private db = getDbClient();
@@ -156,7 +103,7 @@ export class InventoryMovementsService {
     // In-memory freeze append
     IN_MEMORY_MOVEMENTS.unshift(Object.freeze({ ...record }));
 
-    // 3. Update denormalized stock_items cache/read-model
+    // 3. Update denormalized stock_items cache/read-model (upsert — first movement creates the row)
     try {
       const { data: stockRow } = await this.db
         .from('stock_items')
@@ -176,6 +123,38 @@ export class InventoryMovementsService {
           status,
           updated_at: nowIso
         }).eq('code', itemCode);
+      } else {
+        // Enrich description/reorder level from the Item Master where possible
+        let description = itemCode;
+        let masterReorder: number | null = null;
+        let masterUnit: string | null = null;
+        try {
+          const { data: master } = await this.db
+            .from('masters')
+            .select('name, description, reorder_level, unit')
+            .eq('code', itemCode)
+            .maybeSingle();
+          if (master) {
+            description = master.name || master.description || itemCode;
+            masterReorder = Number(master.reorder_level ?? 0);
+            masterUnit = master.unit || null;
+          }
+        } catch { /* masters lookup is best-effort */ }
+
+        await this.db.from('stock_items').insert({
+          id: `stk-${itemCode}`,
+          code: itemCode,
+          description,
+          on_hand: balanceAfter,
+          reserved: 0,
+          available: balanceAfter,
+          demand: 0,
+          reorder_level: masterReorder ?? 25,
+          shortage: Math.max(0, (masterReorder ?? 25) - balanceAfter),
+          unit: masterUnit || 'NOS',
+          status,
+          updated_at: nowIso
+        });
       }
     } catch (err: any) {
       console.warn('Database stock_items sync warning:', err.message);

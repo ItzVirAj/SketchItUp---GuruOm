@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Download, CheckCircle2, AlertTriangle, Search, X, Check, Clock, XCircle } from 'lucide-react';
 import { QCInspection } from '../../../types/console';
 
@@ -17,33 +17,75 @@ export const QCView: React.FC<QCViewProps> = ({
   onInspectSubmit,
   onUpdateQC
 }) => {
-  const activeQcItems = qcItems || qcQueue || [];
+  const initialItems = qcItems || qcQueue || [];
+  const [localQc, setLocalQc] = useState<QCInspection[]>(initialItems);
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [inspectingItem, setInspectingItem] = useState<QCInspection | null>(null);
   const [qcDecision, setQcDecision] = useState<'PASS' | 'QC_HOLD' | 'REJECTED'>('PASS');
   const [qcNotes, setQcNotes] = useState('');
 
-  const filteredQc = activeQcItems.filter(q => {
+  useEffect(() => {
+    if (qcItems || qcQueue) {
+      setLocalQc(qcItems || qcQueue || []);
+    }
+  }, [qcItems, qcQueue]);
+
+  // Deduplicate items by unique orderPo + jobNo (keep the latest)
+  const deduplicatedItems = React.useMemo(() => {
+    const map = new Map<string, QCInspection>();
+    for (const item of localQc) {
+      const key = `${(item.orderPo || '').trim().toUpperCase()}_${(item.jobNo || '').trim().toUpperCase()}`;
+      if (key !== '_') {
+        map.set(key, item); // Overwrite earlier duplicates with latest
+      } else {
+        map.set(item.id, item);
+      }
+    }
+    return Array.from(map.values());
+  }, [localQc]);
+
+  const filteredQc = deduplicatedItems.filter(q => {
     const matchesFilter = filterStatus === 'ALL' || q.qcStatus === filterStatus;
-    const matchesSearch = q.jobNo.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          q.partDescription.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          q.orderPo.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = (q.jobNo || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          (q.partDescription || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (q.orderPo || '').toLowerCase().includes(searchQuery.toLowerCase());
     return matchesFilter && matchesSearch;
   });
+
+  const handleDeleteQC = (id: string) => {
+    setLocalQc(prev => prev.filter(q => q.id !== id));
+  };
 
   const handleInspectSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inspectingItem) return;
+    
+    const targetPo = inspectingItem.orderPo;
+    const targetJob = inspectingItem.jobNo;
+
+    // Instant optimistic update in local state for this item and all items matching the same orderPo/jobNo
+    setLocalQc(prev => prev.map(q => {
+      if (q.id === inspectingItem.id || (targetPo && q.orderPo === targetPo)) {
+        return {
+          ...q,
+          qcStatus: qcDecision,
+          inspectorNotes: qcNotes || q.inspectorNotes,
+          inspectedAt: new Date().toISOString()
+        };
+      }
+      return q;
+    }));
+
     if (onInspectSubmit) onInspectSubmit(inspectingItem.id, qcDecision, qcNotes);
     if (onUpdateQC) onUpdateQC(inspectingItem.id, qcDecision, qcNotes);
     setInspectingItem(null);
     setQcNotes('');
   };
 
-  const pendingCount = activeQcItems.filter(q => q.qcStatus === 'PENDING').length;
-  const passCount = activeQcItems.filter(q => q.qcStatus === 'PASS' || q.qcStatus === 'PASSED').length;
-  const holdCount = activeQcItems.filter(q => q.qcStatus === 'QC_HOLD' || q.qcStatus === 'REJECTED').length;
+  const pendingCount = deduplicatedItems.filter(q => q.qcStatus === 'PENDING').length;
+  const passCount = deduplicatedItems.filter(q => q.qcStatus === 'PASS' || q.qcStatus === 'PASSED').length;
+  const holdCount = deduplicatedItems.filter(q => q.qcStatus === 'QC_HOLD' || q.qcStatus === 'REJECTED').length;
 
   return (
     <div className="space-y-6 font-sans">
@@ -62,7 +104,7 @@ export const QCView: React.FC<QCViewProps> = ({
               }`}>
                 Quality Assurance
               </span>
-              <span className="text-xs text-slate-400 font-mono">• Dimensional & Visual Audit</span>
+              <span className={`text-xs font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>• Dimensional & Visual Audit</span>
             </div>
             <h1 className={`text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
               Quality Control (QC) Queue
@@ -85,7 +127,7 @@ export const QCView: React.FC<QCViewProps> = ({
               </div>
             </div>
             <div className="mt-2 flex items-baseline justify-between">
-              <span className={`text-2xl font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{activeQcItems.length}</span>
+              <span className={`text-2xl font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{localQc.length}</span>
               <span className="text-[11px] font-mono font-semibold text-[#5B75F8]">In System</span>
             </div>
           </div>
@@ -200,13 +242,13 @@ export const QCView: React.FC<QCViewProps> = ({
                 <th className="py-4 px-5 text-center">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
+            <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
               {filteredQc.map((qc) => (
                 <tr key={qc.id} className={isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}>
                   <td className="py-4 px-5 font-bold font-mono text-[#5B75F8] dark:text-[#7B92FF]">
                     {qc.jobNo}
                   </td>
-                  <td className="py-4 px-5 font-mono text-slate-400">
+                  <td className={`py-4 px-5 font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                     {qc.orderPo}
                   </td>
                   <td className={`py-4 px-5 font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
@@ -218,24 +260,28 @@ export const QCView: React.FC<QCViewProps> = ({
                   <td className="py-4 px-5 text-center">
                     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
                       qc.qcStatus === 'PASS' || qc.qcStatus === 'PASSED'
-                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                        : qc.qcStatus === 'QC_HOLD' || qc.qcStatus === 'REJECTED'
-                          ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-                          : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                        ? isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : qc.qcStatus === 'QC_HOLD'
+                          ? isDarkMode ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-200'
+                          : qc.qcStatus === 'REJECTED'
+                            ? isDarkMode ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
+                            : isDarkMode ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' : 'bg-blue-50 text-blue-700 border-blue-200'
                     }`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${
-                        qc.qcStatus === 'PASS' || qc.qcStatus === 'PASSED' ? 'bg-emerald-500' : qc.qcStatus === 'QC_HOLD' ? 'bg-rose-500' : 'bg-amber-500'
+                        qc.qcStatus === 'PASS' || qc.qcStatus === 'PASSED' ? 'bg-emerald-500' : qc.qcStatus === 'QC_HOLD' ? 'bg-amber-500' : qc.qcStatus === 'REJECTED' ? 'bg-rose-500' : 'bg-blue-500'
                       }`} />
                       <span>{qc.qcStatus}</span>
                     </span>
                   </td>
-                  <td className="py-4 px-5 text-slate-400 font-mono text-[11px]">
+                  <td className={`py-4 px-5 font-mono text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                     {qc.inspectorNotes || '—'}
                   </td>
                   <td className="py-4 px-5 text-center">
                     <button
                       onClick={() => {
                         setInspectingItem(qc);
+                        const current = qc.qcStatus === 'PASSED' ? 'PASS' : qc.qcStatus === 'REJECTED' ? 'REJECTED' : qc.qcStatus === 'QC_HOLD' ? 'QC_HOLD' : 'PASS';
+                        setQcDecision(current as any);
                         setQcNotes(qc.inspectorNotes || '');
                       }}
                       className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer ${
@@ -257,10 +303,10 @@ export const QCView: React.FC<QCViewProps> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md font-sans">
           <div className={`relative w-full max-w-lg rounded-3xl border p-7 space-y-6 shadow-2xl transition-all ${
             isDarkMode 
-              ? 'bg-slate-900/95 border-slate-800/80 text-white backdrop-blur-2xl shadow-[#5B75F8]/5' 
+              ? 'bg-slate-900/95 border-slate-800 text-white backdrop-blur-2xl' 
               : 'bg-white border-slate-200 text-slate-900 shadow-2xl'
           }`}>
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-4">
+            <div className={`flex items-center justify-between border-b pb-4 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-2xl bg-[#5B75F8]/15 text-[#5B75F8] border border-[#5B75F8]/30">
                   <CheckCircle2 className="w-5 h-5" />
@@ -294,14 +340,16 @@ export const QCView: React.FC<QCViewProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-2">Inspection Decision *</label>
+                <label className={`block text-[11px] font-mono uppercase font-bold mb-2 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                  Inspection Decision *
+                </label>
                 <div className="grid grid-cols-3 gap-3 font-mono text-xs">
                   <button
                     type="button"
                     onClick={() => setQcDecision('PASS')}
                     className={`py-3 rounded-2xl font-bold border transition-all cursor-pointer ${
                       qcDecision === 'PASS' 
-                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50 shadow-md shadow-emerald-500/20' 
+                        ? 'bg-emerald-500/20 text-emerald-500 dark:text-emerald-400 border-emerald-500/50 shadow-md shadow-emerald-500/20' 
                         : isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white' : 'bg-slate-50 border-slate-200 text-slate-600'
                     }`}
                   >
@@ -312,7 +360,7 @@ export const QCView: React.FC<QCViewProps> = ({
                     onClick={() => setQcDecision('QC_HOLD')}
                     className={`py-3 rounded-2xl font-bold border transition-all cursor-pointer ${
                       qcDecision === 'QC_HOLD' 
-                        ? 'bg-amber-500/20 text-amber-400 border-amber-500/50 shadow-md shadow-amber-500/20' 
+                        ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/50 shadow-md shadow-amber-500/20' 
                         : isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white' : 'bg-slate-50 border-slate-200 text-slate-600'
                     }`}
                   >
@@ -323,7 +371,7 @@ export const QCView: React.FC<QCViewProps> = ({
                     onClick={() => setQcDecision('REJECTED')}
                     className={`py-3 rounded-2xl font-bold border transition-all cursor-pointer ${
                       qcDecision === 'REJECTED' 
-                        ? 'bg-rose-500/20 text-rose-400 border-rose-500/50 shadow-md shadow-rose-500/20' 
+                        ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/50 shadow-md shadow-rose-500/20' 
                         : isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white' : 'bg-slate-50 border-slate-200 text-slate-600'
                     }`}
                   >
@@ -333,7 +381,9 @@ export const QCView: React.FC<QCViewProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Inspector Remarks</label>
+                <label className={`block text-[11px] font-mono uppercase font-bold mb-1.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                  Inspector Remarks
+                </label>
                 <textarea
                   rows={3}
                   value={qcNotes}
@@ -347,7 +397,7 @@ export const QCView: React.FC<QCViewProps> = ({
                 />
               </div>
 
-              <div className="pt-4 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-end gap-3">
+              <div className={`pt-4 border-t flex items-center justify-end gap-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
                 <button 
                   type="button" 
                   onClick={() => setInspectingItem(null)} 

@@ -33,7 +33,17 @@ import {
   FileSpreadsheet,
   Sliders,
   Settings,
-  HardDrive
+  HardDrive,
+  AlertTriangle,
+  FileText,
+  DollarSign,
+  Briefcase,
+  Eye,
+  EyeOff,
+  Copy,
+  Sparkles,
+  Edit,
+  CheckSquare
 } from 'lucide-react';
 import { 
   SystemUser, 
@@ -51,7 +61,25 @@ import {
   VendorBill,
   MasterItem
 } from '../../../types/console';
+import { Modal } from '../../common/Modal';
+
 import { getRoleColor } from '../../../utils/permissions';
+import { 
+  ROLE_DEFAULT_MODULES, 
+  ALL_MODULES, 
+  USER_ROLES, 
+  ACCESS_LEVELS, 
+  MACHINE_SHIFTS, 
+  INDIAN_MOBILE_REGEX, 
+  generateNextCode 
+} from '../../../utils/masterValidation';
+import { 
+  RBAC_ROLE_MATRIX, 
+  normalizeRole, 
+  AccessLevel, 
+  SystemModule, 
+  RoleDefinitionRecord 
+} from '../../../utils/rbacMatrix';
 
 interface UsersAuditViewProps {
   users: SystemUser[];
@@ -72,7 +100,7 @@ interface UsersAuditViewProps {
   onSwitchUser?: (userId: string) => void;
   onRevokeUser?: (userId: string) => void;
   onRestoreUser?: (userId: string) => void;
-  onUpdateUserRole?: (userId: string, role: UserRole) => void;
+  onUpdateUserRole?: (userId: string, role: any) => void;
   onDeleteUser?: (userId: string) => void;
   onResetAllData?: () => void;
   onClearOperationalData?: () => void;
@@ -89,13 +117,13 @@ export type SectionCategory =
   | 'FINANCE' 
   | 'MASTERS';
 
-export const ROLE_DEFINITIONS: { role: UserRole; label: string; desc: string }[] = [
-  { role: 'SUPER ADMIN', label: 'Super Admin', desc: 'Full root access to all ERP modules, configuration, user management, and system data.' },
-  { role: 'OPERATOR', label: 'Shop Floor Operator', desc: 'Access to Orders, Job Cards, Inventory, Production Logging, Quality, and Dispatch.' },
-  { role: 'QC_MANAGER', label: 'Quality Control Manager', desc: 'Authorized to conduct and approve QC stages, defect categorization, and PDI certificates.' },
-  { role: 'DISPATCH_CLERK', label: 'Dispatch & Logistics Clerk', desc: 'Authorized to generate delivery challans, schedule transporters, and generate dispatch invoices.' },
-  { role: 'FINANCE_MANAGER', label: 'Finance & Accounts Manager', desc: 'Authorized for commercial invoicing, vendor bills disbursement, approvals, and financial reports.' }
-];
+export const ROLE_DEFINITIONS = Object.values(RBAC_ROLE_MATRIX).map(r => ({
+  role: r.role,
+  label: r.label,
+  desc: r.scopeDescription || r.approvalLimitDisplay,
+  category: r.category,
+  approvalLimitDisplay: r.approvalLimitDisplay
+}));
 
 export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
   users = [],
@@ -121,7 +149,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
   onResetAllData,
   onClearOperationalData
 }) => {
-  const [activeTab, setActiveTab] = useState<'AUDIT' | 'USERS' | 'DATA_ADMIN'>('AUDIT');
+  const [activeTab, setActiveTab] = useState<'AUDIT' | 'USERS' | 'RBAC_MATRIX' | 'DATA_ADMIN'>('AUDIT');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'REVOKED'>('ALL');
   const [selectedSection, setSelectedSection] = useState<SectionCategory>('ALL');
@@ -132,7 +160,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
   // Edit Role State
   const [showEditRoleModal, setShowEditRoleModal] = useState(false);
   const [userToEditRole, setUserToEditRole] = useState<SystemUser | null>(null);
-  const [newSelectedRole, setNewSelectedRole] = useState<UserRole>('OPERATOR');
+  const [newSelectedRole, setNewSelectedRole] = useState<string>('Shop Floor Supervisor');
 
   // Delete User State
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -142,12 +170,122 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
   const [selectedExportSection, setSelectedExportSection] = useState<string>('ALL');
   const [exportFormat, setExportFormat] = useState<'JSON' | 'CSV'>('JSON');
 
-  // New User Form State
-  const [userName, setUserName] = useState('');
-  const [userEmail, setUserEmail] = useState('');
-  const [userRole, setUserRole] = useState<UserRole>('OPERATOR');
-  const [userDepartment, setUserDepartment] = useState('Shop Floor Operations');
-  const [userPhone, setUserPhone] = useState('');
+  // New User Form State (Exact Master Module Specification)
+  const [uCode, setUCode] = useState('');
+  const [uFullName, setUFullName] = useState('');
+  const [uEmployeeCode, setUEmployeeCode] = useState('');
+  const [uUserRole, setUUserRole] = useState<string>('Shop Floor Supervisor');
+  const [uDepartment, setUDepartment] = useState('Production Operations');
+  const [uMobile, setUMobile] = useState('');
+  const [uEmail, setUEmail] = useState('');
+  const [uPassword, setUPassword] = useState('');
+  const [uConfirmPassword, setUConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [uRequirePasswordChange, setURequirePasswordChange] = useState(true);
+  const [copiedPassword, setCopiedPassword] = useState(false);
+  const [uAccessLevel, setUAccessLevel] = useState<'Full Access' | 'Edit' | 'View Only'>('Edit');
+  const [uModulesAccess, setUModulesAccess] = useState<string[]>(ROLE_DEFAULT_MODULES['Production Supervisor'] || []);
+  const [uReportingManager, setUReportingManager] = useState('');
+  const [uShift, setUShift] = useState('General-Day');
+  const [uStatus, setUStatus] = useState<'Active' | 'Inactive'>('Active');
+  const [userErrors, setUserErrors] = useState<Record<string, string>>({});
+
+  const handleGeneratePassword = () => {
+    const uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const lowercase = 'abcdefghijkmnopqrstuvwxyz';
+    const numbers = '23456789';
+    const symbols = '!@#$%^&*';
+    const all = uppercase + lowercase + numbers + symbols;
+
+    let pwd = '';
+    pwd += uppercase[Math.floor(Math.random() * uppercase.length)];
+    pwd += lowercase[Math.floor(Math.random() * lowercase.length)];
+    pwd += numbers[Math.floor(Math.random() * numbers.length)];
+    pwd += symbols[Math.floor(Math.random() * symbols.length)];
+
+    for (let i = 4; i < 12; i++) {
+      pwd += all[Math.floor(Math.random() * all.length)];
+    }
+
+    pwd = pwd.split('').sort(() => 0.5 - Math.random()).join('');
+
+    setUPassword(pwd);
+    setUConfirmPassword(pwd);
+    setShowPassword(true);
+    setShowConfirmPassword(true);
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(pwd);
+    }
+    setCopiedPassword(true);
+    setTimeout(() => setCopiedPassword(false), 3500);
+
+    setUserErrors(prev => {
+      const next = { ...prev };
+      delete next.password;
+      delete next.confirmPassword;
+      return next;
+    });
+  };
+
+  const openAddUserModal = () => {
+    setUserErrors({});
+    const nextCode = generateNextCode(users.map(u => u.code || u.userId || u.id), 'USR');
+    setUCode(nextCode);
+    setUFullName('');
+    setUEmployeeCode(`EMP-${Math.floor(1000 + Math.random() * 9000)}`);
+    setUUserRole('Shop Floor Supervisor');
+    setUDepartment('Production Operations');
+    setUMobile('');
+    setUEmail('');
+    setUPassword('');
+    setUConfirmPassword('');
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+    setURequirePasswordChange(true);
+    setCopiedPassword(false);
+    setUAccessLevel('Edit');
+    setUModulesAccess(ROLE_DEFAULT_MODULES['Production Supervisor'] || ['job_cards', 'production']);
+    setUReportingManager(users[0]?.name || '');
+    setUShift('General-Day');
+    setUStatus('Active');
+    setShowAddUserModal(true);
+  };
+
+  const handleRoleSelect = (role: string) => {
+    setUUserRole(role);
+    const defaults = ROLE_DEFAULT_MODULES[role] || [];
+    setUModulesAccess(defaults);
+    if (role === 'Owner' || role === 'Admin (System)' || role === 'Admin/Owner') {
+      setUAccessLevel('Full Access');
+      setUDepartment('Executive / Management');
+    } else if (role === 'Management/Viewer') {
+      setUAccessLevel('View Only');
+      setUDepartment('Management');
+    } else if (role === 'Sales/Order Desk' || role === 'Sales Executive') {
+      setUDepartment('Sales & Marketing');
+    } else if (role === 'Purchase Manager' || role === 'Purchase Executive') {
+      setUDepartment('Procurement');
+    } else if (role === 'Store Keeper' || role === 'Store/Inventory Executive') {
+      setUDepartment('Stores & Warehouse');
+    } else if (role === 'Accountant' || role === 'Accounts Executive') {
+      setUDepartment('Accounts & Finance');
+    } else if (role === 'Quality Inspector') {
+      setUDepartment('Quality Assurance');
+    } else if (role === 'Dispatch Executive') {
+      setUDepartment('Logistics & Dispatch');
+    } else if (role === 'Machine Operator') {
+      setUDepartment('Shop Floor Operations');
+    } else if (role === 'HR/Admin') {
+      setUDepartment('Human Resources & Admin');
+    }
+  };
+
+  const toggleModuleAccess = (moduleId: string) => {
+    setUModulesAccess(prev => 
+      prev.includes(moduleId) ? prev.filter(m => m !== moduleId) : [...prev, moduleId]
+    );
+  };
 
   // Audit Logs Pagination & Diff Inspector State
   const [expandedLogIds, setExpandedLogIds] = useState<Record<string, boolean>>({});
@@ -255,7 +393,8 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
     const matchesSearch = 
       usr.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       usr.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      usr.department.toLowerCase().includes(searchTerm.toLowerCase());
+      usr.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (usr.userRole || usr.role || '').toLowerCase().includes(searchTerm.toLowerCase());
     
     if (statusFilter === 'ALL') return matchesSearch;
     return matchesSearch && usr.status === statusFilter;
@@ -369,22 +508,63 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
 
   const handleCreateUser = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userName || !userEmail) return;
+    const errors: Record<string, string> = {};
+
+    if (!uFullName.trim()) errors.fullName = 'Full Name is mandatory';
+    if (!uEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(uEmail.trim())) {
+      errors.email = 'Valid unique email address is mandatory';
+    } else if (users.some(u => u.email.toLowerCase() === uEmail.trim().toLowerCase())) {
+      errors.email = 'A user with this email address already exists';
+    }
+
+    if (!uMobile.trim() || !INDIAN_MOBILE_REGEX.test(uMobile.trim())) {
+      errors.mobile = 'Valid 10-digit Indian mobile number is required';
+    }
+
+    if (!uPassword) {
+      errors.password = 'Password is required';
+    } else if (uPassword.length < 8) {
+      errors.password = 'Password must be at least 8 characters long';
+    } else if (!/(?=.*[a-zA-Z])(?=.*\d)/.test(uPassword)) {
+      errors.password = 'Password must contain at least one letter and one number';
+    }
+
+    if (uPassword !== uConfirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+    }
+
+    if (!uDepartment.trim()) errors.department = 'Department is mandatory';
+
+    if (Object.keys(errors).length > 0) {
+      setUserErrors(errors);
+      return;
+    }
 
     if (onAddUser) {
       onAddUser({
-        name: userName,
-        email: userEmail,
-        role: userRole,
-        department: userDepartment,
-        phone: userPhone,
-        status: 'ACTIVE'
-      });
+        id: `user-${Date.now()}`,
+        code: uCode,
+        userId: uCode,
+        name: uFullName.trim(),
+        fullName: uFullName.trim(),
+        employeeCode: uEmployeeCode.trim(),
+        email: uEmail.trim().toLowerCase(),
+        mobile: uMobile.trim(),
+        phone: uMobile.trim(),
+        role: uUserRole as any,
+        userRole: uUserRole,
+        department: uDepartment.trim(),
+        accessLevel: uAccessLevel,
+        modulesAccess: uModulesAccess,
+        reportingManager: uReportingManager.trim(),
+        shift: uShift,
+        status: uStatus === 'Active' ? 'ACTIVE' : 'REVOKED',
+        password: uPassword,
+        requirePasswordChangeFirstLogin: uRequirePasswordChange
+      } as any);
     }
 
     setShowAddUserModal(false);
-    setUserName('');
-    setUserEmail('');
   };
 
   return (
@@ -402,15 +582,15 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider ${
                 isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/30' : 'bg-[#5B75F8]/10 text-[#5B75F8] border border-[#5B75F8]/20'
               }`}>
-                Identity & Administration
+                Governance & Authorization Hub
               </span>
-              <span className="text-xs text-slate-400 font-mono">• Compliance & System Data Control</span>
+              <span className="text-xs text-slate-400 font-mono">• Exact 12-Role RBAC & Monetary Escalation Engine</span>
             </div>
             <h1 className={`text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-              Admin Control & System Data Suite
+              Identity & Access Control Suite
             </h1>
             <p className={`text-xs mt-1 max-w-xl ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-              Provision system users, inspect security audit logs, reset test seed metrics, or export section datasets as JSON/CSV.
+              Manage users, explore the 12-role RBAC permission matrix with server-side monetary limits (Purchase: ₹1.0L, Accounts: ₹50k), and audit immutable logs.
             </p>
           </div>
 
@@ -427,7 +607,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
 
             {activeTab === 'USERS' && onAddUser && (
               <button
-                onClick={() => setShowAddUserModal(true)}
+                onClick={openAddUserModal}
                 className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
               >
                 <Plus className="w-4 h-4" />
@@ -456,7 +636,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
       <div className={`p-4 rounded-3xl border transition-all flex flex-wrap items-center justify-between gap-4 ${
         isDarkMode ? 'bg-slate-900/70 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-xs'
       }`}>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setActiveTab('AUDIT')}
             className={`px-4 py-2 rounded-2xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 ${
@@ -482,6 +662,18 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
           </button>
 
           <button
+            onClick={() => setActiveTab('RBAC_MATRIX')}
+            className={`px-4 py-2 rounded-2xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === 'RBAC_MATRIX'
+                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white shadow-xs'
+                : isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>RBAC Matrix & Escalations (12 Roles)</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('DATA_ADMIN')}
             className={`px-4 py-2 rounded-2xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 ${
               activeTab === 'DATA_ADMIN'
@@ -490,12 +682,12 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
             }`}
           >
             <HardDrive className="w-3.5 h-3.5" />
-            <span>Data Control & Log Export Suite</span>
+            <span>Data Control Suite</span>
           </button>
         </div>
 
-        {/* Search Bar & Actions for AUDIT / USERS */}
-        {activeTab !== 'DATA_ADMIN' && (
+        {/* Search Bar & Actions */}
+        {activeTab !== 'DATA_ADMIN' && activeTab !== 'RBAC_MATRIX' && (
           <div className="flex items-center gap-3">
             {activeTab === 'USERS' && (
               <select
@@ -523,24 +715,15 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                 className="bg-transparent outline-none w-full"
               />
             </div>
-
-            {activeTab === 'USERS' && (
-              <button
-                onClick={() => setShowAddUserModal(true)}
-                className="px-4 py-1.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs font-mono flex items-center gap-1.5 cursor-pointer shadow-md shadow-[#5B75F8]/20 transition-all hover:scale-[1.02]"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add User</span>
-              </button>
-            )}
           </div>
         )}
       </div>
 
+      {/* ========================================================================= */}
       {/* TAB 1: AUDIT TRAIL STREAM */}
+      {/* ========================================================================= */}
       {activeTab === 'AUDIT' && (
         <div className="space-y-4">
-          {/* Append-Only Immutability Security Banner */}
           <div className={`p-4 rounded-2xl border flex flex-wrap items-center justify-between gap-3 text-xs ${
             isDarkMode ? 'bg-indigo-950/20 border-indigo-500/30 text-indigo-200' : 'bg-indigo-50/80 border-indigo-200 text-indigo-900'
           }`}>
@@ -556,13 +739,13 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                   </span>
                 </div>
                 <div className="text-[11px] text-slate-400 mt-0.5">
-                  Records full WHO, WHAT, WHEN, WHERE, BEFORE, and AFTER history. Mutation or deletion of logs is strictly prohibited.
+                  Records full WHO, WHAT, WHEN, WHERE, within-limit status, and auto-escalated approvals. Mutation or deletion of logs is strictly prohibited.
                 </div>
               </div>
             </div>
 
-            <div className="font-mono text-[11px] text-slate-400">
-              Total Recorded Events: <span className="font-bold text-white">{filteredLogs.length}</span>
+            <div className={`font-mono text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              Total Recorded Events: <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{filteredLogs.length}</span>
             </div>
           </div>
 
@@ -584,148 +767,107 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800/60 font-sans">
+                  {paginatedLogs.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="p-10 text-center">
+                        <div className={`inline-flex p-3 rounded-2xl border mb-3 ${
+                          isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-500' : 'bg-slate-50 border-slate-200 text-slate-400'
+                        }`}>
+                          <Lock className="w-6 h-6" />
+                        </div>
+                        <div className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>No Audit Events Recorded Yet</div>
+                        <div className={`text-xs mt-1 font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                          Every backend change (orders, production, QC, dispatch, finance, masters) streams here in realtime — no demo data.
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                   {paginatedLogs.map((log) => {
                     const secInfo = getSectionInfo(log.entity || log.entityType || '');
-                    const Icon = secInfo.icon;
                     const isExpanded = !!expandedLogIds[log.id];
-
-                    // Determine changed keys if before/after states exist
-                    const allKeys = Array.from(new Set([
-                      ...Object.keys(log.beforeState || {}),
-                      ...Object.keys(log.afterState || {})
-                    ]));
-                    const changedKeys = allKeys.filter(k => {
-                      const b = log.beforeState ? log.beforeState[k] : undefined;
-                      const a = log.afterState ? log.afterState[k] : undefined;
-                      return JSON.stringify(b) !== JSON.stringify(a);
-                    });
 
                     return (
                       <React.Fragment key={log.id}>
                         <tr 
                           onClick={() => toggleExpandLog(log.id)}
                           className={`cursor-pointer transition-colors ${
-                            isDarkMode ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50/80'
-                          } ${isExpanded ? (isDarkMode ? 'bg-slate-800/20' : 'bg-slate-50/50') : ''}`}
+                            isDarkMode ? 'hover:bg-slate-800/50 text-slate-300' : 'hover:bg-slate-50 text-slate-700'
+                          }`}
                         >
-                          <td className="py-4 px-4 text-center">
-                            <button
-                              type="button"
-                              className="p-1 rounded-lg hover:bg-slate-800 text-slate-400"
-                              title={isExpanded ? 'Collapse Diff' : 'Inspect State Diff'}
-                            >
-                              <span className="font-mono text-xs font-bold">{isExpanded ? '▼' : '▶'}</span>
-                            </button>
+                          <td className="py-3.5 px-4 text-center text-slate-500">
+                            {isExpanded ? '▼' : '▶'}
                           </td>
-                          <td className={`py-4 px-4 font-mono text-[11px] whitespace-nowrap ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                            {log.when}
+                          <td className="py-3.5 px-4 font-mono text-[11px] text-slate-400">
+                            {log.when || log.timestamp}
                           </td>
-                          <td className="py-4 px-4">
-                            <div className="font-bold text-xs truncate max-w-[160px] text-slate-900 dark:text-slate-100">
-                              {log.user || log.actorEmail}
-                            </div>
-                            {log.ipAddress && (
-                              <div className="text-[10px] font-mono text-slate-500">
-                                IP: {log.ipAddress}
-                              </div>
-                            )}
-                          </td>
-                          <td className="py-4 px-4">
-                            <div className="flex items-center gap-1.5">
-                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold uppercase border ${secInfo.badgeClass}`}>
-                                <Icon className="w-2.5 h-2.5" />
-                                <span>{secInfo.label}</span>
-                              </span>
-                            </div>
-                            {log.entityId && (
-                              <span className="text-[10px] font-mono text-slate-400 block mt-0.5 truncate max-w-[120px]">
-                                ID: #{log.entityId}
+                          <td className="py-3.5 px-4">
+                            <div className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{log.user || log.actorEmail}</div>
+                            {log.actorRole && (
+                              <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
+                                isDarkMode ? 'bg-slate-800 text-slate-400 border border-slate-700' : 'bg-slate-100 text-slate-600 border border-slate-200'
+                              }`}>
+                                {log.actorRole}
                               </span>
                             )}
                           </td>
-                          <td className="py-4 px-4 font-mono text-xs text-blue-500 font-bold uppercase whitespace-nowrap">
+                          <td className="py-3.5 px-4 font-mono">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${secInfo.badgeClass}`}>
+                              {log.entity || log.entityType}
+                            </span>
+                          </td>
+                          <td className={`py-3.5 px-4 font-mono font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>
                             {log.action}
                           </td>
-                          <td className={`py-4 px-5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                            <div>{log.details}</div>
-                            {changedKeys.length > 0 && !isExpanded && (
-                              <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                                {changedKeys.slice(0, 3).map(k => (
-                                  <span key={k} className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] font-mono">
-                                    Δ {k}: {String(log.beforeState?.[k] ?? 'null')} → {String(log.afterState?.[k] ?? 'null')}
-                                  </span>
-                                ))}
-                                {changedKeys.length > 3 && (
-                                  <span className="text-[10px] font-mono text-slate-500">
-                                    +{changedKeys.length - 3} more
-                                  </span>
-                                )}
-                              </div>
-                            )}
+                          <td className="py-3.5 px-5">
+                            <div className="line-clamp-1">{log.details}</div>
                           </td>
                         </tr>
 
-                        {/* Expandable State Transition Diff Row */}
                         {isExpanded && (
-                          <tr className={isDarkMode ? 'bg-slate-950/60' : 'bg-slate-100/60'}>
-                            <td colSpan={6} className="p-4 pl-12 pr-6">
-                              <div className="space-y-3 font-mono">
-                                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] pb-2 border-b border-slate-800">
-                                  <div className="flex items-center gap-4 text-slate-400">
-                                    <span><strong>Actor:</strong> {log.user || log.actorEmail}</span>
-                                    {log.actorId && <span><strong>Actor ID:</strong> {log.actorId}</span>}
-                                    {log.ipAddress && <span><strong>IP:</strong> {log.ipAddress}</span>}
-                                    {log.userAgent && <span><strong>Client:</strong> {log.userAgent}</span>}
-                                  </div>
-                                  <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold uppercase">
-                                    Append-Only Immutability Verified
-                                  </span>
+                          <tr className={isDarkMode ? 'bg-slate-950/60' : 'bg-slate-50/80'}>
+                            <td colSpan={6} className="p-4 pl-12 text-xs">
+                              <div className={`p-4 rounded-2xl border space-y-3 ${
+                                isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'
+                              }`}>
+                                <div className={`font-mono font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Full Change Record (from backend)</div>
+                                <div className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>{log.details}</div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  {log.beforeState && (
+                                    <div>
+                                      <div className={`text-[10px] font-mono uppercase font-bold mb-1 ${isDarkMode ? 'text-rose-400' : 'text-rose-600'}`}>Before State</div>
+                                      <pre className={`p-2.5 rounded-xl border font-mono text-[10px] overflow-x-auto ${
+                                        isDarkMode ? 'bg-slate-950 border-slate-800 text-rose-300' : 'bg-rose-50/60 border-rose-200 text-rose-700'
+                                      }`}>
+                                        {typeof log.beforeState === 'string' ? log.beforeState : JSON.stringify(log.beforeState, null, 2)}
+                                      </pre>
+                                    </div>
+                                  )}
+                                  {log.afterState && (
+                                    <div>
+                                      <div className={`text-[10px] font-mono uppercase font-bold mb-1 ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>After State</div>
+                                      <pre className={`p-2.5 rounded-xl border font-mono text-[10px] overflow-x-auto ${
+                                        isDarkMode ? 'bg-slate-950 border-slate-800 text-emerald-300' : 'bg-emerald-50/60 border-emerald-200 text-emerald-700'
+                                      }`}>
+                                        {typeof log.afterState === 'string' ? log.afterState : JSON.stringify(log.afterState, null, 2)}
+                                      </pre>
+                                    </div>
+                                  )}
                                 </div>
 
-                                {/* Before vs After Visual Diff */}
-                                {changedKeys.length > 0 ? (
-                                  <div className="space-y-2">
-                                    <div className="text-[11px] font-bold uppercase text-slate-400">
-                                      Changed State Fields ({changedKeys.length}):
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                      <div className="p-3 rounded-xl bg-rose-950/20 border border-rose-500/30 space-y-1.5">
-                                        <div className="text-[10px] uppercase font-bold text-rose-400">
-                                          - BEFORE STATE (Previous)
-                                        </div>
-                                        {changedKeys.map(k => (
-                                          <div key={`before-${k}`} className="text-xs">
-                                            <span className="text-slate-400 font-bold">{k}: </span>
-                                            <span className="text-rose-300 font-bold">
-                                              {typeof log.beforeState?.[k] === 'object' 
-                                                ? JSON.stringify(log.beforeState?.[k]) 
-                                                : String(log.beforeState?.[k] ?? 'null')}
-                                            </span>
-                                          </div>
-                                        ))}
-                                      </div>
+                                <div className={`flex flex-wrap gap-x-6 gap-y-1 font-mono text-[10px] ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>
+                                  {log.entityId && <span>Entity ID: <span className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>{log.entityId}</span></span>}
+                                  {log.ipAddress && <span>IP: <span className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>{log.ipAddress}</span></span>}
+                                  {log.userAgent && <span className="truncate max-w-md">Agent: <span className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>{log.userAgent}</span></span>}
+                                  {log.createdAt && <span>Recorded: <span className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>{new Date(log.createdAt).toLocaleString('en-IN', { hour12: true })}</span></span>}
+                                </div>
 
-                                      <div className="p-3 rounded-xl bg-emerald-950/20 border border-emerald-500/30 space-y-1.5">
-                                        <div className="text-[10px] uppercase font-bold text-emerald-400">
-                                          + AFTER STATE (Mutated)
-                                        </div>
-                                        {changedKeys.map(k => (
-                                          <div key={`after-${k}`} className="text-xs">
-                                            <span className="text-slate-400 font-bold">{k}: </span>
-                                            <span className="text-emerald-300 font-bold">
-                                              {typeof log.afterState?.[k] === 'object' 
-                                                ? JSON.stringify(log.afterState?.[k]) 
-                                                : String(log.afterState?.[k] ?? 'null')}
-                                            </span>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div className="text-xs text-slate-400 italic">
-                                    Initial creation or atomic event without prior baseline state.
-                                  </div>
+                                {log.metadata && (
+                                  <pre className={`p-2.5 rounded-xl border font-mono text-[10px] overflow-x-auto ${
+                                    isDarkMode ? 'bg-slate-950 border-slate-800 text-indigo-300' : 'bg-indigo-50/60 border-indigo-200 text-indigo-700'
+                                  }`}>
+                                    {JSON.stringify(log.metadata, null, 2)}
+                                  </pre>
                                 )}
                               </div>
                             </td>
@@ -738,7 +880,6 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
               </table>
             </div>
 
-            {/* Pagination Controls Footer (50 rows/page) */}
             {totalAuditPages > 1 && (
               <div className={`p-4 border-t flex items-center justify-between text-xs font-mono ${
                 isDarkMode ? 'border-slate-800 bg-slate-950/40 text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-600'
@@ -751,7 +892,9 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                     type="button"
                     disabled={auditPage === 1}
                     onClick={() => setAuditPage(p => Math.max(1, p - 1))}
-                    className="px-3 py-1.5 rounded-xl border border-slate-700 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                    className={`px-3 py-1.5 rounded-xl border disabled:opacity-40 cursor-pointer transition-all ${
+                      isDarkMode ? 'border-slate-700 hover:bg-slate-800' : 'border-slate-200 hover:bg-slate-100'
+                    }`}
                   >
                     Previous
                   </button>
@@ -760,7 +903,9 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                     type="button"
                     disabled={auditPage === totalAuditPages}
                     onClick={() => setAuditPage(p => Math.min(totalAuditPages, p + 1))}
-                    className="px-3 py-1.5 rounded-xl border border-slate-700 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                    className={`px-3 py-1.5 rounded-xl border disabled:opacity-40 cursor-pointer transition-all ${
+                      isDarkMode ? 'border-slate-700 hover:bg-slate-800' : 'border-slate-200 hover:bg-slate-100'
+                    }`}
                   >
                     Next
                   </button>
@@ -771,7 +916,9 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
         </div>
       )}
 
+      {/* ========================================================================= */}
       {/* TAB 2: USER DIRECTORY */}
+      {/* ========================================================================= */}
       {activeTab === 'USERS' && (
         <div className={`rounded-3xl border overflow-hidden shadow-2xl transition-all ${
           isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200'
@@ -782,28 +929,32 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                 <tr className={`border-b font-mono font-bold text-[10px] uppercase tracking-wider ${
                   isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'
                 }`}>
-                  <th className="py-4 px-5">User Name & Identity</th>
-                  <th className="py-4 px-5">Department</th>
-                  <th className="py-4 px-5">Access Role Matrix</th>
-                  <th className="py-4 px-5">Last Activity</th>
+                  <th className="py-4 px-5">User ID & Name</th>
+                  <th className="py-4 px-5">Department & Shift</th>
+                  <th className="py-4 px-5">Exact RBAC Role</th>
+                  <th className="py-4 px-5">Approval Authority</th>
                   <th className="py-4 px-5 text-center">Status</th>
-                  <th className="py-4 px-5 text-right">User Governance & Actions</th>
+                  <th className="py-4 px-5 text-right">User Governance</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800/60 font-sans">
                 {filteredUsers.map((usr) => {
                   const isCurrent = usr.id === currentUserId;
-                  const isRevoked = usr.status === 'REVOKED';
+                  const isRevoked = usr.status === 'REVOKED' || usr.status === 'Inactive';
+                  const normRole = normalizeRole(usr.userRole || usr.role);
+                  const roleDef = RBAC_ROLE_MATRIX[normRole];
+
                   return (
                     <tr key={usr.id} className={isDarkMode ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50/80'}>
                       <td className="py-4 px-5">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-2xl bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center justify-center font-bold text-xs shadow-xs">
+                          <div className="w-9 h-9 rounded-2xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center font-bold text-xs shadow-xs">
                             {usr.name.slice(0, 2).toUpperCase()}
                           </div>
                           <div>
                             <div className={`font-bold text-xs flex items-center gap-1.5 ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>
                               <span>{usr.name}</span>
+                              {usr.code && <span className="font-mono text-[10px] text-indigo-400">({usr.code})</span>}
                               {isCurrent && (
                                 <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-400 border border-blue-500/30 text-[9px] font-mono font-bold">
                                   ACTIVE YOU
@@ -811,21 +962,25 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                               )}
                             </div>
                             <div className={`text-[11px] font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                              {usr.email}
+                              {usr.email} • +91 {usr.mobile || usr.phone || '9822000000'}
                             </div>
                           </div>
                         </div>
                       </td>
-                      <td className={`py-4 px-5 font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                        {usr.department || 'Operations'}
+                      <td className={`py-4 px-5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                        <div className="font-medium">{usr.department || 'Operations'}</div>
+                        <div className="text-[10px] text-slate-400 font-mono">{usr.shift || 'General-Day'}</div>
                       </td>
                       <td className="py-4 px-5">
-                        <span className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${getRoleColor(usr.role)}`}>
-                          {usr.role}
+                        <span className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${getRoleColor(normRole)}`}>
+                          {normRole}
                         </span>
                       </td>
-                      <td className={`py-4 px-5 font-mono text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                        {usr.lastLogin || 'Never'}
+                      <td className="py-4 px-5 font-mono text-[11px]">
+                        <div className="text-slate-300">{roleDef?.approvalLimitDisplay || 'Standard View/Edit'}</div>
+                        {roleDef?.scopeDescription && (
+                          <div className="text-[10px] text-slate-500 max-w-xs truncate mt-0.5">{roleDef.scopeDescription}</div>
+                        )}
                       </td>
                       <td className="py-4 px-5 text-center">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
@@ -839,17 +994,16 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                       </td>
                       <td className="py-4 px-5 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          {/* 1. Edit Role Button */}
                           <button
                             onClick={() => {
                               setUserToEditRole(usr);
-                              setNewSelectedRole(usr.role);
+                              setNewSelectedRole(normRole);
                               setShowEditRoleModal(true);
                             }}
                             className={`p-1.5 px-2.5 rounded-xl border text-[11px] font-bold font-mono transition-all cursor-pointer flex items-center gap-1 ${
                               isDarkMode 
-                                ? 'border-slate-800 bg-slate-950/70 text-slate-300 hover:text-white hover:bg-slate-800 hover:border-slate-700' 
-                                : 'border-slate-200 bg-slate-50 text-slate-700 hover:text-slate-900 hover:bg-slate-100'
+                                ? 'border-slate-800 bg-slate-950/70 text-slate-300 hover:text-white hover:bg-slate-800' 
+                                : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
                             }`}
                             title="Edit Role Matrix"
                           >
@@ -857,7 +1011,6 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                             <span>Role</span>
                           </button>
 
-                          {/* 2. Revoke / Restore Toggle */}
                           {!isRevoked ? (
                             <button
                               onClick={() => onRevokeUser && onRevokeUser(usr.id)}
@@ -886,19 +1039,14 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                             </button>
                           )}
 
-                          {/* 3. Delete User Button (for other users) */}
                           {!isCurrent && onDeleteUser && (
                             <button
                               onClick={() => {
                                 setUserToDelete(usr);
                                 setShowDeleteModal(true);
                               }}
-                              className={`p-1.5 px-2 rounded-xl border text-[11px] font-bold font-mono transition-all cursor-pointer flex items-center gap-1 ${
-                                isDarkMode 
-                                  ? 'border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20' 
-                                  : 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100'
-                              }`}
-                              title="Delete user permanently"
+                              className="p-1.5 px-2 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 cursor-pointer"
+                              title="Delete user"
                             >
                               <Trash2 className="w-3 h-3 text-rose-400" />
                             </button>
@@ -914,498 +1062,802 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
         </div>
       )}
 
-      {/* TAB 3: DATA CONTROL & LOG EXPORT SUITE */}
-      {activeTab === 'DATA_ADMIN' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 font-sans">
+      {/* ========================================================================= */}
+      {/* TAB 3: EXACT 12-ROLE RBAC MATRIX & MONETARY APPROVAL LIMITS */}
+      {/* ========================================================================= */}
+      {activeTab === 'RBAC_MATRIX' && (
+        <div className="space-y-6">
           
-          {/* Card 1: Seed Factory Test Metrics */}
-          <div className={`p-6 rounded-3xl border flex flex-col justify-between space-y-4 shadow-xl ${
-            isDarkMode ? 'bg-slate-900/80 border-slate-800 backdrop-blur-xl' : 'bg-white border-slate-200'
-          }`}>
-            <div>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="p-3 rounded-2xl bg-blue-500/15 text-blue-400 border border-blue-500/30">
-                  <RotateCcw className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className={`font-bold text-base ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                    Seed Factory Test Metrics
-                  </h3>
-                  <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Populate complete mock dataset
-                  </p>
-                </div>
+          {/* Policy Summary Telemetry Strip */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className={`p-4 rounded-3xl border ${isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}>
+              <div className="flex items-center gap-2 text-indigo-400 mb-1">
+                <ShieldCheck className="w-4 h-4" />
+                <span className="text-[11px] font-mono font-bold uppercase">12 Business Roles Matrix</span>
               </div>
-              <p className={`text-xs leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                Repopulates all 19 system tables and state collections with realistic manufacturing seed metrics (Orders, Stock, Job Cards, QC Inspections, Delivery Challans, and Invoices) for testing.
+              <div className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Strict Per-Module Policy</div>
+              <p className={`text-[11px] mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                Every request verifies module access level (No Access, View Only, Create-Edit, Full-Approve).
               </p>
             </div>
+
+            <div className={`p-4 rounded-3xl border ${isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}>
+              <div className="flex items-center gap-2 text-emerald-400 mb-1">
+                <DollarSign className="w-4 h-4" />
+                <span className="text-[11px] font-mono font-bold uppercase">Server-Side Monetary Ceilings</span>
+              </div>
+              <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">PO: ₹1.0L • Pay: ₹50k</div>
+              <p className={`text-[11px] mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                Purchases above ₹1L and disbursements above ₹50k automatically route escalation tickets to the Owner.
+              </p>
+            </div>
+
+            <div className={`p-4 rounded-3xl border ${isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}>
+              <div className="flex items-center gap-2 text-amber-400 mb-1">
+                <Filter className="w-4 h-4" />
+                <span className="text-[11px] font-mono font-bold uppercase">Row-Level Query Scopes</span>
+              </div>
+              <div className="text-xl font-bold text-amber-600 dark:text-amber-500">3 Hardened Boundary Scopes</div>
+              <p className={`text-[11px] mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                HR/Admin scoped to Users only; Operator to own job cards; PPC/Dispatch commercial fields locked.
+              </p>
+            </div>
+          </div>
+
+          {/* Full Role Matrix Cards */}
+          <div className="grid grid-cols-1 gap-4">
+            {Object.values(RBAC_ROLE_MATRIX).map((rDef) => {
+              const modules = Object.entries(rDef.permissions);
+
+              return (
+                <div 
+                  key={rDef.role}
+                  className={`p-5 rounded-3xl border transition-all ${
+                    isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-sm'
+                  }`}
+                >
+                  <div className={`flex flex-wrap items-center justify-between gap-3 pb-3 border-b ${
+                    isDarkMode ? 'border-slate-800/60' : 'border-slate-200'
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      <div className={`px-3 py-1 rounded-xl text-xs font-mono font-bold uppercase border ${getRoleColor(rDef.role)}`}>
+                        {rDef.role}
+                      </div>
+                      <div>
+                        <h3 className={`font-bold text-sm ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>{rDef.label}</h3>
+                        <div className={`text-[11px] font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{rDef.category} Category</div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`px-3 py-1 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 ${
+                        rDef.role === 'Owner' || rDef.role === 'Admin (System)'
+                          ? 'bg-rose-500/15 text-rose-500 dark:text-rose-400 border border-rose-500/30'
+                          : rDef.approvalLimitDisplay.includes('₹')
+                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                          : isDarkMode
+                          ? 'bg-slate-800 text-slate-400 border border-slate-700'
+                          : 'bg-slate-100 text-slate-600 border border-slate-200'
+                      }`}>
+                        <DollarSign className="w-3.5 h-3.5" />
+                        <span>Limit: {rDef.approvalLimitDisplay}</span>
+                      </span>
+
+                      {rDef.scopeDescription && (
+                        <span className={`px-3 py-1 rounded-xl text-[11px] font-mono border ${
+                          isDarkMode ? 'bg-indigo-500/10 text-indigo-300 border-indigo-500/20' : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                        }`}>
+                          {rDef.scopeDescription}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Modules Access Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2.5 mt-4">
+                    {modules.map(([modKey, rule]) => {
+                      const accessColor =
+                        rule.accessLevel === 'FULL_APPROVE'
+                          ? isDarkMode ? 'bg-purple-500/15 text-purple-300 border-purple-500/40 font-bold' : 'bg-purple-50 text-purple-700 border-purple-300/60 font-bold'
+                          : rule.accessLevel === 'CREATE_EDIT'
+                          ? isDarkMode ? 'bg-blue-500/15 text-blue-300 border-blue-500/40 font-bold' : 'bg-blue-50 text-blue-700 border-blue-300/60 font-bold'
+                          : rule.accessLevel === 'VIEW_ONLY'
+                          ? isDarkMode ? 'bg-amber-500/15 text-amber-300 border-amber-500/40' : 'bg-amber-50 text-amber-700 border-amber-300/60'
+                          : isDarkMode
+                          ? 'bg-slate-800/40 text-slate-500 border-slate-800'
+                          : 'bg-slate-100 text-slate-500 border-slate-200';
+
+                      return (
+                        <div
+                          key={modKey}
+                          className={`p-2.5 rounded-2xl border text-xs flex flex-col justify-between ${
+                            isDarkMode ? 'bg-slate-950/50 border-slate-800/60' : 'bg-slate-50 border-slate-200'
+                          }`}
+                        >
+                          <div className={`text-[11px] font-mono uppercase font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{modKey}</div>
+                          <div className="mt-2">
+                            <span className={`px-2 py-0.5 rounded-lg text-[10px] font-mono uppercase border inline-block ${accessColor}`}>
+                              {rule.accessLevel.replace('_', ' ')}
+                            </span>
+                            {rule.approvalLimit && (
+                              <div className="text-[9px] text-emerald-600 dark:text-emerald-400 font-mono mt-1">
+                                Max ₹{rule.approvalLimit.toLocaleString('en-IN')}
+                              </div>
+                            )}
+                            {rule.scopeRule && rule.scopeRule !== 'ALL' && (
+                              <div className="text-[9px] text-indigo-600 dark:text-indigo-400 font-mono mt-0.5 truncate">
+                                [{rule.scopeRule}]
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 4: DATA CONTROL SUITE */}
+      {/* ========================================================================= */}
+      {activeTab === 'DATA_ADMIN' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 font-sans">
+          <div className={`p-6 rounded-3xl border lg:col-span-2 space-y-4 ${
+            isDarkMode ? 'bg-slate-900/80 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          }`}>
+            <h2 className="text-base font-bold flex items-center gap-2">
+              <Download className="w-5 h-5 text-indigo-400" />
+              <span>Bulk Data Export Suite</span>
+            </h2>
+            <p className="text-xs text-slate-400">
+              Select module datasets to download as formatted JSON schemas or CSV records for external audit and compliance backup.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              <div>
+                <label className="block text-[11px] font-mono text-slate-400 mb-1">Target Module Dataset</label>
+                <select
+                  value={selectedExportSection}
+                  onChange={(e) => setSelectedExportSection(e.target.value)}
+                  className="w-full p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white"
+                >
+                  <option value="ALL">Entire System Snapshot (All 19 Modules)</option>
+                  <option value="AUDIT">Audit Trail Logs</option>
+                  <option value="ORDERS">Customer Orders</option>
+                  <option value="INVENTORY">Inventory & Stock</option>
+                  <option value="PRODUCTION">Job Cards & Production Logs</option>
+                  <option value="QUALITY">QC & PDI Inspections</option>
+                  <option value="DISPATCH">Dispatch Challans</option>
+                  <option value="INVOICES">Commercial Invoices</option>
+                  <option value="PAYABLES">Vendor Bills</option>
+                  <option value="MASTERS">Master Data (Customers, Vendors, Items)</option>
+                  <option value="USERS">User Accounts & RBAC Matrix</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-mono text-slate-400 mb-1">Export File Format</label>
+                <select
+                  value={exportFormat}
+                  onChange={(e) => setExportFormat(e.target.value as any)}
+                  className="w-full p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white"
+                >
+                  <option value="JSON">Structured JSON (.json)</option>
+                  <option value="CSV">Comma-Separated Values (.csv)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="pt-3">
+              <button
+                onClick={handleDownloadSection}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+              >
+                <Download className="w-4 h-4" />
+                <span>Generate & Download {selectedExportSection} {exportFormat}</span>
+              </button>
+            </div>
+          </div>
+
+          <div className={`p-6 rounded-3xl border space-y-4 ${
+            isDarkMode ? 'bg-slate-900/80 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          }`}>
+            <h2 className="text-base font-bold flex items-center gap-2 text-amber-400">
+              <RotateCcw className="w-5 h-5 text-amber-400" />
+              <span>Seed & Purge Controls</span>
+            </h2>
+            <p className="text-xs text-slate-400">
+              Administrative actions for database seed management.
+            </p>
 
             {onResetAllData && (
               <button
                 onClick={() => {
-                  if (window.confirm('Populate all system collections with rich factory seed dataset?')) {
+                  if (window.confirm('Reset and repopulate all 19 system tables with clean test seed records?')) {
                     onResetAllData();
                   }
                 }}
-                className="w-full py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.01]"
+                className="w-full p-3 rounded-xl border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20 text-xs font-bold font-mono transition-all text-left flex items-center gap-2"
               >
-                <RotateCcw className="w-4 h-4" />
+                <RotateCcw className="w-4 h-4 text-indigo-400" />
                 <span>Populate Test Seed Data</span>
               </button>
             )}
-          </div>
-
-          {/* Card 2: Purge Operational Test Data */}
-          <div className={`p-6 rounded-3xl border flex flex-col justify-between space-y-4 shadow-xl ${
-            isDarkMode ? 'bg-slate-900/80 border-slate-800 backdrop-blur-xl' : 'bg-white border-slate-200'
-          }`}>
-            <div>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="p-3 rounded-2xl bg-rose-500/15 text-rose-400 border border-rose-500/30">
-                  <Trash2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className={`font-bold text-base ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                    Purge Operational Test Data
-                  </h3>
-                  <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Delete active operational records
-                  </p>
-                </div>
-              </div>
-              <p className={`text-xs leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                Purges active customer purchase orders, production job cards, shift log reports, delivery challans, and customer invoices to start clean testing from zero orders.
-              </p>
-            </div>
 
             {onClearOperationalData && (
               <button
                 onClick={() => setShowPurgeModal(true)}
-                className="w-full py-3 rounded-2xl bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-rose-500/20 transition-all hover:scale-[1.01]"
+                className="w-full p-3 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 text-xs font-bold font-mono transition-all text-left flex items-center gap-2"
               >
-                <Trash2 className="w-4 h-4" />
-                <span>Purge Operational Test Data</span>
+                <Trash2 className="w-4 h-4 text-rose-400" />
+                <span>Purge Operational Logs</span>
               </button>
             )}
           </div>
+        </div>
+      )}
 
-          {/* Card 3: Download Specific Section Logs & Data */}
-          <div className={`p-6 rounded-3xl border flex flex-col justify-between space-y-4 shadow-xl ${
-            isDarkMode ? 'bg-slate-900/80 border-slate-800 backdrop-blur-xl' : 'bg-white border-slate-200'
-          }`}>
-            <div>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="p-3 rounded-2xl bg-blue-500/15 text-blue-400 border border-blue-500/30">
-                  <Download className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className={`font-bold text-base ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                    Download Section Logs & Data
-                  </h3>
-                  <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Export custom dataset in JSON or CSV
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-3 pt-1">
-                <div>
-                  <label className="block text-[10px] uppercase font-mono font-bold text-slate-400 mb-1">Target ERP Section</label>
-                  <select
-                    value={selectedExportSection}
-                    onChange={(e) => setSelectedExportSection(e.target.value)}
-                    className={`w-full px-3 py-2 rounded-xl text-xs font-bold border outline-none cursor-pointer ${
-                      isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  >
-                    <option value="ALL">All System Data & Telemetry (Full Dump)</option>
-                    <option value="AUDIT">Audit Telemetry Stream ({auditLogs.length})</option>
-                    <option value="ORDERS">Customer Purchase Orders ({orders.length})</option>
-                    <option value="INVENTORY">Inventory Stock & Shortages ({stock.length})</option>
-                    <option value="PRODUCTION">Job Cards & Production Logs ({jobCards.length})</option>
-                    <option value="QUALITY">Quality Control (QC & PDI Queue) ({qcQueue.length})</option>
-                    <option value="DISPATCH">Delivery Challans & Dispatches ({dispatches.length})</option>
-                    <option value="INVOICES">Customer Invoices & Receivables ({invoices.length})</option>
-                    <option value="PAYABLES">Vendor Bills & Payables ({payables.length})</option>
-                    <option value="MASTERS">Master SKU Directory ({masters.length})</option>
-                    <option value="USERS">System User Directory ({users.length})</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] uppercase font-mono font-bold text-slate-400 mb-1">Export File Format</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setExportFormat('JSON')}
-                      className={`px-3 py-2 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
-                        exportFormat === 'JSON'
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
-                      }`}
-                    >
-                      <FileJson className="w-3.5 h-3.5" />
-                      <span>JSON Object</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setExportFormat('CSV')}
-                      className={`px-3 py-2 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
-                        exportFormat === 'CSV'
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
-                      }`}
-                    >
-                      <FileSpreadsheet className="w-3.5 h-3.5" />
-                      <span>CSV Table</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
+      {/* ========================================================================= */}
+      {/* MODAL 1: PROVISION NEW USER (LIGHT THEME & PASSWORD WORKFLOW) */}
+      {/* ========================================================================= */}
+      <Modal
+        isOpen={showAddUserModal}
+        onClose={() => setShowAddUserModal(false)}
+        maxWidth="4xl"
+        isDarkMode={isDarkMode}
+        icon={<Users className="w-5 h-5" />}
+        title="Provision New System User"
+        subtitle={`User ID: ${uCode} • Role-Driven RBAC & Module Access Matrix`}
+        footer={
+          <div className="flex items-center justify-end gap-3 w-full">
             <button
-              onClick={handleDownloadSection}
-              className="w-full py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.01]"
+              type="button"
+              onClick={() => setShowAddUserModal(false)}
+              className={`px-4 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
+                isDarkMode 
+                  ? 'text-slate-400 hover:text-white hover:bg-slate-800' 
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
+              }`}
             >
-              <Download className="w-4 h-4" />
-              <span>Download Selected Section File</span>
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="provision-user-form"
+              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-indigo-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+            >
+              <Check className="w-4 h-4" />
+              <span>Provision System User</span>
             </button>
           </div>
-
-        </div>
-      )}
-
-      {/* Confirmation Modal for Purge Data */}
-      {showPurgeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-md rounded-3xl border p-6 space-y-5 shadow-2xl ${
-            isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-          }`}>
-            <div className="flex items-center gap-3 text-rose-500">
-              <div className="p-2.5 rounded-2xl bg-rose-500/15 border border-rose-500/30">
-                <Trash2 className="w-6 h-6" />
-              </div>
-              <h3 className="font-bold text-lg">Purge Operational Data?</h3>
-            </div>
-
-            <p className={`text-xs leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-              Are you sure you want to clear all active operational test data (Orders, Production Logs, Dispatches, and Invoices)? Masters and User Profiles will be preserved.
-            </p>
-
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                onClick={() => setShowPurgeModal(false)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold border cursor-pointer ${
-                  isDarkMode ? 'border-slate-800 text-slate-300 hover:bg-slate-800' : 'border-slate-200 text-slate-700 hover:bg-slate-100'
+        }
+      >
+        <form id="provision-user-form" onSubmit={handleCreateUser} className="space-y-4 text-xs">
+          
+          {/* Row 1: User ID, Full Name, Employee Code */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                User ID (Auto)
+              </label>
+              <input
+                type="text"
+                value={uCode}
+                readOnly
+                className={`w-full p-2.5 rounded-xl border text-xs font-mono cursor-not-allowed ${
+                  isDarkMode ? 'bg-slate-800/40 border-slate-700 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-500'
                 }`}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  if (onClearOperationalData) onClearOperationalData();
-                  setShowPurgeModal(false);
-                }}
-                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold cursor-pointer shadow-md shadow-rose-500/20"
-              >
-                Confirm Purge
-              </button>
+              />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Full Name *
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Ramesh Kulkarni"
+                value={uFullName}
+                onChange={(e) => setUFullName(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${
+                  userErrors.fullName 
+                    ? 'border-rose-500 ring-1 ring-rose-500' 
+                    : isDarkMode ? 'bg-slate-950 border-slate-800 text-white focus:border-indigo-500' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white'
+                }`}
+              />
+              {userErrors.fullName && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{userErrors.fullName}</p>}
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Employee Code *
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. EMP-1048"
+                value={uEmployeeCode}
+                onChange={(e) => setUEmployeeCode(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border text-xs font-mono outline-none transition-all ${
+                  isDarkMode ? 'bg-slate-950 border-slate-800 text-white focus:border-indigo-500' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white'
+                }`}
+              />
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Provision User Modal */}
-      {showAddUserModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-lg rounded-3xl border p-7 space-y-6 shadow-2xl transition-all ${
-            isDarkMode 
-              ? 'bg-slate-900/95 border-slate-800/80 text-white backdrop-blur-2xl shadow-blue-500/5' 
-              : 'bg-white border-slate-200 text-slate-900 shadow-2xl'
-          }`}>
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-blue-500/15 text-blue-500 border border-blue-500/30">
-                  <Users className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className={`font-bold text-base tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                    Provision System User
-                  </h3>
-                  <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Assign role matrix permissions and account identity
-                  </p>
-                </div>
-              </div>
-
-              <button 
-                onClick={() => setShowAddUserModal(false)} 
-                className={`p-2 rounded-2xl border transition-all cursor-pointer ${
-                  isDarkMode 
-                    ? 'border-slate-800 bg-slate-950/60 text-slate-400 hover:text-white hover:bg-slate-800' 
-                    : 'border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateUser} className="space-y-4">
-              <div>
-                <label className="block text-[11px] uppercase font-mono font-bold text-slate-400 mb-1.5">Full Name *</label>
+          {/* Row 2: Mobile Number, Email Address */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Mobile Number (10-digit) *
+              </label>
+              <div className="relative">
+                <Phone className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
                 <input
-                  type="text"
+                  type="tel"
                   required
-                  placeholder="e.g. Ramesh Patel"
-                  value={userName}
-                  onChange={(e) => setUserName(e.target.value)}
-                  className={`w-full rounded-2xl border px-4 py-3 text-xs outline-none transition-all ${
-                    isDarkMode 
-                      ? 'bg-slate-950/80 border-slate-800 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20' 
-                      : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10'
+                  maxLength={10}
+                  placeholder="9876543210"
+                  value={uMobile}
+                  onChange={(e) => setUMobile(e.target.value.replace(/\D/g, ''))}
+                  className={`w-full pl-9 p-2.5 rounded-xl border text-xs font-mono outline-none transition-all ${
+                    userErrors.mobile 
+                      ? 'border-rose-500 ring-1 ring-rose-500' 
+                      : isDarkMode ? 'bg-slate-950 border-slate-800 text-white focus:border-indigo-500' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white'
                   }`}
                 />
               </div>
-
-              <div>
-                <label className="block text-[11px] uppercase font-mono font-bold text-slate-400 mb-1.5">Email Address *</label>
+              {userErrors.mobile && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{userErrors.mobile}</p>}
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Email Address (Login Identity) *
+              </label>
+              <div className="relative">
+                <Mail className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
                 <input
                   type="email"
                   required
-                  placeholder="e.g. ramesh@guruom.in"
-                  value={userEmail}
-                  onChange={(e) => setUserEmail(e.target.value)}
-                  className={`w-full rounded-2xl border px-4 py-3 text-xs font-mono outline-none transition-all ${
-                    isDarkMode 
-                      ? 'bg-slate-950/80 border-slate-800 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20' 
-                      : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10'
+                  placeholder="ramesh@guruom.in"
+                  value={uEmail}
+                  onChange={(e) => setUEmail(e.target.value)}
+                  className={`w-full pl-9 p-2.5 rounded-xl border text-xs font-mono outline-none transition-all ${
+                    userErrors.email 
+                      ? 'border-rose-500 ring-1 ring-rose-500' 
+                      : isDarkMode ? 'bg-slate-950 border-slate-800 text-white focus:border-indigo-500' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white'
                   }`}
                 />
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[11px] uppercase font-mono font-bold text-slate-400 mb-1.5">Department</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Production Operations"
-                    value={userDepartment}
-                    onChange={(e) => setUserDepartment(e.target.value)}
-                    className={`w-full rounded-2xl border px-4 py-3 text-xs outline-none transition-all ${
-                      isDarkMode 
-                        ? 'bg-slate-950/80 border-slate-800 text-white focus:border-blue-500' 
-                        : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-blue-600'
-                    }`}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] uppercase font-mono font-bold text-slate-400 mb-1.5">Phone Number</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. +91 98250 12345"
-                    value={userPhone}
-                    onChange={(e) => setUserPhone(e.target.value)}
-                    className={`w-full rounded-2xl border px-4 py-3 text-xs font-mono outline-none transition-all ${
-                      isDarkMode 
-                        ? 'bg-slate-950/80 border-slate-800 text-white focus:border-blue-500' 
-                        : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-blue-600'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] uppercase font-mono font-bold text-slate-400 mb-1.5">Role Matrix *</label>
-                <select
-                  value={userRole}
-                  onChange={(e) => setUserRole(e.target.value as UserRole)}
-                  className={`w-full rounded-2xl border px-4 py-3 text-xs font-mono font-bold outline-none transition-all cursor-pointer ${
-                    isDarkMode 
-                      ? 'bg-slate-950/80 border-slate-800 text-white focus:border-blue-500' 
-                      : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-blue-600'
-                  }`}
-                >
-                  {ROLE_DEFINITIONS.map(r => (
-                    <option key={r.role} value={r.role}>{r.label} ({r.role})</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="pt-4 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-end gap-3">
-                <button 
-                  type="button" 
-                  onClick={() => setShowAddUserModal(false)} 
-                  className={`px-5 py-2.5 rounded-2xl border text-xs font-mono font-bold cursor-pointer transition-all ${
-                    isDarkMode 
-                      ? 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800' 
-                      : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-                  }`}
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold text-xs font-mono cursor-pointer shadow-lg shadow-blue-500/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  Provision User Access
-                </button>
-              </div>
-            </form>
+              {userErrors.email && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{userErrors.email}</p>}
+            </div>
           </div>
-        </div>
-      )}
 
-      {/* Edit User Role Modal */}
-      {showEditRoleModal && userToEditRole && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-lg rounded-3xl border p-7 space-y-6 shadow-2xl transition-all ${
-            isDarkMode 
-              ? 'bg-slate-900/95 border-slate-800/80 text-white backdrop-blur-2xl' 
-              : 'bg-white border-slate-200 text-slate-900 shadow-2xl'
-          }`}>
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-blue-500/15 text-blue-400 border border-blue-500/30">
-                  <Shield className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className={`font-bold text-base tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                    Update Role Matrix
-                  </h3>
-                  <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Modify permissions for {userToEditRole.name} ({userToEditRole.email})
-                  </p>
-                </div>
+          {/* Row 2.5: Set Password & Confirm Password (NEW DIRECT PROVISIONING WORKFLOW) */}
+          <div className={`p-3.5 rounded-2xl border ${
+            isDarkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/80 border-slate-200'
+          } space-y-3`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Key className="w-3.5 h-3.5 text-indigo-500" />
+                <span className={`text-[11px] font-mono font-bold uppercase ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Admin Initial Credentials
+                </span>
               </div>
-
-              <button 
-                onClick={() => setShowEditRoleModal(false)} 
-                className={`p-2 rounded-2xl border transition-all cursor-pointer ${
-                  isDarkMode 
-                    ? 'border-slate-800 bg-slate-950/60 text-slate-400 hover:text-white hover:bg-slate-800' 
-                    : 'border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
-                }`}
+              <button
+                type="button"
+                onClick={handleGeneratePassword}
+                className="px-2.5 py-1 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 text-[10px] font-mono font-bold flex items-center gap-1 hover:bg-indigo-500/20 transition-all cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <Sparkles className="w-3 h-3" />
+                <span>Generate Strong Password</span>
               </button>
             </div>
 
-            <div className="space-y-3">
-              <label className="block text-[11px] uppercase font-mono font-bold text-slate-400">Select Access Role</label>
-              {ROLE_DEFINITIONS.map(r => {
-                const isSelected = newSelectedRole === r.role;
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Set Password Field */}
+              <div>
+                <label className={`block text-[10px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Set Password *
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    placeholder="Min 8 chars (letters + numbers)"
+                    value={uPassword}
+                    onChange={(e) => {
+                      setUPassword(e.target.value);
+                      setCopiedPassword(false);
+                    }}
+                    className={`w-full pr-16 p-2.5 rounded-xl border text-xs font-mono outline-none transition-all ${
+                      userErrors.password 
+                        ? 'border-rose-500 ring-1 ring-rose-500' 
+                        : isDarkMode ? 'bg-slate-950 border-slate-800 text-white focus:border-indigo-500' : 'bg-white border-slate-300 text-slate-900 focus:border-indigo-500'
+                    }`}
+                  />
+                  <div className="absolute right-2 top-2 flex items-center gap-1">
+                    {uPassword && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (navigator.clipboard) {
+                            navigator.clipboard.writeText(uPassword);
+                            setCopiedPassword(true);
+                            setTimeout(() => setCopiedPassword(false), 2500);
+                          }
+                        }}
+                        title={copiedPassword ? 'Copied!' : 'Copy Password'}
+                        className={`p-1 rounded-lg transition-all ${
+                          copiedPassword ? 'text-emerald-500' : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        {copiedPassword ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="p-1 text-slate-400 hover:text-slate-200 transition-all cursor-pointer"
+                    >
+                      {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </div>
+                {userErrors.password && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{userErrors.password}</p>}
+              </div>
+
+              {/* Confirm Password Field */}
+              <div>
+                <label className={`block text-[10px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Confirm Password *
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    required
+                    placeholder="Re-enter same password"
+                    value={uConfirmPassword}
+                    onChange={(e) => setUConfirmPassword(e.target.value)}
+                    className={`w-full pr-9 p-2.5 rounded-xl border text-xs font-mono outline-none transition-all ${
+                      userErrors.confirmPassword 
+                        ? 'border-rose-500 ring-1 ring-rose-500' 
+                        : isDarkMode ? 'bg-slate-950 border-slate-800 text-white focus:border-indigo-500' : 'bg-white border-slate-300 text-slate-900 focus:border-indigo-500'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="p-1 absolute right-2 top-2 text-slate-400 hover:text-slate-200 transition-all cursor-pointer"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+                {userErrors.confirmPassword && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{userErrors.confirmPassword}</p>}
+              </div>
+            </div>
+
+            {/* Force Password Change on First Login Checkbox */}
+            <label className="flex items-center gap-2 pt-1 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={uRequirePasswordChange}
+                onChange={(e) => setURequirePasswordChange(e.target.checked)}
+                className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-0 cursor-pointer"
+              />
+              <span className={`text-[11px] font-mono ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                Require password change on first login
+              </span>
+            </label>
+          </div>
+
+          {/* Row 3: Reporting Manager, Department, Access Status */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Reporting Manager
+              </label>
+              <select
+                value={uReportingManager}
+                onChange={(e) => setUReportingManager(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all cursor-pointer ${
+                  isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                }`}
+              >
+                <option value="">-- Select Manager --</option>
+                {users.map(u => (
+                  <option key={u.id} value={u.name}>{u.name} ({u.role})</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Department *
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Production Operations"
+                value={uDepartment}
+                onChange={(e) => setUDepartment(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${
+                  userErrors.department 
+                    ? 'border-rose-500 ring-1 ring-rose-500' 
+                    : isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                }`}
+              />
+              {userErrors.department && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{userErrors.department}</p>}
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Account Status *
+              </label>
+              <select
+                value={uStatus}
+                onChange={(e) => setUStatus(e.target.value as any)}
+                className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all cursor-pointer ${
+                  isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                }`}
+              >
+                <option value="Active">Active (Production Access)</option>
+                <option value="Inactive">Inactive (Suspended)</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Row 4: Primary RBAC Role Selection */}
+          <div>
+            <label className={`block text-[11px] font-mono font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+              Primary System Role & Access Privilege *
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {Object.values(RBAC_ROLE_MATRIX).map((r) => {
+                const isSelected = uUserRole === r.role || uUserRole === r.label;
                 return (
                   <div
                     key={r.role}
-                    onClick={() => setNewSelectedRole(r.role)}
-                    className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 ${
+                    onClick={() => handleRoleSelect(r.label)}
+                    className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 ${
                       isSelected
-                        ? isDarkMode ? 'border-blue-500/60 bg-blue-500/10 shadow-sm' : 'border-blue-600 bg-blue-50 shadow-sm'
-                        : isDarkMode ? 'border-slate-800 bg-slate-950/50 hover:border-slate-700' : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
+                        ? isDarkMode 
+                          ? 'border-indigo-500/80 bg-indigo-500/10 shadow-sm' 
+                          : 'border-indigo-600 bg-indigo-50/80 shadow-sm ring-1 ring-indigo-500/20'
+                        : isDarkMode
+                          ? 'border-slate-800 bg-slate-950/40 hover:border-slate-700'
+                          : 'border-slate-200 bg-slate-50 hover:bg-slate-100/80'
                     }`}
                   >
                     <div className={`w-4 h-4 mt-0.5 rounded-full border flex items-center justify-center ${
-                      isSelected ? 'border-blue-500 bg-blue-500 text-white' : 'border-slate-500'
+                      isSelected ? 'border-indigo-500 bg-indigo-500 text-white' : 'border-slate-400'
                     }`}>
                       {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className={`font-bold text-xs ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                          {r.label}
-                        </span>
-                        <span className={`px-2 py-0.5 rounded-lg text-[9px] font-mono font-bold uppercase border ${getRoleColor(r.role)}`}>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className={`font-bold text-xs ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{r.label}</span>
+                        <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-mono font-bold uppercase border ${getRoleColor(r.role)}`}>
                           {r.role}
                         </span>
                       </div>
-                      <p className={`text-[11px] mt-1 leading-relaxed ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                        {r.desc}
-                      </p>
+                      <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">
+                        Approval Limit: {r.approvalLimitDisplay}
+                      </div>
                     </div>
                   </div>
                 );
               })}
             </div>
+          </div>
 
-            <div className="pt-4 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-end gap-3">
-              <button 
-                type="button" 
-                onClick={() => setShowEditRoleModal(false)} 
-                className={`px-5 py-2.5 rounded-2xl border text-xs font-mono font-bold cursor-pointer transition-all ${
-                  isDarkMode 
-                    ? 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800' 
-                    : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-                }`}
-              >
-                Cancel
-              </button>
-              <button 
-                type="button"
-                onClick={() => {
-                  if (onUpdateUserRole && userToEditRole) {
-                    onUpdateUserRole(userToEditRole.id, newSelectedRole);
-                  }
-                  setShowEditRoleModal(false);
-                }}
-                className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold text-xs font-mono cursor-pointer shadow-lg shadow-blue-500/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
-              >
-                Save Role Change
-              </button>
+          {/* Row 5: Modules Granted */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className={`block text-[11px] font-mono font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Granular Module Permissions ({uModulesAccess.length} assigned)
+              </label>
+              <span className={`text-[10px] font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                Auto-synced with Role Matrix
+              </span>
+            </div>
+            <div className={`p-3 rounded-2xl border grid grid-cols-2 sm:grid-cols-4 gap-2 max-h-40 overflow-y-auto ${
+              isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+            }`}>
+              {ALL_MODULES.map((mod) => {
+                const isChecked = uModulesAccess.includes(mod.id);
+                return (
+                  <label
+                    key={mod.id}
+                    onClick={() => toggleModuleAccess(mod.id)}
+                    className={`p-2 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
+                      isChecked
+                        ? isDarkMode
+                          ? 'border-indigo-500/50 bg-indigo-500/10 text-white'
+                          : 'border-indigo-400 bg-indigo-50/80 text-slate-900 font-medium'
+                        : isDarkMode
+                          ? 'border-slate-800/80 bg-slate-900/40 text-slate-400 hover:text-slate-200'
+                          : 'border-slate-200 bg-white text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => {}}
+                      className="w-4 h-4 rounded text-indigo-600 focus:ring-0 cursor-pointer"
+                    />
+                    <div className="overflow-hidden">
+                      <div className="text-[11px] leading-tight truncate">{mod.name}</div>
+                      <div className={`text-[9px] font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{mod.category}</div>
+                    </div>
+                  </label>
+                );
+              })}
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Delete User Confirmation Modal */}
-      {showDeleteModal && userToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-md rounded-3xl border p-6 space-y-5 shadow-2xl ${
-            isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-          }`}>
-            <div className="flex items-center gap-3 text-rose-500">
-              <div className="p-2.5 rounded-2xl bg-rose-500/15 border border-rose-500/30">
-                <Trash2 className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="font-bold text-base">Delete User Account?</h3>
-                <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                  Permanent account removal
-                </p>
-              </div>
-            </div>
+        </form>
+      </Modal>
 
-            <p className={`text-xs leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-              Are you sure you want to permanently delete <strong className="text-rose-400">{userToDelete.name}</strong> ({userToDelete.email})? All active sessions for this account will be invalidated immediately.
-            </p>
-
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold border cursor-pointer ${
-                  isDarkMode ? 'border-slate-800 text-slate-300 hover:bg-slate-800' : 'border-slate-200 text-slate-700 hover:bg-slate-100'
+      {/* ========================================================================= */}
+      {/* MODAL 2: EDIT USER ROLE */}
+      {/* ========================================================================= */}
+      <Modal
+        isOpen={showEditRoleModal && !!userToEditRole}
+        onClose={() => setShowEditRoleModal(false)}
+        maxWidth="lg"
+        isDarkMode={isDarkMode}
+        icon={<Shield className="w-5 h-5" />}
+        title="Update RBAC Role"
+        subtitle={`Modify permissions for ${userToEditRole?.name} (${userToEditRole?.email})`}
+        footer={
+          <div className="flex items-center justify-end gap-3 w-full">
+            <button 
+              type="button" 
+              onClick={() => setShowEditRoleModal(false)} 
+              className={`px-5 py-2.5 rounded-2xl border text-xs font-mono font-bold transition-all cursor-pointer ${
+                isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              Cancel
+            </button>
+            <button 
+              type="button"
+              onClick={() => {
+                if (onUpdateUserRole && userToEditRole) {
+                  onUpdateUserRole(userToEditRole.id, newSelectedRole);
+                }
+                setShowEditRoleModal(false);
+              }}
+              className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-600 text-white font-bold text-xs font-mono shadow-lg shadow-blue-500/25 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]"
+            >
+              Save Role Change
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-2.5">
+          <label className={`block text-[11px] uppercase font-mono font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+            Select Exact Access Role
+          </label>
+          {Object.values(RBAC_ROLE_MATRIX).map(r => {
+            const isSelected = newSelectedRole === r.role;
+            return (
+              <div
+                key={r.role}
+                onClick={() => setNewSelectedRole(r.role)}
+                className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 ${
+                  isSelected
+                    ? isDarkMode ? 'border-blue-500/60 bg-blue-500/10 shadow-sm' : 'border-blue-600 bg-blue-50 shadow-sm ring-1 ring-blue-500/20'
+                    : isDarkMode ? 'border-slate-800 bg-slate-950/50 hover:border-slate-700' : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
                 }`}
               >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  if (onDeleteUser && userToDelete) {
-                    onDeleteUser(userToDelete.id);
-                  }
-                  setShowDeleteModal(false);
-                }}
-                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold cursor-pointer shadow-md shadow-rose-500/20"
-              >
-                Confirm Delete
-              </button>
-            </div>
-          </div>
+                <div className={`w-4 h-4 mt-0.5 rounded-full border flex items-center justify-center ${
+                  isSelected ? 'border-blue-500 bg-blue-500 text-white' : 'border-slate-400'
+                }`}>
+                  {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={`font-bold text-xs ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                      {r.label}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-lg text-[9px] font-mono font-bold uppercase border ${getRoleColor(r.role)}`}>
+                      {r.role}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">
+                    Approval Limit: {r.approvalLimitDisplay}
+                  </div>
+                  {r.scopeDescription && (
+                    <div className={`text-[10px] mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                      {r.scopeDescription}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
-      )}
+      </Modal>
 
+      {/* ========================================================================= */}
+      {/* MODAL 3: DELETE CONFIRMATION */}
+      {/* ========================================================================= */}
+      <Modal
+        isOpen={showDeleteModal && !!userToDelete}
+        onClose={() => setShowDeleteModal(false)}
+        maxWidth="md"
+        isDarkMode={isDarkMode}
+        icon={<Trash2 className="w-5 h-5" />}
+        title="Delete User Account?"
+        subtitle="Permanent account removal"
+        footer={
+          <div className="flex justify-end gap-3 w-full">
+            <button
+              onClick={() => setShowDeleteModal(false)}
+              className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                isDarkMode ? 'border-slate-800 text-slate-300 hover:bg-slate-800' : 'border-slate-200 text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                if (onDeleteUser && userToDelete) {
+                  onDeleteUser(userToDelete.id);
+                }
+                setShowDeleteModal(false);
+              }}
+              className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md shadow-rose-500/20 cursor-pointer"
+            >
+              Confirm Delete
+            </button>
+          </div>
+        }
+      >
+        <p className={`text-xs leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+          Are you sure you want to permanently delete <strong className="text-rose-500">{userToDelete?.name}</strong> ({userToDelete?.email})? All active sessions for this account will be invalidated immediately.
+        </p>
+      </Modal>
+
+      {/* ========================================================================= */}
+      {/* MODAL 4: PURGE OPERATIONAL DATA CONFIRMATION */}
+      {/* ========================================================================= */}
+      <Modal
+        isOpen={showPurgeModal}
+        onClose={() => setShowPurgeModal(false)}
+        maxWidth="md"
+        isDarkMode={isDarkMode}
+        icon={<AlertTriangle className="w-5 h-5" />}
+        title="Purge Operational Data?"
+        subtitle="Orders, Job Cards, QC & Invoices Reset"
+        footer={
+          <div className="flex justify-end gap-3 w-full">
+            <button
+              onClick={() => setShowPurgeModal(false)}
+              className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                isDarkMode ? 'border-slate-800 text-slate-300 hover:bg-slate-800' : 'border-slate-200 text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                if (onClearOperationalData) onClearOperationalData();
+                setShowPurgeModal(false);
+              }}
+              className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md shadow-rose-500/20 cursor-pointer"
+            >
+              Confirm Purge
+            </button>
+          </div>
+        }
+      >
+        <p className={`text-xs leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+          Are you sure you want to clear operational queues? Masters (Items, Customers, Vendors) and Users will remain preserved.
+        </p>
+      </Modal>
     </div>
   );
 };

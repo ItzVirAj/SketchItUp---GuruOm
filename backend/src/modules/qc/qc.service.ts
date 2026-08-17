@@ -2,60 +2,10 @@ import { getDbClient } from '../../config/database';
 import { z } from 'zod';
 import { QCInspectionSchema, ReviewQCSchema, PDIInspectionSchema } from './qc.schema';
 import { notificationsService } from '../notifications/notifications.service';
+import { logAudit } from '../../services/auditLog';
 
-const SEED_QC_QUEUE = [
-  {
-    id: 'qc-1',
-    jobNo: 'JC/0001/26-27',
-    orderPo: 'PO-2026-001',
-    partCode: '00000001',
-    partDescription: 'MAIN SPINDLE HOUSING 120MM',
-    qty: 60,
-    jobStatus: 'IN_INSPECTION',
-    qcStatus: 'PENDING',
-    inspectorNotes: 'Bore tolerance check required (H7 limit)',
-    defectCategory: undefined,
-    inspectedAt: undefined
-  },
-  {
-    id: 'qc-2',
-    jobNo: 'JC/0002/26-27',
-    orderPo: 'PO-2026-002',
-    partCode: '00000002',
-    partDescription: 'HARDENED BUSH 45X60X80',
-    qty: 150,
-    jobStatus: 'IN_INSPECTION',
-    qcStatus: 'PASS',
-    inspectorNotes: 'All dimensional limits within +/- 0.01mm tolerance band.',
-    defectCategory: 'None',
-    inspectedAt: '2026-08-14T09:45:00Z'
-  }
-];
-
-const SEED_PDI_QUEUE = [
-  {
-    id: 'pdi-1',
-    jobNo: 'JC/0002/26-27',
-    orderPo: 'PO-2026-002',
-    partCode: '00000002',
-    partDescription: 'HARDENED BUSH 45X60X80',
-    qty: 150,
-    pdiStatus: 'PASS',
-    certificateNo: 'PDI-2026-8812',
-    reportDate: '2026-08-14'
-  },
-  {
-    id: 'pdi-2',
-    jobNo: 'JC/0001/26-27',
-    orderPo: 'PO-2026-001',
-    partCode: '00000001',
-    partDescription: 'MAIN SPINDLE HOUSING 120MM',
-    qty: 60,
-    pdiStatus: 'PENDING',
-    certificateNo: undefined,
-    reportDate: undefined
-  }
-];
+const SEED_QC_QUEUE: any[] = [];
+const SEED_PDI_QUEUE: any[] = [];
 
 export class QcService {
   private db = getDbClient();
@@ -144,12 +94,26 @@ export class QcService {
 
     const created = { id: qcId, ...validated };
     SEED_QC_QUEUE.unshift(created as any);
+
+    // Real-Time Push: Broadcast new QC inspection in queue
+    await logAudit({
+      actorEmail: 'qc@guruom.in',
+      action: 'QC_INSPECTION_CREATED',
+      entityType: 'qc_inspections',
+      entityId: String(created.id || created.jobNo || ''),
+      afterState: { jobNo: created.jobNo, orderPo: created.orderPo, partCode: created.partCode, qty: created.qty },
+      metadata: { details: `QC inspection queued for job ${created.jobNo} (PO ${created.orderPo})` }
+    }).catch(() => {});
+
+    notificationsService.broadcastEvent('qc_created', created);
+
     return created;
   }
 
   async reviewQCInspection(id: string, reviewData: z.infer<typeof ReviewQCSchema>) {
     const { qcStatus, inspectorNotes, defectCategory } = ReviewQCSchema.parse(reviewData);
     const inspectedAt = new Date().toISOString();
+    const target = (await this.getQCById(id)) || SEED_QC_QUEUE.find(q => q.id === id);
 
     try {
       await this.db.from('qc_inspections').update({
@@ -159,31 +123,98 @@ export class QcService {
         inspected_at: inspectedAt
       }).eq('id', id);
 
-      if (qcStatus === 'PASS') {
-        const target = await this.getQCById(id);
-        if (target) {
-          const pdiId = `pdi-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-          await this.db.from('pdi_inspections').insert({
-            id: pdiId,
-            job_no: target.jobNo,
-            order_po: target.orderPo,
-            part_code: target.partCode,
-            part_description: target.partDescription,
-            qty: target.qty,
-            pdi_status: 'PENDING',
-            created_at: new Date().toISOString()
-          });
+      if (target) {
+        if (qcStatus === 'PASS') {
+          // Advance order to QC_INSPECTION (Stage 6) and clear NCR hold
+          await this.db.from('customer_orders').update({
+            status: 'QC_INSPECTION',
+            progress_step: 6,
+            has_open_ncr: false
+          }).or(`po_no.eq.${target.orderPo},id.eq.${target.orderPo}`);
 
-          SEED_PDI_QUEUE.unshift({
+          await this.db.from('job_cards').update({
+            status: 'COMPLETED'
+          }).or(`job_no.eq.${target.jobNo},id.eq.${target.jobNo}`);
+
+          await this.db.from('ncrs').update({
+            status: 'CLOSED',
+            disposition: 'USE_AS_IS_CONCESSION'
+          }).or(`order_po.eq.${target.orderPo},job_no.eq.${target.jobNo}`);
+
+          const existingPdiIdx = SEED_PDI_QUEUE.findIndex(p => p.orderPo === target.orderPo && (p.jobNo === target.jobNo || p.partCode === target.partCode));
+          const pdiId = existingPdiIdx >= 0 ? SEED_PDI_QUEUE[existingPdiIdx].id : `pdi-${Date.now()}`;
+
+          try {
+            await this.db.from('pdi_inspections').upsert({
+              id: pdiId,
+              job_no: target.jobNo,
+              order_po: target.orderPo,
+              part_code: target.partCode,
+              part_description: target.partDescription,
+              qty: target.qty,
+              pdi_status: 'PENDING',
+              created_at: new Date().toISOString()
+            });
+          } catch (pdiDbErr) {
+            console.warn('DB pdi insert fallback:', pdiDbErr);
+          }
+
+          const pdiRecord = {
             id: pdiId,
             jobNo: target.jobNo,
             orderPo: target.orderPo,
             partCode: target.partCode,
             partDescription: target.partDescription,
             qty: target.qty,
-            pdiStatus: 'PENDING',
-            certificateNo: undefined,
-            reportDate: undefined
+            pdiStatus: 'PENDING'
+          };
+
+          if (existingPdiIdx >= 0) {
+            SEED_PDI_QUEUE[existingPdiIdx] = {
+              ...SEED_PDI_QUEUE[existingPdiIdx],
+              ...pdiRecord
+            };
+          } else {
+            SEED_PDI_QUEUE.unshift(pdiRecord as any);
+          }
+
+          // Real-Time Push: Auto-create PDI inspection in PDI queue & update order
+          notificationsService.broadcastEvent('pdi_created', pdiRecord);
+          notificationsService.broadcastEvent('order_updated', {
+            id: target.orderPo,
+            poNo: target.orderPo,
+            status: 'QC_INSPECTION',
+            stage: 'QC_INSPECTION',
+            progressStep: 6,
+            hasOpenNcr: false
+          });
+        } else if (qcStatus === 'QC_HOLD' || qcStatus === 'REJECTED') {
+          // Set open NCR block on parent order & put job card on QC hold
+          await this.db.from('customer_orders').update({
+            has_open_ncr: true
+          }).or(`po_no.eq.${target.orderPo},id.eq.${target.orderPo}`);
+
+          await this.db.from('job_cards').update({
+            status: 'QC_HOLD'
+          }).or(`job_no.eq.${target.jobNo},id.eq.${target.jobNo}`);
+
+          const ncrNo = `NCR-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+          await this.db.from('ncrs').insert({
+            id: `ncr-${Date.now()}`,
+            ncr_number: ncrNo,
+            job_no: target.jobNo,
+            order_po: target.orderPo,
+            part_code: target.partCode,
+            description: defectCategory || inspectorNotes || 'Dimensional out-of-tolerance detected during QC review',
+            status: 'OPEN',
+            severity: qcStatus === 'REJECTED' ? 'CRITICAL' : 'MAJOR',
+            created_at: new Date().toISOString()
+          });
+
+          notificationsService.broadcastEvent('order_updated', {
+            id: target.orderPo,
+            poNo: target.orderPo,
+            hasOpenNcr: true
           });
         }
       }
@@ -197,27 +228,16 @@ export class QcService {
       local.inspectorNotes = inspectorNotes;
       local.defectCategory = defectCategory;
       local.inspectedAt = inspectedAt;
-
-      if (qcStatus === 'PASS') {
-        const pdiId = `pdi-${Date.now()}`;
-        SEED_PDI_QUEUE.unshift({
-          id: pdiId,
-          jobNo: local.jobNo,
-          orderPo: local.orderPo,
-          partCode: local.partCode,
-          partDescription: local.partDescription,
-          qty: local.qty,
-          pdiStatus: 'PENDING',
-          certificateNo: undefined,
-          reportDate: undefined
-        });
-      }
     }
 
-    return { id, qcStatus, inspectorNotes, defectCategory, inspectedAt };
+    const result = { id, qcStatus, inspectorNotes, defectCategory, inspectedAt };
+    notificationsService.broadcastEvent('qc_updated', result);
+
+    return result;
   }
 
   async getPDIQueue() {
+    let rawList: any[] = [];
     try {
       const { data, error } = await this.db
         .from('pdi_inspections')
@@ -225,7 +245,7 @@ export class QcService {
         .order('created_at', { ascending: false });
 
       if (!error && data && data.length > 0) {
-        return data.map(p => ({
+        rawList = data.map(p => ({
           id: p.id,
           jobNo: p.job_no,
           orderPo: p.order_po,
@@ -240,7 +260,24 @@ export class QcService {
     } catch (err) {
       console.warn('Database getPDIQueue fallback:', err);
     }
-    return SEED_PDI_QUEUE;
+
+    if (rawList.length === 0) {
+      rawList = SEED_PDI_QUEUE;
+    }
+
+    // Deduplicate by unique orderPo + jobNo + partCode (preserve latest status)
+    const map = new Map<string, any>();
+    for (const item of rawList) {
+      const key = `${(item.orderPo || '').trim().toUpperCase()}_${(item.jobNo || '').trim().toUpperCase()}`;
+      if (key !== '_') {
+        if (!map.has(key)) {
+          map.set(key, item);
+        }
+      } else {
+        map.set(item.id, item);
+      }
+    }
+    return Array.from(map.values());
   }
 
   async passPDIInspection(id: string) {
@@ -268,6 +305,13 @@ export class QcService {
           variance: 0,
           created_at: new Date().toISOString()
         });
+
+        // Advance parent order status to READY_TO_DISPATCH (Stage 7)
+        await this.db.from('customer_orders').update({
+          status: 'READY_TO_DISPATCH',
+          progress_step: 7,
+          updated_at: new Date().toISOString()
+        }).or(`po_no.eq.${pdi.order_po},id.eq.${pdi.order_po}`);
       }
     } catch (err) {
       console.warn('Database passPDIInspection fallback:', err);
@@ -280,9 +324,10 @@ export class QcService {
       local.reportDate = reportDate;
     }
 
+    const orderPo = local?.orderPo || 'PO';
+    const partDesc = local?.partDescription || 'Manufactured Item';
+
     try {
-      const partDesc = local?.partDescription || 'Manufactured Item';
-      const orderPo = local?.orderPo || 'PO';
       await notificationsService.triggerNotification({
         eventType: 'pdi_passed',
         entityType: 'PDI_INSPECTION',
@@ -295,8 +340,20 @@ export class QcService {
       console.warn('Could not dispatch PDI pass notification:', notifErr);
     }
 
+    // Real-Time Push: Broadcast PDI pass, Finished Goods update, and Order progression
+    notificationsService.broadcastEvent('pdi_updated', { id, pdiStatus: 'PASS', certificateNo: certNo, reportDate, orderPo });
+    notificationsService.broadcastEvent('finished_goods_updated', { orderPo, partCode: local?.partCode, qty: local?.qty });
+    notificationsService.broadcastEvent('order_updated', {
+      id: orderPo,
+      poNo: orderPo,
+      status: 'READY_TO_DISPATCH',
+      stage: 'READY_FOR_DISPATCH',
+      progressStep: 7
+    });
+
     return { id, pdiStatus: 'PASS', certificateNo: certNo, reportDate };
   }
+
 
   /**
    * Enforces backend-side check whether an Order PO has passed all QC and PDI checks

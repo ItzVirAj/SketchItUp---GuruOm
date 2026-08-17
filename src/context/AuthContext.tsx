@@ -10,7 +10,8 @@ interface AuthContextType {
   signIn: (email: string, password?: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password?: string, fullName?: string, role?: UserRole) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
-  resetPassword: (email: string) => Promise<{ error: Error | null }>;
+  resetPassword: (email: string) => Promise<{ error: Error | null; message?: string }>;
+  confirmPasswordReset: (token: string, newPassword: string) => Promise<{ error: Error | null; message?: string }>;
   refreshProfile: () => Promise<void>;
 }
 
@@ -130,9 +131,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const resetPassword = async (email: string) => {
     try {
-      return { error: null };
+      const cleanEmail = email.trim().toLowerCase();
+      const res = await apiClient.post<{ success: boolean; message: string }>('/auth/forgot-password', {
+        email: cleanEmail
+      });
+      return { error: null, message: res?.message || 'If this email address is registered, a password reset link has been dispatched to your inbox.' };
     } catch (err: any) {
-      return { error: err instanceof Error ? err : new Error('Failed to send reset link.') };
+      // Return safe message without leaking user existence
+      return { error: null, message: 'If this email address is registered, a password reset link has been dispatched to your inbox.' };
+    }
+  };
+
+  const confirmPasswordReset = async (token: string, newPassword: string) => {
+    try {
+      const res = await apiClient.post<{ success: boolean; message: string }>('/auth/reset-password', {
+        token: token.trim(),
+        newPassword
+      });
+      return { error: null, message: res?.message || 'Your password has been reset successfully. Please log in with your new password.' };
+    } catch (err: any) {
+      return { error: err instanceof Error ? err : new Error(err?.message || 'Failed to reset password.') };
     }
   };
 
@@ -159,6 +177,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signUp,
         signOut,
         resetPassword,
+        confirmPasswordReset,
         refreshProfile
       }}
     >

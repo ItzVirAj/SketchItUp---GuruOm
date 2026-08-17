@@ -32,9 +32,54 @@ export class DispatchController {
     }
   }
 
+  async getDispatchableQty(req: Request, res: Response) {
+    try {
+      const data = await dispatchService.getDispatchableQty(req.params.order_id || req.params.orderPo);
+      return res.json({ data });
+    } catch (err: any) {
+      return res.status(500).json({ error: 'InternalServerError', message: err.message });
+    }
+  }
+
+  async dispatchChallan(req: Request, res: Response) {
+    try {
+      const data = await dispatchService.dispatchChallan(req.params.id || req.params.challanNo);
+      return res.json({ message: 'Challan authorized and dispatched', data });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
+
+  async deliverChallan(req: Request, res: Response) {
+    try {
+      const data = await dispatchService.deliverChallan(req.params.id || req.params.challanNo);
+      return res.json({ message: 'Delivery confirmed for challan', data });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
+
+  async cancelChallan(req: Request, res: Response) {
+    try {
+      const data = await dispatchService.cancelChallan(req.params.id || req.params.challanNo, req.body.reason);
+      return res.json({ message: 'Dispatch challan cancelled', data });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
+
+  async printChallan(req: Request, res: Response) {
+    try {
+      const data = await dispatchService.printChallan(req.params.id || req.params.challanNo);
+      return res.json({ data });
+    } catch (err: any) {
+      return res.status(404).json({ error: 'NotFound', message: err.message });
+    }
+  }
+
   async updateDispatchStatus(req: Request, res: Response) {
     try {
-      const data = await dispatchService.updateDispatchStatus(req.params.challanNo, req.body);
+      const data = await dispatchService.updateDispatchStatus(req.params.challanNo || req.params.id, req.body);
       return res.json({ message: 'Dispatch status updated successfully', data });
     } catch (err: any) {
       return res.status(400).json({ error: 'ValidationError', message: err.message });

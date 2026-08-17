@@ -2,6 +2,7 @@ import { getDbClient } from '../../config/database';
 import { z } from 'zod';
 import { AdjustStockSchema } from './inventory.schema';
 import { inventoryMovementsService } from './inventory_movements.service';
+import { notificationsService } from '../notifications/notifications.service';
 import { logAudit } from '../../services/auditLog';
 
 export class InventoryService {
@@ -50,36 +51,7 @@ export class InventoryService {
       console.warn('Database getStock error:', err);
     }
 
-    const defaultCodes = ['00000001', '00000002', '00000003', '00000004'];
-    const descriptions: Record<string, string> = {
-      '00000001': 'LOWER HOUSING FLANGE',
-      '00000002': 'UPPER BLOCK',
-      '00000003': 'TOWER PIVOTING SECTION',
-      '00000004': 'ROTARY GEAR ADAPTER'
-    };
-
-    return await Promise.all(
-      defaultCodes.map(async code => {
-        const onHand = await inventoryMovementsService.getCurrentBalance(code);
-        const reserved = code === '00000001' ? 40 : code === '00000002' ? 80 : 0;
-        const available = onHand - reserved;
-        const reorderLevel = 25;
-        const status = available < 0 ? 'CRITICAL' : available < reorderLevel ? 'SHORTAGE' : 'OK';
-
-        return {
-          code,
-          description: descriptions[code] || 'Precision Component',
-          onHand,
-          reserved,
-          available,
-          demand: 50,
-          reorderLevel,
-          shortage: Math.max(0, reorderLevel - available),
-          unit: 'NOS',
-          status
-        };
-      })
-    );
+    return [];
   }
 
   /**
@@ -91,7 +63,7 @@ export class InventoryService {
     data: z.infer<typeof AdjustStockSchema>, 
     actorEmail = 'inventory@guruom.in'
   ) {
-    const { newOnHand } = AdjustStockSchema.parse(data);
+    const { newOnHand, reason } = AdjustStockSchema.parse(data);
 
     // 1. Get current derived balance
     const currentBalance = await inventoryMovementsService.getCurrentBalance(code);
@@ -113,7 +85,7 @@ export class InventoryService {
       movementType: 'ADJUSTMENT',
       referenceType: 'adjustment',
       actorEmail,
-      notes: `Manual stock adjustment to ${newOnHand} (Delta: ${delta > 0 ? '+' : ''}${delta})`
+      notes: `Manual stock adjustment to ${newOnHand} (Delta: ${delta > 0 ? '+' : ''}${delta})${reason ? ` — ${reason}` : ''}`
     });
 
     const reserved = 0;
@@ -129,6 +101,16 @@ export class InventoryService {
       afterState: { onHand: newOnHand, available, delta },
       metadata: { movementId: movement.id }
     }).catch(() => {});
+
+    // Real-Time Push: every connected client refetches live stock levels
+    notificationsService.broadcastEvent('stock_updated', {
+      itemCode: code,
+      onHand: movement.balance_after,
+      available,
+      delta,
+      movementType: 'ADJUSTMENT',
+      reason
+    });
 
     return {
       code,
@@ -163,7 +145,7 @@ export class InventoryService {
   /**
    * Reserves stock quantity for production job card.
    */
-  async reserveStock(code: string, qty: number) {
+  async reserveStock(code: string, qty: number, orderPo?: string) {
     try {
       const current = await this.getStockItem(code);
       if (current) {
@@ -181,7 +163,16 @@ export class InventoryService {
     } catch (err) {
       console.warn(`Database reserveStock(${code}) error:`, err);
     }
+
+    await logAudit({
+      actorEmail: 'inventory@guruom.in',
+      action: 'RESERVE_MATERIAL',
+      entityType: 'order',
+      entityId: orderPo || code,
+      afterState: { code, reservedQty: qty }
+    }).catch(() => {});
   }
+
 
   /**
    * Fetches active stock shortages.

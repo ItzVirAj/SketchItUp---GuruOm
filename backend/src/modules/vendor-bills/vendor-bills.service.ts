@@ -1,99 +1,15 @@
 import { getDbClient } from '../../config/database';
 import { z } from 'zod';
-import { VendorBillSchema, DisburseBillSchema } from './vendor-bills.schema';
-
-const SEED_VENDOR_BILLS = [
-  {
-    id: 'vb-1',
-    billNo: 'VB-2026-101',
-    vendorName: 'Rajkot Steel Suppliers Co',
-    poNo: 'PO-VEND-890',
-    status: 'OPEN',
-    date: '2026-08-01',
-    dueDate: '2026-08-25',
-    amount: 85000.00,
-    paidAmount: 0.00,
-    balanceAmount: 85000.00,
-    attachmentUrl: undefined
-  },
-  {
-    id: 'vb-2',
-    billNo: 'VB-2026-102',
-    vendorName: 'Anodize Tech Ltd',
-    poNo: 'SO-0041',
-    status: 'PAID',
-    date: '2026-07-28',
-    dueDate: '2026-08-05',
-    amount: 24000.00,
-    paidAmount: 24000.00,
-    balanceAmount: 0.00,
-    attachmentUrl: undefined
-  },
-  {
-    id: 'vb-3',
-    billNo: 'VB-2026-103',
-    vendorName: 'Hardened Cutting Tools Ltd',
-    poNo: 'PO-TOOL-441',
-    status: 'OVERDUE',
-    date: '2026-07-15',
-    dueDate: '2026-08-01',
-    amount: 42000.00,
-    paidAmount: 0.00,
-    balanceAmount: 42000.00,
-    attachmentUrl: undefined
-  },
-  {
-    id: 'bill-1',
-    billNo: 'BILL-2026-001',
-    vendorName: 'Jindal Steel & Power Ltd',
-    poNo: 'PO-RM-2026-001',
-    status: 'OPEN',
-    date: '2026-08-05',
-    dueDate: '2026-09-05',
-    amount: 145000.00,
-    paidAmount: 0.00,
-    balanceAmount: 145000.00,
-    attachmentUrl: undefined
-  },
-  {
-    id: 'bill-2',
-    billNo: 'BILL-2026-002',
-    vendorName: 'Anodize Tech Ltd',
-    poNo: 'PO-OW-2026-002',
-    status: 'PARTIAL',
-    date: '2026-08-01',
-    dueDate: '2026-08-31',
-    amount: 32000.00,
-    paidAmount: 15000.00,
-    balanceAmount: 17000.00,
-    attachmentUrl: undefined
-  },
-  {
-    id: 'bill-3',
-    billNo: 'BILL-2026-003',
-    vendorName: 'Sandvik Coromant Cutting Tools',
-    poNo: 'PO-TL-2026-003',
-    status: 'PAID',
-    date: '2026-07-15',
-    dueDate: '2026-08-15',
-    amount: 68000.00,
-    paidAmount: 68000.00,
-    balanceAmount: 0.00,
-    attachmentUrl: undefined
-  }
-];
+import { VendorBillCreateSchema, DisburseVendorBillSchema } from './vendor-bills.schema';
+import { auditService } from '../audit/audit.service';
+import { calculateVendorBillTds } from '../../../../src/utils/statutoryAccountingEngine';
+import { isWithinApprovalLimit } from '../../../../src/utils/rbacMatrix';
+import { notificationsService } from '../notifications/notifications.service';
 
 export class VendorBillsService {
   private db = getDbClient();
 
-  private roundMoney(amount: number): number {
-    return Math.round((amount + Number.EPSILON) * 100) / 100;
-  }
-
   async getVendorBills() {
-    const memoryMap = new Map<string, any>();
-    SEED_VENDOR_BILLS.forEach(b => memoryMap.set(b.billNo || b.id, b));
-
     try {
       const { data, error } = await this.db
         .from('vendor_bills')
@@ -101,194 +17,150 @@ export class VendorBillsService {
         .order('created_at', { ascending: false });
 
       if (!error && data && data.length > 0) {
-        data.forEach(bill => {
-          const key = bill.bill_no || bill.id;
-          const mem = memoryMap.get(key);
-          memoryMap.set(key, {
-            id: bill.id,
-            billNo: bill.bill_no,
-            vendorName: bill.vendor_name,
-            poNo: bill.po_no,
-            status: mem?.status ?? bill.status,
-            date: bill.date,
-            dueDate: bill.due_date,
-            amount: this.roundMoney(Number(bill.amount || 0)),
-            paidAmount: mem?.paidAmount !== undefined ? mem.paidAmount : this.roundMoney(Number(bill.paid_amount || 0)),
-            balanceAmount: mem?.balanceAmount !== undefined ? mem.balanceAmount : this.roundMoney(Number(bill.balance_amount ?? (bill.amount - (bill.paid_amount || 0)))),
-            attachmentUrl: bill.attachment_url
-          });
-        });
+        return data.map(b => ({
+          id: b.id,
+          billNo: b.bill_no,
+          vendorName: b.vendor_name,
+          vendorType: b.vendor_type,
+          vendorPan: b.vendor_pan,
+          poNo: b.po_no,
+          grnNo: b.grn_no,
+          status: b.status,
+          date: b.bill_date || b.date,
+          dueDate: b.due_date,
+          grossAmount: Number(b.gross_amount || b.amount || 0),
+          amount: Number(b.gross_amount || b.amount || 0),
+          tdsSection: b.tds_section || 'NONE',
+          tdsRate: Number(b.tds_rate || 0),
+          tdsAmount: Number(b.tds_amount || 0),
+          netPayableAmount: Number(b.net_payable_amount || b.amount || 0),
+          paidAmount: Number(b.paid_amount || 0),
+          balanceAmount: Number(b.balance_amount || b.amount || 0)
+        }));
       }
     } catch (err) {
-      console.warn('Database getVendorBills fallback:', err);
+      console.warn('DB getVendorBills fallback:', err);
     }
-    return Array.from(memoryMap.values());
+
+    return [];
   }
 
-  async getVendorBillByNo(billNo: string) {
-    try {
-      const { data: byNo } = await this.db
-        .from('vendor_bills')
-        .select('*')
-        .eq('bill_no', billNo)
-        .maybeSingle();
+  /**
+   * Enters a Vendor Bill with automated statutory TDS withholding (Section 194C or 194Q)
+   */
+  async createVendorBill(data: z.infer<typeof VendorBillCreateSchema>, accountantName: string) {
+    const validated = VendorBillCreateSchema.parse(data);
+    const billId = validated.id || `vb-${Date.now()}`;
 
-      let data = byNo;
-      if (!data) {
-        const { data: byId } = await this.db
-          .from('vendor_bills')
-          .select('*')
-          .eq('id', billNo)
-          .maybeSingle();
-        data = byId;
-      }
-
-      if (data) {
-        return {
-          id: data.id,
-          billNo: data.bill_no,
-          vendorName: data.vendor_name,
-          poNo: data.po_no,
-          status: data.status,
-          date: data.date,
-          dueDate: data.due_date,
-          amount: this.roundMoney(Number(data.amount || 0)),
-          paidAmount: this.roundMoney(Number(data.paid_amount || 0)),
-          balanceAmount: this.roundMoney(Number(data.balance_amount ?? (data.amount - (data.paid_amount || 0)))),
-          attachmentUrl: data.attachment_url
-        };
-      }
-    } catch (err) {
-      console.warn('Database getVendorBillByNo fallback:', err);
-    }
-    return SEED_VENDOR_BILLS.find(b => b.id === billNo || b.billNo === billNo) || null;
-  }
-
-  async createVendorBill(data: z.infer<typeof VendorBillSchema>) {
-    const validated = VendorBillSchema.parse(data);
-    const billId = validated.id || `bill-${Date.now()}`;
-
-    const amount = this.roundMoney(validated.amount);
-    const paidAmount = this.roundMoney(validated.paidAmount || 0);
-    const balanceAmount = this.roundMoney(validated.balanceAmount ?? (amount - paidAmount));
-
-    let status: 'PAID' | 'OVERDUE' | 'OPEN' | 'PARTIAL' = validated.status || 'OPEN';
-    if (balanceAmount === 0 && paidAmount > 0) {
-      status = 'PAID';
-    } else if (paidAmount > 0 && balanceAmount > 0) {
-      status = 'PARTIAL';
-    }
+    // Calculate Statutory TDS
+    const tdsCalc = calculateVendorBillTds({
+      vendorType: validated.vendorType,
+      vendorPan: validated.vendorPan,
+      grossAmount: validated.grossAmount,
+      isPurchaseOfGoods: validated.isPurchaseOfGoods,
+      cumulativeAnnualPurchases: validated.cumulativeAnnualPurchases
+    });
 
     try {
-      const { error } = await this.db.from('vendor_bills').insert({
+      await this.db.from('vendor_bills').insert({
         id: billId,
         bill_no: validated.billNo,
         vendor_name: validated.vendorName,
+        vendor_type: validated.vendorType,
+        vendor_pan: validated.vendorPan,
         po_no: validated.poNo,
-        status,
-        date: validated.date,
+        grn_no: validated.grnNo,
+        status: 'OPEN',
+        bill_date: validated.date,
         due_date: validated.dueDate,
-        amount,
-        paid_amount: paidAmount,
-        balance_amount: balanceAmount,
-        attachment_url: validated.attachmentUrl,
-        created_at: new Date().toISOString()
+        gross_amount: validated.grossAmount,
+        tds_section: tdsCalc.tdsSection,
+        tds_rate: tdsCalc.tdsRate,
+        tds_amount: tdsCalc.tdsAmount,
+        net_payable_amount: tdsCalc.netPayableAmount,
+        paid_amount: 0,
+        balance_amount: tdsCalc.netPayableAmount,
+        attachment_url: validated.attachmentUrl
       });
-
-      if (error) throw error;
     } catch (err) {
-      console.warn('Database createVendorBill fallback:', err);
+      console.warn('DB createVendorBill fallback:', err);
     }
 
-    const created = {
+    await auditService.recordAuditLog({
+      actorEmail: accountantName,
+      actorRole: 'Accountant',
+      action: 'VENDOR_BILL_ENTERED',
+      entityType: 'vendor_bills',
+      entityId: validated.billNo,
+      details: `Vendor Bill ${validated.billNo} entered for ${validated.vendorName} (Gross: ₹${validated.grossAmount}, TDS ${tdsCalc.tdsSection}: ₹${tdsCalc.tdsAmount}, Net: ₹${tdsCalc.netPayableAmount})`
+    }).catch(() => {});
+
+    const result = {
       id: billId,
-      billNo: validated.billNo,
-      vendorName: validated.vendorName,
-      poNo: validated.poNo,
-      status,
-      date: validated.date,
-      dueDate: validated.dueDate,
-      amount,
-      paidAmount,
-      balanceAmount,
-      attachmentUrl: validated.attachmentUrl
+      ...validated,
+      tds: tdsCalc,
+      netPayableAmount: tdsCalc.netPayableAmount
     };
 
-    SEED_VENDOR_BILLS.unshift(created as any);
-    return created;
+    notificationsService.broadcastEvent('vendor_bill_created', result);
+
+    return result;
   }
 
-  async disbursePayment(billNo: string, paymentData: z.infer<typeof DisburseBillSchema>) {
-    const { paymentAmount } = DisburseBillSchema.parse(paymentData || {});
-    let existing = await this.getVendorBillByNo(billNo);
-
-    if (!existing) {
-      existing = {
-        id: `bill-${Date.now()}`,
-        billNo,
-        vendorName: 'Vendor Partner',
-        poNo: 'PO-REF',
-        status: 'OPEN',
-        date: new Date().toISOString().split('T')[0],
-        dueDate: new Date().toISOString().split('T')[0],
-        amount: paymentAmount || 50000,
-        paidAmount: 0,
-        balanceAmount: paymentAmount || 50000,
-        attachmentUrl: undefined
-      };
-      SEED_VENDOR_BILLS.unshift(existing as any);
+  /**
+   * Processes Vendor Payment Disbursement with RBAC Monetary Ceiling Enforcement:
+   * Accountant Limit: ₹50,000 / Purchase Manager: ₹1,00,000 / Above requires Owner approval.
+   */
+  async disbursePayment(billNo: string, data: z.infer<typeof DisburseVendorBillSchema>, actorRole: string, actorName: string) {
+    const validated = DisburseVendorBillSchema.parse(data);
+    const bills = await this.getVendorBills();
+    const bill = bills.find(b => b.billNo === billNo || b.id === billNo);
+    if (!bill) {
+      throw new Error(`Vendor Bill ${billNo} not found`);
     }
 
-    const amountToPay = paymentAmount !== undefined ? this.roundMoney(paymentAmount) : existing.balanceAmount;
-    const newPaidAmount = this.roundMoney(existing.paidAmount + amountToPay);
-    const newBalance = this.roundMoney(Math.max(0, existing.amount - newPaidAmount));
+    const disbursementAmount = validated.paymentAmount || bill.netPayableAmount || bill.balanceAmount;
 
-    let newStatus: 'PAID' | 'PARTIAL' | 'OVERDUE' | 'OPEN' = 'PARTIAL';
-    if (newBalance <= 0) {
-      newStatus = 'PAID';
+    // Enforce Approval Limit Check
+    const approvalCheck = isWithinApprovalLimit(actorRole, disbursementAmount, 'accounting');
+    if (!approvalCheck.allowed) {
+      throw new Error(`Disbursement Blocked: Amount ₹${disbursementAmount.toLocaleString('en-IN')} exceeds your role limit of ₹${approvalCheck.limit?.toLocaleString('en-IN')}. Requires Owner-level authorization.`);
     }
 
     try {
-      if (existing.id) {
-        await this.db
-          .from('vendor_bills')
-          .update({
-            status: newStatus,
-            paid_amount: newPaidAmount,
-            balance_amount: newBalance,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existing.id);
-      }
-      if (existing.billNo) {
-        await this.db
-          .from('vendor_bills')
-          .update({
-            status: newStatus,
-            paid_amount: newPaidAmount,
-            balance_amount: newBalance,
-            updated_at: new Date().toISOString()
-          })
-          .eq('bill_no', existing.billNo);
-      }
+      await this.db
+        .from('vendor_bills')
+        .update({
+          paid_amount: disbursementAmount,
+          balance_amount: 0,
+          status: 'PAID'
+        })
+        .or(`bill_no.eq.${billNo},id.eq.${billNo}`);
     } catch (err) {
-      console.warn('Database disbursePayment fallback:', err);
+      console.warn('DB disbursePayment fallback:', err);
     }
 
-    const local = SEED_VENDOR_BILLS.find(b => b.id === billNo || b.billNo === billNo || b.id === existing?.id || b.billNo === existing?.billNo);
-    if (local) {
-      local.paidAmount = newPaidAmount;
-      local.balanceAmount = newBalance;
-      local.status = newStatus;
-    }
+    await auditService.recordAuditLog({
+      actorEmail: actorName,
+      actorRole,
+      action: 'VENDOR_PAYMENT_DISBURSED',
+      entityType: 'vendor_bills',
+      entityId: billNo,
+      details: `Disbursed ₹${disbursementAmount.toFixed(2)} to ${bill.vendorName} via ${validated.paymentMode} (Ref: ${validated.referenceNo || 'Direct NEFT'}). TDS deducted: ₹${bill.tdsAmount || 0}`
+    }).catch(() => {});
 
-    return {
+    const result = {
       billNo,
-      paidAmount: newPaidAmount,
-      balanceAmount: newBalance,
-      status: newStatus
+      disbursedAmount: disbursementAmount,
+      status: 'PAID',
+      disbursedBy: actorName
     };
+
+    notificationsService.broadcastEvent('vendor_bill_disbursed', result);
+
+    return result;
   }
 }
 
 export const vendorBillsService = new VendorBillsService();
+

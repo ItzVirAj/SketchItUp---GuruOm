@@ -19,9 +19,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
 }) => {
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [orderPo, setOrderPo] = useState(orders[0]?.poNo || 'PO-2026-901');
-  const [transporter, setTransporter] = useState('VRL Logistics');
-  const [vehicleNo, setVehicleNo] = useState('MH-12-AB-9876');
+  const [orderPo, setOrderPo] = useState(orders[0]?.poNo || '');
+  const [transporter, setTransporter] = useState('');
+  const [vehicleNo, setVehicleNo] = useState('');
 
   const filteredDispatches = dispatches.filter(d => 
     d.challanNo.toLowerCase().includes(searchQuery.toLowerCase()) || 

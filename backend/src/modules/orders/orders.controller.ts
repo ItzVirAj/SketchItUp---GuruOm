@@ -37,30 +37,113 @@ export class OrdersController {
   async createOrder(req: Request, res: Response) {
     const tenant = extractTenantId(req);
     try {
-      const created = await ordersService.createOrder(req.body);
+      const actorContext = {
+        role: req.rbacScope?.role || req.user?.role || 'Sales/Order Desk',
+        name: req.rbacScope?.userName || req.user?.name || req.user?.email || 'Sales Desk User'
+      };
+
+      const created = await ordersService.createOrder(req.body, actorContext);
+      
       // Invalidate orders list and dashboard metrics
       await Promise.all([
         CacheService.invalidatePattern(`cache:${tenant}:orders:*`),
         CacheService.invalidatePattern(`cache:${tenant}:dashboard:*`)
       ]);
-      return res.status(201).json({ message: 'Order created successfully', data: created });
+      
+      return res.status(201).json({ 
+        message: 'Order created and passed Stage 1 verification successfully', 
+        data: created 
+      });
     } catch (err: any) {
-      return res.status(400).json({ error: 'ValidationError', message: err.message });
+      return res.status(err.statusCode || 400).json({ 
+        error: err.errorCode || 'ValidationError', 
+        message: err.message 
+      });
     }
   }
 
-  async updateOrderStatus(req: Request, res: Response) {
+  async updateOrder(req: Request, res: Response) {
     const tenant = extractTenantId(req);
     try {
-      const updated = await ordersService.updateOrderStatus(req.params.id, req.body);
+      const actorContext = {
+        role: req.rbacScope?.role || req.user?.role || 'Production Planner',
+        name: req.rbacScope?.userName || req.user?.name || req.user?.email || 'Authorized User'
+      };
+
+      const updated = await ordersService.updateOrder(req.params.id, req.body, actorContext);
+
+      // Invalidate cache
+      await Promise.all([
+        CacheService.invalidatePattern(`cache:${tenant}:orders:*`),
+        CacheService.invalidatePattern(`cache:${tenant}:dashboard:*`)
+      ]);
+
+      return res.json({
+        message: 'Order updated successfully',
+        data: updated
+      });
+    } catch (err: any) {
+      return res.status(err.statusCode || 400).json({
+        error: err.errorCode || 'OrderUpdateError',
+        message: err.message
+      });
+    }
+  }
+
+  async transitionOrder(req: Request, res: Response) {
+    const tenant = extractTenantId(req);
+    try {
+      const actorContext = {
+        role: req.rbacScope?.role || req.user?.role || 'Production Planner',
+        name: req.rbacScope?.userName || req.user?.name || req.user?.email || 'Authorized User'
+      };
+
+      const targetStage = req.body.targetStage || req.body.status;
+      const result = await ordersService.transitionOrderStage(
+        req.params.id, 
+        targetStage, 
+        req.body, 
+        actorContext
+      );
+
       // Invalidate orders list and dashboard metrics
       await Promise.all([
         CacheService.invalidatePattern(`cache:${tenant}:orders:*`),
         CacheService.invalidatePattern(`cache:${tenant}:dashboard:*`)
       ]);
-      return res.json({ message: 'Order status updated successfully', data: updated });
+
+      return res.json({ 
+        message: `Order successfully transitioned to ${targetStage}`, 
+        data: result 
+      });
     } catch (err: any) {
-      return res.status(400).json({ error: 'ValidationError', message: err.message });
+      return res.status(err.statusCode || 400).json({ 
+        error: err.errorCode || 'StageTransitionError', 
+        message: err.message 
+      });
+    }
+  }
+
+  async createAmendment(req: Request, res: Response) {
+    const tenant = extractTenantId(req);
+    try {
+      const actorContext = {
+        role: req.rbacScope?.role || req.user?.role || 'Sales/Order Desk',
+        name: req.rbacScope?.userName || req.user?.name || req.user?.email || 'Sales Desk User'
+      };
+
+      const result = await ordersService.createAmendment(req.params.id, req.body, actorContext);
+
+      // Invalidate orders list
+      await CacheService.invalidatePattern(`cache:${tenant}:orders:*`);
+
+      const status = result.status === 'ESCALATED_TO_OWNER' ? 202 : 200;
+      return res.status(status).json(result);
+    } catch (err: any) {
+      return res.status(err.statusCode || 400).json({ 
+        error: err.errorCode || 'AmendmentError', 
+        message: err.message 
+      });
     }
   }
 }

@@ -76,7 +76,9 @@ async function startServer() {
 
   // Mount Third Batch Business REST API Modules (Production & QC/PDI)
   app.use('/api/v1/production', productionRoutes);
+  app.use('/api/v1/jobcards', productionRoutes);
   app.use('/api/v1/qc', qcRoutes);
+  app.use('/api/v1/pdi', qcRoutes);
 
   // Mount Fourth Batch Business REST API Modules (Dispatch, Finished Goods, Outwork)
   app.use('/api/v1/dispatch', dispatchRoutes);

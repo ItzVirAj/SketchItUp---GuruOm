@@ -1,182 +1,222 @@
 import { getDbClient } from '../../config/database';
 import { z } from 'zod';
-import { OutworkSendOutSchema, ReceiveOutworkSchema } from './outwork.schema';
+import { SubcontractGateOutSchema, SubcontractGateInSchema } from './outwork.schema';
+import { auditService } from '../audit/audit.service';
+import { inventoryService } from '../inventory/inventory.service';
+import { 
+  evaluateSubcontractOverdueStatus, 
+  SubcontractOrder 
+} from '../../../../src/utils/procurementEngine';
 
-const SEED_OUTWORK_SEND_OUTS = [
-  {
-    id: 'ow-1',
-    sendOutId: 'SO-0042',
-    vendorName: 'Anodize Tech Ltd',
-    process: 'Hard Anodizing 25 microns',
-    sentQty: 250,
-    receivedQty: 250,
-    rejectedQty: 0,
-    expectedDate: '2026-08-12',
-    sentDate: '2026-08-05',
-    status: 'COMPLETED',
-    unitCost: 45
-  },
-  {
-    id: 'ow-2',
-    sendOutId: 'SO-0043',
-    vendorName: 'Apex Heat Treaters',
-    process: 'Induction Hardening 55-60 HRC',
-    sentQty: 100,
-    receivedQty: 50,
-    rejectedQty: 0,
-    expectedDate: '2026-08-16',
-    sentDate: '2026-08-10',
-    status: 'PARTIALLY_RECEIVED',
-    unitCost: 75
-  },
-  {
-    id: 'ow-3',
-    sendOutId: 'SO-0044',
-    vendorName: 'Shree Zinc Electroplaters',
-    process: 'Zinc Plating Yellow Passivation',
-    sentQty: 500,
-    receivedQty: 0,
-    rejectedQty: 0,
-    expectedDate: '2026-08-20',
-    sentDate: '2026-08-12',
-    status: 'SENT',
-    unitCost: 18
-  }
-];
+const SEED_SUBCONTRACT_ORDERS: SubcontractOrder[] = [];
 
 export class OutworkService {
   private db = getDbClient();
 
-  async getOutworkList() {
+  /**
+   * Fetches all job-work subcontracting dispatches with real-time automated overdue calculation.
+   */
+  async getSubcontractOrders() {
     try {
       const { data, error } = await this.db
-        .from('outwork_sendouts')
+        .from('subcontract_orders')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (!error && data && data.length > 0) {
-        return data.map(o => ({
-          id: o.id,
-          sendOutId: o.send_out_id,
-          vendorName: o.vendor_name,
-          process: o.process,
-          sentQty: Number(o.sent_qty || 0),
-          receivedQty: Number(o.received_qty || 0),
-          rejectedQty: Number(o.rejected_qty || 0),
-          expectedDate: o.expected_date,
-          status: o.status
-        }));
+        return data.map(sub => {
+          const rawOrder: SubcontractOrder = {
+            id: sub.id,
+            gatePassNo: sub.gate_pass_no,
+            jobNo: sub.job_no,
+            itemCode: sub.item_code,
+            itemDescription: sub.item_description,
+            subcontractorName: sub.subcontractor_name,
+            processType: sub.process_type,
+            dispatchedQty: Number(sub.dispatched_qty || 0),
+            unit: sub.unit || 'NOS',
+            dispatchDate: sub.dispatch_date,
+            expectedReturnDate: sub.expected_return_date,
+            actualReturnDate: sub.actual_return_date,
+            gateInPassNo: sub.gate_in_pass_no,
+            receivedQty: Number(sub.received_qty || 0),
+            rejectedQty: Number(sub.rejected_qty || 0),
+            qcStatus: sub.qc_status || 'PENDING_GATE_IN',
+            status: sub.status || 'OUT_FOR_JOBWORK',
+            isOverdue: sub.is_overdue || false,
+            overdueDays: Number(sub.overdue_days || 0),
+            vehicleDetails: sub.vehicle_details,
+            transporter: sub.transporter,
+            dispatchedBy: sub.dispatched_by,
+            receivedBy: sub.received_by,
+            notes: sub.notes
+          };
+
+          // Evaluate live overdue status based on current date
+          const overdueEval = evaluateSubcontractOverdueStatus(rawOrder);
+          return {
+            ...rawOrder,
+            isOverdue: overdueEval.isOverdue,
+            overdueDays: overdueEval.overdueDays,
+            status: overdueEval.status
+          };
+        });
       }
     } catch (err) {
-      console.warn('Database getOutworkList fallback:', err);
+      console.warn('DB getSubcontractOrders fallback:', err);
     }
-    return SEED_OUTWORK_SEND_OUTS;
+
+    // Fallback seed with live overdue evaluation
+    return SEED_SUBCONTRACT_ORDERS.map(sub => {
+      const overdueEval = evaluateSubcontractOverdueStatus(sub);
+      return {
+        ...sub,
+        isOverdue: overdueEval.isOverdue,
+        overdueDays: overdueEval.overdueDays,
+        status: overdueEval.status
+      };
+    });
   }
 
-  async getOutworkById(id: string) {
-    try {
-      const { data, error } = await this.db
-        .from('outwork_sendouts')
-        .select('*')
-        .or(`id.eq.${id},send_out_id.eq.${id}`)
-        .maybeSingle();
-
-      if (!error && data) {
-        return {
-          id: data.id,
-          sendOutId: data.send_out_id,
-          vendorName: data.vendor_name,
-          process: data.process,
-          sentQty: Number(data.sent_qty || 0),
-          receivedQty: Number(data.received_qty || 0),
-          rejectedQty: Number(data.rejected_qty || 0),
-          expectedDate: data.expected_date,
-          status: data.status
-        };
-      }
-    } catch (err) {
-      console.warn('Database getOutworkById fallback:', err);
-    }
-    return SEED_OUTWORK_SEND_OUTS.find(o => o.id === id || o.sendOutId === id) || null;
-  }
-
-  async createOutworkSendOut(data: z.infer<typeof OutworkSendOutSchema>) {
-    const validated = OutworkSendOutSchema.parse(data);
-    const owId = validated.id || `ow-${Date.now()}`;
+  /**
+   * Dispatches material for outsourced job-work:
+   * 1. Creates Outward Gate Pass (GP-OUT-2026-####)
+   * 2. Deducts on-hand stock via SUBCON_GATE_OUT ledger movement
+   * 3. Updates Job Card status to OUT_FOR_JOBWORK
+   */
+  async dispatchSubcontractGateOut(data: z.infer<typeof SubcontractGateOutSchema>, actorName: string) {
+    const validated = SubcontractGateOutSchema.parse(data);
+    const subId = validated.id || `sub-${Date.now()}`;
+    const gatePassNo = validated.gatePassNo || `GP-OUT-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
 
     try {
-      const { error } = await this.db.from('outwork_sendouts').insert({
-        id: owId,
-        send_out_id: validated.sendOutId,
-        vendor_name: validated.vendorName,
-        process: validated.process,
-        sent_qty: validated.sentQty,
-        received_qty: validated.receivedQty || 0,
-        rejected_qty: validated.rejectedQty || 0,
-        expected_date: validated.expectedDate,
-        status: validated.status || 'SENT'
+      await this.db.from('subcontract_orders').insert({
+        id: subId,
+        gate_pass_no: gatePassNo,
+        job_no: validated.jobNo,
+        item_code: validated.itemCode,
+        item_description: validated.itemDescription,
+        subcontractor_name: validated.subcontractorName,
+        process_type: validated.processType,
+        dispatched_qty: validated.dispatchedQty,
+        unit: validated.unit,
+        dispatch_date: validated.dispatchDate,
+        expected_return_date: validated.expectedReturnDate,
+        qc_status: 'PENDING_GATE_IN',
+        status: 'OUT_FOR_JOBWORK',
+        is_overdue: false,
+        overdue_days: 0,
+        vehicle_details: validated.vehicleDetails,
+        transporter: validated.transporter,
+        unit_rate: validated.unitRate,
+        total_process_cost: (validated.unitRate || 0) * validated.dispatchedQty,
+        dispatched_by: actorName,
+        notes: validated.notes,
+        created_at: new Date().toISOString()
       });
 
-      if (error) throw error;
+      // 1. Record Ledger Movement SUBCON_GATE_OUT
+      await inventoryService.recordMovement({
+        itemCode: validated.itemCode,
+        movementType: 'TRANSFER_OUT',
+        qty: validated.dispatchedQty,
+        referenceDoc: gatePassNo,
+        actor: actorName,
+        notes: `Outward job-work dispatch for ${validated.processType} at ${validated.subcontractorName}. Gate Pass: ${gatePassNo}`
+      });
+
+      // 2. Update linked Job Card
+      await this.db
+        .from('job_cards')
+        .update({ status: 'OUT_FOR_JOBWORK' })
+        .or(`job_no.eq.${validated.jobNo},id.eq.${validated.jobNo}`);
+
     } catch (err) {
-      console.warn('Database createOutworkSendOut fallback:', err);
+      console.warn('DB dispatchSubcontractGateOut fallback:', err);
     }
 
-    const created = { id: owId, ...validated };
-    SEED_OUTWORK_SEND_OUTS.unshift(created as any);
-    return created;
+    await auditService.recordAuditLog({
+      actorEmail: actorName,
+      actorRole: 'Production Planner',
+      action: 'SUBCONTRACT_GATE_OUT_DISPATCHED',
+      entityType: 'subcontract_orders',
+      entityId: gatePassNo,
+      details: `Gate-Out ${gatePassNo}: ${validated.dispatchedQty} ${validated.unit} of ${validated.itemCode} dispatched to ${validated.subcontractorName} for ${validated.processType}. Expected: ${validated.expectedReturnDate}`
+    }).catch(() => {});
+
+    return {
+      id: subId,
+      gatePassNo,
+      ...validated,
+      dispatchedBy: actorName,
+      status: 'OUT_FOR_JOBWORK'
+    };
   }
 
-  async receiveOutworkReturn(id: string, receiveData: z.infer<typeof ReceiveOutworkSchema>) {
-    const { receivedQty, rejectedQty } = ReceiveOutworkSchema.parse(receiveData);
-
-    const existing = await this.getOutworkById(id);
-    if (!existing) {
-      throw new Error(`Outwork record ${id} not found.`);
-    }
-
-    const newReceived = (existing.receivedQty || 0) + receivedQty;
-    const newRejected = (existing.rejectedQty || 0) + (rejectedQty || 0);
-    const totalProcessed = newReceived + newRejected;
-
-    let newStatus: 'SENT' | 'PARTIALLY_RECEIVED' | 'COMPLETED' | 'OVERDUE' = 'PARTIALLY_RECEIVED';
-    if (totalProcessed >= existing.sentQty) {
-      newStatus = 'COMPLETED';
-    } else {
-      const today = new Date().toISOString().split('T')[0];
-      if (existing.expectedDate && today > existing.expectedDate) {
-        newStatus = 'OVERDUE';
-      } else {
-        newStatus = 'PARTIALLY_RECEIVED';
-      }
-    }
+  /**
+   * Receives material back from subcontractor:
+   * 1. Records Inward Gate Pass (GP-IN-2026-####)
+   * 2. Restores material into factory inventory via SUBCON_GATE_IN ledger movement
+   * 3. Records incoming quality inspection
+   */
+  async receiveSubcontractGateIn(data: z.infer<typeof SubcontractGateInSchema>, actorName: string) {
+    const validated = SubcontractGateInSchema.parse(data);
+    const gateInPassNo = validated.gateInPassNo || `GP-IN-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
 
     try {
       await this.db
-        .from('outwork_sendouts')
+        .from('subcontract_orders')
         .update({
-          received_qty: newReceived,
-          rejected_qty: newRejected,
-          status: newStatus
+          gate_in_pass_no: gateInPassNo,
+          actual_return_date: validated.actualReturnDate,
+          received_qty: validated.receivedQty,
+          rejected_qty: validated.rejectedQty,
+          qc_status: validated.qcStatus,
+          status: 'RETURNED_INSPECTED',
+          is_overdue: false,
+          overdue_days: 0,
+          received_by: actorName,
+          notes: validated.notes || validated.inspectionNotes,
+          updated_at: new Date().toISOString()
         })
-        .or(`id.eq.${id},send_out_id.eq.${id}`);
+        .or(`gate_pass_no.eq.${validated.gatePassNo},id.eq.${validated.gatePassNo}`);
+
+      // Record Ledger Movement SUBCON_GATE_IN
+      await inventoryService.recordMovement({
+        itemCode: 'SUBCON-RETURN',
+        movementType: 'TRANSFER_IN',
+        qty: validated.receivedQty,
+        referenceDoc: gateInPassNo,
+        actor: actorName,
+        notes: `Inward job-work receipt for ${validated.gatePassNo}. QC Inspection: ${validated.qcStatus}. Notes: ${validated.inspectionNotes || 'Accepted'}`
+      });
     } catch (err) {
-      console.warn('Database receiveOutworkReturn fallback:', err);
+      console.warn('DB receiveSubcontractGateIn fallback:', err);
     }
 
-    const local = SEED_OUTWORK_SEND_OUTS.find(o => o.id === id || o.sendOutId === id);
-    if (local) {
-      local.receivedQty = newReceived;
-      local.rejectedQty = newRejected;
-      local.status = newStatus;
-    }
+    await auditService.recordAuditLog({
+      actorEmail: actorName,
+      actorRole: 'Quality Inspector',
+      action: 'SUBCONTRACT_GATE_IN_RECEIVED',
+      entityType: 'subcontract_orders',
+      entityId: validated.gatePassNo,
+      details: `Gate-In ${gateInPassNo} (Linked: ${validated.gatePassNo}): ${validated.receivedQty} received, ${validated.rejectedQty} rejected (${validated.qcStatus})`
+    }).catch(() => {});
 
     return {
-      id,
-      receivedQty: newReceived,
-      rejectedQty: newRejected,
-      status: newStatus
+      gatePassNo: validated.gatePassNo,
+      gateInPassNo,
+      status: 'RETURNED_INSPECTED',
+      receivedBy: actorName
     };
+  }
+
+  /**
+   * Real-time automated query for overdue subcontracting alerts.
+   */
+  async getOverdueSubcontractAlerts() {
+    const all = await this.getSubcontractOrders();
+    return all.filter(s => s.isOverdue && s.status === 'OVERDUE_JOBWORK');
   }
 }
 

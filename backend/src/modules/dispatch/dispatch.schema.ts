@@ -9,6 +9,10 @@ export const DispatchChallanSchema = z.object({
   transporter: z.string().min(1, 'Transporter name is required'),
   vehicleNo: z.string().min(1, 'Vehicle number is required'),
   linesCount: z.coerce.number().int().default(1),
+  lines: z.array(z.object({
+    itemCode: z.string().min(1, 'Item code is required'),
+    qty: z.coerce.number().positive('Dispatch quantity must be positive')
+  })).optional(),
   driverContact: z.string().optional(),
   totalInvoiceValue: z.coerce.number().nonnegative().optional()
 });

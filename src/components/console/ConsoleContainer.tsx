@@ -107,6 +107,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
 
   const [currentView, setCurrentView] = useState<ConsoleView>('command-centre');
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>('ord-1');
+  const [pendingJobCardOrderPo, setPendingJobCardOrderPo] = useState<string | null>(null);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     try {
       const item = localStorage.getItem('stratum_darkMode');
@@ -178,6 +179,8 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
     lastSynced,
     handleSaveCompanyProfile,
     handleCreateOrder,
+    handleUpdateOrder,
+    handleConfirmOrder,
     handleCloseOrder: serviceCloseOrder,
     handleCancelOrder: serviceCancelOrder,
     handleAdjustStock,
@@ -431,19 +434,51 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
           {currentView === 'orders' && (
             <OrdersView
               orders={orders}
+              qcQueue={qcQueue}
+              customers={customers}
+              masters={masters}
               isDarkMode={isDarkMode}
               onSelectOrder={handleSelectOrder}
               onCreateOrder={handleCreateOrder}
+              onNavigateToCustomers={() => {
+                navigate('/masters?tab=customers');
+                handleNavigateView('masters');
+              }}
+              onNavigateToMasters={() => {
+                navigate('/masters?tab=items');
+                handleNavigateView('masters');
+              }}
             />
           )}
 
           {currentView === 'order-detail' && selectedOrder && (
             <OrderDetailView
               order={selectedOrder}
+              qcQueue={qcQueue}
               isDarkMode={isDarkMode}
+              currentRole={currentRole}
+              currentUser={currentUser}
               onBack={() => handleNavigateView('orders')}
-              onCloseOrder={handleCloseOrder}
+              onNavigate={(view) => handleNavigateView(view as any)}
+              onConfirmOrder={async (orderId) => {
+                if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
+                  setDynamicFetchedOrder(prev => prev ? { ...prev, status: 'CONFIRMED', stage: 'CONFIRMED', progressStep: 2 } : null);
+                }
+                return handleConfirmOrder(orderId);
+              }}
+              onUpdateOrder={(orderId, updates) => {
+                if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
+                  setDynamicFetchedOrder(prev => prev ? { ...prev, ...updates } : null);
+                }
+                handleUpdateOrder(orderId, updates);
+              }}
+              onNavigateToCreateJobCard={(orderPo) => {
+                setPendingJobCardOrderPo(orderPo);
+                handleNavigateView('production');
+              }}
               onCancelOrder={handleCancelOrder}
+              onNavigateToPDI={() => handleNavigateView('pdi')}
+              onNavigateToDispatch={() => handleNavigateView('dispatch')}
             />
           )}
 
@@ -451,6 +486,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
             <InventoryView
               stock={stock}
               shortages={shortages}
+              masters={masters}
               isDarkMode={isDarkMode}
               onAdjustStock={handleAdjustStock}
             />
@@ -459,11 +495,14 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
           {currentView === 'production' && (
             <ProductionView
               jobCards={jobCards}
+              orders={orders}
               productionLogs={productionLogs}
               qcItems={qcQueue}
               isDarkMode={isDarkMode}
               onCreateJobCard={handleCreateJobCard}
               onLogProduction={handleLogProduction}
+              preselectedOrderPo={pendingJobCardOrderPo}
+              onJobCardModalOpened={() => setPendingJobCardOrderPo(null)}
             />
           )}
 
@@ -519,9 +558,23 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
           {currentView === 'approvals' && (
             <ApprovalsView
               approvals={approvals}
+              orders={orders}
               isDarkMode={isDarkMode}
               onApprove={handleApprove}
               onReject={handleReject}
+              onConfirmOrder={(orderId) => {
+                if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
+                  setDynamicFetchedOrder(prev => prev ? { ...prev, status: 'CONFIRMED', stage: 'CONFIRMED', progressStep: 2 } : null);
+                }
+                handleConfirmOrder(orderId);
+              }}
+              onViewOrder={(orderId) => {
+                const target = orders.find(o => o.id === orderId || o.poNo === orderId);
+                if (target) {
+                  setSelectedOrderId(target.id);
+                  handleNavigateView('order-detail');
+                }
+              }}
             />
           )}
 

@@ -5,38 +5,7 @@ import { auditService } from '../audit/audit.service';
 import { ordersService } from '../orders/orders.service';
 import { purchasingService } from '../purchasing/purchasing.service';
 
-const SEED_APPROVALS = [
-  {
-    id: 'appr-1',
-    title: 'High Value Steel Purchase Order',
-    type: 'HIGH_VALUE_PO',
-    requestedBy: 'Amit Joshi (Procurement)',
-    timestamp: '11:20 AM',
-    amount: 385000,
-    details: 'PO-2026-004 exceeds standard single-sign threshold (₹2.5L limit).',
-    entityId: 'PO-2026-004'
-  },
-  {
-    id: 'appr-2',
-    title: 'Special Customer Discount (5.5%)',
-    type: 'DISCOUNT_OVERRIDE',
-    requestedBy: 'Kavita Patel (Sales)',
-    timestamp: '02:15 PM',
-    amount: 45000,
-    details: 'Order PO-2026-001 discount adjustment for annual volume rebate.',
-    entityId: 'PO-2026-001'
-  },
-  {
-    id: 'appr-3',
-    title: 'Scrap Raw Material Write-off',
-    type: 'SCRAP_WRITE_OFF',
-    requestedBy: 'Deepak Sharma (Production)',
-    timestamp: 'Yesterday',
-    amount: 18200,
-    details: 'Defective forging billet scrap write-off authorization.',
-    entityId: 'SCRAP-2026-09'
-  }
-];
+const SEED_APPROVALS: any[] = [];
 
 export class ApprovalsService {
   private db = getDbClient();

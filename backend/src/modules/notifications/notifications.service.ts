@@ -96,42 +96,8 @@ const SEED_RECIPIENTS = [
   }
 ];
 
-const SEED_NOTIFICATIONS = [
-  {
-    id: 'notif-1',
-    type: 'pdi_passed',
-    title: 'PDI Inspection Passed',
-    message: 'Inspection completed for HARDENED BUSH 45X60X80 (PO-2026-002). Certificate PDI-2026-8812 issued.',
-    severity: 'INFO',
-    entity_type: 'PDI_INSPECTION',
-    entity_id: 'pdi-1',
-    is_read: false,
-    created_at: new Date(Date.now() - 3600000).toISOString()
-  },
-  {
-    id: 'notif-2',
-    type: 'inventory_alert',
-    title: 'Safety Buffer Warning',
-    message: 'Raw material round bar inventory nearing reorder threshold.',
-    severity: 'MEDIUM',
-    entity_type: 'STOCK_ITEM',
-    entity_id: '00000001',
-    is_read: true,
-    created_at: new Date(Date.now() - 7200000).toISOString()
-  }
-];
-
-const SEED_LOGS = [
-  {
-    id: 'nlog-1',
-    event_type: 'pdi_passed',
-    recipient_email: 'quality@guruom.in',
-    subject: '[Owner OS Alert] PDI Inspection Passed',
-    status: 'SENT',
-    resend_email_id: 'msg_98129381',
-    created_at: new Date(Date.now() - 3600000).toISOString()
-  }
-];
+const SEED_NOTIFICATIONS: any[] = [];
+const SEED_LOGS: any[] = [];
 
 import { publishTenantEvent, subscribeTenantEvents } from '../../lib/pubsub';
 

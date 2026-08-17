@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   Database, 
@@ -26,15 +26,55 @@ import {
   Wrench,
   Factory,
   Zap,
-  Sparkles
+  Sparkles,
+  Eye,
+  EyeOff,
+  ShieldCheck,
+  Phone,
+  Mail,
+  Clock,
+  Briefcase,
+  Sliders,
+  AlertTriangle,
+  FileCheck,
+  Truck
 } from 'lucide-react';
-import { MasterItem, CustomerMaster, VendorMaster, MachineMaster } from '../../../types/console';
+import { MasterItem, CustomerMaster, VendorMaster, MachineMaster, SystemUser } from '../../../types/console';
+import { Modal } from '../../common/Modal';
+
+import { 
+  INDIAN_STATES,
+  CUSTOMER_TYPES,
+  VENDOR_TYPES,
+  VENDOR_CATEGORIES,
+  ITEM_TYPES,
+  ITEM_UOMS,
+  GST_RATES,
+  PAYMENT_TERMS,
+  MACHINE_TYPES,
+  MACHINE_SHIFTS,
+  MACHINE_STATUSES,
+  SUBCONTRACTOR_PROCESS_TYPES,
+  INDIAN_MOBILE_REGEX,
+  GSTIN_REGEX,
+  PAN_REGEX,
+  PINCODE_REGEX,
+  HSN_CODE_REGEX,
+  IFSC_REGEX,
+  GST_EXEMPT_VALUE,
+  isGstExempt,
+  getItemPrefix,
+  generateNextCode,
+  maskBankAccount,
+  getStateCodeByName
+} from '../../../utils/masterValidation';
 
 interface MastersViewProps {
   masters: MasterItem[];
   customers?: CustomerMaster[];
   vendors?: VendorMaster[];
   machines?: MachineMaster[];
+  users?: SystemUser[];
   isDarkMode?: boolean;
   onAddMaster?: (item: Partial<MasterItem>) => void;
   onAddMasterItem?: (item: Partial<MasterItem>) => void;
@@ -49,6 +89,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
   customers = [],
   vendors = [],
   machines = [],
+  users = [],
   isDarkMode = true,
   onAddMaster,
   onAddMasterItem,
@@ -65,11 +106,11 @@ export const MastersView: React.FC<MastersViewProps> = ({
 
   useEffect(() => {
     const path = location.pathname;
-    if (path === '/masters/customers') setActiveTab('CUSTOMERS');
-    else if (path === '/masters/vendors') setActiveTab('VENDORS');
-    else if (path === '/masters/machines') setActiveTab('MACHINES');
-    else if (path === '/masters/import-omgst') setActiveTab('IMPORT_OMGST');
-    else if (path === '/masters/items') setActiveTab('ITEMS');
+    if (path.includes('/masters/customers')) setActiveTab('CUSTOMERS');
+    else if (path.includes('/masters/vendors')) setActiveTab('VENDORS');
+    else if (path.includes('/masters/machines')) setActiveTab('MACHINES');
+    else if (path.includes('/masters/import-omgst')) setActiveTab('IMPORT_OMGST');
+    else if (path.includes('/masters/items')) setActiveTab('ITEMS');
   }, [location.pathname]);
 
   const handleSelectTab = (tab: 'ITEMS' | 'CUSTOMERS' | 'VENDORS' | 'MACHINES' | 'IMPORT_OMGST') => {
@@ -83,8 +124,10 @@ export const MastersView: React.FC<MastersViewProps> = ({
       navigate(subPath);
     }
   };
+
   const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState<'ALL' | 'FG' | 'RAW'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'Active' | 'Inactive'>('ALL');
+  const [typeFilter, setTypeFilter] = useState<string>('ALL');
   
   // Separate Modal states
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
@@ -92,66 +135,28 @@ export const MastersView: React.FC<MastersViewProps> = ({
   const [showAddMachineModal, setShowAddMachineModal] = useState(false);
   const [showAddItemModal, setShowAddItemModal] = useState(false);
   
-  // Column customization state
-  const [showColumnsMenu, setShowColumnsMenu] = useState(false);
-  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
-    code: true,
-    name: true,
-    gstin: true,
-    city: true,
-    state: true,
-    creditDays: true,
-    paymentTerms: true,
-    hourlyCost: true,
-    active: true,
-    type: true,
-    status: true
-  });
+  // Unmask Bank Account state
+  const [unmaskedBankVendorCode, setUnmaskedBankVendorCode] = useState<string | null>(null);
 
-  // Limit per page & pagination
-  const [limitPerPage, setLimitPerPage] = useState<number>(25);
-  const [currentPage, setCurrentPage] = useState<number>(1);
+  // Form Validation Errors
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  // OMGST Import State
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [omgstFileType, setOmgstFileType] = useState<string>('Detect from filename');
-  const [uploadedFiles, setUploadedFiles] = useState<{ name: string; size: number; parsedType: string; recordsCount: number }[]>([]);
-  const [importStatus, setImportStatus] = useState<string | null>(null);
-
-  // Departmental Prefixes Lists (Alone prefixes: RAW, MACH, TOOL, PROC, CONS, SERV, LOGS, GEN / OEM, T1, EXP, DIST, RETL, GEN)
-  const VENDOR_DEPARTMENTS = [
-    { code: 'RAW', label: 'RAW — Raw Materials & Metals (RAW-001)' },
-    { code: 'MACH', label: 'MACH — Machinery & Capital Equip (MACH-001)' },
-    { code: 'TOOL', label: 'TOOL — Cutting Tools & Fixtures (TOOL-001)' },
-    { code: 'PROC', label: 'PROC — Subcontract & Jobwork (PROC-001)' },
-    { code: 'CONS', label: 'CONS — Consumables & Hardware (CONS-001)' },
-    { code: 'SERV', label: 'SERV — Service & Calibration (SERV-001)' },
-    { code: 'LOGS', label: 'LOGS — Logistics & Freight (LOGS-001)' },
-    { code: 'GEN', label: 'GEN — General Supplies (GEN-001)' }
-  ];
-
-  const CUSTOMER_DEPARTMENTS = [
-    { code: 'OEM', label: 'OEM — Original Equipment Mfr (OEM-001)' },
-    { code: 'T1', label: 'T1 — Tier-1 Automotive Components (T1-001)' },
-    { code: 'EXP', label: 'EXP — Export & Overseas Accounts (EXP-001)' },
-    { code: 'DIST', label: 'DIST — Distributor & Trading (DIST-001)' },
-    { code: 'RETL', label: 'RETL — Retail & Direct Clients (RETL-001)' },
-    { code: 'GEN', label: 'GEN — General Customers (GEN-001)' }
-  ];
-
-  // Dedicated Customer Form State (Image 2 format)
+  // ----------------------------------------------------
+  // Customer Form State
+  // ----------------------------------------------------
   const [cCode, setCCode] = useState('');
-  const [cCategory, setCCategory] = useState('OEM');
   const [cName, setCName] = useState('');
   const [cLegalName, setCLegalName] = useState('');
-  const [cCustomerType, setCCustomerType] = useState('OEM');
+  const [cCustomerType, setCCustomerType] = useState<string>('OEM');
   const [cContactPerson, setCContactPerson] = useState('');
   const [cMobile, setCMobile] = useState('');
   const [cEmail, setCEmail] = useState('');
   const [cGstin, setCGstin] = useState('');
+  const [cGstExempt, setCGstExempt] = useState(false);
   const [cPan, setCPan] = useState('');
   const [cBillingAddress, setCBillingAddress] = useState('');
   const [cShippingAddress, setCShippingAddress] = useState('');
+  const [cSameAddress, setCSameAddress] = useState(true);
   const [cCity, setCCity] = useState('');
   const [cState, setCState] = useState('Maharashtra');
   const [cPincode, setCPincode] = useState('');
@@ -159,2156 +164,2732 @@ export const MastersView: React.FC<MastersViewProps> = ({
   const [cCreditDays, setCCreditDays] = useState<number>(30);
   const [cCreditLimit, setCCreditLimit] = useState<number>(1000000);
   const [cSalesperson, setCSalesperson] = useState('');
+  const [cStatus, setCStatus] = useState<'Active' | 'Inactive'>('Active');
   const [cNotes, setCNotes] = useState('');
 
-  // Dedicated Vendor Form State (Image 2 format)
+  // ----------------------------------------------------
+  // Vendor Form State
+  // ----------------------------------------------------
   const [vCode, setVCode] = useState('');
-  const [vCategory, setVCategory] = useState('RAW');
   const [vName, setVName] = useState('');
   const [vLegalName, setVLegalName] = useState('');
-  const [vVendorType, setVVendorType] = useState('Supplier');
-  const [vVendorCategory, setVVendorCategory] = useState('Raw Material');
+  const [vVendorType, setVVendorType] = useState<string>('Supplier');
+  const [vVendorCategory, setVVendorCategory] = useState<string>('Raw Material');
   const [vContactPerson, setVContactPerson] = useState('');
   const [vMobile, setVMobile] = useState('');
   const [vEmail, setVEmail] = useState('');
-  const [vGstin, setVGstin] = useState('');
-  const [vPan, setVPan] = useState('');
   const [vBillingAddress, setVBillingAddress] = useState('');
+  const [vShippingAddress, setVShippingAddress] = useState('');
   const [vCity, setVCity] = useState('');
   const [vState, setVState] = useState('Maharashtra');
   const [vPincode, setVPincode] = useState('');
-  const [vPaymentTerms, setVPaymentTerms] = useState('Net 30');
-  const [vCreditDays, setVCreditDays] = useState<number>(30);
-  const [vCreditLimit, setVCreditLimit] = useState<number>(500000);
+  const [vGstin, setVGstin] = useState('');
+  const [vGstExempt, setVGstExempt] = useState(false);
+  const [vPan, setVPan] = useState('');
   const [vBankAccountName, setVBankAccountName] = useState('');
   const [vBankAccountNumber, setVBankAccountNumber] = useState('');
   const [vIfsc, setVIfsc] = useState('');
+  const [vPaymentTerms, setVPaymentTerms] = useState('Net 30');
+  const [vCreditDays, setVCreditDays] = useState<number>(30);
+  const [vCreditLimit, setVCreditLimit] = useState<number>(500000);
+  const [vProcessType, setVProcessType] = useState<string>('Plating / Anodizing / Zinc Coating');
+  const [vTurnaroundTimeDays, setVTurnaroundTimeDays] = useState<number>(3);
+  const [vStatus, setVStatus] = useState<'Active' | 'Inactive'>('Active');
   const [vNotes, setVNotes] = useState('');
 
-  // Machine-Made Sequential Code Generators (Prefix Alone + 3-digit Non-Repeating Number)
-  const generateCustomerCode = (prefix: string) => {
-    const cleanPrefix = prefix.trim().toUpperCase();
-    let maxNum = 0;
+  // ----------------------------------------------------
+  // Item Form State
+  // ----------------------------------------------------
+  const [iCode, setICode] = useState('');
+  const [iName, setIName] = useState('');
+  const [iItemType, setIItemType] = useState<string>('Raw Material');
+  const [iCategory, setICategory] = useState('');
+  const [iDescription, setIDescription] = useState('');
+  const [iPartNo, setIPartNo] = useState('');
+  const [iUnit, setIUnit] = useState<string>('Nos');
+  const [iHsnCode, setIHsnCode] = useState('8483');
+  const [iGstRate, setIGstRate] = useState<number>(18);
+  const [iStandardCost, setIStandardCost] = useState<number>(100);
+  const [iSellingPrice, setISellingPrice] = useState<number>(0);
+  const [iMinStock, setIMinStock] = useState<number>(50);
+  const [iMaxStock, setIMaxStock] = useState<number>(500);
+  const [iReorderLevel, setIReorderLevel] = useState<number>(100);
+  const [iLeadTimeDays, setILeadTimeDays] = useState<number>(7);
+  const [iPreferredVendor, setIPreferredVendor] = useState('');
+  const [iDefaultWarehouse, setIDefaultWarehouse] = useState('Main Raw Material Store');
+  const [iStatus, setIStatus] = useState<'Active' | 'Inactive'>('Active');
 
-    customers.forEach(c => {
-      if (!c.code) return;
-      const codeUpper = c.code.toUpperCase();
-      if (codeUpper.startsWith(`${cleanPrefix}-`) || codeUpper.startsWith(`CST-${cleanPrefix}-`)) {
-        const parts = codeUpper.split('-');
-        const lastPart = parts[parts.length - 1];
-        const num = parseInt(lastPart, 10);
-        if (!isNaN(num) && num > maxNum) maxNum = num;
-      }
-    });
-
-    if (maxNum === 0) {
-      maxNum = customers.length;
-    }
-
-    let nextNum = maxNum + 1;
-    let candidateCode = `${cleanPrefix}-${String(nextNum).padStart(3, '0')}`;
-    while (customers.some(c => c.code && c.code.toUpperCase() === candidateCode.toUpperCase())) {
-      nextNum++;
-      candidateCode = `${cleanPrefix}-${String(nextNum).padStart(3, '0')}`;
-    }
-
-    return candidateCode;
-  };
-
-  const generateVendorCode = (prefix: string) => {
-    const cleanPrefix = prefix.trim().toUpperCase();
-    let maxNum = 0;
-
-    vendors.forEach(v => {
-      if (!v.code) return;
-      const codeUpper = v.code.toUpperCase();
-      if (codeUpper.startsWith(`${cleanPrefix}-`) || codeUpper.startsWith(`VND-${cleanPrefix}-`)) {
-        const parts = codeUpper.split('-');
-        const lastPart = parts[parts.length - 1];
-        const num = parseInt(lastPart, 10);
-        if (!isNaN(num) && num > maxNum) maxNum = num;
-      }
-    });
-
-    if (maxNum === 0) {
-      maxNum = vendors.length;
-    }
-
-    let nextNum = maxNum + 1;
-    let candidateCode = `${cleanPrefix}-${String(nextNum).padStart(3, '0')}`;
-    while (vendors.some(v => v.code && v.code.toUpperCase() === candidateCode.toUpperCase())) {
-      nextNum++;
-      candidateCode = `${cleanPrefix}-${String(nextNum).padStart(3, '0')}`;
-    }
-
-    return candidateCode;
-  };
-
-  const generateMachineMasterCode = () => {
-    const prefix = 'MCH';
-    let maxNum = machines.length;
-    machines.forEach(m => {
-      if (!m.code) return;
-      const parts = m.code.toUpperCase().split('-');
-      const lastPart = parts[parts.length - 1];
-      const num = parseInt(lastPart, 10);
-      if (!isNaN(num) && num > maxNum) maxNum = num;
-    });
-    let nextNum = maxNum + 1;
-    let candidateCode = `${prefix}-${String(nextNum).padStart(3, '0')}`;
-    while (machines.some(m => m.code && m.code.toUpperCase() === candidateCode.toUpperCase())) {
-      nextNum++;
-      candidateCode = `${prefix}-${String(nextNum).padStart(3, '0')}`;
-    }
-    return candidateCode;
-  };
-
-  const openAddCustomerModal = () => {
-    const initialCategory = 'OEM';
-    setCCategory(initialCategory);
-    setCCustomerType('OEM');
-    setCCode(generateCustomerCode(initialCategory));
-    setShowAddCustomerModal(true);
-  };
-
-  const openAddVendorModal = () => {
-    const initialCategory = 'RAW';
-    setVCategory(initialCategory);
-    setVVendorCategory('Raw Material');
-    setVCode(generateVendorCode(initialCategory));
-    setShowAddVendorModal(true);
-  };
-
-  const openAddMachineModal = () => {
-    setMCode(generateMachineMasterCode());
-    setShowAddMachineModal(true);
-  };
-
-  const handleCustomerCategoryChange = (newCat: string) => {
-    setCCategory(newCat);
-    setCCustomerType(newCat);
-    setCCode(generateCustomerCode(newCat));
-  };
-
-  const handleVendorCategoryChange = (newCat: string) => {
-    setVCategory(newCat);
-    const catLabel = VENDOR_DEPARTMENTS.find(d => d.code === newCat)?.label.split('—')[1]?.split('(')[0]?.trim() || 'Raw Material';
-    setVVendorCategory(catLabel);
-    setVCode(generateVendorCode(newCat));
-  };
-
-  // Form state for Machine
+  // ----------------------------------------------------
+  // Machine Form State
+  // ----------------------------------------------------
   const [mCode, setMCode] = useState('');
   const [mName, setMName] = useState('');
-  const [mType, setMType] = useState('CNC Machining');
-  const [mStatus, setMStatus] = useState('RUNNING');
-  const [mHourlyCost, setMHourlyCost] = useState<number>(500);
-  const [mActive, setMActive] = useState<boolean>(true);
+  const [mType, setMType] = useState<string>('CNC Machining');
+  const [mDepartment, setMDepartment] = useState('Machine Shop');
+  const [mLocation, setMLocation] = useState('Bay 1 — Machine Shop');
+  const [mManufacturer, setMManufacturer] = useState('');
+  const [mModel, setMModel] = useState('');
+  const [mSerialNumber, setMSerialNumber] = useState('');
+  const [mInstallationDate, setMInstallationDate] = useState('');
+  const [mCapacity, setMCapacity] = useState<number | undefined>(undefined);
+  const [mCapacityUom, setMCapacityUom] = useState('');
+  const [mOperatingHours, setMOperatingHours] = useState<number>(16);
+  const [mShift, setMShift] = useState<string>('General-Day');
+  const [mStatus, setMStatus] = useState<string>('Active');
+  const [mResponsiblePerson, setMResponsiblePerson] = useState('');
+  const [mHourlyCost, setMHourlyCost] = useState<number>(600);
 
-  // Form state for Item SKU
-  const [itemCode, setItemCode] = useState('');
-  const [partNo, setPartNo] = useState('');
-  const [description, setDescription] = useState('');
-  const [unit, setUnit] = useState('NOS');
-  const [hsnCode, setHsnCode] = useState('84832000');
-  const [reorderLevel, setReorderLevel] = useState(20);
-  const [storeLocation, setStoreLocation] = useState('A1-RACK-01');
-  const [isFinishedGoods, setIsFinishedGoods] = useState(true);
-  const [saleRate, setSaleRate] = useState(100);
-  const [purchaseRate, setPurchaseRate] = useState(70);
-
-  // Filters
-  const filteredCustomers = customers.filter(c => 
-    (c.code || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (c.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (c.gstin || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (c.city || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (c.state || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const filteredVendors = vendors.filter(v => 
-    (v.code || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (v.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (v.gstin || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (v.city || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (v.state || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const filteredMachines = machines.filter(m => 
-    (m.code || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (m.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (m.type || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const filteredItems = masters.filter(m => {
-    const matches = (m.code || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (m.partNo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (m.description || '').toLowerCase().includes(searchTerm.toLowerCase());
-    if (typeFilter === 'FG') return matches && m.isFinishedGoods;
-    if (typeFilter === 'RAW') return matches && !m.isFinishedGoods;
-    return matches;
-  });
-
-  // Dedicated Save Handlers with mandatory field enforcement
-  const handleSaveCustomer = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!cCode || !cName || !cGstin || !cPan || !cMobile || !cBillingAddress || !cCity || !cState) {
-      alert('Please fill in all mandatory fields marked with *: Code, Name, GSTIN, PAN, Mobile, Address, City, and State.');
-      return;
-    }
-
-    const payload: CustomerMaster = {
-      code: cCode,
-      name: cName,
-      legalName: cLegalName || cName,
-      customerType: cCustomerType,
-      gstin: cGstin,
-      pan: cPan,
-      contactPerson: cContactPerson || cName,
-      contact: cMobile,
-      email: cEmail,
-      address: cBillingAddress,
-      shippingAddress: cShippingAddress || cBillingAddress,
-      city: cCity,
-      state: cState,
-      stateCode: '27',
-      pin: cPincode,
-      creditDays: Number(cCreditDays) || 30,
-      paymentTerms: cPaymentTerms,
-      creditLimit: Number(cCreditLimit) || 1000000,
-      salesperson: cSalesperson,
-      status: 'Active',
-      notes: cNotes
-    };
-
-    if (onAddCustomer) onAddCustomer(payload);
-    setActiveTab('CUSTOMERS');
-    setSearchTerm('');
-    setShowAddCustomerModal(false);
-    resetCustomerForm();
-  };
-
-  const resetCustomerForm = () => {
-    setCCode('');
+  // Init Code Generators on opening modals
+  const openCustomerModal = () => {
+    setFormErrors({});
+    const nextCode = generateNextCode(customers.map(c => c.code), 'CUST');
+    setCCode(nextCode);
     setCName('');
     setCLegalName('');
+    setCCustomerType('OEM');
     setCContactPerson('');
     setCMobile('');
     setCEmail('');
     setCGstin('');
+    setCGstExempt(false);
     setCPan('');
     setCBillingAddress('');
     setCShippingAddress('');
+    setCSameAddress(true);
     setCCity('');
+    setCState('Maharashtra');
     setCPincode('');
-    setCSalesperson('');
+    setCPaymentTerms('Net 30');
+    setCCreditDays(30);
+    setCCreditLimit(1000000);
+    setCSalesperson(users.find(u => u.userRole?.includes('Sales'))?.name || '');
+    setCStatus('Active');
     setCNotes('');
+    setShowAddCustomerModal(true);
+  };
+
+  const openVendorModal = () => {
+    setFormErrors({});
+    const nextCode = generateNextCode(vendors.map(v => v.code), 'VEND');
+    setVCode(nextCode);
+    setVName('');
+    setVLegalName('');
+    setVVendorType('Supplier');
+    setVVendorCategory('Raw Material');
+    setVContactPerson('');
+    setVMobile('');
+    setVEmail('');
+    setVBillingAddress('');
+    setVShippingAddress('');
+    setVCity('');
+    setVState('Maharashtra');
+    setVPincode('');
+    setVGstin('');
+    setVGstExempt(false);
+    setVPan('');
+    setVBankAccountName('');
+    setVBankAccountNumber('');
+    setVIfsc('');
+    setVPaymentTerms('Net 30');
+    setVCreditDays(30);
+    setVCreditLimit(500000);
+    setVProcessType('Plating / Anodizing / Zinc Coating');
+    setVTurnaroundTimeDays(3);
+    setVStatus('Active');
+    setVNotes('');
+    setShowAddVendorModal(true);
+  };
+
+  const openItemModal = () => {
+    setFormErrors({});
+    const prefix = getItemPrefix(iItemType);
+    const nextCode = generateNextCode(masters.map(m => m.code), prefix);
+    setICode(nextCode);
+    setIName('');
+    setICategory('Metals & Bars');
+    setIDescription('');
+    setIPartNo('');
+    setIUnit('Nos');
+    setIHsnCode('8483');
+    setIGstRate(18);
+    setIStandardCost(100);
+    setISellingPrice(0);
+    setIMinStock(50);
+    setIMaxStock(500);
+    setIReorderLevel(100);
+    setILeadTimeDays(7);
+    setIPreferredVendor(vendors[0]?.name || '');
+    setIDefaultWarehouse('Main Raw Material Store');
+    setIStatus('Active');
+    setShowAddItemModal(true);
+  };
+
+  const openMachineModal = () => {
+    setFormErrors({});
+    const nextCode = generateNextCode(machines.map(m => m.code), 'MCH');
+    setMCode(nextCode);
+    setMName('');
+    setMType('CNC Machining');
+    setMDepartment('Machine Shop');
+    setMLocation('Bay 1 — Machine Shop');
+    setMManufacturer('');
+    setMModel('');
+    setMSerialNumber('');
+    setMInstallationDate('');
+    setMCapacity(undefined);
+    setMCapacityUom('');
+    setMOperatingHours(16);
+    setMShift('General-Day');
+    setMStatus('Active');
+    setMResponsiblePerson(users[0]?.name || '');
+    setMHourlyCost(600);
+    setShowAddMachineModal(true);
+  };
+
+  // Dynamic Item Prefix update on type change
+  const handleItemTypeChange = (newType: string) => {
+    setIItemType(newType);
+    const prefix = getItemPrefix(newType);
+    const nextCode = generateNextCode(masters.map(m => m.code), prefix);
+    setICode(nextCode);
+
+    if (newType === 'Finished Good') {
+      setIStandardCost(0);
+      setIPreferredVendor('');
+      if (iSellingPrice === 0) setISellingPrice(1500);
+      setIDefaultWarehouse('Finished Goods Yard');
+    } else {
+      setISellingPrice(0);
+      if (iStandardCost === 0) setIStandardCost(100);
+      setIDefaultWarehouse('Main Raw Material Store');
+    }
+  };
+
+  // ----------------------------------------------------
+  // Submit Handlers with Live Dynamic Validation
+  // ----------------------------------------------------
+  const handleSaveCustomer = (e: React.FormEvent) => {
+    e.preventDefault();
+    const errors: Record<string, string> = {};
+
+    if (!cName.trim()) errors.name = 'Customer Name is mandatory';
+    if (!cContactPerson.trim()) errors.contactPerson = 'Contact Person is mandatory';
+    if (!cMobile.trim() || !INDIAN_MOBILE_REGEX.test(cMobile.trim())) {
+      errors.mobile = '10-digit Indian mobile number required (starting with 6-9)';
+    }
+
+    if (cGstExempt) {
+      if (!cNotes.trim()) {
+        errors.notes = 'Exemption reason is mandatory in Notes when GSTIN is N/A — GST-exempt';
+      }
+    } else {
+      if (!cGstin.trim()) {
+        errors.gstin = 'GSTIN is required (or check GST-Exempt)';
+      } else if (!GSTIN_REGEX.test(cGstin.trim())) {
+        errors.gstin = 'Invalid 15-char GSTIN format (e.g. 27AABCL1234M1ZP)';
+      }
+    }
+
+    if (cPan.trim() && !PAN_REGEX.test(cPan.trim())) {
+      errors.pan = 'Invalid PAN format (e.g. AABCL1234M)';
+    }
+
+    if (!cBillingAddress.trim()) errors.billingAddress = 'Billing Address is mandatory';
+    if (!cCity.trim()) errors.city = 'City is mandatory';
+    if (!cState.trim()) errors.state = 'State is mandatory';
+
+    if (cPincode.trim() && !PINCODE_REGEX.test(cPincode.trim())) {
+      errors.pincode = 'Pincode must be 6 digits';
+    }
+
+    if (cPaymentTerms.startsWith('Net')) {
+      if (cCreditDays <= 0 || cCreditDays > 180) {
+        errors.creditDays = 'Credit days must be between 1 and 180 for Net terms';
+      }
+      if (cCreditLimit <= 0) {
+        errors.creditLimit = 'Credit limit (₹) is required for Net terms';
+      }
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+
+    const stateCode = getStateCodeByName(cState);
+    const finalGstin = cGstExempt ? GST_EXEMPT_VALUE : cGstin.trim().toUpperCase();
+    const finalPan = cPan.trim() ? cPan.trim().toUpperCase() : (finalGstin.length === 15 ? finalGstin.slice(2, 12) : '');
+
+    const newCust: CustomerMaster = {
+      code: cCode,
+      name: cName.trim(),
+      legalName: cLegalName.trim(),
+      customerType: cCustomerType,
+      contactPerson: cContactPerson.trim(),
+      mobile: cMobile.trim(),
+      email: cEmail.trim(),
+      gstin: finalGstin,
+      pan: finalPan,
+      billingAddress: cBillingAddress.trim(),
+      address: cBillingAddress.trim(),
+      shippingAddress: cSameAddress ? cBillingAddress.trim() : (cShippingAddress.trim() || cBillingAddress.trim()),
+      city: cCity.trim(),
+      state: cState.trim(),
+      stateCode,
+      pincode: cPincode.trim(),
+      paymentTerms: cPaymentTerms,
+      creditDays: cCreditDays,
+      creditLimit: cCreditLimit,
+      salesperson: cSalesperson.trim(),
+      status: cStatus,
+      notes: cNotes.trim()
+    };
+
+    if (onAddCustomer) {
+      onAddCustomer(newCust);
+    }
+
+    setShowAddCustomerModal(false);
   };
 
   const handleSaveVendor = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!vCode || !vName || !vGstin || !vPan || !vMobile || !vBillingAddress || !vCity || !vState || !vBankAccountName || !vBankAccountNumber || !vIfsc) {
-      alert('Please fill in all mandatory fields marked with *: Code, Name, GSTIN, PAN, Mobile, Address, City, State, Bank Account Name, Bank Account Number, and IFSC Code.');
+    const errors: Record<string, string> = {};
+
+    if (!vName.trim()) errors.name = 'Vendor Name is mandatory';
+    if (!vContactPerson.trim()) errors.contactPerson = 'Contact Person is mandatory';
+    if (!vMobile.trim() || !INDIAN_MOBILE_REGEX.test(vMobile.trim())) {
+      errors.mobile = '10-digit Indian mobile number required (starting with 6-9)';
+    }
+
+    if (!vPan.trim()) {
+      errors.pan = 'PAN is always mandatory for vendor TDS compliance';
+    } else if (!PAN_REGEX.test(vPan.trim())) {
+      errors.pan = 'Invalid 10-char PAN format (e.g. AAAFS1111A)';
+    }
+
+    if (!vGstExempt && vGstin.trim() && !GSTIN_REGEX.test(vGstin.trim())) {
+      errors.gstin = 'Invalid 15-char GSTIN format';
+    }
+
+    if (!vBillingAddress.trim()) errors.billingAddress = 'Billing Address is mandatory';
+    if (!vCity.trim()) errors.city = 'City is mandatory';
+    if (!vState.trim()) errors.state = 'State is mandatory';
+
+    if (!vBankAccountName.trim()) errors.bankAccountName = 'Bank Account Name is mandatory';
+    if (!vBankAccountNumber.trim()) errors.bankAccountNumber = 'Bank Account Number is mandatory';
+    if (!vIfsc.trim() || !IFSC_REGEX.test(vIfsc.trim())) {
+      errors.ifsc = 'Valid 11-char IFSC code is mandatory (e.g. HDFC0001234)';
+    }
+
+    if (vVendorType === 'Subcontractor / Job Worker') {
+      if (!vProcessType.trim()) {
+        errors.processType = 'Process type is required for Subcontractor vendors';
+      }
+      if (vTurnaroundTimeDays <= 0) {
+        errors.turnaroundTimeDays = 'Turnaround time (days) is required for Subcontractors';
+      }
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
       return;
     }
 
-    const payload: VendorMaster = {
+    const stateCode = getStateCodeByName(vState);
+    const finalGstin = vGstExempt ? GST_EXEMPT_VALUE : (vGstin.trim().toUpperCase() || 'N/A — GST-exempt');
+
+    const newVend: VendorMaster = {
       code: vCode,
-      name: vName,
-      legalName: vLegalName || vName,
+      name: vName.trim(),
+      legalName: vLegalName.trim(),
       vendorType: vVendorType,
       vendorCategory: vVendorCategory,
-      gstin: vGstin,
-      pan: vPan,
-      contactPerson: vContactPerson || vName,
-      contact: vMobile,
-      email: vEmail,
-      address: vBillingAddress,
-      city: vCity,
-      state: vState,
-      stateCode: '27',
-      pin: vPincode,
+      contactPerson: vContactPerson.trim(),
+      mobile: vMobile.trim(),
+      email: vEmail.trim(),
+      billingAddress: vBillingAddress.trim(),
+      address: vBillingAddress.trim(),
+      shippingAddress: vShippingAddress.trim() || vBillingAddress.trim(),
+      city: vCity.trim(),
+      state: vState.trim(),
+      stateCode,
+      pincode: vPincode.trim(),
+      gstin: finalGstin,
+      pan: vPan.trim().toUpperCase(),
+      bankAccountName: vBankAccountName.trim(),
+      bankAccountNumber: vBankAccountNumber.trim(),
+      ifsc: vIfsc.trim().toUpperCase(),
       paymentTerms: vPaymentTerms,
-      creditDays: Number(vCreditDays) || 30,
-      creditLimit: Number(vCreditLimit) || 500000,
-      bankAccountName: vBankAccountName,
-      bankAccountNumber: vBankAccountNumber,
-      ifsc: vIfsc,
-      status: 'Active',
-      notes: vNotes
+      creditDays: vCreditDays,
+      creditLimit: vCreditLimit,
+      processType: vVendorType === 'Subcontractor / Job Worker' ? vProcessType : undefined,
+      turnaroundTimeDays: vVendorType === 'Subcontractor / Job Worker' ? vTurnaroundTimeDays : undefined,
+      status: vStatus,
+      notes: vNotes.trim()
     };
 
-    if (onAddVendor) onAddVendor(payload);
-    setActiveTab('VENDORS');
-    setSearchTerm('');
+    if (onAddVendor) {
+      onAddVendor(newVend);
+    }
+
     setShowAddVendorModal(false);
-    resetVendorForm();
-  };
-
-  const resetVendorForm = () => {
-    setVCode('');
-    setVName('');
-    setVLegalName('');
-    setVContactPerson('');
-    setVMobile('');
-    setVEmail('');
-    setVGstin('');
-    setVPan('');
-    setVBillingAddress('');
-    setVCity('');
-    setVPincode('');
-    setVBankAccountName('');
-    setVBankAccountNumber('');
-    setVIfsc('');
-    setVNotes('');
-  };
-
-  const handleSaveMachine = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!mCode || !mName) return;
-
-    const payload: MachineMaster = {
-      code: mCode,
-      name: mName,
-      type: mType,
-      status: mStatus,
-      hourlyCost: Number(mHourlyCost) || 0,
-      active: mActive
-    };
-
-    if (onAddMachine) onAddMachine(payload);
-    setActiveTab('MACHINES');
-    setSearchTerm('');
-    setShowAddMachineModal(false);
-    setMCode('');
-    setMName('');
   };
 
   const handleSaveItem = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!itemCode || !description) return;
+    const errors: Record<string, string> = {};
 
-    const payload: MasterItem = {
-      code: itemCode,
-      partNo,
-      description,
-      unit,
-      hsnCode,
-      reorderLevel: Number(reorderLevel),
-      storeLocation,
-      isFinishedGoods,
-      saleRate: Number(saleRate),
-      purchaseRate: Number(purchaseRate)
+    if (!iName.trim()) errors.name = 'Item Name is mandatory';
+    if (!iHsnCode.trim() || !HSN_CODE_REGEX.test(iHsnCode.trim())) {
+      errors.hsnCode = 'HSN code must be 4 to 8 digits for GST invoicing';
+    }
+
+    if (['Raw Material', 'Consumable', 'Bought-Out'].includes(iItemType)) {
+      if (iStandardCost <= 0) {
+        errors.standardCost = `Standard Cost is required for ${iItemType}`;
+      }
+      if (!iPreferredVendor.trim()) {
+        errors.preferredVendor = `Preferred Vendor is required for ${iItemType}`;
+      }
+    } else if (iItemType === 'Finished Good') {
+      if (iSellingPrice <= 0) {
+        errors.sellingPrice = 'Selling Price (₹) is required for Finished Goods';
+      }
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+
+    const isFG = iItemType === 'Finished Good';
+
+    const newItem: MasterItem = {
+      code: iCode,
+      name: iName.trim(),
+      itemType: iItemType,
+      category: iCategory.trim(),
+      description: iDescription.trim() || iName.trim(),
+      partNo: iPartNo.trim() || iName.trim(),
+      unit: iUnit,
+      hsnCode: iHsnCode.trim(),
+      gstRate: Number(iGstRate),
+      standardCost: isFG ? 0 : Number(iStandardCost),
+      sellingPrice: isFG ? Number(iSellingPrice) : 0,
+      minStock: Number(iMinStock),
+      maxStock: Number(iMaxStock),
+      reorderLevel: Number(iReorderLevel),
+      leadTimeDays: Number(iLeadTimeDays),
+      preferredVendor: isFG ? '' : iPreferredVendor.trim(),
+      defaultWarehouse: iDefaultWarehouse.trim(),
+      storeLocation: iDefaultWarehouse.trim(),
+      isFinishedGoods: isFG,
+      saleRate: isFG ? Number(iSellingPrice) : 0,
+      purchaseRate: isFG ? 0 : Number(iStandardCost),
+      status: iStatus
     };
 
-    if (onAddMaster) onAddMaster(payload);
-    if (onAddMasterItem) onAddMasterItem(payload);
-    setActiveTab('ITEMS');
-    setSearchTerm('');
+    if (onAddMasterItem) {
+      onAddMasterItem(newItem);
+    } else if (onAddMaster) {
+      onAddMaster(newItem);
+    }
+
     setShowAddItemModal(false);
-    setItemCode('');
-    setPartNo('');
-    setDescription('');
   };
 
-  // OMGST DBF File Upload Simulation
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+  const handleSaveMachine = (e: React.FormEvent) => {
+    e.preventDefault();
+    const errors: Record<string, string> = {};
 
-    const newFiles = Array.from(files).map((file: File) => {
-      const fileNameLower = file.name.toLowerCase();
-      let parsedType = 'Items';
-      let recordsCount = Math.floor(Math.random() * 40) + 10;
+    if (!mName.trim()) {
+      errors.name = 'Machine Name is mandatory and must be unique (e.g. VMC-01)';
+    } else if (machines.some(m => m.name.toLowerCase() === mName.trim().toLowerCase())) {
+      errors.name = `Machine "${mName.trim()}" already exists. Name must be unique.`;
+    }
 
-      if (fileNameLower.includes('cust')) {
-        parsedType = 'Customers';
-      } else if (fileNameLower.includes('vend')) {
-        parsedType = 'Vendors';
-      } else if (fileNameLower.includes('mach')) {
-        parsedType = 'Machines';
-      } else if (fileNameLower.includes('item') || fileNameLower.includes('sc')) {
-        parsedType = 'Items';
-      }
+    if (!mDepartment.trim()) errors.department = 'Department is mandatory';
+    if (!mLocation.trim()) errors.location = 'Shop floor location is mandatory';
 
-      return {
-        name: file.name,
-        size: file.size,
-        parsedType,
-        recordsCount
-      };
+    if (mCapacity !== undefined && mCapacity > 0 && !mCapacityUom.trim()) {
+      errors.capacityUom = 'Capacity UOM is required when capacity is specified';
+    }
+
+    if (mOperatingHours < 0 || mOperatingHours > 24) {
+      errors.operatingHours = 'Operating hours must be between 0 and 24 hours';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+
+    const newMachine: MachineMaster = {
+      code: mCode,
+      name: mName.trim().toUpperCase(),
+      type: mType,
+      department: mDepartment.trim(),
+      location: mLocation.trim(),
+      manufacturer: mManufacturer.trim(),
+      model: mModel.trim(),
+      serialNumber: mSerialNumber.trim(),
+      installationDate: mInstallationDate.trim(),
+      capacity: mCapacity ? Number(mCapacity) : undefined,
+      capacityUom: mCapacityUom.trim(),
+      operatingHours: Number(mOperatingHours),
+      shift: mShift,
+      status: mStatus,
+      responsiblePerson: mResponsiblePerson.trim(),
+      hourlyCost: Number(mHourlyCost),
+      active: mStatus === 'Active'
+    };
+
+    if (onAddMachine) {
+      onAddMachine(newMachine);
+    }
+
+    setShowAddMachineModal(false);
+  };
+
+  // ----------------------------------------------------
+  // Filtered Lists
+  // ----------------------------------------------------
+  const filteredCustomers = useMemo(() => {
+    return customers.filter(c => {
+      const matchesSearch = 
+        c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.gstin.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.city.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesStatus = statusFilter === 'ALL' || c.status === statusFilter;
+      const matchesType = typeFilter === 'ALL' || c.customerType === typeFilter;
+      return matchesSearch && matchesStatus && matchesType;
     });
+  }, [customers, searchTerm, statusFilter, typeFilter]);
 
-    setUploadedFiles(prev => [...prev, ...newFiles]);
-    setImportStatus(null);
-  };
+  const filteredVendors = useMemo(() => {
+    return vendors.filter(v => {
+      const matchesSearch = 
+        v.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        v.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        v.gstin.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        v.pan.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        v.city.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesStatus = statusFilter === 'ALL' || v.status === statusFilter;
+      const matchesType = typeFilter === 'ALL' || v.vendorType === typeFilter;
+      return matchesSearch && matchesStatus && matchesType;
+    });
+  }, [vendors, searchTerm, statusFilter, typeFilter]);
 
-  const handleCommitImport = () => {
-    if (uploadedFiles.length === 0) return;
+  const filteredItems = useMemo(() => {
+    return masters.filter(m => {
+      const name = m.name || m.description || '';
+      const matchesSearch = 
+        name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        m.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (m.partNo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        m.hsnCode.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesStatus = statusFilter === 'ALL' || (m.status || 'Active') === statusFilter;
+      const matchesType = typeFilter === 'ALL' || m.itemType === typeFilter;
+      return matchesSearch && matchesStatus && matchesType;
+    });
+  }, [masters, searchTerm, statusFilter, typeFilter]);
 
-    const importedCustomers: CustomerMaster[] = [
-      { code: 'CUST-OMGST-01', name: 'Precision Alloys Ltd (OMGST)', gstin: '24AAACP9012B1Z3', city: 'Rajkot', state: 'Gujarat', creditDays: 45 },
-      { code: 'CUST-OMGST-02', name: 'Metoda Auto Components (OMGST)', gstin: '24AAACM4589C1Z9', city: 'Rajkot', state: 'Gujarat', creditDays: 60 }
-    ];
-    const importedVendors: VendorMaster[] = [
-      { code: 'VEND-OMGST-01', name: 'Gujarat Forgings Ltd (OMGST)', gstin: '24AAACG3412A1Z1', city: 'Shapor', state: 'Gujarat', paymentTerms: 'Net 30 Days' }
-    ];
-    const importedMachines: MachineMaster[] = [
-      { code: 'VMC-04', name: 'VMC 4-axis High Speed (OMGST)', type: 'CNC Machining', status: 'RUNNING', hourlyCost: 850, active: true }
-    ];
-
-    if (onImportOMGST) {
-      onImportOMGST({
-        customers: importedCustomers,
-        vendors: importedVendors,
-        machines: importedMachines
-      });
-    }
-
-    setImportStatus(`Successfully committed ${uploadedFiles.length} DBF file(s). 4 new master records added to database.`);
-    setUploadedFiles([]);
-  };
-
-  // Export to CSV Function
-  const handleExportCSV = (type: 'CUSTOMERS' | 'VENDORS' | 'MACHINES' | 'ITEMS') => {
-    let csvData = '';
-    let filename = 'master_export.csv';
-
-    if (type === 'CUSTOMERS') {
-      filename = 'customers_register.csv';
-      csvData = 'Code,Name,GSTIN,City,State,Credit Days\n';
-      filteredCustomers.forEach(c => {
-        csvData += `"${c.code}","${c.name}","${c.gstin}","${c.city}","${c.state}","${c.creditDays}"\n`;
-      });
-    } else if (type === 'VENDORS') {
-      filename = 'vendors_register.csv';
-      csvData = 'Code,Name,GSTIN,City,State,Payment Terms\n';
-      filteredVendors.forEach(v => {
-        csvData += `"${v.code}","${v.name}","${v.gstin}","${v.city}","${v.state}","${v.paymentTerms}"\n`;
-      });
-    } else if (type === 'MACHINES') {
-      filename = 'machines_register.csv';
-      csvData = 'Code,Name,Type,Status,Hourly Cost,Active\n';
-      filteredMachines.forEach(m => {
-        csvData += `"${m.code}","${m.name}","${m.type}","${m.status || '—'}","${m.hourlyCost}","${m.active ? 'Yes' : 'No'}"\n`;
-      });
-    } else {
-      filename = 'items_master.csv';
-      csvData = 'Code,Part No,Description,Unit,HSN,Reorder Level,Sale Rate,Purchase Rate\n';
-      filteredItems.forEach(i => {
-        csvData += `"${i.code}","${i.partNo}","${i.description}","${i.unit}","${i.hsnCode}","${i.reorderLevel}","${i.saleRate}","${i.purchaseRate}"\n`;
-      });
-    }
-
-    const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = filename;
-    link.click();
-  };
+  const filteredMachines = useMemo(() => {
+    return machines.filter(m => {
+      const matchesSearch = 
+        m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        m.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        m.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        m.department.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesStatus = statusFilter === 'ALL' || m.status === statusFilter;
+      const matchesType = typeFilter === 'ALL' || m.type === typeFilter;
+      return matchesSearch && matchesStatus && matchesType;
+    });
+  }, [machines, searchTerm, statusFilter, typeFilter]);
 
   return (
     <div className="space-y-6 font-sans">
       
-      {/* Top Header Navigation Tabs matching executive UI design */}
-      <div className={`p-1.5 rounded-2xl border flex flex-wrap items-center gap-1.5 font-medium text-xs ${
-        isDarkMode ? 'bg-[#16171B] border-[#262832]' : 'bg-slate-100 border-slate-200/80'
+      {/* Top Banner Header with Summary Telemetry */}
+      <div className={`p-6 rounded-3xl border transition-all ${
+        isDarkMode 
+          ? 'bg-slate-900/80 border-slate-800/80 text-white backdrop-blur-xl shadow-2xl' 
+          : 'bg-white border-slate-200 shadow-sm text-slate-900'
       }`}>
-        {[
-          { id: 'ITEMS', label: 'Items' },
-          { id: 'CUSTOMERS', label: 'Customers' },
-          { id: 'VENDORS', label: 'Vendors' },
-          { id: 'MACHINES', label: 'Machines' },
-          { id: 'IMPORT_OMGST', label: 'Import from OMGST' }
-        ].map(tab => {
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => {
-                handleSelectTab(tab.id as any);
-                setSearchTerm('');
-              }}
-              className={`px-4 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
-                isActive 
-                  ? 'bg-[#5B75F8] text-white shadow-md shadow-[#5B75F8]/20 scale-[1.02]' 
-                  : isDarkMode 
-                    ? 'text-slate-400 hover:text-white hover:bg-slate-800/60' 
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/80'
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider ${
+                isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/30' : 'bg-[#5B75F8]/10 text-[#5B75F8] border border-[#5B75F8]/20'
+              }`}>
+                Precision Master Data Registry
+              </span>
+              <span className="text-xs text-slate-400 font-mono">• ERP Core Modules Specification</span>
+            </div>
+            <h1 className={`text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+              Master Data Hub
+            </h1>
+            <p className={`text-xs mt-1 max-w-xl ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+              Manage Customers, Vendors, Item Catalog, Machine Routing Fleet & Users with strict GSTIN/PAN and conditional rules.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {activeTab === 'CUSTOMERS' && (
+              <button
+                onClick={openCustomerModal}
+                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-blue-600 text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                <span>New Customer (CUST-####)</span>
+              </button>
+            )}
+
+            {activeTab === 'VENDORS' && (
+              <button
+                onClick={openVendorModal}
+                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                <span>New Vendor (VEND-####)</span>
+              </button>
+            )}
+
+            {activeTab === 'ITEMS' && (
+              <button
+                onClick={openItemModal}
+                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-emerald-600 text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                <span>New Item (RM/FG-####)</span>
+              </button>
+            )}
+
+            {activeTab === 'MACHINES' && (
+              <button
+                onClick={openMachineModal}
+                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-amber-600 text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                <span>New Machine (MCH-####)</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Master Metrics Strip */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 pt-4 border-t border-slate-200 dark:border-slate-800/60">
+          <div className={`p-4 rounded-2xl border transition-all ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
+            <div className={`text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Total Customers</div>
+            <div className="text-xl font-bold text-blue-600 dark:text-blue-400 mt-1">{customers.length} Accounts</div>
+            <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-mono font-semibold mt-0.5">● {customers.filter(c => c.status === 'Active').length} Active</div>
+          </div>
+          <div className={`p-4 rounded-2xl border transition-all ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
+            <div className={`text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Total Vendors</div>
+            <div className="text-xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">{vendors.length} Suppliers</div>
+            <div className="text-[11px] text-indigo-600 dark:text-indigo-400 font-mono font-semibold mt-0.5">● {vendors.filter(v => v.vendorType === 'Subcontractor / Job Worker').length} Subcontractors</div>
+          </div>
+          <div className={`p-4 rounded-2xl border transition-all ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
+            <div className={`text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Item Master Parts</div>
+            <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{masters.length} SKUs</div>
+            <div className={`text-[11px] font-mono font-semibold mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{masters.filter(m => m.isFinishedGoods || m.itemType === 'Finished Good').length} FG / {masters.filter(m => m.itemType === 'Raw Material').length} RM</div>
+          </div>
+          <div className={`p-4 rounded-2xl border transition-all ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
+            <div className={`text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Machine Fleet</div>
+            <div className="text-xl font-bold text-amber-600 dark:text-amber-400 mt-1">{machines.length} Units</div>
+            <div className="text-[11px] text-amber-600 dark:text-amber-400 font-mono font-semibold mt-0.5">● {machines.filter(m => m.status === 'Active').length} Operational</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Tab Controls Bar */}
+      <div className={`p-4 rounded-3xl border transition-all flex flex-wrap items-center justify-between gap-4 shadow-sm ${
+        isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-sm'
+      }`}>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => handleSelectTab('CUSTOMERS')}
+            className={`px-4 py-2 rounded-2xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === 'CUSTOMERS'
+                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white shadow-md'
+                : isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Building className="w-3.5 h-3.5" />
+            <span>Customers ({customers.length})</span>
+          </button>
+          
+          <button
+            onClick={() => handleSelectTab('VENDORS')}
+            className={`px-4 py-2 rounded-2xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === 'VENDORS'
+                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white shadow-md'
+                : isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>Vendors ({vendors.length})</span>
+          </button>
+
+          <button
+            onClick={() => handleSelectTab('ITEMS')}
+            className={`px-4 py-2 rounded-2xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === 'ITEMS'
+                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white shadow-md'
+                : isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Package className="w-3.5 h-3.5" />
+            <span>Item Catalog ({masters.length})</span>
+          </button>
+
+          <button
+            onClick={() => handleSelectTab('MACHINES')}
+            className={`px-4 py-2 rounded-2xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === 'MACHINES'
+                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white shadow-md'
+                : isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Wrench className="w-3.5 h-3.5" />
+            <span>Machine Fleet ({machines.length})</span>
+          </button>
+
+          <button
+            onClick={() => handleSelectTab('IMPORT_OMGST')}
+            className={`px-4 py-2 rounded-2xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === 'IMPORT_OMGST'
+                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white shadow-md'
+                : isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            <span>Import / OMGST</span>
+          </button>
+        </div>
+
+        {/* Filter & Search Toolbar */}
+        {activeTab !== 'IMPORT_OMGST' && (
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder={`Search ${activeTab.toLowerCase()}...`}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className={`pl-9 pr-4 py-2 rounded-xl text-xs border transition-all focus:outline-none focus:ring-2 focus:ring-[#5B75F8]/50 ${
+                  isDarkMode 
+                    ? 'bg-slate-800/80 border-slate-700 text-white placeholder:text-slate-500' 
+                    : 'bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 shadow-inner'
+                }`}
+              />
+            </div>
+
+            {/* Status Filter */}
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as any)}
+              className={`px-3 py-2 rounded-xl text-xs border font-medium transition-all focus:outline-none ${
+                isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-900 shadow-xs'
               }`}
             >
-              {tab.label}
-            </button>
-          );
-        })}
+              <option value="ALL">Status: All</option>
+              <option value="Active">Active Only</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
+        )}
       </div>
 
       {/* ========================================================================= */}
-      {/* TAB 1: CUSTOMERS MASTER REGISTER (MATCHING SCREENSHOT 1)                    */}
+      {/* 1. CUSTOMERS TAB */}
       {/* ========================================================================= */}
       {activeTab === 'CUSTOMERS' && (
-        <div className="space-y-4">
-          
-          {/* Header Title Section */}
-          <div className="flex items-center gap-2">
-            <div>
-              <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">REGISTER</div>
-              <div className="flex items-center gap-3">
-                <h1 className={`text-3xl font-extrabold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                  Customers
-                </h1>
-                <button 
-                  onClick={() => setSearchTerm('')}
-                  title="Refresh Register"
-                  className={`p-1.5 rounded-full border transition-all cursor-pointer ${
-                    isDarkMode ? 'border-slate-800 bg-slate-900 text-slate-400 hover:text-white' : 'border-slate-200 bg-white text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Action Toolbar */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex-1 min-w-[240px] max-w-xl relative">
-              <input
-                type="text"
-                placeholder="Search..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className={`w-full px-4 py-2.5 rounded-2xl border text-xs outline-none transition-all ${
-                  isDarkMode 
-                    ? 'bg-slate-900/90 border-slate-800 text-white placeholder:text-slate-500 focus:border-[#5B75F8] focus:ring-2 focus:ring-[#5B75F8]/20' 
-                    : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-[#5B75F8] focus:ring-2 focus:ring-[#5B75F8]/10 shadow-xs'
-                }`}
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={openAddCustomerModal}
-                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-[#4F6BF5] hover:from-[#4F6BF5] hover:to-[#3B59E5] text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 transition-all hover:scale-[1.01]"
-              >
-                <Plus className="w-4 h-4" />
-                <span>New Customer</span>
-              </button>
-
-              <button
-                onClick={() => handleExportCSV('CUSTOMERS')}
-                className={`px-4 py-2.5 rounded-2xl border font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all ${
-                  isDarkMode ? 'border-slate-800 bg-slate-900/80 text-slate-300 hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Export</span>
-              </button>
-
-              <div className="relative">
-                <button
-                  onClick={() => setShowColumnsMenu(!showColumnsMenu)}
-                  className={`px-3.5 py-2.5 rounded-2xl border font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all ${
-                    isDarkMode ? 'border-slate-800 bg-slate-900/80 text-slate-300 hover:text-white' : 'border-slate-200 bg-white text-slate-700'
-                  }`}
-                >
-                  <Columns className="w-3.5 h-3.5" />
-                  <span>Columns</span>
-                  <ChevronDown className="w-3 h-3 opacity-60" />
-                </button>
-
-                {showColumnsMenu && (
-                  <div className={`absolute right-0 top-11 z-40 w-48 p-3 rounded-2xl border shadow-2xl space-y-2 text-xs font-mono ${
-                    isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-white border-slate-200 text-slate-800'
-                  }`}>
-                    <div className="font-bold text-[10px] uppercase text-slate-400 mb-1">Toggle Columns</div>
-                    {['code', 'name', 'gstin', 'city', 'state', 'creditDays'].map(colKey => (
-                      <label key={colKey} className="flex items-center gap-2 cursor-pointer capitalize hover:opacity-80">
-                        <input
-                          type="checkbox"
-                          checked={visibleColumns[colKey] !== false}
-                          onChange={(e) => setVisibleColumns(prev => ({ ...prev, [colKey]: e.target.checked }))}
-                          className="rounded text-[#5B75F8] focus:ring-0 cursor-pointer"
-                        />
-                        <span>{colKey}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Table Register Grid */}
-          <div className={`rounded-2xl border overflow-hidden transition-all shadow-sm ${
-            isDarkMode ? 'bg-slate-900/80 border-slate-800/80' : 'bg-white border-slate-200'
-          }`}>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className={`border-b font-mono text-[11px] ${
-                    isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'
-                  }`}>
-                    {visibleColumns.code !== false && <th className="py-3 px-4 font-normal">Code</th>}
-                    {visibleColumns.name !== false && <th className="py-3 px-4 font-normal">Name</th>}
-                    {visibleColumns.gstin !== false && <th className="py-3 px-4 font-normal">GSTIN</th>}
-                    {visibleColumns.city !== false && <th className="py-3 px-4 font-normal">City</th>}
-                    {visibleColumns.state !== false && <th className="py-3 px-4 font-normal">State</th>}
-                    {visibleColumns.creditDays !== false && <th className="py-3 px-4 font-normal">Credit Days</th>}
+        <div className={`rounded-3xl border overflow-hidden transition-all shadow-xl ${
+          isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-sm'
+        }`}>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className={`border-b font-mono font-bold uppercase tracking-wider text-[11px] ${
+                  isDarkMode ? 'bg-slate-800/80 border-slate-700/80 text-slate-300' : 'bg-slate-100/90 border-slate-200 text-slate-700'
+                }`}>
+                  <th className="py-4 px-5">Customer ID</th>
+                  <th className="py-4 px-5">Customer Name & Type</th>
+                  <th className="py-4 px-5">GSTIN & PAN</th>
+                  <th className="py-4 px-5">Contact & Mobile</th>
+                  <th className="py-4 px-5">City & State</th>
+                  <th className="py-4 px-5">Payment Terms</th>
+                  <th className="py-4 px-5">Credit Days / Limit</th>
+                  <th className="py-4 px-5">Salesperson</th>
+                  <th className="py-4 px-5 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200/70'}`}>
+                {filteredCustomers.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="py-14 text-center">
+                      <Building className="w-9 h-9 mx-auto mb-2 opacity-40 text-slate-400" />
+                      <p className={`text-sm font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-800'}`}>No customer master records found.</p>
+                      <p className={`text-xs mt-1 ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>Click "New Customer" to register an account.</p>
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-800/80">
-                  {filteredCustomers.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="py-12 text-center text-slate-400 font-mono text-xs uppercase tracking-widest">
-                        NO RECORDS
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredCustomers.map((c, idx) => (
-                      <tr 
-                        key={idx} 
-                        className={`transition-colors ${
-                          isDarkMode ? 'hover:bg-slate-800/50 text-slate-200' : 'hover:bg-slate-50 text-slate-800'
-                        }`}
-                      >
-                        {visibleColumns.code !== false && (
-                          <td className="py-3.5 px-4 font-mono font-bold text-slate-900 dark:text-slate-100">
-                            {c.code}
-                          </td>
-                        )}
-                        {visibleColumns.name !== false && (
-                          <td className="py-3.5 px-4 font-medium">{c.name}</td>
-                        )}
-                        {visibleColumns.gstin !== false && (
-                          <td className="py-3.5 px-4 font-mono text-slate-500 dark:text-slate-400">{c.gstin}</td>
-                        )}
-                        {visibleColumns.city !== false && (
-                          <td className="py-3.5 px-4">{c.city}</td>
-                        )}
-                        {visibleColumns.state !== false && (
-                          <td className="py-3.5 px-4">{c.state}</td>
-                        )}
-                        {visibleColumns.creditDays !== false && (
-                          <td className="py-3.5 px-4 font-mono">{c.creditDays}</td>
-                        )}
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Bottom Grid Metrics & Pagination Bar */}
-            <div className={`px-4 py-2.5 border-t flex flex-wrap items-center justify-between gap-3 text-[11px] font-mono ${
-              isDarkMode ? 'bg-slate-950/40 border-slate-800/80 text-slate-400' : 'bg-slate-50/80 border-slate-200 text-slate-600'
-            }`}>
-              <div className="flex items-center gap-4">
-                <span>GRID_METRICS: [1 .. {filteredCustomers.length}] OF {filteredCustomers.length} REC</span>
-                <span className="opacity-40">|</span>
-                <div className="flex items-center gap-1">
-                  <span>LIMIT:</span>
-                  <select
-                    value={limitPerPage}
-                    onChange={(e) => setLimitPerPage(Number(e.target.value))}
-                    className={`px-2 py-0.5 rounded border text-[11px] font-mono outline-none cursor-pointer ${
-                      isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-white border-slate-300 text-slate-800'
-                    }`}
-                  >
-                    <option value={10}>10 / PAGE</option>
-                    <option value={25}>25 / PAGE</option>
-                    <option value={50}>50 / PAGE</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button 
-                  disabled={currentPage === 1}
-                  className="opacity-50 hover:opacity-100 disabled:opacity-30 cursor-pointer"
-                >
-                  &lt; PREV
-                </button>
-                <span>PAGE {currentPage} / 1</span>
-                <button 
-                  disabled
-                  className="opacity-50 hover:opacity-100 disabled:opacity-30 cursor-pointer"
-                >
-                  NEXT &gt;
-                </button>
-              </div>
-            </div>
-
-          </div>
-
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* TAB 2: VENDORS MASTER REGISTER (MATCHING SCREENSHOT 2)                      */}
-      {/* ========================================================================= */}
-      {activeTab === 'VENDORS' && (
-        <div className="space-y-4">
-          
-          <div className="flex items-center gap-2">
-            <div>
-              <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">REGISTER</div>
-              <div className="flex items-center gap-3">
-                <h1 className={`text-3xl font-extrabold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                  Vendors
-                </h1>
-                <button 
-                  onClick={() => setSearchTerm('')}
-                  title="Refresh Register"
-                  className={`p-1.5 rounded-full border transition-all cursor-pointer ${
-                    isDarkMode ? 'border-slate-800 bg-slate-900 text-slate-400 hover:text-white' : 'border-slate-200 bg-white text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex-1 min-w-[240px] max-w-xl relative">
-              <input
-                type="text"
-                placeholder="Search..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className={`w-full px-4 py-2.5 rounded-2xl border text-xs outline-none transition-all ${
-                  isDarkMode 
-                    ? 'bg-slate-900/90 border-slate-800 text-white placeholder:text-slate-500 focus:border-orange-500' 
-                    : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-orange-600 shadow-xs'
-                }`}
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={openAddVendorModal}
-                className="px-4 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-md shadow-orange-600/20 transition-all hover:scale-[1.01]"
-              >
-                <Plus className="w-4 h-4" />
-                <span>New Vendor</span>
-              </button>
-
-              <button
-                onClick={() => handleExportCSV('VENDORS')}
-                className="px-4 py-2.5 rounded-xl border border-orange-600 text-orange-600 dark:text-orange-400 hover:bg-orange-500/10 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Export</span>
-              </button>
-
-              <button
-                onClick={() => setShowColumnsMenu(!showColumnsMenu)}
-                className={`px-3.5 py-2.5 rounded-xl border font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all ${
-                  isDarkMode ? 'border-slate-800 bg-slate-900 text-slate-300 hover:text-white' : 'border-slate-200 bg-white text-slate-700'
-                }`}
-              >
-                <Columns className="w-3.5 h-3.5" />
-                <span>Columns</span>
-                <ChevronDown className="w-3 h-3 opacity-60" />
-              </button>
-            </div>
-          </div>
-
-          <div className={`rounded-2xl border overflow-hidden transition-all shadow-sm ${
-            isDarkMode ? 'bg-slate-900/80 border-slate-800/80' : 'bg-white border-slate-200'
-          }`}>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className={`border-b font-mono text-[11px] ${
-                    isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'
-                  }`}>
-                    <th className="py-3 px-4 font-normal">Code</th>
-                    <th className="py-3 px-4 font-normal">Name</th>
-                    <th className="py-3 px-4 font-normal">GSTIN</th>
-                    <th className="py-3 px-4 font-normal">City</th>
-                    <th className="py-3 px-4 font-normal">State</th>
-                    <th className="py-3 px-4 font-normal">Payment Terms</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-800/80">
-                  {filteredVendors.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="py-16 text-center text-slate-400 font-mono text-xs uppercase tracking-widest">
-                        NO RECORDS
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredVendors.map((v, idx) => (
-                      <tr 
-                        key={idx} 
-                        className={`transition-colors ${
-                          isDarkMode ? 'hover:bg-slate-800/50 text-slate-200' : 'hover:bg-slate-50 text-slate-800'
-                        }`}
-                      >
-                        <td className="py-3.5 px-4 font-mono font-bold text-slate-900 dark:text-slate-100">{v.code}</td>
-                        <td className="py-3.5 px-4 font-medium">{v.name}</td>
-                        <td className="py-3.5 px-4 font-mono text-slate-500 dark:text-slate-400">{v.gstin}</td>
-                        <td className="py-3.5 px-4">{v.city}</td>
-                        <td className="py-3.5 px-4">{v.state}</td>
-                        <td className="py-3.5 px-4 font-mono">{v.paymentTerms}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            <div className={`px-4 py-2.5 border-t flex flex-wrap items-center justify-between gap-3 text-[11px] font-mono ${
-              isDarkMode ? 'bg-slate-950/40 border-slate-800/80 text-slate-400' : 'bg-slate-50/80 border-slate-200 text-slate-600'
-            }`}>
-              <div className="flex items-center gap-4">
-                <span>GRID_METRICS: [0 .. {filteredVendors.length}] OF {filteredVendors.length} REC</span>
-                <span className="opacity-40">|</span>
-                <div className="flex items-center gap-1">
-                  <span>LIMIT:</span>
-                  <select
-                    value={limitPerPage}
-                    onChange={(e) => setLimitPerPage(Number(e.target.value))}
-                    className={`px-2 py-0.5 rounded border text-[11px] font-mono outline-none cursor-pointer ${
-                      isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-white border-slate-300 text-slate-800'
-                    }`}
-                  >
-                    <option value={25}>25 / PAGE</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button disabled className="opacity-30 cursor-not-allowed">&lt; PREV</button>
-                <span>PAGE 1 / 1</span>
-                <button disabled className="opacity-30 cursor-not-allowed">NEXT &gt;</button>
-              </div>
-            </div>
-
-          </div>
-
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* TAB 3: MACHINES MASTER REGISTER (MATCHING SCREENSHOT 3)                     */}
-      {/* ========================================================================= */}
-      {activeTab === 'MACHINES' && (
-        <div className="space-y-4">
-          
-          <div className="flex items-center gap-2">
-            <div>
-              <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">REGISTER</div>
-              <div className="flex items-center gap-3">
-                <h1 className={`text-3xl font-extrabold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                  Machines
-                </h1>
-                <button 
-                  onClick={() => setSearchTerm('')}
-                  title="Refresh Register"
-                  className={`p-1.5 rounded-full border transition-all cursor-pointer ${
-                    isDarkMode ? 'border-slate-800 bg-slate-900 text-slate-400 hover:text-white' : 'border-slate-200 bg-white text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex-1 min-w-[240px] max-w-xl relative">
-              <input
-                type="text"
-                placeholder="Search..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className={`w-full px-4 py-2.5 rounded-2xl border text-xs outline-none transition-all ${
-                  isDarkMode 
-                    ? 'bg-slate-900/90 border-slate-800 text-white placeholder:text-slate-500 focus:border-orange-500' 
-                    : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-orange-600 shadow-xs'
-                }`}
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={openAddMachineModal}
-                className="px-4 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-md shadow-orange-600/20 transition-all hover:scale-[1.01]"
-              >
-                <Plus className="w-4 h-4" />
-                <span>New Machine</span>
-              </button>
-
-              <button
-                onClick={() => setShowColumnsMenu(!showColumnsMenu)}
-                className={`px-3.5 py-2.5 rounded-xl border font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all ${
-                  isDarkMode ? 'border-slate-800 bg-slate-900 text-slate-300 hover:text-white' : 'border-slate-200 bg-white text-slate-700'
-                }`}
-              >
-                <Columns className="w-3.5 h-3.5" />
-                <span>Columns</span>
-                <ChevronDown className="w-3 h-3 opacity-60" />
-              </button>
-            </div>
-          </div>
-
-          <div className={`rounded-2xl border overflow-hidden transition-all shadow-sm ${
-            isDarkMode ? 'bg-slate-900/80 border-slate-800/80' : 'bg-white border-slate-200'
-          }`}>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className={`border-b font-mono text-[11px] ${
-                    isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'
-                  }`}>
-                    <th className="py-3 px-4 font-normal">Code</th>
-                    <th className="py-3 px-4 font-normal">Name</th>
-                    <th className="py-3 px-4 font-normal">Type</th>
-                    <th className="py-3 px-4 font-normal">Status</th>
-                    <th className="py-3 px-4 font-normal">Hourly Cost</th>
-                    <th className="py-3 px-4 font-normal">Active</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-800/80">
-                  {filteredMachines.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="py-12 text-center text-slate-400 font-mono text-xs uppercase tracking-widest">
-                        NO RECORDS
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredMachines.map((m, idx) => (
-                      <tr 
-                        key={idx} 
-                        className={`transition-colors ${
-                          isDarkMode ? 'hover:bg-slate-800/50 text-slate-200' : 'hover:bg-slate-50 text-slate-800'
-                        }`}
-                      >
-                        <td className="py-3.5 px-4 font-mono font-bold text-slate-900 dark:text-slate-100">{m.code}</td>
-                        <td className="py-3.5 px-4 font-medium">{m.name}</td>
-                        <td className="py-3.5 px-4">{m.type}</td>
-                        <td className="py-3.5 px-4 font-mono text-slate-400">{m.status || '—'}</td>
-                        <td className="py-3.5 px-4 font-mono">₹{m.hourlyCost}</td>
-                        <td className="py-3.5 px-4 font-mono">{m.active ? 'Yes' : 'No'}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            <div className={`px-4 py-2.5 border-t flex flex-wrap items-center justify-between gap-3 text-[11px] font-mono ${
-              isDarkMode ? 'bg-slate-950/40 border-slate-800/80 text-slate-400' : 'bg-slate-50/80 border-slate-200 text-slate-600'
-            }`}>
-              <div className="flex items-center gap-4">
-                <span>GRID_METRICS: [1 .. {filteredMachines.length}] OF {filteredMachines.length} REC</span>
-                <span className="opacity-40">|</span>
-                <div className="flex items-center gap-1">
-                  <span>LIMIT:</span>
-                  <select
-                    value={limitPerPage}
-                    onChange={(e) => setLimitPerPage(Number(e.target.value))}
-                    className={`px-2 py-0.5 rounded border text-[11px] font-mono outline-none cursor-pointer ${
-                      isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-white border-slate-300 text-slate-800'
-                    }`}
-                  >
-                    <option value={25}>25 / PAGE</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button disabled className="opacity-30 cursor-not-allowed">&lt; PREV</button>
-                <span>PAGE 1 / 1</span>
-                <button disabled className="opacity-30 cursor-not-allowed">NEXT &gt;</button>
-              </div>
-            </div>
-
-          </div>
-
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* TAB 4: IMPORT FROM OMGST (MATCHING SCREENSHOT 4)                            */}
-      {/* ========================================================================= */}
-      {activeTab === 'IMPORT_OMGST' && (
-        <div className="space-y-6 max-w-5xl">
-          
-          <div>
-            <h1 className={`text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-              Import from OMGST
-            </h1>
-            <p className={`text-xs mt-1 leading-relaxed ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-              Upload master table exports (.DBF) from OMGST, review the changes, then commit. Safe to repeat — existing records are matched by code and updated, never duplicated.
-            </p>
-          </div>
-
-          {/* Hidden File Input */}
-          <input
-            type="file"
-            ref={fileInputRef}
-            accept=".dbf,.DBF"
-            multiple
-            onChange={handleFileUpload}
-            className="hidden"
-          />
-
-          {/* Step 1: Upload Files */}
-          <div className={`p-6 rounded-2xl border space-y-4 shadow-sm ${
-            isDarkMode ? 'bg-slate-900/80 border-slate-800/80' : 'bg-white border-slate-200'
-          }`}>
-            <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-400">
-              1. UPLOAD FILES
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-mono uppercase font-bold text-slate-400 mb-1.5">
-                FILE CONTAINS
-              </label>
-              <div className="flex flex-wrap items-center gap-3">
-                <select
-                  value={omgstFileType}
-                  onChange={(e) => setOmgstFileType(e.target.value)}
-                  className={`px-3.5 py-2.5 rounded-xl border text-xs font-semibold outline-none cursor-pointer min-w-[200px] ${
-                    isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-800'
-                  }`}
-                >
-                  <option value="Detect from filename">Detect from filename</option>
-                  <option value="itemmast.dbf">Item Master (itemmast.dbf)</option>
-                  <option value="custmast.dbf">Customer Master (custmast.dbf)</option>
-                  <option value="vendmast.dbf">Vendor Master (vendmast.dbf)</option>
-                  <option value="machmast.dbf">Machine Master (machmast.dbf)</option>
-                </select>
-
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`px-4 py-2.5 rounded-xl border font-bold text-xs flex items-center gap-2 cursor-pointer transition-all ${
-                    isDarkMode 
-                      ? 'border-slate-700 bg-slate-800/80 text-white hover:bg-slate-700' 
-                      : 'border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200'
-                  }`}
-                >
-                  <Upload className="w-3.5 h-3.5 text-orange-500" />
-                  <span>Select .DBF files</span>
-                </button>
-              </div>
-            </div>
-
-            <p className="text-[11px] text-slate-400 font-mono leading-relaxed">
-              Only .DBF table files are needed — index and dictionary files (.CDX, .DCX, .FCT) can be left out. Standard OMGST filenames (itemmast, scmast, ...) are recognised automatically; for anything else, choose what the file contains first.
-            </p>
-          </div>
-
-          {/* Step 2: Review Changes */}
-          <div className={`p-6 rounded-2xl border space-y-4 shadow-sm ${
-            isDarkMode ? 'bg-slate-900/80 border-slate-800/80' : 'bg-white border-slate-200'
-          }`}>
-            <div className="flex items-center justify-between">
-              <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-400">
-                2. REVIEW CHANGES
-              </div>
-
-              <button
-                disabled={uploadedFiles.length === 0}
-                className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all ${
-                  uploadedFiles.length > 0
-                    ? isDarkMode ? 'border-slate-700 bg-slate-800 text-white cursor-pointer' : 'border-slate-300 bg-slate-100 text-slate-900 cursor-pointer'
-                    : 'opacity-40 border-slate-800 text-slate-500 cursor-not-allowed'
-                }`}
-              >
-                Preview changes
-              </button>
-            </div>
-
-            {uploadedFiles.length === 0 ? (
-              <p className="text-xs text-slate-400 font-mono py-2">
-                Upload at least one file to continue.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {uploadedFiles.map((file, i) => (
-                  <div key={i} className={`p-4 rounded-xl border flex items-center justify-between text-xs font-mono ${
-                    isDarkMode ? 'bg-slate-950/80 border-slate-800 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-800'
-                  }`}>
-                    <div className="flex items-center gap-3">
-                      <FileText className="w-5 h-5 text-orange-500" />
-                      <div>
-                        <div className="font-bold text-white">{file.name}</div>
-                        <div className="text-[10px] text-slate-400">
-                          Detected Target: <span className="text-orange-400 font-bold">{file.parsedType}</span> • {(file.size / 1024).toFixed(1)} KB
+                ) : (
+                  filteredCustomers.map((cust) => (
+                    <tr 
+                      key={cust.code}
+                      className={`transition-colors ${
+                        cust.status === 'Inactive'
+                          ? isDarkMode ? 'bg-slate-950/40 text-slate-500' : 'bg-slate-100/60 text-slate-400'
+                          : isDarkMode ? 'hover:bg-slate-800/40 text-slate-200' : 'hover:bg-slate-50 text-slate-900'
+                      }`}
+                    >
+                      <td className="py-4 px-5 font-mono font-bold text-blue-600 dark:text-blue-400">{cust.code}</td>
+                      <td className="py-4 px-5">
+                        <div className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{cust.name}</div>
+                        <div className="text-[10px] font-mono flex items-center gap-1.5 mt-1">
+                          <span className={`px-2 py-0.5 rounded-md font-bold uppercase border ${
+                            isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-blue-50 text-blue-700 border-blue-200'
+                          }`}>{cust.customerType}</span>
+                          {cust.legalName && <span className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>• {cust.legalName}</span>}
                         </div>
-                      </div>
-                    </div>
-                    <div className="text-emerald-400 font-bold">
-                      {file.recordsCount} records ready
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {importStatus && (
-              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono text-xs flex items-center gap-2">
-                <Check className="w-4 h-4" />
-                <span>{importStatus}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Commit Import Button at Bottom Right */}
-          <div className="flex justify-end pt-2">
-            <button
-              onClick={handleCommitImport}
-              disabled={uploadedFiles.length === 0}
-              className={`px-6 py-3 rounded-xl font-bold text-xs shadow-lg transition-all ${
-                uploadedFiles.length > 0
-                  ? 'bg-orange-500 hover:bg-orange-400 text-white cursor-pointer shadow-orange-500/20'
-                  : 'bg-orange-400/50 text-white/70 cursor-not-allowed'
-              }`}
-            >
-              Commit Import
-            </button>
-          </div>
-
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* TAB 5: ITEMS MASTER REGISTER (EXISTING SKU LIST)                           */}
-      {/* ========================================================================= */}
-      {activeTab === 'ITEMS' && (
-        <div className="space-y-4">
-          
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                Master Items & SKU Directory
-              </h2>
-              <p className="text-xs text-slate-400">
-                Maintain SKU product codes, store locations, and rates.
-              </p>
-            </div>
-
-            <button
-              onClick={() => setShowAddItemModal(true)}
-              className="px-4 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-md"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Master Item</span>
-            </button>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex-1 min-w-[240px] max-w-xl relative">
-              <input
-                type="text"
-                placeholder="Search master items by code, part no, or description..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className={`w-full px-4 py-2.5 rounded-2xl border text-xs outline-none transition-all ${
-                  isDarkMode 
-                    ? 'bg-slate-900/90 border-slate-800 text-white placeholder:text-slate-500 focus:border-orange-500' 
-                    : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-orange-600'
-                }`}
-              />
-            </div>
-
-            <button
-              onClick={() => handleExportCSV('ITEMS')}
-              className="px-4 py-2.5 rounded-xl border border-orange-600 text-orange-600 dark:text-orange-400 hover:bg-orange-500/10 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>Export CSV</span>
-            </button>
-          </div>
-
-          <div className={`rounded-2xl border overflow-hidden transition-all shadow-sm ${
-            isDarkMode ? 'bg-slate-900/80 border-slate-800/80' : 'bg-white border-slate-200'
-          }`}>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className={`border-b font-mono text-[11px] ${
-                    isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'
-                  }`}>
-                    <th className="py-3 px-4 font-normal">Code</th>
-                    <th className="py-3 px-4 font-normal">Part No</th>
-                    <th className="py-3 px-4 font-normal">Description</th>
-                    <th className="py-3 px-4 font-normal">Type</th>
-                    <th className="py-3 px-4 font-normal">HSN Code</th>
-                    <th className="py-3 px-4 font-normal">Rack Location</th>
-                    <th className="py-3 px-4 font-normal">Sale Rate</th>
-                    <th className="py-3 px-4 font-normal">Purchase Rate</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-800/80">
-                  {filteredItems.map((item, idx) => (
-                    <tr key={idx} className={`transition-colors ${
-                      isDarkMode ? 'hover:bg-slate-800/50 text-slate-200' : 'hover:bg-slate-50 text-slate-800'
-                    }`}>
-                      <td className="py-3.5 px-4 font-mono font-bold text-slate-900 dark:text-slate-100">{item.code}</td>
-                      <td className="py-3.5 px-4 font-mono text-slate-400">{item.partNo}</td>
-                      <td className="py-3.5 px-4 font-medium">{item.description}</td>
-                      <td className="py-3.5 px-4">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${
-                          item.isFinishedGoods ? 'bg-emerald-500/20 text-emerald-400' : 'bg-purple-500/20 text-purple-400'
+                      </td>
+                      <td className="py-4 px-5 font-mono">
+                        <div className={`text-xs font-bold ${isGstExempt(cust.gstin) ? 'text-amber-600 dark:text-amber-400' : isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>
+                          {cust.gstin}
+                        </div>
+                        {cust.pan && <div className={`text-[10px] mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>PAN: {cust.pan}</div>}
+                      </td>
+                      <td className="py-4 px-5">
+                        <div className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{cust.contactPerson}</div>
+                        <div className={`text-[11px] font-mono flex items-center gap-1.5 mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                          <Phone className="w-3 h-3 text-[#5B75F8]" />
+                          <span>+91 {cust.mobile}</span>
+                        </div>
+                      </td>
+                      <td className="py-4 px-5">
+                        <div className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{cust.city}</div>
+                        <div className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{cust.state} {cust.pincode ? `(${cust.pincode})` : ''}</div>
+                      </td>
+                      <td className="py-4 px-5">
+                        <span className={`px-2.5 py-1 rounded-xl text-[11px] font-mono font-bold border ${
+                          cust.paymentTerms.startsWith('Net') 
+                            ? isDarkMode ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' : 'bg-blue-50 text-blue-700 border-blue-200'
+                            : isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                         }`}>
-                          {item.isFinishedGoods ? 'FG' : 'RAW'}
+                          {cust.paymentTerms}
                         </span>
                       </td>
-                      <td className="py-3.5 px-4 font-mono">{item.hsnCode}</td>
-                      <td className="py-3.5 px-4 font-mono">{item.storeLocation}</td>
-                      <td className="py-3.5 px-4 font-mono text-emerald-400 font-bold">₹{item.saleRate}</td>
-                      <td className="py-3.5 px-4 font-mono text-slate-400">₹{item.purchaseRate}</td>
+                      <td className="py-4 px-5 font-mono">
+                        <div className={`font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{cust.creditDays} Days</div>
+                        {cust.creditLimit ? (
+                          <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold mt-0.5">₹{cust.creditLimit.toLocaleString('en-IN')}</div>
+                        ) : null}
+                      </td>
+                      <td className={`py-4 px-5 font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                        {cust.salesperson || '—'}
+                      </td>
+                      <td className="py-4 px-5 text-center">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono font-bold uppercase border ${
+                          cust.status === 'Active'
+                            ? isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : isDarkMode ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${cust.status === 'Active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                          <span>{cust.status}</span>
+                        </span>
+                      </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
-
         </div>
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL 1: NEW CUSTOMER MASTER FORM (Image 2 Workbook Spec)                 */}
+      {/* 2. VENDORS TAB */}
       {/* ========================================================================= */}
-      {showAddCustomerModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border shadow-2xl transition-all ${
-            isDarkMode ? 'bg-[#16171B] text-white border-slate-800' : 'bg-white text-slate-900 border-slate-200'
-          }`}>
-            
-            {/* Modal Header */}
-            <div className={`sticky top-0 z-10 p-6 border-b flex items-center justify-between backdrop-blur-md ${
-              isDarkMode ? 'border-slate-800 bg-[#16171B]/90' : 'border-slate-100 bg-white/90'
-            }`}>
-              <div>
-                <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#5B75F8]">
-                  FOCUSED ACTION
-                </div>
-                <h2 className={`text-xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                  New Customer Master
-                </h2>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowAddCustomerModal(false)}
-                className={`p-2 rounded-2xl border transition-all cursor-pointer ${
-                  isDarkMode 
-                    ? 'border-slate-800 bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800' 
-                    : 'border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Form */}
-            <form onSubmit={handleSaveCustomer} className="p-6 space-y-4 text-xs font-mono">
-              
-              {/* Category & Machine-Made Code Rule Panel */}
-              <div className={`p-4 rounded-2xl border ${
-                isDarkMode ? 'bg-slate-900/90 border-slate-700/80' : 'bg-slate-50 border-slate-200'
-              } space-y-3`}>
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] uppercase font-bold text-[#5B75F8] flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                    <span>CUSTOMER CATEGORY & MACHINE CODE RULE</span>
-                  </span>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30">
-                    Non-Repeating Sequence
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[11px] uppercase font-bold text-slate-300 mb-1">
-                      CUSTOMER CATEGORY / PREFIX *
-                    </label>
-                    <select
-                      value={cCategory}
-                      onChange={(e) => handleCustomerCategoryChange(e.target.value)}
-                      className={`w-full px-4 py-2.5 rounded-xl border text-xs font-mono font-bold outline-none cursor-pointer ${
-                        isDarkMode 
-                          ? 'bg-slate-950 border-slate-700 text-white focus:border-[#5B75F8]' 
-                          : 'bg-white border-slate-300 text-slate-900 focus:border-[#5B75F8]'
+      {activeTab === 'VENDORS' && (
+        <div className={`rounded-3xl border overflow-hidden transition-all shadow-xl ${
+          isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-sm'
+        }`}>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className={`border-b font-mono font-bold uppercase tracking-wider text-[11px] ${
+                  isDarkMode ? 'bg-slate-800/80 border-slate-700/80 text-slate-300' : 'bg-slate-100/90 border-slate-200 text-slate-700'
+                }`}>
+                  <th className="py-4 px-5">Vendor ID</th>
+                  <th className="py-4 px-5">Vendor Name & Category</th>
+                  <th className="py-4 px-5">Vendor Type</th>
+                  <th className="py-4 px-5">PAN (TDS) & GSTIN</th>
+                  <th className="py-4 px-5">Bank Account & IFSC</th>
+                  <th className="py-4 px-5">Contact & Mobile</th>
+                  <th className="py-4 px-5">City / State</th>
+                  <th className="py-4 px-5">Terms</th>
+                  <th className="py-4 px-5 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200/70'}`}>
+                {filteredVendors.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="py-14 text-center">
+                      <Users className="w-9 h-9 mx-auto mb-2 opacity-40 text-slate-400" />
+                      <p className={`text-sm font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-800'}`}>No vendor master records found.</p>
+                      <p className={`text-xs mt-1 ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>Click "New Vendor" to register a supplier or subcontractor.</p>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredVendors.map((vend) => (
+                    <tr 
+                      key={vend.code}
+                      className={`transition-colors ${
+                        vend.status === 'Inactive'
+                          ? isDarkMode ? 'bg-slate-950/40 text-slate-500' : 'bg-slate-100/60 text-slate-400'
+                          : isDarkMode ? 'hover:bg-slate-800/40 text-slate-200' : 'hover:bg-slate-50 text-slate-900'
                       }`}
                     >
-                      {CUSTOMER_DEPARTMENTS.map((d) => (
-                        <option key={d.code} value={d.code}>
-                          {d.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                      <td className="py-4 px-5 font-mono font-bold text-indigo-600 dark:text-indigo-400">{vend.code}</td>
+                      <td className="py-4 px-5">
+                        <div className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{vend.name}</div>
+                        <div className="text-[10px] font-mono mt-1">
+                          <span className={`px-2 py-0.5 rounded-md font-bold border ${
+                            isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-300'
+                          }`}>{vend.vendorCategory}</span>
+                        </div>
+                      </td>
+                      <td className="py-4 px-5">
+                        <span className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
+                          vend.vendorType === 'Subcontractor / Job Worker'
+                            ? isDarkMode ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-200'
+                            : isDarkMode ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                        }`}>
+                          {vend.vendorType}
+                        </span>
+                        {vend.vendorType === 'Subcontractor / Job Worker' && vend.processType && (
+                          <div className="text-[11px] text-amber-600 dark:text-amber-400 font-mono font-semibold mt-1">
+                            {vend.processType} ({vend.turnaroundTimeDays || 3}d TAT)
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-4 px-5 font-mono">
+                        <div className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                          <span>PAN: {vend.pan}</span>
+                        </div>
+                        <div className={`text-[11px] mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>GST: {vend.gstin || 'N/A'}</div>
+                      </td>
+                      <td className="py-4 px-5 font-mono">
+                        <div className={`flex items-center gap-1.5 font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>
+                          <span>{unmaskedBankVendorCode === vend.code ? vend.bankAccountNumber : maskBankAccount(vend.bankAccountNumber)}</span>
+                          <button
+                            type="button"
+                            onClick={() => setUnmaskedBankVendorCode(unmaskedBankVendorCode === vend.code ? null : vend.code)}
+                            className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-0.5 cursor-pointer"
+                            title="Toggle account mask"
+                          >
+                            {unmaskedBankVendorCode === vend.code ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                        <div className={`text-[10px] mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>IFSC: {vend.ifsc} • {vend.bankAccountName}</div>
+                      </td>
+                      <td className="py-4 px-5">
+                        <div className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{vend.contactPerson}</div>
+                        <div className={`text-[11px] font-mono flex items-center gap-1.5 mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                          <Phone className="w-3 h-3 text-indigo-500" />
+                          <span>+91 {vend.mobile}</span>
+                        </div>
+                      </td>
+                      <td className="py-4 px-5">
+                        <div className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{vend.city}</div>
+                        <div className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{vend.state}</div>
+                      </td>
+                      <td className="py-4 px-5 font-mono">
+                        <div className={`font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{vend.paymentTerms}</div>
+                        {vend.creditDays ? <div className={`text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{vend.creditDays} Days</div> : null}
+                      </td>
+                      <td className="py-4 px-5 text-center">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono font-bold uppercase border ${
+                          vend.status === 'Active'
+                            ? isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : isDarkMode ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${vend.status === 'Active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                          <span>{vend.status}</span>
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-[11px] uppercase font-bold text-slate-300">
-                        CUSTOMER CODE *
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => setCCode(generateCustomerCode(cCategory))}
-                        className="text-[10px] text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1 cursor-pointer"
-                      >
-                        <Zap className="w-3 h-3 fill-amber-400 animate-pulse" />
-                        <span>Auto-Generate</span>
-                      </button>
-                    </div>
-                    <input
-                      type="text"
-                      required
-                      value={cCode}
-                      onChange={(e) => setCCode(e.target.value)}
-                      placeholder="e.g. OEM-001"
-                      className={`w-full px-4 py-2.5 rounded-xl border text-xs font-mono font-bold outline-none transition-all ${
-                        isDarkMode 
-                          ? 'bg-slate-950 border-slate-700 text-emerald-400 focus:border-[#5B75F8]' 
-                          : 'bg-white border-slate-300 text-emerald-700 focus:border-[#5B75F8]'
+      {/* ========================================================================= */}
+      {/* 3. ITEM CATALOG TAB */}
+      {/* ========================================================================= */}
+      {activeTab === 'ITEMS' && (
+        <div className={`rounded-3xl border overflow-hidden transition-all shadow-xl ${
+          isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-sm'
+        }`}>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className={`border-b font-mono font-bold uppercase tracking-wider text-[11px] ${
+                  isDarkMode ? 'bg-slate-800/80 border-slate-700/80 text-slate-300' : 'bg-slate-100/90 border-slate-200 text-slate-700'
+                }`}>
+                  <th className="py-4 px-5">Item Code</th>
+                  <th className="py-4 px-5">Item Name / Part Description</th>
+                  <th className="py-4 px-5">Type & Category</th>
+                  <th className="py-4 px-5">HSN & GST%</th>
+                  <th className="py-4 px-5">UOM</th>
+                  <th className="py-4 px-5">Standard Cost / Selling Price</th>
+                  <th className="py-4 px-5">Reorder / Stock Thresholds</th>
+                  <th className="py-4 px-5">Preferred Vendor / Store</th>
+                  <th className="py-4 px-5 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200/70'}`}>
+                {filteredItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="py-14 text-center">
+                      <Package className="w-9 h-9 mx-auto mb-2 opacity-40 text-slate-400" />
+                      <p className={`text-sm font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-800'}`}>No item catalog records found.</p>
+                      <p className={`text-xs mt-1 ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>Click "New Item" to register raw material or finished goods.</p>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredItems.map((item) => (
+                    <tr 
+                      key={item.code}
+                      className={`transition-colors ${
+                        item.status === 'Inactive'
+                          ? isDarkMode ? 'bg-slate-950/40 text-slate-500' : 'bg-slate-100/60 text-slate-400'
+                          : isDarkMode ? 'hover:bg-slate-800/40 text-slate-200' : 'hover:bg-slate-50 text-slate-900'
                       }`}
-                    />
-                  </div>
+                    >
+                      <td className="py-4 px-5 font-mono font-bold text-emerald-600 dark:text-emerald-400">{item.code}</td>
+                      <td className="py-4 px-5">
+                        <div className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{item.name || item.description}</div>
+                        {item.partNo && <div className={`text-[11px] font-mono mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Part: {item.partNo}</div>}
+                      </td>
+                      <td className="py-4 px-5">
+                        <span className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
+                          item.itemType === 'Finished Good' || item.isFinishedGoods
+                            ? isDarkMode ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' : 'bg-purple-50 text-purple-700 border-purple-200'
+                            : item.itemType === 'Raw Material'
+                            ? isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : isDarkMode ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30' : 'bg-cyan-50 text-cyan-700 border-cyan-200'
+                        }`}>
+                          {item.itemType || (item.isFinishedGoods ? 'Finished Good' : 'Raw Material')}
+                        </span>
+                        {item.category && <div className={`text-[10px] mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{item.category}</div>}
+                      </td>
+                      <td className="py-4 px-5 font-mono">
+                        <div className={`font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>HSN: {item.hsnCode}</div>
+                        <div className="text-[11px] text-blue-600 dark:text-blue-400 font-bold mt-0.5">GST {item.gstRate ?? 18}%</div>
+                      </td>
+                      <td className="py-4 px-5 font-mono font-bold text-slate-800 dark:text-slate-200">
+                        {item.unit}
+                      </td>
+                      <td className="py-4 px-5 font-mono">
+                        {item.itemType === 'Finished Good' || item.isFinishedGoods ? (
+                          <div className="text-purple-600 dark:text-purple-400 font-bold">₹{item.sellingPrice || item.saleRate || 0} <span className="text-[10px] opacity-80">(Selling)</span></div>
+                        ) : (
+                          <div className="text-emerald-600 dark:text-emerald-400 font-bold">₹{item.standardCost || item.purchaseRate || 0} <span className="text-[10px] opacity-80">(Std Cost)</span></div>
+                        )}
+                      </td>
+                      <td className="py-4 px-5 font-mono">
+                        <div className="text-amber-600 dark:text-amber-400 font-bold">Reorder: {item.reorderLevel} {item.unit}</div>
+                        <div className={`text-[10px] mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Min: {item.minStock || 0} • Max: {item.maxStock || 0}</div>
+                      </td>
+                      <td className="py-4 px-5">
+                        <div className={`font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{item.preferredVendor || '—'}</div>
+                        <div className={`text-[10px] font-mono mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{item.defaultWarehouse || item.storeLocation}</div>
+                      </td>
+                      <td className="py-4 px-5 text-center">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono font-bold uppercase border ${
+                          (item.status || 'Active') === 'Active'
+                            ? isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : isDarkMode ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${(item.status || 'Active') === 'Active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                          <span>{item.status || 'Active'}</span>
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 4. MACHINE FLEET TAB */}
+      {/* ========================================================================= */}
+      {activeTab === 'MACHINES' && (
+        <div className={`rounded-3xl border overflow-hidden transition-all shadow-xl ${
+          isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-sm'
+        }`}>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className={`border-b font-mono font-bold uppercase tracking-wider text-[11px] ${
+                  isDarkMode ? 'bg-slate-800/80 border-slate-700/80 text-slate-300' : 'bg-slate-100/90 border-slate-200 text-slate-700'
+                }`}>
+                  <th className="py-4 px-5">Machine ID</th>
+                  <th className="py-4 px-5">Machine Name (Job Card Ref)</th>
+                  <th className="py-4 px-5">Machine Type</th>
+                  <th className="py-4 px-5">Department & Location</th>
+                  <th className="py-4 px-5">Capacity & Shift</th>
+                  <th className="py-4 px-5">Operating Hours / Day</th>
+                  <th className="py-4 px-5">Hourly Cost (₹)</th>
+                  <th className="py-4 px-5">Responsible Person</th>
+                  <th className="py-4 px-5 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200/70'}`}>
+                {filteredMachines.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="py-14 text-center">
+                      <Wrench className="w-9 h-9 mx-auto mb-2 opacity-40 text-slate-400" />
+                      <p className={`text-sm font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-800'}`}>No machine records found.</p>
+                      <p className={`text-xs mt-1 ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>Click "New Machine" to register production assets.</p>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredMachines.map((mch) => (
+                    <tr 
+                      key={mch.code}
+                      className={`transition-colors ${
+                        mch.status === 'Under Maintenance' || mch.status === 'Decommissioned'
+                          ? isDarkMode ? 'bg-amber-950/20 text-slate-300' : 'bg-amber-50/70 text-slate-900'
+                          : isDarkMode ? 'hover:bg-slate-800/40 text-slate-200' : 'hover:bg-slate-50 text-slate-900'
+                      }`}
+                    >
+                      <td className="py-4 px-5 font-mono font-bold text-amber-600 dark:text-amber-400">{mch.code}</td>
+                      <td className={`py-4 px-5 font-bold font-mono text-sm ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                        {mch.name}
+                      </td>
+                      <td className="py-4 px-5">
+                        <span className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
+                          isDarkMode ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-200'
+                        }`}>
+                          {mch.type}
+                        </span>
+                      </td>
+                      <td className="py-4 px-5">
+                        <div className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{mch.department}</div>
+                        <div className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{mch.location}</div>
+                      </td>
+                      <td className="py-4 px-5 font-mono">
+                        <div className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{mch.capacity ? `${mch.capacity} ${mch.capacityUom}` : 'Standard Capacity'}</div>
+                        <div className={`text-[10px] mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{mch.shift || 'General-Day'}</div>
+                      </td>
+                      <td className="py-4 px-5 font-mono">
+                        <span className={`font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{mch.operatingHours || 16} hrs/day</span>
+                      </td>
+                      <td className="py-4 px-5 font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                        ₹{mch.hourlyCost || 500}/hr
+                      </td>
+                      <td className={`py-4 px-5 font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                        {mch.responsiblePerson || '—'}
+                      </td>
+                      <td className="py-4 px-5 text-center">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono font-bold uppercase border ${
+                          mch.status === 'Active'
+                            ? isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : mch.status === 'Under Maintenance'
+                            ? isDarkMode ? 'bg-amber-500/10 text-amber-400 border-amber-500/30 animate-pulse' : 'bg-amber-50 text-amber-800 border-amber-200 animate-pulse'
+                            : isDarkMode ? 'bg-slate-500/10 text-slate-400 border-slate-500/30' : 'bg-slate-100 text-slate-700 border-slate-300'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${mch.status === 'Active' ? 'bg-emerald-500' : mch.status === 'Under Maintenance' ? 'bg-amber-500' : 'bg-slate-400'}`} />
+                          <span>{mch.status}</span>
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 5. IMPORT / OMGST TAB */}
+      {/* ========================================================================= */}
+      {activeTab === 'IMPORT_OMGST' && (
+        <div className={`p-8 rounded-3xl border transition-all ${
+          isDarkMode ? 'bg-slate-900/60 border-slate-800/80 text-white backdrop-blur-xl' : 'bg-white border-slate-200 shadow-sm text-slate-900'
+        }`}>
+          <div className="max-w-2xl mx-auto text-center space-y-4">
+            <div className="w-16 h-16 rounded-3xl bg-[#5B75F8]/20 border border-[#5B75F8]/40 flex items-center justify-center mx-auto text-[#7B92FF]">
+              <Upload className="w-8 h-8" />
+            </div>
+            <h2 className="text-xl font-bold">Import Legacy GST / OMGST Master Spreadsheets</h2>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Upload standard Indian GST sales registers, purchase bills, or inventory item CSV/Excel spreadsheets. The engine will automatically validate 15-char GSTINs, 10-char PANs, 10-digit mobile numbers, and generate sequential master codes.
+            </p>
+            
+            <div className="p-6 border-2 border-dashed border-slate-700/80 rounded-2xl bg-slate-800/30 hover:border-[#5B75F8] transition-all cursor-pointer">
+              <FileSpreadsheet className="w-10 h-10 mx-auto text-slate-400 mb-2" />
+              <div className="text-xs font-semibold text-slate-200">Drag & Drop master files here or click to browse</div>
+              <div className="text-[10px] text-slate-500 font-mono mt-1">Supports CSV, XLSX up to 25MB (Customers, Vendors, Items, Machines)</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 1: ADD CUSTOMER (LIGHT & DARK THEME POLISHED) */}
+      {/* ========================================================================= */}
+      <Modal
+        isOpen={showAddCustomerModal}
+        onClose={() => setShowAddCustomerModal(false)}
+        maxWidth="4xl"
+        isDarkMode={isDarkMode}
+        icon={<Building className="w-5 h-5" />}
+        title="New Customer Master"
+        subtitle={`Auto ID: ${cCode} • Indian GSTIN & Credit Terms Engine`}
+        footer={
+          <div className="flex items-center justify-end gap-3 w-full">
+            <button
+              type="button"
+              onClick={() => setShowAddCustomerModal(false)}
+              className={`px-4 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
+                isDarkMode 
+                  ? 'text-slate-400 hover:text-white hover:bg-slate-800' 
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="save-customer-form"
+              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-blue-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+            >
+              <Check className="w-4 h-4" />
+              <span>Save Customer Master</span>
+            </button>
+          </div>
+        }
+      >
+        <form id="save-customer-form" onSubmit={handleSaveCustomer} className="space-y-4 text-xs">
+          
+          {/* Row 1: Code, Customer Name, Legal Name */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Customer ID (Auto)
+              </label>
+              <input
+                type="text"
+                value={cCode}
+                readOnly
+                className={`w-full p-2.5 rounded-xl border font-mono font-bold ${
+                  isDarkMode ? 'bg-slate-800/80 border-slate-700 text-blue-400' : 'bg-slate-100 border-slate-200 text-blue-600'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Customer Name <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Tata Motors Ltd"
+                value={cName}
+                onChange={(e) => setCName(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border transition-all ${
+                  formErrors.name 
+                    ? 'border-rose-500 ring-1 ring-rose-500' 
+                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:bg-white'
+                }`}
+              />
+              {formErrors.name && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.name}</p>}
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Legal Name
+              </label>
+              <input
+                type="text"
+                placeholder="Registered business name"
+                value={cLegalName}
+                onChange={(e) => setCLegalName(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:bg-white'
+                }`}
+              />
+            </div>
+          </div>
+
+          {/* Row 2: Customer Type, Contact Person, Mobile, Email */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Customer Type <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={cCustomerType}
+                onChange={(e) => setCCustomerType(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border font-bold ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-blue-300' : 'bg-slate-50 border-slate-300 text-blue-700 focus:bg-white'
+                }`}
+              >
+                {CUSTOMER_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Contact Person <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Rajeev Menon"
+                value={cContactPerson}
+                onChange={(e) => setCContactPerson(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  formErrors.contactPerson 
+                    ? 'border-rose-500 ring-1 ring-rose-500' 
+                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              />
+              {formErrors.contactPerson && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.contactPerson}</p>}
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Mobile (10-digit) <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                maxLength={10}
+                placeholder="9822011234"
+                value={cMobile}
+                onChange={(e) => setCMobile(e.target.value.replace(/\D/g, ''))}
+                className={`w-full p-2.5 rounded-xl border font-mono ${
+                  formErrors.mobile 
+                    ? 'border-rose-500 ring-1 ring-rose-500' 
+                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              />
+              {formErrors.mobile && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.mobile}</p>}
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Email
+              </label>
+              <input
+                type="email"
+                placeholder="contact@company.com"
+                value={cEmail}
+                onChange={(e) => setCEmail(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              />
+            </div>
+          </div>
+
+          {/* Row 3: Statutory GSTIN (with GST-Exempt toggle) & PAN */}
+          <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl border ${
+            isDarkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/80 border-slate-200'
+          }`}>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className={`text-[11px] font-mono font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  GSTIN (15-digit)
+                </label>
+                <label className="flex items-center gap-1.5 text-[10px] text-amber-600 dark:text-amber-400 font-mono font-semibold cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={cGstExempt} 
+                    onChange={(e) => setCGstExempt(e.target.checked)}
+                    className="rounded text-amber-600 focus:ring-0 cursor-pointer"
+                  />
+                  <span>N/A — GST-exempt</span>
+                </label>
+              </div>
+              <input
+                type="text"
+                disabled={cGstExempt}
+                placeholder={cGstExempt ? "N/A — GST-exempt (Provide reason in Notes)" : "27AABCL1234M1ZP"}
+                maxLength={15}
+                value={cGstExempt ? GST_EXEMPT_VALUE : cGstin}
+                onChange={(e) => {
+                  const val = e.target.value.toUpperCase();
+                  setCGstin(val);
+                  if (val.length >= 12 && !cPan) {
+                    setCPan(val.slice(2, 12));
+                  }
+                }}
+                className={`w-full p-2.5 rounded-xl border font-mono transition-all ${
+                  cGstExempt 
+                    ? isDarkMode ? 'bg-slate-800/50 text-amber-400 border-slate-700 cursor-not-allowed' : 'bg-slate-100 text-amber-700 border-slate-200 cursor-not-allowed'
+                    : formErrors.gstin 
+                      ? 'border-rose-500 ring-1 ring-rose-500' 
+                      : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                }`}
+              />
+              {formErrors.gstin && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.gstin}</p>}
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                PAN (10-char)
+              </label>
+              <input
+                type="text"
+                maxLength={10}
+                placeholder="AABCL1234M"
+                value={cPan}
+                onChange={(e) => setCPan(e.target.value.toUpperCase())}
+                className={`w-full p-2.5 rounded-xl border font-mono ${
+                  formErrors.pan 
+                    ? 'border-rose-500 ring-1 ring-rose-500' 
+                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                }`}
+              />
+              {formErrors.pan && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.pan}</p>}
+            </div>
+          </div>
+
+          {/* Row 4: Billing Address & Shipping Address */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Billing Address <span className="text-rose-500">*</span>
+              </label>
+              <textarea
+                rows={2}
+                required
+                placeholder="Factory / Office street address"
+                value={cBillingAddress}
+                onChange={(e) => setCBillingAddress(e.target.value)}
+                className={`w-full p-2 rounded-xl border ${
+                  formErrors.billingAddress 
+                    ? 'border-rose-500 ring-1 ring-rose-500' 
+                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              />
+              {formErrors.billingAddress && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.billingAddress}</p>}
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className={`text-[11px] font-mono font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Shipping Address
+                </label>
+                <label className="flex items-center gap-1.5 text-[10px] text-blue-600 dark:text-blue-400 font-mono font-semibold cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={cSameAddress} 
+                    onChange={(e) => setCSameAddress(e.target.checked)}
+                    className="rounded text-blue-600 focus:ring-0 cursor-pointer"
+                  />
+                  <span>Same as billing</span>
+                </label>
+              </div>
+              <textarea
+                rows={2}
+                disabled={cSameAddress}
+                placeholder={cSameAddress ? "Same as billing address" : "Delivery plant / warehouse address"}
+                value={cSameAddress ? cBillingAddress : cShippingAddress}
+                onChange={(e) => setCShippingAddress(e.target.value)}
+                className={`w-full p-2 rounded-xl border ${
+                  cSameAddress 
+                    ? isDarkMode ? 'bg-slate-800/40 text-slate-400 border-slate-700 cursor-not-allowed' : 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed' 
+                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              />
+            </div>
+          </div>
+
+          {/* Row 5: City, State (Indian states dropdown), Pincode */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                City <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Pune"
+                value={cCity}
+                onChange={(e) => setCCity(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  formErrors.city 
+                    ? 'border-rose-500 ring-1 ring-rose-500' 
+                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                State (India) <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={cState}
+                onChange={(e) => setCState(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              >
+                {INDIAN_STATES.map(s => (
+                  <option key={s.code} value={s.name}>{s.name} ({s.code})</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Pincode (6-digit)
+              </label>
+              <input
+                type="text"
+                maxLength={6}
+                placeholder="411026"
+                value={cPincode}
+                onChange={(e) => setCPincode(e.target.value.replace(/\D/g, ''))}
+                className={`w-full p-2.5 rounded-xl border font-mono ${
+                  formErrors.pincode 
+                    ? 'border-rose-500 ring-1 ring-rose-500' 
+                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              />
+            </div>
+          </div>
+
+          {/* Row 6: Payment Terms & Dynamic Credit Days/Limit (Conditional) */}
+          <div className={`grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-2xl border ${
+            isDarkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/80 border-slate-200'
+          }`}>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Payment Terms <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={cPaymentTerms}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setCPaymentTerms(val);
+                  if (val === 'Net 15') setCCreditDays(15);
+                  else if (val === 'Net 30') setCCreditDays(30);
+                  else if (val === 'Net 45') setCCreditDays(45);
+                  else if (val === 'Net 60') setCCreditDays(60);
+                  else if (val === 'Advance') {
+                    setCCreditDays(0);
+                    setCCreditLimit(0);
+                  }
+                }}
+                className={`w-full p-2.5 rounded-xl border font-bold ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                }`}
+              >
+                {PAYMENT_TERMS.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Credit Days (0-180) {cPaymentTerms.startsWith('Net') && <span className="text-rose-500">*</span>}
+              </label>
+              <input
+                type="number"
+                min={0}
+                max={180}
+                disabled={!cPaymentTerms.startsWith('Net')}
+                value={cCreditDays}
+                onChange={(e) => setCCreditDays(Number(e.target.value))}
+                className={`w-full p-2.5 rounded-xl border font-mono ${
+                  !cPaymentTerms.startsWith('Net') 
+                    ? isDarkMode ? 'bg-slate-800/40 text-slate-500 border-slate-700 cursor-not-allowed' : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                    : formErrors.creditDays 
+                      ? 'border-rose-500 ring-1 ring-rose-500' 
+                      : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                }`}
+              />
+              {formErrors.creditDays && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.creditDays}</p>}
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Credit Limit (₹) {cPaymentTerms.startsWith('Net') && <span className="text-rose-500">*</span>}
+              </label>
+              <input
+                type="number"
+                min={0}
+                disabled={!cPaymentTerms.startsWith('Net')}
+                value={cCreditLimit}
+                onChange={(e) => setCCreditLimit(Number(e.target.value))}
+                className={`w-full p-2.5 rounded-xl border font-mono ${
+                  !cPaymentTerms.startsWith('Net') 
+                    ? isDarkMode ? 'bg-slate-800/40 text-slate-500 border-slate-700 cursor-not-allowed' : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                    : formErrors.creditLimit 
+                      ? 'border-rose-500 ring-1 ring-rose-500' 
+                      : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                }`}
+              />
+              {formErrors.creditLimit && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.creditLimit}</p>}
+            </div>
+          </div>
+
+          {/* Row 7: Salesperson, Status, Notes */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Assigned Salesperson
+              </label>
+              <select
+                value={cSalesperson}
+                onChange={(e) => setCSalesperson(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              >
+                <option value="">-- Select Salesperson / Employee --</option>
+                {users.map(u => (
+                  <option key={u.id} value={u.name}>{u.name} ({u.role})</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Status <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={cStatus}
+                onChange={(e) => setCStatus(e.target.value as any)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              >
+                <option value="Active">Active (Available for Orders)</option>
+                <option value="Inactive">Inactive (Hidden from New Orders)</option>
+              </select>
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Notes / Exemption Reason {cGstExempt && <span className="text-rose-500">*</span>}
+              </label>
+              <input
+                type="text"
+                placeholder={cGstExempt ? "Mandatory GST exemption reason" : "Remarks / dispatch preferences"}
+                value={cNotes}
+                onChange={(e) => setCNotes(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  formErrors.notes 
+                    ? 'border-rose-500 ring-1 ring-rose-500' 
+                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              />
+              {formErrors.notes && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.notes}</p>}
+            </div>
+          </div>
+
+        </form>
+      </Modal>
+
+      {/* ========================================================================= */}
+      {/* MODAL 2: ADD VENDOR (LIGHT & DARK THEME POLISHED) */}
+      {/* ========================================================================= */}
+      <Modal
+        isOpen={showAddVendorModal}
+        onClose={() => setShowAddVendorModal(false)}
+        maxWidth="4xl"
+        isDarkMode={isDarkMode}
+        icon={<Users className="w-5 h-5" />}
+        title="New Vendor Master"
+        subtitle={`Auto ID: ${vCode} • Mandatory TDS PAN, Bank Encryption & Subcontractor Rules`}
+        footer={
+          <div className="flex items-center justify-end gap-3 w-full">
+            <button
+              type="button"
+              onClick={() => setShowAddVendorModal(false)}
+              className={`px-4 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
+                isDarkMode 
+                  ? 'text-slate-400 hover:text-white hover:bg-slate-800' 
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="save-vendor-form"
+              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-indigo-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+            >
+              <Check className="w-4 h-4" />
+              <span>Save Vendor Master</span>
+            </button>
+          </div>
+        }
+      >
+        <form id="save-vendor-form" onSubmit={handleSaveVendor} className="space-y-4 text-xs">
+          
+          {/* Row 1: Code, Name, Legal Name */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Vendor ID (Auto)
+              </label>
+              <input
+                type="text"
+                value={vCode}
+                readOnly
+                className={`w-full p-2.5 rounded-xl border font-mono font-bold ${
+                  isDarkMode ? 'bg-slate-800/80 border-slate-700 text-indigo-400' : 'bg-slate-100 border-slate-200 text-indigo-600'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Vendor Name <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Shree Steel Suppliers"
+                value={vName}
+                onChange={(e) => setVName(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border transition-all ${
+                  formErrors.name 
+                    ? 'border-rose-500 ring-1 ring-rose-500' 
+                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:bg-white'
+                }`}
+              />
+              {formErrors.name && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.name}</p>}
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Legal Name
+              </label>
+              <input
+                type="text"
+                placeholder="Registered legal name"
+                value={vLegalName}
+                onChange={(e) => setVLegalName(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:bg-white'
+                }`}
+              />
+            </div>
+          </div>
+
+          {/* Row 2: Vendor Type, Vendor Category, Contact Person, Mobile */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Vendor Type <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={vVendorType}
+                onChange={(e) => setVVendorType(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border font-bold ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-indigo-300' : 'bg-slate-50 border-slate-300 text-indigo-700 focus:bg-white'
+                }`}
+              >
+                {VENDOR_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Category <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={vVendorCategory}
+                onChange={(e) => setVVendorCategory(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              >
+                {VENDOR_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Contact Person <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Mahesh Shetty"
+                value={vContactPerson}
+                onChange={(e) => setVContactPerson(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  formErrors.contactPerson 
+                    ? 'border-rose-500 ring-1 ring-rose-500' 
+                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              />
+              {formErrors.contactPerson && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.contactPerson}</p>}
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Mobile (10-digit) <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                maxLength={10}
+                placeholder="9850011111"
+                value={vMobile}
+                onChange={(e) => setVMobile(e.target.value.replace(/\D/g, ''))}
+                className={`w-full p-2.5 rounded-xl border font-mono ${
+                  formErrors.mobile 
+                    ? 'border-rose-500 ring-1 ring-rose-500' 
+                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              />
+              {formErrors.mobile && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.mobile}</p>}
+            </div>
+          </div>
+
+          {/* Conditional Prompt for Subcontractor / Job Worker */}
+          {vVendorType === 'Subcontractor / Job Worker' && (
+            <div className={`p-3.5 rounded-2xl border space-y-2 ${
+              isDarkMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-300' : 'bg-amber-50 border-amber-200 text-amber-800'
+            }`}>
+              <div className="flex items-center gap-2 font-mono font-bold text-[11px]">
+                <AlertTriangle className="w-4 h-4 text-amber-500" />
+                <span>Subcontractor / Job-Work Gate-In/Out Profile</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className={`block text-[10px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Process Type <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={vProcessType}
+                    onChange={(e) => setVProcessType(e.target.value)}
+                    className={`w-full p-2 rounded-xl border text-xs ${
+                      isDarkMode ? 'bg-slate-900 border-amber-500/40 text-amber-200' : 'bg-white border-amber-300 text-slate-900'
+                    }`}
+                  >
+                    {SUBCONTRACTOR_PROCESS_TYPES.map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={`block text-[10px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Expected Turnaround Time (Days) <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={60}
+                    value={vTurnaroundTimeDays}
+                    onChange={(e) => setVTurnaroundTimeDays(Number(e.target.value))}
+                    className={`w-full p-2 rounded-xl border text-xs font-mono font-bold ${
+                      isDarkMode ? 'bg-slate-900 border-amber-500/40 text-amber-200' : 'bg-white border-amber-300 text-slate-900'
+                    }`}
+                  />
                 </div>
               </div>
+            </div>
+          )}
 
-              {/* Names */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[11px] uppercase font-bold text-slate-400 mb-1.5">
-                    CUSTOMER NAME (TRADE NAME) *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={cName}
-                    onChange={(e) => setCName(e.target.value)}
-                    placeholder="e.g. Liebherr CMCtec India Pvt Ltd"
-                    className={`w-full px-4 py-3 rounded-2xl border text-xs font-mono outline-none ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
+          {/* Row 3: Statutory PAN (Always mandatory) & GSTIN */}
+          <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl border ${
+            isDarkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/80 border-slate-200'
+          }`}>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                PAN (TDS Mandated) <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                maxLength={10}
+                placeholder="AAAFS1111A"
+                value={vPan}
+                onChange={(e) => setVPan(e.target.value.toUpperCase())}
+                className={`w-full p-2.5 rounded-xl border font-mono ${
+                  formErrors.pan 
+                    ? 'border-rose-500 ring-1 ring-rose-500' 
+                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                }`}
+              />
+              {formErrors.pan && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.pan}</p>}
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className={`text-[11px] font-mono font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  GSTIN (15-char)
+                </label>
+                <label className="flex items-center gap-1.5 text-[10px] text-amber-600 dark:text-amber-400 font-mono font-semibold cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={vGstExempt} 
+                    onChange={(e) => setVGstExempt(e.target.checked)}
+                    className="rounded text-amber-600 focus:ring-0 cursor-pointer"
                   />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] uppercase font-bold text-slate-400 mb-1.5">
-                    LEGAL REGISTERED NAME
-                  </label>
-                  <input
-                    type="text"
-                    value={cLegalName}
-                    onChange={(e) => setCLegalName(e.target.value)}
-                    placeholder="Full legal name if different"
-                    className={`w-full px-4 py-3 rounded-2xl border text-xs font-mono outline-none ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
+                  <span>GST-exempt</span>
+                </label>
               </div>
+              <input
+                type="text"
+                disabled={vGstExempt}
+                placeholder={vGstExempt ? "N/A — GST-exempt" : "27AAAFS1111A1Z1"}
+                maxLength={15}
+                value={vGstExempt ? GST_EXEMPT_VALUE : vGstin}
+                onChange={(e) => setVGstin(e.target.value.toUpperCase())}
+                className={`w-full p-2.5 rounded-xl border font-mono transition-all ${
+                  vGstExempt 
+                    ? isDarkMode ? 'bg-slate-800/50 text-amber-400 border-slate-700 cursor-not-allowed' : 'bg-slate-100 text-amber-700 border-slate-200 cursor-not-allowed'
+                    : formErrors.gstin 
+                      ? 'border-rose-500 ring-1 ring-rose-500' 
+                      : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                }`}
+              />
+            </div>
+          </div>
 
-              {/* GSTIN, PAN */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[11px] uppercase font-bold text-slate-400 mb-1.5">
-                    GSTIN (15-CHARACTER) *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={cGstin}
-                    onChange={(e) => setCGstin(e.target.value.toUpperCase())}
-                    placeholder="e.g. 27AABCL1234M1ZP"
-                    className={`w-full px-4 py-3 rounded-2xl border text-xs font-mono outline-none ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] uppercase font-bold text-slate-400 mb-1.5">
-                    PAN (10-CHARACTER) *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={cPan}
-                    onChange={(e) => setCPan(e.target.value.toUpperCase())}
-                    placeholder="e.g. AABCL1234M"
-                    className={`w-full px-4 py-3 rounded-2xl border text-xs font-mono outline-none ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              {/* Contact, Mobile, Email */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-[11px] uppercase font-bold text-slate-400 mb-1.5">
-                    CONTACT PERSON
-                  </label>
-                  <input
-                    type="text"
-                    value={cContactPerson}
-                    onChange={(e) => setCContactPerson(e.target.value)}
-                    placeholder="e.g. Rajeev Menon"
-                    className={`w-full px-4 py-3 rounded-2xl border text-xs font-mono outline-none ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] uppercase font-bold text-slate-400 mb-1.5">
-                    MOBILE PHONE *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={cMobile}
-                    onChange={(e) => setCMobile(e.target.value)}
-                    placeholder="e.g. 9822011234"
-                    className={`w-full px-4 py-3 rounded-2xl border text-xs font-mono outline-none ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] uppercase font-bold text-slate-400 mb-1.5">
-                    EMAIL ADDRESS
-                  </label>
-                  <input
-                    type="email"
-                    value={cEmail}
-                    onChange={(e) => setCEmail(e.target.value)}
-                    placeholder="e.g. rajeev@liebherr.com"
-                    className={`w-full px-4 py-3 rounded-2xl border text-xs font-mono outline-none ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              {/* Billing Address */}
+          {/* Row 4: Bank Details (Encrypted storage & UI Masking) */}
+          <div className={`p-3.5 rounded-2xl border space-y-2 ${
+            isDarkMode ? 'bg-indigo-500/10 border-indigo-500/30' : 'bg-indigo-50/70 border-indigo-200'
+          }`}>
+            <div className="flex items-center gap-2 font-mono font-bold text-[11px] text-indigo-700 dark:text-indigo-300">
+              <ShieldCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <span>Encrypted Bank Account & Payout Details</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block text-[11px] uppercase font-bold text-slate-400 mb-1.5">
-                  BILLING ADDRESS *
+                <label className={`block text-[10px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Bank Account Name <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
                   required
-                  value={cBillingAddress}
-                  onChange={(e) => setCBillingAddress(e.target.value)}
-                  placeholder="e.g. Plot 12, MIDC Chakan, Pune"
-                  className={`w-full px-4 py-3 rounded-2xl border text-xs font-mono outline-none ${
-                    isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                  placeholder="Account holder name"
+                  value={vBankAccountName}
+                  onChange={(e) => setVBankAccountName(e.target.value)}
+                  className={`w-full p-2 rounded-xl border text-xs ${
+                    formErrors.bankAccountName 
+                      ? 'border-rose-500 ring-1 ring-rose-500' 
+                      : isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
                   }`}
                 />
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-[11px] uppercase font-bold text-slate-400 mb-1.5">CITY *</label>
-                  <input
-                    type="text"
-                    required
-                    value={cCity}
-                    onChange={(e) => setCCity(e.target.value)}
-                    placeholder="e.g. Pune"
-                    className={`w-full px-4 py-3 rounded-2xl border text-xs font-mono outline-none ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] uppercase font-bold text-slate-400 mb-1.5">STATE *</label>
-                  <input
-                    type="text"
-                    required
-                    value={cState}
-                    onChange={(e) => setCState(e.target.value)}
-                    placeholder="e.g. Maharashtra"
-                    className={`w-full px-4 py-3 rounded-2xl border text-xs font-mono outline-none ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] uppercase font-bold text-slate-400 mb-1.5">PINCODE</label>
-                  <input
-                    type="text"
-                    value={cPincode}
-                    onChange={(e) => setCPincode(e.target.value)}
-                    placeholder="e.g. 410501"
-                    className={`w-full px-4 py-3 rounded-2xl border text-xs font-mono outline-none ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              {/* Payment & Credit Terms */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-[11px] uppercase font-bold text-slate-400 mb-1.5">PAYMENT TERMS</label>
-                  <select
-                    value={cPaymentTerms}
-                    onChange={(e) => setCPaymentTerms(e.target.value)}
-                    className={`w-full px-4 py-3 rounded-2xl border text-xs font-mono outline-none cursor-pointer ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  >
-                    <option value="Advance">Advance</option>
-                    <option value="Net 15">Net 15 Days</option>
-                    <option value="Net 30">Net 30 Days</option>
-                    <option value="Net 45">Net 45 Days</option>
-                    <option value="Net 60">Net 60 Days</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] uppercase font-bold text-slate-400 mb-1.5">CREDIT DAYS</label>
-                  <input
-                    type="number"
-                    value={cCreditDays}
-                    onChange={(e) => setCCreditDays(Number(e.target.value))}
-                    className={`w-full px-4 py-3 rounded-2xl border text-xs font-mono outline-none ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] uppercase font-bold text-slate-400 mb-1.5">CREDIT LIMIT (₹)</label>
-                  <input
-                    type="number"
-                    value={cCreditLimit}
-                    onChange={(e) => setCCreditLimit(Number(e.target.value))}
-                    className={`w-full px-4 py-3 rounded-2xl border text-xs font-mono outline-none ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800/80">
-                <button
-                  type="button"
-                  onClick={() => setShowAddCustomerModal(false)}
-                  className={`px-5 py-2.5 rounded-2xl border font-bold text-xs cursor-pointer transition-all ${
-                    isDarkMode ? 'border-slate-800 bg-slate-950 text-slate-400 hover:text-white' : 'border-slate-200 bg-slate-50 text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-[#4F6BF5] hover:from-[#4F6BF5] hover:to-[#3B59E5] text-white font-bold text-xs cursor-pointer shadow-lg shadow-[#5B75F8]/20 transition-all hover:scale-[1.01]"
-                >
-                  Save Customer
-                </button>
-              </div>
-
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* MODAL 2: NEW VENDOR MASTER FORM (Image 2 Workbook Spec)                   */}
-      {/* ========================================================================= */}
-      {showAddVendorModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border shadow-2xl transition-all ${
-            isDarkMode ? 'bg-[#16171B] text-white border-slate-800' : 'bg-white text-slate-900 border-slate-200'
-          }`}>
-            
-            {/* Header */}
-            <div className={`sticky top-0 z-10 p-6 border-b flex items-center justify-between backdrop-blur-md ${
-              isDarkMode ? 'border-slate-800 bg-[#16171B]/90' : 'border-slate-100 bg-white/90'
-            }`}>
               <div>
-                <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-orange-500">
-                  FOCUSED ACTION
-                </div>
-                <h2 className={`text-xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                  New Vendor Master
-                </h2>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowAddVendorModal(false)}
-                className={`p-2 rounded-2xl border transition-all cursor-pointer ${
-                  isDarkMode 
-                    ? 'border-slate-800 bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800' 
-                    : 'border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Form */}
-            <form onSubmit={handleSaveVendor} className="p-6 space-y-4 text-xs font-mono">
-              
-              {/* Category & Machine-Made Code Rule Panel */}
-              <div className={`p-4 rounded-2xl border ${
-                isDarkMode ? 'bg-slate-900/90 border-slate-700/80' : 'bg-slate-50 border-slate-200'
-              } space-y-3`}>
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] uppercase font-bold text-orange-500 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                    <span>VENDOR DEPARTMENT & MACHINE CODE RULE</span>
-                  </span>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30">
-                    Non-Repeating Sequence
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[11px] uppercase font-bold text-slate-300 mb-1">
-                      VENDOR DEPARTMENT / PREFIX *
-                    </label>
-                    <select
-                      value={vCategory}
-                      onChange={(e) => handleVendorCategoryChange(e.target.value)}
-                      className={`w-full px-4 py-2.5 rounded-xl border text-xs font-mono font-bold outline-none cursor-pointer ${
-                        isDarkMode 
-                          ? 'bg-slate-950 border-slate-700 text-white focus:border-orange-500' 
-                          : 'bg-white border-slate-300 text-slate-900 focus:border-orange-500'
-                      }`}
-                    >
-                      {VENDOR_DEPARTMENTS.map((d) => (
-                        <option key={d.code} value={d.code}>
-                          {d.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-[11px] uppercase font-bold text-slate-300">
-                        VENDOR CODE *
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => setVCode(generateVendorCode(vCategory))}
-                        className="text-[10px] text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1 cursor-pointer"
-                      >
-                        <Zap className="w-3 h-3 fill-amber-400 animate-pulse" />
-                        <span>Auto-Generate</span>
-                      </button>
-                    </div>
-                    <input
-                      type="text"
-                      required
-                      value={vCode}
-                      onChange={(e) => setVCode(e.target.value)}
-                      placeholder="e.g. RAW-001"
-                      className={`w-full px-4 py-2.5 rounded-xl border text-xs font-mono font-bold outline-none transition-all ${
-                        isDarkMode 
-                          ? 'bg-slate-950 border-slate-700 text-emerald-400 focus:border-orange-500' 
-                          : 'bg-white border-slate-300 text-emerald-700 focus:border-orange-500'
-                      }`}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Names */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[11px] uppercase font-bold text-slate-400 mb-1.5">
-                    VENDOR NAME (TRADE NAME) *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={vName}
-                    onChange={(e) => setVName(e.target.value)}
-                    placeholder="e.g. Shree Steel Suppliers"
-                    className={`w-full px-4 py-3 rounded-2xl border text-xs font-mono outline-none ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] uppercase font-bold text-slate-400 mb-1.5">
-                    LEGAL REGISTERED NAME
-                  </label>
-                  <input
-                    type="text"
-                    value={vLegalName}
-                    onChange={(e) => setVLegalName(e.target.value)}
-                    placeholder="Full legal company name"
-                    className={`w-full px-4 py-3 rounded-2xl border text-xs font-mono outline-none ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              {/* GSTIN, PAN */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[11px] uppercase font-bold text-slate-400 mb-1.5">
-                    GSTIN (15-CHARACTER) *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={vGstin}
-                    onChange={(e) => setVGstin(e.target.value.toUpperCase())}
-                    placeholder="e.g. 27AAAFS1111A1Z1"
-                    className={`w-full px-4 py-3 rounded-2xl border text-xs font-mono outline-none ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] uppercase font-bold text-slate-400 mb-1.5">
-                    PAN (10-CHARACTER) *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={vPan}
-                    onChange={(e) => setVPan(e.target.value.toUpperCase())}
-                    placeholder="e.g. AAAFS1111A"
-                    className={`w-full px-4 py-3 rounded-2xl border text-xs font-mono outline-none ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              {/* Contact, Mobile, Email */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-[11px] uppercase font-bold text-slate-400 mb-1.5">
-                    CONTACT PERSON
-                  </label>
-                  <input
-                    type="text"
-                    value={vContactPerson}
-                    onChange={(e) => setVContactPerson(e.target.value)}
-                    placeholder="e.g. Mahesh Shetty"
-                    className={`w-full px-4 py-3 rounded-2xl border text-xs font-mono outline-none ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] uppercase font-bold text-slate-400 mb-1.5">
-                    MOBILE PHONE *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={vMobile}
-                    onChange={(e) => setVMobile(e.target.value)}
-                    placeholder="e.g. 9850011111"
-                    className={`w-full px-4 py-3 rounded-2xl border text-xs font-mono outline-none ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] uppercase font-bold text-slate-400 mb-1.5">
-                    EMAIL ADDRESS
-                  </label>
-                  <input
-                    type="email"
-                    value={vEmail}
-                    onChange={(e) => setVEmail(e.target.value)}
-                    placeholder="e.g. mahesh@shreesteel.com"
-                    className={`w-full px-4 py-3 rounded-2xl border text-xs font-mono outline-none ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              {/* Billing Address, City, State, Pincode */}
-              <div>
-                <label className="block text-[11px] uppercase font-bold text-slate-400 mb-1.5">
-                  BILLING ADDRESS *
+                <label className={`block text-[10px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Bank Account Number <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
                   required
-                  value={vBillingAddress}
-                  onChange={(e) => setVBillingAddress(e.target.value)}
-                  placeholder="e.g. MIDC Bhosari, Pune"
-                  className={`w-full px-4 py-3 rounded-2xl border text-xs font-mono outline-none ${
-                    isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                  placeholder="Account number"
+                  value={vBankAccountNumber}
+                  onChange={(e) => setVBankAccountNumber(e.target.value.replace(/\s/g, ''))}
+                  className={`w-full p-2 rounded-xl border text-xs font-mono ${
+                    formErrors.bankAccountNumber 
+                      ? 'border-rose-500 ring-1 ring-rose-500' 
+                      : isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
                   }`}
                 />
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-[11px] uppercase font-bold text-slate-400 mb-1.5">CITY *</label>
-                  <input
-                    type="text"
-                    required
-                    value={vCity}
-                    onChange={(e) => setVCity(e.target.value)}
-                    placeholder="e.g. Pune"
-                    className={`w-full px-4 py-3 rounded-2xl border text-xs font-mono outline-none ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] uppercase font-bold text-slate-400 mb-1.5">STATE *</label>
-                  <input
-                    type="text"
-                    required
-                    value={vState}
-                    onChange={(e) => setVState(e.target.value)}
-                    placeholder="e.g. Maharashtra"
-                    className={`w-full px-4 py-3 rounded-2xl border text-xs font-mono outline-none ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] uppercase font-bold text-slate-400 mb-1.5">PINCODE</label>
-                  <input
-                    type="text"
-                    value={vPincode}
-                    onChange={(e) => setVPincode(e.target.value)}
-                    placeholder="e.g. 411026"
-                    className={`w-full px-4 py-3 rounded-2xl border text-xs font-mono outline-none ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              {/* Vendor Bank Details Section (Workbook Image 2 requirement) */}
-              <div className={`p-4 rounded-2xl border ${
-                isDarkMode ? 'bg-slate-950/90 border-slate-800' : 'bg-slate-50 border-slate-200'
-              } space-y-3`}>
-                <div className="text-[11px] uppercase font-bold text-amber-500">
-                  BANKING & PAYMENT DISBURSEMENT DETAILS *
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 mb-1">BANK ACCOUNT NAME *</label>
-                    <input
-                      type="text"
-                      required
-                      value={vBankAccountName}
-                      onChange={(e) => setVBankAccountName(e.target.value)}
-                      placeholder="e.g. Shree Steel Suppliers"
-                      className={`w-full px-3 py-2 rounded-xl border text-xs font-mono outline-none ${
-                        isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
-                      }`}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 mb-1">BANK ACCOUNT NUMBER *</label>
-                    <input
-                      type="text"
-                      required
-                      value={vBankAccountNumber}
-                      onChange={(e) => setVBankAccountNumber(e.target.value)}
-                      placeholder="e.g. 5020012345678"
-                      className={`w-full px-3 py-2 rounded-xl border text-xs font-mono outline-none ${
-                        isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
-                      }`}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 mb-1">IFSC CODE *</label>
-                    <input
-                      type="text"
-                      required
-                      value={vIfsc}
-                      onChange={(e) => setVIfsc(e.target.value.toUpperCase())}
-                      placeholder="e.g. HDFC0001234"
-                      className={`w-full px-3 py-2 rounded-xl border text-xs font-mono outline-none ${
-                        isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
-                      }`}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800/80">
-                <button
-                  type="button"
-                  onClick={() => setShowAddVendorModal(false)}
-                  className={`px-5 py-2.5 rounded-2xl border font-bold text-xs cursor-pointer transition-all ${
-                    isDarkMode ? 'border-slate-800 bg-slate-950 text-slate-400 hover:text-white' : 'border-slate-200 bg-slate-50 text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-2.5 rounded-2xl bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs cursor-pointer shadow-lg shadow-orange-600/20 transition-all hover:scale-[1.01]"
-                >
-                  Save Vendor
-                </button>
-              </div>
-
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* MODAL 2: NEW MACHINE FORM                                                  */}
-      {/* ========================================================================= */}
-      {showAddMachineModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-lg rounded-3xl border shadow-2xl overflow-hidden transition-all ${
-            isDarkMode ? 'bg-[#16171B] text-white border-slate-800' : 'bg-white text-slate-900 border-slate-200'
-          }`}>
-            <div className={`p-6 border-b flex items-center justify-between ${
-              isDarkMode ? 'border-slate-800 bg-slate-950/40' : 'border-slate-100 bg-slate-50/80'
-            }`}>
               <div>
-                <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#7B92FF]">FOCUSED ACTION</div>
-                <h2 className={`text-xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>New Machine Master</h2>
+                <label className={`block text-[10px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  IFSC Code (11-char) <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  maxLength={11}
+                  placeholder="HDFC0001234"
+                  value={vIfsc}
+                  onChange={(e) => setVIfsc(e.target.value.toUpperCase())}
+                  className={`w-full p-2 rounded-xl border text-xs font-mono ${
+                    formErrors.ifsc 
+                      ? 'border-rose-500 ring-1 ring-rose-500' 
+                      : isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                  }`}
+                />
               </div>
-              <button 
-                onClick={() => setShowAddMachineModal(false)} 
-                className={`p-2 rounded-2xl border transition-all cursor-pointer ${
-                  isDarkMode ? 'border-slate-800 bg-slate-950/60 text-slate-400 hover:text-white' : 'border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-900'
+            </div>
+          </div>
+
+          {/* Row 5: Address, City, State, Pincode */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div className="sm:col-span-2">
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Billing Address <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="Vendor factory / office address"
+                value={vBillingAddress}
+                onChange={(e) => setVBillingAddress(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  formErrors.billingAddress 
+                    ? 'border-rose-500 ring-1 ring-rose-500' 
+                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                City <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Pune"
+                value={vCity}
+                onChange={(e) => setVCity(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  formErrors.city 
+                    ? 'border-rose-500 ring-1 ring-rose-500' 
+                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                State <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={vState}
+                onChange={(e) => setVState(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
                 }`}
               >
-                <X className="w-4 h-4" />
-              </button>
+                {INDIAN_STATES.map(s => (
+                  <option key={s.code} value={s.name}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Row 6: Payment Terms, Credit Days, Status */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Payment Terms
+              </label>
+              <select
+                value={vPaymentTerms}
+                onChange={(e) => setVPaymentTerms(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              >
+                {PAYMENT_TERMS.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Credit Days (0-180)
+              </label>
+              <input
+                type="number"
+                min={0}
+                max={180}
+                value={vCreditDays}
+                onChange={(e) => setVCreditDays(Number(e.target.value))}
+                className={`w-full p-2.5 rounded-xl border font-mono ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Status <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={vStatus}
+                onChange={(e) => setVStatus(e.target.value as any)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              >
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+
+        </form>
+      </Modal>
+
+      {/* ========================================================================= */}
+      {/* MODAL 3: ADD ITEM (LIGHT & DARK THEME POLISHED) */}
+      {/* ========================================================================= */}
+      <Modal
+        isOpen={showAddItemModal}
+        onClose={() => setShowAddItemModal(false)}
+        maxWidth="4xl"
+        isDarkMode={isDarkMode}
+        icon={<Package className="w-5 h-5" />}
+        title="New Item Master"
+        subtitle={`Auto ID: ${iCode} • Dynamic Cost / Price & Vendor Requirements`}
+        footer={
+          <div className="flex items-center justify-end gap-3 w-full">
+            <button
+              type="button"
+              onClick={() => setShowAddItemModal(false)}
+              className={`px-4 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
+                isDarkMode 
+                  ? 'text-slate-400 hover:text-white hover:bg-slate-800' 
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="save-item-form"
+              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+            >
+              <Check className="w-4 h-4" />
+              <span>Save Item Master</span>
+            </button>
+          </div>
+        }
+      >
+        <form id="save-item-form" onSubmit={handleSaveItem} className="space-y-4 text-xs">
+          
+          {/* Row 1: Item Type, Auto Code, Item Name */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Item Type <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={iItemType}
+                onChange={(e) => handleItemTypeChange(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border font-bold ${
+                  iItemType === 'Finished Good' ? isDarkMode ? 'bg-purple-500/20 text-purple-300 border-purple-500/40' : 'bg-purple-50 text-purple-700 border-purple-200' :
+                  iItemType === 'Raw Material' ? isDarkMode ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                }`}
+              >
+                {ITEM_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Item Code (Auto-Prefixed)
+              </label>
+              <input
+                type="text"
+                value={iCode}
+                readOnly
+                className={`w-full p-2.5 rounded-xl border font-mono font-bold ${
+                  isDarkMode ? 'bg-slate-800/80 border-slate-700 text-emerald-400' : 'bg-slate-100 border-slate-200 text-emerald-600'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Item Name <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. MS Plate 20mm or Boom Bracket"
+                value={iName}
+                onChange={(e) => setIName(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  formErrors.name 
+                    ? 'border-rose-500 ring-1 ring-rose-500' 
+                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              />
+              {formErrors.name && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.name}</p>}
+            </div>
+          </div>
+
+          {/* Row 2: Part No, Category, Description */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Part / Drawing No
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. DWG-2026-B"
+                value={iPartNo}
+                onChange={(e) => setIPartNo(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Category
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Structural Steel, Fasteners"
+                value={iCategory}
+                onChange={(e) => setICategory(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Description
+              </label>
+              <input
+                type="text"
+                placeholder="Technical grade / specifications"
+                value={iDescription}
+                onChange={(e) => setIDescription(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              />
+            </div>
+          </div>
+
+          {/* Row 3: UOM, HSN Code, GST Rate % */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Unit of Measure (UOM) <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={iUnit}
+                onChange={(e) => setIUnit(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border font-bold ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              >
+                {ITEM_UOMS.map(u => <option key={u} value={u}>{u}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                HSN Code (4-8 digits) <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                maxLength={8}
+                placeholder="8483"
+                value={iHsnCode}
+                onChange={(e) => setIHsnCode(e.target.value.replace(/\D/g, ''))}
+                className={`w-full p-2.5 rounded-xl border font-mono ${
+                  formErrors.hsnCode 
+                    ? 'border-rose-500 ring-1 ring-rose-500' 
+                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              />
+              {formErrors.hsnCode && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.hsnCode}</p>}
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                GST Rate % <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={iGstRate}
+                onChange={(e) => setIGstRate(Number(e.target.value))}
+                className={`w-full p-2.5 rounded-xl border font-mono font-bold ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-blue-400' : 'bg-slate-50 border-slate-300 text-blue-600 focus:bg-white'
+                }`}
+              >
+                {GST_RATES.map(r => <option key={r} value={r}>{r}% GST</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Dynamic Conditional Row: Standard Cost vs Selling Price & Preferred Vendor */}
+          <div className={`p-3.5 rounded-2xl border space-y-3 ${
+            isDarkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/80 border-slate-200'
+          }`}>
+            <div className="text-[11px] font-mono font-bold flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">
+              <DollarSign className="w-3.5 h-3.5" />
+              <span>Costing & Pricing Valuation Matrix ({iItemType})</span>
             </div>
 
-            <form onSubmit={handleSaveMachine} className="p-6 space-y-4 font-mono text-xs">
-              <div>
-                <label className="block text-[11px] font-bold uppercase text-slate-400 mb-1.5">MACHINE CODE *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. VMC-04"
-                  value={mCode}
-                  onChange={(e) => setMCode(e.target.value)}
-                  className={`w-full px-4 py-3 rounded-2xl border text-xs outline-none ${
-                    isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                  }`}
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold uppercase text-slate-400 mb-1.5">MACHINE NAME *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. VMC 4-axis High Speed"
-                  value={mName}
-                  onChange={(e) => setMName(e.target.value)}
-                  className={`w-full px-4 py-3 rounded-2xl border text-xs outline-none ${
-                    isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                  }`}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Standard Cost: Required if RM / Consumable / Bought-Out */}
+              {iItemType !== 'Finished Good' && (
                 <div>
-                  <label className="block text-[11px] font-bold uppercase text-slate-400 mb-1.5">TYPE</label>
+                  <label className={`block text-[10px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Standard Cost (₹) {['Raw Material', 'Consumable', 'Bought-Out'].includes(iItemType) && <span className="text-rose-500">*</span>}
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={iStandardCost}
+                    onChange={(e) => setIStandardCost(Number(e.target.value))}
+                    className={`w-full p-2 rounded-xl border text-xs font-mono font-bold ${
+                      formErrors.standardCost 
+                        ? 'border-rose-500 ring-1 ring-rose-500' 
+                        : isDarkMode ? 'bg-slate-900 border-slate-700 text-emerald-400' : 'bg-white border-slate-300 text-emerald-700'
+                    }`}
+                  />
+                  {formErrors.standardCost && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.standardCost}</p>}
+                </div>
+              )}
+
+              {/* Selling Price: Required if Finished Good */}
+              {iItemType === 'Finished Good' && (
+                <div>
+                  <label className={`block text-[10px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Selling Price (₹) <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={iSellingPrice}
+                    onChange={(e) => setISellingPrice(Number(e.target.value))}
+                    className={`w-full p-2 rounded-xl border text-xs font-mono font-bold ${
+                      formErrors.sellingPrice 
+                        ? 'border-rose-500 ring-1 ring-rose-500' 
+                        : isDarkMode ? 'bg-slate-900 border-slate-700 text-purple-400' : 'bg-white border-slate-300 text-purple-700'
+                    }`}
+                  />
+                  {formErrors.sellingPrice && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.sellingPrice}</p>}
+                </div>
+              )}
+
+              {/* Preferred Vendor: Required if RM / Consumable / Bought-Out */}
+              {iItemType !== 'Finished Good' && (
+                <div className="sm:col-span-2">
+                  <label className={`block text-[10px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Preferred Vendor {['Raw Material', 'Consumable', 'Bought-Out'].includes(iItemType) && <span className="text-rose-500">*</span>}
+                  </label>
                   <select
-                    value={mType}
-                    onChange={(e) => setMType(e.target.value)}
-                    className={`w-full px-4 py-3 rounded-2xl border text-xs outline-none cursor-pointer ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                    value={iPreferredVendor}
+                    onChange={(e) => setIPreferredVendor(e.target.value)}
+                    className={`w-full p-2 rounded-xl border text-xs ${
+                      formErrors.preferredVendor 
+                        ? 'border-rose-500 ring-1 ring-rose-500' 
+                        : isDarkMode ? 'bg-slate-900 border-slate-700 text-slate-200' : 'bg-white border-slate-300 text-slate-900'
                     }`}
                   >
-                    <option value="CNC Machining">CNC Machining</option>
-                    <option value="Cutting">Cutting</option>
-                    <option value="Drilling">Drilling</option>
-                    <option value="Turning">Turning</option>
-                    <option value="Welding">Welding</option>
-                    <option value="Inspection">Inspection</option>
-                    <option value="VMC">VMC</option>
+                    <option value="">-- Select Preferred Vendor --</option>
+                    {vendors.filter(v => v.status === 'Active').map(v => (
+                      <option key={v.code} value={v.name}>{v.name} ({v.vendorCategory})</option>
+                    ))}
                   </select>
+                  {formErrors.preferredVendor && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.preferredVendor}</p>}
                 </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold uppercase text-slate-400 mb-1.5">HOURLY COST (₹)</label>
-                  <input
-                    type="number"
-                    value={mHourlyCost}
-                    onChange={(e) => setMHourlyCost(Number(e.target.value))}
-                    className={`w-full px-4 py-3 rounded-2xl border text-xs outline-none ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800/80">
-                <button
-                  type="button"
-                  onClick={() => setShowAddMachineModal(false)}
-                  className={`px-5 py-2.5 rounded-2xl border font-bold text-xs cursor-pointer ${
-                    isDarkMode ? 'border-slate-800 bg-slate-950 text-slate-400 hover:text-white' : 'border-slate-200 bg-slate-50 text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-[#4F6BF5] hover:from-[#4F6BF5] hover:to-[#3B59E5] text-white font-bold text-xs cursor-pointer shadow-lg shadow-[#5B75F8]/20 transition-all hover:scale-[1.01]"
-                >
-                  Save Machine
-                </button>
-              </div>
-            </form>
+              )}
+            </div>
           </div>
-        </div>
-      )}
 
-      {/* ========================================================================= */}
-      {/* MODAL 3: NEW MASTER ITEM FORM                                              */}
-      {/* ========================================================================= */}
-      {showAddItemModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-lg rounded-3xl border shadow-2xl overflow-hidden transition-all ${
-            isDarkMode ? 'bg-[#16171B] text-white border-slate-800' : 'bg-white text-slate-900 border-slate-200'
-          }`}>
-            <div className={`p-6 border-b flex items-center justify-between ${
-              isDarkMode ? 'border-slate-800 bg-slate-950/40' : 'border-slate-100 bg-slate-50/80'
-            }`}>
-              <div>
-                <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#7B92FF]">FOCUSED ACTION</div>
-                <h2 className={`text-xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>New Master SKU Item</h2>
-              </div>
-              <button 
-                onClick={() => setShowAddItemModal(false)} 
-                className={`p-2 rounded-2xl border transition-all cursor-pointer ${
-                  isDarkMode ? 'border-slate-800 bg-slate-950/60 text-slate-400 hover:text-white' : 'border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-900'
+          {/* Row 4: Reorder Level, Min Stock, Max Stock, Lead Time */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Reorder Level <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="number"
+                min={0}
+                value={iReorderLevel}
+                onChange={(e) => setIReorderLevel(Number(e.target.value))}
+                className={`w-full p-2.5 rounded-xl border font-mono ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-amber-400 font-bold' : 'bg-slate-50 border-slate-300 text-amber-700 font-bold focus:bg-white'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Min Stock
+              </label>
+              <input
+                type="number"
+                min={0}
+                value={iMinStock}
+                onChange={(e) => setIMinStock(Number(e.target.value))}
+                className={`w-full p-2.5 rounded-xl border font-mono ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Max Stock
+              </label>
+              <input
+                type="number"
+                min={0}
+                value={iMaxStock}
+                onChange={(e) => setIMaxStock(Number(e.target.value))}
+                className={`w-full p-2.5 rounded-xl border font-mono ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Lead Time (Days)
+              </label>
+              <input
+                type="number"
+                min={0}
+                value={iLeadTimeDays}
+                onChange={(e) => setILeadTimeDays(Number(e.target.value))}
+                className={`w-full p-2.5 rounded-xl border font-mono ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              />
+            </div>
+          </div>
+
+          {/* Row 5: Default Warehouse & Status */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Default Warehouse / Location
+              </label>
+              <input
+                type="text"
+                value={iDefaultWarehouse}
+                onChange={(e) => setIDefaultWarehouse(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Status <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={iStatus}
+                onChange={(e) => setIStatus(e.target.value as any)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
                 }`}
               >
-                <X className="w-4 h-4" />
-              </button>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
             </div>
-
-            <form onSubmit={handleSaveItem} className="p-6 space-y-4 font-mono text-xs">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[11px] font-bold uppercase text-slate-400 mb-1.5">PART CODE *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. 00000020"
-                    value={itemCode}
-                    onChange={(e) => setItemCode(e.target.value)}
-                    className={`w-full px-4 py-3 rounded-2xl border text-xs outline-none ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold uppercase text-slate-400 mb-1.5">PART NO</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. PART-890"
-                    value={partNo}
-                    onChange={(e) => setPartNo(e.target.value)}
-                    className={`w-full px-4 py-3 rounded-2xl border text-xs outline-none ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold uppercase text-slate-400 mb-1.5">DESCRIPTION *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. HIGH PRECISION BUSHING AL-7075"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className={`w-full px-4 py-3 rounded-2xl border text-xs outline-none ${
-                    isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                  }`}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[11px] font-bold uppercase text-slate-400 mb-1.5">SALE RATE (₹)</label>
-                  <input
-                    type="number"
-                    value={saleRate}
-                    onChange={(e) => setSaleRate(Number(e.target.value))}
-                    className={`w-full px-4 py-3 rounded-2xl border text-xs outline-none ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold uppercase text-slate-400 mb-1.5">PURCHASE RATE (₹)</label>
-                  <input
-                    type="number"
-                    value={purchaseRate}
-                    onChange={(e) => setPurchaseRate(Number(e.target.value))}
-                    className={`w-full px-4 py-3 rounded-2xl border text-xs outline-none ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800/80">
-                <button
-                  type="button"
-                  onClick={() => setShowAddItemModal(false)}
-                  className={`px-5 py-2.5 rounded-2xl border font-bold text-xs cursor-pointer ${
-                    isDarkMode ? 'border-slate-800 bg-slate-950 text-slate-400 hover:text-white' : 'border-slate-200 bg-slate-50 text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-[#4F6BF5] hover:from-[#4F6BF5] hover:to-[#3B59E5] text-white font-bold text-xs cursor-pointer shadow-lg shadow-[#5B75F8]/20 transition-all hover:scale-[1.01]"
-                >
-                  Save Item
-                </button>
-              </div>
-            </form>
           </div>
-        </div>
-      )}
+
+        </form>
+      </Modal>
+
+      {/* ========================================================================= */}
+      {/* MODAL 4: ADD MACHINE (LIGHT & DARK THEME POLISHED) */}
+      {/* ========================================================================= */}
+      <Modal
+        isOpen={showAddMachineModal}
+        onClose={() => setShowAddMachineModal(false)}
+        maxWidth="4xl"
+        isDarkMode={isDarkMode}
+        icon={<Wrench className="w-5 h-5" />}
+        title="New Machine Master"
+        subtitle={`Auto ID: ${mCode} • Unique Name for Route Cards & Shop Scheduling`}
+        footer={
+          <div className="flex items-center justify-end gap-3 w-full">
+            <button
+              type="button"
+              onClick={() => setShowAddMachineModal(false)}
+              className={`px-4 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
+                isDarkMode 
+                  ? 'text-slate-400 hover:text-white hover:bg-slate-800' 
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="save-machine-form"
+              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-amber-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+            >
+              <Check className="w-4 h-4" />
+              <span>Save Machine Master</span>
+            </button>
+          </div>
+        }
+      >
+        <form id="save-machine-form" onSubmit={handleSaveMachine} className="space-y-4 text-xs">
+          
+          {/* Row 1: Code, Machine Name (Unique), Machine Type */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Machine ID (Auto)
+              </label>
+              <input
+                type="text"
+                value={mCode}
+                readOnly
+                className={`w-full p-2.5 rounded-xl border font-mono font-bold ${
+                  isDarkMode ? 'bg-slate-800/80 border-slate-700 text-amber-400' : 'bg-slate-100 border-slate-200 text-amber-600'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Machine Name (Unique) <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. VMC-01, CNC-02"
+                value={mName}
+                onChange={(e) => setMName(e.target.value.toUpperCase())}
+                className={`w-full p-2.5 rounded-xl border font-mono font-bold ${
+                  formErrors.name 
+                    ? 'border-rose-500 ring-1 ring-rose-500' 
+                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              />
+              {formErrors.name && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.name}</p>}
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Machine Type <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={mType}
+                onChange={(e) => setMType(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              >
+                {MACHINE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Row 2: Department, Location, Hourly Cost */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Department <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Machine Shop, Fabrication"
+                value={mDepartment}
+                onChange={(e) => setMDepartment(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  formErrors.department 
+                    ? 'border-rose-500 ring-1 ring-rose-500' 
+                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Location on Shop Floor <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Bay 1, Line 2"
+                value={mLocation}
+                onChange={(e) => setMLocation(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  formErrors.location 
+                    ? 'border-rose-500 ring-1 ring-rose-500' 
+                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Hourly Cost (₹)
+              </label>
+              <input
+                type="number"
+                min={0}
+                value={mHourlyCost}
+                onChange={(e) => setMHourlyCost(Number(e.target.value))}
+                className={`w-full p-2.5 rounded-xl border font-mono ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-emerald-400 font-bold' : 'bg-slate-50 border-slate-300 text-emerald-700 font-bold focus:bg-white'
+                }`}
+              />
+            </div>
+          </div>
+
+          {/* Row 3: Manufacturer, Model, Serial Number, Installation Date */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Manufacturer
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Haas, BFW, Jyoti"
+                value={mManufacturer}
+                onChange={(e) => setMManufacturer(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Model
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. VF-2SS"
+                value={mModel}
+                onChange={(e) => setMModel(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Serial Number
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. SN-892140"
+                value={mSerialNumber}
+                onChange={(e) => setMSerialNumber(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border font-mono ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Installation Date
+              </label>
+              <input
+                type="date"
+                value={mInstallationDate}
+                onChange={(e) => setMInstallationDate(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              />
+            </div>
+          </div>
+
+          {/* Row 4: Capacity & Capacity UOM (Conditional Requirement) */}
+          <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl border ${
+            isDarkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/80 border-slate-200'
+          }`}>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Capacity Rating
+              </label>
+              <input
+                type="number"
+                min={0}
+                placeholder="e.g. 50"
+                value={mCapacity ?? ''}
+                onChange={(e) => setMCapacity(e.target.value ? Number(e.target.value) : undefined)}
+                className={`w-full p-2.5 rounded-xl border font-mono ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Capacity UOM {mCapacity && mCapacity > 0 && <span className="text-rose-500">*</span>}
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Parts/hr, Tons, RPM, KW"
+                value={mCapacityUom}
+                onChange={(e) => setMCapacityUom(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  formErrors.capacityUom 
+                    ? 'border-rose-500 ring-1 ring-rose-500' 
+                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                }`}
+              />
+              {formErrors.capacityUom && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.capacityUom}</p>}
+            </div>
+          </div>
+
+          {/* Row 5: Operating Hours (0-24), Shift, Status, Responsible Person */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Operating Hours/Day (0-24)
+              </label>
+              <input
+                type="number"
+                min={0}
+                max={24}
+                value={mOperatingHours}
+                onChange={(e) => setMOperatingHours(Number(e.target.value))}
+                className={`w-full p-2.5 rounded-xl border font-mono ${
+                  formErrors.operatingHours 
+                    ? 'border-rose-500 ring-1 ring-rose-500' 
+                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              />
+              {formErrors.operatingHours && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.operatingHours}</p>}
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Shift
+              </label>
+              <select
+                value={mShift}
+                onChange={(e) => setMShift(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              >
+                {MACHINE_SHIFTS.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Status <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={mStatus}
+                onChange={(e) => setMStatus(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              >
+                {MACHINE_STATUSES.map(st => <option key={st} value={st}>{st}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Responsible Person
+              </label>
+              <select
+                value={mResponsiblePerson}
+                onChange={(e) => setMResponsiblePerson(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
+              >
+                <option value="">-- Select Operator/Supervisor --</option>
+                {users.map(u => (
+                  <option key={u.id} value={u.name}>{u.name} ({u.role})</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+        </form>
+      </Modal>
 
     </div>
   );
 };
+

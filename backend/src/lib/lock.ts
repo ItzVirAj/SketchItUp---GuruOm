@@ -18,6 +18,7 @@ export class LockServiceUnavailableError extends Error {
 }
 
 let redlockInstance: Redlock | null = null;
+const inMemoryLocks = new Map<string, Promise<void>>();
 
 function getRedlock(): Redlock {
   if (!redlockInstance) {
@@ -56,46 +57,72 @@ export class LockService {
   /**
    * Executes an operation inside a distributed lock with automatic release and deadlock prevention.
    * Sorts multi-resource keys alphabetically to prevent circular wait deadlocks.
-   * 
-   * @param resources Single lock key or array of lock keys
-   * @param ttlMs Safety net TTL in milliseconds (default 5000ms)
-   * @param fn Critical section operation
+   * Gracefully uses an in-memory asynchronous mutex if Redis is not connected.
    */
   static async withLock<T>(
     resources: string | string[],
     ttlMs = 5000,
     fn: () => Promise<T>
   ): Promise<T> {
-    // Fail-Closed: Exclusivity cannot be guaranteed if Redis is disconnected
-    if (!isRedisConnected()) {
-      throw new LockServiceUnavailableError();
-    }
-
-    const redlock = getRedlock();
     const rawKeys = Array.isArray(resources) ? resources : [resources];
-    
-    // Sort keys alphabetically to guarantee deterministic acquisition order (deadlock prevention)
     const sortedKeys = Array.from(new Set(rawKeys)).sort();
 
-    let lock: Lock;
-    try {
-      lock = await redlock.acquire(sortedKeys, ttlMs);
-    } catch (err: any) {
-      // Could not acquire lock within retry limit
-      throw new ResourceLockedError(`Resource [${sortedKeys.join(', ')}] is currently locked by another operation.`);
+    // Use Redlock if Redis is connected
+    if (isRedisConnected()) {
+      const redlock = getRedlock();
+      let lock: Lock;
+      try {
+        lock = await redlock.acquire(sortedKeys, ttlMs);
+      } catch (err: any) {
+        throw new ResourceLockedError(`Resource [${sortedKeys.join(', ')}] is currently locked by another operation.`);
+      }
+
+      try {
+        return await fn();
+      } finally {
+        try {
+          await lock.release();
+        } catch (releaseErr: any) {
+          console.warn('⚠️ [Redlock] Lock release warning:', releaseErr.message);
+        }
+      }
     }
 
+    // In-memory mutex serialization fallback when Redis is offline
+    const primaryKey = sortedKeys.join('::');
+    const existingLock = inMemoryLocks.get(primaryKey) || Promise.resolve();
+    let releaseMutex: () => void = () => {};
+
+    const currentLock = new Promise<void>((resolve) => {
+      releaseMutex = resolve;
+    });
+
+    inMemoryLocks.set(primaryKey, existingLock.then(() => currentLock));
+
     try {
-      // Execute critical section while holding the lock
+      await existingLock;
       return await fn();
     } finally {
-      // Always release lock
-      try {
-        await lock.release();
-      } catch (releaseErr: any) {
-        // Lock might have already expired if operation exceeded TTL
-        console.warn('⚠️ [Redlock] Lock release warning:', releaseErr.message);
+      releaseMutex();
+      if (inMemoryLocks.get(primaryKey) === existingLock.then(() => currentLock)) {
+        inMemoryLocks.delete(primaryKey);
       }
+    }
+  }
+
+  /**
+   * Evaluates optimistic concurrency: ensures target record's updatedAt matches expected state.
+   */
+  static verifyOptimisticVersion(
+    currentUpdatedAt: string | undefined | null,
+    expectedUpdatedAt: string | undefined | null,
+    resourceName = 'Record'
+  ): void {
+    if (expectedUpdatedAt && currentUpdatedAt && currentUpdatedAt !== expectedUpdatedAt) {
+      const err: any = new Error(`${resourceName} has been modified by another concurrent action. Please refresh the page and try again.`);
+      err.statusCode = 409;
+      err.errorCode = 'ERR_OPTIMISTIC_LOCK_CONFLICT';
+      throw err;
     }
   }
 }

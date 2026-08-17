@@ -10,7 +10,22 @@ interface PDIViewProps {
 }
 
 export const PDIView: React.FC<PDIViewProps> = ({ pdiItems, pdiQueue, isDarkMode = true, onPassPDI }) => {
-  const activePdiItems = pdiItems || pdiQueue || [];
+  const rawPdiItems = pdiItems || pdiQueue || [];
+  
+  // Deduplicate PDI inspection items by orderPo + jobNo (keep latest)
+  const activePdiItems = React.useMemo(() => {
+    const map = new Map<string, PDIInspection>();
+    for (const item of rawPdiItems) {
+      const key = `${(item.orderPo || '').trim().toUpperCase()}_${(item.jobNo || '').trim().toUpperCase()}`;
+      if (key !== '_') {
+        map.set(key, item);
+      } else {
+        map.set(item.id, item);
+      }
+    }
+    return Array.from(map.values());
+  }, [rawPdiItems]);
+
   const [selectedReport, setSelectedReport] = useState<PDIInspection | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 

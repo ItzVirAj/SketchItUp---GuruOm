@@ -51,28 +51,70 @@ export async function logAudit(
   try {
     const { error } = await db.from('audit_logs').insert({
       id: record.id,
+      user_name: record.actorEmail || 'System User',
       actor_id: record.actorId || null,
-      actor_email: record.actorEmail,
-      action: record.action,
-      entity_type: record.entityType,
-      entity_id: record.entityId,
-      before_state: record.beforeState,
-      after_state: record.afterState,
-      ip_address: record.ipAddress,
-      user_agent: record.userAgent,
-      metadata: record.metadata,
+      actor_email: record.actorEmail || null,
+      entity: record.entityType || 'General',
+      entity_type: record.entityType || null,
+      entity_id: record.entityId || null,
+      action: record.action || 'LOG',
+      details: (record.metadata?.details as string) || `${record.action} on ${record.entityType || 'item'}`,
+      before_state: record.beforeState || null,
+      after_state: record.afterState || null,
+      ip_address: record.ipAddress || null,
+      user_agent: record.userAgent || null,
+      metadata: record.metadata || null,
       created_at: record.created_at
     });
 
     if (error) {
-      console.warn('⚠️ [AuditLog] DB insert warning:', error.message);
+      // Legacy-shaped audit_logs tables lack the extended columns — retry with the minimal column set
+      const missingColumn = error.code === 'PGRST204' || (error.message || '').includes('Could not find the');
+      if (missingColumn) {
+        try {
+          await db.from('audit_logs').insert({
+            id: record.id,
+            user_name: record.actorEmail || 'System User',
+            entity: record.entityType || 'General',
+            entity_id: record.entityId || null,
+            action: record.action || 'LOG',
+            details: (record.metadata?.details as string) || `${record.action} on ${record.entityType || 'item'}`,
+            created_at: record.created_at
+          });
+        } catch {
+          try {
+            // Oldest shape: no entity_id either
+            await db.from('audit_logs').insert({
+              id: record.id,
+              user_name: record.actorEmail || 'System User',
+              entity: record.entityType || 'General',
+              action: record.action || 'LOG',
+              details: (record.metadata?.details as string) || `${record.action} on ${record.entityType || 'item'}`,
+              created_at: record.created_at
+            });
+          } catch {
+            // ignore fallback insert error
+          }
+        }
+      } else {
+        console.warn('⚠️ [AuditLog] DB insert warning:', error.message);
+      }
     }
   } catch (err: any) {
-    console.warn('⚠️ [AuditLog] DB fallback:', err.message);
+    // Supabase table insert fallback
   }
 
   // Record into immutable in-memory journal
   inMemoryImmutableAuditLogs.unshift(Object.freeze({ ...record }));
+
+  // Real-Time Push: every audited system change streams to connected clients
+  try {
+    const { notificationsService } = await import('../modules/notifications/notifications.service');
+    notificationsService.broadcastEvent('audit_log_created', record);
+  } catch {
+    // broadcast is best-effort; audit persistence must never fail because of it
+  }
+
   return record;
 }
 

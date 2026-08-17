@@ -3,19 +3,7 @@ import { z } from 'zod';
 import { FinishedGoodsSchema, ReconcileFgSchema } from './finished-goods.schema';
 import { inventoryService } from '../inventory/inventory.service';
 
-const SEED_FINISHED_GOODS = [
-  {
-    id: 'fg-1',
-    orderPo: 'PO-2026-002',
-    partCode: '00000002',
-    partDescription: 'HARDENED BUSH 45X60X80',
-    pdiPassedQty: 150,
-    physicallyHeldQty: 150,
-    dispatchedQty: 0,
-    variance: 0,
-    location: 'FG-BAY-A1'
-  }
-];
+const SEED_FINISHED_GOODS: any[] = [];
 
 export class FinishedGoodsService {
   private db = getDbClient();

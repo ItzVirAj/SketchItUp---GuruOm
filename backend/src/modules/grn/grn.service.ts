@@ -2,63 +2,11 @@ import { getDbClient } from '../../config/database';
 import { z } from 'zod';
 import { GoodsReceiptNoteSchema, UpdateGrnStatusSchema } from './grn.schema';
 import { inventoryMovementsService } from '../inventory/inventory_movements.service';
+import { notificationsService } from '../notifications/notifications.service';
+import { ordersService } from '../orders/orders.service';
+import { logAudit } from '../../services/auditLog';
 
-const SEED_GRNS = [
-  {
-    id: 'grn-1',
-    grnNo: 'GRN-26-081',
-    poNo: 'PO-PUR-2026-001',
-    vendorCode: 'VEND-001',
-    vendorName: 'Mahalaxmi Steel Traders',
-    challanNo: 'CH-MST-9912',
-    challanDate: '2026-08-10',
-    receivedDate: '2026-08-11',
-    receivedBy: 'Suresh Yadav',
-    status: 'QC_VERIFIED',
-    vehicleNo: 'GJ-03-BW-4451',
-    remarks: 'Material test certificate verified at inward gate.',
-    items: [
-      {
-        id: 'grn-item-1',
-        itemCode: 'RAW-ALU-6061-ROD',
-        itemDescription: 'Aluminium 6061 Round Bar Ø50mm',
-        orderedQty: 500,
-        receivedQty: 500,
-        acceptedQty: 500,
-        rejectedQty: 0,
-        unit: 'KG',
-        unitRate: 280
-      }
-    ]
-  },
-  {
-    id: 'grn-2',
-    grnNo: 'GRN-26-082',
-    poNo: 'PO-PUR-2026-002',
-    vendorCode: 'VEND-002',
-    vendorName: 'Apex Tools & Inserts',
-    challanNo: 'INV-APX-4431',
-    challanDate: '2026-08-12',
-    receivedDate: '2026-08-13',
-    receivedBy: 'Rajesh Sharma',
-    status: 'RECEIVED',
-    vehicleNo: 'GJ-03-AX-8910',
-    remarks: 'Delivered by courier.',
-    items: [
-      {
-        id: 'grn-item-2',
-        itemCode: 'TOOL-CNMG-120408',
-        itemDescription: 'CNMG 120408 Turning Carbide Inserts',
-        orderedQty: 50,
-        receivedQty: 50,
-        acceptedQty: 50,
-        rejectedQty: 0,
-        unit: 'NOS',
-        unitRate: 450
-      }
-    ]
-  }
-];
+const SEED_GRNS: any[] = [];
 
 export class GrnService {
   private db = getDbClient();
@@ -214,6 +162,25 @@ export class GrnService {
 
     const createdGrn = { id: grnId, ...validated };
     SEED_GRNS.unshift(createdGrn as any);
+
+    // AUTOMATED CHAIN TRIGGER: Re-evaluate material availability for all orders waiting on raw materials
+    ordersService.recheckMaterialAvailabilityForWaitingOrders().catch(err => {
+      console.warn('Background recheckMaterialAvailability error:', err);
+    });
+
+    // Real-Time Push: Broadcast GRN creation & stock update
+    await logAudit({
+      actorEmail: 'stores@guruom.in',
+      action: 'GRN_RECORDED',
+      entityType: 'goods_receipt_notes',
+      entityId: String(createdGrn.grnNo || createdGrn.id || ''),
+      afterState: { poNo: createdGrn.poNo, vendor: createdGrn.vendorName, receivedQty: createdGrn.receivedQty, status: createdGrn.status },
+      metadata: { details: `GRN ${createdGrn.grnNo} recorded for PO ${createdGrn.poNo} from ${createdGrn.vendorName || 'vendor'}` }
+    }).catch(() => {});
+
+    notificationsService.broadcastEvent('grn_created', createdGrn);
+    notificationsService.broadcastEvent('stock_updated', { grnNo: validated.grnNo, items: validated.items });
+
     return createdGrn;
   }
 
@@ -238,8 +205,18 @@ export class GrnService {
       if (validated.remarks) local.remarks = validated.remarks;
     }
 
-    return { id, ...validated };
+    const updated = { id, ...validated };
+
+    if (validated.status === 'ACCEPTED' || validated.status === 'COMPLETED') {
+      ordersService.recheckMaterialAvailabilityForWaitingOrders().catch(() => {});
+    }
+
+    notificationsService.broadcastEvent('grn_updated', updated);
+    notificationsService.broadcastEvent('stock_updated', { grnId: id, status: validated.status });
+
+    return updated;
   }
 }
 
 export const grnService = new GrnService();
+

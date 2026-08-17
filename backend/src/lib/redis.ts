@@ -24,11 +24,11 @@ export function getRedisClient(): Redis {
     connectTimeout: 2000,
     commandTimeout: 1000,
     retryStrategy(times) {
-      if (times > 3) {
-        // Stop retrying aggressively, retry every 30s quietly
-        return 30000;
+      if (times > 2) {
+        // Stop retrying if Redis is offline / not installed locally
+        return null;
       }
-      return 3000;
+      return 2000;
     }
   };
 

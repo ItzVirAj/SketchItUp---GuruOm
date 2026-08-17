@@ -1,4 +1,4 @@
-import { apiClient } from '../lib/apiClient';
+﻿import { apiClient } from '../lib/apiClient';
 import {
   CustomerOrder,
   StockItem,
@@ -28,28 +28,9 @@ import {
   PurchaseOrder,
   PurchaseOrderItem
 } from '../types/console';
-import {
-  initialOrders,
-  initialStock,
-  initialShortages,
-  initialJobCards,
-  initialFinishedGoods,
-  initialOutworkSendOuts,
-  initialProductionLogs,
-  initialQCQueue,
-  initialPDIQueue,
-  initialDispatches,
-  initialInvoices,
-  initialPayables,
-  initialMasters,
-  initialCustomers,
-  initialVendors,
-  initialMachines,
-  initialUsers,
-  initialAuditLogs,
-  initialCompanyProfile
-} from '../data/consoleData';
 
+// Runtime in-memory caches (no hardcoded data)
+let ordersCache: CustomerOrder[] = [];
 
 
 // ----------------------------------------------------
@@ -73,7 +54,7 @@ export async function fetchCompanyProfile(): Promise<CompanyProfile> {
     if (saved) return JSON.parse(saved);
   } catch (_) {}
 
-  return initialCompanyProfile;
+  return null as unknown as CompanyProfile;
 }
 
 export async function updateCompanyProfile(profile: CompanyProfile): Promise<void> {
@@ -100,17 +81,19 @@ export async function fetchProfiles(): Promise<SystemUser[]> {
   } catch (err) {
     console.warn('fetchProfiles REST error, falling back:', err);
   }
-  return initialUsers;
+  return [];
 }
 
-export async function createProfile(user: Partial<SystemUser>): Promise<SystemUser> {
+export async function createProfile(user: Partial<SystemUser> & { password?: string; requirePasswordChangeFirstLogin?: boolean }): Promise<SystemUser> {
   try {
     const res = await apiClient.post<{ user: any }>('/auth/register', {
       name: user.name,
       email: user.email,
       role: user.role,
       department: user.department,
-      phone: user.phone
+      phone: user.phone || user.mobile,
+      password: user.password,
+      requirePasswordChangeFirstLogin: user.requirePasswordChangeFirstLogin
     });
     return {
       id: res.user.id,
@@ -118,22 +101,13 @@ export async function createProfile(user: Partial<SystemUser>): Promise<SystemUs
       email: res.user.email,
       role: res.user.role as UserRole,
       status: res.user.status,
-      lastLogin: res.user.lastLogin || new Date().toLocaleString('en-IN', { hour12: true }),
+      lastLogin: res.user.lastLogin || 'Never',
       department: res.user.department,
       phone: res.user.phone
     };
   } catch (err) {
     console.warn('createProfile REST error:', err);
-    return {
-      id: `usr-${Date.now()}`,
-      name: user.name || 'New User',
-      email: user.email || 'user@guruom.in',
-      role: (user.role as UserRole) || 'OPERATOR',
-      status: 'ACTIVE',
-      lastLogin: new Date().toLocaleString('en-IN', { hour12: true }),
-      department: user.department,
-      phone: user.phone
-    };
+    throw err instanceof Error ? err : new Error('Failed to create user on backend');
   }
 }
 
@@ -173,22 +147,34 @@ export async function fetchMasters(): Promise<MasterItem[]> {
   } catch (err) {
     console.warn('Backend fetchMasters fallback:', err);
   }
-  return initialMasters;
+  return [];
 }
 
 export async function insertMaster(item: Partial<MasterItem>): Promise<MasterItem> {
-  const payload = {
+  const payload: MasterItem = {
     id: item.code ? `m-${item.code}` : `m-${Date.now()}`,
-    code: item.code || `0000000${Math.floor(10 + Math.random() * 89)}`,
-    partNo: item.partNo || '',
-    description: item.description || 'New Part',
-    unit: item.unit || 'NOS',
+    code: item.code || `RM-${Math.floor(1000 + Math.random() * 9000)}`,
+    name: item.name || item.description || 'New Item',
+    itemType: item.itemType || (item.isFinishedGoods ? 'Finished Good' : 'Raw Material'),
+    category: item.category || '',
+    description: item.description || item.name || 'New Item Description',
+    partNo: item.partNo || item.name || '',
+    unit: item.unit || 'Nos',
     hsnCode: item.hsnCode || '8483',
-    reorderLevel: Number(item.reorderLevel || 10),
+    gstRate: Number(item.gstRate ?? 18),
+    standardCost: Number(item.standardCost ?? item.purchaseRate ?? 0),
+    sellingPrice: Number(item.sellingPrice ?? item.saleRate ?? 0),
+    minStock: Number(item.minStock ?? 0),
+    maxStock: Number(item.maxStock ?? 0),
+    reorderLevel: Number(item.reorderLevel ?? 10),
+    leadTimeDays: Number(item.leadTimeDays ?? 0),
+    preferredVendor: item.preferredVendor || '',
+    defaultWarehouse: item.defaultWarehouse || item.storeLocation || 'Main Store',
     storeLocation: item.storeLocation || 'A1-RACK-1',
-    isFinishedGoods: item.isFinishedGoods ?? true,
-    saleRate: Number(item.saleRate || 100),
-    purchaseRate: Number(item.purchaseRate || 70)
+    isFinishedGoods: item.itemType === 'Finished Good' || Boolean(item.isFinishedGoods),
+    saleRate: Number(item.sellingPrice ?? item.saleRate ?? 0),
+    purchaseRate: Number(item.standardCost ?? item.purchaseRate ?? 0),
+    status: item.status || 'Active'
   };
 
   try {
@@ -207,33 +193,236 @@ export async function fetchOrders(): Promise<CustomerOrder[]> {
   try {
     const res = await apiClient.get<{ data: CustomerOrder[] }>('/orders');
     if (res?.data && res.data.length > 0) {
-      return res.data;
+      // Merge with ordersCache in case local confirmation occurred
+      const merged = res.data.map(d => {
+        const local = ordersCache.find(i => i.id === d.id || i.poNo === d.poNo);
+        if (local && (local.status === 'CONFIRMED' || local.status === 'APPROVED' || (local.progressStep || 1) >= 2)) {
+          return {
+            ...d,
+            status: local.status,
+            stage: local.stage,
+            progressStep: local.progressStep,
+            heatLotNumber: local.heatLotNumber || d.heatLotNumber
+          };
+        }
+        return d;
+      });
+
+      const parseDateToTimestamp = (val?: string | number | null): number => {
+        if (!val) return 0;
+        if (typeof val === 'number') return val > 0 ? val : 0;
+        const str = String(val).trim();
+        if (!str) return 0;
+        if (/^\d{10,13}$/.test(str)) {
+          const num = parseInt(str, 10);
+          if (!isNaN(num) && num > 0) return num;
+        }
+        const idMatch = str.match(/ord-(\d{10,13})/);
+        if (idMatch) {
+          const num = parseInt(idMatch[1], 10);
+          if (!isNaN(num) && num > 0) return num;
+        }
+        const ddmmyyyy = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+        if (ddmmyyyy) {
+          const day = parseInt(ddmmyyyy[1], 10);
+          const month = parseInt(ddmmyyyy[2], 10) - 1;
+          const year = parseInt(ddmmyyyy[3], 10);
+          const d = new Date(year, month, day).getTime();
+          if (!isNaN(d) && d > 0) return d;
+        }
+        const parsed = new Date(str).getTime();
+        if (!isNaN(parsed) && parsed > 0) return parsed;
+        return 0;
+      };
+
+      const getOrderTime = (o: CustomerOrder): number => {
+        if (o.createdAt) {
+          const t = parseDateToTimestamp(o.createdAt);
+          if (t > 0) return t;
+        }
+        const idTime = parseDateToTimestamp(o.id);
+        if (idTime > 0) return idTime;
+        if (o.poDate) {
+          const t = parseDateToTimestamp(o.poDate);
+          if (t > 0) return t;
+        }
+        if (o.orderDate) {
+          const t = parseDateToTimestamp(o.orderDate);
+          if (t > 0) return t;
+        }
+        if (o.deliveryDate) {
+          const t = parseDateToTimestamp(o.deliveryDate);
+          if (t > 0) return t;
+        }
+        return 0;
+      };
+
+      // Global Recency Sort: newest orders first (createdAt / poDate / ID DESC)
+      merged.sort((a, b) => {
+        const timeB = getOrderTime(b);
+        const timeA = getOrderTime(a);
+        if (timeB !== timeA) return timeB - timeA;
+        return String(b.id || b.poNo).localeCompare(String(a.id || a.poNo), undefined, { numeric: true });
+      });
+
+      return merged;
     }
   } catch (err) {
     console.warn('Backend fetchOrders fallback:', err);
   }
-  return initialOrders;
+
+  const parseDateToTimestamp = (val?: string | number | null): number => {
+    if (!val) return 0;
+    if (typeof val === 'number') return val > 0 ? val : 0;
+    const str = String(val).trim();
+    if (!str) return 0;
+    if (/^\d{10,13}$/.test(str)) {
+      const num = parseInt(str, 10);
+      if (!isNaN(num) && num > 0) return num;
+    }
+    const idMatch = str.match(/ord-(\d{10,13})/);
+    if (idMatch) {
+      const num = parseInt(idMatch[1], 10);
+      if (!isNaN(num) && num > 0) return num;
+    }
+    const ddmmyyyy = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+    if (ddmmyyyy) {
+      const day = parseInt(ddmmyyyy[1], 10);
+      const month = parseInt(ddmmyyyy[2], 10) - 1;
+      const year = parseInt(ddmmyyyy[3], 10);
+      const d = new Date(year, month, day).getTime();
+      if (!isNaN(d) && d > 0) return d;
+    }
+    const parsed = new Date(str).getTime();
+    if (!isNaN(parsed) && parsed > 0) return parsed;
+    return 0;
+  };
+
+  const getOrderTime = (o: CustomerOrder): number => {
+    if (o.createdAt) {
+      const t = parseDateToTimestamp(o.createdAt);
+      if (t > 0) return t;
+    }
+    const idTime = parseDateToTimestamp(o.id);
+    if (idTime > 0) return idTime;
+    if (o.poDate) {
+      const t = parseDateToTimestamp(o.poDate);
+      if (t > 0) return t;
+    }
+    if (o.orderDate) {
+      const t = parseDateToTimestamp(o.orderDate);
+      if (t > 0) return t;
+    }
+    if (o.deliveryDate) {
+      const t = parseDateToTimestamp(o.deliveryDate);
+      if (t > 0) return t;
+    }
+    return 0;
+  };
+
+  return [...ordersCache].sort((a, b) => {
+    const timeB = getOrderTime(b);
+    const timeA = getOrderTime(a);
+    if (timeB !== timeA) return timeB - timeA;
+    return String(b.id || b.poNo).localeCompare(String(a.id || a.poNo), undefined, { numeric: true });
+  });
 }
 
 export async function fetchOrderById(orderId: string): Promise<CustomerOrder | null> {
   try {
     const res = await apiClient.get<{ data: CustomerOrder }>(`/orders/${orderId}`);
     if (res?.data) {
+      const local = ordersCache.find(i => i.id === res.data.id || i.poNo === res.data.poNo);
+      if (local && (local.status === 'CONFIRMED' || local.status === 'APPROVED' || (local.progressStep || 1) >= 2)) {
+        return { ...res.data, status: local.status, stage: local.stage, progressStep: local.progressStep };
+      }
       return res.data;
     }
   } catch (err) {
     console.warn(`Backend fetchOrderById (${orderId}) fallback:`, err);
   }
-  const fallback = initialOrders.find(o => o.id === orderId || o.poNo === orderId);
+  const fallback = ordersCache.find(o => o.id === orderId || o.poNo === orderId);
   return fallback || null;
 }
 
 export async function insertOrder(order: CustomerOrder): Promise<void> {
-  await apiClient.post('/orders', order);
+  const idx = ordersCache.findIndex(o => o.id === order.id || o.poNo === order.poNo);
+  if (idx >= 0) {
+    ordersCache[idx] = { ...ordersCache[idx], ...order };
+  } else {
+    ordersCache.unshift(order);
+  }
+  try {
+    await apiClient.post('/orders', order);
+  } catch (err) {
+    console.warn('Backend insertOrder fallback:', err);
+  }
+}
+
+export async function confirmOrder(orderId: string): Promise<CustomerOrder> {
+  const updates: Partial<CustomerOrder> = {
+    status: 'CONFIRMED',
+    stage: 'CONFIRMED',
+    progressStep: 2
+  };
+  const idx = ordersCache.findIndex(o => o.id === orderId || o.poNo === orderId);
+  if (idx >= 0) {
+    ordersCache[idx] = { ...ordersCache[idx], ...updates };
+  } else {
+    ordersCache.unshift({ id: orderId, poNo: orderId, ...updates } as any);
+  }
+
+  try {
+    const res = await apiClient.post<{ data: CustomerOrder }>(`/orders/${orderId}/confirm`, updates);
+    if (res?.data) {
+      if (idx >= 0) {
+        ordersCache[idx] = { ...ordersCache[idx], ...res.data };
+      }
+      return res.data;
+    }
+  } catch (err) {
+    console.warn(`Backend confirmOrder (${orderId}) fallback to status patch:`, err);
+    try {
+      await apiClient.patch(`/orders/${orderId}/status`, { status: 'CONFIRMED', progressStep: 2 });
+    } catch (patchErr) {
+      console.warn(`Backend status patch (${orderId}) fallback:`, patchErr);
+    }
+  }
+
+  return (idx >= 0 ? ordersCache[idx] : { id: orderId, poNo: orderId, ...updates }) as CustomerOrder;
+}
+
+export async function updateOrder(orderId: string, updates: Partial<CustomerOrder>): Promise<void> {
+  const idx = ordersCache.findIndex(o => o.id === orderId || o.poNo === orderId);
+  if (idx >= 0) {
+    ordersCache[idx] = { ...ordersCache[idx], ...updates };
+  } else {
+    ordersCache.unshift({ id: orderId, poNo: orderId, ...updates } as any);
+  }
+  try {
+    await apiClient.patch(`/orders/${orderId}`, updates);
+  } catch (err) {
+    console.warn(`Backend updateOrder (${orderId}) fallback:`, err);
+  }
 }
 
 export async function updateOrderStatus(orderId: string, status: string, progressStep?: number): Promise<void> {
-  await apiClient.patch(`/orders/${orderId}/status`, { status, progressStep });
+  const updates: Partial<CustomerOrder> = {
+    status,
+    stage: status,
+    ...(progressStep ? { progressStep } : {})
+  };
+  const idx = ordersCache.findIndex(o => o.id === orderId || o.poNo === orderId);
+  if (idx >= 0) {
+    ordersCache[idx] = { ...ordersCache[idx], ...updates };
+  } else {
+    ordersCache.unshift({ id: orderId, poNo: orderId, ...updates } as any);
+  }
+  try {
+    await apiClient.patch(`/orders/${orderId}/status`, { status, progressStep });
+  } catch (err) {
+    console.warn(`Backend updateOrderStatus (${orderId}) fallback:`, err);
+  }
 }
 
 // Local Storage Fallback Helpers for Masters
@@ -299,7 +488,7 @@ export async function fetchCustomers(): Promise<CustomerMaster[]> {
   }
 
   const map = new Map<string, CustomerMaster>();
-  [...localCustom, ...dbCustomers, ...initialCustomers].forEach(item => {
+  [...localCustom, ...dbCustomers].forEach(item => {
     if (item.code && !map.has(item.code)) {
       map.set(item.code, item);
     }
@@ -334,7 +523,7 @@ export async function fetchVendors(): Promise<VendorMaster[]> {
   }
 
   const map = new Map<string, VendorMaster>();
-  [...localCustom, ...dbVendors, ...initialVendors].forEach(item => {
+  [...localCustom, ...dbVendors].forEach(item => {
     if (item.code && !map.has(item.code)) {
       map.set(item.code, item);
     }
@@ -369,7 +558,7 @@ export async function fetchMachines(): Promise<MachineMaster[]> {
   }
 
   const map = new Map<string, MachineMaster>();
-  [...localCustom, ...dbMachines, ...initialMachines].forEach(item => {
+  [...localCustom, ...dbMachines].forEach(item => {
     if (item.code && !map.has(item.code)) {
       map.set(item.code, item);
     }
@@ -402,14 +591,15 @@ export async function fetchStock(): Promise<StockItem[]> {
   } catch (err) {
     console.warn('Backend fetchStock fallback:', err);
   }
-  return initialStock;
+  return [];
 }
 
-export async function adjustStockItem(code: string, newOnHand: number): Promise<void> {
+export async function adjustStockItem(code: string, newOnHand: number, reason?: string): Promise<void> {
   try {
-    await apiClient.put(`/inventory/stock/${code}`, { newOnHand });
+    await apiClient.put(`/inventory/stock/${code}`, { newOnHand, reason });
   } catch (err) {
     console.warn('Backend adjustStockItem fallback:', err);
+    throw err instanceof Error ? err : new Error(`Failed to adjust stock for ${code}`);
   }
 }
 
@@ -422,7 +612,7 @@ export async function fetchShortages(): Promise<ShortageItem[]> {
   } catch (err) {
     console.warn('Backend fetchShortages fallback:', err);
   }
-  return initialShortages;
+  return [];
 }
 
 // ----------------------------------------------------
@@ -436,7 +626,10 @@ export async function fetchInventoryMovements(filters?: {
   limit?: number;
 }): Promise<{ movements: any[]; total: number }> {
   try {
-    const res = await apiClient.get<any>('/inventory/movements', { params: filters });
+    const qs = new URLSearchParams(
+      Object.entries(filters || {}).filter(([, v]) => v !== undefined && v !== null).map(([k, v]) => [k, String(v)])
+    ).toString();
+    const res = await apiClient.get<any>(`/inventory/movements${qs ? `?${qs}` : ''}`);
     if (res?.movements) {
       return res;
     }
@@ -503,24 +696,50 @@ export async function reverseInventoryMovement(id: string, reason: string): Prom
 // ----------------------------------------------------
 export async function fetchJobCards(): Promise<JobCard[]> {
   try {
-    const res = await apiClient.get<{ data: JobCard[] }>('/production/jobs');
+    const res = await apiClient.get<{ data: JobCard[] }>('/production/job-cards');
     if (res?.data && res.data.length > 0) {
       return res.data;
     }
   } catch (err) {
     console.warn('fetchJobCards REST API error, falling back:', err);
   }
-  return initialJobCards;
+  return [];
 }
 
 export async function insertJobCard(job: JobCard): Promise<void> {
   try {
-    await apiClient.post('/production/jobs', job);
+    await apiClient.post('/production/job-cards', job);
   } catch (err) {
     console.warn('insertJobCard REST API error:', err);
   }
 }
 
+// Creates a job card against the backend Job Card release API (one per order line item)
+export async function createJobCardForOrder(payload: {
+  orderId?: string;
+  orderPo: string;
+  partCode: string;
+  partDescription: string;
+  drawingRevision?: string;
+  targetQty: number;
+  materialIssuedLot?: string;
+  targetDate?: string;
+  remarks?: string;
+}): Promise<any> {
+  const body = {
+    drawingRevision: payload.drawingRevision || 'REV-A',
+    materialIssuedLot: payload.materialIssuedLot || 'HEAT-LOT-NA',
+    targetDate: payload.targetDate || new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10),
+    ...payload
+  };
+  try {
+    const res = await apiClient.post<{ data: any }>('/production/job-cards', body);
+    if (res?.data) return res.data;
+  } catch (err) {
+    console.warn('Backend createJobCardForOrder fallback:', err);
+  }
+  return { jobNo: `JC/${payload.partCode}/${Date.now().toString().slice(-5)}`, ...body, status: 'RELEASED' };
+}
 // ----------------------------------------------------
 // Production Logs Services (via REST API)
 // ----------------------------------------------------
@@ -533,7 +752,7 @@ export async function fetchProductionLogs(): Promise<ProductionLogReport[]> {
   } catch (err) {
     console.warn('fetchProductionLogs REST API error, falling back:', err);
   }
-  return initialProductionLogs;
+  return [];
 }
 
 export async function insertProductionLogAndQC(job: JobCard, qtyDone: number): Promise<void> {
@@ -564,10 +783,44 @@ export async function fetchQCQueue(): Promise<QCInspection[]> {
   } catch (err) {
     console.warn('fetchQCQueue REST API error, falling back:', err);
   }
-  return initialQCQueue;
+  return [];
 }
 
 export async function updateQCInspection(id: string, qcStatus: 'PASS' | 'QC_HOLD' | 'REJECTED', notes?: string): Promise<void> {
+  const target = [].find(q => q.id === id);
+  const targetPo = target?.orderPo;
+
+  // Synchronize all matching inspections in [] for this order
+  [].forEach(q => {
+    if (q.id === id || (targetPo && q.orderPo === targetPo)) {
+      q.qcStatus = qcStatus;
+      if (notes) q.inspectorNotes = notes;
+      q.inspectedAt = new Date().toISOString();
+    }
+  });
+
+  if (targetPo) {
+    const order = ordersCache.find(o => o.poNo === targetPo || o.id === targetPo);
+    if (order) {
+      if (qcStatus === 'PASS') {
+        order.hasOpenNcr = false;
+        order.stage = 'QC_INSPECTION';
+        order.status = 'QC_INSPECTION';
+        order.progressStep = Math.max(order.progressStep || 1, 6);
+      } else {
+        order.hasOpenNcr = true;
+      }
+    }
+  }
+
+  // Sync corresponding job card
+  if (target?.jobNo) {
+    const job = [].find(j => j.jobNo === target.jobNo || j.id === target.jobNo);
+    if (job) {
+      job.status = qcStatus === 'PASS' ? 'COMPLETED' : 'QC_HOLD';
+    }
+  }
+
   try {
     await apiClient.patch(`/qc/inspections/${id}/review`, {
       qcStatus,
@@ -587,7 +840,7 @@ export async function fetchPDIQueue(): Promise<PDIInspection[]> {
   } catch (err) {
     console.warn('fetchPDIQueue REST API error, falling back:', err);
   }
-  return initialPDIQueue;
+  return [];
 }
 
 export async function passPDIInspection(id: string): Promise<void> {
@@ -620,7 +873,7 @@ export async function fetchFinishedGoods(): Promise<FinishedGoodsItem[]> {
   } catch (err) {
     console.warn('fetchFinishedGoods REST API error, falling back:', err);
   }
-  return initialFinishedGoods;
+  return [];
 }
 
 export async function fetchOutworkSendOuts(): Promise<OutworkSendOut[]> {
@@ -632,7 +885,7 @@ export async function fetchOutworkSendOuts(): Promise<OutworkSendOut[]> {
   } catch (err) {
     console.warn('fetchOutworkSendOuts REST API error, falling back:', err);
   }
-  return initialOutworkSendOuts;
+  return [];
 }
 
 export async function insertOutworkSendOut(outwork: OutworkSendOut): Promise<void> {
@@ -676,7 +929,7 @@ export async function fetchDispatches(): Promise<DispatchChallan[]> {
   } catch (err) {
     console.warn('fetchDispatches REST API error, falling back:', err);
   }
-  return initialDispatches;
+  return [];
 }
 
 export async function insertDispatchChallan(challan: DispatchChallan): Promise<void> {
@@ -710,7 +963,7 @@ export async function fetchInvoices(): Promise<CustomerInvoice[]> {
   } catch (err) {
     console.warn('fetchInvoices REST API error, falling back:', err);
   }
-  return initialInvoices;
+  return [];
 }
 
 export async function insertCustomerInvoice(inv: CustomerInvoice): Promise<void> {
@@ -733,7 +986,7 @@ export async function insertCustomerInvoice(inv: CustomerInvoice): Promise<void>
 }
 
 export async function payInvoice(invoiceNo: string, paymentAmount?: number): Promise<void> {
-  const local = initialInvoices.find(i => i.id === invoiceNo || i.invoiceNo === invoiceNo);
+  const local = [].find(i => i.id === invoiceNo || i.invoiceNo === invoiceNo);
   if (local) {
     const payAmt = paymentAmount !== undefined ? paymentAmount : local.balanceAmount;
     local.paidAmount = Math.min(local.totalAmount, local.paidAmount + payAmt);
@@ -759,7 +1012,7 @@ export async function fetchPayables(): Promise<VendorBill[]> {
   } catch (err) {
     console.warn('fetchPayables REST API error, falling back:', err);
   }
-  return initialPayables;
+  return [];
 }
 
 export async function insertVendorBill(bill: VendorBill): Promise<void> {
@@ -781,7 +1034,7 @@ export async function insertVendorBill(bill: VendorBill): Promise<void> {
 }
 
 export async function payVendorBill(billNo: string, paymentAmount?: number): Promise<void> {
-  const local = initialPayables.find(b => b.id === billNo || b.billNo === billNo);
+  const local = [].find(b => b.id === billNo || b.billNo === billNo);
   if (local) {
     const payAmt = paymentAmount !== undefined ? paymentAmount : local.balanceAmount;
     local.paidAmount = Math.min(local.amount, local.paidAmount + payAmt);
@@ -850,7 +1103,10 @@ export async function fetchAuditLogs(filters?: {
   limit?: number;
 }): Promise<AuditLogEntry[]> {
   try {
-    const res = await apiClient.get<any>('/audit', { params: filters });
+    const qs = new URLSearchParams(
+      Object.entries(filters || {}).filter(([, v]) => v !== undefined && v !== null).map(([k, v]) => [k, String(v)])
+    ).toString();
+    const res = await apiClient.get<any>(`/audit${qs ? `?${qs}` : ''}`);
     const list = res?.logs || res?.data || (Array.isArray(res) ? res : []);
     if (list && list.length > 0) {
       return list.map((item: any) => ({
@@ -875,7 +1131,7 @@ export async function fetchAuditLogs(filters?: {
   } catch (err) {
     console.warn('fetchAuditLogs REST API error, falling back:', err);
   }
-  return initialAuditLogs;
+  return [];
 }
 
 export async function insertAuditLog(entity: string, action: string, details: string, userName: string): Promise<void> {
@@ -993,5 +1249,6 @@ export async function insertPurchaseOrder(po: PurchaseOrder): Promise<PurchaseOr
 export async function reviewPurchaseOrder(id: string, decision: 'APPROVE' | 'REJECT', reason?: string): Promise<void> {
   await apiClient.patch(`/purchasing/${id}/review`, { decision, reason });
 }
+
 
 

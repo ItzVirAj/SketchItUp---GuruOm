@@ -287,22 +287,14 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
     }
   });
 
-  const dynamicTopProducts = Object.keys(productSalesMap).length >= 5 
-    ? Object.entries(productSalesMap).slice(0, 5).map(([name, sales], idx) => ({
-        name,
-        sales: Math.min(1000, Math.max(200, sales * 15)),
-        active: idx === 1
-      }))
-    : [
-        { name: 'Flange Housing', sales: 340, active: false },
-        { name: 'CNC Valve Body', sales: 880, active: true },
-        { name: 'Precision Shaft', sales: 540, active: false },
-        { name: 'Spur Gear', sales: 240, active: false },
-        { name: 'Brass Bushing', sales: 540, active: false }
-      ];
+  const dynamicTopProducts = Object.entries(productSalesMap).slice(0, 5).map(([name, sales], idx) => ({
+    name,
+    sales: Math.min(1000, Math.max(200, sales * 15)),
+    active: idx === 0
+  }));
 
   // Activities log merged with realtime auditLogs and live fallback stream
-  const formattedActivities = auditLogs.length > 0 ? auditLogs.map(log => ({
+  const formattedActivities = auditLogs.map(log => ({
     time: log.when || 'Just now',
     activity: log.details || `${log.entity} status updated`,
     category: log.entity || 'System',
@@ -314,12 +306,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
       : log.details?.toLowerCase().includes('cancel') || log.details?.toLowerCase().includes('hold') 
       ? 'Cancelled' 
       : 'Completed'
-  })) : [
-    { time: '10 min ago', activity: 'Order #PO-2026-901 moved to Processing', category: 'Order', user: 'Admin', status: 'Processing' },
-    { time: '35 min ago', activity: 'Order #PO-2026-880 has been Completed', category: 'Order', user: 'System', status: 'Completed' },
-    { time: '1h ago', activity: '30 units of Flange Housing (SKU-FLG203) added to stock', category: 'Inventory', user: 'Warehouse Staff', status: 'Completed' },
-    { time: '3h ago', activity: 'Order #PO-2026-872 was Cancelled', category: 'Order', user: 'Admin', status: 'Cancelled' }
-  ];
+  }));
 
   const filteredActivities = formattedActivities.filter(act => {
     const matchesSearch = act.activity.toLowerCase().includes(activitySearchQuery.toLowerCase()) ||

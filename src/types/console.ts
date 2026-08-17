@@ -16,16 +16,38 @@ export type ConsoleView =
   | 'masters'
   | 'users-audit'
   | 'company-profile'
-  | 'workflow-testing';
+  | 'workflow-testing'
+  | 'purchasing'
+  | 'grn'
+  | 'bom';
 
 export type UserRole = 'SUPER ADMIN' | 'OPERATOR' | 'QC_MANAGER' | 'DISPATCH_CLERK' | 'FINANCE_MANAGER';
 
+export type ConsoleUser = SystemUser;
+
 export type OrderStatus = 
+  | 'DRAFT'
   | 'CONFIRMED'
+  | 'PENDING_VERIFICATION'
+  | 'MATERIAL_VERIFIED'
+  | 'MATERIAL_SHORT'
+  | 'PO_SENT'
+  | 'GRN_RECEIVED'
+  | 'JOB_RELEASED'
+  | 'WITH_SUBCONTRACTOR'
   | 'IN_PRODUCTION'
+  | 'READY_FOR_QC'
+  | 'QC_REPORT_UPLOADED'
+  | 'PDI_COMPLETE'
+  | 'REWORK'
   | 'PARTIALLY_DISPATCHED'
+  | 'READY_FOR_DISPATCH'
+  | 'INVOICE_GENERATED'
+  | 'DISPATCH_READY'
+  | 'IN_TRANSIT'
   | 'DISPATCHED'
   | 'DELIVERED'
+  | 'PAYMENT_PENDING'
   | 'INVOICED'
   | 'PAID'
   | 'CLOSED'
@@ -41,6 +63,7 @@ export interface OrderLineItem {
   dispatchedQty: number;
   pendingQty: number;
   rate: number;
+  drawingRevision?: string;
 }
 
 export interface LinkedJobCard {
@@ -54,7 +77,12 @@ export interface LinkedDispatch {
   challanNo: string;
   items: string;
   date: string;
-  status: 'GENERATED' | 'DISPATCHED' | 'DELIVERED';
+  status: 'GENERATED' | 'DISPATCHED' | 'IN_TRANSIT' | 'DELIVERED';
+  podDocumentUrl?: string;
+  podAttachmentName?: string;
+  podReceivedAt?: string;
+  transporterName?: string;
+  vehicleNo?: string;
 }
 
 export interface CustomerOrder {
@@ -63,12 +91,42 @@ export interface CustomerOrder {
   customerName: string;
   poDate: string;
   deliveryDate: string;
-  status: OrderStatus;
-  progressStep: number; // 0 to 6 (Confirmed, Production, PDI, Dispatched, Delivered, Invoiced, Paid)
+  status: OrderStatus | string;
+  stage?: string;
+  progressStep: number; // 1 to 10
   grossAmount: number;
   taxCategory?: string;
   remark?: string;
   clientPoFile?: string;
+  subType?: 'FRESH_PO' | 'BLANKET_CALLOFF' | 'AMENDMENT';
+  blanketPoId?: string;
+  blanketPoBalance?: number;
+  drawingRevision?: string;
+  masterDrawingRevision?: string;
+  isDrawingRevisionMatched?: boolean;
+  heatLotNumber?: string;
+  hasOpenNcr?: boolean;
+  openNcrNumbers?: string[];
+  isCustomerOnCreditHold?: boolean;
+  creditHoldOverrideBy?: string;
+  creditHoldOverrideReason?: string;
+  priceAmendmentStatus?: string;
+  purchaseRequisitionNo?: string;
+  // PRD v1.0: Payment tracking
+  paymentStatus?: 'UNPAID' | 'PARTIAL' | 'PAID';
+  paidAmount?: number;
+  outstandingAmount?: number;
+  // PRD v1.0: POD tracking
+  podDocumentUrl?: string;
+  podAttachmentName?: string;
+  podReceivedAt?: string;
+  // PRD v1.0: Change Order versioning
+  version?: number;
+  changeOrderNotes?: string;
+  revisionComments?: string;
+  orderDate?: string;
+  createdAt?: string;
+  updatedAt?: string;
   lines: OrderLineItem[];
   jobCards: LinkedJobCard[];
   dispatches: LinkedDispatch[];
@@ -135,16 +193,84 @@ export interface StockReconciliationReport {
   lastMovementAt?: string;
 }
 
-export interface JobCard {
+export interface RouteCardTemplateStep {
+  id: string;
+  partCode: string;
+  partDescription: string;
+  sequenceNo: number;
+  operationName: string;
+  workCenter: string;
+  standardTimeMinutes: number;
+  inspectionRequired: boolean;
+  requiredCertification: string;
+}
+
+export interface JobCardOperation {
+  id: string;
+  jobCardId?: string;
   jobNo: string;
+  sequenceNo: number;
+  operationName: string;
+  machineId?: string;
+  operatorName?: string;
+  requiredCertification?: string;
+  isCertificationVerified?: boolean;
+  standardTimeMinutes?: number;
+  actualStartTime?: string;
+  actualEndTime?: string;
+  actualTimeMinutes?: number;
+  qtyProcessed: number;
+  qtyRejected: number;
+  inspectionRequired?: boolean;
+  inspectionPassed?: boolean;
+  opStatus: 'PENDING' | 'IN_PROGRESS' | 'PAUSED' | 'COMPLETED' | 'QC_HOLD' | string;
+  notes?: string;
+}
+
+export interface JobCard {
+  id?: string;
+  jobNo: string;
+  orderId?: string;
   orderPo: string;
   partCode: string;
   partDescription: string;
-  orderStatus: OrderStatus;
-  qty: number;
-  machine: string;
+  drawingRevision?: string; // LOCKED at release
+  orderStatus?: OrderStatus | string;
+  qty?: number;
+  targetQty?: number;
+  machine?: string;
+  materialIssuedLot?: string;
+  materialQcStatus?: 'ACCEPTED' | 'QUALITY_HOLD' | 'PENDING_INSPECTION' | string;
+  currentStepNo?: number;
+  currentOperation?: string;
   targetDate: string;
-  status: 'SCHEDULED' | 'IN_PRODUCTION' | 'QC_HOLD' | 'COMPLETED';
+  status?: 'SCHEDULED' | 'IN_PRODUCTION' | 'NOT_STARTED' | 'IN_PROGRESS' | 'QC_HOLD' | 'COMPLETED' | string;
+  jobStatus?: 'NOT_STARTED' | 'IN_PROGRESS' | 'QC_HOLD' | 'COMPLETED' | string;
+  hasOpenNcr?: boolean;
+  ncrReference?: string;
+  supervisorSignOff?: string;
+  remarks?: string;
+  operations?: JobCardOperation[];
+}
+
+export interface NcrRecord {
+  id: string;
+  ncrNumber: string;
+  jobCardId?: string;
+  jobNo: string;
+  sequenceNo: number;
+  operationName: string;
+  orderPo: string;
+  defectCategory: 'DIMENSIONAL' | 'VISUAL_SURFACE' | 'MATERIAL_HARDNESS' | 'MACHINING_CHATTER' | 'RUNOUT_EXCEEDED' | 'OTHER' | string;
+  defectDescription: string;
+  rejectedQty: number;
+  status: 'OPEN' | 'RESOLVED' | 'CLOSED' | string;
+  disposition?: 'REWORK' | 'SCRAP' | 'USE_AS_IS_CONCESSION' | string;
+  dispositionApprovedBy?: string;
+  dispositionReason?: string;
+  dispositionDate?: string;
+  raisedBy: string;
+  raisedAt?: string;
 }
 
 export interface FinishedGoodsItem {
@@ -211,13 +337,16 @@ export interface PDIInspection {
 export interface DispatchChallan {
   challanNo: string;
   orderPo: string;
-  status: 'GENERATED' | 'DISPATCHED' | 'DELIVERED';
+  status: 'GENERATED' | 'DISPATCHED' | 'IN_TRANSIT' | 'DELIVERED';
   date: string;
   transporter: string;
   vehicleNo: string;
   linesCount: number;
   driverContact?: string;
   totalInvoiceValue?: number;
+  podDocumentUrl?: string;
+  podAttachmentName?: string;
+  podReceivedAt?: string;
 }
 
 export interface PendingApproval {
@@ -230,7 +359,129 @@ export interface PendingApproval {
   details: string;
 }
 
+export interface PurchaseRequisition {
+  id: string;
+  reqNumber: string;
+  source: 'LOW_STOCK_ALERT' | 'PRODUCTION_SHORTAGE' | 'MANUAL' | string;
+  orderId?: string;
+  orderPo?: string;
+  itemCode: string;
+  itemDescription: string;
+  requiredQty: number;
+  availableStock: number;
+  deficitQty: number;
+  unit: string;
+  urgency: 'NORMAL' | 'URGENT' | 'CRITICAL' | string;
+  status: 'DRAFT' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'CONVERTED_TO_PO' | string;
+  requestedBy: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  poNumber?: string;
+  rejectionReason?: string;
+  createdAt?: string;
+}
+
+export interface GoodsReceiptNote {
+  id?: string;
+  grnNo: string;
+  poNo: string;
+  supplierName?: string;
+  vendorCode?: string;
+  vendorName?: string;
+  itemCode?: string;
+  itemDescription?: string;
+  poExpectedQty?: number;
+  receivedQty?: number;
+  acceptedQty?: number;
+  rejectedQty?: number;
+  unit?: string;
+  unitPrice?: number;
+  isQtyMismatched?: boolean;
+  mismatchNotes?: string;
+  heatLotNumber?: string;
+  deliveryChallanNo?: string;
+  challanNo?: string;
+  challanDate?: string;
+  carrier?: string;
+  vehicleNo?: string;
+  remarks?: string;
+  receivedDate: string;
+  receivedBy?: string;
+  inspectionStatus?: 'PENDING_INSPECTION' | 'PASSED' | 'PARTIAL_REJECT' | 'REJECTED' | 'QC_VERIFIED' | string;
+  status?: 'PENDING_INSPECTION' | 'RECEIVED' | 'QC_VERIFIED' | 'REJECTED' | string;
+  inspectedBy?: string;
+  storeKeeperName?: string;
+  items?: GrnItem[];
+}
+
+export interface VendorReturn {
+  id: string;
+  returnNo: string;
+  grnNo: string;
+  poNo: string;
+  supplierName: string;
+  itemCode: string;
+  itemDescription: string;
+  rejectedQty: number;
+  defectCategory: string;
+  defectNotes: string;
+  status: 'INITIATED' | 'PENDING_APPROVAL' | 'APPROVED' | 'DISPATCHED_TO_VENDOR' | string;
+  initiatedBy: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  debitNoteNumber?: string;
+  debitAmount?: number;
+}
+
+export interface VendorScorecard {
+  id: string;
+  supplierCode: string;
+  supplierName: string;
+  evaluationPeriod: string;
+  totalOrders: number;
+  totalDeliveries: number;
+  onTimeDeliveries: number;
+  otdPercentage: number;
+  totalReceivedQty: number;
+  acceptedQty: number;
+  rejectedQty: number;
+  qualityAcceptancePercentage: number;
+  overallScore: number;
+  vendorRatingTier: 'TIER_1_EXCELLENT' | 'TIER_2_SATISFACTORY' | 'TIER_3_PROBATION' | string;
+  evaluatedBy?: string;
+}
+
+export interface SubcontractOrder {
+  id: string;
+  gatePassNo: string; // GP-OUT-2026-####
+  jobNo: string;
+  itemCode: string;
+  itemDescription: string;
+  subcontractorName: string;
+  processType: 'HEAT_TREATMENT' | 'ELECTROPLATING' | 'ZINC_PLATING' | 'NDT_TESTING' | 'CNC_MACHINING' | 'BLACK_OXIDE' | 'OTHER' | string;
+  dispatchedQty: number;
+  unit: string;
+  dispatchDate: string;
+  expectedReturnDate: string;
+  actualReturnDate?: string;
+  gateInPassNo?: string;
+  receivedQty?: number;
+  rejectedQty?: number;
+  qcStatus: 'PENDING_GATE_IN' | 'INSPECTED_ACCEPTED' | 'INSPECTED_REJECTED' | string;
+  status: 'OUT_FOR_JOBWORK' | 'OVERDUE_JOBWORK' | 'RETURNED_INSPECTED' | 'CLOSED' | string;
+  isOverdue: boolean;
+  overdueDays: number;
+  vehicleDetails?: string;
+  transporter?: string;
+  unitRate?: number;
+  totalProcessCost?: number;
+  dispatchedBy: string;
+  receivedBy?: string;
+  notes?: string;
+}
+
 export interface CustomerInvoice {
+  id?: string;
   invoiceNo: string;
   customerName: string;
   orderPo: string;
@@ -244,6 +495,7 @@ export interface CustomerInvoice {
 }
 
 export interface VendorBill {
+  id?: string;
   billNo: string;
   vendorName: string;
   poNo: string;
@@ -253,89 +505,138 @@ export interface VendorBill {
   amount: number;
   paidAmount: number;
   balanceAmount: number;
+  grnNo?: string;
+  isThreeWayMatched?: boolean;
+  matchStatus?: 'MATCHED' | 'PRICE_VARIANCE_FLAGGED' | 'QTY_VARIANCE_FLAGGED' | 'PRICE_AND_QTY_VARIANCE';
+  varianceDetails?: string;
 }
 
 export interface MasterItem {
-  code: string;
-  partNo: string;
+  id?: string;
+  code: string; // RM-#### / FG-#### / SF-#### / CO-#### / BO-#### / ITM-####
+  name?: string; // item_name*
+  itemType?: 'Raw Material' | 'Semi-Finished' | 'Finished Good' | 'Consumable' | 'Bought-Out' | 'Other' | string;
+  category?: string;
   description: string;
-  unit: string;
-  hsnCode: string;
+  partNo?: string;
+  unit: 'Nos' | 'Kg' | 'Meter' | 'Litre' | 'Set' | 'Box' | string; // uom*
+  hsnCode: string; // 4-8 digit
+  gstRate?: number; // 0, 5, 12, 18, 28
+  standardCost?: number; // required if RM, Consumable, Bought-Out
+  sellingPrice?: number; // required if Finished Good
+  minStock?: number;
+  maxStock?: number;
   reorderLevel: number;
-  storeLocation: string;
-  isFinishedGoods: boolean;
-  saleRate: number;
-  purchaseRate: number;
+  leadTimeDays?: number;
+  preferredVendor?: string; // ref: Vendor
+  defaultWarehouse?: string;
+  storeLocation?: string;
+  isFinishedGoods?: boolean;
+  saleRate?: number;
+  purchaseRate?: number;
+  status?: 'Active' | 'Inactive' | string;
 }
 
 export interface CustomerMaster {
-  code: string;
-  name: string;
+  id?: string;
+  code: string; // CUST-####
+  name: string; // customer_name*
   legalName?: string;
-  customerType?: string;
-  gstin: string;
-  pan?: string;
+  customerType?: 'Dealer' | 'Distributor' | 'OEM' | 'Retailer' | 'Corporate' | 'Export' | 'Other' | string;
+  contactPerson?: string; // contact_person*
+  mobile?: string; // 10-digit Indian*
+  email?: string;
+  gstin: string; // unique, 15-char GSTIN or 'N/A — GST-exempt'
+  pan?: string; // 10-char PAN
   address?: string;
+  billingAddress?: string; // billing_address*
+  shippingAddress?: string;
+  city: string;
+  state: string; // Indian state
+  stateCode?: string;
+  pin?: string;
+  pincode?: string; // 6-digit
+  paymentTerms?: 'Advance' | 'Net 15' | 'Net 30' | 'Net 45' | 'Net 60' | 'Other' | string;
+  creditDays?: number; // 0-180, required if Net
+  creditLimit?: number; // required if Net
+  salesperson?: string; // ref: Employee/User
+  status?: 'Active' | 'Inactive' | string; // Inactive hidden from new orders
+  notes?: string;
+  contact?: string; // backward compat
+}
+
+export interface VendorMaster {
+  id?: string;
+  code: string; // VEND-####
+  name: string; // vendor_name*
+  legalName?: string;
+  vendorType: 'Supplier' | 'Transporter' | 'Subcontractor / Job Worker' | 'ServiceProvider' | 'EquipmentVendor' | 'ProfessionalService' | 'ManpowerProvider' | 'Other' | string;
+  vendorCategory: 'Raw Material' | 'Components' | 'Consumables' | 'Packaging' | 'Machinery' | 'Maintenance' | 'Transport' | 'IT' | 'Professional' | 'Manpower' | 'Other' | string;
+  contactPerson: string;
+  mobile: string; // 10-digit Indian*
+  email?: string;
+  address?: string;
+  billingAddress?: string;
   shippingAddress?: string;
   city: string;
   state: string;
   stateCode?: string;
   pin?: string;
-  email?: string;
-  contact?: string;
-  contactPerson?: string;
-  creditDays: number;
-  paymentTerms?: string;
-  creditLimit?: number;
-  salesperson?: string;
-  status?: string;
-  notes?: string;
-}
-
-export interface VendorMaster {
-  code: string;
-  name: string;
-  legalName?: string;
-  vendorType?: string;
-  vendorCategory?: string;
-  gstin: string;
-  pan?: string;
-  address?: string;
-  city: string;
-  state: string;
-  stateCode?: string;
-  pin?: string;
-  email?: string;
-  contact?: string;
-  contactPerson?: string;
-  paymentTerms: string;
+  pincode?: string;
+  gstin: string; // conditional unless GST-exempt
+  pan: string; // always mandatory for TDS
+  bankAccountName: string; // bank_account_name*
+  bankAccountNumber: string; // bank_account_number* (encrypted/masked)
+  ifsc: string; // 11-char IFSC*
+  paymentTerms: 'Advance' | 'Net 15' | 'Net 30' | 'Net 45' | 'Net 60' | 'Other' | string;
   creditDays?: number;
   creditLimit?: number;
-  bankAccountName?: string;
-  bankAccountNumber?: string;
-  ifsc?: string;
-  status?: string;
+  processType?: string; // Subcontractor prompt
+  turnaroundTimeDays?: number; // Subcontractor prompt
+  status: 'Active' | 'Inactive' | string;
   notes?: string;
+  contact?: string; // backward compat
 }
 
 export interface MachineMaster {
-  code: string;
-  name: string;
-  type: string;
-  status?: string;
-  hourlyCost: number;
-  active: boolean;
+  id?: string;
+  code: string; // MCH-####
+  name: string; // machine_name* (unique, e.g. VMC-01)
+  type: 'Cutting' | 'Welding' | 'CNC Turning' | 'CNC Machining' | 'Conventional Machining' | 'Grinding' | 'Inspection-CMM' | 'Other' | string;
+  department: string; // department*
+  location: string; // location*
+  manufacturer?: string;
+  model?: string;
+  serialNumber?: string;
+  installationDate?: string;
+  capacity?: number;
+  capacityUom?: string; // required if capacity filled
+  operatingHours?: number; // 0-24
+  shift?: 'General-Day' | 'Shift A' | 'Shift B' | 'Shift C' | string;
+  status: 'Active' | 'Under Maintenance' | 'Idle' | 'Decommissioned' | string;
+  responsiblePerson?: string; // ref: Employee/User
+  hourlyCost?: number;
+  active?: boolean;
 }
 
 export interface SystemUser {
   id: string;
-  name: string;
-  email: string;
-  role: UserRole;
-  status: 'ACTIVE' | 'INACTIVE' | 'REVOKED';
-  lastLogin?: string;
-  department?: string;
+  userId?: string; // USR-####
+  name: string; // full_name*
+  fullName?: string;
+  employeeCode?: string;
+  email: string; // unique login ID*
+  role: UserRole | string;
+  userRole?: string; // Admin/Owner, Sales Executive, etc.
+  department: string; // department*
+  mobile?: string; // 10-digit Indian for OTP*
   phone?: string;
+  accessLevel?: 'Full Access' | 'Edit' | 'View Only' | string;
+  modulesAccess?: string[]; // per-module access array
+  reportingManager?: string; // ref: User
+  shift?: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'Active' | 'Inactive' | 'REVOKED' | string;
+  lastLogin?: string;
 }
 
 export interface AuditLogEntry {
@@ -381,21 +682,6 @@ export interface GrnItem {
   rejectionReason?: string;
 }
 
-export interface GoodsReceiptNote {
-  id?: string;
-  grnNo: string;
-  poNo: string;
-  vendorCode: string;
-  vendorName: string;
-  challanNo: string;
-  challanDate?: string;
-  receivedDate: string;
-  receivedBy: string;
-  status: 'PENDING_INSPECTION' | 'RECEIVED' | 'QC_VERIFIED' | 'REJECTED';
-  vehicleNo?: string;
-  remarks?: string;
-  items: GrnItem[];
-}
 
 export interface BomItem {
   id?: string;

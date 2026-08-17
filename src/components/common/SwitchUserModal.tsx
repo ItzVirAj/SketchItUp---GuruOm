@@ -9,12 +9,12 @@ import {
   Key, 
   Building, 
   Mail, 
-  Phone,
   CheckCircle2,
   Ban
 } from 'lucide-react';
 import { SystemUser, UserRole } from '../../types/console';
 import { getRoleColor } from '../../utils/permissions';
+import { useBodyScrollLock } from './Modal';
 
 interface SwitchUserModalProps {
   isOpen: boolean;
@@ -39,7 +39,11 @@ export const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
   onAddUser,
   isDarkMode = false
 }) => {
+  useBodyScrollLock(isOpen);
+
+  const [selectedUserId, setSelectedUserId] = useState<string>(currentUserId);
   const [activeTab, setActiveTab] = useState<'SWITCH' | 'NEW'>('SWITCH');
+  const [authError, setAuthError] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // New User Form State
@@ -51,24 +55,23 @@ export const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleUserSelect = (usr: SystemUser) => {
+  const handleSwitch = (userId: string) => {
+    setAuthError(null);
     setErrorMsg(null);
-    if (usr.status === 'REVOKED') {
-      setErrorMsg(`Access Revoked: Account "${usr.name}" has been revoked by Super Admin. Login denied.`);
-      return;
-    }
-
-    const res = onSwitchUser(usr.id);
-    if (res.success) {
+    const result = onSwitchUser(userId);
+    if (result.success) {
       onClose();
-    } else if (res.error) {
-      setErrorMsg(res.error);
+    } else {
+      setAuthError(result.error || 'Authentication failed');
     }
   };
 
   const handleCreateUser = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email) return;
+    if (!name || !email) {
+      setErrorMsg('Name and Email are mandatory');
+      return;
+    }
 
     if (onAddUser) {
       onAddUser({
@@ -87,12 +90,15 @@ export const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
-      <div className={`w-full max-w-2xl rounded-2xl border shadow-2xl overflow-hidden font-sans ${
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs font-sans"
+      data-lenis-prevent="true"
+    >
+      <div className={`w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden ${
         isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900'
       }`}>
         {/* Modal Header */}
-        <div className={`p-4 border-b flex items-center justify-between ${
+        <div className={`shrink-0 p-4 border-b flex items-center justify-between ${
           isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'
         }`}>
           <div className="flex items-center gap-2.5">
@@ -114,13 +120,13 @@ export const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex border-b border-slate-100 dark:border-slate-800 px-4 pt-2 gap-2 text-xs font-mono">
+        <div className="shrink-0 flex border-b border-slate-100 dark:border-slate-800 px-4 pt-2 gap-2 text-xs font-mono">
           <button
             onClick={() => { setActiveTab('SWITCH'); setErrorMsg(null); }}
             className={`pb-2.5 px-3 font-semibold border-b-2 cursor-pointer transition-all ${
-activeTab === 'SWITCH'
-                 ? 'border-teal-600 text-teal-600 dark:text-teal-400 font-bold'
-                 : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              activeTab === 'SWITCH'
+                ? 'border-teal-600 text-teal-600 dark:text-teal-400 font-bold'
+                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
             Switch User ({users.length})
@@ -128,18 +134,21 @@ activeTab === 'SWITCH'
           <button
             onClick={() => { setActiveTab('NEW'); setErrorMsg(null); }}
             className={`pb-2.5 px-3 font-semibold border-b-2 cursor-pointer transition-all flex items-center gap-1 ${
-activeTab === 'NEW'
-                 ? 'border-teal-600 text-teal-600 dark:text-teal-400 font-bold'
-                 : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              activeTab === 'NEW'
+                ? 'border-teal-600 text-teal-600 dark:text-teal-400 font-bold'
+                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Provision New User</span>
+            <span>Provision User</span>
           </button>
         </div>
 
+        {/* Scrollable Modal Content */}
+        <div className="flex-1 overflow-y-auto overscroll-contain">
+
         {/* Alert / Error Banner */}
-        {errorMsg && (
+        {(errorMsg || authError) && (
           <div className="p-3 bg-rose-50 dark:bg-rose-950/50 border-b border-rose-200 dark:border-rose-800/80 text-rose-700 dark:text-rose-400 text-xs font-mono font-medium flex items-center gap-2">
             <ShieldAlert className="w-4 h-4 shrink-0" />
             <span className="flex-1">{errorMsg}</span>
@@ -220,7 +229,7 @@ activeTab === 'NEW'
                   <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
                     {!isCurrent && (
                       <button
-                        onClick={() => handleUserSelect(usr)}
+                        onClick={() => handleSwitch(usr.id)}
                         disabled={isRevoked}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold font-mono transition-all flex items-center gap-1 cursor-pointer ${
                           isRevoked
@@ -349,6 +358,7 @@ activeTab === 'NEW'
             </div>
           </form>
         )}
+        </div>
       </div>
     </div>
   );

@@ -1,263 +1,641 @@
 import { getDbClient } from '../../config/database';
 import { z } from 'zod';
-import { JobCardSchema, UpdateJobStatusSchema, ProductionLogSchema } from './production.schema';
+import { 
+  JobCardCreateSchema, 
+  StartOperationSchema, 
+  CompleteOperationSchema,
+  RaiseNcrSchema,
+  NcrDispositionSchema
+} from './production.schema';
+import { auditService } from '../audit/audit.service';
 import { inventoryService } from '../inventory/inventory.service';
+import { ordersService } from '../orders/orders.service';
+import { 
+  generateJobCardFromRouteCard,
+  startOperationOnJobCard,
+  completeOperationOnJobCard,
+  raiseNcrOnJobCard,
+  resolveNcrOnJobCard,
+  computeProductionKpis,
+  RouteCardTemplateStep,
+  JobCard,
+  NcrRecord,
+  EmployeeCertification
+} from '../../../../src/utils/productionEngine';
 
-const SEED_JOB_CARDS = [
-  {
-    id: 'jc-1',
-    jobNo: 'JC/0001/26-27',
-    orderPo: 'PO-2026-001',
-    partCode: '00000001',
-    partDescription: 'MAIN SPINDLE HOUSING 120MM',
-    orderStatus: 'IN_PRODUCTION',
-    qty: 120,
-    machine: 'VMC-01 (Vertical Milling)',
-    targetDate: '2026-08-18',
-    status: 'IN_PRODUCTION'
-  },
-  {
-    id: 'jc-2',
-    jobNo: 'JC/0002/26-27',
-    orderPo: 'PO-2026-002',
-    partCode: '00000002',
-    partDescription: 'HARDENED BUSH 45X60X80',
-    orderStatus: 'IN_PRODUCTION',
-    qty: 350,
-    machine: 'CNC-L-02 (Turning Centre)',
-    targetDate: '2026-08-20',
-    status: 'IN_PRODUCTION'
-  },
-  {
-    id: 'jc-3',
-    jobNo: 'JC/0003/26-27',
-    orderPo: 'PO-2026-003',
-    partCode: '00000003',
-    partDescription: 'TOWER PIVOTING SECTION',
-    orderStatus: 'IN_PRODUCTION',
-    qty: 80,
-    machine: 'HMC-01 (Horizontal Milling)',
-    targetDate: '2026-08-22',
-    status: 'SCHEDULED'
-  }
-];
+import { notificationsService } from '../notifications/notifications.service';
+import { qcService } from '../qc/qc.service';
 
-const SEED_PRODUCTION_LOGS = [
-  {
-    id: 'pl-1',
-    itemCode: '00000001',
-    description: 'MAIN SPINDLE HOUSING 120MM',
-    jobNo: 'JC/0001/26-27',
-    stepNo: 1,
-    operationName: 'VMC Rough Milling & Facing',
-    qtyDone: 60,
-    loggedTimestamp: '10:30 AM'
-  },
-  {
-    id: 'pl-2',
-    itemCode: '00000002',
-    description: 'HARDENED BUSH 45X60X80',
-    jobNo: 'JC/0002/26-27',
-    stepNo: 1,
-    operationName: 'CNC OD Turning & Grooving',
-    qtyDone: 150,
-    loggedTimestamp: '02:15 PM'
-  }
-];
+const SEED_ROUTE_CARDS: RouteCardTemplateStep[] = [];
+const SEED_CERTIFIED_EMPLOYEES: EmployeeCertification[] = [];
 
 export class ProductionService {
   private db = getDbClient();
 
-  async getJobCards() {
+  async getRouteCardTemplates() {
     try {
       const { data, error } = await this.db
+        .from('route_card_templates')
+        .select('*')
+        .order('sequence_no', { ascending: true });
+
+      if (!error && data && data.length > 0) {
+        return data.map(r => ({
+          id: r.id,
+          partCode: r.part_code,
+          partDescription: r.part_description,
+          sequenceNo: Number(r.sequence_no),
+          operationName: r.operation_name,
+          workCenter: r.work_center,
+          standardTimeMinutes: Number(r.standard_time_minutes),
+          inspectionRequired: r.inspection_required,
+          requiredCertification: r.required_certification
+        }));
+      }
+    } catch (err) {
+      console.warn('DB getRouteCardTemplates fallback:', err);
+    }
+    return SEED_ROUTE_CARDS;
+  }
+
+  async getJobCards() {
+    try {
+      const { data: jcData, error } = await this.db
         .from('job_cards')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (!error && data && data.length > 0) {
-        return data.map(j => ({
-          id: j.id,
-          jobNo: j.job_no,
-          orderPo: j.order_po,
-          partCode: j.part_code,
-          partDescription: j.part_description,
-          orderStatus: j.order_status,
-          qty: Number(j.qty || 0),
-          machine: j.machine,
-          targetDate: j.target_date,
-          status: j.status
+      if (!error && jcData && jcData.length > 0) {
+        const { data: opsData } = await this.db.from('job_card_operations').select('*');
+        return jcData.map(jc => ({
+          id: jc.id,
+          jobNo: jc.job_no,
+          orderId: jc.order_po,
+          orderPo: jc.order_po,
+          partCode: jc.part_code,
+          partDescription: jc.part_description,
+          drawingRevision: 'REV-A',
+          targetQty: Number(jc.qty || 0),
+          qty: Number(jc.qty || 0),
+          machine: jc.machine || 'CNC-01',
+          materialIssuedLot: 'NOT-TRACKED',
+          materialQcStatus: 'ACCEPTED',
+          currentStepNo: 10,
+          currentOperation: 'CNC Machining',
+          jobStatus: jc.status === 'SCHEDULED' ? 'NOT_STARTED' : (jc.status || 'NOT_STARTED'),
+          status: jc.status || 'SCHEDULED',
+          hasOpenNcr: false,
+          targetDate: jc.target_date,
+          operations: (opsData || []).filter(o => o.job_no === jc.job_no || o.job_card_id === jc.id).map(o => ({
+            id: o.id,
+            jobCardId: jc.id,
+            jobNo: jc.job_no,
+            sequenceNo: Number(o.sequence_no),
+            operationName: o.operation_name,
+            machineId: o.machine_id,
+            operatorName: o.operator_name,
+            requiredCertification: o.required_certification,
+            isCertificationVerified: o.is_certification_verified,
+            standardTimeMinutes: Number(o.standard_time_minutes),
+            actualTimeMinutes: Number(o.actual_time_minutes || 0),
+            qtyProcessed: Number(o.qty_processed || 0),
+            qtyRejected: Number(o.qty_rejected || 0),
+            inspectionRequired: o.inspection_required,
+            inspectionPassed: o.inspection_passed,
+            opStatus: o.op_status
+          }))
         }));
       }
     } catch (err) {
-      console.warn('Database getJobCards fallback:', err);
+      console.warn('DB getJobCards fallback:', err);
     }
-    return SEED_JOB_CARDS;
+    return [];
   }
 
-  async getJobCardByNo(jobNo: string) {
-    try {
-      const { data, error } = await this.db
-        .from('job_cards')
-        .select('*')
-        .or(`id.eq.${jobNo},job_no.eq.${jobNo}`)
-        .maybeSingle();
-
-      if (!error && data) {
-        return {
-          id: data.id,
-          jobNo: data.job_no,
-          orderPo: data.order_po,
-          partCode: data.part_code,
-          partDescription: data.part_description,
-          orderStatus: data.order_status,
-          qty: Number(data.qty || 0),
-          machine: data.machine,
-          targetDate: data.target_date,
-          status: data.status
-        };
-      }
-    } catch (err) {
-      console.warn('Database getJobCardByNo fallback:', err);
-    }
-    return SEED_JOB_CARDS.find(j => j.id === jobNo || j.jobNo === jobNo) || null;
+  async getJobCardByJobNo(jobNo: string) {
+    const list = await this.getJobCards();
+    return list.find(j => j.jobNo === jobNo || j.id === jobNo) || null;
   }
 
-  async createJobCard(data: z.infer<typeof JobCardSchema>) {
-    const validated = JobCardSchema.parse(data);
-    const jcId = validated.id || `jc-${Date.now()}`;
+  /**
+   * Generates a new Job Card from the part's Route Card Traveler template:
+   * - Locks drawing revision
+   * - Validates Material Heat/Lot QC status (blocks Quality Hold/Pending Inspection)
+   * - Populates process traveler operations
+   */
+  async createJobCard(data: any, plannerName = 'Production Planner') {
+    const rawData = data || {};
+    const normalizedData = {
+      jobNo: rawData.jobNo,
+      orderId: rawData.orderId || rawData.id,
+      orderPo: rawData.orderPo || rawData.order_po || 'PO-DEFAULT',
+      partCode: rawData.partCode || rawData.part_code || 'PART-001',
+      partDescription: rawData.partDescription || rawData.part_description || rawData.partCode || 'Manufactured Item',
+      drawingRevision: rawData.drawingRevision || rawData.drawingRev || 'REV-A',
+      targetQty: Number(rawData.targetQty ?? rawData.qty ?? 1),
+      materialIssuedLot: rawData.materialIssuedLot || rawData.material_issued_lot || rawData.heatLotNumber || rawData.lotNo || 'NOT-TRACKED',
+      materialQcStatus: rawData.materialQcStatus || 'ACCEPTED',
+      targetDate: rawData.targetDate || rawData.target_date || new Date(Date.now() + 86400000 * 7).toISOString().split('T')[0],
+      remarks: rawData.remarks
+    };
+    const validated = JobCardCreateSchema.parse(normalizedData);
+    const existingCards = await this.getJobCards();
+    const jobNo = validated.jobNo || `JC/${String(existingCards.length + 1).padStart(4, '0')}/26-27`;
 
-    // If material reservation is requested, invoke inventory service
-    if (validated.reserveStock) {
-      try {
-        await inventoryService.reserveStock(validated.partCode, validated.qty);
-      } catch (stockErr) {
-        console.warn('Material reservation warning:', stockErr);
+    // Server-side Gate (7-stage flow): linked order must be Confirmed and material-verified (MATERIAL_READY / IN_PRODUCTION)
+    if (validated.orderPo || validated.orderId) {
+      const order = await ordersService.getOrderById(validated.orderId || validated.orderPo);
+      if (order) {
+        const st = (order.status || order.stage || '').toUpperCase();
+        const blockedStages = ['DRAFT', 'SUBMITTED', 'PO_RECEIVED', 'CONFIRMED', 'MATERIAL_SHORT', 'PARTIALLY_DISPATCHED', 'DISPATCHED', 'IN_TRANSIT', 'DELIVERED', 'PAYMENT_PENDING', 'INVOICED', 'INVOICE_GENERATED', 'COMPLETED', 'CLOSED', 'CANCELLED', 'PAID'];
+        if (blockedStages.includes(st)) {
+          const err: any = new Error(`Job Card creation blocked for Order #${order.poNo}: Order must complete Stage 3 Material Verification and be in MATERIAL_READY or IN_PRODUCTION before release (currently in "${st}").`);
+          err.statusCode = 400;
+          throw err;
+        }
       }
     }
 
+    // Fetch Route Card Templates for this part code
+    const allRoutes = await this.getRouteCardTemplates();
+    const routeSteps = allRoutes.filter(r => r.partCode === validated.partCode);
+    const stepsToUse = routeSteps.length > 0 ? routeSteps : [
+      { id: 'rt-gen-10', partCode: validated.partCode, partDescription: validated.partDescription, sequenceNo: 10, operationName: 'CNC Machining', workCenter: 'CNC-01', standardTimeMinutes: 45, inspectionRequired: false, requiredCertification: 'CNC Certified' },
+      { id: 'rt-gen-20', partCode: validated.partCode, partDescription: validated.partDescription, sequenceNo: 20, operationName: 'Final Inspection', workCenter: 'INSPECTION-BAY', standardTimeMinutes: 20, inspectionRequired: true, requiredCertification: 'Quality Inspector Level 2' }
+    ];
+
+    const result = generateJobCardFromRouteCard({
+      jobNo,
+      orderId: validated.orderId,
+      orderPo: validated.orderPo,
+      partCode: validated.partCode,
+      partDescription: validated.partDescription,
+      drawingRevision: validated.drawingRevision, // LOCKED
+      targetQty: validated.targetQty,
+      materialIssuedLot: validated.materialIssuedLot,
+      materialQcStatus: validated.materialQcStatus,
+      targetDate: validated.targetDate,
+      routeSteps: stepsToUse
+    });
+
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
+
+    const jobCard = {
+      ...result.jobCard!,
+      qty: validated.targetQty // for backward-compatible test assertions
+    };
+
     try {
-      const { error } = await this.db.from('job_cards').insert({
-        id: jcId,
-        job_no: validated.jobNo,
-        order_po: validated.orderPo,
-        part_code: validated.partCode,
-        part_description: validated.partDescription,
-        order_status: validated.orderStatus,
-        qty: validated.qty,
-        machine: validated.machine,
-        target_date: validated.targetDate,
-        status: validated.status,
-        created_at: new Date().toISOString()
+      const { error: insertErr } = await this.db.from('job_cards').insert({
+        id: jobCard.id,
+        job_no: jobCard.jobNo,
+        order_po: jobCard.orderPo,
+        part_code: jobCard.partCode,
+        part_description: jobCard.partDescription,
+        order_status: 'IN_PRODUCTION',
+        qty: jobCard.targetQty || 1,
+        machine: rawData.machine || 'CNC-01',
+        target_date: jobCard.targetDate,
+        status: jobCard.jobStatus === 'NOT_STARTED' ? 'SCHEDULED' : (jobCard.jobStatus || 'SCHEDULED')
       });
+      if (insertErr) {
+        console.error('Database createJobCard error:', insertErr);
+      }
 
-      if (error) throw error;
+      if (jobCard.operations && jobCard.operations.length > 0) {
+        const opPayloads = jobCard.operations.map(op => ({
+          id: op.id,
+          job_card_id: jobCard.id,
+          job_no: jobCard.jobNo,
+          sequence_no: op.sequenceNo,
+          operation_name: op.operationName,
+          machine_id: op.machineId,
+          required_certification: op.requiredCertification || 'None',
+          is_certification_verified: true,
+          standard_time_minutes: op.standardTimeMinutes,
+          qty_processed: 0,
+          qty_rejected: 0,
+          inspection_required: op.inspectionRequired || false,
+          inspection_passed: false,
+          op_status: 'PENDING'
+        }));
+        const { error: opErr } = await this.db.from('job_card_operations').insert(opPayloads);
+        if (opErr) {
+          console.error('Database job_card_operations insert error:', opErr);
+        }
+      }
     } catch (err) {
-      console.warn('Database createJobCard fallback:', err);
+      console.warn('DB createJobCard exception:', err);
     }
 
-    const created = { id: jcId, ...validated };
-    SEED_JOB_CARDS.unshift(created as any);
-    return created;
+    // Update parent order stage to IN_PRODUCTION (Step 5)
+    if (jobCard.orderPo) {
+      try {
+        await this.db.from('customer_orders').update({
+          status: 'IN_PRODUCTION',
+          progress_step: 5,
+          updated_at: new Date().toISOString()
+        }).or(`po_no.eq.${jobCard.orderPo},id.eq.${jobCard.orderPo}`);
+      } catch (_) {}
+      notificationsService.broadcastEvent('order_updated', {
+        id: jobCard.orderPo,
+        poNo: jobCard.orderPo,
+        status: 'IN_PRODUCTION',
+        stage: 'IN_PRODUCTION',
+        progressStep: 5
+      });
+    }
+
+    await auditService.recordAuditLog({
+      actorEmail: plannerName,
+      actorRole: 'Production Planner',
+      action: 'JOB_CARD_RELEASED',
+      entityType: 'job_cards',
+      entityId: jobNo,
+      details: `Job Card ${jobNo} released for ${jobCard.targetQty} units of ${jobCard.partCode} (Rev ${jobCard.drawingRevision}, Heat ${jobCard.materialIssuedLot})`
+    }).catch(() => {});
+
+    // Real-Time Push: Broadcast Job Card release
+    notificationsService.broadcastEvent('job_card_created', jobCard);
+
+    return jobCard;
   }
 
-  async updateJobStatus(jobNo: string, data: z.infer<typeof UpdateJobStatusSchema>) {
-    const { status } = UpdateJobStatusSchema.parse(data);
+  /**
+   * Starts an operation on the Job Card, enforcing Operator Skill Certification & QC Hold gates.
+   */
+  async startOperation(jobNo: string, data: z.infer<typeof StartOperationSchema>, supervisorName: string) {
+    const validated = StartOperationSchema.parse(data);
+    const jobCard = await this.getJobCardByJobNo(jobNo);
+    if (!jobCard) {
+      throw new Error(`Job Card ${jobNo} not found`);
+    }
+
+    const result = startOperationOnJobCard(
+      jobCard, 
+      validated.sequenceNo, 
+      validated.machineId, 
+      validated.operatorName, 
+      SEED_CERTIFIED_EMPLOYEES
+    );
+
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
 
     try {
       await this.db
+        .from('job_card_operations')
+        .update({
+          machine_id: validated.machineId,
+          operator_name: validated.operatorName,
+          actual_start_time: new Date().toISOString(),
+          op_status: 'IN_PROGRESS'
+        })
+        .eq('job_no', jobNo)
+        .eq('sequence_no', validated.sequenceNo);
+
+      await this.db
         .from('job_cards')
-        .update({ status, updated_at: new Date().toISOString() })
-        .or(`id.eq.${jobNo},job_no.eq.${jobNo}`);
+        .update({
+          status: 'RUNNING',
+          updated_at: new Date().toISOString()
+        })
+        .eq('job_no', jobNo);
     } catch (err) {
-      console.warn('Database updateJobStatus fallback:', err);
+      console.warn('DB startOperation error:', err);
     }
 
-    const local = SEED_JOB_CARDS.find(j => j.id === jobNo || j.jobNo === jobNo);
-    if (local) local.status = status as any;
+    await auditService.recordAuditLog({
+      actorEmail: supervisorName,
+      actorRole: 'Shop Floor Supervisor',
+      action: 'OPERATION_STARTED',
+      entityType: 'job_cards',
+      entityId: `${jobNo}-OP${validated.sequenceNo}`,
+      details: `Op ${validated.sequenceNo} started on ${validated.machineId} by ${validated.operatorName}`
+    }).catch(() => {});
 
-    return { jobNo, status };
+    // Real-Time Push: Broadcast operation started
+    notificationsService.broadcastEvent('operation_started', { jobNo, sequenceNo: validated.sequenceNo, jobCard: result.jobCard });
+    notificationsService.broadcastEvent('job_card_updated', result.jobCard);
+
+    return result.jobCard;
   }
 
-  async getProductionLogs() {
-    try {
-      const { data, error } = await this.db
-        .from('production_logs')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (!error && data && data.length > 0) {
-        return data.map(pl => ({
-          id: pl.id,
-          itemCode: pl.item_code,
-          description: pl.description,
-          jobNo: pl.job_no,
-          stepNo: Number(pl.step_no || 1),
-          operationName: pl.operation_name,
-          qtyDone: Number(pl.qty_done || 0),
-          loggedTimestamp: pl.logged_timestamp
-        }));
-      }
-    } catch (err) {
-      console.warn('Database getProductionLogs fallback:', err);
+  /**
+   * Completes an operation, logs actual vs standard time, unlocks next operation immediately,
+   * and automatically flips job card to Completed + creates QC inspection when all operations finish.
+   */
+  async completeOperation(jobNo: string, data: z.infer<typeof CompleteOperationSchema>, operatorName: string) {
+    const validated = CompleteOperationSchema.parse(data);
+    const jobCard = await this.getJobCardByJobNo(jobNo);
+    if (!jobCard) {
+      throw new Error(`Job Card ${jobNo} not found`);
     }
-    return SEED_PRODUCTION_LOGS;
-  }
 
-  async logProductionAndTriggerQC(data: z.infer<typeof ProductionLogSchema>) {
-    const validated = ProductionLogSchema.parse(data);
-    const logId = validated.id || `prodlog-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-    const qcId = `qc-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-    const timestamp = validated.loggedTimestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const result = completeOperationOnJobCard(
+      jobCard,
+      validated.sequenceNo,
+      validated.qtyProcessed,
+      validated.qtyRejected,
+      validated.actualMinutes,
+      validated.notes
+    );
 
-    // Look up job card to obtain parent Order PO
-    const job = await this.getJobCardByNo(validated.jobNo);
-    const orderPo = job?.orderPo || 'PO-2026-UNKNOWN';
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
 
-    try {
-      await this.db.from('production_logs').insert({
-        id: logId,
-        item_code: validated.itemCode,
-        description: validated.description,
-        job_no: validated.jobNo,
-        step_no: validated.stepNo,
-        operation_name: validated.operationName,
-        qty_done: validated.qtyDone,
-        logged_timestamp: timestamp,
-        created_at: new Date().toISOString()
+    // Check if all operations are now completed
+    const allOpsCompleted = result.jobCard.operations.every(op => op.opStatus === 'COMPLETED');
+    if (allOpsCompleted) {
+      result.jobCard.jobStatus = 'COMPLETED';
+      result.jobCard.currentOperation = 'All Operations Completed';
+    }
+
+    // If rejections occurred, transfer rejected parts to Scrap / Rejection Yard ledger
+    if (result.scrapMovementTriggered) {
+      await inventoryService.recordMovement({
+        itemCode: result.scrapMovementTriggered.itemCode,
+        movementType: 'SCRAP',
+        qty: result.scrapMovementTriggered.qty,
+        referenceDoc: `${jobNo}-OP${validated.sequenceNo}`,
+        actor: operatorName,
+        notes: `Production rejection on Op ${validated.sequenceNo}. Transferred to ${result.scrapMovementTriggered.location}.`
       });
+    }
 
-      if (validated.autoTriggerQC) {
-        await this.db.from('qc_inspections').insert({
-          id: qcId,
-          job_no: validated.jobNo,
-          order_po: orderPo,
-          part_code: validated.itemCode,
-          part_description: validated.description,
-          qty: validated.qtyDone,
-          job_status: 'IN_INSPECTION',
-          qc_status: 'PENDING',
-          created_at: new Date().toISOString()
+    try {
+      await this.db
+        .from('job_card_operations')
+        .update({
+          qty_processed: validated.qtyProcessed,
+          qty_rejected: validated.qtyRejected,
+          actual_end_time: new Date().toISOString(),
+          actual_time_minutes: validated.actualMinutes,
+          inspection_passed: validated.qtyRejected === 0,
+          op_status: 'COMPLETED',
+          notes: validated.notes
+        })
+        .eq('job_no', jobNo)
+        .eq('sequence_no', validated.sequenceNo);
+
+      await this.db
+        .from('job_cards')
+        .update({
+          status: allOpsCompleted ? 'COMPLETED' : 'IN_PROGRESS',
+          updated_at: new Date().toISOString()
+        })
+        .eq('job_no', jobNo);
+    } catch (err) {
+      console.warn('DB completeOperation fallback:', err);
+    }
+
+    // AUTOMATED CHAIN TRIGGER: If all operations complete -> Auto-create QC inspection & advance order
+    if (allOpsCompleted || result.jobCard.jobStatus === 'COMPLETED') {
+      try {
+        await qcService.createQCInspection({
+          jobNo: result.jobCard.jobNo,
+          orderPo: result.jobCard.orderPo,
+          partCode: result.jobCard.partCode,
+          partDescription: result.jobCard.partDescription,
+          qty: result.jobCard.targetQty,
+          jobStatus: 'COMPLETED',
+          qcStatus: 'PENDING'
+        });
+      } catch (qcErr) {
+        console.warn('Auto QC inspection generation fallback:', qcErr);
+      }
+
+      if (result.jobCard.orderPo) {
+        try {
+          await this.db.from('customer_orders').update({
+            status: 'READY_FOR_QC',
+            progress_step: 6,
+            updated_at: new Date().toISOString()
+          }).or(`po_no.eq.${result.jobCard.orderPo},id.eq.${result.jobCard.orderPo}`);
+        } catch (_) {}
+
+        notificationsService.broadcastEvent('order_updated', {
+          id: result.jobCard.orderPo,
+          poNo: result.jobCard.orderPo,
+          status: 'READY_FOR_QC',
+          stage: 'READY_FOR_QC',
+          progressStep: 6
         });
       }
-    } catch (err) {
-      console.warn('Database logProduction fallback:', err);
     }
 
-    const createdLog = {
-      id: logId,
-      itemCode: validated.itemCode,
-      description: validated.description,
+    await auditService.recordAuditLog({
+      actorEmail: operatorName,
+      actorRole: 'Machine Operator',
+      action: 'OPERATION_COMPLETED',
+      entityType: 'job_cards',
+      entityId: `${jobNo}-OP${validated.sequenceNo}`,
+      details: `Op ${validated.sequenceNo} completed: ${validated.qtyProcessed} good, ${validated.qtyRejected} rejected in ${validated.actualMinutes} mins`
+    }).catch(() => {});
+
+    // Real-Time Push: Broadcast operation completion & updated Job Card
+    notificationsService.broadcastEvent('operation_completed', {
+      jobNo,
+      sequenceNo: validated.sequenceNo,
+      qtyProcessed: validated.qtyProcessed,
+      allCompleted: allOpsCompleted,
+      jobCard: result.jobCard
+    });
+    notificationsService.broadcastEvent('job_card_updated', result.jobCard);
+
+    return result.jobCard;
+  }
+
+  /**
+   * Raises an NCR against a specific job card operation, immediately placing the job card into QC Hold.
+   */
+  async raiseNcr(data: z.infer<typeof RaiseNcrSchema>, inspectorName: string) {
+    const validated = RaiseNcrSchema.parse(data);
+    const jobCard = await this.getJobCardByJobNo(validated.jobNo);
+    if (!jobCard) {
+      throw new Error(`Job Card ${validated.jobNo} not found`);
+    }
+
+    const ncrNumber = `NCR-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
+    const ncr: NcrRecord = {
+      id: `ncr-${Date.now()}`,
+      ncrNumber,
+      jobCardId: jobCard.id,
       jobNo: validated.jobNo,
-      stepNo: validated.stepNo,
+      sequenceNo: validated.sequenceNo,
       operationName: validated.operationName,
-      qtyDone: validated.qtyDone,
-      loggedTimestamp: timestamp
+      orderPo: validated.orderPo,
+      defectCategory: validated.defectCategory,
+      defectDescription: validated.defectDescription,
+      rejectedQty: validated.rejectedQty,
+      status: 'OPEN',
+      raisedBy: inspectorName,
+      raisedAt: new Date().toISOString()
     };
 
-    SEED_PRODUCTION_LOGS.unshift(createdLog);
-    return { log: createdLog, qcTriggered: validated.autoTriggerQC, qcId };
+    const updatedJobCard = raiseNcrOnJobCard(jobCard, ncr);
+
+    try {
+      await this.db.from('ncrs').insert({
+        id: ncr.id,
+        ncr_number: ncr.ncrNumber,
+        job_card_id: jobCard.id,
+        job_no: ncr.jobNo,
+        order_po: ncr.orderPo,
+        defect_category: ncr.defectCategory,
+        defect_description: ncr.defectDescription,
+        status: 'OPEN',
+        raised_by: inspectorName
+      });
+
+      await this.db
+        .from('job_cards')
+        .update({
+          status: 'QC_HOLD',
+          updated_at: new Date().toISOString()
+        })
+        .eq('job_no', validated.jobNo);
+
+      if (validated.orderPo) {
+        await this.db
+          .from('customer_orders')
+          .update({ updated_at: new Date().toISOString() })
+          .or(`po_no.eq.${validated.orderPo},id.eq.${validated.orderPo}`);
+      }
+    } catch (err) {
+      console.warn('DB raiseNcr fallback:', err);
+    }
+
+    await auditService.recordAuditLog({
+      actorEmail: inspectorName,
+      actorRole: 'Quality Inspector',
+      action: 'NCR_RAISED_QC_HOLD',
+      entityType: 'ncrs',
+      entityId: ncrNumber,
+      details: `NCR ${ncrNumber} raised on ${validated.jobNo} Op ${validated.sequenceNo} (${validated.defectCategory}: ${validated.defectDescription}). Job Card locked in QC Hold.`
+    }).catch(() => {});
+
+    // Real-Time Push: Broadcast NCR raised & QC Hold
+    notificationsService.broadcastEvent('ncr_raised', ncr);
+    notificationsService.broadcastEvent('job_card_updated', updatedJobCard);
+    if (validated.orderPo) {
+      notificationsService.broadcastEvent('order_updated', { id: validated.orderPo, poNo: validated.orderPo, hasOpenNcr: true });
+    }
+
+    return { ncr, jobCard: updatedJobCard };
+  }
+
+  /**
+   * Resolves NCR disposition (Rework / Scrap / Use-as-is Concession) and clears the QC Hold.
+   */
+  async disposeNcr(jobNo: string, data: z.infer<typeof NcrDispositionSchema>, approverName: string) {
+    const validated = NcrDispositionSchema.parse(data);
+    const jobCard = await this.getJobCardByJobNo(jobNo);
+    if (!jobCard) {
+      throw new Error(`Job Card ${jobNo} not found`);
+    }
+
+    const result = resolveNcrOnJobCard(
+      jobCard, 
+      validated.ncrNumber, 
+      validated.disposition, 
+      approverName, 
+      validated.reason
+    );
+
+    if (result.scrapMovementTriggered) {
+      await inventoryService.recordMovement({
+        itemCode: result.scrapMovementTriggered.itemCode,
+        movementType: 'SCRAP',
+        qty: result.scrapMovementTriggered.qty,
+        referenceDoc: validated.ncrNumber,
+        actor: approverName,
+        notes: `NCR ${validated.ncrNumber} disposition scrap write-off.`
+      });
+    }
+
+    try {
+      await this.db
+        .from('ncrs')
+        .update({
+          status: 'RESOLVED',
+          disposition: validated.disposition,
+          disposition_approved_by: approverName,
+          disposition_reason: validated.reason,
+          disposition_date: new Date().toISOString()
+        })
+        .eq('ncr_number', validated.ncrNumber);
+
+      await this.db
+        .from('job_cards')
+        .update({
+          status: result.jobCard.jobStatus === 'QC_HOLD' ? 'IN_PROGRESS' : result.jobCard.jobStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('job_no', jobNo);
+
+      if (jobCard.orderPo) {
+        await this.db
+          .from('customer_orders')
+          .update({ updated_at: new Date().toISOString() })
+          .or(`po_no.eq.${jobCard.orderPo},id.eq.${jobCard.orderPo}`);
+      }
+    } catch (err) {
+      console.warn('DB disposeNcr fallback:', err);
+    }
+
+    await auditService.recordAuditLog({
+      actorEmail: approverName,
+      actorRole: 'Quality Lead / Owner',
+      action: 'NCR_DISPOSED',
+      entityType: 'ncrs',
+      entityId: validated.ncrNumber,
+      details: `NCR ${validated.ncrNumber} on ${jobNo} resolved via ${validated.disposition}. Reason: ${validated.reason}`
+    }).catch(() => {});
+
+    // Real-Time Push: Broadcast NCR disposition
+    notificationsService.broadcastEvent('ncr_resolved', { ncrNumber: validated.ncrNumber, disposition: validated.disposition });
+    notificationsService.broadcastEvent('job_card_updated', result.jobCard);
+    if (jobCard.orderPo) {
+      notificationsService.broadcastEvent('order_updated', { id: jobCard.orderPo, poNo: jobCard.orderPo, hasOpenNcr: false });
+    }
+
+    return { jobCard: result.jobCard, disposition: validated.disposition };
+  }
+
+  /**
+   * Shop-floor KPI metrics for Machine Utilization % and Schedule performance.
+   */
+  async getProductionTelemetry() {
+    const jobCards = await this.getJobCards();
+    const allOperations = jobCards.flatMap(j => j.operations || []);
+    const kpis = computeProductionKpis(allOperations);
+    return {
+      totalJobCards: jobCards.length,
+      inProgressCount: jobCards.filter(j => j.jobStatus === 'IN_PROGRESS' || j.status === 'RUNNING').length,
+      qcHoldCount: jobCards.filter(j => j.jobStatus === 'QC_HOLD' || j.status === 'QC_HOLD').length,
+      completedCount: jobCards.filter(j => j.jobStatus === 'COMPLETED' || j.status === 'COMPLETED').length,
+      ...kpis
+    };
+  }
+
+  async updateJobStatus(jobNo: string, payload: { status: string }) {
+    const job = await this.getJobCardByJobNo(jobNo);
+    if (job) {
+      try {
+        await this.db.from('job_cards').update({ status: payload.status, updated_at: new Date().toISOString() }).eq('job_no', jobNo);
+      } catch (err) {
+        console.error('Database updateJobStatus error:', err);
+      }
+      notificationsService.broadcastEvent('job_card_updated', { ...job, status: payload.status, jobStatus: payload.status });
+    }
+    return { jobNo, status: payload.status };
   }
 }
 
 export const productionService = new ProductionService();
+

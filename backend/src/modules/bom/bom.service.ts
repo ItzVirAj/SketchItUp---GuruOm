@@ -1,68 +1,9 @@
 import { getDbClient } from '../../config/database';
 import { z } from 'zod';
 import { BillOfMaterialsSchema } from './bom.schema';
+import { logAudit } from '../../services/auditLog';
 
-const SEED_BOMS = [
-  {
-    id: 'bom-1',
-    bomCode: 'BOM-00000001',
-    parentPartCode: '00000001',
-    parentPartName: 'Precision Flange Ø120mm',
-    revision: 'v1.2',
-    yieldPercentage: 98.0,
-    batchSize: 50,
-    status: 'ACTIVE',
-    notes: 'Standard production BOM with 6061 Aluminium round stock.',
-    components: [
-      {
-        id: 'bom-item-1',
-        componentCode: 'RAW-ALU-6061-ROD',
-        componentName: 'Aluminium 6061 Round Bar Ø50mm',
-        componentType: 'RAW_MATERIAL',
-        qtyPerUnit: 1.45,
-        unit: 'KG',
-        scrapAllowancePct: 3.5,
-        stage: 'CNC_TURNING',
-        unitCost: 280
-      },
-      {
-        id: 'bom-item-2',
-        componentCode: 'HARD-M8-BOLT-SS',
-        componentName: 'SS304 M8x25 Hex Socket Fasteners',
-        componentType: 'HARDWARE',
-        qtyPerUnit: 4,
-        unit: 'NOS',
-        scrapAllowancePct: 1.0,
-        stage: 'FINAL_ASSEMBLY',
-        unitCost: 15
-      }
-    ]
-  },
-  {
-    id: 'bom-2',
-    bomCode: 'BOM-00000002',
-    parentPartCode: '00000002',
-    parentPartName: 'Hardened Spindle Shaft 25x300mm',
-    revision: 'v2.0',
-    yieldPercentage: 96.5,
-    batchSize: 100,
-    status: 'ACTIVE',
-    notes: 'Requires induction hardening after primary turning.',
-    components: [
-      {
-        id: 'bom-item-3',
-        componentCode: 'RAW-EN8-BAR-32MM',
-        componentName: 'EN8 Bright Drawn Steel Bar Ø32mm',
-        componentType: 'RAW_MATERIAL',
-        qtyPerUnit: 2.1,
-        unit: 'KG',
-        scrapAllowancePct: 4.0,
-        stage: 'CNC_MACHINING',
-        unitCost: 95
-      }
-    ]
-  }
-];
+const SEED_BOMS: any[] = [];
 
 export class BomService {
   private db = getDbClient();
@@ -188,6 +129,8 @@ export class BomService {
     } catch (err) {
       console.warn('Database createOrUpdateBOM error:', err);
     }
+
+    await logAudit({ actorEmail: 'engineering@guruom.in', action: 'BOM_SAVED', entityType: 'bill_of_materials', entityId: String(validated.bomCode), afterState: { parentPartCode: validated.parentPartCode, revision: validated.revision, componentCount: (validated.components || []).length, batchSize: validated.batchSize }, metadata: { details: `BOM ${validated.bomCode} saved for ${validated.parentPartCode} (${(validated.components || []).length} components, rev ${validated.revision})` } }).catch(() => {});
 
     const createdBOM = { id: bomId, ...validated };
     const existingIdx = SEED_BOMS.findIndex(b => b.bomCode === validated.bomCode);

@@ -20,4 +20,12 @@ router.patch('/pdi/:id/pass', requireRole(['SUPER ADMIN', 'QC_MANAGER']), (req, 
 // Downstream Dispatch Gatekeeper Check
 router.get('/dispatch-eligibility/:orderPo', (req, res) => qcController.checkDispatchEligibility(req, res));
 
+// Step 7: No Deletes on Transactional Records
+router.delete('/*', (req, res) => {
+  return res.status(405).json({
+    error: 'ERR_TRANSACTION_DELETE_FORBIDDEN',
+    message: 'Transactional quality records cannot be deleted. Use NCR disposition and re-inspection workflows.'
+  });
+});
+
 export default router;

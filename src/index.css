@@ -195,3 +195,11 @@ html, .scroll-smooth {
   scrollbar-width: none;
 }
 
+/* Modal active scroll lock */
+body.modal-open, html.modal-open {
+  overflow: hidden !important;
+  touch-action: none;
+  -webkit-overflow-scrolling: auto;
+}
+
+

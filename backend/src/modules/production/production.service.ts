@@ -58,11 +58,154 @@ export class ProductionService {
     return SEED_ROUTE_CARDS;
   }
 
+  async getGroupedRouteCards() {
+    const rawTemplates = await this.getRouteCardTemplates();
+    const map = new Map<string, any>();
+
+    for (const step of rawTemplates) {
+      const key = step.partCode;
+      if (!map.has(key)) {
+        map.set(key, {
+          id: `rc-${step.partCode}`,
+          routeCode: `RC-${step.partCode}`,
+          partCode: step.partCode,
+          partDescription: step.partDescription || step.partCode,
+          revision: 'REV-A',
+          status: 'ACTIVE' as const,
+          totalStandardTimeMinutes: 0,
+          operations: []
+        });
+      }
+      const rc = map.get(key);
+      rc.operations.push(step);
+      rc.totalStandardTimeMinutes += Number(step.standardTimeMinutes || 0);
+    }
+
+    return Array.from(map.values()).map(rc => {
+      rc.operations.sort((a: any, b: any) => a.sequenceNo - b.sequenceNo);
+      return rc;
+    });
+  }
+
+  async saveRouteCard(payload: {
+    partCode: string;
+    partDescription?: string;
+    revision?: string;
+    status?: 'ACTIVE' | 'DRAFT' | 'OBSOLETE';
+    notes?: string;
+    operations: Array<{
+      id?: string;
+      sequenceNo: number;
+      operationName: string;
+      workCenter: string;
+      standardTimeMinutes: number;
+      inspectionRequired: boolean;
+      requiredCertification?: string;
+    }>;
+  }) {
+    const { partCode, partDescription = '', operations = [] } = payload;
+    if (!partCode) throw new Error('partCode is required for Route Card');
+
+    try {
+      // 1. Delete existing route steps for this part
+      await this.db.from('route_card_templates').delete().eq('part_code', partCode);
+
+      // 2. Insert new sequenced operations
+      if (operations.length > 0) {
+        const rows = operations.map((op, idx) => ({
+          id: op.id || `rc-${partCode}-${op.sequenceNo || (idx + 1) * 10}`,
+          part_code: partCode,
+          part_description: partDescription || partCode,
+          sequence_no: Number(op.sequenceNo || (idx + 1) * 10),
+          operation_name: op.operationName,
+          work_center: op.workCenter,
+          standard_time_minutes: Number(op.standardTimeMinutes || 30),
+          inspection_required: Boolean(op.inspectionRequired),
+          required_certification: op.requiredCertification || 'None',
+          updated_at: new Date().toISOString()
+        }));
+
+        const { error: insErr } = await this.db.from('route_card_templates').insert(rows);
+        if (insErr) throw insErr;
+      }
+    } catch (err: any) {
+      console.warn('Database saveRouteCard exception:', err);
+      throw new Error(`Failed to save Route Card for ${partCode}: ${err.message}`);
+    }
+
+    await auditService.recordAuditLog({
+      actorEmail: 'engineering@guruom.in',
+      actorRole: 'Manufacturing Engineer',
+      action: 'ROUTE_CARD_SAVED',
+      entityType: 'route_card_templates',
+      entityId: `RC-${partCode}`,
+      details: `Route Card saved for ${partCode} with ${operations.length} operations.`
+    }).catch(() => {});
+
+    return {
+      id: `rc-${partCode}`,
+      routeCode: `RC-${partCode}`,
+      partCode,
+      partDescription,
+      revision: payload.revision || 'REV-A',
+      status: payload.status || 'ACTIVE',
+      operations
+    };
+  }
+
+  async duplicateRouteCard(sourcePartCode: string, targetPartCode: string, targetPartDescription?: string) {
+    const grouped = await this.getGroupedRouteCards();
+    const source = grouped.find(g => g.partCode === sourcePartCode);
+    if (!source) throw new Error(`Source Route Card for ${sourcePartCode} not found`);
+
+    return this.saveRouteCard({
+      partCode: targetPartCode,
+      partDescription: targetPartDescription || `${source.partDescription} (Copy)`,
+      revision: 'REV-A',
+      status: 'ACTIVE',
+      operations: source.operations.map((op: any) => ({
+        ...op,
+        id: undefined,
+        partCode: targetPartCode,
+        partDescription: targetPartDescription || `${source.partDescription} (Copy)`
+      }))
+    });
+  }
+
+  async deleteRouteCard(partCode: string) {
+    try {
+      const { error } = await this.db.from('route_card_templates').delete().eq('part_code', partCode);
+      if (error) throw error;
+    } catch (err: any) {
+      console.warn('Database deleteRouteCard error:', err);
+      throw new Error(`Failed to delete Route Card for ${partCode}: ${err.message}`);
+    }
+
+    await auditService.recordAuditLog({
+      actorEmail: 'engineering@guruom.in',
+      actorRole: 'Manufacturing Engineer',
+      action: 'ROUTE_CARD_DELETED',
+      entityType: 'route_card_templates',
+      entityId: `RC-${partCode}`,
+      details: `Route Card deleted for part ${partCode}`
+    }).catch(() => {});
+
+    return { success: true, partCode };
+  }
+
   async getJobCards() {
     try {
       const { data: jcData, error } = await this.db
         .from('job_cards')
         .select('*')
+        .not('order_po', 'like', 'PO-GOLDEN-%')
+        .not('order_po', 'like', 'PO-TEST-REG-%')
+        .not('order_po', 'like', 'PO-PERSIST-%')
+        .not('order_po', 'like', 'PO-TATA-%')
+        .not('order_po', 'like', 'PO-TEST-%')
+        .not('order_po', 'like', '__TEST__%')
+        .not('job_no', 'like', 'JC/6%')
+        .not('job_no', 'like', 'JC/TEST%')
         .order('created_at', { ascending: false });
 
       if (!error && jcData && jcData.length > 0) {
@@ -202,6 +345,7 @@ export class ProductionService {
       });
       if (insertErr) {
         console.error('Database createJobCard error:', insertErr);
+        throw new Error(`Failed to write Job Card to database: ${insertErr.message}`);
       }
 
       if (jobCard.operations && jobCard.operations.length > 0) {
@@ -226,8 +370,9 @@ export class ProductionService {
           console.error('Database job_card_operations insert error:', opErr);
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn('DB createJobCard exception:', err);
+      throw err;
     }
 
     // Update parent order stage to IN_PRODUCTION (Step 5)

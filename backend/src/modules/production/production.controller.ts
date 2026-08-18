@@ -11,6 +11,43 @@ export class ProductionController {
     }
   }
 
+  async getGroupedRouteCards(req: Request, res: Response) {
+    try {
+      const data = await productionService.getGroupedRouteCards();
+      return res.json({ data });
+    } catch (err: any) {
+      return res.status(500).json({ error: 'InternalServerError', message: err.message });
+    }
+  }
+
+  async saveRouteCard(req: Request, res: Response) {
+    try {
+      const data = await productionService.saveRouteCard(req.body);
+      return res.status(201).json({ message: 'Route Card saved successfully', data });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
+
+  async duplicateRouteCard(req: Request, res: Response) {
+    try {
+      const { sourcePartCode, targetPartCode, targetPartDescription } = req.body;
+      const data = await productionService.duplicateRouteCard(sourcePartCode, targetPartCode, targetPartDescription);
+      return res.status(201).json({ message: 'Route Card duplicated successfully', data });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
+
+  async deleteRouteCard(req: Request, res: Response) {
+    try {
+      const data = await productionService.deleteRouteCard(req.params.partCode);
+      return res.json({ message: 'Route Card deleted successfully', data });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
+
   async getJobCards(req: Request, res: Response) {
     try {
       const data = await productionService.getJobCards();

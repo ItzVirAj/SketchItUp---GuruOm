@@ -39,7 +39,7 @@ async function runSecurityTests() {
   // TEST 2: User Login & Session Creation with Token Family
   // ----------------------------------------------------
   console.log('\n▶ TEST 2: Login Flow & Token Family Initialization');
-  const testEmail = 'user@guruom.in';
+  const testEmail = 'owner@guruom.in';
   const testPassword = '1234567890';
   const testIp = '103.24.120.45';
   const testUa = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0';

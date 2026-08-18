@@ -44,7 +44,7 @@ async function runTests() {
 
   // Test 3: AuthService Login Flow
   console.log('\n[Test 3] Testing AuthService.login...');
-  const loginRes = await authService.login('user@guruom.in', '1234567890');
+  const loginRes = await authService.login('owner@guruom.in', '1234567890');
   console.log('✓ Super Admin Login Success:', loginRes.user.name, `(${loginRes.user.role})`);
   if (loginRes.user.role !== 'SUPER ADMIN') {
     throw new Error('Expected Super Admin role');

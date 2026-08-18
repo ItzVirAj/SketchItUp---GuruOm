@@ -95,6 +95,10 @@ const getPathForView = (view: ConsoleView, orderId?: string | null): string => {
       return '/company-profile';
     case 'workflow-testing':
       return '/workflow-testing';
+    case 'bom':
+      return '/production?tab=bom';
+    case 'route-cards':
+      return '/production?tab=route-cards';
     default:
       return '/command-center';
   }
@@ -146,8 +150,8 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
 
   const activeUserFallback: SystemUser = authProfile || {
     id: 'usr-1',
-    name: 'Pramod Parshi (Founder & CEO)',
-    email: 'user@guruom.in',
+    name: 'Sachin Gharbude (Founder & CEO)',
+    email: 'owner@guruom.in',
     role: 'SUPER ADMIN',
     status: 'ACTIVE',
     department: 'Executive Management',
@@ -200,6 +204,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
     handleAddMachine,
     handleImportOMGST,
     handleAddUser,
+    handleUpdateUser,
     handleRevokeUser: serviceRevokeUser,
     handleRestoreUser,
     handleUpdateUserRole,
@@ -250,8 +255,14 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
       setCurrentView('masters');
     } else if (path === '/inventory') {
       setCurrentView('inventory');
-    } else if (path === '/production') {
-      setCurrentView('production');
+    } else if (path === '/production' || path === '/bom' || path === '/route-cards') {
+      if (path === '/bom') {
+        setCurrentView('bom');
+      } else if (path === '/route-cards') {
+        setCurrentView('route-cards');
+      } else {
+        setCurrentView('production');
+      }
     } else if (path === '/finished-goods') {
       setCurrentView('finished-goods');
     } else if (path === '/plating-outwork') {
@@ -358,7 +369,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
         setIsDarkMode={setIsDarkMode}
         currentRole={currentRole}
         setCurrentRole={(role) => handleUpdateUserRole(currentUserId, role)}
-        userName={currentUser ? currentUser.name : "Pramod Parshi"}
+        userName={currentUser ? currentUser.name : "Sachin Gharbude"}
         currentUser={currentUser}
         onOpenSwitchUser={() => setIsSwitchUserOpen(true)}
         onSync={handleSync}
@@ -382,7 +393,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
           currentRole={currentRole}
           isDarkMode={isDarkMode}
           currentUser={currentUser}
-          userName={currentUser ? currentUser.name : "Pramod Parshi"}
+          userName={currentUser ? currentUser.name : "Sachin Gharbude"}
           onSignOut={onSignOut}
           onOpenSecurityModal={() => setIsSecurityModalOpen(true)}
           isOpenMobile={isOpenMobile}
@@ -492,13 +503,16 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
             />
           )}
 
-          {currentView === 'production' && (
+          {(currentView === 'production' || currentView === 'bom' || currentView === 'route-cards') && (
             <ProductionView
               jobCards={jobCards}
               orders={orders}
               productionLogs={productionLogs}
               qcItems={qcQueue}
+              stock={stock}
+              masters={masters}
               isDarkMode={isDarkMode}
+              initialSection={currentView === 'bom' ? 'bom' : currentView === 'route-cards' ? 'route-cards' : 'job-cards'}
               onCreateJobCard={handleCreateJobCard}
               onLogProduction={handleLogProduction}
               preselectedOrderPo={pendingJobCardOrderPo}
@@ -626,6 +640,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
               isDarkMode={isDarkMode}
               currentUserId={currentUserId}
               onAddUser={handleAddUser}
+              onUpdateUser={handleUpdateUser}
               onSwitchUser={handleSwitchUser}
               onRevokeUser={handleRevokeUser}
               onRestoreUser={handleRestoreUser}

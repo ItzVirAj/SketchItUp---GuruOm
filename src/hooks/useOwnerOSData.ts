@@ -503,17 +503,20 @@ export function useOwnerOSData(currentUser?: SystemUser) {
 
   const handleCreateJobCard = async (job: JobCard) => {
     // Manual creation from the Production floor form — posts to the job card release API
-    await createJobCardForOrder({
+    const res = await createJobCardForOrder({
+      jobNo: job.jobNo,
       orderPo: job.orderPo,
       partCode: job.partCode,
       partDescription: job.partDescription,
       drawingRevision: job.drawingRevision || 'REV-A',
       targetQty: Number(job.targetQty ?? job.qty ?? 0),
+      qty: Number(job.qty ?? job.targetQty ?? 0),
+      machine: job.machine || 'CNC-01',
       materialIssuedLot: job.materialIssuedLot || 'HEAT-LOT-NA',
       targetDate: job.targetDate,
       remarks: `Manually created on Production floor for PO ${job.orderPo}${job.machine ? ` (${job.machine})` : ''}`
     });
-    await addAuditLog('job_card', 'create', `Created job card ${job.jobNo} for PO ${job.orderPo} (${job.partCode} x ${Number(job.targetQty ?? job.qty ?? 0)})`);
+    await addAuditLog('job_card', 'create', `Created job card ${res?.jobNo || job.jobNo} for PO ${job.orderPo} (${job.partCode} x ${Number(job.targetQty ?? job.qty ?? 0)})`);
     await loadAllData();
   };
 
@@ -707,6 +710,22 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     await loadAllData();
   };
 
+  const handleUpdateUser = async (userId: string, updates: Partial<SystemUser>) => {
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...updates } : u));
+    const saved = localStorage.getItem('stratum_user');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.id === userId || parsed.email === users.find(u => u.id === userId)?.email) {
+          localStorage.setItem('stratum_user', JSON.stringify({ ...parsed, ...updates }));
+        }
+      } catch (_) {}
+    }
+    await updateProfile(userId, updates);
+    await addAuditLog('users', 'update_user', `Updated user record #${userId} [Name: ${updates.name || '—'}, Email: ${updates.email || '—'}, Role: ${updates.role || '—'}]`);
+    await loadAllData();
+  };
+
   const handleDeleteUser = async (userId: string) => {
     setUsers(prev => prev.filter(u => u.id !== userId));
     await deleteProfile(userId);
@@ -869,6 +888,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     handleAddMachine,
     handleImportOMGST,
     handleAddUser,
+    handleUpdateUser,
     handleRevokeUser,
     handleRestoreUser,
     handleUpdateUserRole,

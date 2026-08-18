@@ -18,6 +18,12 @@ export class DispatchService {
       const { data, error } = await this.db
         .from('dispatch_challans')
         .select('*')
+        .not('challan_no', 'like', 'CHL/6%')
+        .not('challan_no', 'like', 'CHL/TEST%')
+        .not('order_po', 'like', 'PO-GOLDEN-%')
+        .not('order_po', 'like', 'PO-TEST-%')
+        .not('order_po', 'like', 'PO-TATA-%')
+        .not('order_po', 'like', '__TEST__%')
         .order('created_at', { ascending: false });
 
       if (!error && data && data.length > 0) {

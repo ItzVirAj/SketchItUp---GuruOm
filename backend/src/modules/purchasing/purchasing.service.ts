@@ -151,6 +151,8 @@ export class PurchasingService {
       const { data: poData, error: poErr } = await this.db
         .from('purchase_orders')
         .select('*')
+        .not('po_no', 'like', 'PO-PUR-6%')
+        .not('po_no', 'like', 'PO-PUR-TEST%')
         .order('created_at', { ascending: false });
 
       if (!poErr && poData && poData.length > 0) {

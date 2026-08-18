@@ -27,11 +27,16 @@ import {
   CreditCard,
   Building,
   User,
-  ShieldAlert
+  ShieldAlert,
+  Zap,
+  Sparkles,
+  CheckCircle,
+  AlertCircle
 } from 'lucide-react';
 import { CustomerOrder, OrderStatus, QCInspection, OrderLineItem, UserRole } from '../../../types/console';
 import { isRoleAuthorizedForCta, getCtaPermission, CtaId, normalizeRole } from '../../../utils/rbacMatrix';
 import { executeOrderStageTransition, validatePodRequired, validateOrderClosure } from '../../../utils/orderStateMachine';
+import { runMaterialCheckForOrder, overrideMaterialCheckForOrder } from '../../../services/supabaseServices';
 
 interface OrderDetailViewProps {
   order: CustomerOrder;
@@ -72,6 +77,17 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   const [isConfirming, setIsConfirming] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
 
+  // Material Availability & Override States
+  const [isRunningMaterialCheck, setIsRunningMaterialCheck] = useState(false);
+  const [showOverrideModal, setShowOverrideModal] = useState(false);
+  const [overrideReason, setOverrideReason] = useState('');
+  const [overrideError, setOverrideError] = useState<string | null>(null);
+  const [materialCheckFeedback, setMaterialCheckFeedback] = useState<{
+    ready: boolean;
+    shortages?: any[];
+    message?: string;
+  } | null>(null);
+
   // POD Form State (PRD v1.0 Hard Gate)
   const [podDocUrl, setPodDocUrl] = useState(order.podDocumentUrl || '');
   const [podCarrier, setPodCarrier] = useState(order.transporterName || '');
@@ -101,7 +117,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   const editTotalGross = editLines.reduce((sum, l) => sum + (Number(l.orderQty || 0) * Number(l.rate || 0)), 0);
 
   const hasJobCards = (order.jobCards && order.jobCards.length > 0) || ['IN_PRODUCTION', 'QC_INSPECTION', 'READY_TO_DISPATCH', 'DISPATCHED'].includes(order.status || '');
-  const isOwner = normalizeRole(currentRole) === 'ADMIN_OWNER';
+  const isOwner = normalizeRole(currentRole) === 'ADMIN_OWNER' || String(currentRole).toUpperCase().includes('OWNER') || String(currentRole).toUpperCase().includes('ADMIN');
 
   const openEditModal = () => {
     setEditPoNo(order.poNo || '');
@@ -301,22 +317,56 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
   const handleMaterialCheckAction = async () => {
     try {
-      setIsConfirming(true);
+      setIsRunningMaterialCheck(true);
       setConfirmError(null);
-      const heatLot = order.heatLotNumber || `HEAT-LOT-${Math.floor(1000 + Math.random() * 9000)}`;
-
+      const res = await runMaterialCheckForOrder(order.id || order.poNo);
+      setMaterialCheckFeedback({
+        ready: res.ready,
+        shortages: res.shortages || [],
+        message: res.ready 
+          ? 'Material Check PASSED: All BOM raw materials are in stock and allocated.' 
+          : `Material Check Shortage: ${res.shortages?.length || 0} items are short. Purchase requisitions auto-created.`
+      });
       if (onUpdateOrder) {
         await onUpdateOrder(order.id, {
-          status: 'MATERIAL_READY',
-          stage: 'MATERIAL_READY',
-          heatLotNumber: heatLot,
-          progressStep: 3
+          status: res.status,
+          stage: res.status,
+          progressStep: res.progressStep
         });
       }
     } catch (err: any) {
       setConfirmError(err?.message || 'Failed to complete material check.');
     } finally {
-      setIsConfirming(false);
+      setIsRunningMaterialCheck(false);
+    }
+  };
+
+  const handleOverrideMaterialSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!overrideReason || overrideReason.trim().length < 5) {
+      setOverrideError('A detailed reason (min 5 characters) is required for Owner Override.');
+      return;
+    }
+    try {
+      setIsRunningMaterialCheck(true);
+      setOverrideError(null);
+      const res = await overrideMaterialCheckForOrder(order.id || order.poNo, overrideReason);
+      setShowOverrideModal(false);
+      setMaterialCheckFeedback({
+        ready: true,
+        message: `Owner Override Applied: ${overrideReason}`
+      });
+      if (onUpdateOrder) {
+        await onUpdateOrder(order.id, {
+          status: 'MATERIAL_READY',
+          stage: 'MATERIAL_READY',
+          progressStep: 4
+        });
+      }
+    } catch (err: any) {
+      setOverrideError(err?.message || 'Failed to apply material override.');
+    } finally {
+      setIsRunningMaterialCheck(false);
     }
   };
 
@@ -1151,6 +1201,111 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
       </div>
 
+      {/* 2.5 Stage 3 Material Availability & BOM Verification Hub */}
+      {['CONFIRMED', 'APPROVED', 'MATERIAL_SHORT', 'MATERIAL_CHECK', 'MATERIAL_READY', 'IN_PRODUCTION'].includes((order.status || '').toUpperCase()) && (
+        <div className={`p-6 rounded-3xl border space-y-4 font-mono text-xs transition-all shadow-lg ${
+          (order.status || '').toUpperCase() === 'MATERIAL_READY' || (order.status || '').toUpperCase() === 'IN_PRODUCTION'
+            ? isDarkMode ? 'bg-emerald-950/30 border-emerald-500/30 text-white' : 'bg-emerald-50/70 border-emerald-200 text-slate-900'
+            : (order.status || '').toUpperCase() === 'MATERIAL_SHORT'
+            ? isDarkMode ? 'bg-amber-950/30 border-amber-500/30 text-white' : 'bg-amber-50/70 border-amber-200 text-slate-900'
+            : isDarkMode ? 'bg-slate-900/80 border-slate-800/80 text-white' : 'bg-white border-slate-200 text-slate-900'
+        }`}>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3.5 border-slate-200 dark:border-slate-800">
+            <div className="flex items-center gap-2.5">
+              <div className={`p-2 rounded-xl ${
+                (order.status || '').toUpperCase() === 'MATERIAL_READY' || (order.status || '').toUpperCase() === 'IN_PRODUCTION'
+                  ? 'bg-emerald-500/20 text-emerald-400'
+                  : (order.status || '').toUpperCase() === 'MATERIAL_SHORT'
+                  ? 'bg-amber-500/20 text-amber-400'
+                  : 'bg-[#5B75F8]/20 text-[#7B92FF]'
+              }`}>
+                <Layers className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-sm uppercase tracking-wide">
+                    Stage 3: BOM Explosion & Material Verification
+                  </h3>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                    (order.status || '').toUpperCase() === 'MATERIAL_READY' || (order.status || '').toUpperCase() === 'IN_PRODUCTION'
+                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                      : (order.status || '').toUpperCase() === 'MATERIAL_SHORT'
+                      ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
+                      : 'bg-blue-500/20 text-blue-400 border border-blue-500/40'
+                  }`}>
+                    {(order.status || '').toUpperCase() === 'MATERIAL_READY' || (order.status || '').toUpperCase() === 'IN_PRODUCTION'
+                      ? '✓ Material Ready & Reserved'
+                      : (order.status || '').toUpperCase() === 'MATERIAL_SHORT'
+                      ? '⚠ Material Shortage'
+                      : 'Pending Availability Check'}
+                  </span>
+                </div>
+                <p className={`text-[11px] mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                  Live BOM explosion verified against warehouse inventory stock. Determines Job Card release eligibility.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                disabled={isRunningMaterialCheck}
+                onClick={handleMaterialCheckAction}
+                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-md shadow-[#5B75F8]/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isRunningMaterialCheck ? 'animate-spin' : ''}`} />
+                <span>{isRunningMaterialCheck ? 'Checking...' : 'Re-run Material Check'}</span>
+              </button>
+
+              {isOwner && (
+                <button
+                  onClick={() => setShowOverrideModal(true)}
+                  className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    isDarkMode 
+                      ? 'border-purple-500/40 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20' 
+                      : 'border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100'
+                  }`}
+                  title="Owner Override: Bypass material check for dev/testing with mandatory audit reason"
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                  <span>Owner Override</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {materialCheckFeedback && (
+            <div className={`p-3 rounded-2xl border text-xs flex items-center gap-2 ${
+              materialCheckFeedback.ready
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+            }`}>
+              {materialCheckFeedback.ready ? <CheckCircle className="w-4 h-4 shrink-0" /> : <AlertTriangle className="w-4 h-4 shrink-0" />}
+              <span>{materialCheckFeedback.message}</span>
+            </div>
+          )}
+
+          {(order.status || '').toUpperCase() === 'MATERIAL_SHORT' && (
+            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-amber-400 text-xs flex items-center gap-1.5">
+                  <AlertTriangle className="w-4 h-4 text-amber-400" />
+                  Shortage Routing Active (Stage 3): Purchase Requisitions Auto-Created
+                </span>
+                <button 
+                  onClick={() => onNavigate?.('inventory')} 
+                  className="px-3 py-1 rounded-lg bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30 text-[11px] font-bold cursor-pointer"
+                >
+                  Open Procurement Requisitions ➔
+                </button>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Job Card release is gated until required raw materials are procured via GRN or overridden by the Owner.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 3. Executive KPI & Order Metadata Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 font-mono">
         
@@ -1843,6 +1998,73 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 Record Payment
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Owner Override Material Check Modal */}
+      {showOverrideModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md font-sans">
+          <div className={`relative w-full max-w-md rounded-3xl border p-6 space-y-4 font-mono text-xs z-10 shadow-2xl ${
+            isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          }`}>
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-purple-500/20 text-purple-400">
+                  <Zap className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm uppercase text-purple-400">Owner Material Override</h3>
+                  <p className="text-[11px] text-slate-400">Force Order to MATERIAL_READY with audit trace</p>
+                </div>
+              </div>
+              <button onClick={() => setShowOverrideModal(false)} className="text-slate-400 hover:text-white cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {overrideError && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+                {overrideError}
+              </div>
+            )}
+
+            <form onSubmit={handleOverrideMaterialSubmit} className="space-y-3">
+              <div>
+                <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">
+                  Reason for Override (Mandatory) *
+                </label>
+                <textarea 
+                  rows={3}
+                  placeholder="e.g. Raw material stock verified physically in bay 3 / Expedited demo order approval"
+                  value={overrideReason}
+                  onChange={(e) => setOverrideReason(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-xs outline-none focus:border-purple-500"
+                  required
+                />
+              </div>
+
+              <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-[11px] text-purple-300">
+                ⚠️ This action will be permanently logged in the audit trail under your user ID: <strong>{currentUser?.name || 'Owner'}</strong>.
+              </div>
+
+              <div className="pt-3 flex justify-end gap-2.5 border-t border-slate-800">
+                <button 
+                  type="button"
+                  onClick={() => setShowOverrideModal(false)} 
+                  className="px-4 py-2 rounded-xl border border-slate-800 text-slate-400 hover:text-white cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  disabled={isRunningMaterialCheck || overrideReason.trim().length < 5}
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold cursor-pointer hover:from-indigo-600 hover:to-purple-600 shadow-lg shadow-purple-500/25 disabled:opacity-50"
+                >
+                  {isRunningMaterialCheck ? 'Applying Override...' : 'Confirm Owner Override'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

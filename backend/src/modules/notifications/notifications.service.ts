@@ -73,7 +73,7 @@ const SEED_RECIPIENTS = [
     recipient_type: 'EMAIL',
     recipient_value: 'admin@guruom.in',
     email: 'admin@guruom.in',
-    name: 'Pramod Parshi (Founder & CEO)',
+    name: 'Sachin Gharbude (Founder & CEO)',
     enabled: true
   },
   {

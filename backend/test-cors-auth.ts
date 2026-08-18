@@ -62,11 +62,8 @@ async function runCorsVerificationTests() {
     console.log('\n[CORS 2] Testing Cross-Origin POST /api/v1/auth/login from Vite dev server origin...');
     const loginRes = await fetch(`${BASE_URL}/login`, {
       method: 'POST',
-      headers: {
-        'Origin': FRONTEND_ORIGIN,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ email: 'user@guruom.in', password: '1234567890' })
+      headers: { 'Content-Type': 'application/json', 'Origin': 'http://localhost:5173' },
+      body: JSON.stringify({ email: 'owner@guruom.in', password: '1234567890' })
     });
 
     console.log('✓ Login HTTP Status:', loginRes.status);

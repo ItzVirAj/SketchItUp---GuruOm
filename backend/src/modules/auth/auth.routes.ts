@@ -37,6 +37,8 @@ router.get('/security-events/admin', requireAuth, (req, res) => authController.g
 
 // 6. User Management Endpoints (Admin)
 router.get('/users', requireAuth, (req, res) => authController.getUsers(req, res));
+router.patch('/users/:id', requireAuth, (req, res) => authController.updateUser(req, res));
+router.put('/users/:id', requireAuth, (req, res) => authController.updateUser(req, res));
 router.patch('/users/:id/role', requireAuth, (req, res) => authController.updateUserRole(req, res));
 router.patch('/users/:id/status', requireAuth, (req, res) => authController.updateUserStatus(req, res));
 router.delete('/users/:id', requireAuth, (req, res) => authController.deleteUser(req, res));

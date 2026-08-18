@@ -258,7 +258,7 @@ async function runGoldenPathSuite() {
       totalAmount: (ctx.rawMaterialRequiredKg * ctx.rawMaterialUnitPrice) * 1.18,
       status: 'APPROVED',
       approvalStatus: 'APPROVED',
-      approvedBy: 'CEO Pramod Parshi',
+      approvedBy: 'CEO Sachin Gharbude',
       createdBy: 'purchasing@guruom.in',
       notes: `Raw material for order ${ctx.orderPo}`,
       items: [
@@ -526,18 +526,8 @@ async function runGoldenPathSuite() {
       date: new Date().toISOString().split('T')[0],
       transporter: 'VRL Logistics Express',
       vehicleNo: 'MH-12-AB-9876',
-      linesCount: 1
-    });
-
-    // Record Outward Dispatch Movement in Inventory Ledger
-    await inventoryMovementsService.recordMovement({
-      itemCode: ctx.partCode,
-      quantityChange: -ctx.orderQty,
-      movementType: 'DISPATCH',
-      referenceId: ctx.challanNo,
-      referenceType: 'dispatch',
-      actorEmail: 'dispatch@guruom.in',
-      notes: `Delivery to ${ctx.customerName} via ${createdDispatch.transporter}`
+      linesCount: 1,
+      lines: [{ itemCode: ctx.partCode, qty: ctx.orderQty }]
     });
 
     const partBalAfterDispatch = await inventoryMovementsService.getCurrentBalance(ctx.partCode);
@@ -592,14 +582,48 @@ async function runGoldenPathSuite() {
 
     if (totalFailed > 0) {
       console.error('💥 Golden-path workflow failed. Halting release pipeline.');
-      process.exit(1);
+      process.exitCode = 1;
     } else {
       console.log('🎉 100% Golden-path ERP lifecycle verified successfully across Sales, Purchasing, Warehouse, Production, QC, Dispatch, and Finance!');
-      process.exit(0);
+      process.exitCode = 0;
     }
   } catch (err: any) {
     console.error('💥 Fatal error during golden-path pipeline execution:', err);
-    process.exit(1);
+    process.exitCode = 1;
+  } finally {
+    // Automated Teardown: Clean up all test artifacts generated during this run
+    console.log(`\n🧹 [Teardown] Cleaning up all test entities generated for runId: ${runId}...`);
+    try {
+      if (ctx.orderPo) await db.from('material_reservations').delete().eq('order_po', ctx.orderPo);
+      if (ctx.orderPo) await db.from('production_logs').delete().eq('order_po', ctx.orderPo);
+      if (ctx.orderPo) await db.from('qc_inspections').delete().eq('order_po', ctx.orderPo);
+      if (ctx.orderPo) await db.from('pdi_inspections').delete().eq('order_po', ctx.orderPo);
+      if (ctx.jobNo) await db.from('job_cards').delete().eq('job_no', ctx.jobNo);
+      if (ctx.orderPo) await db.from('job_cards').delete().eq('order_po', ctx.orderPo);
+      if (ctx.orderPo) await db.from('finished_goods').delete().eq('order_po', ctx.orderPo);
+      if (ctx.challanNo) await db.from('dispatch_challans').delete().eq('challan_no', ctx.challanNo);
+      if (ctx.orderPo) await db.from('dispatch_challans').delete().eq('order_po', ctx.orderPo);
+      if (ctx.invoiceNo) await db.from('customer_invoices').delete().eq('invoice_no', ctx.invoiceNo);
+      if (ctx.orderPo) await db.from('customer_invoices').delete().eq('order_po', ctx.orderPo);
+      if (ctx.orderId) await db.from('order_line_items').delete().eq('order_id', ctx.orderId);
+      if (ctx.orderId) await db.from('customer_orders').delete().eq('id', ctx.orderId);
+      if (ctx.orderPo) await db.from('customer_orders').delete().eq('po_no', ctx.orderPo);
+      if (ctx.poNo) await db.from('purchase_orders').delete().eq('po_no', ctx.poNo);
+      if (ctx.grnNo) await db.from('goods_receipt_notes').delete().eq('grn_no', ctx.grnNo);
+      if (ctx.bomCode) await db.from('boms').delete().eq('bom_code', ctx.bomCode);
+      if (ctx.customerName) await db.from('customers').delete().eq('name', ctx.customerName);
+      if (ctx.partCode) {
+        await db.from('stock_items').delete().eq('item_code', ctx.partCode);
+        await db.from('inventory_movements').delete().eq('item_code', ctx.partCode);
+      }
+      if (ctx.rawMaterialCode) {
+        await db.from('stock_items').delete().eq('item_code', ctx.rawMaterialCode);
+        await db.from('inventory_movements').delete().eq('item_code', ctx.rawMaterialCode);
+      }
+      console.log('✅ [Teardown] Test data teardown completed successfully. Database restored.');
+    } catch (cleanupErr) {
+      console.warn('⚠️ [Teardown] Cleanup warning:', cleanupErr);
+    }
   }
 }
 

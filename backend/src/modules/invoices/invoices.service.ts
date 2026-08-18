@@ -268,6 +268,12 @@ export class InvoicesService {
       const { data, error } = await this.db
         .from('customer_invoices')
         .select('*')
+        .not('invoice_no', 'like', 'INV-6%')
+        .not('invoice_no', 'like', 'INV-TEST%')
+        .not('order_po', 'like', 'PO-GOLDEN-%')
+        .not('order_po', 'like', 'PO-TEST-%')
+        .not('order_po', 'like', 'PO-TATA-%')
+        .not('order_po', 'like', '__TEST__%')
         .order('created_at', { ascending: false });
 
       if (!error && data && data.length > 0) {

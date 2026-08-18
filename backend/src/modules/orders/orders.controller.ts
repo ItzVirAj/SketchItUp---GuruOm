@@ -146,6 +146,62 @@ export class OrdersController {
       });
     }
   }
+
+  async runMaterialCheck(req: Request, res: Response) {
+    const tenant = extractTenantId(req);
+    try {
+      const actorContext = {
+        role: req.rbacScope?.role || req.user?.role || 'Production Planner',
+        name: req.rbacScope?.userName || req.user?.name || req.user?.email || 'Production Planner'
+      };
+
+      const result = await ordersService.runMaterialVerificationForOrder(req.params.id, actorContext);
+
+      await Promise.all([
+        CacheService.invalidatePattern(`cache:${tenant}:orders:*`),
+        CacheService.invalidatePattern(`cache:${tenant}:dashboard:*`)
+      ]);
+
+      return res.json({
+        message: result.ready 
+          ? `Material check passed for Order ${result.poNo}. Order is now MATERIAL_READY.` 
+          : `Material check failed for Order ${result.poNo}. Shortages recorded and Order moved to MATERIAL_SHORT.`,
+        data: result
+      });
+    } catch (err: any) {
+      return res.status(err.statusCode || 400).json({
+        error: err.errorCode || 'MaterialCheckError',
+        message: err.message
+      });
+    }
+  }
+
+  async overrideMaterialCheck(req: Request, res: Response) {
+    const tenant = extractTenantId(req);
+    try {
+      const actorContext = {
+        role: req.rbacScope?.role || req.user?.role || 'Owner/Management',
+        name: req.rbacScope?.userName || req.user?.name || req.user?.email || 'Owner'
+      };
+
+      const result = await ordersService.overrideMaterialCheck(req.params.id, req.body, actorContext);
+
+      await Promise.all([
+        CacheService.invalidatePattern(`cache:${tenant}:orders:*`),
+        CacheService.invalidatePattern(`cache:${tenant}:dashboard:*`)
+      ]);
+
+      return res.json({
+        message: `Material check overridden by Owner for Order ${result.poNo}. Order forced to MATERIAL_READY.`,
+        data: result
+      });
+    } catch (err: any) {
+      return res.status(err.statusCode || 400).json({
+        error: err.errorCode || 'OverrideError',
+        message: err.message
+      });
+    }
+  }
 }
 
 export const ordersController = new OrdersController();

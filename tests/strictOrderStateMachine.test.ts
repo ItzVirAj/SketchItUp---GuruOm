@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { 
   executeOrderStageTransition, 
   normalizeOrderState,
@@ -18,6 +18,7 @@ import {
 import { ordersService } from '../backend/src/modules/orders/orders.service';
 import { invoicesService } from '../backend/src/modules/invoices/invoices.service';
 import { productionService } from '../backend/src/modules/production/production.service';
+import { getDbClient } from '../backend/src/config/database';
 
 const SAMPLE_CERTIFIED_OPERATORS: EmployeeCertification[] = [
   { employeeName: 'Rajesh Sharma', certificationName: 'CNC Certified' },
@@ -597,5 +598,27 @@ describe('Strict Enterprise Order State Machine & Server-Side Hard Enforcement (
       expect(jobCard.materialIssuedLot).toBe('HEAT-LOT-BHEL-0099');
       expect(jobCard.targetQty).toBe(50);
     }, 15000);
+  });
+
+  afterAll(async () => {
+    // Automated Teardown: Clean up any test orders, line items, and job cards generated in this test run
+    try {
+      const db = getDbClient();
+      const { data: testOrders } = await db
+        .from('customer_orders')
+        .select('id, po_no')
+        .or('po_no.ilike.PO-TEST-REG-%,po_no.ilike.PO-GOLDEN-%,po_no.ilike.PO-PERSIST-%,po_no.ilike.__TEST__%');
+
+      if (testOrders && testOrders.length > 0) {
+        for (const to of testOrders) {
+          await db.from('material_reservations').delete().eq('order_po', to.po_no);
+          await db.from('job_cards').delete().eq('order_po', to.po_no);
+          await db.from('order_line_items').delete().eq('order_id', to.id);
+          await db.from('customer_orders').delete().eq('id', to.id);
+        }
+      }
+    } catch (cleanupErr) {
+      console.warn('strictOrderStateMachine afterAll cleanup warning:', cleanupErr);
+    }
   });
 });

@@ -61,7 +61,7 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
   isDarkMode,
   currentRole = 'SUPER ADMIN',
   currentUser,
-  userName = 'Pramod Parshi',
+  userName = 'Sachin Gharbude',
   onSignOut,
   onOpenSecurityModal,
   isOpenMobile,
@@ -234,7 +234,7 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
 
   // User Initials
   const displayName = currentUser ? currentUser.name : userName;
-  const displayEmail = currentUser ? currentUser.email : 'user@guruom.in';
+  const displayEmail = currentUser ? currentUser.email : 'owner@guruom.in';
   const initials = displayName
     .split(' ')
     .map(n => n[0])

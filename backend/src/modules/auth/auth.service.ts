@@ -105,9 +105,9 @@ const IN_MEMORY_RESET_TOKENS: PasswordResetToken[] = [];
 const SEED_USERS: UserRecord[] = [
   {
     id: 'usr-1',
-    email: 'user@guruom.in',
+    email: 'owner@guruom.in',
     password_hash: '$argon2id$v=19$m=65536,p=4,t=3$VgHcmjAIFdBPsWEkHYiakw$b10tFs2HPJOw+wKzZHy9zmayWA34zywOYLZOiqCIqcI',
-    full_name: 'Pramod Parshi (Founder & CEO)',
+    full_name: 'Sachin Gharbude (Founder & CEO)',
     role: 'SUPER ADMIN',
     department: 'Executive Management',
     phone: '+91 98250 12345',
@@ -182,12 +182,12 @@ const SEED_USERS: UserRecord[] = [
   },
   {
     id: 'usr-8',
-    email: 'sachin@example.com',
+    email: 'pramod@guruom.in',
     password_hash: '$argon2id$v=19$m=65536,p=4,t=3$VgHcmjAIFdBPsWEkHYiakw$b10tFs2HPJOw+wKzZHy9zmayWA34zywOYLZOiqCIqcI',
-    full_name: 'Sachin Gharbude',
+    full_name: 'Pramod Parshi',
     role: 'SUPER ADMIN',
     department: 'Plant Operations Admin',
-    phone: '+91 98220 99010',
+    phone: '+91 98250 12345',
     status: 'ACTIVE',
     is_temporary_password: true
   }
@@ -206,6 +206,32 @@ export class AuthService {
   private async findUserByEmail(email: string): Promise<UserRecord | null> {
     const cleanEmail = email.trim().toLowerCase();
 
+    // 1. Try profiles table in Supabase DB
+    try {
+      const { data, error } = await this.db
+        .from('profiles')
+        .select('*')
+        .eq('email', cleanEmail)
+        .maybeSingle();
+
+      if (data && !error) {
+        return {
+          id: data.id,
+          email: data.email,
+          password_hash: data.password_hash || '$argon2id$v=19$m=65536,p=4,t=3$VgHcmjAIFdBPsWEkHYiakw$b10tFs2HPJOw+wKzZHy9zmayWA34zywOYLZOiqCIqcI',
+          full_name: data.full_name,
+          role: data.role,
+          department: data.department,
+          phone: data.phone,
+          status: data.status,
+          is_temporary_password: false
+        } as UserRecord;
+      }
+    } catch (err) {
+      console.warn('Database profiles lookup fallback:', err);
+    }
+
+    // 2. Try users table in Supabase DB
     try {
       const { data, error } = await this.db
         .from('users')
@@ -220,7 +246,11 @@ export class AuthService {
       console.warn('Database user lookup fallback:', err);
     }
 
-    // Check seed accounts
+    // 3. Check seed accounts (support both new owner@guruom.in and legacy user@guruom.in alias for usr-1)
+    if (cleanEmail === 'user@guruom.in') {
+      const ownerSeed = SEED_USERS.find(u => u.id === 'usr-1');
+      if (ownerSeed) return ownerSeed;
+    }
     const seed = SEED_USERS.find(u => u.email.toLowerCase() === cleanEmail);
     if (seed) return seed;
 
@@ -231,6 +261,32 @@ export class AuthService {
    * Finds a user record by ID.
    */
   private async findUserById(id: string): Promise<UserRecord | null> {
+    // 1. Try profiles table
+    try {
+      const { data, error } = await this.db
+        .from('profiles')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (data && !error) {
+        return {
+          id: data.id,
+          email: data.email,
+          password_hash: data.password_hash || '$argon2id$v=19$m=65536,p=4,t=3$VgHcmjAIFdBPsWEkHYiakw$b10tFs2HPJOw+wKzZHy9zmayWA34zywOYLZOiqCIqcI',
+          full_name: data.full_name,
+          role: data.role,
+          department: data.department,
+          phone: data.phone,
+          status: data.status,
+          is_temporary_password: false
+        } as UserRecord;
+      }
+    } catch (err) {
+      console.warn('Database profiles findUserById fallback:', err);
+    }
+
+    // 2. Try users table
     try {
       const { data, error } = await this.db
         .from('users')
@@ -1449,6 +1505,25 @@ export class AuthService {
 
   async getAllUsers() {
     try {
+      const { data, error } = await this.db.from('profiles').select('*').order('created_at', { ascending: false });
+      if (data && !error && data.length > 0) {
+        return data.map((u: any) => ({
+          id: u.id,
+          name: u.full_name,
+          email: u.email,
+          role: u.role,
+          department: u.department,
+          phone: u.phone,
+          status: u.status,
+          isTemporaryPassword: u.is_temporary_password || false,
+          lastLogin: u.last_login ? new Date(u.last_login).toLocaleString('en-IN') : 'Recently'
+        }));
+      }
+    } catch (err) {
+      console.warn('Database getAllUsers profiles fallback:', err);
+    }
+
+    try {
       const { data, error } = await this.db.from('users').select('*').order('created_at', { ascending: false });
       if (data && !error && data.length > 0) {
         return data.map((u: any) => ({
@@ -1478,6 +1553,139 @@ export class AuthService {
       isTemporaryPassword: u.is_temporary_password || false,
       lastLogin: u.last_login_at || 'Never'
     }));
+  }
+
+  async updateUser(
+    id: string,
+    updates: {
+      name?: string;
+      full_name?: string;
+      email?: string;
+      role?: string;
+      department?: string;
+      phone?: string;
+      reporting_manager?: string;
+      status?: string;
+    },
+    actorContext?: { id?: string; email?: string; role?: string; name?: string }
+  ) {
+    const existing = await this.findUserById(id);
+    if (!existing) {
+      const err: any = new Error(`User with ID ${id} not found.`);
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const cleanEmail = updates.email ? updates.email.trim().toLowerCase() : undefined;
+    if (cleanEmail && cleanEmail !== existing.email.toLowerCase()) {
+      // Check uniqueness
+      const conflict = await this.findUserByEmail(cleanEmail);
+      if (conflict && conflict.id !== id) {
+        const err: any = new Error(`Email address ${cleanEmail} is already assigned to another user.`);
+        err.statusCode = 409;
+        throw err;
+      }
+    }
+
+    const newFullName = updates.full_name || updates.name || existing.full_name;
+    const newEmail = cleanEmail || existing.email;
+    const newRole = updates.role || existing.role;
+    const newDept = updates.department || existing.department;
+    const newPhone = updates.phone !== undefined ? updates.phone : existing.phone;
+    const newStatus = updates.status || existing.status;
+    const nowIso = new Date().toISOString();
+
+    const beforeState = {
+      id: existing.id,
+      email: existing.email,
+      name: existing.full_name,
+      role: existing.role,
+      department: existing.department,
+      status: existing.status
+    };
+
+    const afterState = {
+      id: existing.id,
+      email: newEmail,
+      name: newFullName,
+      role: newRole,
+      department: newDept,
+      status: newStatus
+    };
+
+    try {
+      await this.db
+        .from('profiles')
+        .update({
+          full_name: newFullName,
+          email: newEmail,
+          role: newRole,
+          department: newDept,
+          phone: newPhone,
+          status: newStatus,
+          updated_at: nowIso
+        })
+        .eq('id', id);
+    } catch (dbErr) {
+      console.warn('DB profiles update fallback:', dbErr);
+    }
+
+    try {
+      await this.db
+        .from('users')
+        .update({
+          full_name: newFullName,
+          email: newEmail,
+          role: newRole,
+          department: newDept,
+          phone: newPhone,
+          status: newStatus,
+          updated_at: nowIso
+        })
+        .eq('id', id);
+    } catch (_) {}
+
+    // Update in-memory seed if applicable
+    const seed = SEED_USERS.find(u => u.id === id || u.email.toLowerCase() === existing.email.toLowerCase());
+    if (seed) {
+      seed.full_name = newFullName;
+      seed.email = newEmail;
+      seed.role = newRole;
+      seed.department = newDept;
+      seed.phone = newPhone;
+      seed.status = newStatus;
+    }
+
+    await auditService.recordAuditLog({
+      actorEmail: actorContext?.email || 'owner@guruom.in',
+      actorRole: actorContext?.role || 'Owner',
+      action: 'USER_MASTER_UPDATE',
+      entityType: 'users',
+      entityId: id,
+      details: `User master updated: [Name: ${beforeState.name} → ${afterState.name}, Email: ${beforeState.email} → ${afterState.email}, Role: ${beforeState.role} → ${afterState.role}]`
+    }).catch(() => {});
+
+    notificationsService.broadcastEvent('user_updated', {
+      id,
+      name: newFullName,
+      email: newEmail,
+      role: newRole,
+      department: newDept,
+      phone: newPhone,
+      status: newStatus
+    });
+
+    return {
+      id,
+      name: newFullName,
+      fullName: newFullName,
+      email: newEmail,
+      role: newRole,
+      department: newDept,
+      phone: newPhone,
+      status: newStatus,
+      updatedAt: nowIso
+    };
   }
 
   async updateUserRole(id: string, role: string, actorId?: string) {

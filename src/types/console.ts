@@ -19,7 +19,8 @@ export type ConsoleView =
   | 'workflow-testing'
   | 'purchasing'
   | 'grn'
-  | 'bom';
+  | 'bom'
+  | 'route-cards';
 
 export type UserRole = 'SUPER ADMIN' | 'OPERATOR' | 'QC_MANAGER' | 'DISPATCH_CLERK' | 'FINANCE_MANAGER';
 
@@ -203,6 +204,18 @@ export interface RouteCardTemplateStep {
   standardTimeMinutes: number;
   inspectionRequired: boolean;
   requiredCertification: string;
+}
+
+export interface RouteCard {
+  id?: string;
+  routeCode?: string;
+  partCode: string;
+  partDescription: string;
+  revision?: string;
+  status?: 'ACTIVE' | 'DRAFT' | 'OBSOLETE';
+  totalStandardTimeMinutes?: number;
+  notes?: string;
+  operations: RouteCardTemplateStep[];
 }
 
 export interface JobCardOperation {

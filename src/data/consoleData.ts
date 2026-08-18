@@ -1415,12 +1415,11 @@ export const initialMachines: MachineMaster[] = [
   }
 ];
 
-
 export const initialUsers: SystemUser[] = [
   {
     id: 'usr-1',
-    name: 'Pramod Parshi (Founder & CEO)',
-    email: 'user@guruom.in',
+    name: 'Sachin Gharbude (Founder & CEO)',
+    email: 'owner@guruom.in',
     role: 'SUPER ADMIN',
     status: 'ACTIVE',
     department: 'Executive Management',
@@ -1519,12 +1518,12 @@ export const initialUsers: SystemUser[] = [
   },
   {
     id: 'usr-11',
-    name: 'Sachin Gharbude',
-    email: 'sachin@example.com',
+    name: 'Pramod Parshi',
+    email: 'pramod@guruom.in',
     role: 'SUPER ADMIN',
     status: 'ACTIVE',
     department: 'Plant Operations Admin',
-    phone: '+91 98220 99010',
+    phone: '+91 98250 12345',
     lastLogin: 'Today, 09:15 AM'
   }
 ];
@@ -1532,7 +1531,6 @@ export const initialUsers: SystemUser[] = [
 export const initialAuditLogs: AuditLogEntry[] = [
   {
     id: 'log-101',
-    when: '10 min ago',
     user: 'Rohan Deshpande',
     entity: 'Order',
     action: 'update',

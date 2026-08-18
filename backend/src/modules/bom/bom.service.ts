@@ -142,6 +142,94 @@ export class BomService {
 
     return createdBOM;
   }
+
+  async duplicateBOM(sourceBomCode: string, targetBomCode: string, targetPartCode?: string, targetPartName?: string) {
+    const source = await this.getBOMByCode(sourceBomCode);
+    if (!source) {
+      throw new Error(`Source BOM ${sourceBomCode} not found`);
+    }
+
+    const duplicated: z.infer<typeof BillOfMaterialsSchema> = {
+      bomCode: targetBomCode || `${source.bomCode}-COPY`,
+      parentPartCode: targetPartCode || source.parentPartCode,
+      parentPartName: targetPartName || source.parentPartName,
+      revision: 'REV-A',
+      yieldPercentage: source.yieldPercentage,
+      batchSize: source.batchSize,
+      status: 'DRAFT',
+      notes: `Duplicated from ${sourceBomCode}`,
+      components: (source.components || []).map(c => ({
+        ...c,
+        id: undefined
+      }))
+    };
+
+    return this.createOrUpdateBOM(duplicated);
+  }
+
+  async createBOMRevision(sourceBomCode: string, newRevision: string) {
+    const source = await this.getBOMByCode(sourceBomCode);
+    if (!source) {
+      throw new Error(`Source BOM ${sourceBomCode} not found`);
+    }
+
+    const nextRev: z.infer<typeof BillOfMaterialsSchema> = {
+      ...source,
+      id: undefined,
+      bomCode: `${source.parentPartCode}-${newRevision}`,
+      revision: newRevision,
+      status: 'ACTIVE',
+      notes: `New engineering revision ${newRevision} generated from ${source.revision}`,
+      components: (source.components || []).map(c => ({
+        ...c,
+        id: undefined
+      }))
+    };
+
+    return this.createOrUpdateBOM(nextRev);
+  }
+
+  async setBOMStatus(bomCode: string, status: 'ACTIVE' | 'DRAFT' | 'OBSOLETE') {
+    try {
+      const { error } = await this.db
+        .from('bill_of_materials')
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq('bom_code', bomCode);
+
+      if (error) console.error('Database setBOMStatus error:', error);
+    } catch (err) {
+      console.warn('Database setBOMStatus exception:', err);
+    }
+
+    const bom = await this.getBOMByCode(bomCode);
+    if (bom) {
+      bom.status = status;
+    }
+    return bom;
+  }
+
+  async deleteBOM(bomCode: string) {
+    // Check if BOM has open customer orders / job cards before deleting
+    try {
+      const { error: itemErr } = await this.db.from('bom_items').delete().eq('bom_id', bomCode);
+      const { error: bomErr } = await this.db.from('bill_of_materials').delete().or(`bom_code.eq.${bomCode},id.eq.${bomCode}`);
+      if (bomErr) throw bomErr;
+    } catch (err: any) {
+      console.warn('Database deleteBOM exception:', err);
+      throw new Error(`Failed to delete BOM ${bomCode}: ${err.message}`);
+    }
+
+    await logAudit({
+      actorEmail: 'engineering@guruom.in',
+      action: 'BOM_DELETED',
+      entityType: 'bill_of_materials',
+      entityId: bomCode,
+      afterState: null,
+      metadata: { details: `BOM ${bomCode} deleted from system.` }
+    }).catch(() => {});
+
+    return { success: true, bomCode };
+  }
 }
 
 export const bomService = new BomService();

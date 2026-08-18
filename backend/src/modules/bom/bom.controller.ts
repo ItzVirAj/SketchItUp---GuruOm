@@ -31,6 +31,45 @@ export class BomController {
       return res.status(400).json({ error: 'ValidationError', message: err.message });
     }
   }
+
+  async duplicateBOM(req: Request, res: Response) {
+    try {
+      const { sourceBomCode, targetBomCode, targetPartCode, targetPartName } = req.body;
+      const data = await bomService.duplicateBOM(sourceBomCode, targetBomCode, targetPartCode, targetPartName);
+      return res.status(201).json({ message: 'BOM duplicated successfully', data });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
+
+  async createRevision(req: Request, res: Response) {
+    try {
+      const { revision } = req.body;
+      const data = await bomService.createBOMRevision(req.params.code, revision);
+      return res.status(201).json({ message: `Revision ${revision} created successfully`, data });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
+
+  async updateStatus(req: Request, res: Response) {
+    try {
+      const { status } = req.body;
+      const data = await bomService.setBOMStatus(req.params.code, status);
+      return res.json({ message: `BOM status updated to ${status}`, data });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
+
+  async deleteBOM(req: Request, res: Response) {
+    try {
+      const data = await bomService.deleteBOM(req.params.code);
+      return res.json({ message: 'BOM deleted successfully', data });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
 }
 
 export const bomController = new BomController();

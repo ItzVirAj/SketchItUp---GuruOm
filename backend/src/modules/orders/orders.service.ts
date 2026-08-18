@@ -20,26 +20,56 @@ import { logAudit } from '../../services/auditLog';
 
 
 
+export function isTestOrderPo(poNo?: string): boolean {
+  if (!poNo) return false;
+  return poNo.startsWith('PO-GOLDEN-') ||
+         poNo.startsWith('PO-TEST-REG-') ||
+         poNo.startsWith('PO-PERSIST-') ||
+         poNo.startsWith('PO-TATA-') ||
+         poNo.startsWith('PO-TEST-') ||
+         poNo.startsWith('PO-PROC-') ||
+         poNo.startsWith('__TEST__') ||
+         poNo.includes('615144') ||
+         poNo.includes('678480');
+}
+
 export class OrdersService {
   private db = getDbClient();
 
   /**
    * Fetches all customer orders with line items, job cards, dispatches, and gate statuses.
    */
-  async getOrders() {
+  async getOrders(options?: { includeTest?: boolean }) {
+    const shouldIncludeTest = options?.includeTest === true || process.env.NODE_ENV === 'test';
     try {
-      const { data: ordersData, error: ordersErr } = await this.db
+      let query = this.db
         .from('customer_orders')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*');
 
-      if (!ordersErr && ordersData && ordersData.length > 0) {
+      if (!shouldIncludeTest) {
+        query = query
+          .not('po_no', 'like', 'PO-GOLDEN-%')
+          .not('po_no', 'like', 'PO-TEST-REG-%')
+          .not('po_no', 'like', 'PO-PERSIST-%')
+          .not('po_no', 'like', 'PO-TATA-%')
+          .not('po_no', 'like', 'PO-TEST-%')
+          .not('po_no', 'like', 'PO-PROC-%')
+          .not('po_no', 'like', '__TEST__%');
+      }
+
+      const { data: ordersData, error: ordersErr } = await query.order('created_at', { ascending: false });
+
+      const finalOrdersData = shouldIncludeTest 
+        ? (ordersData || []) 
+        : (ordersData || []).filter(o => !isTestOrderPo(o.po_no));
+
+      if (!ordersErr && finalOrdersData.length > 0) {
         const { data: linesData } = await this.db.from('order_line_items').select('*');
         const { data: jobsData } = await this.db.from('job_cards').select('*');
         const { data: dispatchesData } = await this.db.from('dispatch_challans').select('*');
         const { data: ncrsData } = await this.db.from('ncrs').select('*').in('status', ['OPEN', 'UNDER_REVIEW', 'REWORK_PLANNED']);
 
-        const combined = ordersData.map(o => {
+        const combined = finalOrdersData.map(o => {
           const lines = (linesData || []).filter(l => l.order_id === o.id).map(l => ({
             id: l.id,
             itemCode: l.item_code,
@@ -137,7 +167,7 @@ export class OrdersService {
    * Fetches a single customer order by ID with full traceability.
    */
   async getOrderById(orderId: string) {
-    const orders = await this.getOrders();
+    const orders = await this.getOrders({ includeTest: true });
     return orders.find(o => o.id === orderId || o.poNo === orderId) || null;
   }
 
@@ -355,16 +385,6 @@ export class OrdersService {
             .or(`id.eq.${orderId},po_no.eq.${order.poNo}`);
         } catch (dbErr) {
           console.warn('DB recheckMaterial update fallback:', dbErr);
-        }
-
-        const seedIdx = SEED_ORDERS.findIndex(s => s.id === order.id || s.poNo === order.poNo);
-        if (seedIdx >= 0) {
-          SEED_ORDERS[seedIdx] = {
-            ...SEED_ORDERS[seedIdx],
-            status: 'MATERIAL_READY',
-            stage: 'MATERIAL_READY',
-            progressStep: 4
-          };
         }
 
         newlyReadyOrders.push(order.poNo);
@@ -651,6 +671,126 @@ export class OrdersService {
 
       return resultPayload;
     });
+  }
+
+  /**
+   * Explicitly evaluates BOM explosion & material availability for a specific order.
+   * Updates order status to MATERIAL_READY or MATERIAL_SHORT in DB and returns verification details.
+   */
+  async runMaterialVerificationForOrder(orderIdOrPo: string, actorContext?: { role?: string; name?: string }) {
+    const order = await this.getOrderById(orderIdOrPo);
+    if (!order) {
+      const err: any = new Error(`Order ${orderIdOrPo} not found`);
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const check = await this.checkAndReserveMaterialsForOrder(order, actorContext?.name || 'Material Verification Engine');
+    const newStatus: OrderStage = check.ready ? 'MATERIAL_READY' : 'MATERIAL_SHORT';
+    const progressStep = check.ready ? 4 : 3;
+    const updatedAt = new Date().toISOString();
+
+    try {
+      await this.db
+        .from('customer_orders')
+        .update({
+          status: newStatus,
+          progress_step: progressStep,
+          updated_at: updatedAt
+        })
+        .or(`id.eq.${order.id},po_no.eq.${order.poNo}`);
+    } catch (dbErr) {
+      console.warn('DB runMaterialVerification update fallback:', dbErr);
+    }
+
+    await auditService.recordAuditLog({
+      actorEmail: actorContext?.name || 'system@guruom.in',
+      actorRole: actorContext?.role || 'Production Planner',
+      action: 'MATERIAL_VERIFICATION_EXECUTED',
+      entityType: 'customer_orders',
+      entityId: order.id,
+      details: `Material verification executed for Order #${order.poNo}: result is ${newStatus} (${check.ready ? 'All materials available and allocated' : `${check.shortages?.length || 0} component shortages detected`})`
+    }).catch(() => {});
+
+    const resultPayload = {
+      orderId: order.id,
+      poNo: order.poNo,
+      status: newStatus,
+      stage: newStatus,
+      progressStep,
+      ready: check.ready,
+      shortages: check.shortages || [],
+      updatedAt
+    };
+
+    notificationsService.broadcastEvent('order_updated', { ...order, ...resultPayload });
+    if (check.ready) {
+      notificationsService.broadcastEvent('stock_updated', { orderPo: order.poNo, status: 'RESERVED' });
+    } else {
+      notificationsService.broadcastEvent('shortage_updated', { orderPo: order.poNo, shortages: check.shortages });
+    }
+
+    return resultPayload;
+  }
+
+  /**
+   * Owner/Ops Admin Override for Material Verification.
+   * Requires mandatory reason and logs explicit OVERRIDE_MATERIAL_CHECK audit log.
+   */
+  async overrideMaterialCheck(
+    orderIdOrPo: string, 
+    payload: { reason: string }, 
+    actorContext: { role: string; name: string }
+  ) {
+    if (!payload.reason || payload.reason.trim().length < 5) {
+      const err: any = new Error('A detailed override reason (min 5 characters) is mandatory to bypass Material Verification.');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const order = await this.getOrderById(orderIdOrPo);
+    if (!order) {
+      const err: any = new Error(`Order ${orderIdOrPo} not found`);
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const updatedAt = new Date().toISOString();
+    try {
+      await this.db
+        .from('customer_orders')
+        .update({
+          status: 'MATERIAL_READY',
+          progress_step: 4,
+          updated_at: updatedAt
+        })
+        .or(`id.eq.${order.id},po_no.eq.${order.poNo}`);
+    } catch (dbErr) {
+      console.warn('DB overrideMaterialCheck fallback:', dbErr);
+    }
+
+    await auditService.recordAuditLog({
+      actorEmail: actorContext.name || 'owner@guruom.in',
+      actorRole: actorContext.role || 'Owner/Management',
+      action: 'OVERRIDE_MATERIAL_CHECK',
+      entityType: 'customer_orders',
+      entityId: order.id,
+      details: `[OWNER OVERRIDE] Material Check overridden for Order #${order.poNo}. Reason: ${payload.reason}`
+    });
+
+    const resultPayload = {
+      orderId: order.id,
+      poNo: order.poNo,
+      status: 'MATERIAL_READY',
+      stage: 'MATERIAL_READY',
+      progressStep: 4,
+      isOverridden: true,
+      overrideReason: payload.reason,
+      updatedAt
+    };
+
+    notificationsService.broadcastEvent('order_updated', { ...order, ...resultPayload });
+    return resultPayload;
   }
 
 

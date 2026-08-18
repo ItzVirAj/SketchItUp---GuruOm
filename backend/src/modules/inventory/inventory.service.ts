@@ -127,18 +127,37 @@ export class InventoryService {
    * Gets a specific stock item by code.
    */
   async getStockItem(code: string) {
-    const onHand = await inventoryMovementsService.getCurrentBalance(code);
+    let onHand = await inventoryMovementsService.getCurrentBalance(code);
+    let reserved = 0;
+    let reorderLevel = 25;
+    let description = 'Precision Item';
+    let unit = 'NOS';
+
+    try {
+      const { data } = await this.db.from('stock_items').select('*').eq('code', code).maybeSingle();
+      if (data) {
+        if (onHand === 0 && data.on_hand !== undefined && data.on_hand !== null) {
+          onHand = Number(data.on_hand || 0);
+        }
+        reserved = Number(data.reserved || 0);
+        reorderLevel = Number(data.reorder_level || 25);
+        description = data.description || description;
+        unit = data.unit || unit;
+      }
+    } catch (_) {}
+
+    const available = onHand - reserved;
     return {
       code,
-      description: 'Precision Item',
+      description,
       onHand,
-      reserved: 0,
-      available: onHand,
+      reserved,
+      available,
       demand: 0,
-      reorderLevel: 25,
-      shortage: 0,
-      unit: 'NOS',
-      status: onHand < 0 ? 'CRITICAL' : onHand < 25 ? 'SHORTAGE' : 'OK'
+      reorderLevel,
+      shortage: Math.max(0, reorderLevel - available),
+      unit,
+      status: (available < 0 ? 'CRITICAL' : available < reorderLevel ? 'SHORTAGE' : 'OK') as 'CRITICAL' | 'SHORTAGE' | 'OK'
     };
   }
 

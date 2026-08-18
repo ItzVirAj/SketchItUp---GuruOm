@@ -35,10 +35,9 @@ router.post('/:id/cancel', requirePermission('orders', 'CREATE_EDIT'), (req, res
   req.body.targetStage = 'CANCELLED';
   return ordersController.transitionOrder(req, res);
 });
-router.post('/:id/material-check', requirePermission('orders', 'CREATE_EDIT'), (req, res) => {
-  req.body.targetStage = 'MATERIAL_CHECK';
-  return ordersController.transitionOrder(req, res);
-});
+router.post('/:id/material-check', requirePermission('orders', 'CREATE_EDIT'), (req, res) => ordersController.runMaterialCheck(req, res));
+router.post('/:id/verify-materials', requirePermission('orders', 'CREATE_EDIT'), (req, res) => ordersController.runMaterialCheck(req, res));
+router.post('/:id/override-material-check', requirePermission('orders', 'CREATE_EDIT'), (req, res) => ordersController.overrideMaterialCheck(req, res));
 router.post('/:id/amendments', requirePermission('orders', 'CREATE_EDIT'), (req, res) => ordersController.createAmendment(req, res));
 
 // Step 7: No Deletes on Transactional Records

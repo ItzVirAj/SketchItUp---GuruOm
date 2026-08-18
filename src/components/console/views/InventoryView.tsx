@@ -32,7 +32,6 @@ import {
   ShortageItem,
   PurchaseOrder,
   GoodsReceiptNote,
-  BillOfMaterials,
   InventoryMovement,
   StockReconciliationReport,
   MovementType,
@@ -45,8 +44,6 @@ import {
   fetchGrnList,
   insertGrn,
   updateGrnStatus,
-  fetchBOMs,
-  saveBOM,
   fetchInventoryMovements,
   fetchItemStockHistory,
   recordInventoryMovement,
@@ -71,16 +68,15 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   onAdjustStock
 }) => {
   const { user } = useAuth();
-  const [subTab, setSubTab] = useState<'stock' | 'shortages' | 'purchases' | 'grn' | 'bom' | 'movements' | 'reconciliation'>('stock');
+  const [subTab, setSubTab] = useState<'stock' | 'shortages' | 'purchases' | 'grn' | 'movements' | 'reconciliation'>('stock');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStockForAdjust, setSelectedStockForAdjust] = useState<StockItem | null>(null);
   const [adjustQty, setAdjustQty] = useState<number>(0);
   const [adjustReason, setAdjustReason] = useState<string>('Physical Audit Adjustment');
 
-  // Async states for Purchasing, GRN, BOM, Movements & Reconciliation
+  // Async states for Purchasing, GRN, Movements & Reconciliation
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [grnList, setGrnList] = useState<GoodsReceiptNote[]>([]);
-  const [boms, setBoms] = useState<BillOfMaterials[]>([]);
   const [movements, setMovements] = useState<InventoryMovement[]>([]);
   const [reconciliationReport, setReconciliationReport] = useState<StockReconciliationReport[]>([]);
   const [movementTypeFilter, setMovementTypeFilter] = useState<string>('ALL');
@@ -88,18 +84,12 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   const [selectedMovementForCorrection, setSelectedMovementForCorrection] = useState<InventoryMovement | null>(null);
   const [correctionReason, setCorrectionReason] = useState<string>('');
   const [isLoadingModuleData, setIsLoadingModuleData] = useState(false);
-  const [expandedBomCode, setExpandedBomCode] = useState<string | null>(null);
 
   // Modals state
   const [isCreatePoOpen, setIsCreatePoOpen] = useState(false);
   const [isCreateGrnOpen, setIsCreateGrnOpen] = useState(false);
-  const [isCreateBomOpen, setIsCreateBomOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
-
-  useEffect(() => {
-    loadModuleData();
-  }, [subTab]);
 
   const loadModuleData = async () => {
     setIsLoadingModuleData(true);
@@ -110,22 +100,23 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       } else if (subTab === 'grn') {
         const data = await fetchGrnList();
         setGrnList(data);
-      } else if (subTab === 'bom') {
-        const data = await fetchBOMs();
-        setBoms(data);
       } else if (subTab === 'movements') {
-        const res = await fetchInventoryMovements({ limit: 100 });
-        setMovements(res.movements || []);
+        const data = await fetchInventoryMovements();
+        setMovements(data);
       } else if (subTab === 'reconciliation') {
         const data = await fetchStockReconciliation();
         setReconciliationReport(data);
       }
     } catch (err) {
-      console.warn('Error loading module data:', err);
+      console.warn('InventoryView async fetch error:', err);
     } finally {
       setIsLoadingModuleData(false);
     }
   };
+
+  useEffect(() => {
+    loadModuleData();
+  }, [subTab]);
 
   const handleOpenItemHistory = async (stk: StockItem) => {
     try {
@@ -252,13 +243,13 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               }`}>
                 Store & Material Telemetry
               </span>
-              <span className="text-xs text-slate-400 font-mono">• Raw Materials, GRN, BOM & Purchasing</span>
+              <span className="text-xs text-slate-400 font-mono">• Physical Stock, GRN, Movements & Purchasing</span>
             </div>
             <h1 className={`text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-              Inventory, Procurement & BOM Engine
+              Inventory, Procurement & Store Ledger
             </h1>
             <p className={`text-xs mt-1 max-w-xl ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-              Monitor physical store inventory, execute Goods Receipt (GRN), configure multi-level Bills of Materials (BOM), and govern Purchase Orders.
+              Monitor physical store inventory, execute Goods Receipt (GRN), audit real-time stock movements, and govern Purchase Orders.
             </p>
           </div>
 
@@ -290,15 +281,6 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               >
                 <Truck className="w-4 h-4" />
                 <span>Receive Material (GRN)</span>
-              </button>
-            )}
-            {subTab === 'bom' && (
-              <button
-                onClick={() => setIsCreateBomOpen(true)}
-                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
-              >
-                <Layers className="w-4 h-4" />
-                <span>Create BOM Formula</span>
               </button>
             )}
           </div>
@@ -394,7 +376,6 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             { id: 'shortages', label: 'Material Shortages' },
             { id: 'purchases', label: 'Purchase Orders' },
             { id: 'grn', label: 'Goods-in (GRN)' },
-            { id: 'bom', label: 'Bill of Materials' },
           ].map(t => (
             <button
               key={t.id}
@@ -704,116 +685,6 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               </tbody>
             </table>
           </div>
-        </div>
-      )}
-
-      {/* 5. Bill of Materials (BOM) Sub-View */}
-      {subTab === 'bom' && (
-        <div className="space-y-4">
-          {boms.length === 0 ? (
-            <div className={`p-8 rounded-3xl border text-center ${
-              isDarkMode ? 'bg-slate-900/80 border-slate-800/80' : 'bg-white border-slate-200 shadow-sm'
-            }`}>
-              <div className="inline-flex p-3 rounded-2xl bg-[#5B75F8]/15 text-[#5B75F8] dark:text-[#7B92FF] border border-[#5B75F8]/30 mb-3">
-                <Layers className="w-6 h-6" />
-              </div>
-              <h4 className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>No BOM Formulas Configured</h4>
-              <p className={`text-xs mt-1 font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                Create a BOM to define the raw material formula consumed per finished good during order confirmation.
-              </p>
-            </div>
-          ) : null}
-
-          {boms.map(bom => {
-            const isExpanded = expandedBomCode === bom.bomCode;
-            return (
-              <div
-                key={bom.id || bom.bomCode}
-                className={`rounded-3xl border transition-all overflow-hidden ${
-                  isDarkMode ? 'bg-slate-900/80 border-slate-800/80' : 'bg-white border-slate-200 shadow-sm'
-                }`}
-              >
-                <div
-                  onClick={() => setExpandedBomCode(isExpanded ? null : bom.bomCode)}
-                  className={`p-5 flex flex-wrap items-center justify-between gap-4 cursor-pointer transition-all ${
-                    isDarkMode ? 'hover:bg-slate-800/30' : 'hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-[#5B75F8]/15 text-[#5B75F8] dark:text-[#7B92FF] border border-[#5B75F8]/30">
-                      <Layers className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold font-mono text-sm text-[#5B75F8] dark:text-[#7B92FF]">{bom.bomCode}</span>
-                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-mono ${
-                          isDarkMode ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-600'
-                        }`}>{bom.revision}</span>
-                        <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">{bom.status}</span>
-                      </div>
-                      <h4 className={`text-sm font-semibold mt-0.5 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                        {bom.parentPartCode} — {bom.parentPartName}
-                      </h4>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-6">
-                    <div className="text-right">
-                      <div className={`text-[11px] font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                        Standard Batch: <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{bom.batchSize} Units</span>
-                      </div>
-                      <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-mono">Yield Factor: <span className="font-bold">{bom.yieldPercentage}%</span></div>
-                    </div>
-                    <div className={`p-1 rounded-lg border ${
-                      isDarkMode ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-400'
-                    }`}>
-                      {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                    </div>
-                  </div>
-                </div>
-
-                {isExpanded && (
-                  <div className={`p-5 border-t ${
-                    isDarkMode ? 'border-slate-800/80 bg-slate-950/40' : 'border-slate-200 bg-slate-50/60'
-                  }`}>
-                    <h5 className={`text-[11px] font-mono uppercase font-bold mb-3 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Components & Scrap Ratios</h5>
-                    <div className={`rounded-2xl border overflow-hidden ${
-                      isDarkMode ? 'border-slate-800/80' : 'border-slate-200'
-                    }`}>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left text-xs border-collapse font-mono">
-                          <thead>
-                            <tr className={`border-b font-bold uppercase tracking-wider text-[10px] ${
-                              isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-100/80 border-slate-200 text-slate-500'
-                            }`}>
-                              <th className="py-3 px-4">Component SKU</th>
-                              <th className="py-3 px-4">Component Name</th>
-                              <th className="py-3 px-4">Category</th>
-                              <th className="py-3 px-4 text-right">Qty / Unit</th>
-                              <th className="py-3 px-4 text-right">Scrap %</th>
-                              <th className="py-3 px-4 text-right">Unit Cost</th>
-                            </tr>
-                          </thead>
-                          <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/50' : 'divide-slate-200'}`}>
-                            {bom.components.map(comp => (
-                              <tr key={comp.id || comp.componentCode} className={isDarkMode ? '' : 'bg-white'}>
-                                <td className="py-3 px-4 font-bold text-[#5B75F8] dark:text-[#7B92FF]">{comp.componentCode}</td>
-                                <td className={`py-3 px-4 ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{comp.componentName}</td>
-                                <td className={`py-3 px-4 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{comp.componentType}</td>
-                                <td className="py-3 px-4 text-right font-bold text-emerald-600 dark:text-emerald-400">{comp.qtyPerUnit} {comp.unit}</td>
-                                <td className="py-3 px-4 text-right text-rose-600 dark:text-rose-400">+{comp.scrapAllowancePct}%</td>
-                                <td className={`py-3 px-4 text-right ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>₹{comp.unitCost}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
         </div>
       )}
 
@@ -1377,136 +1248,6 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               <div className="pt-4 border-t border-slate-800 flex justify-end gap-3 font-sans">
                 <button type="button" onClick={() => setIsCreateGrnOpen(false)} className="px-4 py-2 rounded-xl border border-slate-800 text-slate-300">Cancel</button>
                 <button type="submit" className="px-5 py-2 rounded-xl bg-[#5B75F8] hover:bg-[#4A64E7] text-white font-bold">Log GRN Inward</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Create BOM Formula */}
-      {isCreateBomOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-xl rounded-3xl border p-7 space-y-6 shadow-2xl transition-all ${
-            isDarkMode
-              ? 'bg-slate-900/95 border-slate-800/80 text-white backdrop-blur-2xl'
-              : 'bg-white border-slate-200 text-slate-900'
-          }`}>
-            <div className={`flex items-center justify-between border-b pb-4 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-[#5B75F8]/15 text-[#5B75F8] dark:text-[#7B92FF] border border-[#5B75F8]/30">
-                  <Layers className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-base">Configure Bill of Materials (BOM)</h3>
-                  <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Define raw material formulas & components</p>
-                </div>
-              </div>
-              <button onClick={() => setIsCreateBomOpen(false)} className={`p-2 rounded-2xl border transition-all cursor-pointer ${
-                isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800' : 'border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
-              }`}><X className="w-4 h-4" /></button>
-            </div>
-
-            <form onSubmit={async (e) => {
-              e.preventDefault();
-              const form = e.target as any;
-              const newBom: BillOfMaterials = {
-                bomCode: `BOM-${form.parentCode.value}`,
-                parentPartCode: form.parentCode.value,
-                parentPartName: form.parentName.value,
-                revision: 'v1.0',
-                yieldPercentage: Number(form.yield.value),
-                batchSize: Number(form.batchSize.value),
-                status: 'ACTIVE',
-                notes: form.notes.value,
-                components: [{
-                  componentCode: form.compCode.value,
-                  componentName: form.compName.value,
-                  componentType: 'RAW_MATERIAL',
-                  qtyPerUnit: Number(form.compQty.value),
-                  unit: form.compUnit.value,
-                  scrapAllowancePct: 2.5,
-                  stage: 'CNC_MACHINING',
-                  unitCost: Number(form.compCost.value)
-                }]
-              };
-
-              try {
-                await saveBOM(newBom);
-                setIsCreateBomOpen(false);
-                setActionSuccess('BOM configuration saved.');
-                const updated = await fetchBOMs();
-                setBoms(updated);
-              } catch (err: any) {
-                setActionError(err.message || 'Failed to save BOM.');
-              }
-            }} className="space-y-4 text-xs font-mono">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={`block text-[10px] uppercase font-bold mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Parent Part Code</label>
-                  <input name="parentCode" required defaultValue="00000003" className={`w-full rounded-xl border p-2.5 outline-none transition-all focus:border-[#5B75F8] ${
-                    isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'
-                  }`} />
-                </div>
-                <div>
-                  <label className={`block text-[10px] uppercase font-bold mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Parent Part Name</label>
-                  <input name="parentName" required defaultValue="Hardened Adapter Sleeve" className={`w-full rounded-xl border p-2.5 outline-none transition-all focus:border-[#5B75F8] ${
-                    isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'
-                  }`} />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={`block text-[10px] uppercase font-bold mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Batch Size</label>
-                  <input name="batchSize" type="number" required defaultValue="50" className={`w-full rounded-xl border p-2.5 outline-none transition-all focus:border-[#5B75F8] ${
-                    isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'
-                  }`} />
-                </div>
-                <div>
-                  <label className={`block text-[10px] uppercase font-bold mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Expected Yield (%)</label>
-                  <input name="yield" type="number" step="0.1" required defaultValue="98.5" className={`w-full rounded-xl border p-2.5 outline-none transition-all focus:border-[#5B75F8] ${
-                    isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'
-                  }`} />
-                </div>
-              </div>
-
-              <div className={`p-3 rounded-2xl border space-y-3 ${
-                isDarkMode ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-slate-50/80'
-              }`}>
-                <div className="text-[10px] font-bold text-[#5B75F8] dark:text-[#7B92FF] uppercase">Primary Raw Material Component</div>
-                <div className="grid grid-cols-2 gap-3">
-                  <input name="compCode" placeholder="Component Code" defaultValue="RAW-EN8-BAR-32MM" className={`rounded-lg border p-2 outline-none focus:border-[#5B75F8] ${
-                    isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-900'
-                  }`} />
-                  <input name="compName" placeholder="Component Name" defaultValue="EN8 Steel Bar Ø32mm" className={`rounded-lg border p-2 outline-none focus:border-[#5B75F8] ${
-                    isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-900'
-                  }`} />
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <input name="compQty" type="number" step="0.01" placeholder="Qty/Unit" defaultValue="1.8" className={`rounded-lg border p-2 outline-none focus:border-[#5B75F8] ${
-                    isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-900'
-                  }`} />
-                  <input name="compUnit" placeholder="Unit" defaultValue="KG" className={`rounded-lg border p-2 outline-none focus:border-[#5B75F8] ${
-                    isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-900'
-                  }`} />
-                  <input name="compCost" type="number" placeholder="Cost (₹)" defaultValue="95" className={`rounded-lg border p-2 outline-none focus:border-[#5B75F8] ${
-                    isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-900'
-                  }`} />
-                </div>
-              </div>
-
-              <div>
-                <label className={`block text-[10px] uppercase font-bold mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Engineering Notes</label>
-                <input name="notes" defaultValue="Initial engineering release BOM formula" className={`w-full rounded-xl border p-2.5 outline-none transition-all focus:border-[#5B75F8] ${
-                  isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'
-                }`} />
-              </div>
-
-              <div className={`pt-4 border-t flex justify-end gap-3 font-sans ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
-                <button type="button" onClick={() => setIsCreateBomOpen(false)} className={`px-4 py-2 rounded-xl border font-bold cursor-pointer transition-all ${
-                  isDarkMode ? 'border-slate-800 text-slate-300 hover:bg-slate-800' : 'border-slate-200 text-slate-700 hover:bg-slate-100'
-                }`}>Cancel</button>
-                <button type="submit" className="px-5 py-2 rounded-xl bg-[#5B75F8] hover:bg-[#4A64E7] text-white font-bold cursor-pointer transition-all">Save BOM</button>
               </div>
             </form>
           </div>

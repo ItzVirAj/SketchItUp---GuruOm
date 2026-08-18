@@ -97,6 +97,7 @@ interface UsersAuditViewProps {
   isDarkMode?: boolean;
   currentUserId?: string;
   onAddUser?: (user: Partial<SystemUser>) => void;
+  onUpdateUser?: (userId: string, updates: Partial<SystemUser>) => Promise<any> | void;
   onSwitchUser?: (userId: string) => void;
   onRevokeUser?: (userId: string) => void;
   onRestoreUser?: (userId: string) => void;
@@ -141,6 +142,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
   isDarkMode = true,
   currentUserId,
   onAddUser,
+  onUpdateUser,
   onSwitchUser,
   onRevokeUser,
   onRestoreUser,
@@ -161,6 +163,18 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
   const [showEditRoleModal, setShowEditRoleModal] = useState(false);
   const [userToEditRole, setUserToEditRole] = useState<SystemUser | null>(null);
   const [newSelectedRole, setNewSelectedRole] = useState<string>('Shop Floor Supervisor');
+
+  // Edit User Master State
+  const [showEditUserModal, setShowEditUserModal] = useState(false);
+  const [userToEdit, setUserToEdit] = useState<SystemUser | null>(null);
+  const [editFullName, setEditFullName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editRole, setEditRole] = useState<string>('SUPER ADMIN');
+  const [editDepartment, setEditDepartment] = useState('Executive Management');
+  const [editMobile, setEditMobile] = useState('');
+  const [editStatus, setEditStatus] = useState<'Active' | 'Inactive'>('Active');
+  const [editReportingManager, setEditReportingManager] = useState('');
+  const [editUserErrors, setEditUserErrors] = useState<Record<string, string>>({});
 
   // Delete User State
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -565,6 +579,54 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
     }
 
     setShowAddUserModal(false);
+  };
+
+  const handleOpenEditUser = (usr: SystemUser) => {
+    setUserToEdit(usr);
+    setEditFullName(usr.name || usr.fullName || '');
+    setEditEmail(usr.email || '');
+    setEditRole(usr.userRole || usr.role || 'SUPER ADMIN');
+    setEditDepartment(usr.department || 'Executive Management');
+    setEditMobile(usr.mobile || usr.phone || '');
+    setEditStatus(usr.status === 'REVOKED' || usr.status === 'Inactive' ? 'Inactive' : 'Active');
+    setEditReportingManager(usr.reportingManager || '');
+    setEditUserErrors({});
+    setShowEditUserModal(true);
+  };
+
+  const handleSaveEditUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userToEdit) return;
+
+    const errors: Record<string, string> = {};
+    if (!editFullName.trim()) errors.fullName = 'Full Name is mandatory';
+    if (!editEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editEmail.trim())) {
+      errors.email = 'Valid email address is mandatory';
+    } else if (users.some(u => u.id !== userToEdit.id && u.email.toLowerCase() === editEmail.trim().toLowerCase())) {
+      errors.email = 'A user with this email address already exists';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setEditUserErrors(errors);
+      return;
+    }
+
+    if (onUpdateUser) {
+      onUpdateUser(userToEdit.id, {
+        name: editFullName.trim(),
+        fullName: editFullName.trim(),
+        email: editEmail.trim().toLowerCase(),
+        role: editRole as any,
+        userRole: editRole,
+        department: editDepartment.trim(),
+        phone: editMobile.trim(),
+        mobile: editMobile.trim(),
+        status: editStatus === 'Active' ? 'ACTIVE' : 'REVOKED',
+        reportingManager: editReportingManager.trim()
+      } as any);
+    }
+
+    setShowEditUserModal(false);
   };
 
   return (
@@ -994,6 +1056,19 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                       </td>
                       <td className="py-4 px-5 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => handleOpenEditUser(usr)}
+                            className={`p-1.5 px-2.5 rounded-xl border text-[11px] font-bold font-mono transition-all cursor-pointer flex items-center gap-1 ${
+                              isDarkMode 
+                                ? 'border-indigo-500/30 bg-indigo-500/10 text-indigo-300 hover:text-white hover:bg-indigo-500/20' 
+                                : 'border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
+                            }`}
+                            title="Edit User Master Record"
+                          >
+                            <Edit className="w-3 h-3 text-indigo-400" />
+                            <span>Edit</span>
+                          </button>
+
                           <button
                             onClick={() => {
                               setUserToEditRole(usr);
@@ -1696,6 +1771,182 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
             </div>
           </div>
 
+        </form>
+      </Modal>
+
+      {/* ========================================================================= */}
+      {/* MODAL 1B: EDIT USER MASTER RECORD */}
+      {/* ========================================================================= */}
+      <Modal
+        isOpen={showEditUserModal && !!userToEdit}
+        onClose={() => setShowEditUserModal(false)}
+        maxWidth="2xl"
+        isDarkMode={isDarkMode}
+        icon={<Edit className="w-5 h-5 text-indigo-400" />}
+        title="Edit User Master Record"
+        subtitle={`Update credentials & identity for ${userToEdit?.name || userToEdit?.email}`}
+        footer={
+          <div className="flex items-center justify-end gap-3 w-full">
+            <button 
+              type="button" 
+              onClick={() => setShowEditUserModal(false)} 
+              className={`px-5 py-2.5 rounded-2xl border text-xs font-mono font-bold transition-all cursor-pointer ${
+                isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              Cancel
+            </button>
+            <button 
+              type="button"
+              onClick={handleSaveEditUser}
+              className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold text-xs font-mono shadow-lg shadow-indigo-500/25 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]"
+            >
+              Save Master Changes
+            </button>
+          </div>
+        }
+      >
+        <form onSubmit={handleSaveEditUser} className="space-y-4 text-xs font-sans">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Full Name */}
+            <div>
+              <label className={`block text-[11px] uppercase font-mono font-bold mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                Full Name <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={editFullName}
+                onChange={e => setEditFullName(e.target.value)}
+                placeholder="e.g. Sachin Gharbude"
+                className={`w-full p-2.5 rounded-xl border text-xs font-mono ${
+                  editUserErrors.fullName ? 'border-rose-500 ring-1 ring-rose-500' : isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-300 bg-white text-slate-900'
+                }`}
+              />
+              {editUserErrors.fullName && <p className="text-[10px] text-rose-500 mt-1">{editUserErrors.fullName}</p>}
+            </div>
+
+            {/* Email */}
+            <div>
+              <label className={`block text-[11px] uppercase font-mono font-bold mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                Email Address (Login ID) <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="email"
+                value={editEmail}
+                onChange={e => setEditEmail(e.target.value)}
+                placeholder="e.g. owner@guruom.in"
+                className={`w-full p-2.5 rounded-xl border text-xs font-mono ${
+                  editUserErrors.email ? 'border-rose-500 ring-1 ring-rose-500' : isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-300 bg-white text-slate-900'
+                }`}
+              />
+              {editUserErrors.email && <p className="text-[10px] text-rose-500 mt-1">{editUserErrors.email}</p>}
+            </div>
+
+            {/* Exact RBAC Role */}
+            <div>
+              <label className={`block text-[11px] uppercase font-mono font-bold mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                Exact RBAC Role <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={editRole}
+                onChange={e => setEditRole(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border text-xs font-mono ${
+                  isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-300 bg-white text-slate-900'
+                }`}
+              >
+                {Object.values(RBAC_ROLE_MATRIX).map(r => (
+                  <option key={r.role} value={r.role}>
+                    {r.label} ({r.role})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Department */}
+            <div>
+              <label className={`block text-[11px] uppercase font-mono font-bold mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                Department / Functional Unit <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={editDepartment}
+                onChange={e => setEditDepartment(e.target.value)}
+                placeholder="e.g. Executive Management / Plant Operations"
+                className={`w-full p-2.5 rounded-xl border text-xs font-mono ${
+                  editUserErrors.department ? 'border-rose-500 ring-1 ring-rose-500' : isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-300 bg-white text-slate-900'
+                }`}
+              />
+              {editUserErrors.department && <p className="text-[10px] text-rose-500 mt-1">{editUserErrors.department}</p>}
+            </div>
+
+            {/* Mobile */}
+            <div>
+              <label className={`block text-[11px] uppercase font-mono font-bold mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                Mobile Number
+              </label>
+              <input
+                type="text"
+                value={editMobile}
+                onChange={e => setEditMobile(e.target.value)}
+                placeholder="e.g. +91 98250 12345"
+                className={`w-full p-2.5 rounded-xl border text-xs font-mono ${
+                  isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-300 bg-white text-slate-900'
+                }`}
+              />
+            </div>
+
+            {/* Reporting Manager */}
+            <div>
+              <label className={`block text-[11px] uppercase font-mono font-bold mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                Reporting Manager
+              </label>
+              <select
+                value={editReportingManager}
+                onChange={e => setEditReportingManager(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border text-xs font-mono ${
+                  isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-300 bg-white text-slate-900'
+                }`}
+              >
+                <option value="">None / Top Level Executive</option>
+                {users
+                  .filter(u => u.id !== userToEdit?.id)
+                  .map(u => (
+                    <option key={u.id} value={u.name}>
+                      {u.name} ({u.email})
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            {/* Account Status */}
+            <div>
+              <label className={`block text-[11px] uppercase font-mono font-bold mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                Account Status
+              </label>
+              <div className="flex gap-4 items-center mt-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="editStatus"
+                    checked={editStatus === 'Active'}
+                    onChange={() => setEditStatus('Active')}
+                    className="text-indigo-600"
+                  />
+                  <span className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>Active (Full Access)</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="editStatus"
+                    checked={editStatus === 'Inactive'}
+                    onChange={() => setEditStatus('Inactive')}
+                    className="text-indigo-600"
+                  />
+                  <span className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>Inactive / Revoked</span>
+                </label>
+              </div>
+            </div>
+          </div>
         </form>
       </Modal>
 

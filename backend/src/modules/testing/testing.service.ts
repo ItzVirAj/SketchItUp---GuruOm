@@ -295,7 +295,7 @@ export class TestingWorkflowService {
               totalAmount: (ctx.rawMaterialRequiredKg * ctx.rawMaterialUnitPrice) * 1.18,
               status: 'APPROVED',
               approvalStatus: 'APPROVED',
-              approvedBy: 'CEO Pramod Parshi',
+              approvedBy: 'CEO Sachin Gharbude',
               createdBy: 'purchasing@guruom.in',
               notes: `Material for order ${ctx.orderPo}`,
               items: [
@@ -620,6 +620,34 @@ export class TestingWorkflowService {
     runState.totalDurationMs = Date.now() - overallStartTime;
     runState.completedAt = new Date().toISOString();
     return runState;
+  }
+
+  /**
+   * Purges test records across all ERP entities for a given runId or all test runs.
+   */
+  async purgeTestData(runId?: string) {
+    const db = getDbClient();
+    const pattern = runId ? `%${runId}%` : '%';
+    
+    // Purge downstream to upstream
+    await db.from('customer_invoices').delete().ilike('invoice_no', `INV-TEST-${pattern}`);
+    await db.from('dispatch_challans').delete().ilike('challan_no', `CHL-TEST-${pattern}`);
+    await db.from('finished_goods').delete().ilike('order_po', `PO-TEST-${pattern}`);
+    await db.from('qc_inspections').delete().ilike('order_po', `PO-TEST-${pattern}`);
+    await db.from('pdi_inspections').delete().ilike('order_po', `PO-TEST-${pattern}`);
+    await db.from('production_logs').delete().ilike('order_po', `PO-TEST-${pattern}`);
+    await db.from('job_cards').delete().ilike('order_po', `PO-TEST-${pattern}`);
+    await db.from('material_reservations').delete().ilike('order_po', `PO-TEST-${pattern}`);
+    await db.from('goods_receipt_notes').delete().ilike('grn_no', `GRN-${pattern}`);
+    await db.from('purchase_orders').delete().ilike('po_no', `PO-PUR-${pattern}`);
+    await db.from('boms').delete().ilike('bom_code', `BOM-${pattern}`);
+    await db.from('stock_items').delete().ilike('item_code', `%${pattern}%`);
+    await db.from('inventory_movements').delete().ilike('item_code', `%${pattern}%`);
+    await db.from('customers').delete().ilike('name', `%Testing Unit - ${pattern}`);
+    await db.from('order_line_items').delete().ilike('order_id', `ord-${pattern}`);
+    await db.from('customer_orders').delete().ilike('po_no', `PO-TEST-${pattern}`);
+    
+    return { success: true, message: `Test data purged for pattern ${pattern}` };
   }
 }
 

@@ -1,4 +1,4 @@
-﻿import { apiClient } from '../lib/apiClient';
+import { apiClient } from '../lib/apiClient';
 import {
   CustomerOrder,
   StockItem,
@@ -25,6 +25,8 @@ import {
   GrnItem,
   BillOfMaterials,
   BomItem,
+  RouteCard,
+  RouteCardTemplateStep,
   PurchaseOrder,
   PurchaseOrderItem
 } from '../types/console';
@@ -108,6 +110,24 @@ export async function createProfile(user: Partial<SystemUser> & { password?: str
   } catch (err) {
     console.warn('createProfile REST error:', err);
     throw err instanceof Error ? err : new Error('Failed to create user on backend');
+  }
+}
+
+export async function updateProfile(id: string, updates: Partial<SystemUser>): Promise<SystemUser> {
+  try {
+    const res = await apiClient.patch<{ message: string; user: any }>(`/auth/users/${id}`, {
+      name: updates.name,
+      full_name: updates.name,
+      email: updates.email,
+      role: updates.role,
+      department: updates.department,
+      phone: updates.phone || (updates as any).mobile,
+      status: updates.status
+    });
+    return res.user;
+  } catch (err) {
+    console.warn(`updateProfile(${id}) REST error:`, err);
+    throw err instanceof Error ? err : new Error('Failed to update user on backend');
   }
 }
 
@@ -425,6 +445,16 @@ export async function updateOrderStatus(orderId: string, status: string, progres
   }
 }
 
+export async function runMaterialCheckForOrder(orderId: string): Promise<any> {
+  const res = await apiClient.post<{ message: string; data: any }>(`/orders/${orderId}/verify-materials`);
+  return res.data;
+}
+
+export async function overrideMaterialCheckForOrder(orderId: string, reason: string): Promise<any> {
+  const res = await apiClient.post<{ message: string; data: any }>(`/orders/${orderId}/override-material-check`, { reason });
+  return res.data;
+}
+
 // Local Storage Fallback Helpers for Masters
 const getSavedCustomCustomers = (): CustomerMaster[] => {
   try {
@@ -716,12 +746,15 @@ export async function insertJobCard(job: JobCard): Promise<void> {
 
 // Creates a job card against the backend Job Card release API (one per order line item)
 export async function createJobCardForOrder(payload: {
+  jobNo?: string;
   orderId?: string;
   orderPo: string;
   partCode: string;
   partDescription: string;
   drawingRevision?: string;
   targetQty: number;
+  qty?: number;
+  machine?: string;
   materialIssuedLot?: string;
   targetDate?: string;
   remarks?: string;
@@ -732,13 +765,8 @@ export async function createJobCardForOrder(payload: {
     targetDate: payload.targetDate || new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10),
     ...payload
   };
-  try {
-    const res = await apiClient.post<{ data: any }>('/production/job-cards', body);
-    if (res?.data) return res.data;
-  } catch (err) {
-    console.warn('Backend createJobCardForOrder fallback:', err);
-  }
-  return { jobNo: `JC/${payload.partCode}/${Date.now().toString().slice(-5)}`, ...body, status: 'RELEASED' };
+  const res = await apiClient.post<{ data: any }>('/production/job-cards', body);
+  return res.data;
 }
 // ----------------------------------------------------
 // Production Logs Services (via REST API)
@@ -1216,6 +1244,83 @@ export async function fetchBOMByCode(code: string): Promise<BillOfMaterials | nu
 export async function saveBOM(bom: BillOfMaterials): Promise<BillOfMaterials> {
   const res = await apiClient.post<{ data: BillOfMaterials }>('/bom', bom);
   return res.data;
+}
+
+export async function duplicateBOM(payload: { sourceBomCode: string; targetBomCode?: string; targetPartCode?: string; targetPartName?: string }): Promise<BillOfMaterials> {
+  const res = await apiClient.post<{ data: BillOfMaterials }>('/bom/duplicate', payload);
+  return res.data;
+}
+
+export async function createBOMRevision(bomCode: string, revision: string): Promise<BillOfMaterials> {
+  const res = await apiClient.post<{ data: BillOfMaterials }>(`/bom/${bomCode}/revision`, { revision });
+  return res.data;
+}
+
+export async function updateBOMStatus(bomCode: string, status: 'ACTIVE' | 'DRAFT' | 'OBSOLETE'): Promise<BillOfMaterials> {
+  const res = await apiClient.patch<{ data: BillOfMaterials }>(`/bom/${bomCode}/status`, { status });
+  return res.data;
+}
+
+export async function deleteBOM(bomCode: string): Promise<{ success: boolean }> {
+  await apiClient.delete<{ message: string }>(`/bom/${bomCode}`);
+  return { success: true };
+}
+
+// ----------------------------------------------------
+// Route Cards Services (via REST API)
+// ----------------------------------------------------
+export async function fetchRouteCards(): Promise<RouteCardTemplateStep[]> {
+  try {
+    const res = await apiClient.get<{ data: RouteCardTemplateStep[] }>('/production/route-cards');
+    return res?.data || [];
+  } catch (err) {
+    console.warn('fetchRouteCards API error:', err);
+    return [];
+  }
+}
+
+export async function fetchGroupedRouteCards(): Promise<RouteCard[]> {
+  try {
+    const res = await apiClient.get<{ data: RouteCard[] }>('/production/route-cards/grouped');
+    return res?.data || [];
+  } catch (err) {
+    console.warn('fetchGroupedRouteCards API error:', err);
+    return [];
+  }
+}
+
+export async function saveRouteCard(payload: {
+  partCode: string;
+  partDescription?: string;
+  revision?: string;
+  status?: 'ACTIVE' | 'DRAFT' | 'OBSOLETE';
+  notes?: string;
+  operations: Array<{
+    id?: string;
+    sequenceNo: number;
+    operationName: string;
+    workCenter: string;
+    standardTimeMinutes: number;
+    inspectionRequired: boolean;
+    requiredCertification?: string;
+  }>;
+}): Promise<RouteCard> {
+  const res = await apiClient.post<{ data: RouteCard }>('/production/route-cards', payload);
+  return res.data;
+}
+
+export async function duplicateRouteCard(sourcePartCode: string, targetPartCode: string, targetPartDescription?: string): Promise<RouteCard> {
+  const res = await apiClient.post<{ data: RouteCard }>('/production/route-cards/duplicate', {
+    sourcePartCode,
+    targetPartCode,
+    targetPartDescription
+  });
+  return res.data;
+}
+
+export async function deleteRouteCard(partCode: string): Promise<{ success: boolean }> {
+  await apiClient.delete<{ message: string }>(`/production/route-cards/${partCode}`);
+  return { success: true };
 }
 
 // ----------------------------------------------------

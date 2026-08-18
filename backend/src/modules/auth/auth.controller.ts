@@ -342,6 +342,24 @@ export class AuthController {
   }
 
   /**
+   * PATCH/PUT /api/v1/auth/users/:id
+   */
+  async updateUser(req: Request, res: Response) {
+    try {
+      const actorContext = {
+        id: req.user?.id,
+        email: req.user?.email || 'owner@guruom.in',
+        role: req.user?.role || 'Owner',
+        name: req.user?.name || 'Owner'
+      };
+      const user = await authService.updateUser(req.params.id, req.body, actorContext);
+      return res.json({ message: 'User updated successfully', user });
+    } catch (err: any) {
+      return res.status(err.statusCode || 400).json({ error: 'BadRequest', message: err.message });
+    }
+  }
+
+  /**
    * DELETE /api/v1/auth/users/:id
    */
   async deleteUser(req: Request, res: Response) {

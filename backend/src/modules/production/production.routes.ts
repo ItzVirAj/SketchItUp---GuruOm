@@ -9,6 +9,10 @@ router.use(requireAuth);
 
 // Route Cards
 router.get('/route-cards', requirePermission('production', 'VIEW_ONLY'), (req, res) => productionController.getRouteCards(req, res));
+router.get('/route-cards/grouped', requirePermission('production', 'VIEW_ONLY'), (req, res) => productionController.getGroupedRouteCards(req, res));
+router.post('/route-cards', requirePermission('production', 'CREATE_EDIT'), (req, res) => productionController.saveRouteCard(req, res));
+router.post('/route-cards/duplicate', requirePermission('production', 'CREATE_EDIT'), (req, res) => productionController.duplicateRouteCard(req, res));
+router.delete('/route-cards/:partCode', requirePermission('production', 'CREATE_EDIT'), (req, res) => productionController.deleteRouteCard(req, res));
 
 // Job Cards & Operations
 router.get('/job-cards', requirePermission('production', 'VIEW_ONLY'), (req, res) => productionController.getJobCards(req, res));

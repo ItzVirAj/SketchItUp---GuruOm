@@ -29,8 +29,8 @@ import { getRedisClient, closeRedis } from './backend/src/lib/redis';
 
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = path.dirname(process.argv[1] || __filename || '.');
+
 
 async function startServer() {
   // Initialize shared Redis fast-layer connection
@@ -112,7 +112,7 @@ async function startServer() {
       const { prompt, context } = req.body;
       const ai = new GoogleGenAI({ apiKey });
       const systemInstruction = `You are Stratum AI Executive Copilot, an advanced business analytics and workspace intelligence assistant. Provide precise, actionable, data-driven answers in clean markdown format. Keep tone professional, concise, and executive-ready. Focus on metric trends, anomaly resolution, team performance, and strategic growth.`;
-      
+
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: [

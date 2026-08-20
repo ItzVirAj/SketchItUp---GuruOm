@@ -396,4 +396,75 @@ body.modal-open, html.modal-open {
   -webkit-overflow-scrolling: auto;
 }
 
+/* Statutory Print Media Styles */
+@media print {
+  body, html {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11pt !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .no-print, header, aside, nav, button, .lucide-x {
+    display: none !important;
+  }
+
+  #challan-print-container {
+    position: static !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
+  .print-clean-box {
+    border: 1.5pt solid #000000 !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    padding: 15pt !important;
+  }
+
+  table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+
+  th, td {
+    border: 1pt solid #333333 !important;
+    color: #000000 !important;
+    padding: 6pt !important;
+  }
+
+  thead tr {
+    background-color: #f0f0f0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+/* ========================================================================= */
+/* GLOBAL MODAL SCROLL LOCK & OVERSCROLL CONTAINMENT */
+/* ========================================================================= */
+body:has(.fixed.inset-0.z-50),
+body:has([role="dialog"]),
+body:has([aria-modal="true"]),
+body.modal-open {
+  overflow: hidden !important;
+}
+
+.fixed.inset-0.z-50,
+[role="dialog"],
+[aria-modal="true"],
+[data-lenis-prevent] {
+  overscroll-behavior: contain !important;
+}
+
 

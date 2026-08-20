@@ -42,7 +42,9 @@ import {
   Lock,
   History,
   CheckSquare,
-  Sparkle
+  Sparkle,
+  FastForward,
+  CheckCheck
 } from 'lucide-react';
 import { 
   JobCard, 
@@ -377,9 +379,12 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
   const [logStepNo, setLogStepNo] = useState<number>(1);
   const [logOperation, setLogOperation] = useState<string>('CNC Milling');
   const [logDoneQty, setLogDoneQty] = useState<number>(25);
+  const [isSubmittingJobCard, setIsSubmittingJobCard] = useState(false);
+  const [isCompletingAllSteps, setIsCompletingAllSteps] = useState(false);
 
   const handleCreateJobSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmittingJobCard(true);
     setActionError(null);
     setActionSuccess(null);
     const newJobNo = `JC/${String(jobCards.length + 1).padStart(4, '0')}/26-27`;
@@ -424,6 +429,8 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
       setActionSuccess(`Job Card ${newJobNo} created with ${operationsToAttach?.length || 0} routed operations.`);
     } catch (err: any) {
       setActionError(err.message || 'Failed to release Job Card to shopfloor.');
+    } finally {
+      setIsSubmittingJobCard(false);
     }
   };
 
@@ -630,6 +637,47 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
       setTravelerError(err.message || 'Failed to complete operation');
     } finally {
       setIsExecutingOp(false);
+    }
+  };
+
+  const handleCompleteAllSteps = async () => {
+    if (!activeJobCard || !onCompleteOperation) return;
+    setIsCompletingAllSteps(true);
+    setTravelerError(null);
+    setTravelerSuccess(null);
+    try {
+      const targetQty = Number(activeJobCard.targetQty || activeJobCard.qty || 1);
+      let lastUpdated = activeJobCard;
+      
+      for (const op of effectiveOperations) {
+        if (op.opStatus !== 'COMPLETED') {
+          if (onStartOperation && (op.opStatus === 'PENDING' || !op.opStatus)) {
+            try {
+              await onStartOperation(activeJobCard.jobNo, {
+                sequenceNo: op.sequenceNo,
+                machineId: op.machineId || activeJobCard.machine || 'CNC-01',
+                operatorName: op.operatorName || 'Sachin G. (Lead Machinist)'
+              });
+            } catch (e) {
+              // Ignore start error if already active
+            }
+          }
+          const updated = await onCompleteOperation(activeJobCard.jobNo, {
+            sequenceNo: op.sequenceNo,
+            qtyProcessed: targetQty,
+            qtyRejected: 0,
+            actualMinutes: Number(op.standardTimeMinutes || 15),
+            notes: 'Fast-forward: Completed via Complete All Steps'
+          });
+          if (updated) lastUpdated = updated;
+        }
+      }
+      setSelectedJobForTraveler(lastUpdated);
+      setTravelerSuccess(`All ${effectiveOperations.length} operations marked COMPLETED! Job Card is fully executed and ready for QC / PDI.`);
+    } catch (err: any) {
+      setTravelerError(err.message || 'Failed to complete all operations');
+    } finally {
+      setIsCompletingAllSteps(false);
     }
   };
 
@@ -3103,9 +3151,11 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                 </button>
                 <button 
                   type="submit" 
-                  className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs font-mono cursor-pointer shadow-lg shadow-[#5B75F8]/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  disabled={isSubmittingJobCard}
+                  className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs font-mono cursor-pointer shadow-lg shadow-[#5B75F8]/25 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 flex items-center gap-2"
                 >
-                  Release Job Card
+                  <RefreshCw className={`w-3.5 h-3.5 ${isSubmittingJobCard ? 'animate-spin' : ''}`} />
+                  <span>{isSubmittingJobCard ? 'Releasing Job Card...' : 'Release Job Card'}</span>
                 </button>
               </div>
             </form>
@@ -3550,14 +3600,25 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                         <div className="text-[11px] font-mono text-slate-400">
                           ⚡ Completing this operation automatically unlocks the next Route Card operation.
                         </div>
-                        <button
-                          type="submit"
-                          disabled={isExecutingOp}
-                          className="px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white font-bold text-xs font-mono cursor-pointer shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 flex items-center gap-2"
-                        >
-                          <CheckCircle2 className="w-4 h-4" />
-                          <span>{isExecutingOp ? 'Processing...' : 'COMPLETE OPERATION & ADVANCE'}</span>
-                        </button>
+                        <div className="flex items-center gap-2.5">
+                          <button
+                            type="button"
+                            disabled={isExecutingOp || isCompletingAllSteps}
+                            onClick={handleCompleteAllSteps}
+                            className="px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white font-bold text-xs font-mono cursor-pointer shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 flex items-center gap-2"
+                          >
+                            <FastForward className={`w-4 h-4 ${isCompletingAllSteps ? 'animate-spin' : ''}`} />
+                            <span>{isCompletingAllSteps ? 'Completing All Steps...' : 'Complete All Steps'}</span>
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={isExecutingOp || isCompletingAllSteps}
+                            className="px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white font-bold text-xs font-mono cursor-pointer shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 flex items-center gap-2"
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                            <span>{isExecutingOp ? 'Processing...' : 'COMPLETE OPERATION & ADVANCE'}</span>
+                          </button>
+                        </div>
                       </div>
                     </form>
                   ) : currentExecutableOp?.sequenceNo === selectedOp.sequenceNo ? (
@@ -3602,14 +3663,25 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                           <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                           <span>Operator skill & heat lot QC verified OK for shopfloor dispatch.</span>
                         </div>
-                        <button
-                          type="submit"
-                          disabled={isExecutingOp}
-                          className="px-6 py-3 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs font-mono cursor-pointer shadow-lg shadow-[#5B75F8]/25 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 flex items-center gap-2"
-                        >
-                          <Play className="w-4 h-4 fill-current" />
-                          <span>{isExecutingOp ? 'Starting...' : 'START OPERATION'}</span>
-                        </button>
+                        <div className="flex items-center gap-2.5">
+                          <button
+                            type="button"
+                            disabled={isExecutingOp || isCompletingAllSteps}
+                            onClick={handleCompleteAllSteps}
+                            className="px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white font-bold text-xs font-mono cursor-pointer shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 flex items-center gap-2"
+                          >
+                            <FastForward className={`w-4 h-4 ${isCompletingAllSteps ? 'animate-spin' : ''}`} />
+                            <span>{isCompletingAllSteps ? 'Completing All Steps...' : 'Complete All Steps'}</span>
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={isExecutingOp || isCompletingAllSteps}
+                            className="px-6 py-3 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs font-mono cursor-pointer shadow-lg shadow-[#5B75F8]/25 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 flex items-center gap-2"
+                          >
+                            <Play className="w-4 h-4 fill-current" />
+                            <span>{isExecutingOp ? 'Starting...' : 'START OPERATION'}</span>
+                          </button>
+                        </div>
                       </div>
                     </form>
                   ) : (
@@ -3624,15 +3696,26 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                       <p className="text-xs mt-1 font-sans">
                         Please complete previous routing steps first. The current active step is <span className="font-bold text-indigo-400">Op {currentExecutableOp?.sequenceNo}: {currentExecutableOp?.operationName}</span>.
                       </p>
-                      {currentExecutableOp && (
+                      <div className="mt-3 flex items-center justify-center gap-2">
+                        {currentExecutableOp && (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedOpSequence(currentExecutableOp.sequenceNo)}
+                            className="px-4 py-1.5 rounded-xl bg-[#5B75F8]/10 text-[#7B92FF] border border-[#5B75F8]/30 font-mono text-xs font-bold hover:bg-[#5B75F8]/20 cursor-pointer"
+                          >
+                            Switch to Op {currentExecutableOp.sequenceNo}
+                          </button>
+                        )}
                         <button
                           type="button"
-                          onClick={() => setSelectedOpSequence(currentExecutableOp.sequenceNo)}
-                          className="mt-3 px-4 py-1.5 rounded-xl bg-[#5B75F8]/10 text-[#7B92FF] border border-[#5B75F8]/30 font-mono text-xs font-bold hover:bg-[#5B75F8]/20 cursor-pointer"
+                          disabled={isExecutingOp || isCompletingAllSteps}
+                          onClick={handleCompleteAllSteps}
+                          className="px-4 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-mono text-xs font-bold hover:bg-emerald-500/25 cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                         >
-                          Switch to Op {currentExecutableOp.sequenceNo}
+                          <FastForward className={`w-3.5 h-3.5 ${isCompletingAllSteps ? 'animate-spin' : ''}`} />
+                          <span>{isCompletingAllSteps ? 'Completing All...' : 'Complete All Steps'}</span>
                         </button>
-                      )}
+                      </div>
                     </div>
                   )}
                 </div>

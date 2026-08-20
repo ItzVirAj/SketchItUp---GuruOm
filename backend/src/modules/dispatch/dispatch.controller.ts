@@ -77,6 +77,25 @@ export class DispatchController {
     }
   }
 
+  async updateDispatch(req: Request, res: Response) {
+    try {
+      const userEmail = (req as any).user?.email || 'dispatch@guruom.in';
+      const data = await dispatchService.updateDispatch(req.params.challanNo || req.params.id, req.body, userEmail);
+      return res.json({ message: 'Dispatch challan updated successfully', data });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
+
+  async cleanDuplicates(req: Request, res: Response) {
+    try {
+      const data = await dispatchService.cleanDuplicateChallans();
+      return res.json({ message: 'Redundant duplicate challans cancelled', data });
+    } catch (err: any) {
+      return res.status(500).json({ error: 'InternalServerError', message: err.message });
+    }
+  }
+
   async updateDispatchStatus(req: Request, res: Response) {
     try {
       const data = await dispatchService.updateDispatchStatus(req.params.challanNo || req.params.id, req.body);

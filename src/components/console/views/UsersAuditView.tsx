@@ -43,7 +43,10 @@ import {
   Copy,
   Sparkles,
   Edit,
-  CheckSquare
+  CheckSquare,
+  Calendar,
+  ShieldAlert,
+  RefreshCw
 } from 'lucide-react';
 import { 
   SystemUser, 
@@ -62,6 +65,7 @@ import {
   MasterItem
 } from '../../../types/console';
 import { Modal } from '../../common/Modal';
+import { exportAuditLogsApi } from '../../../services/supabaseServices';
 
 import { getRoleColor } from '../../../utils/permissions';
 import { 
@@ -96,6 +100,7 @@ interface UsersAuditViewProps {
   pdiQueue?: PDIInspection[];
   isDarkMode?: boolean;
   currentUserId?: string;
+  currentRole?: string;
   onAddUser?: (user: Partial<SystemUser>) => void;
   onUpdateUser?: (userId: string, updates: Partial<SystemUser>) => Promise<any> | void;
   onSwitchUser?: (userId: string) => void;
@@ -141,6 +146,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
   pdiQueue = [],
   isDarkMode = true,
   currentUserId,
+  currentRole,
   onAddUser,
   onUpdateUser,
   onSwitchUser,
@@ -155,9 +161,27 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'REVOKED'>('ALL');
   const [selectedSection, setSelectedSection] = useState<SectionCategory>('ALL');
+  const [selectedActor, setSelectedActor] = useState<string>('ALL');
+  const [selectedActionType, setSelectedActionType] = useState<string>('ALL');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+  const [isExporting, setIsExporting] = useState<boolean>(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [showPurgeModal, setShowPurgeModal] = useState(false);
   const [copiedExport, setCopiedExport] = useState(false);
+
+  // Role Gate Evaluation
+  const normalizedUserRole = normalizeRole(currentRole || '');
+  const isOwnerAdmin = [
+    'Owner',
+    'Admin (System)',
+    'SUPER ADMIN',
+    'ADMIN_OWNER',
+    'ADMIN',
+    'Super Admin',
+    'Admin',
+    'Owner / Managing Director'
+  ].includes(normalizedUserRole) || (currentRole || '').toLowerCase().includes('admin') || (currentRole || '').toLowerCase().includes('owner');
 
   // Edit Role State
   const [showEditRoleModal, setShowEditRoleModal] = useState(false);
@@ -386,19 +410,83 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
     }
   };
 
+  const availableActionTypes = Array.from(
+    new Set(auditLogs.map(l => l.action).filter(Boolean))
+  ).sort();
+
+  const availableActors = Array.from(
+    new Set([
+      ...users.map(u => u.email),
+      ...auditLogs.map(l => l.actorEmail || l.user).filter(Boolean)
+    ])
+  ).sort();
+
   const filteredLogs = auditLogs.filter(log => {
     const actor = (log.user || log.actorEmail || '').toLowerCase();
     const act = (log.action || '').toLowerCase();
     const det = (log.details || '').toLowerCase();
     const ent = (log.entity || log.entityType || '').toLowerCase();
+    const entId = (log.entityId || '').toLowerCase();
     const search = searchTerm.toLowerCase();
 
-    const matchesSearch = actor.includes(search) || act.includes(search) || det.includes(search) || ent.includes(search);
+    const matchesSearch = 
+      !search || 
+      actor.includes(search) || 
+      act.includes(search) || 
+      det.includes(search) || 
+      ent.includes(search) || 
+      entId.includes(search);
     
-    if (selectedSection === 'ALL') return matchesSearch;
-    const secInfo = getSectionInfo(log.entity || log.entityType || '');
-    return matchesSearch && secInfo.category === selectedSection;
+    if (!matchesSearch) return false;
+
+    if (selectedSection !== 'ALL') {
+      const secInfo = getSectionInfo(log.entity || log.entityType || '');
+      if (secInfo.category !== selectedSection) return false;
+    }
+
+    if (selectedActor !== 'ALL') {
+      const targetActor = selectedActor.toLowerCase();
+      if (actor !== targetActor && (log.actorEmail || '').toLowerCase() !== targetActor) {
+        return false;
+      }
+    }
+
+    if (selectedActionType !== 'ALL') {
+      if (act !== selectedActionType.toLowerCase()) return false;
+    }
+
+    if (startDate) {
+      const startMs = new Date(startDate).getTime();
+      const logMs = log.createdAt ? new Date(log.createdAt).getTime() : 0;
+      if (logMs > 0 && logMs < startMs) return false;
+    }
+
+    if (endDate) {
+      const endMs = new Date(endDate).getTime() + 86400000;
+      const logMs = log.createdAt ? new Date(log.createdAt).getTime() : 0;
+      if (logMs > 0 && logMs > endMs) return false;
+    }
+
+    return true;
   });
+
+  const activeFiltersCount = 
+    (searchTerm ? 1 : 0) + 
+    (selectedSection !== 'ALL' ? 1 : 0) + 
+    (selectedActor !== 'ALL' ? 1 : 0) + 
+    (selectedActionType !== 'ALL' ? 1 : 0) + 
+    (startDate ? 1 : 0) + 
+    (endDate ? 1 : 0);
+
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setSelectedSection('ALL');
+    setSelectedActor('ALL');
+    setSelectedActionType('ALL');
+    setStartDate('');
+    setEndDate('');
+    setAuditPage(1);
+  };
 
   const totalAuditPages = Math.max(1, Math.ceil(filteredLogs.length / AUDIT_PAGE_SIZE));
   const paginatedLogs = filteredLogs.slice((auditPage - 1) * AUDIT_PAGE_SIZE, auditPage * AUDIT_PAGE_SIZE);
@@ -414,11 +502,23 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
     return matchesSearch && usr.status === statusFilter;
   });
 
-  const handleExportCSV = () => {
-    if (auditLogs.length === 0) return;
-    const headers = 'ID,Timestamp,User,Category,Action,Details\n';
-    const rows = auditLogs.map(l => 
-      `"${l.id}","${l.when}","${l.user}","${l.entity}","${l.action}","${l.details.replace(/"/g, '""')}"`
+  const handleExportCSV = async () => {
+    if (filteredLogs.length === 0) return;
+    setIsExporting(true);
+    try {
+      await exportAuditLogsApi({
+        actorEmail: users.find(u => u.userId === currentUserId || u.id === currentUserId)?.email || 'owner@guruom.in',
+        entityType: selectedSection !== 'ALL' ? selectedSection : undefined,
+        action: selectedActionType !== 'ALL' ? selectedActionType : undefined,
+        search: searchTerm || undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined
+      });
+    } catch (_) {}
+
+    const headers = 'ID,Timestamp,User,Actor_Role,Category,Action,Entity_ID,Details,IP_Address\n';
+    const rows = filteredLogs.map(l => 
+      `"${l.id}","${l.createdAt || l.when || ''}","${l.user || l.actorEmail || ''}","${l.actorRole || ''}","${l.entity || l.entityType || ''}","${l.action || ''}","${l.entityId || ''}","${(l.details || '').replace(/"/g, '""')}","${l.ipAddress || ''}"`
     ).join('\n');
 
     const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
@@ -431,6 +531,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
 
     setCopiedExport(true);
     setTimeout(() => setCopiedExport(false), 2500);
+    setIsExporting(false);
   };
 
   const handleDownloadSection = () => {
@@ -786,195 +887,360 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
       {/* ========================================================================= */}
       {activeTab === 'AUDIT' && (
         <div className="space-y-4">
-          <div className={`p-4 rounded-2xl border flex flex-wrap items-center justify-between gap-3 text-xs ${
-            isDarkMode ? 'bg-indigo-950/20 border-indigo-500/30 text-indigo-200' : 'bg-indigo-50/80 border-indigo-200 text-indigo-900'
-          }`}>
-            <div className="flex items-center gap-2.5">
-              <div className="p-1.5 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-400">
-                <Lock className="w-4 h-4" />
+          {!isOwnerAdmin ? (
+            <div className={`p-10 rounded-3xl border text-center space-y-4 shadow-xl ${
+              isDarkMode ? 'bg-rose-950/20 border-rose-500/30 text-rose-200' : 'bg-rose-50 border-rose-200 text-rose-900'
+            }`}>
+              <div className="inline-flex p-4 rounded-2xl bg-rose-500/20 text-rose-400 border border-rose-500/30 shadow-lg">
+                <ShieldAlert className="w-8 h-8" />
               </div>
-              <div>
-                <div className="font-bold font-mono tracking-tight flex items-center gap-2">
-                  <span>Append-Only Immutable Security Ledger</span>
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[9px] font-bold">
-                    DB TRIGGER ENFORCED
+              <div className="text-base font-bold font-mono uppercase tracking-wider">Access Restricted (403 Forbidden)</div>
+              <p className="text-xs max-w-md mx-auto text-slate-400">
+                The Comprehensive Audit Trail & Append-Only Security Ledger is restricted exclusively to <strong>Owner / Managing Director</strong> and <strong>Super Admin</strong> roles. Your current role ({currentRole || 'Staff'}) is not authorized to inspect audit logs.
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Header Badge & Stats */}
+              <div className={`p-4 rounded-2xl border flex flex-wrap items-center justify-between gap-3 text-xs ${
+                isDarkMode ? 'bg-indigo-950/20 border-indigo-500/30 text-indigo-200' : 'bg-indigo-50/80 border-indigo-200 text-indigo-900'
+              }`}>
+                <div className="flex items-center gap-2.5">
+                  <div className="p-1.5 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-400">
+                    <Lock className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="font-bold font-mono tracking-tight flex items-center gap-2">
+                      <span>Append-Only Immutable Security Ledger</span>
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[9px] font-bold flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping inline-block"></span>
+                        DB TRIGGER ENFORCED • REAL-TIME
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-0.5">
+                      Captures WHO, WHAT, WHEN, WHERE, Before/After states across Orders, Inventory, Production, Quality, Dispatch, Finance, and Auth.
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className={`font-mono text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                    Showing <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{filteredLogs.length}</span> of <span className="font-bold">{auditLogs.length}</span> recorded events
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={isExporting || filteredLogs.length === 0}
+                    onClick={handleExportCSV}
+                    className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold font-mono flex items-center gap-1.5 cursor-pointer shadow-md shadow-[#5B75F8]/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                  >
+                    {isExporting ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Download className="w-3.5 h-3.5" />
+                    )}
+                    <span>{copiedExport ? 'Exported!' : 'Export Log (CSV)'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Advanced Multi-Filter Toolbar */}
+              <div className={`p-4 rounded-2xl border transition-all space-y-3 ${
+                isDarkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+              }`}>
+                {/* Category Pills */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[11px] font-mono font-bold text-slate-400 mr-1 flex items-center gap-1">
+                    <Filter className="w-3 h-3" /> Entity:
                   </span>
+                  {(['ALL', 'SECURITY', 'ORDERS', 'PRODUCTION', 'INVENTORY', 'QUALITY', 'DISPATCH', 'FINANCE', 'MASTERS'] as SectionCategory[]).map(cat => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => {
+                        setSelectedSection(cat);
+                        setAuditPage(1);
+                      }}
+                      className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                        selectedSection === cat
+                          ? isDarkMode ? 'bg-[#5B75F8] text-white shadow-xs' : 'bg-[#5B75F8] text-white shadow-xs'
+                          : isDarkMode ? 'bg-slate-950/60 text-slate-400 hover:text-white border border-slate-800' : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
                 </div>
-                <div className="text-[11px] text-slate-400 mt-0.5">
-                  Records full WHO, WHAT, WHEN, WHERE, within-limit status, and auto-escalated approvals. Mutation or deletion of logs is strictly prohibited.
+
+                {/* Secondary Filters Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2.5 pt-1">
+                  {/* Actor Dropdown */}
+                  <div>
+                    <label className="block text-[10px] font-mono text-slate-400 mb-1">Actor (WHO)</label>
+                    <select
+                      value={selectedActor}
+                      onChange={(e) => {
+                        setSelectedActor(e.target.value);
+                        setAuditPage(1);
+                      }}
+                      className={`w-full px-2.5 py-1.5 rounded-xl border text-xs font-mono outline-none cursor-pointer ${
+                        isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+                      }`}
+                    >
+                      <option value="ALL">All Actors ({availableActors.length})</option>
+                      {availableActors.map(act => (
+                        <option key={act} value={act}>{act}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Action Type Dropdown */}
+                  <div>
+                    <label className="block text-[10px] font-mono text-slate-400 mb-1">Action Type (WHAT)</label>
+                    <select
+                      value={selectedActionType}
+                      onChange={(e) => {
+                        setSelectedActionType(e.target.value);
+                        setAuditPage(1);
+                      }}
+                      className={`w-full px-2.5 py-1.5 rounded-xl border text-xs font-mono outline-none cursor-pointer ${
+                        isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+                      }`}
+                    >
+                      <option value="ALL">All Action Types ({availableActionTypes.length})</option>
+                      {availableActionTypes.map(act => (
+                        <option key={act} value={act}>{act}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* From Date */}
+                  <div>
+                    <label className="block text-[10px] font-mono text-slate-400 mb-1 flex items-center gap-1">
+                      <Calendar className="w-2.5 h-2.5" /> From Date
+                    </label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => {
+                        setStartDate(e.target.value);
+                        setAuditPage(1);
+                      }}
+                      className={`w-full px-2.5 py-1.5 rounded-xl border text-xs font-mono outline-none ${
+                        isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+                      }`}
+                    />
+                  </div>
+
+                  {/* To Date */}
+                  <div>
+                    <label className="block text-[10px] font-mono text-slate-400 mb-1 flex items-center gap-1">
+                      <Calendar className="w-2.5 h-2.5" /> To Date
+                    </label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => {
+                        setEndDate(e.target.value);
+                        setAuditPage(1);
+                      }}
+                      className={`w-full px-2.5 py-1.5 rounded-xl border text-xs font-mono outline-none ${
+                        isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+                      }`}
+                    />
+                  </div>
+
+                  {/* Clear Filters Button */}
+                  <div className="flex items-end">
+                    <button
+                      type="button"
+                      disabled={activeFiltersCount === 0}
+                      onClick={handleClearFilters}
+                      className={`w-full px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition-all ${
+                        activeFiltersCount > 0
+                          ? isDarkMode 
+                            ? 'bg-slate-800/80 hover:bg-slate-700 text-amber-400 border-amber-500/30 cursor-pointer shadow-xs' 
+                            : 'bg-white hover:bg-slate-100 text-amber-600 border-amber-300 cursor-pointer shadow-xs'
+                          : 'opacity-40 cursor-not-allowed border-transparent text-slate-500'
+                      }`}
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Clear Filters {activeFiltersCount > 0 ? `(${activeFiltersCount})` : ''}</span>
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className={`font-mono text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-              Total Recorded Events: <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{filteredLogs.length}</span>
-            </div>
-          </div>
-
-          <div className={`rounded-3xl border overflow-hidden shadow-2xl transition-all ${
-            isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200'
-          }`}>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse font-sans">
-                <thead>
-                  <tr className={`border-b font-mono font-bold text-[10px] uppercase tracking-wider ${
-                    isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'
-                  }`}>
-                    <th className="py-4 px-4 w-10 text-center"></th>
-                    <th className="py-4 px-4">Timestamp (WHEN)</th>
-                    <th className="py-4 px-4">Actor (WHO)</th>
-                    <th className="py-4 px-4">Entity & ID</th>
-                    <th className="py-4 px-4">Action (WHAT)</th>
-                    <th className="py-4 px-5">State Transition / Details</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800/60 font-sans">
-                  {paginatedLogs.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="p-10 text-center">
-                        <div className={`inline-flex p-3 rounded-2xl border mb-3 ${
-                          isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-500' : 'bg-slate-50 border-slate-200 text-slate-400'
-                        }`}>
-                          <Lock className="w-6 h-6" />
-                        </div>
-                        <div className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>No Audit Events Recorded Yet</div>
-                        <div className={`text-xs mt-1 font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                          Every backend change (orders, production, QC, dispatch, finance, masters) streams here in realtime — no demo data.
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                  {paginatedLogs.map((log) => {
-                    const secInfo = getSectionInfo(log.entity || log.entityType || '');
-                    const isExpanded = !!expandedLogIds[log.id];
-
-                    return (
-                      <React.Fragment key={log.id}>
-                        <tr 
-                          onClick={() => toggleExpandLog(log.id)}
-                          className={`cursor-pointer transition-colors ${
-                            isDarkMode ? 'hover:bg-slate-800/50 text-slate-300' : 'hover:bg-slate-50 text-slate-700'
-                          }`}
-                        >
-                          <td className="py-3.5 px-4 text-center text-slate-500">
-                            {isExpanded ? '▼' : '▶'}
-                          </td>
-                          <td className="py-3.5 px-4 font-mono text-[11px] text-slate-400">
-                            {log.when || log.timestamp}
-                          </td>
-                          <td className="py-3.5 px-4">
-                            <div className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{log.user || log.actorEmail}</div>
-                            {log.actorRole && (
-                              <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
-                                isDarkMode ? 'bg-slate-800 text-slate-400 border border-slate-700' : 'bg-slate-100 text-slate-600 border border-slate-200'
-                              }`}>
-                                {log.actorRole}
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-3.5 px-4 font-mono">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${secInfo.badgeClass}`}>
-                              {log.entity || log.entityType}
-                            </span>
-                          </td>
-                          <td className={`py-3.5 px-4 font-mono font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>
-                            {log.action}
-                          </td>
-                          <td className="py-3.5 px-5">
-                            <div className="line-clamp-1">{log.details}</div>
+              {/* Immutable Ledger Table */}
+              <div className={`rounded-3xl border overflow-hidden shadow-2xl transition-all ${
+                isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200'
+              }`}>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse font-sans">
+                    <thead>
+                      <tr className={`border-b font-mono font-bold text-[10px] uppercase tracking-wider ${
+                        isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'
+                      }`}>
+                        <th className="py-4 px-4 w-10 text-center"></th>
+                        <th className="py-4 px-4">Timestamp (WHEN)</th>
+                        <th className="py-4 px-4">Actor (WHO)</th>
+                        <th className="py-4 px-4">Entity & ID</th>
+                        <th className="py-4 px-4">Action (WHAT)</th>
+                        <th className="py-4 px-5">State Transition / Details</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800/60 font-sans">
+                      {paginatedLogs.length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="p-10 text-center">
+                            <div className={`inline-flex p-3 rounded-2xl border mb-3 ${
+                              isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-500' : 'bg-slate-50 border-slate-200 text-slate-400'
+                            }`}>
+                              <Lock className="w-6 h-6" />
+                            </div>
+                            <div className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>No Audit Events Matching Active Filters</div>
+                            <div className={`text-xs mt-1 font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                              Try clearing filters to view complete historical ledger records.
+                            </div>
                           </td>
                         </tr>
+                      )}
+                      {paginatedLogs.map((log) => {
+                        const secInfo = getSectionInfo(log.entity || log.entityType || '');
+                        const isExpanded = !!expandedLogIds[log.id];
 
-                        {isExpanded && (
-                          <tr className={isDarkMode ? 'bg-slate-950/60' : 'bg-slate-50/80'}>
-                            <td colSpan={6} className="p-4 pl-12 text-xs">
-                              <div className={`p-4 rounded-2xl border space-y-3 ${
-                                isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'
-                              }`}>
-                                <div className={`font-mono font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Full Change Record (from backend)</div>
-                                <div className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>{log.details}</div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                  {log.beforeState && (
-                                    <div>
-                                      <div className={`text-[10px] font-mono uppercase font-bold mb-1 ${isDarkMode ? 'text-rose-400' : 'text-rose-600'}`}>Before State</div>
-                                      <pre className={`p-2.5 rounded-xl border font-mono text-[10px] overflow-x-auto ${
-                                        isDarkMode ? 'bg-slate-950 border-slate-800 text-rose-300' : 'bg-rose-50/60 border-rose-200 text-rose-700'
-                                      }`}>
-                                        {typeof log.beforeState === 'string' ? log.beforeState : JSON.stringify(log.beforeState, null, 2)}
-                                      </pre>
-                                    </div>
-                                  )}
-                                  {log.afterState && (
-                                    <div>
-                                      <div className={`text-[10px] font-mono uppercase font-bold mb-1 ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>After State</div>
-                                      <pre className={`p-2.5 rounded-xl border font-mono text-[10px] overflow-x-auto ${
-                                        isDarkMode ? 'bg-slate-950 border-slate-800 text-emerald-300' : 'bg-emerald-50/60 border-emerald-200 text-emerald-700'
-                                      }`}>
-                                        {typeof log.afterState === 'string' ? log.afterState : JSON.stringify(log.afterState, null, 2)}
-                                      </pre>
-                                    </div>
-                                  )}
-                                </div>
-
-                                <div className={`flex flex-wrap gap-x-6 gap-y-1 font-mono text-[10px] ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>
-                                  {log.entityId && <span>Entity ID: <span className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>{log.entityId}</span></span>}
-                                  {log.ipAddress && <span>IP: <span className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>{log.ipAddress}</span></span>}
-                                  {log.userAgent && <span className="truncate max-w-md">Agent: <span className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>{log.userAgent}</span></span>}
-                                  {log.createdAt && <span>Recorded: <span className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>{new Date(log.createdAt).toLocaleString('en-IN', { hour12: true })}</span></span>}
-                                </div>
-
-                                {log.metadata && (
-                                  <pre className={`p-2.5 rounded-xl border font-mono text-[10px] overflow-x-auto ${
-                                    isDarkMode ? 'bg-slate-950 border-slate-800 text-indigo-300' : 'bg-indigo-50/60 border-indigo-200 text-indigo-700'
+                        return (
+                          <React.Fragment key={log.id}>
+                            <tr 
+                              onClick={() => toggleExpandLog(log.id)}
+                              className={`cursor-pointer transition-colors ${
+                                isDarkMode ? 'hover:bg-slate-800/50 text-slate-300' : 'hover:bg-slate-50 text-slate-700'
+                              }`}
+                            >
+                              <td className="py-3.5 px-4 text-center text-slate-500 font-mono text-[10px]">
+                                {isExpanded ? '▼' : '▶'}
+                              </td>
+                              <td className="py-3.5 px-4 font-mono text-[11px] text-slate-400 whitespace-nowrap">
+                                {log.when || log.timestamp || (log.createdAt ? new Date(log.createdAt).toLocaleString('en-IN', { hour12: true }) : 'Recent')}
+                              </td>
+                              <td className="py-3.5 px-4">
+                                <div className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{log.user || log.actorEmail}</div>
+                                {log.actorRole && (
+                                  <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
+                                    isDarkMode ? 'bg-slate-800 text-slate-400 border border-slate-700' : 'bg-slate-100 text-slate-600 border border-slate-200'
                                   }`}>
-                                    {JSON.stringify(log.metadata, null, 2)}
-                                  </pre>
+                                    {log.actorRole}
+                                  </span>
                                 )}
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                              </td>
+                              <td className="py-3.5 px-4 font-mono">
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${secInfo.badgeClass}`}>
+                                  {log.entity || log.entityType}
+                                </span>
+                                {log.entityId && (
+                                  <div className="text-[10px] text-slate-400 font-mono mt-0.5">{log.entityId}</div>
+                                )}
+                              </td>
+                              <td className={`py-3.5 px-4 font-mono font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>
+                                {log.action}
+                              </td>
+                              <td className="py-3.5 px-5">
+                                <div className="line-clamp-1">{log.details}</div>
+                              </td>
+                            </tr>
 
-            {totalAuditPages > 1 && (
-              <div className={`p-4 border-t flex items-center justify-between text-xs font-mono ${
-                isDarkMode ? 'border-slate-800 bg-slate-950/40 text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-600'
-              }`}>
-                <div>
-                  Showing <strong>{(auditPage - 1) * AUDIT_PAGE_SIZE + 1}</strong> to <strong>{Math.min(auditPage * AUDIT_PAGE_SIZE, filteredLogs.length)}</strong> of <strong>{filteredLogs.length}</strong> events
+                            {isExpanded && (
+                              <tr className={isDarkMode ? 'bg-slate-950/60' : 'bg-slate-50/80'}>
+                                <td colSpan={6} className="p-4 pl-12 text-xs">
+                                  <div className={`p-4 rounded-2xl border space-y-3 ${
+                                    isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'
+                                  }`}>
+                                    <div className={`font-mono font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Full Change Record (Immutable Log)</div>
+                                    <div className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>{log.details}</div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                      {log.beforeState && (
+                                        <div>
+                                          <div className={`text-[10px] font-mono uppercase font-bold mb-1 ${isDarkMode ? 'text-rose-400' : 'text-rose-600'}`}>Before State</div>
+                                          <pre className={`p-2.5 rounded-xl border font-mono text-[10px] overflow-x-auto max-h-48 ${
+                                            isDarkMode ? 'bg-slate-950 border-slate-800 text-rose-300' : 'bg-rose-50/60 border-rose-200 text-rose-700'
+                                          }`}>
+                                            {typeof log.beforeState === 'string' ? log.beforeState : JSON.stringify(log.beforeState, null, 2)}
+                                          </pre>
+                                        </div>
+                                      )}
+                                      {log.afterState && (
+                                        <div>
+                                          <div className={`text-[10px] font-mono uppercase font-bold mb-1 ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>After State</div>
+                                          <pre className={`p-2.5 rounded-xl border font-mono text-[10px] overflow-x-auto max-h-48 ${
+                                            isDarkMode ? 'bg-slate-950 border-slate-800 text-emerald-300' : 'bg-emerald-50/60 border-emerald-200 text-emerald-700'
+                                          }`}>
+                                            {typeof log.afterState === 'string' ? log.afterState : JSON.stringify(log.afterState, null, 2)}
+                                          </pre>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    <div className={`flex flex-wrap gap-x-6 gap-y-1 font-mono text-[10px] ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>
+                                      {log.entityId && <span>Entity ID: <span className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>{log.entityId}</span></span>}
+                                      {log.ipAddress && <span>IP: <span className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>{log.ipAddress}</span></span>}
+                                      {log.userAgent && <span className="truncate max-w-md">Agent: <span className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>{log.userAgent}</span></span>}
+                                      {log.createdAt && <span>Recorded: <span className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>{new Date(log.createdAt).toLocaleString('en-IN', { hour12: true })}</span></span>}
+                                    </div>
+
+                                    {log.metadata && (
+                                      <pre className={`p-2.5 rounded-xl border font-mono text-[10px] overflow-x-auto max-h-48 ${
+                                        isDarkMode ? 'bg-slate-950 border-slate-800 text-indigo-300' : 'bg-indigo-50/60 border-indigo-200 text-indigo-700'
+                                      }`}>
+                                        {JSON.stringify(log.metadata, null, 2)}
+                                      </pre>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    disabled={auditPage === 1}
-                    onClick={() => setAuditPage(p => Math.max(1, p - 1))}
-                    className={`px-3 py-1.5 rounded-xl border disabled:opacity-40 cursor-pointer transition-all ${
-                      isDarkMode ? 'border-slate-700 hover:bg-slate-800' : 'border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    Previous
-                  </button>
-                  <span>Page {auditPage} of {totalAuditPages}</span>
-                  <button
-                    type="button"
-                    disabled={auditPage === totalAuditPages}
-                    onClick={() => setAuditPage(p => Math.min(totalAuditPages, p + 1))}
-                    className={`px-3 py-1.5 rounded-xl border disabled:opacity-40 cursor-pointer transition-all ${
-                      isDarkMode ? 'border-slate-700 hover:bg-slate-800' : 'border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    Next
-                  </button>
-                </div>
+
+                {totalAuditPages > 1 && (
+                  <div className={`p-4 border-t flex items-center justify-between text-xs font-mono ${
+                    isDarkMode ? 'border-slate-800 bg-slate-950/40 text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-600'
+                  }`}>
+                    <div>
+                      Showing <strong>{(auditPage - 1) * AUDIT_PAGE_SIZE + 1}</strong> to <strong>{Math.min(auditPage * AUDIT_PAGE_SIZE, filteredLogs.length)}</strong> of <strong>{filteredLogs.length}</strong> events
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={auditPage === 1}
+                        onClick={() => setAuditPage(p => Math.max(1, p - 1))}
+                        className={`px-3 py-1.5 rounded-xl border disabled:opacity-40 cursor-pointer transition-all ${
+                          isDarkMode ? 'border-slate-700 hover:bg-slate-800' : 'border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        Previous
+                      </button>
+                      <span>Page {auditPage} of {totalAuditPages}</span>
+                      <button
+                        type="button"
+                        disabled={auditPage === totalAuditPages}
+                        onClick={() => setAuditPage(p => Math.min(totalAuditPages, p + 1))}
+                        className={`px-3 py-1.5 rounded-xl border disabled:opacity-40 cursor-pointer transition-all ${
+                          isDarkMode ? 'border-slate-700 hover:bg-slate-800' : 'border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </>
+          )}
         </div>
       )}
 

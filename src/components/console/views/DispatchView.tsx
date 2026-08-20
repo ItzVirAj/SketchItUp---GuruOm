@@ -1,7 +1,22 @@
-import React, { useState } from 'react';
-import { Truck, Plus, Download, CheckCircle2, Search, X, MapPin, PackageCheck } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  Truck, 
+  Plus, 
+  Download, 
+  CheckCircle2, 
+  Search, 
+  X, 
+  MapPin, 
+  PackageCheck, 
+  Eye, 
+  Printer, 
+  Loader2,
+  FileText,
+  AlertCircle
+} from 'lucide-react';
 import { DispatchChallan, CustomerOrder, VendorMaster } from '../../../types/console';
 import { getCurrentFinancialYear, formatDocumentNumber } from '../../../utils/statutoryAccountingEngine';
+import { ChallanDetailModal } from '../modals/ChallanDetailModal';
 
 interface DispatchViewProps {
   dispatches?: DispatchChallan[];
@@ -9,7 +24,13 @@ interface DispatchViewProps {
   vendors?: VendorMaster[];
   isDarkMode?: boolean;
   onCreateChallan?: (newChallan: Partial<DispatchChallan>) => void;
-  onIssueDispatch?: (newChallan: any) => void;
+  onIssueDispatch?: (newChallan: any) => Promise<any> | void;
+  onUpdateChallan?: (challanNo: string, updates: any) => Promise<any>;
+  onCancelChallan?: (challanNo: string, reason?: string) => Promise<void>;
+  onDispatchChallan?: (challanNo: string) => Promise<void>;
+  onNavigateToOrder?: (orderPo: string) => void;
+  preselectedOrderPo?: string | null;
+  onDispatchModalOpened?: () => void;
 }
 
 export const DispatchView: React.FC<DispatchViewProps> = ({
@@ -18,43 +39,138 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
   vendors = [],
   isDarkMode = true,
   onCreateChallan,
-  onIssueDispatch
+  onIssueDispatch,
+  onUpdateChallan,
+  onCancelChallan,
+  onDispatchChallan,
+  onNavigateToOrder,
+  preselectedOrderPo,
+  onDispatchModalOpened
 }) => {
-  const [showModal, setShowModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [selectedChallan, setSelectedChallan] = useState<DispatchChallan | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [orderPo, setOrderPo] = useState(orders[0]?.poNo || '');
   
-  const allTransporterOptions = ['VRL Logistics Ltd', 'SafeXpress Courier', 'GATI KWE', 'BlueDart Express', 'TCI Freight', 'Delhivery Surface'];
+  const allTransporterOptions = [
+    'VRL Logistics Ltd', 
+    'SafeXpress Courier', 
+    'GATI KWE', 
+    'BlueDart Express', 
+    'TCI Freight', 
+    'Delhivery Surface',
+    'Self Pick-up (Customer Transport)'
+  ];
   const [transporter, setTransporter] = useState(allTransporterOptions[0] || 'VRL Logistics Ltd');
   const [vehicleNo, setVehicleNo] = useState('');
+  const [lrNo, setLrNo] = useState('');
+  const [eWayBillNo, setEWayBillNo] = useState('');
+  const [remarks, setRemarks] = useState('');
+  const [driverContact, setDriverContact] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const filteredDispatches = dispatches.filter(d => 
     d.challanNo.toLowerCase().includes(searchQuery.toLowerCase()) || 
     d.orderPo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (d.transporter && d.transporter.toLowerCase().includes(searchQuery.toLowerCase()))
+    (d.transporter && d.transporter.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (d.vehicleNo && d.vehicleNo.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleRowClick = (challan: DispatchChallan) => {
+    setSelectedChallan(challan);
+    setShowDetailModal(true);
+  };
+
+  const preselectHandled = useRef<string | null>(null);
+  useEffect(() => {
+    if (!preselectedOrderPo || preselectHandled.current === preselectedOrderPo) return;
+    preselectHandled.current = preselectedOrderPo;
+    setOrderPo(preselectedOrderPo);
+    const matchingOrder = orders.find(o => o.poNo === preselectedOrderPo || o.id === preselectedOrderPo);
+    if (matchingOrder && matchingOrder.transporterName) {
+      setTransporter(matchingOrder.transporterName);
+    }
+    setShowCreateModal(true);
+    onDispatchModalOpened?.();
+  }, [preselectedOrderPo, orders, onDispatchModalOpened]);
+
+  const handleOpenCreateModal = () => {
+    setOrderPo(orders[0]?.poNo || '');
+    setTransporter(allTransporterOptions[0] || 'VRL Logistics Ltd');
+    setVehicleNo('');
+    setLrNo('');
+    setEWayBillNo('');
+    setRemarks('');
+    setDriverContact('');
+    setSubmitError(null);
+    setShowCreateModal(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const fy = getCurrentFinancialYear();
-    const runningNum = Math.floor(1000 + (dispatches.length + 1) * 31 + Math.random() * 899) % 9000;
-    const challanNo = formatDocumentNumber('CHL', fy, runningNum);
-    const payload = {
-      challanNo,
-      orderPo,
-      status: 'DISPATCHED' as const,
-      date: new Date().toISOString().split('T')[0],
-      transporter,
-      vehicleNo,
-      driverContact: '+91 98765 43210',
-      totalInvoiceValue: 18500
-    };
-    if (onCreateChallan) onCreateChallan(payload);
-    if (onIssueDispatch) onIssueDispatch(payload);
-    setShowModal(false);
+    if (isSubmitting) return;
+
+    if (!vehicleNo.trim()) {
+      setSubmitError('Vehicle Registration Number is required.');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setSubmitError(null);
+
+      const fy = getCurrentFinancialYear();
+      const runningNum = Math.floor(1000 + (dispatches.length + 1) * 31 + Math.random() * 899) % 9000;
+      const challanNo = formatDocumentNumber('CHL', fy, runningNum);
+      const idempotencyKey = `idmp-chl-${orderPo}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
+      const matchingOrder = orders.find(o => o.poNo === orderPo || o.id === orderPo);
+
+      const payload: any = {
+        challanNo,
+        orderPo,
+        status: 'DISPATCH_READY' as const,
+        date: new Date().toISOString().split('T')[0],
+        transporter,
+        vehicleNo: vehicleNo.trim().toUpperCase(),
+        lrNo: lrNo.trim(),
+        eWayBillNo: eWayBillNo.trim(),
+        remarks: remarks.trim(),
+        driverContact: driverContact.trim() || '+91 98765 43210',
+        linesCount: matchingOrder?.lines?.length || 1,
+        lines: matchingOrder?.lines?.map(l => ({
+          itemCode: l.itemCode,
+          itemDescription: l.itemDescription,
+          qty: Number(l.pendingQty ?? l.orderQty),
+          unit: l.unit || 'NOS',
+          rate: Number(l.rate || 0)
+        })),
+        idempotencyKey
+      };
+
+      if (onIssueDispatch) {
+        await onIssueDispatch(payload);
+      } else if (onCreateChallan) {
+        await onCreateChallan(payload);
+      }
+
+      setShowCreateModal(false);
+    } catch (err: any) {
+      setSubmitError(err?.message || 'Failed to issue delivery challan.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const deliveredCount = dispatches.filter(d => d.status === 'DELIVERED' || d.status === 'DISPATCHED').length;
+  const draftCount = dispatches.filter(d => ['DRAFT', 'GENERATED', 'DISPATCH_READY'].includes(d.status)).length;
+  const inTransitCount = dispatches.filter(d => d.status === 'DISPATCHED' || d.status === 'IN_TRANSIT').length;
+
+  const selectedOrderForModal = orders.find(
+    o => o.poNo === selectedChallan?.orderPo || o.id === selectedChallan?.orderPo
+  );
 
   return (
     <div className="space-y-6 font-sans">
@@ -85,7 +201,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
 
           <div className="flex items-center gap-3">
             <button
-              onClick={() => setShowModal(true)}
+              onClick={handleOpenCreateModal}
               className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
               <Plus className="w-4 h-4" />
@@ -100,93 +216,78 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
             isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/80 border-slate-200/80'
           }`}>
             <div className="flex items-center justify-between">
-              <span className={`text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Total Delivery Challans</span>
-              <div className={`p-2 rounded-xl ${isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF]' : 'bg-[#5B75F8]/10 text-[#5B75F8]'}`}>
-                <Truck className="w-4 h-4" />
-              </div>
+              <span className="text-xs font-mono font-bold uppercase text-slate-400">Total Consignments</span>
+              <Truck className="w-4 h-4 text-[#5B75F8]" />
             </div>
-            <div className="mt-2 flex items-baseline justify-between">
-              <span className={`text-2xl font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{dispatches.length}</span>
-              <span className="text-[11px] font-mono font-semibold text-[#5B75F8]">Challans</span>
-            </div>
+            <div className="text-2xl font-bold font-mono mt-2">{dispatches.length}</div>
+            <div className="text-[11px] text-slate-400 mt-1">Outward Delivery Challans</div>
           </div>
 
           <div className={`p-4 rounded-2xl border transition-all ${
             isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/80 border-slate-200/80'
           }`}>
             <div className="flex items-center justify-between">
-              <span className={`text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Fulfilled & Delivered</span>
-              <div className={`p-2 rounded-xl ${isDarkMode ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-700'}`}>
-                <PackageCheck className="w-4 h-4" />
-              </div>
+              <span className="text-xs font-mono font-bold uppercase text-slate-400">Draft / Staging</span>
+              <FileText className="w-4 h-4 text-amber-400" />
             </div>
-            <div className="mt-2 flex items-baseline justify-between">
-              <span className={`text-2xl font-bold font-mono text-emerald-500`}>{deliveredCount}</span>
-              <span className="text-[11px] font-mono font-semibold text-emerald-500">Dispatched</span>
-            </div>
+            <div className="text-2xl font-bold font-mono mt-2 text-amber-400">{draftCount}</div>
+            <div className="text-[11px] text-slate-400 mt-1">Pending Gate Release</div>
           </div>
 
           <div className={`p-4 rounded-2xl border transition-all ${
             isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/80 border-slate-200/80'
           }`}>
             <div className="flex items-center justify-between">
-              <span className={`text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Freight Transporters</span>
-              <div className={`p-2 rounded-xl ${isDarkMode ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-100 text-purple-700'}`}>
-                <MapPin className="w-4 h-4" />
-              </div>
+              <span className="text-xs font-mono font-bold uppercase text-slate-400">In Transit</span>
+              <MapPin className="w-4 h-4 text-cyan-400" />
             </div>
-            <div className="mt-2 flex items-baseline justify-between">
-              <span className={`text-2xl font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>4 Partners</span>
-              <span className="text-[11px] font-mono font-semibold text-purple-400">Logistics</span>
-            </div>
+            <div className="text-2xl font-bold font-mono mt-2 text-cyan-400">{inTransitCount}</div>
+            <div className="text-[11px] text-slate-400 mt-1">Dispatched On Road</div>
           </div>
 
           <div className={`p-4 rounded-2xl border transition-all ${
             isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/80 border-slate-200/80'
           }`}>
             <div className="flex items-center justify-between">
-              <span className={`text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Dispatch Compliance</span>
-              <div className={`p-2 rounded-xl ${isDarkMode ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-100 text-amber-700'}`}>
-                <CheckCircle2 className="w-4 h-4" />
-              </div>
+              <span className="text-xs font-mono font-bold uppercase text-slate-400">Delivered (POD)</span>
+              <PackageCheck className="w-4 h-4 text-emerald-400" />
             </div>
-            <div className="mt-2 flex items-baseline justify-between">
-              <span className={`text-2xl font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>100%</span>
-              <span className="text-[11px] font-mono font-semibold text-amber-500">PDI Verified</span>
-            </div>
+            <div className="text-2xl font-bold font-mono mt-2 text-emerald-400">{deliveredCount}</div>
+            <div className="text-[11px] text-slate-400 mt-1">Completed Consignments</div>
           </div>
         </div>
       </div>
 
-      {/* Filter & Search Controls */}
-      <div className={`p-4 rounded-3xl border transition-all flex flex-wrap items-center justify-between gap-4 ${
-        isDarkMode ? 'bg-slate-900/70 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-xs'
+      {/* Dispatches Search & Filter */}
+      <div className={`p-6 rounded-3xl border space-y-4 ${
+        isDarkMode ? 'bg-slate-900/60 border-slate-800/80' : 'bg-white border-slate-200'
       }`}>
-        <div className={`relative flex items-center rounded-2xl border px-3.5 py-1.5 transition-all ${
-          isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white focus-within:border-[#5B75F8]/50' : 'bg-slate-50 border-slate-200 text-slate-900 focus-within:border-[#5B75F8]'
-        }`}>
-          <Search className="w-4 h-4 text-slate-400 shrink-0 mr-2" />
-          <input
-            type="text"
-            placeholder="Search Challan # or Order PO..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-transparent outline-none text-xs w-64 font-mono"
-          />
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="relative flex-1 min-w-[280px]">
+            <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search challan number, PO reference, vehicle number, transporter..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className={`w-full pl-10 pr-4 py-2.5 rounded-2xl border text-xs outline-none transition-all ${
+                isDarkMode 
+                  ? 'bg-slate-950/80 border-slate-800 text-white placeholder-slate-500 focus:border-[#5B75F8]' 
+                  : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400 focus:border-[#5B75F8]'
+              }`}
+            />
+          </div>
+          <div className="text-xs font-mono text-slate-400">
+            Showing <strong>{filteredDispatches.length}</strong> of <strong>{dispatches.length}</strong> dispatches
+          </div>
         </div>
 
-        <span className="text-xs font-mono text-slate-400">Showing {filteredDispatches.length} Delivery Challans</span>
-      </div>
-
-      {/* Dispatches Table */}
-      <div className={`rounded-3xl border overflow-hidden transition-all shadow-xl ${
-        isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200'
-      }`}>
+        {/* Challans Interactive Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full text-left text-xs">
             <thead>
-              <tr className={`border-b font-mono font-bold uppercase tracking-wider text-[11px] ${
-                isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'
+              <tr className={`border-b font-mono font-bold uppercase tracking-wider ${
+                isDarkMode ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-500'
               }`}>
                 <th className="py-4 px-5">Challan #</th>
                 <th className="py-4 px-5">Customer Order PO</th>
@@ -194,45 +295,93 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                 <th className="py-4 px-5">Dispatch Date</th>
                 <th className="py-4 px-5">Transporter Partner</th>
                 <th className="py-4 px-5">Vehicle #</th>
+                <th className="py-4 px-5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
-              {filteredDispatches.map((disp) => (
-                <tr key={disp.challanNo} className={isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}>
-                  <td className="py-4 px-5 font-bold font-mono text-[#5B75F8] dark:text-[#7B92FF]">
-                    {disp.challanNo}
-                  </td>
-                  <td className="py-4 px-5 font-mono text-slate-400">
-                    {disp.orderPo}
-                  </td>
-                  <td className="py-4 px-5 text-center">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      <span>{disp.status}</span>
-                    </span>
-                  </td>
-                  <td className="py-4 px-5 font-mono text-slate-400">
-                    {disp.date}
-                  </td>
-                  <td className={`py-4 px-5 font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
-                    {disp.transporter || 'Self Pick-up'}
-                  </td>
-                  <td className="py-4 px-5 font-mono text-purple-400 font-medium">
-                    {disp.vehicleNo || '—'}
+              {filteredDispatches.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-slate-400 font-mono">
+                    No delivery challans found. Click "+ Generate Delivery Challan" to create one.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredDispatches.map((disp) => (
+                  <tr 
+                    key={disp.challanNo} 
+                    onClick={() => handleRowClick(disp)}
+                    className={`cursor-pointer transition-colors ${
+                      isDarkMode ? 'hover:bg-slate-800/60' : 'hover:bg-slate-50'
+                    }`}
+                  >
+                    <td className="py-4 px-5 font-bold font-mono text-[#5B75F8] dark:text-[#7B92FF] flex items-center gap-2">
+                      <span>{disp.challanNo}</span>
+                    </td>
+                    <td className="py-4 px-5 font-mono text-slate-400">
+                      {disp.orderPo}
+                    </td>
+                    <td className="py-4 px-5 text-center">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
+                        ['DRAFT', 'GENERATED', 'DISPATCH_READY'].includes(disp.status)
+                          ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                          : disp.status === 'DELIVERED'
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                            : disp.status === 'CANCELLED'
+                              ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                              : 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          ['DRAFT', 'GENERATED', 'DISPATCH_READY'].includes(disp.status)
+                            ? 'bg-amber-400'
+                            : disp.status === 'DELIVERED'
+                              ? 'bg-emerald-400'
+                              : disp.status === 'CANCELLED'
+                                ? 'bg-rose-400'
+                                : 'bg-cyan-400'
+                        }`} />
+                        <span>{disp.status}</span>
+                      </span>
+                    </td>
+                    <td className="py-4 px-5 font-mono text-slate-400">
+                      {disp.date}
+                    </td>
+                    <td className={`py-4 px-5 font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
+                      {disp.transporter || 'Self Pick-up'}
+                    </td>
+                    <td className="py-4 px-5 font-mono text-purple-400 font-medium">
+                      {disp.vehicleNo || '—'}
+                    </td>
+                    <td className="py-4 px-5 text-right">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRowClick(disp);
+                        }}
+                        className={`p-2 rounded-xl border transition-all inline-flex items-center gap-1 text-xs font-mono font-bold ${
+                          isDarkMode 
+                            ? 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white' 
+                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        <Eye className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>View</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
       </div>
 
       {/* Ultra-Polished Issue Delivery Challan Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-lg rounded-3xl border p-7 space-y-6 shadow-2xl transition-all ${
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
+          <div className={`relative w-full max-w-lg rounded-3xl border p-7 space-y-5 shadow-2xl transition-all ${
             isDarkMode 
-              ? 'bg-slate-900/95 border-slate-800/80 text-white backdrop-blur-2xl shadow-[#5B75F8]/5' 
+              ? 'bg-slate-900/95 border-slate-800 text-white backdrop-blur-2xl' 
               : 'bg-white border-slate-200 text-slate-900 shadow-2xl'
           }`}>
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-4">
@@ -250,7 +399,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                 </div>
               </div>
               <button 
-                onClick={() => setShowModal(false)} 
+                onClick={() => !isSubmitting && setShowCreateModal(false)} 
                 className={`p-2 rounded-2xl border transition-all cursor-pointer ${
                   isDarkMode 
                     ? 'border-slate-800 bg-slate-950/60 text-slate-400 hover:text-white hover:bg-slate-800' 
@@ -260,6 +409,13 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                 <X className="w-4 h-4" />
               </button>
             </div>
+
+            {submitError && (
+              <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{submitError}</span>
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -297,15 +453,77 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                 </select>
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Vehicle Registration # *</label>
+                  <input
+                    type="text"
+                    required
+                    value={vehicleNo}
+                    onChange={(e) => setVehicleNo(e.target.value)}
+                    placeholder="e.g. MH 12 AB 4589"
+                    className={`w-full rounded-2xl border px-4 py-3 text-xs font-mono outline-none transition-all ${
+                      isDarkMode 
+                        ? 'bg-slate-950/80 border-slate-800 text-white focus:border-[#5B75F8]' 
+                        : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#5B75F8]'
+                    }`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">LR / Docket Number</label>
+                  <input
+                    type="text"
+                    value={lrNo}
+                    onChange={(e) => setLrNo(e.target.value)}
+                    placeholder="e.g. VRL-98762"
+                    className={`w-full rounded-2xl border px-4 py-3 text-xs font-mono outline-none transition-all ${
+                      isDarkMode 
+                        ? 'bg-slate-950/80 border-slate-800 text-white focus:border-[#5B75F8]' 
+                        : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#5B75F8]'
+                    }`}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">E-Way Bill Number</label>
+                  <input
+                    type="text"
+                    value={eWayBillNo}
+                    onChange={(e) => setEWayBillNo(e.target.value)}
+                    placeholder="e.g. 2710 9821 4455"
+                    className={`w-full rounded-2xl border px-4 py-3 text-xs font-mono outline-none transition-all ${
+                      isDarkMode 
+                        ? 'bg-slate-950/80 border-slate-800 text-white focus:border-[#5B75F8]' 
+                        : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#5B75F8]'
+                    }`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Driver Contact Phone</label>
+                  <input
+                    type="text"
+                    value={driverContact}
+                    onChange={(e) => setDriverContact(e.target.value)}
+                    placeholder="e.g. +91 98765 43210"
+                    className={`w-full rounded-2xl border px-4 py-3 text-xs font-mono outline-none transition-all ${
+                      isDarkMode 
+                        ? 'bg-slate-950/80 border-slate-800 text-white focus:border-[#5B75F8]' 
+                        : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#5B75F8]'
+                    }`}
+                  />
+                </div>
+              </div>
+
               <div>
-                <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Vehicle Registration Number *</label>
+                <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Delivery Notes & Remarks</label>
                 <input
                   type="text"
-                  required
-                  value={vehicleNo}
-                  onChange={(e) => setVehicleNo(e.target.value)}
-                  placeholder="e.g. MH 12 AB 4589"
-                  className={`w-full rounded-2xl border px-4 py-3 text-xs font-mono outline-none transition-all ${
+                  value={remarks}
+                  onChange={(e) => setRemarks(e.target.value)}
+                  placeholder="e.g. Goods packed in sealed crates with rust-proof coating"
+                  className={`w-full rounded-2xl border px-4 py-3 text-xs outline-none transition-all ${
                     isDarkMode 
                       ? 'bg-slate-950/80 border-slate-800 text-white focus:border-[#5B75F8]' 
                       : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#5B75F8]'
@@ -316,7 +534,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
               <div className="pt-4 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-end gap-3">
                 <button 
                   type="button" 
-                  onClick={() => setShowModal(false)} 
+                  disabled={isSubmitting}
+                  onClick={() => setShowCreateModal(false)} 
                   className={`px-5 py-2.5 rounded-2xl border text-xs font-mono font-bold cursor-pointer transition-all ${
                     isDarkMode 
                       ? 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800' 
@@ -327,15 +546,40 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                 </button>
                 <button 
                   type="submit" 
-                  className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs font-mono cursor-pointer shadow-lg shadow-[#5B75F8]/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  disabled={isSubmitting || !vehicleNo.trim()}
+                  className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs font-mono cursor-pointer shadow-lg shadow-[#5B75F8]/25 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 flex items-center gap-2"
                 >
-                  Issue Challan
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Issuing Delivery Challan...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Truck className="w-4 h-4" />
+                      <span>Issue Challan</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* Challan Detail View Modal (View, Edit while Draft, Print, PDF) */}
+      <ChallanDetailModal
+        isOpen={showDetailModal}
+        onClose={() => setShowDetailModal(false)}
+        challan={selectedChallan}
+        order={selectedOrderForModal}
+        isDarkMode={isDarkMode}
+        transporters={allTransporterOptions}
+        onUpdateChallan={onUpdateChallan}
+        onCancelChallan={onCancelChallan}
+        onDispatchChallan={onDispatchChallan}
+        onNavigateToOrder={onNavigateToOrder}
+      />
 
     </div>
   );

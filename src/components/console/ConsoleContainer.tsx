@@ -112,6 +112,11 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
   const [currentView, setCurrentView] = useState<ConsoleView>('command-centre');
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>('ord-1');
   const [pendingJobCardOrderPo, setPendingJobCardOrderPo] = useState<string | null>(null);
+  const [pendingInvoiceOrderPo, setPendingInvoiceOrderPo] = useState<string | null>(null);
+  const [pendingInvoiceDispatchNo, setPendingInvoiceDispatchNo] = useState<string | null>(null);
+  const [pendingPdiOrderPo, setPendingPdiOrderPo] = useState<string | null>(null);
+  const [pendingPdiJobNo, setPendingPdiJobNo] = useState<string | null>(null);
+  const [pendingDispatchOrderPo, setPendingDispatchOrderPo] = useState<string | null>(null);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     try {
       const item = localStorage.getItem('stratum_darkMode');
@@ -228,6 +233,8 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
     handleCompletePDI,
     handleGenerateInvoice,
     handleGenerateChallan,
+    handleUpdateChallan,
+    handleCancelChallan,
     handleMarkDispatched,
     handleMarkDelivered,
     handleRecordPayment
@@ -483,6 +490,8 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
             <OrderDetailView
               order={selectedOrder}
               qcQueue={qcQueue}
+              pdiQueue={pdiQueue}
+              dispatches={dispatches}
               vendors={vendors}
               isDarkMode={isDarkMode}
               currentRole={currentRole}
@@ -505,12 +514,26 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
                 setPendingJobCardOrderPo(orderPo);
                 handleNavigateView('production');
               }}
+              onNavigateToCreateInvoice={(orderPo, challanNo) => {
+                setPendingInvoiceOrderPo(orderPo);
+                setPendingInvoiceDispatchNo(challanNo || null);
+                handleNavigateView('invoices');
+              }}
               onCancelOrder={handleCancelOrder}
-              onNavigateToPDI={() => handleNavigateView('pdi')}
-              onNavigateToDispatch={() => handleNavigateView('dispatch')}
+              onNavigateToPDI={(orderPo, jobNo) => {
+                setPendingPdiOrderPo(orderPo || null);
+                setPendingPdiJobNo(jobNo || null);
+                handleNavigateView('pdi');
+              }}
+              onNavigateToDispatch={(orderPo) => {
+                setPendingDispatchOrderPo(orderPo || null);
+                handleNavigateView('dispatch');
+              }}
               onCompletePDI={handleCompletePDI}
               onGenerateInvoice={handleGenerateInvoice}
               onGenerateChallan={handleGenerateChallan}
+              onUpdateChallan={handleUpdateChallan}
+              onCancelChallan={handleCancelChallan}
               onMarkDispatched={handleMarkDispatched}
               onMarkDelivered={handleMarkDelivered}
               onRecordPayment={handleRecordPayment}
@@ -584,6 +607,12 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
             <PDIView
               pdiItems={pdiQueue}
               isDarkMode={isDarkMode}
+              preselectedOrderPo={pendingPdiOrderPo}
+              preselectedJobNo={pendingPdiJobNo}
+              onPdiModalOpened={() => {
+                setPendingPdiOrderPo(null);
+                setPendingPdiJobNo(null);
+              }}
               onPassPDI={handlePassPDI}
             />
           )}
@@ -594,7 +623,36 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
               orders={orders}
               vendors={vendors}
               isDarkMode={isDarkMode}
+              preselectedOrderPo={pendingDispatchOrderPo}
+              onDispatchModalOpened={() => setPendingDispatchOrderPo(null)}
               onIssueDispatch={handleIssueDispatch}
+              onUpdateChallan={handleUpdateChallan}
+              onCancelChallan={handleCancelChallan}
+              onDispatchChallan={async (challanNo) => {
+                const targetCh = dispatches.find(d => d.challanNo === challanNo || d.id === challanNo);
+                const targetPo = targetCh?.orderPo || selectedOrderId;
+                const targetOrd = orders.find(o => o.poNo === targetPo || o.id === targetPo || o.deliveryChallanNo === challanNo);
+                
+                await handleUpdateChallan(challanNo, { status: 'DISPATCHED' });
+                
+                if (targetOrd) {
+                  await handleMarkDispatched(targetOrd.id, {
+                    dispatchDate: targetCh?.date || new Date().toISOString().split('T')[0],
+                    transporter: targetCh?.transporter || targetOrd.transporterName || 'VRL Logistics Ltd',
+                    vehicleNo: targetCh?.vehicleNo || (targetOrd as any).vehicleNo || 'MH 12 AB 4589',
+                    lrNo: targetCh?.lrNo,
+                    challanNo: challanNo,
+                    lines: targetOrd.lines
+                  });
+                }
+              }}
+              onNavigateToOrder={(po) => {
+                const ord = orders.find(o => o.poNo === po || o.id === po);
+                if (ord) {
+                  setSelectedOrderId(ord.id);
+                  handleNavigateView('order-detail');
+                }
+              }}
             />
           )}
 
@@ -630,6 +688,12 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
               masters={masters}
               isDarkMode={isDarkMode}
               currentRole={currentRole}
+              preselectedOrderPo={pendingInvoiceOrderPo}
+              preselectedDispatchNo={pendingInvoiceDispatchNo}
+              onInvoiceModalOpened={() => {
+                setPendingInvoiceOrderPo(null);
+                setPendingInvoiceDispatchNo(null);
+              }}
               onCreateInvoice={handleCreateInvoice}
               onIssueInvoice={handleIssueInvoice}
               onRecordPayment={handleRecordInvoicePayment}
@@ -690,6 +754,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
               pdiQueue={pdiQueue}
               isDarkMode={isDarkMode}
               currentUserId={currentUserId}
+              currentRole={currentRole}
               onAddUser={handleAddUser}
               onUpdateUser={handleUpdateUser}
               onSwitchUser={handleSwitchUser}

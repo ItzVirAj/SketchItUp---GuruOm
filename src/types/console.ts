@@ -369,20 +369,40 @@ export interface PDIInspection {
   };
 }
 
+export interface DispatchChallanLine {
+  id?: string;
+  itemCode: string;
+  itemDescription?: string;
+  hsnCode?: string;
+  qty: number;
+  unit?: string;
+  rate?: number;
+  approxValue?: number;
+}
+
 export interface DispatchChallan {
   id?: string;
   challanNo: string;
   orderPo: string;
-  status: 'GENERATED' | 'DISPATCHED' | 'IN_TRANSIT' | 'DELIVERED';
+  orderId?: string;
+  status: 'DRAFT' | 'GENERATED' | 'DISPATCH_READY' | 'DISPATCHED' | 'IN_TRANSIT' | 'DELIVERED' | 'CANCELLED' | string;
   date: string;
   transporter: string;
   vehicleNo: string;
+  lrNo?: string;
+  eWayBillNo?: string;
+  remarks?: string;
   linesCount?: number;
   driverContact?: string;
   totalInvoiceValue?: number;
   podDocumentUrl?: string;
   podAttachmentName?: string;
   podReceivedAt?: string;
+  lines?: DispatchChallanLine[];
+  items?: DispatchChallanLine[];
+  idempotencyKey?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface PendingApproval {

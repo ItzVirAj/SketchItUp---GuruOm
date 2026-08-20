@@ -242,6 +242,17 @@ export class QcService {
     }
 
     const result = { id, qcStatus, inspectorNotes, defectCategory, inspectedAt };
+    
+    await logAudit({
+      actorEmail: 'qc@guruom.in',
+      action: qcStatus === 'PASS' ? 'QC_INSPECTION_PASSED' : (qcStatus === 'QC_HOLD' ? 'QC_HOLD_PLACED' : 'QC_INSPECTION_REJECTED'),
+      entityType: 'qc_inspections',
+      entityId: String(id || target?.jobNo || ''),
+      beforeState: target ? { qcStatus: target.qcStatus, defectCategory: target.defectCategory } : null,
+      afterState: { qcStatus, inspectorNotes, defectCategory, inspectedAt, orderPo: target?.orderPo, jobNo: target?.jobNo },
+      metadata: { details: `QC inspection ${qcStatus} for job ${target?.jobNo || id} (PO ${target?.orderPo || ''})` }
+    }).catch(() => {});
+
     notificationsService.broadcastEvent('qc_updated', result);
 
     return result;
@@ -341,6 +352,19 @@ export class QcService {
     const partDesc = dbPdi?.part_description || local?.partDescription || 'Manufactured Item';
     const qty = dbPdi?.qty || local?.qty;
 
+    if (orderPo && orderPo !== 'PO') {
+      try {
+        const { ordersService } = await import('../orders/orders.service');
+        await ordersService.updateOrder(orderPo, {
+          status: 'READY_TO_DISPATCH',
+          stage: 'READY_TO_DISPATCH',
+          progressStep: 7
+        });
+      } catch (err) {
+        console.warn('ordersService updateOrder on PDI pass fallback:', err);
+      }
+    }
+
     try {
       await notificationsService.triggerNotification({
         eventType: 'pdi_passed',
@@ -353,6 +377,17 @@ export class QcService {
     } catch (notifErr) {
       console.warn('Could not dispatch PDI pass notification:', notifErr);
     }
+
+    // Record Audit Log for PDI compliance clearance
+    await logAudit({
+      actorEmail: 'pdi@guruom.in',
+      action: 'PDI_INSPECTION_PASSED',
+      entityType: 'pdi_inspections',
+      entityId: String(id || local?.jobNo || orderPo),
+      beforeState: local ? { pdiStatus: local.pdiStatus } : null,
+      afterState: { pdiStatus: 'PASS', certificateNo: certNo, reportDate, orderPo, partCode, qty },
+      metadata: { details: `PDI clearance granted for PO ${orderPo} with certificate ${certNo}` }
+    }).catch(() => {});
 
     // Real-Time Push: Broadcast PDI pass, Finished Goods update, and Order progression
     notificationsService.broadcastEvent('pdi_updated', { id, pdiStatus: 'PASS', certificateNo: certNo, reportDate, orderPo });

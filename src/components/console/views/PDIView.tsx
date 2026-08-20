@@ -6,11 +6,23 @@ interface PDIViewProps {
   pdiItems?: PDIInspection[];
   pdiQueue?: PDIInspection[];
   isDarkMode?: boolean;
+  preselectedOrderPo?: string | null;
+  preselectedJobNo?: string | null;
+  onPdiModalOpened?: () => void;
   onPassPDI?: (pdiNo: string, payload?: any) => void;
   onFailPDI?: (pdiNo: string, payload?: any) => void;
 }
 
-export const PDIView: React.FC<PDIViewProps> = ({ pdiItems, pdiQueue, isDarkMode = true, onPassPDI, onFailPDI }) => {
+export const PDIView: React.FC<PDIViewProps> = ({ 
+  pdiItems, 
+  pdiQueue, 
+  isDarkMode = true, 
+  preselectedOrderPo,
+  preselectedJobNo,
+  onPdiModalOpened,
+  onPassPDI, 
+  onFailPDI 
+}) => {
   const rawPdiItems = pdiItems || pdiQueue || [];
   
   // Local state for instant optimistic updates
@@ -38,8 +50,28 @@ export const PDIView: React.FC<PDIViewProps> = ({ pdiItems, pdiQueue, isDarkMode
 
   const [selectedReport, setSelectedReport] = useState<PDIInspection | null>(null);
   const [inspectingItem, setInspectingItem] = useState<PDIInspection | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(preselectedOrderPo || preselectedJobNo || '');
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'PASS' | 'PENDING' | 'FAIL'>('ALL');
+
+  // Handle preselection
+  const preselectHandled = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    const key = preselectedOrderPo || preselectedJobNo;
+    if (!key || preselectHandled.current === key) return;
+    preselectHandled.current = key;
+
+    const matched = activePdiItems.find(p => 
+      (preselectedJobNo && (p.jobNo?.toLowerCase() === preselectedJobNo.toLowerCase() || p.id === preselectedJobNo)) ||
+      (preselectedOrderPo && (p.orderPo?.toLowerCase() === preselectedOrderPo.toLowerCase()))
+    );
+
+    if (matched) {
+      handleOpenInspect(matched);
+      onPdiModalOpened?.();
+    } else if (preselectedOrderPo) {
+      setSearchQuery(preselectedOrderPo);
+    }
+  }, [preselectedOrderPo, preselectedJobNo, activePdiItems, onPdiModalOpened]);
 
   // Inspection form states
   const [acceptedQty, setAcceptedQty] = useState<number>(0);

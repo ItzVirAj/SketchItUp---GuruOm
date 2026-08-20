@@ -48,6 +48,9 @@ interface InvoicesViewProps {
   onIssueInvoice?: (invoiceNo: string) => Promise<void> | void;
   onRecordPayment?: (invoiceNo: string) => void;
   onViewOrder?: (orderId: string) => void;
+  preselectedDispatchNo?: string | null;
+  preselectedOrderPo?: string | null;
+  onInvoiceModalOpened?: () => void;
 }
 
 export const InvoicesView: React.FC<InvoicesViewProps> = ({
@@ -61,7 +64,10 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
   onCreateInvoice,
   onIssueInvoice,
   onRecordPayment,
-  onViewOrder
+  onViewOrder,
+  preselectedDispatchNo,
+  preselectedOrderPo,
+  onInvoiceModalOpened
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -143,12 +149,15 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
     if (linkedOrder && linkedOrder.lines && linkedOrder.lines.length > 0) {
       const lines = linkedOrder.lines.map(l => {
         const master = masters.find(m => m.code === l.itemCode);
+        const resolvedRate = Number(
+          (l as any).rate ?? (l as any).unitPrice ?? (l as any).unit_rate ?? (l as any).sell_rate ?? master?.saleRate ?? 0
+        );
         return {
           itemCode: l.itemCode,
-          itemDescription: l.description || master?.description || 'Precision Machined Component',
+          itemDescription: l.itemDescription || l.description || master?.description || 'Precision Machined Component',
           hsnCode: master?.hsnCode || '84834000',
-          qty: l.dispatchedQty || l.orderQty || 1,
-          unitPrice: l.unitPrice || 1250,
+          qty: Number(l.dispatchedQty || l.orderQty || 1),
+          unitPrice: resolvedRate,
           gstRate: 18
         };
       });
@@ -167,15 +176,79 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
     }
   };
 
+  // Handle Preselection from Order Detail View or External CTA
+  const preselectHandled = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    const key = preselectedDispatchNo || preselectedOrderPo;
+    if (!key || preselectHandled.current === key) return;
+    preselectHandled.current = key;
+
+    // 1. Try finding matching dispatch by challanNo or orderPo
+    const matchedDispatch = dispatches.find(d => 
+      (preselectedDispatchNo && (d.challanNo === preselectedDispatchNo || d.id === preselectedDispatchNo)) ||
+      (preselectedOrderPo && (d.orderPo === preselectedOrderPo || d.orderId === preselectedOrderPo))
+    );
+
+    if (matchedDispatch) {
+      handleSelectDispatch(matchedDispatch.challanNo);
+      setShowCreateModal(true);
+      onInvoiceModalOpened?.();
+    } else if (preselectedOrderPo) {
+      // 2. Direct order fallback if dispatch object isn't indexed yet
+      const linkedOrder = orders.find(o => o.poNo === preselectedOrderPo || o.id === preselectedOrderPo);
+      if (linkedOrder) {
+        const challan = preselectedDispatchNo || linkedOrder.deliveryChallanNo || `CHL-${linkedOrder.poNo || linkedOrder.id}`;
+        setSelectedDispatchNo(challan);
+        setModalError(null);
+        const fy = getCurrentFinancialYear();
+        const runningNum = Math.floor(1000 + (invoices.length + 1) * 17) % 9000;
+        setInvoiceNoInput(formatDocumentNumber('INV', fy, runningNum));
+
+        if (linkedOrder.lines && linkedOrder.lines.length > 0) {
+          const lines = linkedOrder.lines.map(l => {
+            const master = masters.find(m => m.code === l.itemCode);
+            const resolvedRate = Number(
+              (l as any).rate ?? (l as any).unitPrice ?? (l as any).unit_rate ?? (l as any).sell_rate ?? master?.saleRate ?? 0
+            );
+            return {
+              itemCode: l.itemCode,
+              itemDescription: l.itemDescription || l.description || master?.description || 'Precision Machined Component',
+              hsnCode: master?.hsnCode || '84834000',
+              qty: Number(l.dispatchedQty || l.orderQty || 1),
+              unitPrice: resolvedRate,
+              gstRate: 18
+            };
+          });
+          setInvoiceLines(lines);
+        } else {
+          setInvoiceLines([
+            {
+              itemCode: 'ITEM-PRECISION-01',
+              itemDescription: 'Machined Component Batch',
+              hsnCode: '84834000',
+              qty: 1,
+              unitPrice: 2500,
+              gstRate: 18
+            }
+          ]);
+        }
+        setShowCreateModal(true);
+        onInvoiceModalOpened?.();
+      }
+    }
+  }, [preselectedDispatchNo, preselectedOrderPo, dispatches, orders, masters, invoices.length, onInvoiceModalOpened]);
+
   // Selected Dispatch Metadata
   const selectedDispatch = useMemo(() => {
     return dispatches.find(d => d.challanNo === selectedDispatchNo || d.id === selectedDispatchNo);
   }, [dispatches, selectedDispatchNo]);
 
   const selectedOrder = useMemo(() => {
-    if (!selectedDispatch) return null;
-    return orders.find(o => o.poNo === selectedDispatch.orderPo || o.id === selectedDispatch.orderPo);
-  }, [orders, selectedDispatch]);
+    if (selectedDispatch) {
+      return orders.find(o => o.poNo === selectedDispatch.orderPo || o.id === selectedDispatch.orderPo);
+    }
+    return orders.find(o => o.deliveryChallanNo === selectedDispatchNo || o.poNo === selectedDispatchNo || o.id === selectedDispatchNo);
+  }, [orders, selectedDispatch, selectedDispatchNo]);
 
   const selectedCustomer = useMemo(() => {
     if (!selectedOrder) return null;
@@ -202,7 +275,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
 
   // Handle Save Invoice (Draft or Immediate Issue)
   const handleSaveInvoice = async (status: 'DRAFT' | 'ISSUED') => {
-    if (!selectedDispatch) {
+    if (!selectedDispatch && !selectedOrder && !selectedDispatchNo) {
       setModalError('Please select a source dispatch challan.');
       return;
     }
@@ -224,8 +297,8 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
         customerId: selectedOrder?.customerId || selectedCustomer?.id || 'CUST-AUTO',
         customerName,
         customerGstin,
-        orderPo: selectedDispatch.orderPo,
-        challanNo: selectedDispatch.challanNo,
+        orderPo: selectedDispatch?.orderPo || selectedOrder?.poNo || selectedOrder?.id || 'PO-AUTO',
+        challanNo: selectedDispatch?.challanNo || selectedOrder?.deliveryChallanNo || selectedDispatchNo,
         status,
         date: invoiceDate,
         dueDate,
@@ -335,7 +408,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
               className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold px-4 py-2.5 rounded-2xl flex items-center gap-2 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer hover:scale-[1.02]"
             >
               <Plus className="w-4 h-4" />
-              <span>+ Create New Invoice</span>
+              <span>Create New Invoice</span>
             </button>
           )}
         </div>

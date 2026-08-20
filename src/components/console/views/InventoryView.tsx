@@ -259,7 +259,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 onClick={() => {
                   if (stockMasterRows.length > 0) setSelectedStockForAdjust(stockMasterRows[0]);
                 }}
-                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-500 hover:to-teal-400 text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-teal-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
               >
                 <SlidersHorizontal className="w-4 h-4" />
                 <span>Adjust Stock</span>
@@ -951,12 +951,27 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
             <form onSubmit={handleAdjustSubmit} className="space-y-4">
               <div>
-                <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Target SKU</label>
-                <div className={`p-3.5 rounded-2xl border font-mono font-bold text-xs ${
-                  isDarkMode ? 'bg-slate-950/80 border-slate-800 text-[#7B92FF]' : 'bg-slate-50 border-slate-200 text-[#5B75F8]'
-                }`}>
-                  {selectedStockForAdjust.code} — {selectedStockForAdjust.description}
-                </div>
+                <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">
+                  Target SKU / Material Component *
+                </label>
+                <select
+                  value={selectedStockForAdjust.code}
+                  onChange={(e) => {
+                    const found = stockMasterRows.find(s => s.code === e.target.value);
+                    if (found) setSelectedStockForAdjust(found);
+                  }}
+                  className={`w-full rounded-2xl border px-4 py-3 text-xs font-mono font-bold outline-none transition-all cursor-pointer ${
+                    isDarkMode 
+                      ? 'bg-slate-950/80 border-slate-800 text-[#7B92FF] focus:border-[#5B75F8]' 
+                      : 'bg-slate-50 border-slate-200 text-[#5B75F8] focus:border-[#5B75F8]'
+                  }`}
+                >
+                  {stockMasterRows.map((s) => (
+                    <option key={s.code} value={s.code} className={isDarkMode ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>
+                      {s.code} — {s.description} ({s.onHand} {s.unit || 'units'} on hand)
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

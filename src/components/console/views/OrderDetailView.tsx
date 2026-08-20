@@ -36,17 +36,22 @@ import {
   Receipt,
   CheckSquare,
   Square,
-  ClipboardCheck
+  ClipboardCheck,
+  Loader2,
+  Eye
 } from 'lucide-react';
-import { CustomerOrder, OrderStatus, QCInspection, OrderLineItem, UserRole, VendorMaster } from '../../../types/console';
+import { CustomerOrder, OrderStatus, QCInspection, OrderLineItem, UserRole, VendorMaster, DispatchChallan } from '../../../types/console';
 import { isRoleAuthorizedForCta, getCtaPermission, CtaId, normalizeRole } from '../../../utils/rbacMatrix';
 import { executeOrderStageTransition, validatePodRequired, validateOrderClosure, normalizeOrderState, CanonicalOrderState } from '../../../utils/orderStateMachine';
 import { runMaterialCheckForOrder, overrideMaterialCheckForOrder } from '../../../services/supabaseServices';
 import { getCurrentFinancialYear, formatDocumentNumber } from '../../../utils/statutoryAccountingEngine';
+import { ChallanDetailModal } from '../modals/ChallanDetailModal';
 
 interface OrderDetailViewProps {
   order: CustomerOrder;
   qcQueue?: QCInspection[];
+  pdiQueue?: PDIInspection[];
+  dispatches?: DispatchChallan[];
   vendors?: VendorMaster[];
   isDarkMode: boolean;
   currentRole?: UserRole | string;
@@ -57,11 +62,14 @@ interface OrderDetailViewProps {
   onUpdateOrder?: (orderId: string, updates: Partial<CustomerOrder>) => void;
   onNavigateToCreateJobCard?: (orderPo: string) => void;
   onCancelOrder?: (orderId: string) => void;
-  onNavigateToPDI?: () => void;
+  onNavigateToPDI?: (orderPo?: string, jobNo?: string) => void;
   onNavigateToDispatch?: () => void;
+  onNavigateToCreateInvoice?: (orderPo: string, challanNo?: string) => void;
   onCompletePDI?: (orderId: string, payload: any) => Promise<any> | void;
   onGenerateInvoice?: (orderId: string, invoiceData: any) => Promise<any> | void;
   onGenerateChallan?: (orderId: string, challanData: any) => Promise<any> | void;
+  onUpdateChallan?: (challanNo: string, updates: any) => Promise<any>;
+  onCancelChallan?: (challanNo: string, reason?: string) => Promise<void>;
   onMarkDispatched?: (orderId: string, dispatchData: any) => Promise<any> | void;
   onMarkDelivered?: (orderId: string, deliveryData: any) => Promise<any> | void;
   onRecordPayment?: (orderId: string, paymentData: any) => Promise<any> | void;
@@ -70,6 +78,8 @@ interface OrderDetailViewProps {
 export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   order,
   qcQueue = [],
+  pdiQueue = [],
+  dispatches = [],
   vendors = [],
   isDarkMode,
   currentRole = 'SUPER ADMIN',
@@ -82,9 +92,12 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   onCancelOrder,
   onNavigateToPDI,
   onNavigateToDispatch,
+  onNavigateToCreateInvoice,
   onCompletePDI,
   onGenerateInvoice,
   onGenerateChallan,
+  onUpdateChallan,
+  onCancelChallan,
   onMarkDispatched,
   onMarkDelivered,
   onRecordPayment
@@ -100,6 +113,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   const [showChallanModal, setShowChallanModal] = useState(false);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
   const [showDeliveryModal, setShowDeliveryModal] = useState(false);
+  const [showChallanDetailModal, setShowChallanDetailModal] = useState(false);
+  const [selectedChallanDetail, setSelectedChallanDetail] = useState<DispatchChallan | null>(null);
 
   const [poFileName, setPoFileName] = useState<string | null>(order.clientPoFile || null);
   const [isConfirming, setIsConfirming] = useState(false);
@@ -222,13 +237,34 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   };
 
   const linkedQc = (qcQueue || []).filter(q => 
-    (q.orderPo && (q.orderPo.trim().toUpperCase() === order.poNo.trim().toUpperCase() || q.orderPo.trim().toUpperCase() === order.id.trim().toUpperCase())) ||
+    (q.orderPo && (q.orderPo.trim().toUpperCase() === (order.poNo || '').trim().toUpperCase() || q.orderPo.trim().toUpperCase() === (order.id || '').trim().toUpperCase())) ||
     (order.jobCards && order.jobCards.some(j => j.jobNo && j.jobNo.trim().toUpperCase() === (q.jobNo || '').trim().toUpperCase()))
   );
 
   const isQcRejected = linkedQc.some(q => q.qcStatus === 'REJECTED');
   const isQcHold = linkedQc.some(q => q.qcStatus === 'QC_HOLD');
+  const allQcPassed = (linkedQc.length > 0 && linkedQc.every(q => q.qcStatus === 'PASS' || q.qcStatus === 'PASSED')) ||
+    ['QC_INSPECTION', 'QC_PASS', 'QC_PASSED', 'QC_COMPLETE', 'PDI', 'PDI_HOLD', 'PDI_COMPLETE', 'READY_TO_DISPATCH', 'READY_FOR_DISPATCH', 'DISPATCHED', 'IN_TRANSIT', 'DELIVERED', 'INVOICED', 'CLOSED'].includes((order.status || order.stage || '').toUpperCase()) ||
+    Boolean(isPdiPassed);
   const hasNcr = order.hasOpenNcr || isQcRejected || isQcHold;
+
+  const linkedDispatches = (dispatches || []).filter(d => 
+    (d.orderPo && ((order.poNo && d.orderPo.trim().toUpperCase() === order.poNo.trim().toUpperCase()) || (order.id && d.orderPo.trim().toUpperCase() === order.id.trim().toUpperCase()))) ||
+    (order.deliveryChallanNo && d.challanNo && d.challanNo.trim().toUpperCase() === order.deliveryChallanNo.trim().toUpperCase())
+  );
+
+  const latestDispatch = linkedDispatches[linkedDispatches.length - 1];
+  const effectiveChallanNo = order.deliveryChallanNo || latestDispatch?.challanNo || null;
+  const isDispatched = ['DISPATCHED', 'IN_TRANSIT', 'DELIVERED', 'CLOSED', 'PAID'].includes((order.status || order.stage || '').toUpperCase()) || latestDispatch?.status === 'DISPATCHED';
+
+  const linkedPdi = (pdiQueue || []).filter(p => 
+    (p.orderPo && ((order.poNo && p.orderPo.trim().toUpperCase() === order.poNo.trim().toUpperCase()) || (order.id && p.orderPo.trim().toUpperCase() === order.id.trim().toUpperCase()))) ||
+    (order.jobCards && order.jobCards.some(j => j.jobNo && j.jobNo.trim().toUpperCase() === (p.jobNo || '').trim().toUpperCase()))
+  );
+
+  const isPdiPassed = (linkedPdi.length > 0 && linkedPdi.every(p => p.pdiStatus === 'PASS')) ||
+    ['PDI_COMPLETE', 'READY_FOR_DISPATCH', 'READY_TO_DISPATCH', 'INVOICE_GENERATED', 'DISPATCH_READY', 'PARTIALLY_DISPATCHED', 'DISPATCHED', 'IN_TRANSIT', 'DELIVERED', 'CLOSED', 'PAID'].includes((order.status || order.stage || '').toUpperCase()) ||
+    Boolean(effectiveChallanNo);
 
   // Active step index calculation matching the 8-stage lifecycle
   let activeStepIndex = 0;
@@ -239,9 +275,9 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
     activeStepIndex = 6;
   } else if (['DELIVERED'].includes(currentStage)) {
     activeStepIndex = 5;
-  } else if (['PARTIALLY_DISPATCHED', 'DISPATCHED', 'IN_TRANSIT'].includes(currentStage)) {
+  } else if (isDispatched || ['PARTIALLY_DISPATCHED', 'DISPATCHED', 'IN_TRANSIT'].includes(currentStage)) {
     activeStepIndex = 4;
-  } else if (['PDI_COMPLETE', 'READY_FOR_DISPATCH', 'READY_TO_DISPATCH', 'INVOICE_GENERATED', 'DISPATCH_READY'].includes(currentStage)) {
+  } else if (isPdiPassed || ['PDI_COMPLETE', 'READY_FOR_DISPATCH', 'READY_TO_DISPATCH', 'INVOICE_GENERATED', 'DISPATCH_READY'].includes(currentStage)) {
     activeStepIndex = 3;
   } else if (['READY_FOR_QC', 'MANUFACTURING_COMPLETED', 'QC', 'QC_INSPECTION', 'QC_HOLD', 'QC_REPORT_UPLOADED', 'PDI', 'PDI_HOLD'].includes(currentStage)) {
     activeStepIndex = 2;
@@ -255,6 +291,29 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   const totalOrderedQty = (order.lines || []).reduce((sum, l) => sum + Number(l.orderQty || 0), 0);
   const totalDispatchedQty = (order.lines || []).reduce((sum, l) => sum + Number(l.dispatchedQty || 0), 0);
   const fulfillmentPercentage = totalOrderedQty > 0 ? Math.min(100, Math.round((totalDispatchedQty / totalOrderedQty) * 100)) : 0;
+
+  const handleOpenChallanDetailModal = () => {
+    const matched = latestDispatch || (effectiveChallanNo ? {
+      id: effectiveChallanNo,
+      challanNo: effectiveChallanNo,
+      orderPo: order.poNo || order.id,
+      date: order.dispatchedAt || new Date().toISOString().split('T')[0],
+      customerName: order.customerName,
+      customerGstin: order.customerGstin || '27AAAAA0000A1Z5',
+      destinationCity: order.destinationCity || 'Pune',
+      transporter: order.transporterName || 'VRL Logistics Ltd',
+      vehicleNo: (order as any).vehicleNo || 'MH 12 AB 4589',
+      lrNo: (order as any).lrNo || 'LR-2026-8899',
+      driverContact: '+91 98765 43210',
+      status: isDispatched ? 'DISPATCHED' : 'DRAFT',
+      linesCount: (order.lines || []).length,
+      totalQty: totalOrderedQty,
+      remarks: 'Precision engineered machined components',
+      items: order.lines || []
+    } : null);
+    setSelectedChallanDetail(matched as any);
+    setShowChallanDetailModal(true);
+  };
 
   // ----------------------------------------------------
   // Order Progression Interactive Handlers
@@ -333,8 +392,12 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   };
 
   const handleGenerateChallanSubmit = async () => {
+    if (isConfirming) return;
     try {
       setIsConfirming(true);
+      setConfirmError(null);
+
+      const idempotencyKey = `idmp-chl-${order.poNo}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       const challanData = {
         orderPo: order.poNo || order.id,
         challanNo: genChallanNo.trim() || formatDocumentNumber('CHL', getCurrentFinancialYear(), Math.floor(1000 + Math.random() * 8999)),
@@ -342,7 +405,9 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         vehicleNo: challanVehicleNo.trim(),
         driverContact: challanDriverContact.trim(),
         remarks: challanRemarks.trim(),
-        items: order.lines || []
+        items: order.lines || [],
+        lines: order.lines || [],
+        idempotencyKey
       };
 
       if (onGenerateChallan) {
@@ -603,12 +668,35 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
     }
   };
 
+  const handleConfirmOrderAction = handleConfirmAction;
+
   // 7-Stage Flow: redirect the user to Production, where job cards are created manually (per item)
   const handleGoToCreateJobCard = () => {
     if (onNavigateToCreateJobCard) {
       onNavigateToCreateJobCard(order.poNo || order.id);
     } else {
       onNavigate?.('production');
+    }
+  };
+
+  // 7-Stage Flow: redirect the user to Invoices, linking directly to '+ Create New Invoice'
+  const handleGoToCreateInvoice = () => {
+    if (onNavigateToCreateInvoice) {
+      onNavigateToCreateInvoice(order.poNo || order.id, order.deliveryChallanNo);
+    } else if (onNavigate) {
+      onNavigate('invoices');
+    } else {
+      setShowInvoiceModal(true);
+    }
+  };
+
+  const handleGoToCreateChallan = () => {
+    if (onNavigateToDispatch) {
+      onNavigateToDispatch(order.poNo || order.id);
+    } else if (onNavigate) {
+      onNavigate('dispatch');
+    } else {
+      setShowChallanModal(true);
     }
   };
 
@@ -914,6 +1002,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
     }
   };
 
+  const handleCloseOrderSubmit = handleCloseOrderAction;
+
   // 7-Stage Flow: QCI & PDI cleared -> dispatch the order (challan + full line quantities)
   const handleDispatchOrderAction = async () => {
     try {
@@ -1002,52 +1092,44 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
     }
 
     // Stage 4 (QC / PDI): Enter checklist & Complete PDI
-    if (['MANUFACTURING_COMPLETED', 'READY_FOR_QC', 'QC', 'QC_INSPECTION', 'QC_HOLD', 'QC_REPORT_UPLOADED', 'PDI', 'PDI_HOLD'].includes(st)) {
+    if (['MANUFACTURING_COMPLETED', 'READY_FOR_QC', 'QC', 'QC_INSPECTION', 'QC_HOLD', 'QC_REPORT_UPLOADED', 'PDI', 'PDI_HOLD'].includes(st) && !isPdiPassed) {
+      if ((allQcPassed && !hasNcr) || ['PDI', 'QC_REPORT_UPLOADED', 'PDI_PENDING'].includes(st)) {
+        return {
+          label: 'Inspect PDI (Stage 8a)',
+          icon: ClipboardCheck,
+          buttonClass: 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white shadow-emerald-500/25',
+          handler: () => {
+            if (onNavigateToPDI) onNavigateToPDI(order.poNo || order.id, order.jobCards?.[0]?.jobNo);
+            else if (onNavigate) onNavigate('pdi');
+            else setShowPdiModal(true);
+          },
+          disabled: isConfirming || hasNcr,
+          disabledReason: hasNcr ? 'Open NCR / QC Hold must be resolved before PDI' : undefined,
+          ownerRole: 'Quality & Pre-Dispatch'
+        };
+      }
       return {
-        label: 'START QC / PDI CHECK',
+        label: 'Upload Quality Report / Perform QC',
         icon: ShieldCheck,
         buttonClass: 'bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white shadow-indigo-500/25',
-        handler: () => setShowPdiModal(true),
+        handler: () => {
+          if (onNavigate) onNavigate('qc');
+          else setShowPdiModal(true);
+        },
         disabled: isConfirming,
         ownerRole: 'QC Manager / Inspector'
       };
     }
 
-    // Stage 5 (Invoice & Challan / Ready to Dispatch): Delivery Challan & Dispatch
-    if (['PDI_COMPLETE', 'READY_FOR_DISPATCH', 'READY_TO_DISPATCH', 'INVOICE_GENERATED', 'DISPATCH_READY'].includes(st)) {
-      const allowed = isRoleAuthorizedForCta(currentRole, 'GENERATE_DELIVERY_CHALLAN');
-      if (!order.deliveryChallanNo) {
-        return {
-          label: 'Generate Delivery Challan (Stage 9a)',
-          icon: FileText,
-          buttonClass: 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white shadow-emerald-500/25',
-          handler: () => setShowChallanModal(true),
-          disabled: isConfirming || hasNcr || !allowed,
-          disabledReason: !allowed ? 'Only Dispatch Clerk or Owner can generate delivery challan' : hasNcr ? 'Open NCR / QC Hold must be resolved before challan issuance' : undefined,
-          ownerRole: 'Quality & Dispatch'
-        };
-      } else {
-        return {
-          label: 'Mark as Dispatched (Outward Logistics)',
-          icon: Truck,
-          buttonClass: 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-blue-600 hover:to-cyan-600 text-white shadow-cyan-500/25',
-          handler: () => setShowDispatchModal(true),
-          disabled: isConfirming || hasNcr || !allowed,
-          disabledReason: !allowed ? 'Only Dispatch Clerk or Owner can dispatch the order' : hasNcr ? 'Open NCR / QC Hold must be resolved before dispatch' : undefined,
-          ownerRole: 'Quality & Dispatch'
-        };
-      }
-    }
-
     // Stage 6 (Dispatched): shipped / in transit -> Generate Invoice or Mark Delivered
-    if (['PARTIALLY_DISPATCHED', 'DISPATCHED', 'IN_TRANSIT'].includes(st)) {
+    if (isDispatched || ['PARTIALLY_DISPATCHED', 'DISPATCHED', 'IN_TRANSIT'].includes(st)) {
       if (!order.invoiceNo) {
         const allowed = isRoleAuthorizedForCta(currentRole, 'GENERATE_INVOICE');
         return {
           label: 'Generate Statutory GST Tax Invoice (Stage 9)',
           icon: Receipt,
           buttonClass: 'bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white shadow-indigo-500/25',
-          handler: () => setShowInvoiceModal(true),
+          handler: handleGoToCreateInvoice,
           disabled: !allowed,
           disabledReason: !allowed ? 'Only Finance / Accounts or Owner can generate tax invoices' : undefined,
           ownerRole: 'Accounts / Finance'
@@ -1066,6 +1148,32 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       }
     }
 
+    // Stage 5 (Invoice & Challan / Ready to Dispatch): Delivery Challan & Dispatch
+    if (!isDispatched && (isPdiPassed || ['PDI_COMPLETE', 'READY_FOR_DISPATCH', 'READY_TO_DISPATCH', 'INVOICE_GENERATED', 'DISPATCH_READY'].includes(st))) {
+      const allowed = isRoleAuthorizedForCta(currentRole, 'GENERATE_DELIVERY_CHALLAN');
+      if (!effectiveChallanNo) {
+        return {
+          label: 'Generate Delivery Challan (Stage 9a)',
+          icon: Plus,
+          buttonClass: 'bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white shadow-[#5B75F8]/25',
+          handler: handleGoToCreateChallan,
+          disabled: isConfirming || hasNcr || !allowed,
+          disabledReason: !allowed ? 'Only Dispatch Clerk or Owner can generate delivery challan' : hasNcr ? 'Open NCR / QC Hold must be resolved before challan issuance' : undefined,
+          ownerRole: 'Quality & Dispatch'
+        };
+      } else {
+        return {
+          label: 'Mark as Dispatched (Outward Logistics)',
+          icon: Truck,
+          buttonClass: 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-blue-600 hover:to-cyan-600 text-white shadow-cyan-500/25',
+          handler: () => setShowDispatchModal(true),
+          disabled: isConfirming || hasNcr || !allowed,
+          disabledReason: !allowed ? 'Only Dispatch Clerk or Owner can dispatch the order' : hasNcr ? 'Open NCR / QC Hold must be resolved before dispatch' : undefined,
+          ownerRole: 'Quality & Dispatch'
+        };
+      }
+    }
+
     // Stage 7 (Delivered / Payment Pending / Invoiced): Invoicing or Payment
     if (['DELIVERED', 'PAYMENT_PENDING', 'INVOICED'].includes(st)) {
       if (!order.invoiceNo) {
@@ -1074,7 +1182,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           label: 'Generate Statutory GST Tax Invoice (Stage 9)',
           icon: Receipt,
           buttonClass: 'bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white shadow-indigo-500/25',
-          handler: () => setShowInvoiceModal(true),
+          handler: handleGoToCreateInvoice,
           disabled: !allowed,
           disabledReason: !allowed ? 'Only Finance / Accounts or Owner can generate tax invoices' : undefined,
           ownerRole: 'Accounts / Finance'
@@ -1098,9 +1206,9 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           label: isConfirming ? 'Closing...' : 'Order Paid in Full (Close Order)',
           icon: CheckCircle2,
           buttonClass: 'bg-gradient-to-r from-emerald-700 to-slate-800 hover:from-slate-800 hover:to-emerald-700 text-white shadow-emerald-500/25',
-          handler: handleCloseOrderAction,
+          handler: handleCloseOrderSubmit,
           disabled: isConfirming,
-          ownerRole: 'Finance / Accounts'
+          ownerRole: 'System / Super Admin'
         };
       }
     }
@@ -1108,50 +1216,50 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
     return null;
   };
 
-  // Configuration of dynamic stage shortcuts & testing endpoints (7-stage lifecycle)
-  const getStageShortcutConfig = () => {
-    switch (activeStepIndex) {
+  // ----------------------------------------------------
+  // Dynamic Stage Info for Pipeline Visualizer Banner
+  // ----------------------------------------------------
+  const getStageShortcutConfig = (step = activeStepIndex) => {
+    switch (step) {
       case 0:
         return {
-          title: 'Stage 1: Confirmed',
-          desc: 'Order received and logged. Review commercials and line item drawing revisions, then confirm the order to release it for production.',
-          targetView: 'approvals',
-          viewLabel: 'Open Approvals Queue ➔',
+          title: 'Stage 1: Confirmed PO Spec Verification',
+          desc: 'Order received and logged. Review commercials and item specifications, then confirm the order into production pipeline.',
+          targetView: 'orders',
+          viewLabel: 'Open Order Details ➔',
           endpoint: 'POST /api/v1/orders/:id/confirm',
           role: 'SALES_DESK / SUPER_ADMIN',
-          testActionLabel: 'Confirm & Approve Order (Test)',
+          testActionLabel: '⚡ Confirm Order (Lock Specs)',
           onTest: handleConfirmAction
         };
       case 1:
         return {
-          title: 'Stage 2: Production',
-          desc: 'Stock verified & job cards released. Track multi-operation CNC/machining progress on the shop floor.',
-          targetView: 'production-jobs',
-          viewLabel: 'Open Production Floor ➔',
-          endpoint: 'POST /api/v1/job-cards/:id/start-operation',
-          role: 'PLANT_HEAD / OPERATOR',
-          testActionLabel: 'Start Machining (Test)',
-          onTest: handleStartProductionAction
+          title: 'Stage 2: Customer PO Confirmation & BOM Verification',
+          desc: 'Verify customer purchase order terms, allocate bill of materials (BOM), and confirm technical specs.',
+          targetView: 'orders',
+          viewLabel: 'Open Order Details ➔',
+          endpoint: 'POST /api/v1/orders/:id/confirm',
+          role: 'SALES_MANAGER / OPS_ADMIN',
+          testActionLabel: '⚡ Confirm Order (Lock Specs)',
+          onTest: handleConfirmOrderAction
         };
       case 2:
         return {
-          title: 'Stage 3: QC / PDI Inspection',
-          desc: 'Manufacturing complete. Dimensional quality inspection and Pre-Dispatch Inspection (PDI) compliance checks are mandatory before dispatch.',
-          targetView: 'qc-pdi',
-          viewLabel: 'Open QC Bay ➔',
-          secondaryTargetView: 'qc-pdi',
-          secondaryViewLabel: 'Open PDI Bay ➔',
-          endpoint: 'POST /api/v1/qc/inspections/:id/review',
-          role: 'QC_ADMIN / DISPATCH_QC',
-          testActionLabel: 'START QC / PDI CHECK',
-          onTest: () => setShowPdiModal(true)
+          title: 'Stage 3: Production Routing & Job Cards',
+          desc: 'Create CNC/VMC routing job cards, allocate machine line, and log daily operator production sheets.',
+          targetView: 'production',
+          viewLabel: 'Open Production Floor ➔',
+          endpoint: 'POST /api/v1/production/jobs',
+          role: 'PRODUCTION_HEAD / SHOP_FLOOR_SUPERVISOR',
+          testActionLabel: '⚡ Create Job Card',
+          onTest: handleGoToCreateJobCard
         };
       case 3:
         return {
-          title: 'Stage 4: Delivery Challan & Dispatch',
-          desc: 'QC & PDI cleared. Generate statutory Delivery Challan (Stage 9a) with allocated quantities and dispatch goods to customer.',
+          title: 'Stage 4: Outward Logistics & Dispatch Challan',
+          desc: 'Pre-dispatch inspection cleared. Prepare outward delivery challan (CHL-2627-####) with transporter & vehicle details.',
           targetView: 'dispatch',
-          viewLabel: 'Open Dispatch Challans ➔',
+          viewLabel: 'Open Dispatch Register ➔',
           endpoint: 'POST /api/v1/dispatch',
           role: 'DISPATCH_STORE / OPS_ADMIN',
           testActionLabel: order.deliveryChallanNo ? '⚡ Confirm Outward Dispatch' : '⚡ Issue Delivery Challan',
@@ -1166,7 +1274,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           endpoint: 'POST /api/v1/invoices',
           role: 'ACCOUNTS_ADMIN / FINANCE',
           testActionLabel: '⚡ Generate GST Tax Invoice',
-          onTest: () => setShowInvoiceModal(true)
+          onTest: handleGoToCreateInvoice
         };
       case 5:
         return {
@@ -1177,7 +1285,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           endpoint: 'POST /api/v1/dispatch/:id/deliver',
           role: 'DISPATCH_STORE / OPS_ADMIN',
           testActionLabel: order.invoiceNo ? '⚡ Mark Delivered (POD)' : '⚡ Generate GST Invoice',
-          onTest: () => order.invoiceNo ? setShowDeliveryModal(true) : setShowInvoiceModal(true)
+          onTest: () => order.invoiceNo ? setShowDeliveryModal(true) : handleGoToCreateInvoice()
         };
       default:
         return {
@@ -1490,11 +1598,12 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     <span>Raise Change Order</span>
                   </button>
                   <button
+                    disabled={isRunningMaterialCheck}
                     onClick={handleMaterialCheckAction}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold shadow-lg shadow-[#5B75F8]/20 transition-all cursor-pointer flex items-center gap-1.5"
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold shadow-lg shadow-[#5B75F8]/20 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                   >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    <span>Proceed to Material Check</span>
+                    <RefreshCw className={`w-3.5 h-3.5 ${isRunningMaterialCheck ? 'animate-spin' : ''}`} />
+                    <span>{isRunningMaterialCheck ? 'Checking Material...' : 'Proceed to Material Check'}</span>
                   </button>
                 </div>
               )
@@ -1676,7 +1785,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               description: 'All route card machining operations completed and logged on shop floor. Ready for QC clearance.',
               icon: CheckCircle,
               matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
-                ['MANUFACTURING_COMPLETED', 'READY_FOR_QC'].includes((o.status || '').toUpperCase()),
+                !allQcPassed && !isPdiPassed && ['MANUFACTURING_COMPLETED', 'READY_FOR_QC'].includes((o.status || o.stage || '').toUpperCase()),
               renderActions: () => (
                 <div className="flex flex-wrap items-center gap-2">
                   <button
@@ -1696,16 +1805,31 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               description: 'Dimensional audit, surface finish inspection, and tolerance verification against drawing.',
               icon: ShieldCheck,
               matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
-                ['QC', 'QC_INSPECTION'].includes(n) || ['QC', 'QC_INSPECTION', 'QC_IN_PROGRESS', 'INSPECTION_PENDING'].includes((o.status || '').toUpperCase()),
+                !allQcPassed && !isPdiPassed && (['QC', 'QC_INSPECTION'].includes(n) || ['QC', 'QC_INSPECTION', 'QC_IN_PROGRESS', 'INSPECTION_PENDING'].includes((o.status || '').toUpperCase())),
               renderActions: () => (
                 <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={() => onNavigate?.('qc')}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white text-xs font-bold shadow-md shadow-indigo-500/20 transition-all cursor-pointer flex items-center gap-1.5"
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    <span>Upload Quality Report / Perform QC</span>
-                  </button>
+                  {allQcPassed && !hasNcr ? (
+                    <button
+                      onClick={() => {
+                        if (onNavigateToPDI) onNavigateToPDI(order.poNo || order.id, order.jobCards?.[0]?.jobNo);
+                        else if (onNavigate) onNavigate('pdi');
+                        else setShowPdiModal(true);
+                      }}
+                      title={`Inspect PDI for ${order.jobCards?.[0]?.jobNo || 'JC'} (${order.poNo || order.id})`}
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <ClipboardCheck className="w-3.5 h-3.5" />
+                      <span>Proceed to PDI / Inspect PDI ➔</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => onNavigate?.('qc')}
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white text-xs font-bold shadow-md shadow-indigo-500/20 transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>Upload Quality Report / Perform QC</span>
+                    </button>
+                  )}
                 </div>
               )
             },
@@ -1717,15 +1841,20 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               description: 'Final compliance inspection, visual check, anti-rust coating, and protective packaging verification.',
               icon: ClipboardCheck,
               matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
-                ['PDI', 'PDI_HOLD', 'QC_REPORT_UPLOADED'].includes(n) || ['PDI', 'PDI_PENDING', 'AWAITING_PDI'].includes((o.status || '').toUpperCase()),
+                !isPdiPassed && ((allQcPassed && !hasNcr) || ['PDI', 'PDI_HOLD', 'QC_REPORT_UPLOADED'].includes(n) || ['PDI', 'PDI_PENDING', 'AWAITING_PDI', 'QC_REPORT_UPLOADED'].includes((o.status || '').toUpperCase())),
               renderActions: () => (
                 <div className="flex flex-wrap items-center gap-2">
                   <button
-                    onClick={() => setShowPdiModal(true)}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white text-xs font-bold shadow-md shadow-indigo-500/20 transition-all cursor-pointer flex items-center gap-1.5"
+                    onClick={() => {
+                      if (onNavigateToPDI) onNavigateToPDI(order.poNo || order.id, order.jobCards?.[0]?.jobNo);
+                      else if (onNavigate) onNavigate('pdi');
+                      else setShowPdiModal(true);
+                    }}
+                    title={`Inspect PDI for ${order.jobCards?.[0]?.jobNo || 'JC'} (${order.poNo || order.id})`}
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold shadow-md shadow-[#5B75F8]/20 transition-all cursor-pointer flex items-center gap-1.5"
                   >
                     <ClipboardCheck className="w-3.5 h-3.5" />
-                    <span>Upload PDI Report / Conduct Inspection</span>
+                    <span>Inspect PDI</span>
                   </button>
                 </div>
               )
@@ -1738,7 +1867,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               description: 'Quality verification sign-off and Certificate of Compliance (CoC) clearance.',
               icon: ShieldAlert,
               matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
-                ['REWORK', 'QC_HOLD'].includes(n) || ['REWORK', 'QC_HOLD'].includes((o.status || '').toUpperCase()) || isQcHold || hasNcr,
+                !isPdiPassed && (['REWORK', 'QC_HOLD'].includes(n) || ['REWORK', 'QC_HOLD'].includes((o.status || '').toUpperCase()) || isQcHold || hasNcr),
               renderActions: () => (
                 <div className="flex flex-wrap items-center gap-2">
                   <button
@@ -1766,29 +1895,41 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               description: 'Pre-Dispatch Quality Inspection cleared. Issue statutory Delivery Challan (CHL-2627-####) and dispatch finished parts.',
               icon: Truck,
               matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
-                ['READY_FOR_DISPATCH', 'PDI_COMPLETE', 'DISPATCH_READY'].includes(n) || ['READY_TO_DISPATCH', 'READY_FOR_DISPATCH', 'PDI_COMPLETE', 'DISPATCH_READY'].includes((o.status || '').toUpperCase()),
+                !isDispatched && (['READY_FOR_DISPATCH', 'PDI_COMPLETE', 'DISPATCH_READY'].includes(n) || ['READY_TO_DISPATCH', 'READY_FOR_DISPATCH', 'PDI_COMPLETE', 'DISPATCH_READY'].includes((o.status || '').toUpperCase())),
               renderActions: () => {
                 const allowed = isRoleAuthorizedForCta(currentRole, 'GENERATE_DELIVERY_CHALLAN');
                 return (
                   <div className="flex flex-wrap items-center gap-2">
-                    {!order.deliveryChallanNo ? (
+                    {!effectiveChallanNo ? (
                       <button
                         disabled={isConfirming || hasNcr || !allowed}
-                        onClick={() => setShowChallanModal(true)}
-                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                        onClick={handleGoToCreateChallan}
+                        className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
                       >
-                        <FileText className="w-3.5 h-3.5" />
-                        <span>Create Delivery Challan</span>
+                        <Plus className="w-4 h-4" />
+                        <span>Generate Delivery Challan</span>
                       </button>
                     ) : (
-                      <button
-                        disabled={isConfirming || hasNcr || !allowed}
-                        onClick={() => setShowDispatchModal(true)}
-                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-blue-600 hover:to-cyan-600 text-white text-xs font-bold shadow-md shadow-cyan-500/20 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
-                      >
-                        <Truck className="w-3.5 h-3.5" />
-                        <span>Mark In Transit (Confirm Dispatch)</span>
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={handleOpenChallanDetailModal}
+                          className="px-3.5 py-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-400 border border-cyan-500/30 text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>View / Edit {effectiveChallanNo}</span>
+                        </button>
+                        {!isDispatched && (
+                          <button
+                            disabled={isConfirming || hasNcr || !allowed}
+                            onClick={() => setShowDispatchModal(true)}
+                            className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-blue-600 hover:to-cyan-600 text-white text-xs font-bold shadow-md shadow-cyan-500/20 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                          >
+                            <Truck className="w-3.5 h-3.5" />
+                            <span>Mark In Transit (Confirm Dispatch)</span>
+                          </button>
+                        )}
+                      </>
                     )}
                   </div>
                 );
@@ -1802,14 +1943,14 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               description: 'Statutory GST Tax Invoice (INV-2627-####) generation against outward dispatch challan.',
               icon: Receipt,
               matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
-                (['DISPATCHED', 'PARTIALLY_DISPATCHED', 'INVOICE_GENERATED', 'INVOICED'].includes(n) || ['DISPATCHED', 'PARTIALLY_DISPATCHED'].includes((o.status || '').toUpperCase())) && (!o.invoiceNo || o.invoiceNo === ''),
+                (isDispatched || ['DISPATCHED', 'PARTIALLY_DISPATCHED', 'INVOICE_GENERATED', 'INVOICED'].includes(n) || ['DISPATCHED', 'PARTIALLY_DISPATCHED'].includes((o.status || '').toUpperCase())) && (!o.invoiceNo || o.invoiceNo === ''),
               renderActions: () => {
                 const allowed = isRoleAuthorizedForCta(currentRole, 'GENERATE_INVOICE');
                 return (
                   <div className="flex flex-wrap items-center gap-2">
                     <button
                       disabled={isConfirming || !allowed}
-                      onClick={() => setShowInvoiceModal(true)}
+                      onClick={handleGoToCreateInvoice}
                       className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white text-xs font-bold shadow-md shadow-indigo-500/20 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                     >
                       <Receipt className="w-3.5 h-3.5" />
@@ -2894,8 +3035,17 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 disabled={isConfirming || !challanVehicleNo.trim()}
                 className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-blue-600 hover:to-cyan-600 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-lg shadow-cyan-500/25 disabled:opacity-50"
               >
-                <Truck className="w-4 h-4" />
-                <span>{isConfirming ? 'Generating...' : 'Issue Delivery Challan'}</span>
+                {isConfirming ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Issuing Delivery Challan...</span>
+                  </>
+                ) : (
+                  <>
+                    <Truck className="w-4 h-4" />
+                    <span>Issue Delivery Challan</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -3279,6 +3429,33 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* 6. CHALLAN DETAIL & STATUTORY PRINT MODAL */}
+      <ChallanDetailModal
+        isOpen={showChallanDetailModal}
+        onClose={() => setShowChallanDetailModal(false)}
+        challan={selectedChallanDetail}
+        order={order}
+        isDarkMode={isDarkMode}
+        transporters={allTransporterOptions}
+        onUpdateChallan={onUpdateChallan}
+        onCancelChallan={onCancelChallan}
+        onDispatchChallan={async (challanNo) => {
+          if (onUpdateChallan) {
+            await onUpdateChallan(challanNo, { status: 'DISPATCHED' });
+          }
+          if (onMarkDispatched) {
+            await onMarkDispatched(order.id, {
+              dispatchDate: selectedChallanDetail?.date || new Date().toISOString().split('T')[0],
+              transporter: selectedChallanDetail?.transporter || order.transporterName || 'VRL Logistics Ltd',
+              vehicleNo: selectedChallanDetail?.vehicleNo || 'MH 12 AB 4589',
+              lrNo: selectedChallanDetail?.lrNo,
+              challanNo: challanNo,
+              lines: order.lines
+            });
+          }
+        }}
+      />
 
     </div>
   );

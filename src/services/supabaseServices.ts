@@ -1102,18 +1102,58 @@ export async function insertDispatchChallan(challan: DispatchChallan): Promise<v
     await apiClient.post('/dispatch', {
       challanNo: challan.challanNo,
       orderPo: challan.orderPo,
-      status: challan.status || 'DISPATCHED',
+      status: challan.status || 'DISPATCH_READY',
       date: challan.date || new Date().toISOString().split('T')[0],
       transporter: challan.transporter,
       vehicleNo: challan.vehicleNo,
-      linesCount: challan.linesCount || 1,
+      lrNo: challan.lrNo,
+      eWayBillNo: challan.eWayBillNo,
+      remarks: challan.remarks,
+      linesCount: challan.linesCount || (challan.lines ? challan.lines.length : 1),
+      lines: challan.lines || challan.items,
+      items: challan.lines || challan.items,
       driverContact: challan.driverContact,
-      totalInvoiceValue: challan.totalInvoiceValue
+      totalInvoiceValue: challan.totalInvoiceValue,
+      idempotencyKey: challan.idempotencyKey
     });
   } catch (err) {
     console.warn('insertDispatchChallan REST API error:', err);
     throw err;
   }
+}
+
+export async function updateDispatchChallan(challanNo: string, updates: Partial<DispatchChallan>): Promise<DispatchChallan | null> {
+  try {
+    const res = await apiClient.put<{ data: DispatchChallan }>(`/dispatch/${challanNo}`, updates);
+    if (res?.data) {
+      return res.data;
+    }
+  } catch (err) {
+    console.warn('updateDispatchChallan REST API error:', err);
+    throw err;
+  }
+  return null;
+}
+
+export async function cancelDispatchChallan(challanNo: string, reason = 'Cancelled by user'): Promise<void> {
+  try {
+    await apiClient.post(`/dispatch/${challanNo}/cancel`, { reason });
+  } catch (err) {
+    console.warn('cancelDispatchChallan REST API error:', err);
+    throw err;
+  }
+}
+
+export async function fetchDispatchByNo(challanNo: string): Promise<DispatchChallan | null> {
+  try {
+    const res = await apiClient.get<{ data: DispatchChallan }>(`/dispatch/${challanNo}`);
+    if (res?.data) {
+      return res.data;
+    }
+  } catch (err) {
+    console.warn('fetchDispatchByNo REST API error:', err);
+  }
+  return null;
 }
 
 // ----------------------------------------------------
@@ -1289,12 +1329,15 @@ export async function fetchAuditLogs(filters?: {
   entityType?: string;
   entityId?: string;
   action?: string;
+  search?: string;
+  startDate?: string;
+  endDate?: string;
   from?: number;
   limit?: number;
 }): Promise<AuditLogEntry[]> {
   try {
     const qs = new URLSearchParams(
-      Object.entries(filters || {}).filter(([, v]) => v !== undefined && v !== null).map(([k, v]) => [k, String(v)])
+      Object.entries(filters || {}).filter(([, v]) => v !== undefined && v !== null && v !== '').map(([k, v]) => [k, String(v)])
     ).toString();
     const res = await apiClient.get<any>(`/audit${qs ? `?${qs}` : ''}`);
     const list = res?.logs || res?.data || (Array.isArray(res) ? res : []);
@@ -1321,7 +1364,45 @@ export async function fetchAuditLogs(filters?: {
   } catch (err) {
     console.warn('fetchAuditLogs REST API error, falling back:', err);
   }
-  return [];
+  return initialAuditLogs;
+}
+
+export async function exportAuditLogsApi(filters?: {
+  actorEmail?: string;
+  entityType?: string;
+  entityId?: string;
+  action?: string;
+  search?: string;
+  startDate?: string;
+  endDate?: string;
+}): Promise<{ logs: AuditLogEntry[]; count: number }> {
+  try {
+    const res = await apiClient.post<any>('/audit/export', filters || {});
+    const list = res?.logs || [];
+    const mapped = list.map((item: any) => ({
+      id: item.id,
+      when: item.created_at ? new Date(item.created_at).toLocaleString('en-IN', { hour12: true }) : item.when || 'Just now',
+      user: item.actorEmail || item.actor_email || item.user || 'System User',
+      actorId: item.actorId || item.actor_id,
+      actorEmail: item.actorEmail || item.actor_email,
+      entity: item.entityType || item.entity_type || item.entity || 'General',
+      entityType: item.entityType || item.entity_type,
+      entityId: item.entityId || item.entity_id,
+      action: item.action,
+      details: item.metadata?.details || item.details || `${item.action} on ${item.entityType || item.entity || 'item'}`,
+      beforeState: item.beforeState || item.before_state,
+      afterState: item.afterState || item.after_state,
+      ipAddress: item.ipAddress || item.ip_address,
+      userAgent: item.userAgent || item.user_agent,
+      metadata: item.metadata,
+      createdAt: item.created_at || item.createdAt
+    }));
+    return { logs: mapped, count: mapped.length };
+  } catch (err) {
+    console.warn('exportAuditLogsApi error, using fallback:', err);
+    const fallbackLogs = await fetchAuditLogs(filters);
+    return { logs: fallbackLogs, count: fallbackLogs.length };
+  }
 }
 
 export async function insertAuditLog(entity: string, action: string, details: string, userName: string): Promise<void> {
@@ -1620,7 +1701,11 @@ export async function generateChallanForOrder(
     challanNo?: string;
     driverContact?: string;
     items?: any[];
+    lines?: any[];
     remarks?: string;
+    lrNo?: string;
+    eWayBillNo?: string;
+    idempotencyKey?: string;
   }
 ): Promise<DispatchChallan> {
   const fy = getCurrentFinancialYear();
@@ -1635,7 +1720,13 @@ export async function generateChallanForOrder(
     date,
     transporter: challanData.transporter,
     vehicleNo: challanData.vehicleNo,
-    driverContact: challanData.driverContact || '+91 98765 43210'
+    lrNo: challanData.lrNo,
+    eWayBillNo: challanData.eWayBillNo,
+    remarks: challanData.remarks,
+    lines: challanData.lines || challanData.items,
+    items: challanData.lines || challanData.items,
+    driverContact: challanData.driverContact || '+91 98765 43210',
+    idempotencyKey: challanData.idempotencyKey
   };
 
   try {

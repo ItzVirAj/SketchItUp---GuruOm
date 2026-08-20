@@ -57,6 +57,8 @@ import {
   fetchOutworkSendOuts,
   fetchDispatches,
   insertDispatchChallan,
+  updateDispatchChallan,
+  cancelDispatchChallan,
   fetchInvoices,
   insertCustomerInvoice,
   issueCustomerInvoice,
@@ -636,29 +638,48 @@ export function useOwnerOSData(currentUser?: SystemUser) {
   };
 
   const handlePassPDI = async (id: string, payload?: Partial<PDIInspection>) => {
-    const target = pdiQueue.find(p => p.id === id);
-    const targetOrderPo = payload?.orderPo || target?.orderPo;
+    const target = pdiQueue.find(p => p.id === id || p.orderPo === id);
+    const targetOrderPo = (payload?.orderPo || target?.orderPo || id || '').trim();
     const certNo = payload?.certificateNo || target?.certificateNo || `PDI-COC-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    setPdiQueue(prev => prev.map(p => (p.id === id || (targetOrderPo && p.orderPo === targetOrderPo)) ? { 
-      ...p, 
-      ...payload,
-      pdiStatus: 'PASS', 
-      certificateNo: certNo 
-    } : p));
+    const normPo = targetOrderPo.toUpperCase();
 
-    if (targetOrderPo) {
+    setPdiQueue(prev => prev.map(p => {
+      const match = p.id === id || (normPo && (p.orderPo || '').trim().toUpperCase() === normPo);
+      if (match) {
+        return {
+          ...p,
+          ...payload,
+          pdiStatus: 'PASS',
+          certificateNo: certNo,
+          reportDate: new Date().toISOString().split('T')[0]
+        };
+      }
+      return p;
+    }));
+
+    if (normPo) {
       setOrders(prev => prev.map(ord => {
-        if (ord.poNo === targetOrderPo || ord.id === targetOrderPo) {
+        if ((ord.poNo || '').trim().toUpperCase() === normPo || (ord.id || '').trim().toUpperCase() === normPo) {
           return {
             ...ord,
-            stage: 'READY_TO_DISPATCH',
-            status: 'READY_TO_DISPATCH',
+            stage: 'READY_TO_DISPATCH' as any,
+            status: 'READY_TO_DISPATCH' as any,
             progressStep: Math.max(ord.progressStep || 1, 7)
           };
         }
         return ord;
       }));
+
+      // Explicitly update the order status
+      const matchedOrder = orders.find(o => (o.poNo || '').trim().toUpperCase() === normPo || (o.id || '').trim().toUpperCase() === normPo);
+      if (matchedOrder) {
+        await updateOrder(matchedOrder.id, {
+          stage: 'READY_TO_DISPATCH' as any,
+          status: 'READY_TO_DISPATCH' as any,
+          progressStep: 7
+        }).catch(() => {});
+      }
     }
 
     await passPDIInspection(id);
@@ -690,6 +711,21 @@ export function useOwnerOSData(currentUser?: SystemUser) {
   };
 
   const handleCreateInvoice = async (inv: CustomerInvoice) => {
+    setInvoices(prev => [inv, ...prev.filter(i => i.invoiceNo !== inv.invoiceNo && i.id !== inv.id)]);
+    if (inv.orderPo) {
+      setOrders(prev => prev.map(o => {
+        if ((o.poNo && o.poNo.trim().toUpperCase() === inv.orderPo?.trim().toUpperCase()) || (o.id && o.id.trim().toUpperCase() === inv.orderPo?.trim().toUpperCase())) {
+          return {
+            ...o,
+            invoiceNo: inv.invoiceNo,
+            status: 'INVOICED',
+            stage: 'INVOICED',
+            progressStep: 8
+          };
+        }
+        return o;
+      }));
+    }
     await insertCustomerInvoice(inv);
     await addAuditLog('invoice', 'create', `Created invoice #${inv.invoiceNo} for ${inv.customerName}`);
     await loadAllData();
@@ -759,7 +795,47 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     return ch;
   };
 
+  const handleUpdateChallan = async (challanNo: string, updates: any) => {
+    setDispatches(prev => prev.map(d => (d.challanNo === challanNo || d.id === challanNo) ? { ...d, ...updates } : d));
+    const updated = await updateDispatchChallan(challanNo, updates);
+    await addAuditLog('dispatch', 'update_challan', `Updated Delivery Challan ${challanNo} (${updates.status || updates.transporter || updates.vehicleNo || 'draft params'})`);
+    await loadAllData();
+    return updated;
+  };
+
+  const handleCancelChallan = async (challanNo: string, reason = 'Cancelled by user') => {
+    setDispatches(prev => prev.map(d => (d.challanNo === challanNo || d.id === challanNo) ? { ...d, status: 'CANCELLED' as any } : d));
+    await cancelDispatchChallan(challanNo, reason);
+    await addAuditLog('dispatch', 'cancel_challan', `Cancelled Delivery Challan ${challanNo}: ${reason}`);
+    await loadAllData();
+  };
+
   const handleMarkDispatched = async (orderId: string, dispatchData: any) => {
+    // Instant optimistic update for dispatches
+    if (dispatchData.challanNo) {
+      setDispatches(prev => prev.map(d => (d.challanNo === dispatchData.challanNo || d.id === dispatchData.challanNo) ? { ...d, status: 'DISPATCHED' as any } : d));
+      await updateDispatchChallan(dispatchData.challanNo, { status: 'DISPATCHED' }).catch(() => {});
+    }
+    // Instant optimistic update for orders
+    setOrders(prev => prev.map(ord => {
+      if (ord.id === orderId || ord.poNo === orderId || (dispatchData.challanNo && ord.deliveryChallanNo === dispatchData.challanNo)) {
+        return {
+          ...ord,
+          status: 'DISPATCHED' as any,
+          stage: 'DISPATCHED' as any,
+          transporterName: dispatchData.transporter || ord.transporterName,
+          dispatchedAt: dispatchData.dispatchDate || new Date().toISOString().split('T')[0],
+          progressStep: 8,
+          lines: (ord.lines || []).map(l => ({
+            ...l,
+            dispatchedQty: l.orderQty,
+            pendingQty: 0
+          }))
+        };
+      }
+      return ord;
+    }));
+
     await markOrderDispatched(orderId, dispatchData);
     await addAuditLog('dispatch', 'mark_dispatched', `Dispatched consignment for Order #${orderId} via ${dispatchData.transporter} (${dispatchData.vehicleNo})`);
     await loadAllData();
@@ -1095,6 +1171,8 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     handleCompletePDI,
     handleGenerateInvoice,
     handleGenerateChallan,
+    handleUpdateChallan,
+    handleCancelChallan,
     handleMarkDispatched,
     handleMarkDelivered,
     handleRecordPayment,

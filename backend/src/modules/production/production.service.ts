@@ -26,7 +26,52 @@ import {
 import { notificationsService } from '../notifications/notifications.service';
 import { qcService } from '../qc/qc.service';
 
-const SEED_ROUTE_CARDS: RouteCardTemplateStep[] = [];
+const SEED_ROUTE_CARDS: RouteCardTemplateStep[] = [
+  // 00000001 - MAIN SPINDLE HOUSING 120MM
+  { id: 'rt-001-10', partCode: '00000001', partDescription: 'MAIN SPINDLE HOUSING 120MM', sequenceNo: 10, operationName: 'Raw Material Saw Cutting', workCenter: 'BANDSAW-01', standardTimeMinutes: 10, inspectionRequired: false, requiredCertification: 'Operator Lv1' },
+  { id: 'rt-001-20', partCode: '00000001', partDescription: 'MAIN SPINDLE HOUSING 120MM', sequenceNo: 20, operationName: 'CNC Rough Turning & Facing', workCenter: 'CNC-LATHE-01', standardTimeMinutes: 25, inspectionRequired: false, requiredCertification: 'CNC Certified' },
+  { id: 'rt-001-30', partCode: '00000001', partDescription: 'MAIN SPINDLE HOUSING 120MM', sequenceNo: 30, operationName: 'VMC Boring & Keyway Milling', workCenter: 'VMC-01', standardTimeMinutes: 35, inspectionRequired: false, requiredCertification: 'VMC Machinist' },
+  { id: 'rt-001-40', partCode: '00000001', partDescription: 'MAIN SPINDLE HOUSING 120MM', sequenceNo: 40, operationName: 'Induction Hardening & Case Depth Check', workCenter: 'HT-FURNACE-01', standardTimeMinutes: 30, inspectionRequired: true, requiredCertification: 'Heat Treatment Tech' },
+  { id: 'rt-001-50', partCode: '00000001', partDescription: 'MAIN SPINDLE HOUSING 120MM', sequenceNo: 50, operationName: 'Precision Cylindrical OD Grinding', workCenter: 'GRIND-01', standardTimeMinutes: 20, inspectionRequired: true, requiredCertification: 'Grinding Specialist' },
+  { id: 'rt-001-60', partCode: '00000001', partDescription: 'MAIN SPINDLE HOUSING 120MM', sequenceNo: 60, operationName: 'Final Dimensional & Runout Inspection', workCenter: 'QC-LAB', standardTimeMinutes: 15, inspectionRequired: true, requiredCertification: 'QC Inspector Lv2' },
+  { id: 'rt-001-70', partCode: '00000001', partDescription: 'MAIN SPINDLE HOUSING 120MM', sequenceNo: 70, operationName: 'Ultrasonic Cleaning & Protective Packing', workCenter: 'PACK-01', standardTimeMinutes: 5, inspectionRequired: false, requiredCertification: 'Packing Clerk' },
+
+  // 00000002 / BOOM-BRACKET-ASM - Boom Bracket Sub-assembly
+  { id: 'rt-002-10', partCode: '00000002', partDescription: 'Boom Bracket Sub-assembly', sequenceNo: 10, operationName: 'Profile Saw & Plate Cutting', workCenter: 'CUT-01', standardTimeMinutes: 12, inspectionRequired: false, requiredCertification: 'Operator Lv1' },
+  { id: 'rt-002-20', partCode: '00000002', partDescription: 'Boom Bracket Sub-assembly', sequenceNo: 20, operationName: 'MIG/TIG Structural Welding', workCenter: 'WELD-01', standardTimeMinutes: 25, inspectionRequired: false, requiredCertification: 'Certified Welder' },
+  { id: 'rt-002-30', partCode: '00000002', partDescription: 'Boom Bracket Sub-assembly', sequenceNo: 30, operationName: 'CNC Coordinate Milling', workCenter: 'VMC-01', standardTimeMinutes: 40, inspectionRequired: true, requiredCertification: 'VMC Machinist' },
+  { id: 'rt-002-40', partCode: '00000002', partDescription: 'Boom Bracket Sub-assembly', sequenceNo: 40, operationName: 'CMM Dimensional Inspection', workCenter: 'CMM-01', standardTimeMinutes: 10, inspectionRequired: true, requiredCertification: 'Quality Inspector' },
+  { id: 'rt-002-50', partCode: '00000002', partDescription: 'Boom Bracket Sub-assembly', sequenceNo: 50, operationName: 'Surface Powder Coating & Packing', workCenter: 'PACK-01', standardTimeMinutes: 8, inspectionRequired: false, requiredCertification: 'None' },
+
+  // 00000003 / CONTROL-PANEL-ASM - Control Panel Assembly
+  { id: 'rt-003-10', partCode: '00000003', partDescription: 'Control Panel Assembly', sequenceNo: 10, operationName: 'Sheet Metal Laser Cutting', workCenter: 'CUT-01', standardTimeMinutes: 15, inspectionRequired: false, requiredCertification: 'Laser Op' },
+  { id: 'rt-003-20', partCode: '00000003', partDescription: 'Control Panel Assembly', sequenceNo: 20, operationName: 'CNC Turret Punching & Bending', workCenter: 'BEND-01', standardTimeMinutes: 20, inspectionRequired: false, requiredCertification: 'Bending Op' },
+  { id: 'rt-003-30', partCode: '00000003', partDescription: 'Control Panel Assembly', sequenceNo: 30, operationName: 'Electrical Busbar & Component Mounting', workCenter: 'ELEC-01', standardTimeMinutes: 30, inspectionRequired: false, requiredCertification: 'Electrician Lv2' },
+  { id: 'rt-003-40', partCode: '00000003', partDescription: 'Control Panel Assembly', sequenceNo: 40, operationName: 'High-Voltage Insulation & Continuity Testing', workCenter: 'TEST-BAY', standardTimeMinutes: 15, inspectionRequired: true, requiredCertification: 'QC Electrical' },
+  { id: 'rt-003-50', partCode: '00000003', partDescription: 'Control Panel Assembly', sequenceNo: 50, operationName: 'Protective Packaging & Labeling', workCenter: 'PACK-01', standardTimeMinutes: 10, inspectionRequired: false, requiredCertification: 'None' },
+
+  // 00000004 / HYD-CYL-MOUNT - Hydraulic Cylinder Mount
+  { id: 'rt-004-10', partCode: '00000004', partDescription: 'Hydraulic Cylinder Mount', sequenceNo: 10, operationName: 'Round Billet Saw Cutting', workCenter: 'BANDSAW-01', standardTimeMinutes: 10, inspectionRequired: false, requiredCertification: 'Operator Lv1' },
+  { id: 'rt-004-20', partCode: '00000004', partDescription: 'Hydraulic Cylinder Mount', sequenceNo: 20, operationName: 'Heavy Turning & Bore Roughing', workCenter: 'CNC-LATHE-02', standardTimeMinutes: 30, inspectionRequired: false, requiredCertification: 'CNC Certified' },
+  { id: 'rt-004-30', partCode: '00000004', partDescription: 'Hydraulic Cylinder Mount', sequenceNo: 30, operationName: '4-Axis Milling & Pin Hole Reaming', workCenter: 'VMC-02', standardTimeMinutes: 25, inspectionRequired: false, requiredCertification: 'VMC Machinist' },
+  { id: 'rt-004-40', partCode: '00000004', partDescription: 'Hydraulic Cylinder Mount', sequenceNo: 40, operationName: 'Magnetic Particle Non-Destructive Testing', workCenter: 'NDT-01', standardTimeMinutes: 15, inspectionRequired: true, requiredCertification: 'NDT Level II' },
+  { id: 'rt-004-50', partCode: '00000004', partDescription: 'Hydraulic Cylinder Mount', sequenceNo: 50, operationName: 'Anti-Corrosion Phosphate Coating', workCenter: 'COAT-01', standardTimeMinutes: 10, inspectionRequired: false, requiredCertification: 'None' },
+
+  // 00000005 / FLANGE-EN8-100MM - Precision Machined Flange 100mm
+  { id: 'rt-005-10', partCode: '00000005', partDescription: 'Precision Machined Flange 100mm', sequenceNo: 10, operationName: 'Billet Saw Cutting', workCenter: 'BANDSAW-01', standardTimeMinutes: 8, inspectionRequired: false, requiredCertification: 'Operator Lv1' },
+  { id: 'rt-005-20', partCode: '00000005', partDescription: 'Precision Machined Flange 100mm', sequenceNo: 20, operationName: 'CNC Facing, Turning & Grooving', workCenter: 'CNC-LATHE-01', standardTimeMinutes: 20, inspectionRequired: false, requiredCertification: 'CNC Certified' },
+  { id: 'rt-005-30', partCode: '00000005', partDescription: 'Precision Machined Flange 100mm', sequenceNo: 30, operationName: 'PCD Hole Pattern Drilling & Tapping', workCenter: 'RADIAL-DRILL-01', standardTimeMinutes: 15, inspectionRequired: false, requiredCertification: 'Machinist' },
+  { id: 'rt-005-40', partCode: '00000005', partDescription: 'Precision Machined Flange 100mm', sequenceNo: 40, operationName: 'Surface Flatness & Dimensional QC', workCenter: 'QC-LAB', standardTimeMinutes: 10, inspectionRequired: true, requiredCertification: 'QC Inspector' },
+  { id: 'rt-005-50', partCode: '00000005', partDescription: 'Precision Machined Flange 100mm', sequenceNo: 50, operationName: 'Rust Preventive Dipping & Wrapping', workCenter: 'PACK-01', standardTimeMinutes: 5, inspectionRequired: false, requiredCertification: 'None' },
+
+  // 00000006 / SHAFT-PINION-EN24 - Pinion Gear Shaft EN24
+  { id: 'rt-006-10', partCode: '00000006', partDescription: 'Pinion Gear Shaft EN24', sequenceNo: 10, operationName: 'Bar Stock Sawing', workCenter: 'BANDSAW-01', standardTimeMinutes: 10, inspectionRequired: false, requiredCertification: 'Operator Lv1' },
+  { id: 'rt-006-20', partCode: '00000006', partDescription: 'Pinion Gear Shaft EN24', sequenceNo: 20, operationName: 'CNC Step Turning & Centering', workCenter: 'CNC-LATHE-01', standardTimeMinutes: 25, inspectionRequired: false, requiredCertification: 'CNC Certified' },
+  { id: 'rt-006-30', partCode: '00000006', partDescription: 'Pinion Gear Shaft EN24', sequenceNo: 30, operationName: 'Gear Hobbing & Tooth Generation', workCenter: 'HOBBING-01', standardTimeMinutes: 35, inspectionRequired: false, requiredCertification: 'Gear Specialist' },
+  { id: 'rt-006-40', partCode: '00000006', partDescription: 'Pinion Gear Shaft EN24', sequenceNo: 40, operationName: 'Vacuum Carburizing & Quenching', workCenter: 'HT-FURNACE-01', standardTimeMinutes: 45, inspectionRequired: true, requiredCertification: 'Heat Treatment Tech' },
+  { id: 'rt-006-50', partCode: '00000006', partDescription: 'Pinion Gear Shaft EN24', sequenceNo: 50, operationName: 'Spline & Journal Precision Grinding', workCenter: 'GRIND-01', standardTimeMinutes: 20, inspectionRequired: true, requiredCertification: 'Grinding Specialist' },
+  { id: 'rt-006-60', partCode: '00000006', partDescription: 'Pinion Gear Shaft EN24', sequenceNo: 60, operationName: 'Gear Profile & Lead Pitch Inspection', workCenter: 'QC-LAB', standardTimeMinutes: 15, inspectionRequired: true, requiredCertification: 'QC Inspector Lv2' }
+];
 const SEED_CERTIFIED_EMPLOYEES: EmployeeCertification[] = [];
 
 export class ProductionService {
@@ -40,7 +85,7 @@ export class ProductionService {
         .order('sequence_no', { ascending: true });
 
       if (!error && data && data.length > 0) {
-        return data.map(r => ({
+        const dbList = data.map(r => ({
           id: r.id,
           partCode: r.part_code,
           partDescription: r.part_description,
@@ -51,6 +96,10 @@ export class ProductionService {
           inspectionRequired: r.inspection_required,
           requiredCertification: r.required_certification
         }));
+        // Merge seed route cards for missing part codes
+        const dbParts = new Set(dbList.map(r => r.partCode));
+        const missingSeeds = SEED_ROUTE_CARDS.filter(s => !dbParts.has(s.partCode));
+        return [...dbList, ...missingSeeds];
       }
     } catch (err) {
       console.warn('DB getRouteCardTemplates fallback:', err);
@@ -282,8 +331,27 @@ export class ProductionService {
       remarks: rawData.remarks
     };
     const validated = JobCardCreateSchema.parse(normalizedData);
-    const existingCards = await this.getJobCards();
-    const jobNo = validated.jobNo || `JC/${String(existingCards.length + 1).padStart(4, '0')}/26-27`;
+    
+    // Query ALL existing job numbers directly from database to guarantee absolute uniqueness
+    const { data: dbCards } = await this.db.from('job_cards').select('job_no');
+    const existingJobNos = new Set<string>((dbCards || []).map((c: any) => c.job_no).filter(Boolean));
+
+    let jobNo = validated.jobNo;
+    if (!jobNo || existingJobNos.has(jobNo)) {
+      let maxSeq = 0;
+      existingJobNos.forEach(no => {
+        const m = String(no).match(/JC\/(\d+)\//i);
+        if (m) {
+          const n = parseInt(m[1], 10);
+          if (!isNaN(n) && n > maxSeq) maxSeq = n;
+        }
+      });
+      let seq = Math.max(maxSeq + 1, existingJobNos.size + 1);
+      while (existingJobNos.has(`JC/${String(seq).padStart(4, '0')}/26-27`)) {
+        seq++;
+      }
+      jobNo = `JC/${String(seq).padStart(4, '0')}/26-27`;
+    }
 
     // Server-side Gate (7-stage flow): linked order must be Confirmed and material-verified (MATERIAL_READY / IN_PRODUCTION)
     if (validated.orderPo || validated.orderId) {
@@ -330,49 +398,74 @@ export class ProductionService {
       qty: validated.targetQty // for backward-compatible test assertions
     };
 
-    try {
-      const { error: insertErr } = await this.db.from('job_cards').insert({
-        id: jobCard.id,
-        job_no: jobCard.jobNo,
-        order_po: jobCard.orderPo,
-        part_code: jobCard.partCode,
-        part_description: jobCard.partDescription,
-        order_status: 'IN_PRODUCTION',
-        qty: jobCard.targetQty || 1,
-        machine: rawData.machine || 'CNC-01',
-        target_date: jobCard.targetDate,
-        status: jobCard.jobStatus === 'NOT_STARTED' ? 'SCHEDULED' : (jobCard.jobStatus || 'SCHEDULED')
-      });
-      if (insertErr) {
-        console.error('Database createJobCard error:', insertErr);
-        throw new Error(`Failed to write Job Card to database: ${insertErr.message}`);
-      }
-
-      if (jobCard.operations && jobCard.operations.length > 0) {
-        const opPayloads = jobCard.operations.map(op => ({
-          id: op.id,
-          job_card_id: jobCard.id,
+    let insertSuccess = false;
+    let attempts = 0;
+    while (!insertSuccess && attempts < 5) {
+      attempts++;
+      try {
+        const { error: insertErr } = await this.db.from('job_cards').insert({
+          id: jobCard.id,
           job_no: jobCard.jobNo,
-          sequence_no: op.sequenceNo,
-          operation_name: op.operationName,
-          machine_id: op.machineId,
-          required_certification: op.requiredCertification || 'None',
-          is_certification_verified: true,
-          standard_time_minutes: op.standardTimeMinutes,
-          qty_processed: 0,
-          qty_rejected: 0,
-          inspection_required: op.inspectionRequired || false,
-          inspection_passed: false,
-          op_status: 'PENDING'
-        }));
-        const { error: opErr } = await this.db.from('job_card_operations').insert(opPayloads);
-        if (opErr) {
-          console.error('Database job_card_operations insert error:', opErr);
+          order_po: jobCard.orderPo,
+          part_code: jobCard.partCode,
+          part_description: jobCard.partDescription,
+          order_status: 'IN_PRODUCTION',
+          qty: jobCard.targetQty || 1,
+          machine: rawData.machine || 'CNC-01',
+          target_date: jobCard.targetDate,
+          status: jobCard.jobStatus === 'NOT_STARTED' ? 'SCHEDULED' : (jobCard.jobStatus || 'SCHEDULED')
+        });
+
+        if (insertErr) {
+          if (insertErr.code === '23505' || String(insertErr.message).includes('unique constraint') || String(insertErr.message).includes('duplicate key') || String(insertErr.message).includes('job_cards_job_no_key')) {
+            const randomSalt = Math.floor(1000 + Math.random() * 9000);
+            const ts = Date.now();
+            const newJobNo = `JC/${ts.toString().slice(-4)}${randomSalt.toString().slice(-2)}/26-27`;
+            jobCard.jobNo = newJobNo;
+            jobNo = newJobNo;
+            jobCard.id = `jc-${ts}-${randomSalt}`;
+            if (jobCard.operations && jobCard.operations.length > 0) {
+              jobCard.operations.forEach((op, idx) => {
+                op.jobNo = newJobNo;
+                op.jobCardId = jobCard.id;
+                op.id = `jco-${ts}-${idx}-${randomSalt}`;
+              });
+            }
+            continue;
+          }
+          console.error('Database createJobCard error:', insertErr);
+          throw new Error(`Failed to write Job Card to database: ${insertErr.message}`);
+        }
+
+        if (jobCard.operations && jobCard.operations.length > 0) {
+          const opPayloads = jobCard.operations.map(op => ({
+            id: op.id,
+            job_card_id: jobCard.id,
+            job_no: jobCard.jobNo,
+            sequence_no: op.sequenceNo,
+            operation_name: op.operationName,
+            machine_id: op.machineId,
+            required_certification: op.requiredCertification || 'None',
+            is_certification_verified: true,
+            standard_time_minutes: op.standardTimeMinutes,
+            qty_processed: 0,
+            qty_rejected: 0,
+            inspection_required: op.inspectionRequired || false,
+            inspection_passed: false,
+            op_status: 'PENDING'
+          }));
+          const { error: opErr } = await this.db.from('job_card_operations').insert(opPayloads);
+          if (opErr) {
+            console.error('Database job_card_operations insert error:', opErr);
+          }
+        }
+        insertSuccess = true;
+      } catch (err: any) {
+        if (attempts >= 5) {
+          console.warn('DB createJobCard exception:', err);
+          throw err;
         }
       }
-    } catch (err: any) {
-      console.warn('DB createJobCard exception:', err);
-      throw err;
     }
 
     // Update parent order stage to IN_PRODUCTION (Step 5)
@@ -384,12 +477,22 @@ export class ProductionService {
           updated_at: new Date().toISOString()
         }).or(`po_no.eq.${jobCard.orderPo},id.eq.${jobCard.orderPo}`);
       } catch (_) {}
-      notificationsService.broadcastEvent('order_updated', {
-        id: jobCard.orderPo,
+      notificationsService.broadcastEvent('order_transitioned', {
+        orderId: jobCard.orderPo,
         poNo: jobCard.orderPo,
         status: 'IN_PRODUCTION',
         stage: 'IN_PRODUCTION',
-        progressStep: 5
+        progressStep: 5,
+        updatedAt: new Date().toISOString()
+      });
+      notificationsService.broadcastEvent('order_updated', {
+        id: jobCard.orderPo,
+        orderId: jobCard.orderPo,
+        poNo: jobCard.orderPo,
+        status: 'IN_PRODUCTION',
+        stage: 'IN_PRODUCTION',
+        progressStep: 5,
+        updatedAt: new Date().toISOString()
       });
     }
 
@@ -563,12 +666,22 @@ export class ProductionService {
           }).or(`po_no.eq.${result.jobCard.orderPo},id.eq.${result.jobCard.orderPo}`);
         } catch (_) {}
 
-        notificationsService.broadcastEvent('order_updated', {
-          id: result.jobCard.orderPo,
+        notificationsService.broadcastEvent('order_transitioned', {
+          orderId: result.jobCard.orderPo,
           poNo: result.jobCard.orderPo,
           status: 'READY_FOR_QC',
           stage: 'READY_FOR_QC',
-          progressStep: 6
+          progressStep: 6,
+          updatedAt: new Date().toISOString()
+        });
+        notificationsService.broadcastEvent('order_updated', {
+          id: result.jobCard.orderPo,
+          orderId: result.jobCard.orderPo,
+          poNo: result.jobCard.orderPo,
+          status: 'READY_FOR_QC',
+          stage: 'READY_FOR_QC',
+          progressStep: 6,
+          updatedAt: new Date().toISOString()
         });
       }
     }

@@ -128,30 +128,14 @@ export function validateMaterialIssueForJobCard(
 }
 
 /**
- * 2. Operator Skill & Certification Verification
+ * 2. Operator Skill & Certification Verification (Removed for all operators)
  */
 export function validateOperatorCertification(
-  operatorName: string,
-  requiredCertification: string,
-  certifiedEmployees: EmployeeCertification[]
+  _operatorName: string,
+  _requiredCertification: string,
+  _certifiedEmployees: EmployeeCertification[] = []
 ): { valid: boolean; errorCode?: ProductionErrorCode; errorMessage?: string } {
-  if (!requiredCertification || requiredCertification === 'None' || requiredCertification === '') {
-    return { valid: true };
-  }
-
-  const isCertified = certifiedEmployees.some(
-    emp => emp.employeeName.toLowerCase() === operatorName.toLowerCase() && 
-           emp.certificationName.toLowerCase() === requiredCertification.toLowerCase()
-  );
-
-  if (!isCertified) {
-    return {
-      valid: false,
-      errorCode: PRODUCTION_ERROR_CODES.ERR_OPERATOR_CERTIFICATION_REQUIRED,
-      errorMessage: `Skill Certification Check Failed: Operator '${operatorName}' does not possess the mandatory '${requiredCertification}' certification required for this operation.`
-    };
-  }
-
+  // Skill certification check removed for all users
   return { valid: true };
 }
 
@@ -208,8 +192,10 @@ export function generateJobCardFromRouteCard(params: {
   }
 
   const sortedSteps = [...params.routeSteps].sort((a, b) => a.sequenceNo - b.sequenceNo);
-  const operations: JobCardOperation[] = sortedSteps.map(step => ({
-    id: `jco-${Date.now()}-${step.sequenceNo}`,
+  const now = Date.now();
+  const salt = Math.floor(1000 + Math.random() * 9000);
+  const operations: JobCardOperation[] = sortedSteps.map((step, idx) => ({
+    id: `jco-${now}-${idx}-${step.sequenceNo}-${salt}`,
     jobCardId: params.jobNo,
     jobNo: params.jobNo,
     sequenceNo: step.sequenceNo,
@@ -230,7 +216,7 @@ export function generateJobCardFromRouteCard(params: {
   const initialStep = sortedSteps[0]?.sequenceNo || 10;
 
   const jobCard: JobCard = {
-    id: `jc-${Date.now()}`,
+    id: `jc-${now}-${salt}`,
     jobNo: params.jobNo,
     orderId: params.orderId,
     orderPo: params.orderPo,

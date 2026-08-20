@@ -36,7 +36,13 @@ import {
   Check,
   FolderPlus,
   RefreshCw,
-  Box
+  Box,
+  User,
+  Timer,
+  Lock,
+  History,
+  CheckSquare,
+  Sparkle
 } from 'lucide-react';
 import { 
   JobCard, 
@@ -62,6 +68,114 @@ import {
   deleteRouteCard
 } from '../../../services/supabaseServices';
 
+export const DEFAULT_ROUTE_CARDS: RouteCard[] = [
+  {
+    id: 'rc-00000001',
+    routeCode: 'RC-00000001',
+    partCode: '00000001',
+    partDescription: 'MAIN SPINDLE HOUSING 120MM',
+    revision: 'REV-A',
+    status: 'ACTIVE',
+    totalStandardTimeMinutes: 140,
+    notes: 'Multi-stage CNC turning, boring, induction hardening & precision grinding route',
+    operations: [
+      { id: 'op-001-10', partCode: '00000001', partDescription: 'MAIN SPINDLE HOUSING 120MM', sequenceNo: 10, operationName: 'Raw Material Saw Cutting', workCenter: 'BANDSAW-01', standardTimeMinutes: 10, inspectionRequired: false, requiredCertification: 'Operator Lv1' },
+      { id: 'op-001-20', partCode: '00000001', partDescription: 'MAIN SPINDLE HOUSING 120MM', sequenceNo: 20, operationName: 'CNC Rough Turning & Facing', workCenter: 'CNC-LATHE-01', standardTimeMinutes: 25, inspectionRequired: false, requiredCertification: 'CNC Certified' },
+      { id: 'op-001-30', partCode: '00000001', partDescription: 'MAIN SPINDLE HOUSING 120MM', sequenceNo: 30, operationName: 'VMC Boring & Keyway Milling', workCenter: 'VMC-01', standardTimeMinutes: 35, inspectionRequired: false, requiredCertification: 'VMC Machinist' },
+      { id: 'op-001-40', partCode: '00000001', partDescription: 'MAIN SPINDLE HOUSING 120MM', sequenceNo: 40, operationName: 'Induction Hardening & Case Depth Check', workCenter: 'HT-FURNACE-01', standardTimeMinutes: 30, inspectionRequired: true, requiredCertification: 'Heat Treatment Tech' },
+      { id: 'op-001-50', partCode: '00000001', partDescription: 'MAIN SPINDLE HOUSING 120MM', sequenceNo: 50, operationName: 'Precision Cylindrical OD Grinding', workCenter: 'GRIND-01', standardTimeMinutes: 20, inspectionRequired: true, requiredCertification: 'Grinding Specialist' },
+      { id: 'op-001-60', partCode: '00000001', partDescription: 'MAIN SPINDLE HOUSING 120MM', sequenceNo: 60, operationName: 'Final Dimensional & Runout Inspection', workCenter: 'QC-LAB', standardTimeMinutes: 15, inspectionRequired: true, requiredCertification: 'QC Inspector Lv2' },
+      { id: 'op-001-70', partCode: '00000001', partDescription: 'MAIN SPINDLE HOUSING 120MM', sequenceNo: 70, operationName: 'Ultrasonic Cleaning & Protective Packing', workCenter: 'PACK-01', standardTimeMinutes: 5, inspectionRequired: false, requiredCertification: 'Packing Clerk' }
+    ]
+  },
+  {
+    id: 'rc-00000002',
+    routeCode: 'RC-00000002',
+    partCode: '00000002',
+    partDescription: 'Boom Bracket Sub-assembly',
+    revision: 'REV-A',
+    status: 'ACTIVE',
+    totalStandardTimeMinutes: 95,
+    notes: 'Structural fabrication, welding, coordinate milling and CMM verification',
+    operations: [
+      { id: 'op-002-10', partCode: '00000002', partDescription: 'Boom Bracket Sub-assembly', sequenceNo: 10, operationName: 'Profile Saw & Plate Cutting', workCenter: 'CUT-01', standardTimeMinutes: 12, inspectionRequired: false, requiredCertification: 'Operator Lv1' },
+      { id: 'op-002-20', partCode: '00000002', partDescription: 'Boom Bracket Sub-assembly', sequenceNo: 20, operationName: 'MIG/TIG Structural Welding', workCenter: 'WELD-01', standardTimeMinutes: 25, inspectionRequired: false, requiredCertification: 'Certified Welder' },
+      { id: 'op-002-30', partCode: '00000002', partDescription: 'Boom Bracket Sub-assembly', sequenceNo: 30, operationName: 'CNC Coordinate Milling', workCenter: 'VMC-01', standardTimeMinutes: 40, inspectionRequired: true, requiredCertification: 'VMC Machinist' },
+      { id: 'op-002-40', partCode: '00000002', partDescription: 'Boom Bracket Sub-assembly', sequenceNo: 40, operationName: 'CMM Dimensional Inspection', workCenter: 'CMM-01', standardTimeMinutes: 10, inspectionRequired: true, requiredCertification: 'Quality Inspector' },
+      { id: 'op-002-50', partCode: '00000002', partDescription: 'Boom Bracket Sub-assembly', sequenceNo: 50, operationName: 'Surface Powder Coating & Packing', workCenter: 'PACK-01', standardTimeMinutes: 8, inspectionRequired: false, requiredCertification: 'None' }
+    ]
+  },
+  {
+    id: 'rc-00000003',
+    routeCode: 'RC-00000003',
+    partCode: '00000003',
+    partDescription: 'Control Panel Assembly',
+    revision: 'REV-B',
+    status: 'ACTIVE',
+    totalStandardTimeMinutes: 90,
+    notes: 'Electrical enclosure laser cutting, bending, assembly and dielectric testing',
+    operations: [
+      { id: 'op-003-10', partCode: '00000003', partDescription: 'Control Panel Assembly', sequenceNo: 10, operationName: 'Sheet Metal Laser Cutting', workCenter: 'CUT-01', standardTimeMinutes: 15, inspectionRequired: false, requiredCertification: 'Laser Op' },
+      { id: 'op-003-20', partCode: '00000003', partDescription: 'Control Panel Assembly', sequenceNo: 20, operationName: 'CNC Turret Punching & Bending', workCenter: 'BEND-01', standardTimeMinutes: 20, inspectionRequired: false, requiredCertification: 'Bending Op' },
+      { id: 'op-003-30', partCode: '00000003', partDescription: 'Control Panel Assembly', sequenceNo: 30, operationName: 'Electrical Busbar & Component Mounting', workCenter: 'ELEC-01', standardTimeMinutes: 30, inspectionRequired: false, requiredCertification: 'Electrician Lv2' },
+      { id: 'op-003-40', partCode: '00000003', partDescription: 'Control Panel Assembly', sequenceNo: 40, operationName: 'High-Voltage Insulation & Continuity Testing', workCenter: 'TEST-BAY', standardTimeMinutes: 15, inspectionRequired: true, requiredCertification: 'QC Electrical' },
+      { id: 'op-003-50', partCode: '00000003', partDescription: 'Control Panel Assembly', sequenceNo: 50, operationName: 'Protective Packaging & Labeling', workCenter: 'PACK-01', standardTimeMinutes: 10, inspectionRequired: false, requiredCertification: 'None' }
+    ]
+  },
+  {
+    id: 'rc-00000004',
+    routeCode: 'RC-00000004',
+    partCode: '00000004',
+    partDescription: 'Hydraulic Cylinder Mount',
+    revision: 'REV-A',
+    status: 'ACTIVE',
+    totalStandardTimeMinutes: 90,
+    notes: 'Heavy bore roughing, 4-axis milling and magnetic particle testing',
+    operations: [
+      { id: 'op-004-10', partCode: '00000004', partDescription: 'Hydraulic Cylinder Mount', sequenceNo: 10, operationName: 'Round Billet Saw Cutting', workCenter: 'BANDSAW-01', standardTimeMinutes: 10, inspectionRequired: false, requiredCertification: 'Operator Lv1' },
+      { id: 'op-004-20', partCode: '00000004', partDescription: 'Hydraulic Cylinder Mount', sequenceNo: 20, operationName: 'Heavy Turning & Bore Roughing', workCenter: 'CNC-LATHE-02', standardTimeMinutes: 30, inspectionRequired: false, requiredCertification: 'CNC Certified' },
+      { id: 'op-004-30', partCode: '00000004', partDescription: 'Hydraulic Cylinder Mount', sequenceNo: 30, operationName: '4-Axis Milling & Pin Hole Reaming', workCenter: 'VMC-02', standardTimeMinutes: 25, inspectionRequired: false, requiredCertification: 'VMC Machinist' },
+      { id: 'op-004-40', partCode: '00000004', partDescription: 'Hydraulic Cylinder Mount', sequenceNo: 40, operationName: 'Magnetic Particle Non-Destructive Testing', workCenter: 'NDT-01', standardTimeMinutes: 15, inspectionRequired: true, requiredCertification: 'NDT Level II' },
+      { id: 'op-004-50', partCode: '00000004', partDescription: 'Hydraulic Cylinder Mount', sequenceNo: 50, operationName: 'Anti-Corrosion Phosphate Coating', workCenter: 'COAT-01', standardTimeMinutes: 10, inspectionRequired: false, requiredCertification: 'None' }
+    ]
+  },
+  {
+    id: 'rc-00000005',
+    routeCode: 'RC-00000005',
+    partCode: '00000005',
+    partDescription: 'Precision Machined Flange 100mm',
+    revision: 'REV-A',
+    status: 'ACTIVE',
+    totalStandardTimeMinutes: 58,
+    notes: 'Facing, turning, PCD hole pattern drilling and flatness inspection',
+    operations: [
+      { id: 'op-005-10', partCode: '00000005', partDescription: 'Precision Machined Flange 100mm', sequenceNo: 10, operationName: 'Billet Saw Cutting', workCenter: 'BANDSAW-01', standardTimeMinutes: 8, inspectionRequired: false, requiredCertification: 'Operator Lv1' },
+      { id: 'op-005-20', partCode: '00000005', partDescription: 'Precision Machined Flange 100mm', sequenceNo: 20, operationName: 'CNC Facing, Turning & Grooving', workCenter: 'CNC-LATHE-01', standardTimeMinutes: 20, inspectionRequired: false, requiredCertification: 'CNC Certified' },
+      { id: 'op-005-30', partCode: '00000005', partDescription: 'Precision Machined Flange 100mm', sequenceNo: 30, operationName: 'PCD Hole Pattern Drilling & Tapping', workCenter: 'RADIAL-DRILL-01', standardTimeMinutes: 15, inspectionRequired: false, requiredCertification: 'Machinist' },
+      { id: 'op-005-40', partCode: '00000005', partDescription: 'Precision Machined Flange 100mm', sequenceNo: 40, operationName: 'Surface Flatness & Dimensional QC', workCenter: 'QC-LAB', standardTimeMinutes: 10, inspectionRequired: true, requiredCertification: 'QC Inspector' },
+      { id: 'op-005-50', partCode: '00000005', partDescription: 'Precision Machined Flange 100mm', sequenceNo: 50, operationName: 'Rust Preventive Dipping & Wrapping', workCenter: 'PACK-01', standardTimeMinutes: 5, inspectionRequired: false, requiredCertification: 'None' }
+    ]
+  },
+  {
+    id: 'rc-00000006',
+    routeCode: 'RC-00000006',
+    partCode: '00000006',
+    partDescription: 'Pinion Gear Shaft EN24',
+    revision: 'REV-A',
+    status: 'ACTIVE',
+    totalStandardTimeMinutes: 150,
+    notes: 'Gear tooth hobbing, vacuum carburizing and spline precision grinding',
+    operations: [
+      { id: 'op-006-10', partCode: '00000006', partDescription: 'Pinion Gear Shaft EN24', sequenceNo: 10, operationName: 'Bar Stock Sawing', workCenter: 'BANDSAW-01', standardTimeMinutes: 10, inspectionRequired: false, requiredCertification: 'Operator Lv1' },
+      { id: 'op-006-20', partCode: '00000006', partDescription: 'Pinion Gear Shaft EN24', sequenceNo: 20, operationName: 'CNC Step Turning & Centering', workCenter: 'CNC-LATHE-01', standardTimeMinutes: 25, inspectionRequired: false, requiredCertification: 'CNC Certified' },
+      { id: 'op-006-30', partCode: '00000006', partDescription: 'Pinion Gear Shaft EN24', sequenceNo: 30, operationName: 'Gear Hobbing & Tooth Generation', workCenter: 'HOBBING-01', standardTimeMinutes: 35, inspectionRequired: false, requiredCertification: 'Gear Specialist' },
+      { id: 'op-006-40', partCode: '00000006', partDescription: 'Pinion Gear Shaft EN24', sequenceNo: 40, operationName: 'Vacuum Carburizing & Quenching', workCenter: 'HT-FURNACE-01', standardTimeMinutes: 45, inspectionRequired: true, requiredCertification: 'Heat Treatment Tech' },
+      { id: 'op-006-50', partCode: '00000006', partDescription: 'Pinion Gear Shaft EN24', sequenceNo: 50, operationName: 'Spline & Journal Precision Grinding', workCenter: 'GRIND-01', standardTimeMinutes: 20, inspectionRequired: true, requiredCertification: 'Grinding Specialist' },
+      { id: 'op-006-60', partCode: '00000006', partDescription: 'Pinion Gear Shaft EN24', sequenceNo: 60, operationName: 'Gear Profile & Lead Pitch Inspection', workCenter: 'QC-LAB', standardTimeMinutes: 15, inspectionRequired: true, requiredCertification: 'QC Inspector Lv2' }
+    ]
+  }
+];
+
 export type ProductionSection = 'job-cards' | 'route-cards' | 'bom' | 'matrix';
 
 interface ProductionViewProps {
@@ -74,7 +188,11 @@ interface ProductionViewProps {
   isDarkMode: boolean;
   initialSection?: ProductionSection;
   onCreateJobCard: (newCard: Partial<JobCard>) => void;
+  onStartOperation?: (jobNo: string, payload: { sequenceNo: number; machineId: string; operatorName: string }) => Promise<any>;
+  onCompleteOperation?: (jobNo: string, payload: { sequenceNo: number; qtyProcessed: number; qtyRejected: number; actualMinutes: number; notes?: string }) => Promise<any>;
   onLogProduction?: (log: Partial<ProductionLogReport>) => void;
+  onNavigate?: (view: any) => void;
+  onSelectOrder?: (order: string | CustomerOrder) => void;
   preselectedOrderPo?: string | null;
   onJobCardModalOpened?: () => void;
 }
@@ -89,7 +207,11 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
   isDarkMode,
   initialSection = 'job-cards',
   onCreateJobCard,
+  onStartOperation,
+  onCompleteOperation,
   onLogProduction,
+  onNavigate,
+  onSelectOrder,
   preselectedOrderPo,
   onJobCardModalOpened
 }) => {
@@ -112,10 +234,23 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
   // Job Cards Modal States
   const [showNewJobModal, setShowNewJobModal] = useState(false);
   const [selectedJobForLog, setSelectedJobForLog] = useState<JobCard | null>(null);
+  const [selectedJobForTraveler, setSelectedJobForTraveler] = useState<JobCard | null>(null);
+  const [selectedOpSequence, setSelectedOpSequence] = useState<number | null>(null);
+
+  // Operation Execution Form State
+  const [opMachineId, setOpMachineId] = useState<string>('CNC-01');
+  const [opOperatorName, setOpOperatorName] = useState<string>('Sachin G. (Lead Machinist)');
+  const [opQtyProcessed, setOpQtyProcessed] = useState<number>(1);
+  const [opQtyRejected, setOpQtyRejected] = useState<number>(0);
+  const [opActualMinutes, setOpActualMinutes] = useState<number>(15);
+  const [opNotes, setOpNotes] = useState<string>('');
+  const [isExecutingOp, setIsExecutingOp] = useState<boolean>(false);
+  const [travelerError, setTravelerError] = useState<string | null>(null);
+  const [travelerSuccess, setTravelerSuccess] = useState<string | null>(null);
 
   // BOM & Route Card Async Records
   const [boms, setBoms] = useState<BillOfMaterials[]>([]);
-  const [routeCards, setRouteCards] = useState<RouteCard[]>([]);
+  const [routeCards, setRouteCards] = useState<RouteCard[]>(DEFAULT_ROUTE_CARDS);
   const [isLoadingAsyncData, setIsLoadingAsyncData] = useState(false);
   const [expandedBomCode, setExpandedBomCode] = useState<string | null>(null);
   const [expandedRoutePart, setExpandedRoutePart] = useState<string | null>(null);
@@ -129,9 +264,20 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
         fetchGroupedRouteCards()
       ]);
       setBoms(bomData || []);
-      setRouteCards(routeData || []);
+      
+      // Merge fetched route cards with default route cards
+      if (routeData && routeData.length > 0) {
+        const fetchedPartCodes = new Set(routeData.map(r => r.partCode?.toLowerCase().trim()));
+        const nonDuplicateDefaults = DEFAULT_ROUTE_CARDS.filter(
+          def => !fetchedPartCodes.has(def.partCode?.toLowerCase().trim())
+        );
+        setRouteCards([...routeData, ...nonDuplicateDefaults]);
+      } else {
+        setRouteCards(DEFAULT_ROUTE_CARDS);
+      }
     } catch (err: any) {
       console.warn('Error loading manufacturing data:', err);
+      setRouteCards(DEFAULT_ROUTE_CARDS);
     } finally {
       setIsLoadingAsyncData(false);
     }
@@ -167,14 +313,20 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
 
   // Computed linked BOM and Route Card for selected Part Code
   const linkedBOMForNewJob = useMemo(() => {
-    return boms.find(b => b.parentPartCode === newPartCode && b.status === 'ACTIVE') ||
-           boms.find(b => b.parentPartCode === newPartCode) || null;
+    return boms.find(b => b.parentPartCode?.toLowerCase().trim() === newPartCode?.toLowerCase().trim() && b.status === 'ACTIVE') ||
+           boms.find(b => b.parentPartCode?.toLowerCase().trim() === newPartCode?.toLowerCase().trim()) || null;
   }, [boms, newPartCode]);
 
   const linkedRouteForNewJob = useMemo(() => {
-    return routeCards.find(r => r.partCode === newPartCode && r.status === 'ACTIVE') ||
-           routeCards.find(r => r.partCode === newPartCode) || null;
-  }, [routeCards, newPartCode]);
+    const cleanCode = newPartCode?.toLowerCase().trim();
+    const cleanDesc = newPartDesc?.toLowerCase().trim();
+    return routeCards.find(r => 
+      (cleanCode && r.partCode?.toLowerCase().trim() === cleanCode) ||
+      (cleanCode && r.routeCode?.toLowerCase().trim() === cleanCode) ||
+      (cleanDesc && r.partDescription && r.partDescription.toLowerCase().trim() === cleanDesc) ||
+      (cleanCode && r.partCode && (r.partCode.toLowerCase().includes(cleanCode) || cleanCode.includes(r.partCode.toLowerCase())))
+    ) || null;
+  }, [routeCards, newPartCode, newPartDesc]);
 
   const handleSelectOrder = (poNo: string) => {
     setNewOrderPo(poNo);
@@ -231,6 +383,27 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
     setActionError(null);
     setActionSuccess(null);
     const newJobNo = `JC/${String(jobCards.length + 1).padStart(4, '0')}/26-27`;
+    
+    // Resolve operations from matched Route Card for this part
+    const operationsToAttach = (linkedRouteForNewJob?.operations && linkedRouteForNewJob.operations.length > 0)
+      ? linkedRouteForNewJob.operations.map(op => ({
+          id: `op-${newJobNo}-${op.sequenceNo}`,
+          jobNo: newJobNo,
+          sequenceNo: Number(op.sequenceNo),
+          operationName: op.operationName,
+          machineId: op.workCenter,
+          operatorName: '',
+          requiredCertification: op.requiredCertification || 'None',
+          standardTimeMinutes: Number(op.standardTimeMinutes || 15),
+          actualTimeMinutes: 0,
+          qtyProcessed: 0,
+          qtyRejected: 0,
+          inspectionRequired: Boolean(op.inspectionRequired),
+          inspectionPassed: false,
+          opStatus: 'PENDING'
+        }))
+      : undefined;
+
     try {
       await onCreateJobCard({
         jobNo: newJobNo,
@@ -244,10 +417,11 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
         targetQty: Number(newQty),
         machine: newMachine,
         targetDate: newTargetDate,
-        status: 'SCHEDULED'
+        status: 'SCHEDULED',
+        operations: operationsToAttach as any
       });
       setShowNewJobModal(false);
-      setActionSuccess(`Job Card ${newJobNo} created and released to shopfloor.`);
+      setActionSuccess(`Job Card ${newJobNo} created with ${operationsToAttach?.length || 0} routed operations.`);
     } catch (err: any) {
       setActionError(err.message || 'Failed to release Job Card to shopfloor.');
     }
@@ -267,6 +441,196 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
     });
     setSelectedJobForLog(null);
     setActionSuccess(`Production shift logged for ${selectedJobForLog.jobNo}.`);
+  };
+
+  // ----------------------------------------------------------------
+  // JOB CARD ROUTE TRAVELER WORKFLOW ENGINE
+  // ----------------------------------------------------------------
+  const activeJobCard = useMemo(() => {
+    if (!selectedJobForTraveler) return null;
+    return jobCards.find(j => j.jobNo === selectedJobForTraveler.jobNo || j.id === selectedJobForTraveler.id) || selectedJobForTraveler;
+  }, [jobCards, selectedJobForTraveler]);
+
+  const effectiveOperations: any[] = useMemo(() => {
+    if (!activeJobCard) return [];
+    if (activeJobCard.operations && activeJobCard.operations.length > 0) {
+      return [...activeJobCard.operations].sort((a: any, b: any) => Number(a.sequenceNo) - Number(b.sequenceNo));
+    }
+
+    const cleanCode = activeJobCard.partCode?.toLowerCase().trim();
+    const cleanDesc = activeJobCard.partDescription?.toLowerCase().trim();
+
+    // 1. Direct Part Code or Route Code match
+    let matchingRoute = routeCards.find(r => 
+      (cleanCode && r.partCode?.toLowerCase().trim() === cleanCode) ||
+      (cleanCode && r.routeCode?.toLowerCase().trim() === cleanCode)
+    );
+
+    // 2. Exact Description match
+    if (!matchingRoute && cleanDesc) {
+      matchingRoute = routeCards.find(r => 
+        r.partDescription && r.partDescription.toLowerCase().trim() === cleanDesc
+      );
+    }
+
+    // 3. Parent Order PO Line Item match
+    if (!matchingRoute && activeJobCard.orderPo) {
+      const parentOrder = orders.find(o => o.poNo === activeJobCard.orderPo || o.id === activeJobCard.orderPo);
+      if (parentOrder && parentOrder.lines && parentOrder.lines.length > 0) {
+        for (const line of parentOrder.lines) {
+          const lCode = line.itemCode?.toLowerCase().trim();
+          const lDesc = line.itemDescription?.toLowerCase().trim();
+          matchingRoute = routeCards.find(r => 
+            (lCode && r.partCode?.toLowerCase().trim() === lCode) ||
+            (lDesc && r.partDescription && r.partDescription.toLowerCase().trim() === lDesc)
+          );
+          if (matchingRoute) break;
+        }
+      }
+    }
+
+    // 4. Substring / Keyword match
+    if (!matchingRoute) {
+      matchingRoute = routeCards.find(r => {
+        const rCode = r.partCode?.toLowerCase().trim() || '';
+        const rDesc = r.partDescription?.toLowerCase().trim() || '';
+        return (cleanCode && (rCode.includes(cleanCode) || cleanCode.includes(rCode))) ||
+               (cleanDesc && (rDesc.includes(cleanDesc) || cleanDesc.includes(rDesc)));
+      });
+    }
+
+    // If matching Route Card found, map its operations
+    if (matchingRoute && matchingRoute.operations && matchingRoute.operations.length > 0) {
+      return matchingRoute.operations.map((op: any) => ({
+        id: `op-${activeJobCard.jobNo}-${op.sequenceNo}`,
+        jobCardId: activeJobCard.id || '',
+        jobNo: activeJobCard.jobNo,
+        sequenceNo: Number(op.sequenceNo),
+        operationName: op.operationName,
+        machineId: op.workCenter,
+        operatorName: '',
+        requiredCertification: op.requiredCertification || 'None',
+        standardTimeMinutes: Number(op.standardTimeMinutes || 15),
+        actualTimeMinutes: 0,
+        qtyProcessed: 0,
+        qtyRejected: 0,
+        inspectionRequired: Boolean(op.inspectionRequired),
+        inspectionPassed: false,
+        opStatus: 'PENDING'
+      })).sort((a: any, b: any) => Number(a.sequenceNo) - Number(b.sequenceNo));
+    }
+
+    // Fallback to the first available Route Card
+    const defaultRoute = routeCards[0] || DEFAULT_ROUTE_CARDS[0];
+    if (defaultRoute && defaultRoute.operations && defaultRoute.operations.length > 0) {
+      return defaultRoute.operations.map((op: any) => ({
+        id: `op-${activeJobCard.jobNo}-${op.sequenceNo}`,
+        jobCardId: activeJobCard.id || '',
+        jobNo: activeJobCard.jobNo,
+        sequenceNo: Number(op.sequenceNo),
+        operationName: op.operationName,
+        machineId: op.workCenter,
+        operatorName: '',
+        requiredCertification: op.requiredCertification || 'None',
+        standardTimeMinutes: Number(op.standardTimeMinutes || 15),
+        actualTimeMinutes: 0,
+        qtyProcessed: 0,
+        qtyRejected: 0,
+        inspectionRequired: Boolean(op.inspectionRequired),
+        inspectionPassed: false,
+        opStatus: 'PENDING'
+      })).sort((a: any, b: any) => Number(a.sequenceNo) - Number(b.sequenceNo));
+    }
+
+    return [];
+  }, [activeJobCard, routeCards, orders]);
+
+  const currentExecutableOp = useMemo(() => {
+    if (!effectiveOperations || effectiveOperations.length === 0) return null;
+    const inProgress = effectiveOperations.find((o: any) => o.opStatus === 'IN_PROGRESS');
+    if (inProgress) return inProgress;
+    const nextPending = effectiveOperations.find((o: any) => o.opStatus === 'PENDING' || !o.opStatus);
+    return nextPending || null;
+  }, [effectiveOperations]);
+
+  useEffect(() => {
+    if (activeJobCard) {
+      if (selectedOpSequence === null || !effectiveOperations.some((o: any) => o.sequenceNo === selectedOpSequence)) {
+        if (currentExecutableOp) {
+          setSelectedOpSequence(currentExecutableOp.sequenceNo);
+        } else if (effectiveOperations.length > 0) {
+          setSelectedOpSequence(effectiveOperations[0].sequenceNo);
+        }
+      }
+    }
+  }, [activeJobCard, effectiveOperations, currentExecutableOp, selectedOpSequence]);
+
+  const selectedOp = useMemo(() => {
+    if (!effectiveOperations || effectiveOperations.length === 0) return null;
+    return effectiveOperations.find((o: any) => o.sequenceNo === selectedOpSequence) || currentExecutableOp || effectiveOperations[0];
+  }, [effectiveOperations, selectedOpSequence, currentExecutableOp]);
+
+  useEffect(() => {
+    if (selectedOp) {
+      setOpMachineId(selectedOp.machineId || activeJobCard?.machine || 'CNC-01');
+      setOpOperatorName(selectedOp.operatorName || 'Sachin G. (Lead Machinist)');
+      const goodTarget = (activeJobCard?.targetQty || activeJobCard?.qty || 1) - (selectedOp.qtyRejected || 0);
+      setOpQtyProcessed(selectedOp.qtyProcessed > 0 ? selectedOp.qtyProcessed : goodTarget);
+      setOpQtyRejected(selectedOp.qtyRejected || 0);
+      setOpActualMinutes(selectedOp.actualTimeMinutes > 0 ? selectedOp.actualTimeMinutes : (selectedOp.standardTimeMinutes || 15));
+      setOpNotes(selectedOp.notes || '');
+    }
+  }, [selectedOp, activeJobCard]);
+
+  const handleOpenJobTraveler = (jc: JobCard) => {
+    setSelectedJobForTraveler(jc);
+    setSelectedOpSequence(null);
+    setTravelerError(null);
+    setTravelerSuccess(null);
+  };
+
+  const handleStartOpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeJobCard || !selectedOp || !onStartOperation) return;
+    setIsExecutingOp(true);
+    setTravelerError(null);
+    setTravelerSuccess(null);
+    try {
+      const updated = await onStartOperation(activeJobCard.jobNo, {
+        sequenceNo: selectedOp.sequenceNo,
+        machineId: opMachineId,
+        operatorName: opOperatorName
+      });
+      setTravelerSuccess(`Operation ${selectedOp.sequenceNo} (${selectedOp.operationName}) started.`);
+      if (updated) setSelectedJobForTraveler(updated);
+    } catch (err: any) {
+      setTravelerError(err.message || 'Failed to start operation');
+    } finally {
+      setIsExecutingOp(false);
+    }
+  };
+
+  const handleCompleteOpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeJobCard || !selectedOp || !onCompleteOperation) return;
+    setIsExecutingOp(true);
+    setTravelerError(null);
+    setTravelerSuccess(null);
+    try {
+      const updated = await onCompleteOperation(activeJobCard.jobNo, {
+        sequenceNo: selectedOp.sequenceNo,
+        qtyProcessed: Number(opQtyProcessed),
+        qtyRejected: Number(opQtyRejected),
+        actualMinutes: Number(opActualMinutes),
+        notes: opNotes || undefined
+      });
+      setTravelerSuccess(`Operation ${selectedOp.sequenceNo} completed! (${opQtyProcessed} good, ${opQtyRejected} rejected). Next operation unlocked.`);
+      if (updated) setSelectedJobForTraveler(updated);
+    } catch (err: any) {
+      setTravelerError(err.message || 'Failed to complete operation');
+    } finally {
+      setIsExecutingOp(false);
+    }
   };
 
   // ----------------------------------------------------------------
@@ -1034,14 +1398,40 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                           </span>
                         </td>
                         <td className="py-4 px-5 text-center">
-                          <button
-                            onClick={() => setSelectedJobForLog(jc)}
-                            className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer ${
-                              isDarkMode ? 'bg-[#5B75F8]/10 text-[#7B92FF] hover:bg-[#5B75F8]/20 border border-[#5B75F8]/30' : 'bg-[#5B75F8]/10 text-[#5B75F8] hover:bg-[#5B75F8]/20 border border-[#5B75F8]/20'
-                            }`}
-                          >
-                            Log Production
-                          </button>
+                          <div className="flex items-center justify-center gap-2">
+                            {(jc.jobStatus === 'COMPLETED' || jc.status === 'COMPLETED') && (
+                              <button
+                                onClick={() => {
+                                  if (onSelectOrder && jc.orderPo) {
+                                    onSelectOrder(jc.orderPo);
+                                  } else if (onNavigate) {
+                                    onNavigate('qc');
+                                  }
+                                }}
+                                className="px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white shadow-xs hover:scale-[1.02] flex items-center gap-1.5"
+                                title="Start QC / PDI Check"
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <span>QC / PDI</span>
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleOpenJobTraveler(jc)}
+                              className="px-3.5 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white shadow-xs hover:scale-[1.02] flex items-center gap-1.5"
+                            >
+                              <Route className="w-3.5 h-3.5" />
+                              <span>Traveler</span>
+                            </button>
+                            <button
+                              onClick={() => setSelectedJobForLog(jc)}
+                              className={`p-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer ${
+                                isDarkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'
+                              }`}
+                              title="Legacy Shift Log"
+                            >
+                              <Activity className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1067,9 +1457,13 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
 
                     <div className="space-y-3">
                       {colJobs.map(jc => (
-                        <div key={jc.jobNo} className={`p-4 rounded-2xl border transition-all ${
-                          isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
-                        }`}>
+                        <div 
+                          key={jc.jobNo} 
+                          onClick={() => handleOpenJobTraveler(jc)}
+                          className={`p-4 rounded-2xl border transition-all cursor-pointer hover:scale-[1.01] ${
+                            isDarkMode ? 'bg-slate-900 border-slate-800 hover:border-[#5B75F8]/50' : 'bg-white border-slate-200 shadow-sm hover:border-[#5B75F8]'
+                          }`}
+                        >
                           <div className="flex items-center justify-between text-xs font-mono font-bold text-[#5B75F8]">
                             <span>{jc.jobNo}</span>
                             <span className="text-slate-400">{jc.targetQty || jc.qty} NOS</span>
@@ -1080,6 +1474,15 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                           <div className="mt-2 flex items-center justify-between text-[11px] font-mono text-slate-400">
                             <span>{jc.machine}</span>
                             <span className="text-amber-500">{jc.targetDate}</span>
+                          </div>
+                          <div className="mt-3 pt-2 border-t border-slate-200 dark:border-slate-800/60 flex items-center justify-between">
+                            <span className="text-[10px] font-mono text-indigo-400 flex items-center gap-1">
+                              <Route className="w-3 h-3" />
+                              <span>Route Traveler</span>
+                            </span>
+                            <span className="text-[10px] font-mono font-bold text-slate-400">
+                              {(jc.operations?.filter((o: any) => o.opStatus === 'COMPLETED').length || 0)} / {(jc.operations?.length || 2)} Ops Done
+                            </span>
                           </div>
                         </div>
                       ))}
@@ -2810,6 +3213,450 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================================= */}
+      {/* MODAL 9: JOB CARD ROUTE TRAVELER & LIVE OPERATION EXECUTION */}
+      {/* ========================================================================================= */}
+      {activeJobCard && selectedJobForTraveler && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans overflow-y-auto">
+          <div className={`relative w-full max-w-4xl max-h-[90vh] flex flex-col rounded-3xl border shadow-2xl transition-all overflow-hidden ${
+            isDarkMode 
+              ? 'bg-slate-900/95 border-slate-800/90 text-white backdrop-blur-2xl shadow-[#5B75F8]/10' 
+              : 'bg-white border-slate-200 text-slate-900 shadow-2xl'
+          }`}>
+            {/* Header */}
+            <div className="flex flex-wrap items-center justify-between gap-3 px-7 py-5 border-b border-slate-200 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/40">
+              <div className="flex items-center gap-3.5">
+                <div className="p-3 rounded-2xl bg-gradient-to-tr from-[#5B75F8] to-indigo-600 text-white shadow-md shadow-[#5B75F8]/20">
+                  <Route className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-lg font-mono text-[#5B75F8] dark:text-[#7B92FF] tracking-tight">
+                      {activeJobCard.jobNo}
+                    </h3>
+                    <span className={`px-2.5 py-0.5 rounded-xl text-[10px] font-mono font-bold uppercase border ${
+                      activeJobCard.jobStatus === 'QC_HOLD' || activeJobCard.status === 'QC_HOLD'
+                        ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                        : activeJobCard.jobStatus === 'IN_PROGRESS' || activeJobCard.status === 'RUNNING'
+                        ? 'bg-purple-500/10 text-purple-400 border-purple-500/30 animate-pulse'
+                        : activeJobCard.jobStatus === 'COMPLETED' || activeJobCard.status === 'COMPLETED'
+                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                        : 'bg-[#5B75F8]/10 text-[#7B92FF] border-[#5B75F8]/30'
+                    }`}>
+                      {activeJobCard.jobStatus || activeJobCard.status}
+                    </span>
+                    {activeJobCard.drawingRevision && (
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        Rev: {activeJobCard.drawingRevision}
+                      </span>
+                    )}
+                  </div>
+                  <p className={`text-xs mt-0.5 font-sans ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                    <span className="font-bold">{activeJobCard.partCode}</span> — {activeJobCard.partDescription} • PO: <span className="font-mono font-bold text-indigo-400">{activeJobCard.orderPo}</span> • Target: <span className="font-mono font-bold">{activeJobCard.targetQty || activeJobCard.qty} NOS</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {activeJobCard.materialIssuedLot && (
+                  <div className={`px-3 py-1.5 rounded-xl border text-[11px] font-mono ${
+                    isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'
+                  }`}>
+                    Heat/Lot: <span className="font-bold text-amber-400">{activeJobCard.materialIssuedLot}</span>
+                  </div>
+                )}
+                <button 
+                  onClick={() => setSelectedJobForTraveler(null)} 
+                  className={`p-2.5 rounded-2xl border transition-all cursor-pointer ${
+                    isDarkMode 
+                      ? 'border-slate-800 bg-slate-950/60 text-slate-400 hover:text-white hover:bg-slate-800' 
+                      : 'border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Scrollable Body */}
+            <div className="p-7 space-y-6 overflow-y-auto flex-1">
+              {/* Alert Feedback */}
+              {travelerError && (
+                <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-mono flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  <span>{travelerError}</span>
+                </div>
+              )}
+              {travelerSuccess && (
+                <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  <span>{travelerSuccess}</span>
+                </div>
+              )}
+
+              {/* ROUTE CARD TRAVELER WORKFLOW SEQUENCE TIMELINE */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-[#5B75F8]" />
+                    <span className="text-xs font-mono uppercase font-bold tracking-wider text-slate-400">
+                      Operational Routing Sequence (Route Card Traveler)
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-mono text-slate-400">
+                    {effectiveOperations.filter((o: any) => o.opStatus === 'COMPLETED').length} of {effectiveOperations.length} Operations Completed
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                  {effectiveOperations.map((op: any, index: number) => {
+                    const isSelected = selectedOp?.sequenceNo === op.sequenceNo;
+                    const isCompleted = op.opStatus === 'COMPLETED';
+                    const isInProgress = op.opStatus === 'IN_PROGRESS';
+                    const isPending = !isCompleted && !isInProgress;
+                    const isNextExecutable = currentExecutableOp?.sequenceNo === op.sequenceNo;
+
+                    return (
+                      <div
+                        key={op.sequenceNo}
+                        onClick={() => setSelectedOpSequence(op.sequenceNo)}
+                        className={`p-4 rounded-2xl border transition-all cursor-pointer relative overflow-hidden ${
+                          isSelected 
+                            ? isDarkMode
+                              ? 'bg-slate-800/90 border-[#5B75F8] shadow-lg shadow-[#5B75F8]/10'
+                              : 'bg-indigo-50/50 border-[#5B75F8] shadow-md shadow-indigo-100'
+                            : isDarkMode
+                              ? 'bg-slate-950/40 border-slate-800 hover:border-slate-700'
+                              : 'bg-slate-50 border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        {/* Top Step Pill & Status */}
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[10px] font-mono font-bold text-slate-400">
+                            STEP {index + 1} • OP {op.sequenceNo}
+                          </span>
+                          {isCompleted ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                              <CheckCircle2 className="w-3 h-3" />
+                              <span>DONE</span>
+                            </span>
+                          ) : isInProgress ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 animate-pulse">
+                              <Play className="w-2.5 h-2.5 fill-current" />
+                              <span>RUNNING</span>
+                            </span>
+                          ) : isNextExecutable ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40">
+                              <Sparkle className="w-2.5 h-2.5" />
+                              <span>READY</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-slate-800/60 text-slate-500 border border-slate-700/50">
+                              <Lock className="w-2.5 h-2.5" />
+                              <span>LOCKED</span>
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Operation Name */}
+                        <h4 className={`text-xs font-bold font-sans line-clamp-1 ${
+                          isSelected ? (isDarkMode ? 'text-white' : 'text-slate-900') : (isDarkMode ? 'text-slate-300' : 'text-slate-700')
+                        }`}>
+                          {op.operationName}
+                        </h4>
+
+                        {/* Work Center & Duration */}
+                        <div className="mt-2 pt-2 border-t border-slate-200 dark:border-slate-800/60 flex items-center justify-between text-[10px] font-mono text-slate-400">
+                          <span>{op.machineId || 'Machining'}</span>
+                          <span>{op.actualTimeMinutes > 0 ? `${op.actualTimeMinutes}m` : `${op.standardTimeMinutes || 15}m std`}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* ALL OPERATIONS COMPLETED STATE BANNER */}
+              {effectiveOperations.length > 0 && effectiveOperations.every((o: any) => o.opStatus === 'COMPLETED') && (
+                <div className={`p-5 rounded-3xl border flex flex-wrap items-center justify-between gap-4 ${
+                  isDarkMode 
+                    ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-300' 
+                    : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                }`}>
+                  <div className="flex items-center gap-3.5">
+                    <div className="p-3 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                      <ShieldCheck className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm font-sans">
+                        🎉 Manufacturing Completed! All Operations Executed.
+                      </h4>
+                      <p className="text-xs font-mono mt-0.5 opacity-90">
+                        Job Card {activeJobCard.jobNo} is ready for Pre-Dispatch Inspection (PDI) & Quality Clearance.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedJobForTraveler(null);
+                      if (onSelectOrder && activeJobCard.orderPo) {
+                        onSelectOrder(activeJobCard.orderPo);
+                      } else if (onNavigate) {
+                        onNavigate('qc');
+                      }
+                    }}
+                    className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white font-bold text-xs font-mono shadow-lg shadow-emerald-500/25 flex items-center gap-2 cursor-pointer transition-all hover:scale-105 shrink-0"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>START QC / PDI CHECK</span>
+                  </button>
+                </div>
+              )}
+
+              {/* ACTIVE OPERATION EXECUTION WORKSPACE */}
+              {selectedOp && (
+                <div className={`p-6 rounded-3xl border transition-all ${
+                  isDarkMode ? 'bg-slate-950/60 border-slate-800/90' : 'bg-slate-50/80 border-slate-200'
+                }`}>
+                  <div className="flex flex-wrap items-center justify-between gap-3 pb-4 mb-5 border-b border-slate-200 dark:border-slate-800/80">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold bg-[#5B75F8]/20 text-[#7B92FF]">
+                          OP {selectedOp.sequenceNo}
+                        </span>
+                        <h4 className={`text-base font-bold font-sans ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                          {selectedOp.operationName}
+                        </h4>
+                      </div>
+                      <p className={`text-xs mt-1 font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                        Work Center: <span className="font-bold text-indigo-400">{selectedOp.machineId || 'Machining Bay'}</span> • Standard Cycle Time: <span className="font-bold">{selectedOp.standardTimeMinutes || 15} Mins</span> • Required Skill: <span className="font-bold">{selectedOp.requiredCertification || 'None'}</span>
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className={`px-3 py-1 rounded-xl text-xs font-mono font-bold uppercase border ${
+                        selectedOp.opStatus === 'COMPLETED'
+                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                          : selectedOp.opStatus === 'IN_PROGRESS'
+                          ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
+                          : 'bg-slate-800 text-slate-400 border-slate-700'
+                      }`}>
+                        {selectedOp.opStatus || 'PENDING'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* SUB-CASE 1: Operation is COMPLETED */}
+                  {selectedOp.opStatus === 'COMPLETED' ? (
+                    <div className="space-y-4 font-mono">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div className={`p-3.5 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                          <div className="text-[10px] text-slate-400">GOOD PROCESSED</div>
+                          <div className="text-sm font-bold text-emerald-400 mt-1">{selectedOp.qtyProcessed || activeJobCard.targetQty || 1} NOS</div>
+                        </div>
+                        <div className={`p-3.5 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                          <div className="text-[10px] text-slate-400">SCRAP / REJECTED</div>
+                          <div className="text-sm font-bold text-rose-400 mt-1">{selectedOp.qtyRejected || 0} NOS</div>
+                        </div>
+                        <div className={`p-3.5 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                          <div className="text-[10px] text-slate-400">ACTUAL TIME</div>
+                          <div className="text-sm font-bold text-indigo-400 mt-1">{selectedOp.actualTimeMinutes || selectedOp.standardTimeMinutes || 15} Mins</div>
+                        </div>
+                        <div className={`p-3.5 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                          <div className="text-[10px] text-slate-400">OPERATOR</div>
+                          <div className="text-sm font-bold text-slate-200 mt-1 truncate">{selectedOp.operatorName || 'Shopfloor Machinist'}</div>
+                        </div>
+                      </div>
+                      {selectedOp.notes && (
+                        <div className={`p-3.5 rounded-2xl border text-xs ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-700'}`}>
+                          <span className="text-slate-400">Operator Remarks: </span>
+                          {selectedOp.notes}
+                        </div>
+                      )}
+                    </div>
+                  ) : selectedOp.opStatus === 'IN_PROGRESS' ? (
+                    /* SUB-CASE 2: Operation is IN_PROGRESS -> Show Complete Operation Form */
+                    <form onSubmit={handleCompleteOpSubmit} className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">
+                            Good Processed Output (NOS) *
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            required
+                            value={opQtyProcessed}
+                            onChange={(e) => setOpQtyProcessed(Number(e.target.value))}
+                            className={`w-full rounded-2xl border px-4 py-3 text-xs font-mono font-bold outline-none transition-all ${
+                              isDarkMode ? 'bg-slate-900 border-slate-800 text-white focus:border-[#5B75F8]' : 'bg-white border-slate-200 text-slate-900 focus:border-[#5B75F8]'
+                            }`}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">
+                            Rejection / Scrap Qty (NOS)
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={opQtyRejected}
+                            onChange={(e) => setOpQtyRejected(Number(e.target.value))}
+                            className={`w-full rounded-2xl border px-4 py-3 text-xs font-mono font-bold outline-none transition-all ${
+                              isDarkMode ? 'bg-slate-900 border-slate-800 text-rose-400 focus:border-rose-500' : 'bg-white border-slate-200 text-rose-600 focus:border-rose-500'
+                            }`}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">
+                            Actual Time Spent (Minutes) *
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            required
+                            value={opActualMinutes}
+                            onChange={(e) => setOpActualMinutes(Number(e.target.value))}
+                            className={`w-full rounded-2xl border px-4 py-3 text-xs font-mono font-bold outline-none transition-all ${
+                              isDarkMode ? 'bg-slate-900 border-slate-800 text-indigo-400 focus:border-[#5B75F8]' : 'bg-white border-slate-200 text-indigo-600 focus:border-[#5B75F8]'
+                            }`}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">
+                          Activity Logs, Parameter Readings & Operator Remarks
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={opNotes}
+                          onChange={(e) => setOpNotes(e.target.value)}
+                          placeholder="e.g. Dimensions verified within 0.02mm tolerance; spindle speed 1200 RPM; coolant checked."
+                          className={`w-full rounded-2xl border px-4 py-3 text-xs outline-none transition-all ${
+                            isDarkMode ? 'bg-slate-900 border-slate-800 text-white focus:border-[#5B75F8]' : 'bg-white border-slate-200 text-slate-900 focus:border-[#5B75F8]'
+                          }`}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2">
+                        <div className="text-[11px] font-mono text-slate-400">
+                          ⚡ Completing this operation automatically unlocks the next Route Card operation.
+                        </div>
+                        <button
+                          type="submit"
+                          disabled={isExecutingOp}
+                          className="px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white font-bold text-xs font-mono cursor-pointer shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 flex items-center gap-2"
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>{isExecutingOp ? 'Processing...' : 'COMPLETE OPERATION & ADVANCE'}</span>
+                        </button>
+                      </div>
+                    </form>
+                  ) : currentExecutableOp?.sequenceNo === selectedOp.sequenceNo ? (
+                    /* SUB-CASE 3: Operation is PENDING & is Next Step to Start */
+                    <form onSubmit={handleStartOpSubmit} className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">
+                            Assigned Machine / Work Center *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={opMachineId}
+                            onChange={(e) => setOpMachineId(e.target.value)}
+                            placeholder="e.g. VMC-01 (Vertical Milling)"
+                            className={`w-full rounded-2xl border px-4 py-3 text-xs font-mono outline-none transition-all ${
+                              isDarkMode ? 'bg-slate-900 border-slate-800 text-white focus:border-[#5B75F8]' : 'bg-white border-slate-200 text-slate-900 focus:border-[#5B75F8]'
+                            }`}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">
+                            Technician / Machine Operator Name *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={opOperatorName}
+                            onChange={(e) => setOpOperatorName(e.target.value)}
+                            placeholder="e.g. Sachin Gharbude"
+                            className={`w-full rounded-2xl border px-4 py-3 text-xs outline-none transition-all ${
+                              isDarkMode ? 'bg-slate-900 border-slate-800 text-white focus:border-[#5B75F8]' : 'bg-white border-slate-200 text-slate-900 focus:border-[#5B75F8]'
+                            }`}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2">
+                        <div className="text-[11px] font-mono text-slate-400 flex items-center gap-1.5">
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Operator skill & heat lot QC verified OK for shopfloor dispatch.</span>
+                        </div>
+                        <button
+                          type="submit"
+                          disabled={isExecutingOp}
+                          className="px-6 py-3 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs font-mono cursor-pointer shadow-lg shadow-[#5B75F8]/25 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 flex items-center gap-2"
+                        >
+                          <Play className="w-4 h-4 fill-current" />
+                          <span>{isExecutingOp ? 'Starting...' : 'START OPERATION'}</span>
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    /* SUB-CASE 4: Operation is Locked Pending Earlier Steps */
+                    <div className={`p-6 rounded-2xl border text-center ${
+                      isDarkMode ? 'bg-slate-900/50 border-slate-800/80 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'
+                    }`}>
+                      <Lock className="w-6 h-6 mx-auto mb-2 text-slate-500" />
+                      <h5 className="font-bold text-xs font-mono uppercase tracking-wider">
+                        Operation Sequence Locked
+                      </h5>
+                      <p className="text-xs mt-1 font-sans">
+                        Please complete previous routing steps first. The current active step is <span className="font-bold text-indigo-400">Op {currentExecutableOp?.sequenceNo}: {currentExecutableOp?.operationName}</span>.
+                      </p>
+                      {currentExecutableOp && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedOpSequence(currentExecutableOp.sequenceNo)}
+                          className="mt-3 px-4 py-1.5 rounded-xl bg-[#5B75F8]/10 text-[#7B92FF] border border-[#5B75F8]/30 font-mono text-xs font-bold hover:bg-[#5B75F8]/20 cursor-pointer"
+                        >
+                          Switch to Op {currentExecutableOp.sequenceNo}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between px-7 py-4 border-t border-slate-200 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/40">
+              <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
+                <Activity className="w-4 h-4 text-emerald-400" />
+                <span>Real-Time Audit Trail & Order Progression Synced</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedJobForTraveler(null)}
+                className={`px-5 py-2 rounded-2xl border text-xs font-mono font-bold cursor-pointer transition-all ${
+                  isDarkMode 
+                    ? 'border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800' 
+                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                Close Traveler
+              </button>
+            </div>
           </div>
         </div>
       )}

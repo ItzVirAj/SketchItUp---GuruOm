@@ -22,6 +22,223 @@
   --color-dark-text: #F3F4F6;
 }
 
+/* Centralized Accent Color Tokens */
+:root, [data-accent="blue"] {
+  --accent-primary: #5B75F8;
+  --accent-hover: #4A64E8;
+  --accent-active: #3B52D9;
+  --accent-text-light: #3B52D9;
+  --accent-text-dark: #7B92FF;
+  --accent-soft-light: rgba(91, 117, 248, 0.10);
+  --accent-soft-dark: rgba(91, 117, 248, 0.18);
+  --accent-border-light: rgba(91, 117, 248, 0.35);
+  --accent-border-dark: rgba(91, 117, 248, 0.30);
+  --accent-ring: rgba(91, 117, 248, 0.50);
+  --accent-shadow: rgba(91, 117, 248, 0.25);
+  --accent-gradient-from: #5B75F8;
+  --accent-gradient-to: #4f46e5;
+}
+
+[data-accent="teal"] {
+  --accent-primary: #0F766E;
+  --accent-hover: #0D655E;
+  --accent-active: #115E59;
+  --accent-text-light: #0F766E;
+  --accent-text-dark: #2DD4BF;
+  --accent-soft-light: rgba(15, 118, 110, 0.10);
+  --accent-soft-dark: rgba(45, 212, 191, 0.18);
+  --accent-border-light: rgba(15, 118, 110, 0.35);
+  --accent-border-dark: rgba(45, 212, 191, 0.30);
+  --accent-ring: rgba(15, 118, 110, 0.50);
+  --accent-shadow: rgba(15, 118, 110, 0.25);
+  --accent-gradient-from: #0F766E;
+  --accent-gradient-to: #059669;
+}
+
+[data-accent="orange"] {
+  --accent-primary: #EA580C;
+  --accent-hover: #C2410C;
+  --accent-active: #9A3412;
+  --accent-text-light: #C2410C;
+  --accent-text-dark: #FB923C;
+  --accent-soft-light: rgba(234, 88, 12, 0.10);
+  --accent-soft-dark: rgba(251, 146, 60, 0.18);
+  --accent-border-light: rgba(234, 88, 12, 0.35);
+  --accent-border-dark: rgba(251, 146, 60, 0.30);
+  --accent-ring: rgba(234, 88, 12, 0.50);
+  --accent-shadow: rgba(234, 88, 12, 0.25);
+  --accent-gradient-from: #EA580C;
+  --accent-gradient-to: #d97706;
+}
+
+[data-accent="red"] {
+  --accent-primary: #DC2626;
+  --accent-hover: #B91C1C;
+  --accent-active: #991B1B;
+  --accent-text-light: #B91C1C;
+  --accent-text-dark: #F87171;
+  --accent-soft-light: rgba(220, 38, 38, 0.10);
+  --accent-soft-dark: rgba(248, 113, 113, 0.18);
+  --accent-border-light: rgba(220, 38, 38, 0.35);
+  --accent-border-dark: rgba(248, 113, 113, 0.30);
+  --accent-ring: rgba(220, 38, 38, 0.50);
+  --accent-shadow: rgba(220, 38, 38, 0.25);
+  --accent-gradient-from: #DC2626;
+  --accent-gradient-to: #e11d48;
+}
+
+/* Multi-Accent System Utility & Direct Color Override Bindings */
+/* All Buttons, Badges and Controls with Primary/Accent Gradients */
+[data-accent] .from-\[\#5B75F8\],
+[data-accent] .from-\[\#FF5000\],
+[data-accent] .from-\[\#6C63FF\],
+[data-accent] .bg-gradient-to-r.from-\[\#5B75F8\],
+[data-accent] .bg-gradient-to-tr.from-\[\#5B75F8\],
+[data-accent] .bg-gradient-to-br.from-\[\#5B75F8\],
+[data-accent] button.from-\[\#5B75F8\],
+[data-accent] a.from-\[\#5B75F8\],
+[data-accent] button[class*="from-[#5B75F8]"],
+[data-accent] button[class*="from-[#FF5000]"],
+[data-accent] .accent-btn {
+  background-image: linear-gradient(to right, var(--accent-gradient-from), var(--accent-gradient-to)) !important;
+  background-color: var(--accent-primary) !important;
+  color: #ffffff !important;
+}
+
+[data-accent] .from-\[\#5B75F8\]:hover,
+[data-accent] .from-\[\#FF5000\]:hover,
+[data-accent] .from-\[\#6C63FF\]:hover,
+[data-accent] button.from-\[\#5B75F8\]:hover,
+[data-accent] a.from-\[\#5B75F8\]:hover,
+[data-accent] button[class*="from-[#5B75F8]"]:hover,
+[data-accent] button[class*="from-[#FF5000]"]:hover,
+[data-accent] .hover\:from-indigo-600:hover,
+[data-accent] .hover\:to-\[\#5B75F8\]:hover,
+[data-accent] .hover\:bg-\[\#5B75F8\]:hover,
+[data-accent] .accent-btn:hover {
+  background-image: linear-gradient(to right, var(--accent-hover), var(--accent-primary)) !important;
+  background-color: var(--accent-hover) !important;
+  color: #ffffff !important;
+}
+
+/* Solid Accent Buttons & Backgrounds */
+[data-accent] .bg-\[\#5B75F8\],
+[data-accent] .bg-\[\#FF5000\],
+[data-accent] .bg-\[\#6C63FF\],
+[data-accent] .bg-teal-600,
+[data-accent] .bg-teal-500 {
+  background-color: var(--accent-primary) !important;
+}
+
+/* Accent Text & Brand Titles */
+[data-accent] .text-\[\#5B75F8\],
+[data-accent] .text-\[\#FF5000\],
+[data-accent] .text-\[\#6C63FF\] {
+  color: var(--accent-text-light) !important;
+}
+
+[data-accent].dark .text-\[\#5B75F8\],
+[data-accent].dark .text-\[\#7B92FF\],
+[data-accent].dark .text-\[\#FF5000\],
+[data-accent].dark .text-\[\#6C63FF\],
+[data-accent] .dark .text-\[\#5B75F8\],
+[data-accent] .dark .text-\[\#7B92FF\],
+[data-accent] .dark .text-\[\#FF5000\],
+[data-accent] .dark .text-\[\#6C63FF\],
+[data-accent] .text-\[\#7B92FF\] {
+  color: var(--accent-text-dark) !important;
+}
+
+/* Soft Tint Backgrounds */
+[data-accent] .bg-\[\#5B75F8\]\/10,
+[data-accent] .bg-\[\#5B75F8\]\/15,
+[data-accent] .bg-\[\#5B75F8\]\/20,
+[data-accent] .bg-\[\#FF5000\]\/10,
+[data-accent] .bg-\[\#FF5000\]\/20,
+[data-accent] .hover\:bg-\[\#5B75F8\]\/10:hover,
+[data-accent] .hover\:bg-\[\#5B75F8\]\/15:hover,
+[data-accent] .hover\:bg-\[\#5B75F8\]\/20:hover {
+  background-color: var(--accent-soft-light) !important;
+}
+
+[data-accent].dark .bg-\[\#5B75F8\]\/10,
+[data-accent].dark .bg-\[\#5B75F8\]\/15,
+[data-accent].dark .bg-\[\#5B75F8\]\/20,
+[data-accent] .dark .bg-\[\#5B75F8\]\/10,
+[data-accent] .dark .bg-\[\#5B75F8\]\/15,
+[data-accent] .dark .bg-\[\#5B75F8\]\/20,
+[data-accent] .dark .hover\:bg-\[\#5B75F8\]\/10:hover,
+[data-accent] .dark .hover\:bg-\[\#5B75F8\]\/15:hover,
+[data-accent] .dark .hover\:bg-\[\#5B75F8\]\/20:hover {
+  background-color: var(--accent-soft-dark) !important;
+}
+
+/* Accent Borders */
+[data-accent] .border-\[\#5B75F8\],
+[data-accent] .border-\[\#5B75F8\]\/20,
+[data-accent] .border-\[\#5B75F8\]\/30,
+[data-accent] .border-\[\#5B75F8\]\/40,
+[data-accent] .border-\[\#FF5000\],
+[data-accent] .border-\[\#FF5000\]\/20,
+[data-accent] .border-\[\#FF5000\]\/30 {
+  border-color: var(--accent-border-light) !important;
+}
+
+[data-accent].dark .border-\[\#5B75F8\],
+[data-accent].dark .border-\[\#5B75F8\]\/20,
+[data-accent].dark .border-\[\#5B75F8\]\/30,
+[data-accent].dark .border-\[\#5B75F8\]\/40,
+[data-accent] .dark .border-\[\#5B75F8\],
+[data-accent] .dark .border-\[\#5B75F8\]\/20,
+[data-accent] .dark .border-\[\#5B75F8\]\/30,
+[data-accent] .dark .border-\[\#5B75F8\]\/40 {
+  border-color: var(--accent-border-dark) !important;
+}
+
+/* Focus Rings & Outlines */
+[data-accent] .focus\:border-\[\#5B75F8\]:focus {
+  border-color: var(--accent-primary) !important;
+}
+
+[data-accent] .focus\:ring-\[\#5B75F8\]:focus,
+[data-accent] .focus\:ring-\[\#5B75F8\]\/20:focus {
+  --tw-ring-color: var(--accent-ring) !important;
+  box-shadow: 0 0 0 2px var(--accent-ring) !important;
+}
+
+/* Accent Hover States */
+[data-accent] .hover\:text-\[\#5B75F8\]:hover,
+[data-accent] .hover\:text-\[\#FF5000\]:hover {
+  color: var(--accent-primary) !important;
+}
+
+[data-accent].dark .hover\:text-\[\#7B92FF\]:hover,
+[data-accent] .dark .hover\:text-\[\#7B92FF\]:hover,
+[data-accent] .hover\:text-\[\#7B92FF\]:hover {
+  color: var(--accent-text-dark) !important;
+}
+
+[data-accent] .group:hover .group-hover\:text-\[\#5B75F8\],
+[data-accent] .group:hover .group-hover\:text-\[\#FF5000\] {
+  color: var(--accent-primary) !important;
+}
+
+[data-accent].dark .group:hover .dark\:group-hover\:text-\[\#7B92FF\],
+[data-accent] .dark .group:hover .dark\:group-hover\:text-\[\#7B92FF\],
+[data-accent] .group:hover .group-hover\:text-\[\#7B92FF\] {
+  color: var(--accent-text-dark) !important;
+}
+
+/* Accent Glow Shadows */
+[data-accent] .shadow-\[\#5B75F8\]\/20,
+[data-accent] .shadow-\[\#5B75F8\]\/25,
+[data-accent] .shadow-\[\#5B75F8\]\/30,
+[data-accent] .shadow-\[\#5B75F8\]\/40,
+[data-accent] .shadow-\[\#FF5000\]\/20,
+[data-accent] .shadow-\[\#FF5000\]\/30 {
+  box-shadow: 0 10px 15px -3px var(--accent-shadow), 0 4px 6px -4px var(--accent-shadow) !important;
+}
+
 /* Explicit ByteBoost Dark Mode Global Theme Overrides */
 .dark {
   background-color: #121316;
@@ -58,29 +275,6 @@
 .dark .border-slate-800\/40,
 .dark .border-slate-700 {
   border-color: #282A34 !important;
-}
-
-.dark .bg-teal-600,
-.dark .bg-teal-500 {
-  background-color: #5B75F8 !important;
-}
-
-.dark .text-teal-400,
-.dark .text-teal-300,
-.dark .text-teal-500 {
-  color: #7B92FF !important;
-}
-
-.dark .bg-teal-500\/10,
-.dark .bg-teal-500\/15,
-.dark .bg-teal-500\/20,
-.dark .bg-teal-600\/20 {
-  background-color: rgba(91, 117, 248, 0.15) !important;
-}
-
-.dark .border-teal-500\/30,
-.dark .border-teal-500\/40 {
-  border-color: rgba(91, 117, 248, 0.3) !important;
 }
 
 /* Explicit Google Noto Sans Font & Scaled Styling for all tables across the application */

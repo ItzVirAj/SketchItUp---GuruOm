@@ -35,6 +35,30 @@ export class MastersController {
     }
   }
 
+  async updateMaster(req: Request, res: Response) {
+    const tenant = extractTenantId(req);
+    const { code } = req.params;
+    try {
+      const result = await mastersService.updateMaster(code, req.body);
+      await CacheService.invalidatePattern(`cache:${tenant}:masters:*`);
+      return res.json({ message: 'Master item updated successfully', data: result });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
+
+  async deleteMaster(req: Request, res: Response) {
+    const tenant = extractTenantId(req);
+    const { code } = req.params;
+    try {
+      const result = await mastersService.deleteMaster(code);
+      await CacheService.invalidatePattern(`cache:${tenant}:masters:*`);
+      return res.json({ message: 'Master item deleted successfully', data: result });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
+
   // Customers
   async getCustomers(req: Request, res: Response) {
     const tenant = extractTenantId(req);
@@ -60,6 +84,30 @@ export class MastersController {
       const result = await mastersService.createCustomer(req.body);
       await CacheService.invalidatePattern(`cache:${tenant}:masters:*`);
       return res.status(201).json({ message: 'Customer saved successfully', data: result });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
+
+  async updateCustomer(req: Request, res: Response) {
+    const tenant = extractTenantId(req);
+    const { code } = req.params;
+    try {
+      const result = await mastersService.updateCustomer(code, req.body);
+      await CacheService.invalidatePattern(`cache:${tenant}:masters:*`);
+      return res.json({ message: 'Customer updated successfully', data: result });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
+
+  async deleteCustomer(req: Request, res: Response) {
+    const tenant = extractTenantId(req);
+    const { code } = req.params;
+    try {
+      const result = await mastersService.deleteCustomer(code);
+      await CacheService.invalidatePattern(`cache:${tenant}:masters:*`);
+      return res.json({ message: 'Customer deleted successfully', data: result });
     } catch (err: any) {
       return res.status(400).json({ error: 'ValidationError', message: err.message });
     }
@@ -96,6 +144,30 @@ export class MastersController {
     }
   }
 
+  async updateVendor(req: Request, res: Response) {
+    const tenant = extractTenantId(req);
+    const { code } = req.params;
+    try {
+      const result = await mastersService.updateVendor(code, req.body);
+      await CacheService.invalidatePattern(`cache:${tenant}:masters:*`);
+      return res.json({ message: 'Vendor updated successfully', data: result });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
+
+  async deleteVendor(req: Request, res: Response) {
+    const tenant = extractTenantId(req);
+    const { code } = req.params;
+    try {
+      const result = await mastersService.deleteVendor(code);
+      await CacheService.invalidatePattern(`cache:${tenant}:masters:*`);
+      return res.json({ message: 'Vendor deleted successfully', data: result });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
+
   // Machines
   async getMachines(req: Request, res: Response) {
     const tenant = extractTenantId(req);
@@ -121,6 +193,30 @@ export class MastersController {
       const result = await mastersService.createMachine(req.body);
       await CacheService.invalidatePattern(`cache:${tenant}:masters:*`);
       return res.status(201).json({ message: 'Machine saved successfully', data: result });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
+
+  async updateMachine(req: Request, res: Response) {
+    const tenant = extractTenantId(req);
+    const { code } = req.params;
+    try {
+      const result = await mastersService.updateMachine(code, req.body);
+      await CacheService.invalidatePattern(`cache:${tenant}:masters:*`);
+      return res.json({ message: 'Machine updated successfully', data: result });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
+
+  async deleteMachine(req: Request, res: Response) {
+    const tenant = extractTenantId(req);
+    const { code } = req.params;
+    try {
+      const result = await mastersService.deleteMachine(code);
+      await CacheService.invalidatePattern(`cache:${tenant}:masters:*`);
+      return res.json({ message: 'Machine deleted successfully', data: result });
     } catch (err: any) {
       return res.status(400).json({ error: 'ValidationError', message: err.message });
     }

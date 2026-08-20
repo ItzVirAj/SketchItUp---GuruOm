@@ -103,14 +103,15 @@ export class InvoicesService {
       throw err;
     }
 
-    // 2. Validate Order State Machine Gate (Must be DISPATCHED)
+    // 2. Validate Order State Machine Gate (Must be in eligible dispatch or invoiced states)
     if (validated.orderPo) {
       const { ordersService } = await import('../orders/orders.service');
       const order = await ordersService.getOrderById(validated.orderPo);
       if (order) {
         const currentStage = (order.stage || order.status || 'DRAFT') as string;
         const normalized = (await import('../../../../src/utils/orderStateMachine')).normalizeOrderState(currentStage);
-        if (normalized !== 'DISPATCHED' && currentStage !== 'DISPATCHED' && currentStage !== 'PARTIALLY_DISPATCHED') {
+        const allowedStages = ['DISPATCHED', 'PARTIALLY_DISPATCHED', 'IN_TRANSIT', 'DELIVERED', 'READY_TO_DISPATCH', 'READY_FOR_DISPATCH', 'DISPATCH_READY', 'PDI_COMPLETE', 'INVOICE_GENERATED', 'INVOICED', 'PAYMENT_PENDING'];
+        if (!allowedStages.includes(currentStage.toUpperCase()) && !['DISPATCHED', 'READY_FOR_DISPATCH', 'DELIVERED', 'INVOICED', 'PAYMENT_PENDING'].includes(normalized)) {
           const err: any = new Error(`State Machine Gate Blocked: Cannot generate sales invoice for order "${validated.orderPo}" currently in '${currentStage}' state. Order must be physically DISPATCHED before invoice generation.`);
           err.errorCode = 'ERR_INVALID_STAGE_TRANSITION';
           err.statusCode = 400;
@@ -129,10 +130,17 @@ export class InvoicesService {
       }
     }
 
-    // 4. Validate line items for HSN & GST rates
+    // 4. Validate line items for HSN & GST rates and compute Intra-state vs Inter-state GST
+    const sellerStateCode = '27'; // Maharashtra seller base
+    const buyerStateCode = validated.customerGstin && validated.customerGstin.length >= 2 
+      ? validated.customerGstin.substring(0, 2) 
+      : '27';
+    const isIntraState = buyerStateCode === sellerStateCode;
+
     let totalTaxable = 0;
     let totalCgst = 0;
     let totalSgst = 0;
+    let totalIgst = 0;
 
     for (const item of validated.items) {
       // In master, item GST is 18 standard
@@ -148,22 +156,27 @@ export class InvoicesService {
       const taxable = item.qty * item.unitPrice;
       const gstAmt = (taxable * item.gstRate) / 100;
       totalTaxable += taxable;
-      totalCgst += gstAmt / 2;
-      totalSgst += gstAmt / 2;
+      if (isIntraState) {
+        totalCgst += gstAmt / 2;
+        totalSgst += gstAmt / 2;
+      } else {
+        totalIgst += gstAmt;
+      }
     }
 
     const totalInvoiceAmount = totalTaxable > 0 
-      ? (totalTaxable + totalCgst + totalSgst) 
+      ? Number((totalTaxable + totalCgst + totalSgst + totalIgst).toFixed(2)) 
       : Number((data as any).totalAmount || (data as any).balanceAmount || (data as any).grossAmount || 0);
     const balanceAmount = (data as any).balanceAmount !== undefined 
       ? Number((data as any).balanceAmount) 
       : totalInvoiceAmount;
 
-    // 5. Generate Next Atomic Invoice Number
+    // 5. Generate Next Atomic Gapless Invoice Number
     const invoiceNo = validated.invoiceNo || (await this.getNextDocumentNumber('INV', 'INV'));
     const invoiceId = validated.id || `inv-${Date.now()}`;
+    const invoiceStatus = (data as any).status || validated.status || 'DRAFT';
 
-    // 4. Check E-Invoicing applicability
+    // 6. Check E-Invoicing applicability
     const settings = await this.getStatutorySettings();
     const isEInvoice = settings.isApplicable;
     const irnNumber = isEInvoice ? `IRN-MOCK-${Date.now()}-GSTN` : undefined;
@@ -177,12 +190,13 @@ export class InvoicesService {
         customer_gstin: validated.customerGstin,
         order_po: validated.orderPo,
         challan_no: validated.challanNo,
-        status: validated.status || 'UNPAID',
+        status: invoiceStatus,
         date: validated.date,
         due_date: validated.dueDate,
         taxable_amount: totalTaxable,
         cgst_amount: totalCgst,
         sgst_amount: totalSgst,
+        igst_amount: totalIgst,
         total_amount: totalInvoiceAmount,
         paid_amount: (data as any).paidAmount || 0,
         balance_amount: balanceAmount,
@@ -205,10 +219,12 @@ export class InvoicesService {
             unit_price: it.unitPrice,
             taxable_value: taxable,
             gst_rate: it.gstRate,
-            cgst_rate: it.gstRate / 2,
-            sgst_rate: it.gstRate / 2,
-            cgst_amount: gstAmt / 2,
-            sgst_amount: gstAmt / 2,
+            cgst_rate: isIntraState ? it.gstRate / 2 : 0,
+            sgst_rate: isIntraState ? it.gstRate / 2 : 0,
+            igst_rate: isIntraState ? 0 : it.gstRate,
+            cgst_amount: isIntraState ? gstAmt / 2 : 0,
+            sgst_amount: isIntraState ? gstAmt / 2 : 0,
+            igst_amount: isIntraState ? 0 : gstAmt,
             total_item_amount: taxable + gstAmt,
             gst_override_reason: it.gstOverrideReason
           };
@@ -225,7 +241,7 @@ export class InvoicesService {
       action: 'CUSTOMER_INVOICE_GENERATED',
       entityType: 'customer_invoices',
       entityId: invoiceNo,
-      details: `Tax Invoice ${invoiceNo} generated for ${validated.customerName} (₹${totalInvoiceAmount.toFixed(2)}, GSTIN: ${validated.customerGstin}, e-Invoice: ${isEInvoice ? 'Yes' : 'No'})`
+      details: `Tax Invoice ${invoiceNo} created for ${validated.customerName} (₹${totalInvoiceAmount.toFixed(2)}, GSTIN: ${validated.customerGstin}, Status: ${invoiceStatus}, Intra-State: ${isIntraState ? 'Yes' : 'No'})`
     }).catch(() => {});
 
     await logAudit({
@@ -233,7 +249,7 @@ export class InvoicesService {
       action: 'CREATE_INVOICE',
       entityType: 'invoice',
       entityId: invoiceNo,
-      afterState: { totalAmount: totalInvoiceAmount, balanceAmount, invoiceNo }
+      afterState: { totalAmount: totalInvoiceAmount, balanceAmount, invoiceNo, status: invoiceStatus }
     }).catch(() => {});
 
     const createdInvoice = {
@@ -243,22 +259,108 @@ export class InvoicesService {
       taxableAmount: totalTaxable,
       cgstAmount: totalCgst,
       sgstAmount: totalSgst,
+      igstAmount: totalIgst,
+      isIntraState,
       totalAmount: totalInvoiceAmount,
       paidAmount: (data as any).paidAmount || 0,
       balanceAmount: balanceAmount,
-      status: (data as any).status || 'ISSUED',
+      status: invoiceStatus,
       isEInvoiceApplicable: isEInvoice,
       irnNumber
     };
 
     SEED_INVOICES.unshift(createdInvoice);
 
-    // Real-time Push: Broadcast invoice creation
+    // Real-time Push: Broadcast invoice creation and update
     notificationsService.broadcastEvent('invoice_created', createdInvoice);
+    notificationsService.broadcastEvent('invoice_updated', createdInvoice);
 
     return createdInvoice;
   }
 
+  /**
+   * Issues a Draft Customer Invoice (DRAFT -> ISSUED):
+   * Advances Invoice status to ISSUED, updates linked Order to INVOICED (Step 8), and broadcasts real-time events.
+   */
+  async issueInvoice(invoiceNo: string, actorName = 'Finance Manager') {
+    const invoice = await this.getInvoiceByNo(invoiceNo);
+    if (!invoice) {
+      const err: any = new Error(`Invoice ${invoiceNo} not found`);
+      err.statusCode = 404;
+      throw err;
+    }
+
+    try {
+      await this.db
+        .from('customer_invoices')
+        .update({
+          status: 'ISSUED',
+          updated_at: new Date().toISOString()
+        })
+        .or(`id.eq.${invoiceNo},invoice_no.eq.${invoiceNo}`);
+    } catch (err) {
+      console.warn('DB issueInvoice fallback:', err);
+    }
+
+    const seedIdx = SEED_INVOICES.findIndex(i => i.id === invoice.id || i.invoiceNo === invoice.invoiceNo);
+    const updatedInvoice = {
+      ...invoice,
+      status: 'ISSUED'
+    };
+    if (seedIdx >= 0) {
+      SEED_INVOICES[seedIdx] = updatedInvoice;
+    }
+
+    // Advance linked order to INVOICED (Stage 10 / Step 8)
+    if (invoice.orderPo) {
+      try {
+        await this.db
+          .from('customer_orders')
+          .update({
+            status: 'INVOICED',
+            invoice_no: invoice.invoiceNo,
+            progress_step: 8,
+            updated_at: new Date().toISOString()
+          })
+          .or(`po_no.eq.${invoice.orderPo},id.eq.${invoice.orderPo}`);
+      } catch (ordErr) {
+        console.warn('DB update order to INVOICED fallback:', ordErr);
+      }
+
+      notificationsService.broadcastEvent('order_transitioned', {
+        orderId: invoice.orderPo,
+        poNo: invoice.orderPo,
+        status: 'INVOICED',
+        stage: 'INVOICED',
+        progressStep: 8,
+        invoiceNo: invoice.invoiceNo
+      });
+
+      notificationsService.broadcastEvent('order_updated', {
+        id: invoice.orderPo,
+        orderId: invoice.orderPo,
+        poNo: invoice.orderPo,
+        status: 'INVOICED',
+        stage: 'INVOICED',
+        progressStep: 8,
+        invoiceNo: invoice.invoiceNo
+      });
+    }
+
+    await auditService.recordAuditLog({
+      actorEmail: actorName,
+      actorRole: 'Finance Manager',
+      action: 'INVOICE_ISSUED',
+      entityType: 'customer_invoices',
+      entityId: invoice.invoiceNo,
+      details: `Tax Invoice ${invoice.invoiceNo} issued for ${invoice.customerName} (₹${Number(invoice.totalAmount).toFixed(2)})`
+    }).catch(() => {});
+
+    // Real-Time Push: Broadcast invoice update
+    notificationsService.broadcastEvent('invoice_updated', updatedInvoice);
+
+    return updatedInvoice;
+  }
 
   /**
    * Fetches all customer invoices

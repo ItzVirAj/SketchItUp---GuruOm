@@ -189,19 +189,30 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
     handleCancelOrder: serviceCancelOrder,
     handleAdjustStock,
     handleCreateJobCard,
+    handleStartOperation,
+    handleCompleteOperation,
     handleLogProduction,
     handleUpdateQC,
     handlePassPDI,
     handleIssueDispatch,
     handleRecordInvoicePayment,
     handleCreateInvoice,
+    handleIssueInvoice,
     handleRecordPayablePayment,
     handleCreateVendorBill,
     handleCreateOutwork,
     handleAddMasterItem,
+    handleUpdateMasterItem,
+    handleDeleteMasterItem,
     handleAddCustomer,
+    handleUpdateCustomer,
+    handleDeleteCustomer,
     handleAddVendor,
+    handleUpdateVendor,
+    handleDeleteVendor,
     handleAddMachine,
+    handleUpdateMachine,
+    handleDeleteMachine,
     handleImportOMGST,
     handleAddUser,
     handleUpdateUser,
@@ -213,7 +224,13 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
     handleReject,
     handleSync,
     handleResetAllData,
-    handleClearOperationalData
+    handleClearOperationalData,
+    handleCompletePDI,
+    handleGenerateInvoice,
+    handleGenerateChallan,
+    handleMarkDispatched,
+    handleMarkDelivered,
+    handleRecordPayment
   } = useOwnerOSData(activeUserFallback);
 
   const currentUser = 
@@ -349,7 +366,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
     }
   };
 
-  const selectedOrder = dynamicFetchedOrder || orders.find(o => o.id === selectedOrderId || o.poNo === selectedOrderId) || orders[0];
+  const selectedOrder = orders.find(o => o.id === selectedOrderId || o.poNo === selectedOrderId) || dynamicFetchedOrder || orders[0];
 
 
 
@@ -466,6 +483,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
             <OrderDetailView
               order={selectedOrder}
               qcQueue={qcQueue}
+              vendors={vendors}
               isDarkMode={isDarkMode}
               currentRole={currentRole}
               currentUser={currentUser}
@@ -490,6 +508,12 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
               onCancelOrder={handleCancelOrder}
               onNavigateToPDI={() => handleNavigateView('pdi')}
               onNavigateToDispatch={() => handleNavigateView('dispatch')}
+              onCompletePDI={handleCompletePDI}
+              onGenerateInvoice={handleGenerateInvoice}
+              onGenerateChallan={handleGenerateChallan}
+              onMarkDispatched={handleMarkDispatched}
+              onMarkDelivered={handleMarkDelivered}
+              onRecordPayment={handleRecordPayment}
             />
           )}
 
@@ -514,7 +538,11 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
               isDarkMode={isDarkMode}
               initialSection={currentView === 'bom' ? 'bom' : currentView === 'route-cards' ? 'route-cards' : 'job-cards'}
               onCreateJobCard={handleCreateJobCard}
+              onStartOperation={handleStartOperation}
+              onCompleteOperation={handleCompleteOperation}
               onLogProduction={handleLogProduction}
+              onNavigate={handleNavigateView}
+              onSelectOrder={handleSelectOrder}
               preselectedOrderPo={pendingJobCardOrderPo}
               onJobCardModalOpened={() => setPendingJobCardOrderPo(null)}
             />
@@ -564,6 +592,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
             <DispatchView
               dispatches={dispatches}
               orders={orders}
+              vendors={vendors}
               isDarkMode={isDarkMode}
               onIssueDispatch={handleIssueDispatch}
             />
@@ -595,8 +624,22 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
           {currentView === 'invoices' && (
             <InvoicesView
               invoices={invoices}
+              dispatches={dispatches}
+              orders={orders}
+              customers={customers}
+              masters={masters}
               isDarkMode={isDarkMode}
+              currentRole={currentRole}
+              onCreateInvoice={handleCreateInvoice}
+              onIssueInvoice={handleIssueInvoice}
               onRecordPayment={handleRecordInvoicePayment}
+              onViewOrder={(orderId) => {
+                const target = orders.find(o => o.id === orderId || o.poNo === orderId);
+                if (target) {
+                  setSelectedOrderId(target.id);
+                  handleNavigateView('order-detail');
+                }
+              }}
             />
           )}
 
@@ -616,9 +659,17 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
               machines={machines}
               isDarkMode={isDarkMode}
               onAddMaster={handleAddMasterItem}
+              onUpdateMaster={handleUpdateMasterItem}
+              onDeleteMaster={handleDeleteMasterItem}
               onAddCustomer={handleAddCustomer}
+              onUpdateCustomer={handleUpdateCustomer}
+              onDeleteCustomer={handleDeleteCustomer}
               onAddVendor={handleAddVendor}
+              onUpdateVendor={handleUpdateVendor}
+              onDeleteVendor={handleDeleteVendor}
               onAddMachine={handleAddMachine}
+              onUpdateMachine={handleUpdateMachine}
+              onDeleteMachine={handleDeleteMachine}
               onImportOMGST={handleImportOMGST}
             />
           )}

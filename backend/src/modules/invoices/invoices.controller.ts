@@ -107,6 +107,16 @@ export class InvoicesController {
       return res.status(400).json({ error: 'ValidationError', message: err.message });
     }
   }
+
+  async issueInvoice(req: Request, res: Response) {
+    try {
+      const actorName = (req as any).user?.email || (req as any).user?.name || 'Finance Manager';
+      const data = await invoicesService.issueInvoice(req.params.invoiceNo, actorName);
+      return res.json({ message: 'Tax invoice issued successfully', data });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'InvoiceIssueError', message: err.message });
+    }
+  }
 }
 
 export const invoicesController = new InvoicesController();

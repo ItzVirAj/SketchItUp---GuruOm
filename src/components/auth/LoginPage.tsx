@@ -51,6 +51,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       if (!cancelled) {
         setDemoUsers(users);
         setIsDemoLoading(false);
+        if (users && users.length > 0) {
+          try {
+            localStorage.setItem('stratum_demo_users', JSON.stringify(users));
+          } catch (_) {}
+        }
       }
     }).catch(() => { if (!cancelled) setIsDemoLoading(false); });
     return () => { cancelled = true; };
@@ -150,7 +155,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         className="w-full max-w-[440px] bg-[#FFFFFF] rounded-[24px] shadow-[0_20px_60px_-15px_rgba(108,99,255,0.25),0_10px_30px_-10px_rgba(0,0,0,0.06)] p-8 sm:p-10 relative z-10 border border-white/80"
       >
         {/* Logo Section */}
-        <div className="w-[44px] h-[44px] rounded-[12px] bg-gradient-to-br from-[#6C63FF] to-[#4338CA] flex items-center justify-center text-white shadow-md shadow-[#6C63FF]/30 mb-6">
+        <div className="w-[44px] h-[44px] rounded-[12px] bg-gradient-to-br from-[#5B75F8] to-indigo-600 flex items-center justify-center text-white shadow-md shadow-[#5B75F8]/30 mb-6">
           <span className="font-extrabold text-xl tracking-tight leading-none select-none">G</span>
         </div>
 

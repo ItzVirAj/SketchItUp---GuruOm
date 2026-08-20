@@ -50,6 +50,7 @@ import {
   AuditLogEntry
 } from '../../../types/console';
 import { AgentBentoGrid } from '../AgentBentoGrid';
+import { AccentColorSelector } from '../AccentColorSelector';
 
 interface CommandCentreViewProps {
   orders?: CustomerOrder[];
@@ -1440,6 +1441,11 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
 
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
               
+              {/* Accent Color Customization */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700">
+                <AccentColorSelector isDarkMode={isDarkMode} />
+              </div>
+
               {/* Display Mode Selection */}
               <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 space-y-2">
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">

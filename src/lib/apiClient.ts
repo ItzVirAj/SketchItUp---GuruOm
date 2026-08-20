@@ -21,14 +21,30 @@ export class ApiError extends Error {
   }
 }
 
-// In-memory access token storage (never in localStorage to prevent XSS exposure)
-let inMemoryAccessToken: string | null = null;
+// In-memory access token storage with safe 15-minute session persistence
+let inMemoryAccessToken: string | null = (() => {
+  try {
+    const expiresAt = localStorage.getItem('stratum_session_expires_at');
+    if (expiresAt && parseInt(expiresAt, 10) > Date.now()) {
+      return localStorage.getItem('stratum_access_token');
+    }
+  } catch (_) {}
+  return null;
+})();
+
 let isRefreshing = false;
 let refreshSubscribers: ((token: string) => void)[] = [];
 let authFailureListeners: (() => void)[] = [];
 
 export function setAccessToken(token: string | null) {
   inMemoryAccessToken = token;
+  try {
+    if (token) {
+      localStorage.setItem('stratum_access_token', token);
+    } else {
+      localStorage.removeItem('stratum_access_token');
+    }
+  } catch (_) {}
 }
 
 export function getAccessToken(): string | null {
@@ -44,6 +60,9 @@ export function onAuthFailure(callback: () => void) {
 
 function notifyAuthFailure() {
   inMemoryAccessToken = null;
+  try {
+    localStorage.removeItem('stratum_access_token');
+  } catch (_) {}
   authFailureListeners.forEach(cb => cb());
 }
 

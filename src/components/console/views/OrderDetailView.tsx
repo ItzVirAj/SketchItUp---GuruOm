@@ -28,19 +28,26 @@ import {
   Building,
   User,
   ShieldAlert,
+  Flame,
   Zap,
   Sparkles,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Receipt,
+  CheckSquare,
+  Square,
+  ClipboardCheck
 } from 'lucide-react';
-import { CustomerOrder, OrderStatus, QCInspection, OrderLineItem, UserRole } from '../../../types/console';
+import { CustomerOrder, OrderStatus, QCInspection, OrderLineItem, UserRole, VendorMaster } from '../../../types/console';
 import { isRoleAuthorizedForCta, getCtaPermission, CtaId, normalizeRole } from '../../../utils/rbacMatrix';
-import { executeOrderStageTransition, validatePodRequired, validateOrderClosure } from '../../../utils/orderStateMachine';
+import { executeOrderStageTransition, validatePodRequired, validateOrderClosure, normalizeOrderState, CanonicalOrderState } from '../../../utils/orderStateMachine';
 import { runMaterialCheckForOrder, overrideMaterialCheckForOrder } from '../../../services/supabaseServices';
+import { getCurrentFinancialYear, formatDocumentNumber } from '../../../utils/statutoryAccountingEngine';
 
 interface OrderDetailViewProps {
   order: CustomerOrder;
   qcQueue?: QCInspection[];
+  vendors?: VendorMaster[];
   isDarkMode: boolean;
   currentRole?: UserRole | string;
   currentUser?: any;
@@ -52,11 +59,18 @@ interface OrderDetailViewProps {
   onCancelOrder?: (orderId: string) => void;
   onNavigateToPDI?: () => void;
   onNavigateToDispatch?: () => void;
+  onCompletePDI?: (orderId: string, payload: any) => Promise<any> | void;
+  onGenerateInvoice?: (orderId: string, invoiceData: any) => Promise<any> | void;
+  onGenerateChallan?: (orderId: string, challanData: any) => Promise<any> | void;
+  onMarkDispatched?: (orderId: string, dispatchData: any) => Promise<any> | void;
+  onMarkDelivered?: (orderId: string, deliveryData: any) => Promise<any> | void;
+  onRecordPayment?: (orderId: string, paymentData: any) => Promise<any> | void;
 }
 
 export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   order,
   qcQueue = [],
+  vendors = [],
   isDarkMode,
   currentRole = 'SUPER ADMIN',
   currentUser,
@@ -67,12 +81,26 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   onNavigateToCreateJobCard,
   onCancelOrder,
   onNavigateToPDI,
-  onNavigateToDispatch
+  onNavigateToDispatch,
+  onCompletePDI,
+  onGenerateInvoice,
+  onGenerateChallan,
+  onMarkDispatched,
+  onMarkDelivered,
+  onRecordPayment
 }) => {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showPodModal, setShowPodModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+
+  // Dedicated Progression Modals
+  const [showPdiModal, setShowPdiModal] = useState(false);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [showChallanModal, setShowChallanModal] = useState(false);
+  const [showDispatchModal, setShowDispatchModal] = useState(false);
+  const [showDeliveryModal, setShowDeliveryModal] = useState(false);
+
   const [poFileName, setPoFileName] = useState<string | null>(order.clientPoFile || null);
   const [isConfirming, setIsConfirming] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
@@ -88,14 +116,58 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
     message?: string;
   } | null>(null);
 
-  // POD Form State (PRD v1.0 Hard Gate)
+  // Transporter options from Vendor Master (Vendor Type: Transporter)
+  const transporterVendors = (vendors || []).filter(v => (v.vendorType || '').toLowerCase().includes('transporter'));
+  const defaultTransporterNames = ['VRL Logistics Ltd', 'SafeXpress Logistics', 'TCI Freight', 'Blue Dart Express', 'Direct Factory Delivery'];
+  const allTransporterOptions = transporterVendors.length > 0 ? transporterVendors.map(v => v.name) : defaultTransporterNames;
+
+  // 1. PDI Inspection Modal State
+  const totalOrderQty = (order.lines || []).reduce((sum, l) => sum + Number(l.orderQty || 0), 0);
+  const [pdiAcceptedQty, setPdiAcceptedQty] = useState<number>(totalOrderQty || 100);
+  const [pdiRejectedQty, setPdiRejectedQty] = useState<number>(0);
+  const [pdiRemarks, setPdiRemarks] = useState('');
+  const [pdiReportUrl, setPdiReportUrl] = useState('');
+  const [pdiChecklist, setPdiChecklist] = useState<Record<string, boolean>>({
+    visualFinish: true,
+    dimensionalAudit: true,
+    gaugesChecked: true,
+    packagingRustProof: true
+  });
+  const [pdiError, setPdiError] = useState<string | null>(null);
+
+  // 2. Invoice Generation Modal State
+  const [genInvoiceNo, setGenInvoiceNo] = useState(order.invoiceNo || formatDocumentNumber('INV', getCurrentFinancialYear(), Math.floor(1000 + Math.random() * 8999)));
+  const [genInvoiceDate, setGenInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
+
+  // 3. Delivery Challan Modal State
+  const [genChallanNo, setGenChallanNo] = useState(order.deliveryChallanNo || formatDocumentNumber('CHL', getCurrentFinancialYear(), Math.floor(1000 + Math.random() * 8999)));
+  const [challanTransporter, setChallanTransporter] = useState(order.transporterName || allTransporterOptions[0]);
+  const [challanVehicleNo, setChallanVehicleNo] = useState('MH 12 AB 4589');
+  const [challanDriverContact, setChallanDriverContact] = useState('+91 98765 43210');
+  const [challanRemarks, setChallanRemarks] = useState('Standard delivery with batch test certificate attached');
+
+  // 4. Dispatch Modal State
+  const [dispatchDate, setDispatchDate] = useState(new Date().toISOString().split('T')[0]);
+  const [dispatchTransporter, setDispatchTransporter] = useState(order.transporterName || allTransporterOptions[0]);
+  const [dispatchVehicleNo, setDispatchVehicleNo] = useState(challanVehicleNo || 'MH 12 AB 4589');
+  const [dispatchLrNo, setDispatchLrNo] = useState(`LR-${Math.floor(100000 + Math.random() * 900000)}`);
+  const [dispatchDriverContact, setDispatchDriverContact] = useState('+91 98765 43210');
+  const [dispatchRemarks, setDispatchRemarks] = useState('');
+
+  // 5. Delivery Modal State
+  const [deliveryDate, setDeliveryDate] = useState(new Date().toISOString().split('T')[0]);
+  const [deliveryReceivedBy, setDeliveryReceivedBy] = useState(order.podReceivedBy || 'Stores Gate Security');
+  const [deliveryRemarks, setDeliveryRemarks] = useState('Consignment received in intact condition');
+  const [deliveryPodUrl, setDeliveryPodUrl] = useState(order.podDocumentUrl || '');
+
+  // 6. POD Form State (PRD v1.0 Hard Gate)
   const [podDocUrl, setPodDocUrl] = useState(order.podDocumentUrl || '');
   const [podCarrier, setPodCarrier] = useState(order.transporterName || '');
   const [podReceivedBy, setPodReceivedBy] = useState(order.podReceivedBy || '');
   const [podDate, setPodDate] = useState(order.podReceivedDate || new Date().toISOString().split('T')[0]);
   const [podError, setPodError] = useState<string | null>(null);
 
-  // Payment Form State (PRD v1.0 Hard Gate)
+  // 7. Payment Form State (PRD v1.0 Hard Gate)
   const gross = Number(order.grossAmount || (order.lines || []).reduce((sum, l) => sum + (Number(l.orderQty || 0) * Number(l.rate || 0)), 0));
   const currentPaid = Number(order.paidAmount || 0);
   const remainingOutstanding = Math.max(0, gross - currentPaid);
@@ -130,15 +202,16 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
     setShowEditModal(true);
   };
 
-  // 7-Stage Order Lifecycle: Confirmed -> Production -> QCI & PDI -> Dispatched -> Delivered -> Invoiced -> Paid
+  // 8-Stage Order Lifecycle: Confirmed -> Production -> QC/PDI -> Invoice & Challan -> Dispatched -> Delivered -> Receivable -> Closed
   const steps = [
     { name: 'Confirmed', subtitle: 'Order Approved', key: 0, icon: CheckCircle2, stageMatch: ['DRAFT', 'SUBMITTED', 'PO_RECEIVED', 'CONFIRMED', 'APPROVED', 'RELEASED'] },
     { name: 'Production', subtitle: 'Job Cards & Machining', key: 1, icon: Package, stageMatch: ['MATERIAL_CHECKED', 'MATERIAL_CHECK', 'MATERIAL_READY', 'MATERIAL_VERIFIED', 'PROCUREMENT_PENDING', 'GRN', 'PO_SENT', 'GRN_RECEIVED', 'JOB_RELEASED', 'MATERIAL_ISSUED', 'IN_PRODUCTION', 'WITH_SUBCONTRACTOR', 'REWORK'] },
-    { name: 'QCI & PDI', subtitle: 'Quality Clearance', key: 2, icon: ShieldCheck, stageMatch: ['READY_FOR_QC', 'QC', 'QC_INSPECTION', 'QC_HOLD', 'QC_REPORT_UPLOADED', 'PDI', 'PDI_HOLD', 'PDI_COMPLETE', 'READY_FOR_DISPATCH', 'READY_TO_DISPATCH', 'DISPATCH_READY'] },
-    { name: 'Dispatched', subtitle: 'Shipped to Customer', key: 3, icon: Truck, stageMatch: ['PARTIALLY_DISPATCHED', 'DISPATCHED', 'IN_TRANSIT'] },
-    { name: 'Delivered', subtitle: 'POD Received', key: 4, icon: CheckCircle2, stageMatch: ['DELIVERED', 'PAYMENT_PENDING'] },
-    { name: 'Invoiced', subtitle: 'GST Invoice Issued', key: 5, icon: FileText, stageMatch: ['INVOICED', 'INVOICE_GENERATED'] },
-    { name: 'Paid', subtitle: 'Payment Settled', key: 6, icon: DollarSign, stageMatch: ['COMPLETED', 'CLOSED', 'PAID'] }
+    { name: 'QC / PDI', subtitle: 'Compliance & Audit', key: 2, icon: ShieldCheck, stageMatch: ['READY_FOR_QC', 'QC', 'QC_INSPECTION', 'QC_HOLD', 'QC_REPORT_UPLOADED', 'PDI', 'PDI_HOLD'] },
+    { name: 'Invoice & Challan', subtitle: 'Dispatch Prep', key: 3, icon: FileText, stageMatch: ['PDI_COMPLETE', 'READY_FOR_DISPATCH', 'READY_TO_DISPATCH', 'INVOICE_GENERATED', 'DISPATCH_READY'] },
+    { name: 'Dispatched', subtitle: 'Shipped to Customer', key: 4, icon: Truck, stageMatch: ['PARTIALLY_DISPATCHED', 'DISPATCHED', 'IN_TRANSIT'] },
+    { name: 'Delivered', subtitle: 'Goods Received', key: 5, icon: CheckCircle2, stageMatch: ['DELIVERED'] },
+    { name: 'Receivable', subtitle: 'Payment Pending', key: 6, icon: DollarSign, stageMatch: ['PAYMENT_PENDING', 'INVOICED'] },
+    { name: 'Closed', subtitle: 'Order Settled', key: 7, icon: CheckCircle, stageMatch: ['COMPLETED', 'CLOSED', 'PAID'] }
   ];
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -157,18 +230,20 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   const isQcHold = linkedQc.some(q => q.qcStatus === 'QC_HOLD');
   const hasNcr = order.hasOpenNcr || isQcRejected || isQcHold;
 
-  // Active step index calculation matching the 7-stage lifecycle
+  // Active step index calculation matching the 8-stage lifecycle
   let activeStepIndex = 0;
-  const currentStage = (order.stage || order.status || 'DRAFT').toUpperCase();
+  const currentStage = (order.status || order.stage || 'DRAFT').toUpperCase();
   if (['COMPLETED', 'CLOSED', 'PAID'].includes(currentStage)) {
+    activeStepIndex = 7;
+  } else if (['PAYMENT_PENDING', 'INVOICED'].includes(currentStage)) {
     activeStepIndex = 6;
-  } else if (['INVOICED', 'INVOICE_GENERATED'].includes(currentStage)) {
+  } else if (['DELIVERED'].includes(currentStage)) {
     activeStepIndex = 5;
-  } else if (['DELIVERED', 'PAYMENT_PENDING'].includes(currentStage)) {
-    activeStepIndex = 4;
   } else if (['PARTIALLY_DISPATCHED', 'DISPATCHED', 'IN_TRANSIT'].includes(currentStage)) {
+    activeStepIndex = 4;
+  } else if (['PDI_COMPLETE', 'READY_FOR_DISPATCH', 'READY_TO_DISPATCH', 'INVOICE_GENERATED', 'DISPATCH_READY'].includes(currentStage)) {
     activeStepIndex = 3;
-  } else if (['READY_FOR_QC', 'QC', 'QC_INSPECTION', 'QC_HOLD', 'QC_REPORT_UPLOADED', 'PDI', 'PDI_HOLD', 'PDI_COMPLETE', 'READY_FOR_DISPATCH', 'READY_TO_DISPATCH', 'DISPATCH_READY'].includes(currentStage)) {
+  } else if (['READY_FOR_QC', 'MANUFACTURING_COMPLETED', 'QC', 'QC_INSPECTION', 'QC_HOLD', 'QC_REPORT_UPLOADED', 'PDI', 'PDI_HOLD'].includes(currentStage)) {
     activeStepIndex = 2;
   } else if (['CONFIRMED', 'APPROVED', 'RELEASED', 'MATERIAL_CHECKED', 'MATERIAL_CHECK', 'MATERIAL_READY', 'MATERIAL_VERIFIED', 'PROCUREMENT_PENDING', 'GRN', 'PO_SENT', 'GRN_RECEIVED', 'JOB_RELEASED', 'MATERIAL_ISSUED', 'IN_PRODUCTION', 'WITH_SUBCONTRACTOR', 'REWORK'].includes(currentStage)) {
     activeStepIndex = 1;
@@ -180,6 +255,228 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   const totalOrderedQty = (order.lines || []).reduce((sum, l) => sum + Number(l.orderQty || 0), 0);
   const totalDispatchedQty = (order.lines || []).reduce((sum, l) => sum + Number(l.dispatchedQty || 0), 0);
   const fulfillmentPercentage = totalOrderedQty > 0 ? Math.min(100, Math.round((totalDispatchedQty / totalOrderedQty) * 100)) : 0;
+
+  // ----------------------------------------------------
+  // Order Progression Interactive Handlers
+  // ----------------------------------------------------
+  
+  const handlePdiDecisionSubmit = async (pdiDecision: 'PASS' | 'FAIL') => {
+    try {
+      setIsConfirming(true);
+      setPdiError(null);
+      
+      const payload = {
+        orderPo: order.poNo || order.id,
+        pdiStatus: pdiDecision,
+        certificateNo: `PDI-COC-${Math.floor(10000 + Math.random() * 90000)}`,
+        acceptedQty: pdiAcceptedQty,
+        rejectedQty: pdiRejectedQty,
+        remarks: pdiRemarks,
+        pdiReportUrl: pdiReportUrl,
+        checklist: pdiChecklist,
+        inspectedBy: currentUser?.name || 'QC Inspector'
+      };
+
+      if (onCompletePDI) {
+        await onCompletePDI(order.id, payload);
+      } else if (onUpdateOrder) {
+        const nextStatus = pdiDecision === 'PASS' ? 'READY_TO_DISPATCH' : 'REWORK';
+        await onUpdateOrder(order.id, {
+          status: nextStatus as any,
+          stage: nextStatus as any,
+          hasOpenNcr: pdiDecision === 'FAIL',
+          progressStep: pdiDecision === 'PASS' ? 7 : 5
+        });
+      }
+
+      setShowPdiModal(false);
+    } catch (err: any) {
+      setPdiError(err?.message || 'Failed to complete PDI inspection.');
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  const handleGenerateInvoiceSubmit = async () => {
+    try {
+      setIsConfirming(true);
+      const calculatedTax = Math.round(gross * 0.18);
+      const totalInvoiceAmount = gross + calculatedTax;
+
+      const invoiceData = {
+        orderPo: order.poNo || order.id,
+        customerName: order.customerName || 'Customer Entity',
+        totalAmount: totalInvoiceAmount,
+        taxAmount: calculatedTax,
+        invoiceNo: genInvoiceNo.trim() || `INV-26-${Math.floor(1000 + Math.random() * 9000)}`,
+        invoiceDate: genInvoiceDate,
+        items: order.lines || []
+      };
+
+      if (onGenerateInvoice) {
+        await onGenerateInvoice(order.id, invoiceData);
+      } else if (onUpdateOrder) {
+        await onUpdateOrder(order.id, {
+          invoiceNo: invoiceData.invoiceNo,
+          status: 'INVOICE_GENERATED' as any,
+          stage: 'INVOICE_GENERATED' as any,
+          progressStep: 8
+        });
+      }
+
+      setShowInvoiceModal(false);
+    } catch (err: any) {
+      setConfirmError(err?.message || 'Failed to generate tax invoice.');
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  const handleGenerateChallanSubmit = async () => {
+    try {
+      setIsConfirming(true);
+      const challanData = {
+        orderPo: order.poNo || order.id,
+        challanNo: genChallanNo.trim() || formatDocumentNumber('CHL', getCurrentFinancialYear(), Math.floor(1000 + Math.random() * 8999)),
+        transporter: challanTransporter.trim(),
+        vehicleNo: challanVehicleNo.trim(),
+        driverContact: challanDriverContact.trim(),
+        remarks: challanRemarks.trim(),
+        items: order.lines || []
+      };
+
+      if (onGenerateChallan) {
+        await onGenerateChallan(order.id, challanData);
+      } else if (onUpdateOrder) {
+        await onUpdateOrder(order.id, {
+          deliveryChallanNo: challanData.challanNo,
+          transporterName: challanData.transporter,
+          status: 'READY_TO_DISPATCH' as any,
+          stage: 'READY_FOR_DISPATCH' as any,
+          progressStep: 7
+        });
+      }
+
+      setShowChallanModal(false);
+    } catch (err: any) {
+      setConfirmError(err?.message || 'Failed to generate delivery challan.');
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  const handleDispatchSubmit = async () => {
+    try {
+      setIsConfirming(true);
+      const dispatchData = {
+        dispatchDate,
+        transporter: dispatchTransporter.trim() || challanTransporter || 'VRL Logistics Ltd',
+        vehicleNo: dispatchVehicleNo.trim() || challanVehicleNo || 'MH 12 AB 4589',
+        lrNo: dispatchLrNo.trim(),
+        driverContact: dispatchDriverContact.trim(),
+        remarks: dispatchRemarks.trim(),
+        lines: order.lines || []
+      };
+
+      if (onMarkDispatched) {
+        await onMarkDispatched(order.id, dispatchData);
+      } else if (onUpdateOrder) {
+        await onUpdateOrder(order.id, {
+          status: 'DISPATCHED' as any,
+          stage: 'DISPATCHED' as any,
+          transporterName: dispatchData.transporter,
+          dispatchedAt: dispatchData.dispatchDate,
+          progressStep: 8,
+          lines: (order.lines || []).map(l => ({
+            ...l,
+            dispatchedQty: l.orderQty,
+            pendingQty: 0
+          }))
+        });
+      }
+
+      setShowDispatchModal(false);
+    } catch (err: any) {
+      setConfirmError(err?.message || 'Failed to record dispatch.');
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  const handleDeliverySubmit = async () => {
+    try {
+      setIsConfirming(true);
+      const deliveryData = {
+        deliveryDate,
+        receivedBy: deliveryReceivedBy.trim() || 'Stores Gate Security',
+        podUrl: deliveryPodUrl.trim(),
+        remarks: deliveryRemarks.trim()
+      };
+
+      if (onMarkDelivered) {
+        await onMarkDelivered(order.id, deliveryData);
+      } else if (onUpdateOrder) {
+        await onUpdateOrder(order.id, {
+          status: 'DELIVERED' as any,
+          stage: 'DELIVERED' as any,
+          podReceivedDate: deliveryData.deliveryDate,
+          podReceivedBy: deliveryData.receivedBy,
+          podDocumentUrl: deliveryData.podUrl || 'POD-CONFIRMED',
+          progressStep: 9
+        });
+      }
+
+      setShowDeliveryModal(false);
+    } catch (err: any) {
+      setConfirmError(err?.message || 'Failed to record delivery.');
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  const handleRecordPaymentSubmit = async () => {
+    try {
+      setIsConfirming(true);
+      if (paymentAmount <= 0) {
+        setPaymentError('Payment amount must be greater than ₹0.');
+        return;
+      }
+
+      const paymentData = {
+        amount: paymentAmount,
+        mode: paymentMode,
+        referenceNo: paymentRefNo.trim(),
+        paymentDate,
+        currentPaid,
+        grossAmount: gross,
+        remarks: 'Payment settled in full / partially',
+        receivedBy: currentUser?.name || 'Accounts Officer',
+        existingHistory: order.paymentHistory || []
+      };
+
+      if (onRecordPayment) {
+        await onRecordPayment(order.id, paymentData);
+      } else if (onUpdateOrder) {
+        const newTotalPaid = currentPaid + paymentAmount;
+        const isFullyPaid = newTotalPaid >= gross;
+        await onUpdateOrder(order.id, {
+          paidAmount: newTotalPaid,
+          paymentStatus: isFullyPaid ? 'PAID' : 'PARTIAL',
+          status: (isFullyPaid ? 'CLOSED' : 'PAYMENT_PENDING') as any,
+          stage: (isFullyPaid ? 'CLOSED' : 'PAYMENT_PENDING') as any,
+          closedAt: isFullyPaid ? new Date().toISOString() : undefined,
+          closedBy: isFullyPaid ? (currentUser?.name || 'Finance Controller') : undefined,
+          progressStep: isFullyPaid ? 11 : 10
+        });
+      }
+
+      setShowPaymentModal(false);
+    } catch (err: any) {
+      setPaymentError(err?.message || 'Failed to record payment.');
+    } finally {
+      setIsConfirming(false);
+    }
+  };
 
   const addEditLineItem = () => {
     setEditLines(prev => [
@@ -650,7 +947,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   const getNextAction = () => {
     if (order.status === 'CLOSED' || order.status === 'CANCELLED' || order.status === 'COMPLETED') return null;
 
-    const st = (order.stage || order.status || 'DRAFT').toUpperCase();
+    const st = (order.status || order.stage || 'DRAFT').toUpperCase();
 
     // Stage 1: DRAFT / SUBMITTED / PO_RECEIVED
     if (['DRAFT', 'SUBMITTED', 'PO_RECEIVED'].includes(st)) {
@@ -666,7 +963,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       };
     }
 
-    // Stage 1 -> 2: CONFIRMED -> go to Production and create job cards manually (one per line item)
+    // Stage 2: CONFIRMED -> go to Production to create / start job cards
     if (['CONFIRMED', 'APPROVED', 'RELEASED', 'MATERIAL_CHECKED', 'MATERIAL_CHECK', 'MATERIAL_READY', 'MATERIAL_VERIFIED', 'JOB_RELEASED', 'MATERIAL_ISSUED'].includes(st)) {
       const allowed = isRoleAuthorizedForCta(currentRole, 'CREATE_JOB_CARD');
       const lineCount = (order.lines || []).length;
@@ -692,83 +989,117 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       };
     }
 
-    // Stage 2 (Production): IN_PRODUCTION / WITH_SUBCONTRACTOR / REWORK -> advance to QCI & PDI
+    // Stage 3 (Production Floor): IN_PRODUCTION / WITH_SUBCONTRACTOR / REWORK -> Start PDI / QC
     if (['IN_PRODUCTION', 'WITH_SUBCONTRACTOR', 'REWORK'].includes(st)) {
       return {
-        label: isConfirming ? 'Advancing...' : 'Advance to QCI & PDI',
+        label: 'Start PDI / QC Inspection',
         icon: ShieldCheck,
         buttonClass: 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-indigo-600 hover:to-purple-600 text-white shadow-purple-500/25',
-        handler: handleAdvanceToQcAction,
+        handler: () => setShowPdiModal(true),
         disabled: isConfirming,
-        ownerRole: 'Production Floor Supervisor'
+        ownerRole: 'Quality & Pre-Dispatch'
       };
     }
 
-    // Stage 3 (QCI & PDI): pass quality clearance and dispatch the order
-    if (['READY_FOR_QC', 'QC', 'QC_INSPECTION', 'QC_HOLD', 'QC_REPORT_UPLOADED', 'PDI', 'PDI_HOLD', 'PDI_COMPLETE', 'READY_FOR_DISPATCH', 'READY_TO_DISPATCH', 'DISPATCH_READY'].includes(st)) {
+    // Stage 4 (QC / PDI): Enter checklist & Complete PDI
+    if (['MANUFACTURING_COMPLETED', 'READY_FOR_QC', 'QC', 'QC_INSPECTION', 'QC_HOLD', 'QC_REPORT_UPLOADED', 'PDI', 'PDI_HOLD'].includes(st)) {
+      return {
+        label: 'START QC / PDI CHECK',
+        icon: ShieldCheck,
+        buttonClass: 'bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white shadow-indigo-500/25',
+        handler: () => setShowPdiModal(true),
+        disabled: isConfirming,
+        ownerRole: 'QC Manager / Inspector'
+      };
+    }
+
+    // Stage 5 (Invoice & Challan / Ready to Dispatch): Delivery Challan & Dispatch
+    if (['PDI_COMPLETE', 'READY_FOR_DISPATCH', 'READY_TO_DISPATCH', 'INVOICE_GENERATED', 'DISPATCH_READY'].includes(st)) {
       const allowed = isRoleAuthorizedForCta(currentRole, 'GENERATE_DELIVERY_CHALLAN');
-      return {
-        label: isConfirming ? 'Dispatching...' : 'Pass QC & PDI and Dispatch',
-        icon: Truck,
-        buttonClass: 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-blue-600 hover:to-cyan-600 text-white shadow-cyan-500/25',
-        handler: handleDispatchOrderAction,
-        disabled: isConfirming || hasNcr || !allowed,
-        disabledReason: !allowed ? 'Only Dispatch Clerk or Owner can dispatch the order' : hasNcr ? 'Open NCR / QC Hold must be resolved before dispatch' : undefined,
-        ownerRole: 'Quality & Dispatch'
-      };
+      if (!order.deliveryChallanNo) {
+        return {
+          label: 'Generate Delivery Challan (Stage 9a)',
+          icon: FileText,
+          buttonClass: 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white shadow-emerald-500/25',
+          handler: () => setShowChallanModal(true),
+          disabled: isConfirming || hasNcr || !allowed,
+          disabledReason: !allowed ? 'Only Dispatch Clerk or Owner can generate delivery challan' : hasNcr ? 'Open NCR / QC Hold must be resolved before challan issuance' : undefined,
+          ownerRole: 'Quality & Dispatch'
+        };
+      } else {
+        return {
+          label: 'Mark as Dispatched (Outward Logistics)',
+          icon: Truck,
+          buttonClass: 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-blue-600 hover:to-cyan-600 text-white shadow-cyan-500/25',
+          handler: () => setShowDispatchModal(true),
+          disabled: isConfirming || hasNcr || !allowed,
+          disabledReason: !allowed ? 'Only Dispatch Clerk or Owner can dispatch the order' : hasNcr ? 'Open NCR / QC Hold must be resolved before dispatch' : undefined,
+          ownerRole: 'Quality & Dispatch'
+        };
+      }
     }
 
-    // Stage 4 (Dispatched): shipped / in transit -> Mark Delivered (Requires POD upload)
+    // Stage 6 (Dispatched): shipped / in transit -> Generate Invoice or Mark Delivered
     if (['PARTIALLY_DISPATCHED', 'DISPATCHED', 'IN_TRANSIT'].includes(st)) {
-      const allowed = isRoleAuthorizedForCta(currentRole, 'MARK_DELIVERED');
-      return {
-        label: 'Mark Delivered (Attach POD)',
-        icon: CheckCircle2,
-        buttonClass: 'bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-emerald-600 hover:to-blue-600 text-white shadow-blue-500/25',
-        handler: () => setShowPodModal(true),
-        disabled: !allowed,
-        disabledReason: !allowed ? 'Only Dispatch Clerk or Owner can mark delivered' : undefined,
-        ownerRole: 'Dispatch Logistics'
-      };
+      if (!order.invoiceNo) {
+        const allowed = isRoleAuthorizedForCta(currentRole, 'GENERATE_INVOICE');
+        return {
+          label: 'Generate Statutory GST Tax Invoice (Stage 9)',
+          icon: Receipt,
+          buttonClass: 'bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white shadow-indigo-500/25',
+          handler: () => setShowInvoiceModal(true),
+          disabled: !allowed,
+          disabledReason: !allowed ? 'Only Finance / Accounts or Owner can generate tax invoices' : undefined,
+          ownerRole: 'Accounts / Finance'
+        };
+      } else {
+        const allowed = isRoleAuthorizedForCta(currentRole, 'MARK_DELIVERED');
+        return {
+          label: 'Mark as Delivered (Confirm Goods Received)',
+          icon: CheckCircle2,
+          buttonClass: 'bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-emerald-600 hover:to-blue-600 text-white shadow-blue-500/25',
+          handler: () => setShowDeliveryModal(true),
+          disabled: !allowed,
+          disabledReason: !allowed ? 'Only Dispatch Clerk or Owner can mark delivered' : undefined,
+          ownerRole: 'Dispatch Logistics'
+        };
+      }
     }
 
-    // Stage 5 (Delivered): generate the GST tax invoice
-    if (['DELIVERED', 'PAYMENT_PENDING'].includes(st)) {
-      const allowed = isRoleAuthorizedForCta(currentRole, 'GENERATE_INVOICE');
-      return {
-        label: isConfirming ? 'Generating...' : 'Generate GST Tax Invoice',
-        icon: FileText,
-        buttonClass: 'bg-gradient-to-r from-emerald-600 to-indigo-600 hover:from-indigo-600 hover:to-emerald-600 text-white shadow-emerald-500/25',
-        handler: handleGenerateInvoiceAction,
-        disabled: isConfirming || !allowed,
-        disabledReason: !allowed ? 'Only Finance / Accounts or Owner can generate tax invoices' : undefined,
-        ownerRole: 'Finance / Accounts'
-      };
-    }
+    // Stage 7 (Delivered / Payment Pending / Invoiced): Invoicing or Payment
+    if (['DELIVERED', 'PAYMENT_PENDING', 'INVOICED'].includes(st)) {
+      if (!order.invoiceNo) {
+        const allowed = isRoleAuthorizedForCta(currentRole, 'GENERATE_INVOICE');
+        return {
+          label: 'Generate Statutory GST Tax Invoice (Stage 9)',
+          icon: Receipt,
+          buttonClass: 'bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white shadow-indigo-500/25',
+          handler: () => setShowInvoiceModal(true),
+          disabled: !allowed,
+          disabledReason: !allowed ? 'Only Finance / Accounts or Owner can generate tax invoices' : undefined,
+          ownerRole: 'Accounts / Finance'
+        };
+      }
 
-    // Stage 6 (Invoiced): settle payment; Stage 7 (Paid): close the order
-    if (['INVOICED', 'INVOICE_GENERATED'].includes(st)) {
       const isPaid = order.paymentStatus === 'PAID' || remainingOutstanding <= 0;
       if (!isPaid) {
         const allowed = isRoleAuthorizedForCta(currentRole, 'RECORD_PAYMENT');
         return {
-          label: `Record Payment (Bal: ₹${remainingOutstanding.toLocaleString('en-IN')})`,
+          label: `Record Payment Received (Bal: ₹${remainingOutstanding.toLocaleString('en-IN')})`,
           icon: CreditCard,
-          buttonClass: 'bg-gradient-to-r from-amber-600 to-emerald-600 hover:from-emerald-600 hover:to-amber-600 text-white shadow-amber-500/25',
+          buttonClass: 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white shadow-emerald-500/25',
           handler: () => setShowPaymentModal(true),
           disabled: !allowed,
           disabledReason: !allowed ? 'Only Finance / Accounts or Owner can record payments' : undefined,
           ownerRole: 'Finance / Accounts'
         };
       } else {
-        const allowed = isRoleAuthorizedForCta(currentRole, 'MARK_ORDER_CLOSED');
         return {
-          label: isConfirming ? 'Closing...' : 'Mark Order Closed (Paid in Full)',
+          label: isConfirming ? 'Closing...' : 'Order Paid in Full (Close Order)',
           icon: CheckCircle2,
           buttonClass: 'bg-gradient-to-r from-emerald-700 to-slate-800 hover:from-slate-800 hover:to-emerald-700 text-white shadow-emerald-500/25',
           handler: handleCloseOrderAction,
-          disabled: isConfirming || !allowed,
-          disabledReason: !allowed ? 'Only Finance / Accounts or Owner can close order' : undefined,
+          disabled: isConfirming,
           ownerRole: 'Finance / Accounts'
         };
       }
@@ -794,91 +1125,70 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       case 1:
         return {
           title: 'Stage 2: Production',
-          desc: 'Order confirmed. Redirect to the Production floor to create job cards manually — one per order line item, with route card and material lot filled in.',
-          targetView: 'production',
+          desc: 'Stock verified & job cards released. Track multi-operation CNC/machining progress on the shop floor.',
+          targetView: 'production-jobs',
           viewLabel: 'Open Production Floor ➔',
-          endpoint: 'POST /api/v1/production/job-cards',
-          role: 'PRODUCTION_PLANNER / PPC',
-          testActionLabel: 'Go to Create Job Card (Test)',
-          onTest: handleGoToCreateJobCard
+          endpoint: 'POST /api/v1/job-cards/:id/start-operation',
+          role: 'PLANT_HEAD / OPERATOR',
+          testActionLabel: 'Start Machining (Test)',
+          onTest: handleStartProductionAction
         };
       case 2:
         return {
-          title: 'Stage 3: QCI & PDI',
-          desc: 'Perform dimensional audits, resolve quality holds, and clear PDI inspection certificates before dispatch.',
-          targetView: 'qc',
-          secondaryView: 'pdi',
-          viewLabel: 'Open Quality Control Queue ➔',
+          title: 'Stage 3: QC / PDI Inspection',
+          desc: 'Manufacturing complete. Dimensional quality inspection and Pre-Dispatch Inspection (PDI) compliance checks are mandatory before dispatch.',
+          targetView: 'qc-pdi',
+          viewLabel: 'Open QC Bay ➔',
+          secondaryTargetView: 'qc-pdi',
           secondaryViewLabel: 'Open PDI Bay ➔',
           endpoint: 'POST /api/v1/qc/inspections/:id/review',
           role: 'QC_ADMIN / DISPATCH_QC',
-          testActionLabel: 'Advance to QCI & PDI (Test)',
-          onTest: () => {
-            onUpdateOrder?.(order.id, {
-              status: 'QC_INSPECTION',
-              stage: 'QC_INSPECTION',
-              progressStep: 5
-            });
-          }
+          testActionLabel: 'START QC / PDI CHECK',
+          onTest: () => setShowPdiModal(true)
         };
       case 3:
         return {
-          title: 'Stage 4: Dispatched',
-          desc: 'QC & PDI cleared. Dispatch the order — challan issued, line quantities shipped to the customer.',
+          title: 'Stage 4: Delivery Challan & Dispatch',
+          desc: 'QC & PDI cleared. Generate statutory Delivery Challan (Stage 9a) with allocated quantities and dispatch goods to customer.',
           targetView: 'dispatch',
           viewLabel: 'Open Dispatch Challans ➔',
-          endpoint: 'POST /api/v1/dispatch/:id/dispatch',
+          endpoint: 'POST /api/v1/dispatch',
           role: 'DISPATCH_STORE / OPS_ADMIN',
-          testActionLabel: 'Dispatch Order (Test)',
-          onTest: handleDispatchOrderAction
+          testActionLabel: order.deliveryChallanNo ? '⚡ Confirm Outward Dispatch' : '⚡ Issue Delivery Challan',
+          onTest: () => order.deliveryChallanNo ? setShowDispatchModal(true) : setShowChallanModal(true)
         };
       case 4:
         return {
-          title: 'Stage 5: Delivered',
-          desc: 'Shipment in transit / dispatched. Collect the signed POD / E-POD from the customer to mark the order delivered.',
-          targetView: 'dispatch',
-          viewLabel: 'Open Dispatch Challans ➔',
-          endpoint: 'POST /api/v1/dispatch/:id/deliver',
-          role: 'DISPATCH_STORE / OPS_ADMIN',
-          testActionLabel: 'Mark Delivered (Test)',
-          onTest: () => {
-            onUpdateOrder?.(order.id, {
-              status: 'DELIVERED',
-              stage: 'DELIVERED',
-              podDocumentUrl: order.podDocumentUrl || 'POD-SIGNED-EPOD',
-              podReceivedBy: order.podReceivedBy || 'Customer Reception',
-              progressStep: 7
-            });
-          }
-        };
-      case 5:
-        return {
-          title: 'Stage 6: Invoiced',
-          desc: 'Order delivered with POD on record. Generate the statutory GST tax invoice (INV-2526-####) for the settled quantity.',
+          title: 'Stage 5: Statutory GST Invoicing',
+          desc: 'Consignment dispatched. Issue statutory GST Tax Invoice (INV-2627-####) against the dispatch challan and line items.',
           targetView: 'invoices',
           viewLabel: 'Open Invoices & Accounts ➔',
           endpoint: 'POST /api/v1/invoices',
-          role: 'ACCOUNTS_ADMIN',
-          testActionLabel: 'Generate GST Invoice (Test)',
-          onTest: () => {
-            onUpdateOrder?.(order.id, {
-              status: 'INVOICED',
-              stage: 'INVOICED',
-              invoiceNo: order.invoiceNo || `INV-2526-${Math.floor(1000 + Math.random() * 9000)}`,
-              progressStep: 8
-            });
-          }
+          role: 'ACCOUNTS_ADMIN / FINANCE',
+          testActionLabel: '⚡ Generate GST Tax Invoice',
+          onTest: () => setShowInvoiceModal(true)
+        };
+      case 5:
+        return {
+          title: 'Stage 6: Goods Delivered & POD',
+          desc: 'Shipment delivered to customer. Verify signed Proof of Delivery (POD) and finalize billing records.',
+          targetView: 'dispatch',
+          viewLabel: 'Open Dispatch Register ➔',
+          endpoint: 'POST /api/v1/dispatch/:id/deliver',
+          role: 'DISPATCH_STORE / OPS_ADMIN',
+          testActionLabel: order.invoiceNo ? '⚡ Mark Delivered (POD)' : '⚡ Generate GST Invoice',
+          onTest: () => order.invoiceNo ? setShowDeliveryModal(true) : setShowInvoiceModal(true)
         };
       default:
         return {
-          title: 'Stage 7: Paid',
-          desc: 'Invoice issued. Record customer payments against the outstanding balance; full settlement closes the order.',
+          title: 'Stage 7: Payment Realization',
+          desc: 'Tax invoice issued. Record customer NEFT/RTGS collections against outstanding balance; full settlement closes the order.',
           targetView: 'invoices',
           viewLabel: 'Open Invoices & Accounts ➔',
           endpoint: 'POST /api/v1/invoices/:invoiceNo/pay',
-          role: 'ACCOUNTS_ADMIN',
-          testActionLabel: 'Order Settled',
-          onTest: undefined
+          role: 'ACCOUNTS_ADMIN / FINANCE',
+          testActionLabel: remainingOutstanding > 0 ? '⚡ Record Payment Received' : 'Order Settled in Full',
+          onTest: remainingOutstanding > 0 ? () => setShowPaymentModal(true) : undefined
         };
     }
   };
@@ -932,9 +1242,9 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   order.status === 'DRAFT' || order.status === 'PO_RECEIVED' || order.status === 'SUBMITTED' ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30' :
                   order.status === 'CONFIRMED' || order.status === 'APPROVED' ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-400 dark:border-blue-500/30' :
                   order.status === 'MATERIAL_CHECKED' || order.status === 'MATERIAL_CHECK' || order.status === 'MATERIAL_READY' ? 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-500/15 dark:text-indigo-400 dark:border-indigo-500/30' :
-                  order.status === 'IN_PRODUCTION' ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/30' :
-                  order.status === 'QC_INSPECTION' || order.status === 'QC' ? 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-500/15 dark:text-purple-400 dark:border-purple-500/30' :
-                  order.status === 'READY_TO_DISPATCH' || order.status === 'READY_FOR_DISPATCH' ? 'bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-500/15 dark:text-cyan-400 dark:border-cyan-500/30' :
+                  order.status === 'IN_PRODUCTION' || order.status === 'JOB_RELEASED' ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/30' :
+                  order.status === 'READY_FOR_QC' || order.status === 'MANUFACTURING_COMPLETED' || order.status === 'QC_INSPECTION' || order.status === 'QC' ? 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-500/15 dark:text-purple-400 dark:border-purple-500/30' :
+                  order.status === 'READY_TO_DISPATCH' || order.status === 'READY_FOR_DISPATCH' || order.status === 'PDI_COMPLETE' ? 'bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-500/15 dark:text-cyan-400 dark:border-cyan-500/30' :
                   order.status === 'PARTIALLY_DISPATCHED' || order.status === 'DISPATCHED' ? 'bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-500/15 dark:text-teal-400 dark:border-teal-500/30' :
                   order.status === 'CLOSED' || order.status === 'COMPLETED' ? 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700' :
                   'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30'
@@ -946,13 +1256,14 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     order.status === 'DRAFT' || order.status === 'PO_RECEIVED' || order.status === 'SUBMITTED' ? 'bg-amber-500 animate-pulse' :
                     order.status === 'CONFIRMED' || order.status === 'APPROVED' ? 'bg-blue-500' :
                     order.status === 'MATERIAL_CHECKED' || order.status === 'MATERIAL_CHECK' || order.status === 'MATERIAL_READY' ? 'bg-indigo-500' :
-                    order.status === 'IN_PRODUCTION' ? 'bg-amber-500 animate-pulse' :
+                    order.status === 'IN_PRODUCTION' || order.status === 'JOB_RELEASED' ? 'bg-amber-500 animate-pulse' :
+                    order.status === 'READY_FOR_QC' || order.status === 'MANUFACTURING_COMPLETED' ? 'bg-purple-500 animate-pulse' :
                     order.status === 'QC_INSPECTION' || order.status === 'QC' ? 'bg-purple-500' :
-                    order.status === 'READY_TO_DISPATCH' || order.status === 'READY_FOR_DISPATCH' ? 'bg-cyan-500' :
+                    order.status === 'READY_TO_DISPATCH' || order.status === 'READY_FOR_DISPATCH' || order.status === 'PDI_COMPLETE' ? 'bg-cyan-500' :
                     order.status === 'PARTIALLY_DISPATCHED' || order.status === 'DISPATCHED' ? 'bg-teal-500' :
                     order.status === 'CLOSED' || order.status === 'COMPLETED' ? 'bg-slate-400' : 'bg-emerald-500'
                   }`} />
-                  <span>{isQcRejected ? 'QC Rejected' : (isQcHold || hasNcr) ? 'QC Hold / NCR' : (order.stage || order.status).replace(/_/g, ' ')}</span>
+                  <span>{isQcRejected ? 'QC Rejected' : (isQcHold || hasNcr) ? 'QC Hold / NCR' : (order.status || order.stage || 'DRAFT').replace(/_/g, ' ')}</span>
                 </span>
               </div>
               <p className={`text-xs mt-1 flex items-center gap-1.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
@@ -964,7 +1275,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             </div>
           </div>
 
-          {/* Action Buttons Toolbar */}
+          {/* Clean Header Info Strip (No Floating Workflow Buttons) */}
           <div className="flex items-center gap-2.5">
             <button
               onClick={() => setShowUploadModal(true)}
@@ -977,43 +1288,6 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               <Upload className="w-3.5 h-3.5" />
               <span>{poFileName ? 'PO File Attached' : 'Attach PO'}</span>
             </button>
-
-            {(() => {
-              const nextAction = getNextAction();
-              if (!nextAction) return null;
-              const ActionIcon = nextAction.icon;
-              return (
-                <button
-                  disabled={nextAction.disabled}
-                  title={nextAction.disabledReason}
-                  onClick={nextAction.handler}
-                  className={`px-4 py-2 rounded-2xl ${nextAction.buttonClass} text-xs font-bold font-mono transition-all cursor-pointer flex items-center gap-1.5 shadow-lg hover:scale-[1.02] active:scale-[0.98] ${
-                    nextAction.disabled ? 'opacity-60 cursor-not-allowed hover:scale-100' : ''
-                  }`}
-                >
-                  <ActionIcon className="w-3.5 h-3.5" />
-                  <span>{nextAction.label}</span>
-                </button>
-              );
-            })()}
-
-            {order.status !== 'CLOSED' && order.status !== 'CANCELLED' && (
-              <>
-                <button
-                  onClick={openEditModal}
-                  className="px-4 py-2 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold font-mono transition-all cursor-pointer flex items-center gap-1.5 shadow-lg shadow-[#5B75F8]/25 hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  <Edit3 className="w-3.5 h-3.5" />
-                  <span>Edit Order</span>
-                </button>
-                <button
-                  onClick={() => onCancelOrder?.(order.id)}
-                  className="px-3.5 py-2 rounded-2xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold text-xs font-mono transition-all cursor-pointer"
-                >
-                  Cancel Order
-                </button>
-              </>
-            )}
           </div>
         </div>
 
@@ -1053,7 +1327,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 Production & Order Fulfillment Pipeline
               </h2>
               <p className={`text-[11px] font-mono mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                Gated 7-stage verification • Stage {activeStepIndex + 1} of 7 Active
+                Gated Lifecycle Stages • Single Source of Truth Action Gateways
               </p>
             </div>
           </div>
@@ -1061,7 +1335,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             <span className={`px-3 py-1 rounded-xl text-xs font-mono font-bold border ${
               isDarkMode ? 'bg-indigo-500/10 border-indigo-500/30 text-[#7B92FF]' : 'bg-indigo-50 border-indigo-200 text-indigo-700'
             }`}>
-              {Math.round(((activeStepIndex + 1) / 7) * 100)}% Milestone Completed
+              Status: {(order.status || order.stage || 'DRAFT').replace(/_/g, ' ')}
             </span>
           </div>
         </div>
@@ -1072,7 +1346,6 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             {steps.map((st, idx) => {
               const isCompleted = idx < activeStepIndex;
               const isCurrent = idx === activeStepIndex;
-              const isUpcoming = idx > activeStepIndex;
               const StepIcon = st.icon;
 
               return (
@@ -1109,27 +1382,20 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     }`}>
                       {st.name}
                     </span>
-
-                    <span className={`mt-0.5 text-[10px] font-mono block leading-tight ${
-                      isCurrent 
-                        ? 'text-indigo-400 font-semibold' 
-                        : isCompleted 
-                        ? 'text-emerald-500 font-medium' 
-                        : 'text-slate-400/80 dark:text-slate-500'
+                    <span className={`text-[10px] font-mono mt-0.5 block ${
+                      isCurrent ? 'text-indigo-400 font-semibold' : 'text-slate-400 dark:text-slate-500'
                     }`}>
-                      {isCompleted ? '✓ Cleared' : isCurrent ? '● In Progress' : st.subtitle}
+                      {st.subtitle}
                     </span>
                   </div>
 
-                  {/* Connecting Line */}
+                  {/* Connector Line between Steps */}
                   {idx < steps.length - 1 && (
-                    <div className="flex-1 self-start mt-6 mx-2 min-w-[30px]">
+                    <div className="flex-1 self-center px-2 -mt-6">
                       <div className={`h-1 rounded-full transition-all duration-500 ${
                         idx < activeStepIndex 
-                          ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 shadow-sm shadow-emerald-500/20' 
-                          : idx === activeStepIndex
-                          ? 'bg-gradient-to-r from-[#5B75F8] to-slate-300 dark:to-slate-700 animate-pulse'
-                          : isDarkMode ? 'bg-slate-800' : 'bg-slate-200'
+                          ? 'bg-gradient-to-r from-emerald-500 to-teal-500 shadow-xs shadow-emerald-500/30' 
+                          : 'bg-slate-200 dark:bg-slate-800'
                       }`} />
                     </div>
                   )}
@@ -1138,173 +1404,585 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             })}
           </div>
         </div>
-
-        {/* 2.5 Stage Testing & Direct Navigation Shortcut Banner */}
-        <div className={`mt-6 p-4 rounded-2xl border flex flex-wrap items-center justify-between gap-4 font-mono text-xs ${
-          isDarkMode 
-            ? 'bg-slate-950/70 border-[#5B75F8]/30' 
-            : 'bg-indigo-50/70 border-indigo-200'
-        }`}>
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-[#5B75F8]/20 text-[#7B92FF] font-bold">
-              ⚡ Stage Gateway
-            </div>
-            <div>
-              <div className="font-bold text-sm font-sans flex items-center gap-2">
-                <span>{stageShortcut.title}</span>
-                <span className={`text-[10px] px-2 py-0.5 rounded-md font-mono ${
-                  isDarkMode ? 'bg-slate-800 text-slate-300 border border-slate-700' : 'bg-white text-slate-700 border border-slate-300'
-                }`}>
-                  {stageShortcut.role}
-                </span>
-              </div>
-              <p className={`text-[11px] mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                {stageShortcut.desc} • <code className="text-[#5B75F8] dark:text-[#7B92FF] font-bold">{stageShortcut.endpoint}</code>
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {stageShortcut.targetView && (
-              <button
-                onClick={() => onNavigate?.(stageShortcut.targetView)}
-                className="px-3.5 py-2 rounded-xl bg-[#5B75F8] hover:bg-indigo-600 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:scale-105"
-              >
-                <span>{stageShortcut.viewLabel}</span>
-              </button>
-            )}
-
-            {stageShortcut.secondaryView && (
-              <button
-                onClick={() => onNavigate?.(stageShortcut.secondaryView!)}
-                className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:scale-105"
-              >
-                <span>{stageShortcut.secondaryViewLabel}</span>
-              </button>
-            )}
-
-            {stageShortcut.onTest && (
-              <button
-                onClick={stageShortcut.onTest}
-                className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 hover:scale-105 ${
-                  isDarkMode 
-                    ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20' 
-                    : 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                }`}
-                title="Testing Quick Action: Transition order to next verified state"
-              >
-                <span>⚡ {stageShortcut.testActionLabel}</span>
-              </button>
-            )}
-          </div>
-        </div>
-
       </div>
 
-      {/* 2.5 Stage 3 Material Availability & BOM Verification Hub */}
-      {['CONFIRMED', 'APPROVED', 'MATERIAL_SHORT', 'MATERIAL_CHECK', 'MATERIAL_READY', 'IN_PRODUCTION'].includes((order.status || '').toUpperCase()) && (
-        <div className={`p-6 rounded-3xl border space-y-4 font-mono text-xs transition-all shadow-lg ${
-          (order.status || '').toUpperCase() === 'MATERIAL_READY' || (order.status || '').toUpperCase() === 'IN_PRODUCTION'
-            ? isDarkMode ? 'bg-emerald-950/30 border-emerald-500/30 text-white' : 'bg-emerald-50/70 border-emerald-200 text-slate-900'
-            : (order.status || '').toUpperCase() === 'MATERIAL_SHORT'
-            ? isDarkMode ? 'bg-amber-950/30 border-amber-500/30 text-white' : 'bg-amber-50/70 border-amber-200 text-slate-900'
-            : isDarkMode ? 'bg-slate-900/80 border-slate-800/80 text-white' : 'bg-white border-slate-200 text-slate-900'
-        }`}>
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3.5 border-slate-200 dark:border-slate-800">
-            <div className="flex items-center gap-2.5">
-              <div className={`p-2 rounded-xl ${
-                (order.status || '').toUpperCase() === 'MATERIAL_READY' || (order.status || '').toUpperCase() === 'IN_PRODUCTION'
-                  ? 'bg-emerald-500/20 text-emerald-400'
-                  : (order.status || '').toUpperCase() === 'MATERIAL_SHORT'
-                  ? 'bg-amber-500/20 text-amber-400'
-                  : 'bg-[#5B75F8]/20 text-[#7B92FF]'
-              }`}>
-                <Layers className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-sm uppercase tracking-wide">
-                    Stage 3: BOM Explosion & Material Verification
-                  </h3>
-                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                    (order.status || '').toUpperCase() === 'MATERIAL_READY' || (order.status || '').toUpperCase() === 'IN_PRODUCTION'
-                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                      : (order.status || '').toUpperCase() === 'MATERIAL_SHORT'
-                      ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
-                      : 'bg-blue-500/20 text-blue-400 border border-blue-500/40'
-                  }`}>
-                    {(order.status || '').toUpperCase() === 'MATERIAL_READY' || (order.status || '').toUpperCase() === 'IN_PRODUCTION'
-                      ? '✓ Material Ready & Reserved'
-                      : (order.status || '').toUpperCase() === 'MATERIAL_SHORT'
-                      ? '⚠ Material Shortage'
-                      : 'Pending Availability Check'}
-                  </span>
-                </div>
-                <p className={`text-[11px] mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                  Live BOM explosion verified against warehouse inventory stock. Determines Job Card release eligibility.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                disabled={isRunningMaterialCheck}
-                onClick={handleMaterialCheckAction}
-                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-md shadow-[#5B75F8]/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isRunningMaterialCheck ? 'animate-spin' : ''}`} />
-                <span>{isRunningMaterialCheck ? 'Checking...' : 'Re-run Material Check'}</span>
-              </button>
-
-              {isOwner && (
-                <button
-                  onClick={() => setShowOverrideModal(true)}
-                  className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    isDarkMode 
-                      ? 'border-purple-500/40 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20' 
-                      : 'border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100'
-                  }`}
-                  title="Owner Override: Bypass material check for dev/testing with mandatory audit reason"
-                >
-                  <Zap className="w-3.5 h-3.5" />
-                  <span>Owner Override</span>
-                </button>
-              )}
-            </div>
+      {/* 2.5 Unified Stage Gateway Panels (Single Source of Truth) */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between px-1">
+          <div>
+            <h2 className="font-bold text-sm uppercase tracking-wider flex items-center gap-2">
+              <Layers className="w-4 h-4 text-[#5B75F8] dark:text-[#7B92FF]" />
+              <span>Stage Gateway Panels</span>
+            </h2>
+            <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              One Stage Gateway Panel Per Stage • Exact 1 Active Stage at a time
+            </p>
           </div>
-
-          {materialCheckFeedback && (
-            <div className={`p-3 rounded-2xl border text-xs flex items-center gap-2 ${
-              materialCheckFeedback.ready
-                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
-            }`}>
-              {materialCheckFeedback.ready ? <CheckCircle className="w-4 h-4 shrink-0" /> : <AlertTriangle className="w-4 h-4 shrink-0" />}
-              <span>{materialCheckFeedback.message}</span>
-            </div>
-          )}
-
-          {(order.status || '').toUpperCase() === 'MATERIAL_SHORT' && (
-            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-amber-400 text-xs flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4 text-amber-400" />
-                  Shortage Routing Active (Stage 3): Purchase Requisitions Auto-Created
-                </span>
-                <button 
-                  onClick={() => onNavigate?.('inventory')} 
-                  className="px-3 py-1 rounded-lg bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30 text-[11px] font-bold cursor-pointer"
-                >
-                  Open Procurement Requisitions ➔
-                </button>
-              </div>
-              <p className="text-[11px] text-slate-400">
-                Job Card release is gated until required raw materials are procured via GRN or overridden by the Owner.
-              </p>
-            </div>
-          )}
         </div>
-      )}
+
+        {(() => {
+          const norm = normalizeOrderState(order.stage || order.status);
+          
+          const stageDefinitions = [
+            {
+              id: 'stage-1',
+              stageNumber: 'Stage 1',
+              name: 'PO Received & Order Commercials',
+              role: 'Sales / Order Desk',
+              description: 'Review customer PO terms, delivery schedule, item specifications, and confirm order into production pipeline.',
+              icon: FileText,
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
+                ['DRAFT', 'SUBMITTED'].includes(n) || ['DRAFT', 'PO_RECEIVED', 'SUBMITTED', 'PENDING_REVIEW'].includes((o.status || '').toUpperCase()),
+              renderActions: () => {
+                const allowed = isRoleAuthorizedForCta(currentRole, 'CONFIRM_ORDER');
+                return (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      onClick={openEditModal}
+                      className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        isDarkMode 
+                          ? 'border-indigo-500/40 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20' 
+                          : 'border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
+                      }`}
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span>Request Revision / Edit</span>
+                    </button>
+                    <button
+                      disabled={isConfirming || !allowed}
+                      onClick={handleConfirmAction}
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white text-xs font-bold shadow-lg shadow-emerald-500/20 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>{isConfirming ? 'Confirming...' : 'Confirm Order'}</span>
+                    </button>
+                    <button
+                      onClick={() => onCancelOrder?.(order.id)}
+                      className="px-3 py-2 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 text-xs font-bold cursor-pointer transition-all"
+                    >
+                      <XCircle className="w-3.5 h-3.5" />
+                      <span>Cancel</span>
+                    </button>
+                  </div>
+                );
+              }
+            },
+            {
+              id: 'stage-2',
+              stageNumber: 'Stage 2',
+              name: 'Order Release Planning',
+              role: 'Production Planner (PPC)',
+              description: 'Commercials confirmed. Verify drawing revisions, plan shop floor release, or raise change order.',
+              icon: Layers,
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
+                n === 'APPROVED' || ['CONFIRMED', 'APPROVED', 'PO_APPROVED'].includes((o.status || '').toUpperCase()),
+              renderActions: () => (
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={openEditModal}
+                    className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      isDarkMode 
+                        ? 'border-purple-500/40 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20' 
+                        : 'border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100'
+                    }`}
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>Raise Change Order</span>
+                  </button>
+                  <button
+                    onClick={handleMaterialCheckAction}
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold shadow-lg shadow-[#5B75F8]/20 transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Proceed to Material Check</span>
+                  </button>
+                </div>
+              )
+            },
+            {
+              id: 'stage-3',
+              stageNumber: 'Stage 3',
+              name: 'BOM Explosion & Material Verification',
+              role: 'Stores & Material Control',
+              description: 'Live BOM explosion verified against warehouse inventory stock. Determines Job Card release eligibility.',
+              icon: Package,
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
+                ['RELEASED', 'PENDING_VERIFICATION', 'MATERIAL_CHECK'].includes(n) || ['MATERIAL_CHECK', 'PENDING_VERIFICATION'].includes((o.status || '').toUpperCase()),
+              renderActions: () => (
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    disabled={isRunningMaterialCheck}
+                    onClick={handleMaterialCheckAction}
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold shadow-md shadow-[#5B75F8]/20 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isRunningMaterialCheck ? 'animate-spin' : ''}`} />
+                    <span>{isRunningMaterialCheck ? 'Checking...' : 'Re-run Material Check'}</span>
+                  </button>
+                  {isOwner && (
+                    <button
+                      onClick={() => setShowOverrideModal(true)}
+                      className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        isDarkMode 
+                          ? 'border-purple-500/40 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20' 
+                          : 'border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100'
+                      }`}
+                    >
+                      <Zap className="w-3.5 h-3.5" />
+                      <span>Owner Override</span>
+                    </button>
+                  )}
+                </div>
+              )
+            },
+            {
+              id: 'stage-4',
+              stageNumber: 'Stage 4',
+              name: 'Material Verified',
+              role: 'Stores & Material Control',
+              description: 'Raw material allocation verified and reserved for job card cutting.',
+              icon: CheckCircle2,
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
+                n === 'MATERIAL_SHORT' || ['MATERIAL_SHORT', 'MATERIAL_SHORTAGE'].includes((o.status || '').toUpperCase()),
+              renderActions: () => (
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => onNavigate?.('inventory')}
+                    className="px-3.5 py-2 rounded-xl bg-amber-500/20 text-amber-500 dark:text-amber-300 border border-amber-500/40 text-xs font-bold cursor-pointer hover:bg-amber-500/30 flex items-center gap-1.5"
+                  >
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    <span>Open Purchase Requisitions ➔</span>
+                  </button>
+                </div>
+              )
+            },
+            {
+              id: 'stage-5',
+              stageNumber: 'Stage 5',
+              name: 'Procurement',
+              role: 'Purchase / Procurement',
+              description: 'Shortage identified. Purchase orders issued to raw material vendors.',
+              icon: Building,
+              isConditional: (o: CustomerOrder) => ['PROCUREMENT_PENDING', 'PO_SENT', 'GRN', 'GRN_PENDING', 'MATERIAL_SHORT'].includes((o.status || o.stage || '').toUpperCase()),
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
+                n === 'PROCUREMENT_PENDING' || ['PROCUREMENT_PENDING', 'PO_SENT', 'UNDER_PROCUREMENT'].includes((o.status || '').toUpperCase()),
+              renderActions: () => (
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => onNavigate?.('inventory')}
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-500 text-white text-xs font-bold cursor-pointer shadow-md shadow-amber-500/20 hover:from-orange-500 hover:to-amber-600 flex items-center gap-1.5"
+                  >
+                    <Building className="w-3.5 h-3.5" />
+                    <span>Create Purchase Order</span>
+                  </button>
+                </div>
+              )
+            },
+            {
+              id: 'stage-5a',
+              stageNumber: 'Stage 5a',
+              name: 'Goods Receipt',
+              role: 'Stores & Inward QC',
+              description: 'Inward shipment inspection and warehouse Goods Receipt Note (GRN) entry.',
+              icon: Package,
+              isConditional: (o: CustomerOrder) => ['GRN', 'GRN_PENDING', 'AWAITING_GRN', 'PROCUREMENT_PENDING'].includes((o.status || o.stage || '').toUpperCase()),
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
+                n === 'GRN' || ['GRN', 'GRN_PENDING', 'AWAITING_GRN'].includes((o.status || '').toUpperCase()),
+              renderActions: () => (
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => onNavigate?.('inventory')}
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 text-white text-xs font-bold cursor-pointer shadow-md shadow-teal-500/20 hover:from-emerald-600 hover:to-teal-600 flex items-center gap-1.5"
+                  >
+                    <Package className="w-3.5 h-3.5" />
+                    <span>Record GRN</span>
+                  </button>
+                </div>
+              )
+            },
+            {
+              id: 'stage-6',
+              stageNumber: 'Stage 6',
+              name: 'Job Card Creation',
+              role: 'Production Planner (PPC)',
+              description: 'BOM raw materials issued from stores. Route card operations scheduled for machine allocation.',
+              icon: FileCheck,
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
+                ['MATERIAL_READY', 'JOB_RELEASED'].includes(n) || ['MATERIAL_READY', 'READY_FOR_PRODUCTION', 'PLANNING', 'MATERIAL_ISSUED', 'MATERIAL_CHECKED', 'MATERIAL_VERIFIED'].includes((o.status || '').toUpperCase()),
+              renderActions: () => {
+                const allowed = isRoleAuthorizedForCta(currentRole, 'CREATE_JOB_CARD');
+                const lineCount = (order.lines || []).length;
+                return (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      disabled={!allowed || lineCount === 0}
+                      onClick={handleGoToCreateJobCard}
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-500 hover:from-orange-500 hover:to-amber-600 text-white text-xs font-bold shadow-md shadow-amber-500/20 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      <span>Create Job Card ({lineCount} item{lineCount === 1 ? '' : 's'})</span>
+                    </button>
+                  </div>
+                );
+              }
+            },
+            {
+              id: 'stage-6a',
+              stageNumber: 'Stage 6a',
+              name: 'Subcontract Operations',
+              role: 'Outwork & Subcontract Desk',
+              description: 'External vendor processing for heat treatment, plating, or specialized machining operations.',
+              icon: RefreshCw,
+              isConditional: (o: CustomerOrder) => ['WITH_SUBCONTRACTOR', 'OUTWORK_DISPATCHED', 'OUTWORK_RECEIVED'].includes((o.status || o.stage || '').toUpperCase()),
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
+                ['WITH_SUBCONTRACTOR', 'OUTWORK_DISPATCHED', 'OUTWORK_RECEIVED'].includes((o.status || '').toUpperCase()),
+              renderActions: () => (
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => onNavigate?.('production')}
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-indigo-600 hover:to-purple-600 text-white text-xs font-bold shadow-md shadow-purple-500/20 transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Issue / Receive Subcontractor Outwork</span>
+                  </button>
+                </div>
+              )
+            },
+            {
+              id: 'stage-7',
+              stageNumber: 'Stage 7',
+              name: 'Manufacturing Execution',
+              role: 'Shop Floor & Machine Operators',
+              description: 'Active CNC turning, milling, grinding, and route card operation execution on shop floor.',
+              icon: Flame,
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
+                n === 'IN_PRODUCTION' || ['IN_PRODUCTION', 'IN_PROGRESS', 'MANUFACTURING'].includes((o.status || '').toUpperCase()),
+              renderActions: () => (
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => onNavigate?.('production')}
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-indigo-600 hover:to-purple-600 text-white text-xs font-bold shadow-md shadow-purple-500/20 transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Flame className="w-3.5 h-3.5" />
+                    <span>Log Production / Start Operations</span>
+                  </button>
+                </div>
+              )
+            },
+            {
+              id: 'stage-7b',
+              stageNumber: 'Stage 7b',
+              name: 'Manufacturing Complete',
+              role: 'Production Supervisor',
+              description: 'All route card machining operations completed and logged on shop floor. Ready for QC clearance.',
+              icon: CheckCircle,
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
+                ['MANUFACTURING_COMPLETED', 'READY_FOR_QC'].includes((o.status || '').toUpperCase()),
+              renderActions: () => (
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => onNavigate?.('qc')}
+                    className="px-3.5 py-2 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 text-xs font-bold cursor-pointer hover:bg-indigo-500/30 flex items-center gap-1.5"
+                  >
+                    <span>Proceed to QC Queue ➔</span>
+                  </button>
+                </div>
+              )
+            },
+            {
+              id: 'stage-8',
+              stageNumber: 'Stage 8',
+              name: 'Quality Control',
+              role: 'QC Inspector',
+              description: 'Dimensional audit, surface finish inspection, and tolerance verification against drawing.',
+              icon: ShieldCheck,
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
+                ['QC', 'QC_INSPECTION'].includes(n) || ['QC', 'QC_INSPECTION', 'QC_IN_PROGRESS', 'INSPECTION_PENDING'].includes((o.status || '').toUpperCase()),
+              renderActions: () => (
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => onNavigate?.('qc')}
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white text-xs font-bold shadow-md shadow-indigo-500/20 transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>Upload Quality Report / Perform QC</span>
+                  </button>
+                </div>
+              )
+            },
+            {
+              id: 'stage-8a',
+              stageNumber: 'Stage 8a',
+              name: 'Pre-Dispatch Inspection (PDI)',
+              role: 'Quality & Pre-Dispatch Inspector',
+              description: 'Final compliance inspection, visual check, anti-rust coating, and protective packaging verification.',
+              icon: ClipboardCheck,
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
+                ['PDI', 'PDI_HOLD', 'QC_REPORT_UPLOADED'].includes(n) || ['PDI', 'PDI_PENDING', 'AWAITING_PDI'].includes((o.status || '').toUpperCase()),
+              renderActions: () => (
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => setShowPdiModal(true)}
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white text-xs font-bold shadow-md shadow-indigo-500/20 transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <ClipboardCheck className="w-3.5 h-3.5" />
+                    <span>Upload PDI Report / Conduct Inspection</span>
+                  </button>
+                </div>
+              )
+            },
+            {
+              id: 'stage-8b',
+              stageNumber: 'Stage 8b',
+              name: 'QC Decision & Clearance',
+              role: 'Quality Gatekeeper',
+              description: 'Quality verification sign-off and Certificate of Compliance (CoC) clearance.',
+              icon: ShieldAlert,
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
+                ['REWORK', 'QC_HOLD'].includes(n) || ['REWORK', 'QC_HOLD'].includes((o.status || '').toUpperCase()) || isQcHold || hasNcr,
+              renderActions: () => (
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => setShowPdiModal(true)}
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>Mark Ready to Dispatch</span>
+                  </button>
+                  <button
+                    onClick={() => setShowPdiModal(true)}
+                    className="px-3.5 py-2 rounded-xl bg-rose-500/10 text-rose-500 dark:text-rose-400 border border-rose-500/30 text-xs font-bold cursor-pointer hover:bg-rose-500/20 flex items-center gap-1.5"
+                  >
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    <span>Raise NCR & Send to Rework</span>
+                  </button>
+                </div>
+              )
+            },
+            {
+              id: 'stage-9a',
+              stageNumber: 'Stage 9a',
+              name: 'Delivery Challan & Dispatch',
+              role: 'Dispatch & Shipping Clerk',
+              description: 'Pre-Dispatch Quality Inspection cleared. Issue statutory Delivery Challan (CHL-2627-####) and dispatch finished parts.',
+              icon: Truck,
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
+                ['READY_FOR_DISPATCH', 'PDI_COMPLETE', 'DISPATCH_READY'].includes(n) || ['READY_TO_DISPATCH', 'READY_FOR_DISPATCH', 'PDI_COMPLETE', 'DISPATCH_READY'].includes((o.status || '').toUpperCase()),
+              renderActions: () => {
+                const allowed = isRoleAuthorizedForCta(currentRole, 'GENERATE_DELIVERY_CHALLAN');
+                return (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {!order.deliveryChallanNo ? (
+                      <button
+                        disabled={isConfirming || hasNcr || !allowed}
+                        onClick={() => setShowChallanModal(true)}
+                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                        <span>Create Delivery Challan</span>
+                      </button>
+                    ) : (
+                      <button
+                        disabled={isConfirming || hasNcr || !allowed}
+                        onClick={() => setShowDispatchModal(true)}
+                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-blue-600 hover:to-cyan-600 text-white text-xs font-bold shadow-md shadow-cyan-500/20 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                      >
+                        <Truck className="w-3.5 h-3.5" />
+                        <span>Mark In Transit (Confirm Dispatch)</span>
+                      </button>
+                    )}
+                  </div>
+                );
+              }
+            },
+            {
+              id: 'stage-9',
+              stageNumber: 'Stage 9',
+              name: 'GST Tax Invoicing',
+              role: 'Accounts & Finance Controller',
+              description: 'Statutory GST Tax Invoice (INV-2627-####) generation against outward dispatch challan.',
+              icon: Receipt,
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
+                (['DISPATCHED', 'PARTIALLY_DISPATCHED', 'INVOICE_GENERATED', 'INVOICED'].includes(n) || ['DISPATCHED', 'PARTIALLY_DISPATCHED'].includes((o.status || '').toUpperCase())) && (!o.invoiceNo || o.invoiceNo === ''),
+              renderActions: () => {
+                const allowed = isRoleAuthorizedForCta(currentRole, 'GENERATE_INVOICE');
+                return (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      disabled={isConfirming || !allowed}
+                      onClick={() => setShowInvoiceModal(true)}
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white text-xs font-bold shadow-md shadow-indigo-500/20 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <Receipt className="w-3.5 h-3.5" />
+                      <span>Generate GST Tax Invoice</span>
+                    </button>
+                  </div>
+                );
+              }
+            },
+            {
+              id: 'stage-10a',
+              stageNumber: 'Stage 10a',
+              name: 'Customer Delivery Confirmation',
+              role: 'Logistics & Proof of Delivery (POD)',
+              description: 'Outward shipping in transit to customer site. Confirm delivery arrival with signed Proof of Delivery (POD).',
+              icon: CheckCircle2,
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
+                (n === 'IN_TRANSIT' || ['IN_TRANSIT', 'DISPATCHED'].includes((o.status || '').toUpperCase())) && !['DELIVERED', 'COMPLETED', 'CLOSED'].includes((o.status || '').toUpperCase()),
+              renderActions: () => (
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => setShowDeliveryModal(true)}
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-emerald-600 hover:to-blue-600 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Mark Delivered (Attach POD)</span>
+                  </button>
+                </div>
+              )
+            },
+            {
+              id: 'stage-11',
+              stageNumber: 'Stage 11',
+              name: 'Commercial Payment Settlement',
+              role: 'Accounts Receivable',
+              description: 'Accounts receivable settlement. Settle outstanding customer invoice collections.',
+              icon: CreditCard,
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
+                (o.status === 'DELIVERED' || n === 'DELIVERED' || n === 'PAYMENT_PENDING') && remainingOutstanding > 0 && o.paymentStatus !== 'PAID',
+              renderActions: () => (
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => setShowPaymentModal(true)}
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <CreditCard className="w-3.5 h-3.5" />
+                    <span>Record Payment Received (₹{remainingOutstanding.toLocaleString('en-IN')})</span>
+                  </button>
+                </div>
+              )
+            },
+            {
+              id: 'stage-11a',
+              stageNumber: 'Stage 11a',
+              name: 'Order Closure',
+              role: 'Finance Controller / Owner',
+              description: 'Order lifecycle complete. All line items delivered and accounts receivable settled in full.',
+              icon: Lock,
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
+                (o.status === 'DELIVERED' && (remainingOutstanding <= 0 || o.paymentStatus === 'PAID')) || ['COMPLETED', 'CLOSED'].includes((o.status || '').toUpperCase()),
+              renderActions: () => {
+                const canClose = (order.status === 'DELIVERED' || (order.status || '').toUpperCase() === 'CLOSED') && remainingOutstanding <= 0;
+                return (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {order.status !== 'CLOSED' && order.status !== 'COMPLETED' ? (
+                      <button
+                        disabled={isConfirming || !canClose}
+                        onClick={handleCloseOrderAction}
+                        title={!canClose ? 'Order must be Delivered and fully Paid before closing' : undefined}
+                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Mark Order Closed</span>
+                      </button>
+                    ) : (
+                      <span className="px-3 py-1 rounded-xl text-xs font-bold bg-slate-800 text-slate-400 border border-slate-700">
+                        Order Closed & Archived
+                      </span>
+                    )}
+                  </div>
+                );
+              }
+            }
+          ];
+
+          const visibleStages = stageDefinitions.filter(s => !s.isConditional || s.isConditional(order));
+
+          let activeIndex = 0;
+          for (let i = 0; i < visibleStages.length; i++) {
+            if (visibleStages[i].matchCurrent(norm, order)) {
+              activeIndex = i;
+              break;
+            }
+          }
+          if (order.status === 'CLOSED' || order.status === 'COMPLETED') {
+            activeIndex = visibleStages.length - 1;
+          }
+
+          const currentStageDef = visibleStages[activeIndex] || visibleStages[0];
+          if (!currentStageDef) return null;
+
+          const StageIcon = currentStageDef.icon;
+          const isClosed = order.status === 'CLOSED' || order.status === 'COMPLETED';
+
+          return (
+            <div className="space-y-2.5">
+              <div
+                key={currentStageDef.id}
+                className={`p-5 sm:p-6 rounded-2xl sm:rounded-3xl border transition-all ${
+                  isDarkMode
+                    ? 'bg-gradient-to-r from-slate-900/95 via-indigo-950/40 to-slate-900/95 border-[#5B75F8]/50 ring-1 ring-[#5B75F8]/30 shadow-2xl text-white'
+                    : 'bg-gradient-to-r from-indigo-50/90 via-white to-blue-50/90 border-indigo-200 ring-1 ring-indigo-300 shadow-lg text-slate-900'
+                }`}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-start sm:items-center gap-3.5">
+                    <div className={`p-3 rounded-2xl shrink-0 transition-all ${
+                      isDarkMode
+                        ? 'bg-gradient-to-br from-[#5B75F8]/25 to-indigo-500/25 text-[#7B92FF] border border-[#5B75F8]/40 shadow-sm'
+                        : 'bg-indigo-100/80 text-indigo-700 border border-indigo-200 shadow-sm'
+                    }`}>
+                      <StageIcon className="w-6 h-6" />
+                    </div>
+
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-md font-mono ${
+                          isDarkMode
+                            ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/30'
+                            : 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                        }`}>
+                          {currentStageDef.stageNumber}
+                        </span>
+
+                        <h3 className={`font-bold text-base tracking-tight ${
+                          isDarkMode ? 'text-white' : 'text-slate-900'
+                        }`}>
+                          {currentStageDef.name}
+                        </h3>
+
+                        <span className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1.5 ${
+                          isClosed
+                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                            : 'bg-indigo-500/20 text-[#7B92FF] border border-indigo-500/40 animate-pulse'
+                        }`}>
+                          {isClosed ? '✓ Order Closed' : '● Active Stage'}
+                        </span>
+
+                        <span className={`hidden sm:inline text-[10px] font-mono px-2 py-0.5 rounded-md ${
+                          isDarkMode ? 'bg-slate-800/80 text-slate-300 border border-slate-700' : 'bg-slate-100 text-slate-700 border border-slate-200'
+                        }`}>
+                          {currentStageDef.role}
+                        </span>
+                      </div>
+
+                      <p className={`text-xs mt-1.5 leading-relaxed ${
+                        isDarkMode ? 'text-slate-300' : 'text-slate-600'
+                      }`}>
+                        {currentStageDef.description}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons Right-Aligned */}
+                  <div className="shrink-0">
+                    {currentStageDef.renderActions && currentStageDef.renderActions()}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+      </div>
 
       {/* 3. Executive KPI & Order Metadata Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 font-mono">
@@ -1787,119 +2465,656 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         </div>
       )}
 
-      {/* Proof of Delivery (POD) Hard Gate Modal */}
-      {showPodModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-mono text-xs z-10 shadow-2xl ${
-            isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+      {/* 1. PRE-DISPATCH INSPECTION (PDI) MODAL */}
+      {showPdiModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
+          <div className={`relative w-full max-w-xl rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${
+            isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900 shadow-slate-200/50'
           }`}>
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400">
-                  <CheckCircle2 className="w-4 h-4" />
+            {/* Header */}
+            <div className={`flex items-center justify-between border-b pb-4 ${
+              isDarkMode ? 'border-slate-800' : 'border-slate-200'
+            }`}>
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-gradient-to-br from-[#5B75F8]/20 to-indigo-500/20 text-[#5B75F8] dark:text-[#7B92FF]">
+                  <ClipboardCheck className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm uppercase text-emerald-400">Attach Proof of Delivery (POD)</h3>
-                  <p className="text-[11px] text-slate-400">PRD Hard Gate: Mandatory verification before mark as Delivered</p>
+                  <h3 className="font-bold text-sm uppercase tracking-tight text-[#5B75F8] dark:text-[#7B92FF]">
+                    Pre-Dispatch Inspection (PDI)
+                  </h3>
+                  <p className={`text-[11px] mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                    Quality verification & Compliance Certificate Clearance
+                  </p>
                 </div>
               </div>
-              <button onClick={() => setShowPodModal(false)} className="text-slate-400 hover:text-white cursor-pointer">
+              <button 
+                onClick={() => setShowPdiModal(false)} 
+                className={`p-1.5 rounded-xl transition-all cursor-pointer ${
+                  isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {podError && (
-              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
-                {podError}
+            {pdiError && (
+              <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-500 dark:text-rose-400 text-xs flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{pdiError}</span>
               </div>
             )}
 
-            <div className="space-y-3">
-              <div>
-                <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">
-                  POD Document URL or File Name *
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+              {/* Order & Part Summary Box */}
+              <div className={`p-3.5 rounded-2xl border space-y-2 ${
+                isDarkMode ? 'bg-slate-900/60 border-slate-800/90' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                  <div>
+                    <span className={`text-[10px] font-bold uppercase ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Order PO #</span>
+                    <div className="font-bold truncate">{order.poNo}</div>
+                  </div>
+                  <div>
+                    <span className={`text-[10px] font-bold uppercase ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Customer</span>
+                    <div className="font-bold truncate">{order.customerName}</div>
+                  </div>
+                  <div className="col-span-2 sm:col-span-1">
+                    <span className={`text-[10px] font-bold uppercase ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Total Ordered Qty</span>
+                    <div className="font-bold text-emerald-500 dark:text-emerald-400 font-mono">{totalOrderedQty} NOS</div>
+                  </div>
+                </div>
+
+                {order.lines && order.lines.length > 0 && (
+                  <div className={`pt-2 border-t flex flex-wrap gap-1.5 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+                    {order.lines.map((l, i) => (
+                      <span key={l.id || i} className={`px-2 py-0.5 rounded-lg text-[10px] font-mono border ${
+                        isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-700'
+                      }`}>
+                        {l.itemCode} • {l.orderQty} {l.unit || 'NOS'}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 4-Point Quality & Compliance Checklist */}
+              <div className="space-y-2">
+                <label className={`block text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                  4-Point Quality & Compliance Checklist
                 </label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. https://storage.guruom.in/pod/POD-2026-0816.pdf or signed-pod-scan.pdf"
-                  value={podDocUrl}
-                  onChange={(e) => setPodDocUrl(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-xs outline-none focus:border-emerald-500"
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {[
+                    { key: 'visualFinish', label: '1. Visual Finish & Surface', desc: '100% surface inspection, no burrs or blemishes' },
+                    { key: 'dimensionalAudit', label: '2. Critical Dimensions', desc: 'Sampling verified against approved drawing' },
+                    { key: 'gaugesChecked', label: '3. Gauge & Thread Tolerance', desc: 'Go/No-Go plug and ring gauges cleared' },
+                    { key: 'packagingRustProof', label: '4. Anti-Rust & Packaging', desc: 'VCI coating and protective wrap verified' }
+                  ].map(({ key, label, desc }) => {
+                    const isChecked = pdiChecklist[key] ?? true;
+                    return (
+                      <div
+                        key={key}
+                        onClick={() => setPdiChecklist(prev => ({ ...prev, [key]: !isChecked }))}
+                        className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-start gap-2.5 select-none ${
+                          isChecked
+                            ? isDarkMode
+                              ? 'bg-emerald-950/20 border-emerald-500/40 text-emerald-300'
+                              : 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                            : isDarkMode
+                            ? 'bg-slate-900/40 border-slate-800 text-slate-400 hover:border-slate-700'
+                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
+                        }`}
+                      >
+                        <div className={`mt-0.5 p-0.5 rounded-md ${
+                          isChecked ? 'text-emerald-500 dark:text-emerald-400' : isDarkMode ? 'text-slate-500' : 'text-slate-400'
+                        }`}>
+                          {isChecked ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                        </div>
+                        <div>
+                          <div className="font-bold text-[11px]">{label}</div>
+                          <div className="text-[10px] opacity-80 mt-0.5 font-normal">{desc}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Accepted vs Rejected Qty */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                    Accepted Qty (NOS) *
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={pdiAcceptedQty}
+                    onChange={(e) => setPdiAcceptedQty(Number(e.target.value))}
+                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${
+                      isDarkMode 
+                        ? 'bg-slate-900/90 border-slate-800 text-white focus:border-indigo-500' 
+                        : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500'
+                    }`}
+                  />
+                </div>
+                <div>
+                  <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                    Rejected Qty (NOS)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={pdiRejectedQty}
+                    onChange={(e) => setPdiRejectedQty(Number(e.target.value))}
+                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${
+                      isDarkMode 
+                        ? 'bg-slate-900/90 border-slate-800 text-white focus:border-rose-500' 
+                        : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
+                    }`}
+                  />
+                </div>
+              </div>
+
+              {/* Certificate / Report Document URL */}
+              <div>
+                <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                  Compliance / PDI Certificate URL or Filename (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. COC-2026-0816.pdf or https://..."
+                  value={pdiReportUrl}
+                  onChange={(e) => setPdiReportUrl(e.target.value)}
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${
+                    isDarkMode 
+                      ? 'bg-slate-900/90 border-slate-800 text-white focus:border-indigo-500 placeholder-slate-600' 
+                      : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500 placeholder-slate-400'
+                  }`}
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">
-                    Received By (Customer Rep) *
-                  </label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. Ramesh Kumar (Store Incharge)"
-                    value={podReceivedBy}
-                    onChange={(e) => setPodReceivedBy(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-xs outline-none focus:border-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">
-                    Delivery Date
-                  </label>
-                  <input 
-                    type="date" 
-                    value={podDate}
-                    onChange={(e) => setPodDate(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-xs outline-none focus:border-emerald-500"
-                  />
-                </div>
-              </div>
-
+              {/* Remarks */}
               <div>
-                <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">
-                  Transporter / Vehicle No
+                <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                  Inspection Remarks & Observations
                 </label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. VRL Logistics / MH-12-AB-1234"
-                  value={podCarrier}
-                  onChange={(e) => setPodCarrier(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-xs outline-none focus:border-emerald-500"
+                <textarea
+                  rows={2}
+                  placeholder="e.g. 100% parts cleared visual, dimensional, and thread tolerance checks without non-conformance."
+                  value={pdiRemarks}
+                  onChange={(e) => setPdiRemarks(e.target.value)}
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${
+                    isDarkMode 
+                      ? 'bg-slate-900/90 border-slate-800 text-white focus:border-indigo-500 placeholder-slate-600' 
+                      : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500 placeholder-slate-400'
+                  }`}
                 />
               </div>
             </div>
 
+            {/* Actions */}
+            <div className={`pt-4 flex flex-wrap items-center justify-between gap-2.5 border-t ${
+              isDarkMode ? 'border-slate-800' : 'border-slate-200'
+            }`}>
+              <button
+                type="button"
+                onClick={() => handlePdiDecisionSubmit('FAIL')}
+                disabled={isConfirming}
+                className="px-4 py-2.5 rounded-xl bg-rose-500/10 text-rose-500 dark:text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all disabled:opacity-50"
+              >
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span>PDI Fail (Flag Rework)</span>
+              </button>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowPdiModal(false)}
+                  className={`px-4 py-2.5 rounded-xl border text-xs font-semibold cursor-pointer transition-all ${
+                    isDarkMode 
+                      ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800' 
+                      : 'border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePdiDecisionSubmit('PASS')}
+                  disabled={isConfirming || pdiAcceptedQty <= 0}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-500/25 disabled:opacity-50 transition-all"
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>{isConfirming ? 'Processing...' : 'Complete PDI (Pass & Release)'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. GENERATE TAX INVOICE MODAL */}
+      {showInvoiceModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
+          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-mono text-xs z-10 shadow-2xl ${
+            isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          }`}>
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm uppercase text-emerald-400 tracking-tight">Generate GST Tax Invoice</h3>
+                  <p className="text-[11px] text-slate-400">Auto-populated from Order PO #{order.poNo}</p>
+                </div>
+              </div>
+              <button onClick={() => setShowInvoiceModal(false)} className="text-slate-400 hover:text-white cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Invoice Number *</label>
+                  <input
+                    type="text"
+                    value={genInvoiceNo}
+                    onChange={(e) => setGenInvoiceNo(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white font-bold text-xs outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Invoice Date</label>
+                  <input
+                    type="date"
+                    value={genInvoiceDate}
+                    onChange={(e) => setGenInvoiceDate(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-xs outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-slate-900 border border-slate-800 space-y-1.5">
+                <div className="flex justify-between text-slate-400">
+                  <span>Customer Name:</span>
+                  <span className="font-bold text-white">{order.customerName}</span>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span>Order Tax Category:</span>
+                  <span className="font-bold text-emerald-400">{order.taxCategory || 'GST 18%'}</span>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span>Taxable Value:</span>
+                  <span className="font-bold text-white">₹{gross.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span>GST (18%):</span>
+                  <span className="font-bold text-white">₹{(Math.round(gross * 0.18)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between text-white font-bold border-t border-slate-800 pt-1.5 text-xs">
+                  <span className="text-emerald-400">Total Invoice Amount:</span>
+                  <span className="text-emerald-400">₹{(gross + Math.round(gross * 0.18)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+
+              {/* Line Items Summary */}
+              <div className="space-y-1">
+                <label className="block text-[11px] text-slate-400 font-bold uppercase">Invoice Line Items</label>
+                <div className="divide-y divide-slate-800 rounded-2xl bg-slate-900/60 border border-slate-800 p-2">
+                  {(order.lines || []).map((l, i) => (
+                    <div key={l.id || i} className="py-1.5 flex items-center justify-between text-[11px]">
+                      <div>
+                        <span className="font-bold text-slate-200">{l.itemCode}</span>
+                        <span className="text-slate-400 ml-1.5">({l.orderQty} {l.unit || 'NOS'} @ ₹{l.rate})</span>
+                      </div>
+                      <span className="font-bold text-emerald-400 font-mono">₹{(Number(l.orderQty) * Number(l.rate)).toLocaleString('en-IN')}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
             <div className="pt-3 flex justify-end gap-2.5 border-t border-slate-800">
-              <button 
-                onClick={() => setShowPodModal(false)} 
+              <button
+                type="button"
+                onClick={() => setShowInvoiceModal(false)}
                 className="px-4 py-2 rounded-xl border border-slate-800 text-slate-400 hover:text-white cursor-pointer"
               >
                 Cancel
               </button>
-              <button 
-                onClick={handleSavePodDelivery}
-                className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold cursor-pointer hover:from-teal-600 hover:to-emerald-600 shadow-lg shadow-emerald-500/25"
+              <button
+                type="button"
+                onClick={handleGenerateInvoiceSubmit}
+                disabled={isConfirming}
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-indigo-600 hover:from-indigo-600 hover:to-emerald-600 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-500/25"
               >
-                Verify & Confirm Delivery
+                <FileText className="w-4 h-4" />
+                <span>{isConfirming ? 'Generating...' : 'Confirm & Generate Tax Invoice'}</span>
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Payment Recording & Settle Hard Gate Modal */}
-      {showPaymentModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md font-sans">
+      {/* 3. GENERATE DELIVERY CHALLAN MODAL */}
+      {showChallanModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
           <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-mono text-xs z-10 shadow-2xl ${
             isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
           }`}>
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400">
-                  <CreditCard className="w-4 h-4" />
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-cyan-500/20 text-cyan-400">
+                  <Truck className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm uppercase text-amber-400">Record Commercial Payment</h3>
-                  <p className="text-[11px] text-slate-400">PRD Hard Gate: Full payment required for Order Closure</p>
+                  <h3 className="font-bold text-sm uppercase text-cyan-400 tracking-tight">Generate Delivery Challan</h3>
+                  <p className="text-[11px] text-slate-400">Outward Transport Manifest for Order #{order.poNo}</p>
+                </div>
+              </div>
+              <button onClick={() => setShowChallanModal(false)} className="text-slate-400 hover:text-white cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Challan Number *</label>
+                  <input
+                    type="text"
+                    value={genChallanNo}
+                    onChange={(e) => setGenChallanNo(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white font-bold text-xs outline-none focus:border-cyan-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Vehicle Registration # *</label>
+                  <input
+                    type="text"
+                    value={challanVehicleNo}
+                    onChange={(e) => setChallanVehicleNo(e.target.value)}
+                    placeholder="e.g. MH 12 AB 4589"
+                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white font-bold text-xs outline-none focus:border-cyan-500"
+                  />
+                </div>
+              </div>
+
+              {/* Transporter selection fetched from Vendor Master */}
+              <div>
+                <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">
+                  Transporter Partner (Vendor Master) *
+                </label>
+                <select
+                  value={challanTransporter}
+                  onChange={(e) => setChallanTransporter(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-xs outline-none cursor-pointer focus:border-cyan-500"
+                >
+                  {allTransporterOptions.map((t, idx) => (
+                    <option key={idx} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Driver Contact / Phone</label>
+                <input
+                  type="text"
+                  value={challanDriverContact}
+                  onChange={(e) => setChallanDriverContact(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-xs outline-none focus:border-cyan-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Delivery Notes / Remarks</label>
+                <input
+                  type="text"
+                  value={challanRemarks}
+                  onChange={(e) => setChallanRemarks(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-xs outline-none focus:border-cyan-500"
+                />
+              </div>
+            </div>
+
+            <div className="pt-3 flex justify-end gap-2.5 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setShowChallanModal(false)}
+                className="px-4 py-2 rounded-xl border border-slate-800 text-slate-400 hover:text-white cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleGenerateChallanSubmit}
+                disabled={isConfirming || !challanVehicleNo.trim()}
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-blue-600 hover:to-cyan-600 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-lg shadow-cyan-500/25 disabled:opacity-50"
+              >
+                <Truck className="w-4 h-4" />
+                <span>{isConfirming ? 'Generating...' : 'Issue Delivery Challan'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. DISPATCH OUTWARD CONSIGNMENT MODAL */}
+      {showDispatchModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
+          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-mono text-xs z-10 shadow-2xl ${
+            isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          }`}>
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-cyan-500/20 text-cyan-400">
+                  <Truck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm uppercase text-cyan-400 tracking-tight">Confirm Outward Dispatch</h3>
+                  <p className="text-[11px] text-slate-400">Mark shipment as dispatched and in-transit</p>
+                </div>
+              </div>
+              <button onClick={() => setShowDispatchModal(false)} className="text-slate-400 hover:text-white cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Dispatch Date *</label>
+                  <input
+                    type="date"
+                    value={dispatchDate}
+                    onChange={(e) => setDispatchDate(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white font-bold text-xs outline-none focus:border-cyan-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">LR / Consignment # *</label>
+                  <input
+                    type="text"
+                    value={dispatchLrNo}
+                    onChange={(e) => setDispatchLrNo(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white font-bold text-xs outline-none focus:border-cyan-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Transporter Partner *</label>
+                <select
+                  value={dispatchTransporter}
+                  onChange={(e) => setDispatchTransporter(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-xs outline-none cursor-pointer focus:border-cyan-500"
+                >
+                  {allTransporterOptions.map((t, idx) => (
+                    <option key={idx} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Vehicle Registration # *</label>
+                  <input
+                    type="text"
+                    value={dispatchVehicleNo}
+                    onChange={(e) => setDispatchVehicleNo(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white font-bold text-xs outline-none focus:border-cyan-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Driver Contact Phone</label>
+                  <input
+                    type="text"
+                    value={dispatchDriverContact}
+                    onChange={(e) => setDispatchDriverContact(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-xs outline-none focus:border-cyan-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Dispatch Remarks</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Lorry loaded and sealed with GPS tracking active"
+                  value={dispatchRemarks}
+                  onChange={(e) => setDispatchRemarks(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-xs outline-none focus:border-cyan-500"
+                />
+              </div>
+            </div>
+
+            <div className="pt-3 flex justify-end gap-2.5 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setShowDispatchModal(false)}
+                className="px-4 py-2 rounded-xl border border-slate-800 text-slate-400 hover:text-white cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDispatchSubmit}
+                disabled={isConfirming}
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-blue-600 hover:to-cyan-600 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-lg shadow-cyan-500/25"
+              >
+                <Truck className="w-4 h-4" />
+                <span>{isConfirming ? 'Dispatching...' : 'Confirm Dispatch (Mark In-Transit)'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 5. CONFIRM DELIVERY MODAL */}
+      {showDeliveryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
+          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-mono text-xs z-10 shadow-2xl ${
+            isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          }`}>
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-blue-500/20 text-blue-400">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm uppercase text-blue-400 tracking-tight">Confirm Customer Delivery</h3>
+                  <p className="text-[11px] text-slate-400">Record destination arrival and move to Receivable</p>
+                </div>
+              </div>
+              <button onClick={() => setShowDeliveryModal(false)} className="text-slate-400 hover:text-white cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Delivery Date *</label>
+                  <input
+                    type="date"
+                    value={deliveryDate}
+                    onChange={(e) => setDeliveryDate(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white font-bold text-xs outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Received By (Person) *</label>
+                  <input
+                    type="text"
+                    value={deliveryReceivedBy}
+                    onChange={(e) => setDeliveryReceivedBy(e.target.value)}
+                    placeholder="e.g. Ramesh Kumar (Stores)"
+                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white font-bold text-xs outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Proof of Delivery (POD) Document (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. signed-pod-challan.pdf or attachment URL"
+                  value={deliveryPodUrl}
+                  onChange={(e) => setDeliveryPodUrl(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-xs outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Delivery Remarks</label>
+                <input
+                  type="text"
+                  value={deliveryRemarks}
+                  onChange={(e) => setDeliveryRemarks(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-xs outline-none focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="pt-3 flex justify-end gap-2.5 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setShowDeliveryModal(false)}
+                className="px-4 py-2 rounded-xl border border-slate-800 text-slate-400 hover:text-white cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeliverySubmit}
+                disabled={isConfirming || !deliveryReceivedBy.trim()}
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-emerald-600 hover:to-blue-600 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-lg shadow-blue-500/25 disabled:opacity-50"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>{isConfirming ? 'Confirming...' : 'Confirm Delivery (Move to Receivable)'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6. RECORD PAYMENT & SETTLE MODAL */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
+          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-mono text-xs z-10 shadow-2xl ${
+            isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          }`}>
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400">
+                  <CreditCard className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm uppercase text-emerald-400 tracking-tight">Record Commercial Payment</h3>
+                  <p className="text-[11px] text-slate-400">Settle invoice receivable and close order</p>
                 </div>
               </div>
               <button onClick={() => setShowPaymentModal(false)} className="text-slate-400 hover:text-white cursor-pointer">
@@ -1915,7 +3130,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
             <div className="p-3 rounded-2xl bg-slate-900 border border-slate-800 space-y-1.5">
               <div className="flex justify-between">
-                <span className="text-slate-400">Gross Invoice Amount:</span>
+                <span className="text-slate-400">Gross Amount:</span>
                 <span className="font-bold text-white">₹{gross.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               </div>
               <div className="flex justify-between">
@@ -1923,7 +3138,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 <span className="font-bold text-emerald-400">₹{currentPaid.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               </div>
               <div className="flex justify-between pt-1 border-t border-slate-800 font-bold">
-                <span className="text-amber-400">Outstanding Balance:</span>
+                <span className="text-amber-400">Outstanding Receivable Balance:</span>
                 <span className="text-amber-400">₹{remainingOutstanding.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               </div>
             </div>
@@ -1931,20 +3146,16 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">
-                    Payment Amount ₹ *
-                  </label>
-                  <input 
-                    type="number" 
+                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Payment Amount ₹ *</label>
+                  <input
+                    type="number"
                     value={paymentAmount}
                     onChange={(e) => setPaymentAmount(Number(e.target.value))}
-                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white font-bold text-xs outline-none focus:border-amber-500"
+                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white font-bold text-xs outline-none focus:border-emerald-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">
-                    Payment Mode
-                  </label>
+                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Payment Mode</label>
                   <select
                     value={paymentMode}
                     onChange={(e) => setPaymentMode(e.target.value as any)}
@@ -1960,42 +3171,42 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">
-                    Reference / UTR No *
-                  </label>
-                  <input 
-                    type="text" 
+                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Reference / UTR No *</label>
+                  <input
+                    type="text"
                     value={paymentRefNo}
                     onChange={(e) => setPaymentRefNo(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-xs outline-none focus:border-amber-500"
+                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-xs outline-none focus:border-emerald-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">
-                    Received Date
-                  </label>
-                  <input 
-                    type="date" 
+                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Payment Date</label>
+                  <input
+                    type="date"
                     value={paymentDate}
                     onChange={(e) => setPaymentDate(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-xs outline-none focus:border-amber-500"
+                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-xs outline-none focus:border-emerald-500"
                   />
                 </div>
               </div>
             </div>
 
             <div className="pt-3 flex justify-end gap-2.5 border-t border-slate-800">
-              <button 
-                onClick={() => setShowPaymentModal(false)} 
+              <button
+                type="button"
+                onClick={() => setShowPaymentModal(false)}
                 className="px-4 py-2 rounded-xl border border-slate-800 text-slate-400 hover:text-white cursor-pointer"
               >
                 Cancel
               </button>
-              <button 
-                onClick={handleSavePayment}
-                className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-emerald-600 text-white font-bold cursor-pointer hover:from-emerald-600 hover:to-amber-600 shadow-lg shadow-amber-500/25"
+              <button
+                type="button"
+                onClick={handleRecordPaymentSubmit}
+                disabled={isConfirming || paymentAmount <= 0}
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-500/25"
               >
-                Record Payment
+                <CreditCard className="w-4 h-4" />
+                <span>{isConfirming ? 'Recording...' : 'Record Payment & Settle'}</span>
               </button>
             </div>
           </div>

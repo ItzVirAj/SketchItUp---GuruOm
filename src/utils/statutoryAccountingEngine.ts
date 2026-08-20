@@ -282,3 +282,70 @@ export function calculateOrderCosting(params: {
     profitabilityPercentage
   };
 }
+
+/**
+ * 8. Automatic Intra-State (CGST + SGST) vs Inter-State (IGST) Tax Engine
+ * Determines tax classification based on Buyer State code vs Seller Base (27 - Maharashtra).
+ */
+export function calculateGstTaxSplit(params: {
+  taxableAmount: number;
+  gstRate: number;
+  sellerStateCode?: string; // default '27' (Maharashtra)
+  buyerGstin?: string;
+  buyerStateCode?: string;
+}): {
+  isIntraState: boolean;
+  buyerStateCode: string;
+  cgstRate: number;
+  sgstRate: number;
+  igstRate: number;
+  cgstAmount: number;
+  sgstAmount: number;
+  igstAmount: number;
+  totalGstAmount: number;
+  totalAmount: number;
+} {
+  const sellerState = (params.sellerStateCode || '27').trim();
+  let buyerState = (params.buyerStateCode || '').trim();
+  if (!buyerState && params.buyerGstin && params.buyerGstin.trim().length >= 2) {
+    buyerState = params.buyerGstin.trim().substring(0, 2);
+  }
+  if (!buyerState) {
+    buyerState = sellerState; // default intra-state if unassigned
+  }
+
+  const isIntraState = sellerState === buyerState;
+  const taxable = Number(params.taxableAmount || 0);
+  const rate = Number(params.gstRate ?? 18);
+  const totalGst = Number(((taxable * rate) / 100).toFixed(2));
+
+  if (isIntraState) {
+    const halfRate = rate / 2;
+    const halfGst = Number((totalGst / 2).toFixed(2));
+    return {
+      isIntraState: true,
+      buyerStateCode: buyerState,
+      cgstRate: halfRate,
+      sgstRate: halfRate,
+      igstRate: 0,
+      cgstAmount: halfGst,
+      sgstAmount: halfGst,
+      igstAmount: 0,
+      totalGstAmount: totalGst,
+      totalAmount: Number((taxable + totalGst).toFixed(2))
+    };
+  } else {
+    return {
+      isIntraState: false,
+      buyerStateCode: buyerState,
+      cgstRate: 0,
+      sgstRate: 0,
+      igstRate: rate,
+      cgstAmount: 0,
+      sgstAmount: 0,
+      igstAmount: totalGst,
+      totalGstAmount: totalGst,
+      totalAmount: Number((taxable + totalGst).toFixed(2))
+    };
+  }
+}

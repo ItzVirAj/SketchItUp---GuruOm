@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAccentTheme } from '../../context/AccentThemeContext';
 
 interface GuruOmLogoProps {
   className?: string;
@@ -8,12 +9,15 @@ interface GuruOmLogoProps {
 
 export const GuruOmLogo: React.FC<GuruOmLogoProps> = ({
   className = "",
-  color = "#FF5000"
+  color
 }) => {
+  const { currentTheme } = useAccentTheme();
+  const brandColor = color || currentTheme.primary;
+
   return (
     <span 
       className={`font-black tracking-tight select-none inline-block ${className}`}
-      style={{ color: color || '#FF5000' }}
+      style={{ color: brandColor }}
     >
       GuruOm Industries LLP
     </span>

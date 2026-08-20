@@ -49,14 +49,14 @@ export const Navbar: React.FC = () => {
           
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-teal-600 p-0.5 shadow-lg shadow-sky-500/20 group-hover:shadow-sky-500/35 transition-all">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#5B75F8] to-indigo-600 p-0.5 shadow-lg shadow-[#5B75F8]/20 group-hover:shadow-[#5B75F8]/35 transition-all">
               <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
-                <Cpu className="w-5 h-5 text-teal-400 group-hover:rotate-12 transition-transform duration-300" />
+                <Cpu className="w-5 h-5 text-[#5B75F8] group-hover:rotate-12 transition-transform duration-300" />
               </div>
             </div>
             <div className="flex flex-col">
               <span className="text-xl font-extrabold tracking-tight text-white flex items-center gap-1">
-                SketchItUp <span className="text-teal-400 text-xs font-mono px-1.5 py-0.5 rounded bg-teal-500/10 border border-teal-500/30">OS</span>
+                SketchItUp <span className="text-[#5B75F8] text-xs font-mono px-1.5 py-0.5 rounded bg-[#5B75F8]/10 border border-[#5B75F8]/30">OS</span>
               </span>
               <span className="text-[10px] text-slate-400 font-medium tracking-wider uppercase">Business Operating System</span>
             </div>

@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Truck, Plus, Download, CheckCircle2, Search, X, MapPin, PackageCheck } from 'lucide-react';
-import { DispatchChallan, CustomerOrder } from '../../../types/console';
+import { DispatchChallan, CustomerOrder, VendorMaster } from '../../../types/console';
+import { getCurrentFinancialYear, formatDocumentNumber } from '../../../utils/statutoryAccountingEngine';
 
 interface DispatchViewProps {
   dispatches?: DispatchChallan[];
   orders?: CustomerOrder[];
+  vendors?: VendorMaster[];
   isDarkMode?: boolean;
   onCreateChallan?: (newChallan: Partial<DispatchChallan>) => void;
   onIssueDispatch?: (newChallan: any) => void;
@@ -13,6 +15,7 @@ interface DispatchViewProps {
 export const DispatchView: React.FC<DispatchViewProps> = ({
   dispatches = [],
   orders = [],
+  vendors = [],
   isDarkMode = true,
   onCreateChallan,
   onIssueDispatch
@@ -20,7 +23,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [orderPo, setOrderPo] = useState(orders[0]?.poNo || '');
-  const [transporter, setTransporter] = useState('');
+  
+  const allTransporterOptions = ['VRL Logistics Ltd', 'SafeXpress Courier', 'GATI KWE', 'BlueDart Express', 'TCI Freight', 'Delhivery Surface'];
+  const [transporter, setTransporter] = useState(allTransporterOptions[0] || 'VRL Logistics Ltd');
   const [vehicleNo, setVehicleNo] = useState('');
 
   const filteredDispatches = dispatches.filter(d => 
@@ -31,7 +36,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const challanNo = `CHL/${String(dispatches.length + 1).padStart(4, '0')}/26-27`;
+    const fy = getCurrentFinancialYear();
+    const runningNum = Math.floor(1000 + (dispatches.length + 1) * 31 + Math.random() * 899) % 9000;
+    const challanNo = formatDocumentNumber('CHL', fy, runningNum);
     const payload = {
       challanNo,
       orderPo,
@@ -273,19 +280,21 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Transporter Partner *</label>
-                <input
-                  type="text"
+                <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Transporter Partner (Vendor Master) *</label>
+                <select
                   required
                   value={transporter}
                   onChange={(e) => setTransporter(e.target.value)}
-                  placeholder="e.g. VRL Logistics Ltd"
-                  className={`w-full rounded-2xl border px-4 py-3 text-xs outline-none transition-all ${
+                  className={`w-full rounded-2xl border px-4 py-3 text-xs outline-none cursor-pointer transition-all ${
                     isDarkMode 
                       ? 'bg-slate-950/80 border-slate-800 text-white focus:border-[#5B75F8]' 
                       : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#5B75F8]'
                   }`}
-                />
+                >
+                  {allTransporterOptions.map((t, idx) => (
+                    <option key={idx} value={t}>{t}</option>
+                  ))}
+                </select>
               </div>
 
               <div>

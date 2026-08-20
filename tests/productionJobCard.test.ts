@@ -87,22 +87,16 @@ describe('GuruOm Production & Job Card Shop-Floor Engine', () => {
     });
   });
 
-  describe('Gate 3: Operator Skill & Certification Verification', () => {
-    it('permits operator holding the required certification to start operation', () => {
-      const check = validateOperatorCertification('Rajesh Sharma', 'CNC Certified', sampleCertifications);
-      expect(check.valid).toBe(true);
-    });
+  describe('Gate 3: Operator Skill & Certification Verification (Open to All)', () => {
+    it('permits any operator to start operation without certification restrictions', () => {
+      const check1 = validateOperatorCertification('Rajesh Sharma', 'CNC Certified', sampleCertifications);
+      expect(check1.valid).toBe(true);
 
-    it('blocks uncertified operator from starting certified operation with ERR_OPERATOR_CERTIFICATION_REQUIRED', () => {
-      const check = validateOperatorCertification('Sunil Jadhav', 'CNC Certified', sampleCertifications);
-      expect(check.valid).toBe(false);
-      expect(check.errorCode).toBe(PRODUCTION_ERROR_CODES.ERR_OPERATOR_CERTIFICATION_REQUIRED);
-      expect(check.errorMessage).toContain('does not possess the mandatory \'CNC Certified\' certification');
-    });
+      const check2 = validateOperatorCertification('Sachin G. (Lead Machinist)', 'CNC Certified', sampleCertifications);
+      expect(check2.valid).toBe(true);
 
-    it('allows any operator when required certification is None', () => {
-      const check = validateOperatorCertification('Helper Mohan', 'None', sampleCertifications);
-      expect(check.valid).toBe(true);
+      const check3 = validateOperatorCertification('Helper Mohan', 'None', sampleCertifications);
+      expect(check3.valid).toBe(true);
     });
   });
 

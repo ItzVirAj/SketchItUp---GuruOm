@@ -14,8 +14,10 @@ import {
   ArrowRight,
   ChevronDown,
   SlidersHorizontal,
-  ShieldCheck
+  ShieldCheck,
+  Palette
 } from 'lucide-react';
+import { AccentColorSelector } from './AccentColorSelector';
 import { CustomerOrder, StockItem, CustomerInvoice, JobCard, UserRole, ConsoleView, SystemUser } from '../../types/console';
 
 interface ConsoleHeaderProps {
@@ -73,10 +75,12 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [showScopeDropdown, setShowScopeDropdown] = useState(false);
+  const [showCustomizeMenu, setShowCustomizeMenu] = useState(false);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchDropdownRef = useRef<HTMLDivElement>(null);
   const scopeDropdownRef = useRef<HTMLDivElement>(null);
+  const customizeDropdownRef = useRef<HTMLDivElement>(null);
 
   // Close search dropdown on click outside
   useEffect(() => {
@@ -95,15 +99,29 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
       ) {
         setShowScopeDropdown(false);
       }
+      if (
+        customizeDropdownRef.current &&
+        !customizeDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowCustomizeMenu(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleSyncClick = () => {
+  const handleSyncClick = async () => {
+    if (isSyncing) return;
     setIsSyncing(true);
-    onSync();
-    setTimeout(() => setIsSyncing(false), 800);
+    try {
+      if (onSync) {
+        await onSync();
+      }
+    } catch (err) {
+      console.warn('System refresh error:', err);
+    } finally {
+      setTimeout(() => setIsSyncing(false), 600);
+    }
   };
 
   // Live Omnisearch query matching
@@ -190,7 +208,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
         >
           <div className="flex flex-col leading-none">
             <span className="text-base font-black tracking-tight text-slate-900 dark:text-white">
-              sketch<span className="text-[#FF5000]">ItUP</span>
+              sketch<span className="text-[#5B75F8]">ItUP</span>
             </span>
             <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mt-0.5">
               Owner OS
@@ -380,40 +398,71 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
           )}
         </div>
 
-        {/* Customize Dashboard Button (Shifted to upper right nav) */}
-        {onOpenCustomize && (
+        {/* Customize & Appearance Menu (Header Popover) */}
+        <div className="relative" ref={customizeDropdownRef}>
           <button 
             type="button"
-            onClick={onOpenCustomize}
-            className="flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-[#d8dde8] dark:border-slate-800 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 shadow-2xs hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer"
-            title="Customize Dashboard Widgets & Layout"
+            onClick={() => setShowCustomizeMenu(prev => !prev)}
+            className={`flex items-center gap-1.5 border rounded-xl px-3 py-1.5 text-xs font-semibold shadow-2xs transition-all cursor-pointer ${
+              showCustomizeMenu
+                ? 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white'
+                : 'bg-white dark:bg-slate-900 border-[#d8dde8] dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
+            }`}
+            title="Appearance & Dashboard Customization"
           >
-            <SlidersHorizontal className="w-3.5 h-3.5 text-slate-500" />
+            <Palette className="w-3.5 h-3.5 text-slate-500" />
             <span className="hidden md:inline">Customize</span>
+            <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${showCustomizeMenu ? 'rotate-180' : ''}`} />
           </button>
-        )}
 
-        {/* Security & Active Sessions Modal Trigger */}
-        {onOpenSecurityModal && (
-          <button
-            type="button"
-            onClick={onOpenSecurityModal}
-            className="flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-[#d8dde8] dark:border-slate-800 rounded-xl px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 shadow-2xs hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer"
-            title="Active Sessions, Token Families & Security Audit"
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-            <span className="hidden xl:inline">Security</span>
-          </button>
-        )}
+          {showCustomizeMenu && (
+            <div className={`absolute right-0 top-full mt-2 w-72 p-4 rounded-2xl border shadow-xl z-50 space-y-4 font-sans animate-fade-in ${
+              isDarkMode 
+                ? 'bg-slate-900/95 border-slate-800/90 text-white backdrop-blur-xl shadow-black/40' 
+                : 'bg-white border-slate-200 text-slate-900 shadow-xl'
+            }`}>
+              {/* Accent Color Section */}
+              <AccentColorSelector isDarkMode={isDarkMode} />
+
+              {/* Dashboard Layout Action */}
+              {onOpenCustomize && (
+                <div className="pt-3 border-t border-slate-200 dark:border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCustomizeMenu(false);
+                      onOpenCustomize();
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium border transition-colors cursor-pointer ${
+                      isDarkMode 
+                        ? 'bg-slate-950/60 border-slate-800 text-slate-300 hover:bg-slate-800 hover:text-white' 
+                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Configure Widgets & Layout</span>
+                    </div>
+                    <ArrowRight className="w-3 h-3 text-slate-400" />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Sync Now Pill */}
         <button
+          type="button"
           onClick={handleSyncClick}
           disabled={isSyncing}
-          className="bg-[#5B75F8]/10 hover:bg-[#5B75F8]/20 border border-[#5B75F8]/30 text-[#5B75F8] dark:text-[#7B92FF] text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-xl flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs shrink-0"
+          title="Refresh & Synchronize all system data with database"
+          className={`bg-[#5B75F8]/10 hover:bg-[#5B75F8]/20 border border-[#5B75F8]/30 text-[#5B75F8] dark:text-[#7B92FF] text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-xl flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs shrink-0 active:scale-95 ${
+            isSyncing ? 'opacity-80 cursor-wait' : ''
+          }`}
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-          <span className="hidden sm:inline">Sync Now</span>
+          <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-[#5B75F8]' : ''}`} />
+          <span className="hidden sm:inline">{isSyncing ? 'Syncing...' : 'Sync Now'}</span>
         </button>
 
         {/* Sync Status Label */}

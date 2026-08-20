@@ -1530,29 +1530,6 @@ export const initialUsers: SystemUser[] = [
 
 export const initialAuditLogs: AuditLogEntry[] = [
   {
-    id: 'log-101',
-    user: 'Rohan Deshpande',
-    entity: 'Order',
-    action: 'update',
-    details: 'Order #PO-2026-901 moved to Processing stage'
-  },
-  {
-    id: 'log-102',
-    when: '35 min ago',
-    user: 'System Bot',
-    entity: 'Order',
-    action: 'close',
-    details: 'Order #PO-2026-880 marked Completed & Invoiced'
-  },
-  {
-    id: 'log-103',
-    when: '1h ago',
-    user: 'Suresh Yadav',
-    entity: 'Inventory',
-    action: 'adjust',
-    details: '30 units of Boom Bracket Sub-assembly added to stock'
-  },
-  {
     id: 'log-104',
     when: '2h ago',
     user: 'Snehal Bhosale',

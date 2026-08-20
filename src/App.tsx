@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 import { ConsoleContainer } from './components/console/ConsoleContainer';
 import { LoginPage } from './components/auth/LoginPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { AccentThemeProvider } from './context/AccentThemeContext';
 import { useSmoothScroll } from './hooks/useSmoothScroll';
 
 // Helper component to reset scroll position on page route changes
@@ -71,7 +72,9 @@ function MainApp() {
 export default function App() {
   return (
     <AuthProvider>
-      <MainApp />
+      <AccentThemeProvider>
+        <MainApp />
+      </AccentThemeProvider>
     </AuthProvider>
   );
 }

@@ -192,6 +192,66 @@ export class MastersService {
     return validated;
   }
 
+  async updateMaster(code: string, data: any) {
+    const validated = MasterItemSchema.partial().parse(data);
+    const updateRecord: any = { updated_at: new Date().toISOString() };
+    if (validated.name !== undefined) updateRecord.name = validated.name;
+    if (validated.itemType !== undefined) {
+      updateRecord.item_type = validated.itemType;
+      updateRecord.is_finished_goods = validated.itemType === 'Finished Good';
+    }
+    if (validated.category !== undefined) updateRecord.category = validated.category;
+    if (validated.description !== undefined) updateRecord.description = validated.description;
+    if (validated.partNo !== undefined) updateRecord.part_no = validated.partNo;
+    if (validated.unit !== undefined) updateRecord.unit = validated.unit;
+    if (validated.hsnCode !== undefined) updateRecord.hsn_code = validated.hsnCode;
+    if (validated.gstRate !== undefined) updateRecord.gst_rate = validated.gstRate;
+    if (validated.standardCost !== undefined) {
+      updateRecord.standard_cost = validated.standardCost;
+      updateRecord.purchase_rate = validated.standardCost;
+    }
+    if (validated.sellingPrice !== undefined) {
+      updateRecord.selling_price = validated.sellingPrice;
+      updateRecord.sale_rate = validated.sellingPrice;
+    }
+    if (validated.minStock !== undefined) updateRecord.min_stock = validated.minStock;
+    if (validated.maxStock !== undefined) updateRecord.max_stock = validated.maxStock;
+    if (validated.reorderLevel !== undefined) updateRecord.reorder_level = validated.reorderLevel;
+    if (validated.leadTimeDays !== undefined) updateRecord.lead_time_days = validated.leadTimeDays;
+    if (validated.preferredVendor !== undefined) updateRecord.preferred_vendor = validated.preferredVendor;
+    if (validated.defaultWarehouse !== undefined) updateRecord.default_warehouse = validated.defaultWarehouse;
+    if (validated.storeLocation !== undefined) updateRecord.store_location = validated.storeLocation;
+    if (validated.status !== undefined) updateRecord.status = validated.status;
+
+    try {
+      const { data: updated, error } = await this.db
+        .from('masters')
+        .update(updateRecord)
+        .eq('code', code)
+        .select()
+        .single();
+      if (!error && updated) {
+        notificationsService.broadcastEvent('master_item_updated', updated);
+        return updated;
+      }
+    } catch (err) {
+      console.warn('Database updateMaster error:', err);
+    }
+    await logAudit({ actorEmail: 'masters@guruom.in', action: 'ITEM_MASTER_UPDATED', entityType: 'masters', entityId: code, metadata: { details: `Item Master ${code} updated` } }).catch(() => {});
+    return { code, ...validated };
+  }
+
+  async deleteMaster(code: string) {
+    try {
+      await this.db.from('masters').delete().eq('code', code);
+    } catch (err) {
+      console.warn('Database deleteMaster error:', err);
+    }
+    await logAudit({ actorEmail: 'masters@guruom.in', action: 'ITEM_MASTER_DELETED', entityType: 'masters', entityId: code, metadata: { details: `Item Master ${code} deleted` } }).catch(() => {});
+    notificationsService.broadcastEvent('master_item_deleted', { code });
+    return { success: true, code };
+  }
+
   // ----------------------------------------------------
   // 2. Customer Masters
   // ----------------------------------------------------
@@ -324,6 +384,68 @@ export class MastersService {
     }
 
     return validated;
+  }
+
+  async updateCustomer(code: string, data: any) {
+    const validated = CustomerMasterSchema.partial().parse(data);
+    const updateRecord: any = { updated_at: new Date().toISOString() };
+    if (validated.name !== undefined) updateRecord.name = validated.name;
+    if (validated.legalName !== undefined) updateRecord.legal_name = validated.legalName;
+    if (validated.customerType !== undefined) updateRecord.customer_type = validated.customerType;
+    if (validated.contactPerson !== undefined) updateRecord.contact_person = validated.contactPerson;
+    if (validated.mobile !== undefined) {
+      updateRecord.mobile = validated.mobile;
+      updateRecord.contact = validated.mobile;
+    }
+    if (validated.email !== undefined) updateRecord.email = validated.email;
+    if (validated.gstin !== undefined) updateRecord.gstin = validated.gstin;
+    if (validated.pan !== undefined) updateRecord.pan = validated.pan;
+    if (validated.billingAddress !== undefined) {
+      updateRecord.billing_address = validated.billingAddress;
+      updateRecord.address = validated.billingAddress;
+    }
+    if (validated.shippingAddress !== undefined) updateRecord.shipping_address = validated.shippingAddress;
+    if (validated.city !== undefined) updateRecord.city = validated.city;
+    if (validated.state !== undefined) updateRecord.state = validated.state;
+    if (validated.stateCode !== undefined) updateRecord.state_code = validated.stateCode;
+    if (validated.pincode !== undefined) {
+      updateRecord.pincode = validated.pincode;
+      updateRecord.pin = validated.pincode;
+    }
+    if (validated.paymentTerms !== undefined) updateRecord.payment_terms = validated.paymentTerms;
+    if (validated.creditDays !== undefined) updateRecord.credit_days = validated.creditDays;
+    if (validated.creditLimit !== undefined) updateRecord.credit_limit = validated.creditLimit;
+    if (validated.salesperson !== undefined) updateRecord.salesperson = validated.salesperson;
+    if (validated.status !== undefined) updateRecord.status = validated.status;
+    if (validated.notes !== undefined) updateRecord.notes = validated.notes;
+
+    try {
+      const { data: updated, error } = await this.db
+        .from('customer_masters')
+        .update(updateRecord)
+        .eq('code', code)
+        .select()
+        .single();
+      if (!error && updated) {
+        notificationsService.broadcastEvent('customer_updated', updated);
+        return updated;
+      }
+    } catch (err) {
+      console.warn('Database updateCustomer error:', err);
+    }
+    await logAudit({ actorEmail: 'sales@guruom.in', action: 'CUSTOMER_MASTER_UPDATED', entityType: 'customer_masters', entityId: code, metadata: { details: `Customer Master ${code} updated` } }).catch(() => {});
+    return { code, ...validated };
+  }
+
+  async deleteCustomer(code: string) {
+    try {
+      await this.db.from('customer_masters').delete().eq('code', code);
+    } catch (err) {
+      console.warn('Database deleteCustomer error:', err);
+    }
+    await logAudit({ actorEmail: 'sales@guruom.in', action: 'CUSTOMER_MASTER_DELETED', entityType: 'customer_masters', entityId: code, metadata: { details: `Customer Master ${code} deleted` } }).catch(() => {});
+    notificationsService.broadcastEvent('customer_deleted', { code });
+    return { success: true, code };
   }
 
   // ----------------------------------------------------
@@ -482,6 +604,75 @@ export class MastersService {
     };
   }
 
+  async updateVendor(code: string, data: any) {
+    const validated = VendorMasterSchema.partial().parse(data);
+    const updateRecord: any = { updated_at: new Date().toISOString() };
+    if (validated.name !== undefined) updateRecord.name = validated.name;
+    if (validated.legalName !== undefined) updateRecord.legal_name = validated.legalName;
+    if (validated.vendorType !== undefined) updateRecord.vendor_type = validated.vendorType;
+    if (validated.vendorCategory !== undefined) updateRecord.vendor_category = validated.vendorCategory;
+    if (validated.contactPerson !== undefined) updateRecord.contact_person = validated.contactPerson;
+    if (validated.mobile !== undefined) {
+      updateRecord.mobile = validated.mobile;
+      updateRecord.contact = validated.mobile;
+    }
+    if (validated.email !== undefined) updateRecord.email = validated.email;
+    if (validated.billingAddress !== undefined) {
+      updateRecord.billing_address = validated.billingAddress;
+      updateRecord.address = validated.billingAddress;
+    }
+    if (validated.shippingAddress !== undefined) updateRecord.shipping_address = validated.shippingAddress;
+    if (validated.city !== undefined) updateRecord.city = validated.city;
+    if (validated.state !== undefined) updateRecord.state = validated.state;
+    if (validated.stateCode !== undefined) updateRecord.state_code = validated.stateCode;
+    if (validated.pincode !== undefined) {
+      updateRecord.pincode = validated.pincode;
+      updateRecord.pin = validated.pincode;
+    }
+    if (validated.gstin !== undefined) updateRecord.gstin = validated.gstin;
+    if (validated.pan !== undefined) updateRecord.pan = validated.pan;
+    if (validated.bankAccountName !== undefined) updateRecord.bank_account_name = validated.bankAccountName;
+    if (validated.bankAccountNumber !== undefined && !validated.bankAccountNumber.includes('•')) {
+      updateRecord.bank_account_number = encryptField(validated.bankAccountNumber);
+    }
+    if (validated.ifsc !== undefined) updateRecord.ifsc = validated.ifsc;
+    if (validated.paymentTerms !== undefined) updateRecord.payment_terms = validated.paymentTerms;
+    if (validated.creditDays !== undefined) updateRecord.credit_days = validated.creditDays;
+    if (validated.creditLimit !== undefined) updateRecord.credit_limit = validated.creditLimit;
+    if (validated.processType !== undefined) updateRecord.process_type = validated.processType;
+    if (validated.turnaroundTimeDays !== undefined) updateRecord.turnaround_time_days = validated.turnaroundTimeDays;
+    if (validated.status !== undefined) updateRecord.status = validated.status;
+    if (validated.notes !== undefined) updateRecord.notes = validated.notes;
+
+    try {
+      const { data: updated, error } = await this.db
+        .from('vendor_masters')
+        .update(updateRecord)
+        .eq('code', code)
+        .select()
+        .single();
+      if (!error && updated) {
+        notificationsService.broadcastEvent('vendor_updated', updated);
+        return updated;
+      }
+    } catch (err) {
+      console.warn('Database updateVendor error:', err);
+    }
+    await logAudit({ actorEmail: 'purchase@guruom.in', action: 'VENDOR_MASTER_UPDATED', entityType: 'vendor_masters', entityId: code, metadata: { details: `Vendor Master ${code} updated` } }).catch(() => {});
+    return { code, ...validated };
+  }
+
+  async deleteVendor(code: string) {
+    try {
+      await this.db.from('vendor_masters').delete().eq('code', code);
+    } catch (err) {
+      console.warn('Database deleteVendor error:', err);
+    }
+    await logAudit({ actorEmail: 'purchase@guruom.in', action: 'VENDOR_MASTER_DELETED', entityType: 'vendor_masters', entityId: code, metadata: { details: `Vendor Master ${code} deleted` } }).catch(() => {});
+    notificationsService.broadcastEvent('vendor_deleted', { code });
+    return { success: true, code };
+  }
+
   // ----------------------------------------------------
   // 4. Machine Masters
   // ----------------------------------------------------
@@ -602,6 +793,60 @@ export class MastersService {
     }
 
     return validated;
+  }
+
+  async updateMachine(code: string, data: any) {
+    const validated = MachineMasterSchema.partial().parse(data);
+    const updateRecord: any = { updated_at: new Date().toISOString() };
+    if (validated.name !== undefined) updateRecord.name = validated.name;
+    if (validated.type !== undefined) {
+      updateRecord.machine_type = validated.type;
+      updateRecord.type = validated.type;
+    }
+    if (validated.department !== undefined) updateRecord.department = validated.department;
+    if (validated.location !== undefined) updateRecord.location = validated.location;
+    if (validated.manufacturer !== undefined) updateRecord.manufacturer = validated.manufacturer;
+    if (validated.model !== undefined) updateRecord.model = validated.model;
+    if (validated.serialNumber !== undefined) updateRecord.serial_number = validated.serialNumber;
+    if (validated.installationDate !== undefined) updateRecord.installation_date = validated.installationDate;
+    if (validated.capacity !== undefined) updateRecord.capacity = validated.capacity;
+    if (validated.capacityUom !== undefined) updateRecord.capacity_uom = validated.capacityUom;
+    if (validated.operatingHours !== undefined) updateRecord.operating_hours = validated.operatingHours;
+    if (validated.shift !== undefined) updateRecord.shift = validated.shift;
+    if (validated.status !== undefined) {
+      updateRecord.status = validated.status;
+      updateRecord.active = validated.status === 'Active';
+    }
+    if (validated.responsiblePerson !== undefined) updateRecord.responsible_person = validated.responsiblePerson;
+    if (validated.hourlyCost !== undefined) updateRecord.hourly_cost = validated.hourlyCost;
+
+    try {
+      const { data: updated, error } = await this.db
+        .from('machine_masters')
+        .update(updateRecord)
+        .eq('code', code)
+        .select()
+        .single();
+      if (!error && updated) {
+        notificationsService.broadcastEvent('machine_updated', updated);
+        return updated;
+      }
+    } catch (err) {
+      console.warn('Database updateMachine error:', err);
+    }
+    await logAudit({ actorEmail: 'production@guruom.in', action: 'MACHINE_MASTER_UPDATED', entityType: 'machine_masters', entityId: code, metadata: { details: `Machine Master ${code} updated` } }).catch(() => {});
+    return { code, ...validated };
+  }
+
+  async deleteMachine(code: string) {
+    try {
+      await this.db.from('machine_masters').delete().eq('code', code);
+    } catch (err) {
+      console.warn('Database deleteMachine error:', err);
+    }
+    await logAudit({ actorEmail: 'production@guruom.in', action: 'MACHINE_MASTER_DELETED', entityType: 'machine_masters', entityId: code, metadata: { details: `Machine Master ${code} deleted` } }).catch(() => {});
+    notificationsService.broadcastEvent('machine_deleted', { code });
+    return { success: true, code };
   }
 
   // ----------------------------------------------------

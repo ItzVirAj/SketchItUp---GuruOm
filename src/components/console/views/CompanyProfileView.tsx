@@ -12,6 +12,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { CompanyProfile } from '../../../types/console';
+import { AccentColorSelector } from '../AccentColorSelector';
 
 interface CompanyProfileViewProps {
   profile: CompanyProfile;
@@ -209,6 +210,26 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
             </button>
           </div>
         </form>
+      </div>
+
+      {/* Appearance & Accent Color Theme */}
+      <div className={`p-8 rounded-3xl border transition-all shadow-xl ${
+        isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl text-white' : 'bg-white border-slate-200 text-slate-900'
+      }`}>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2.5 rounded-2xl bg-[#5B75F8]/10 text-[#5B75F8] dark:text-[#7B92FF] border border-[#5B75F8]/20">
+            <Globe className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="font-bold text-base tracking-tight">Workspace Appearance & Brand Accent</h3>
+            <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              Customize your Owner OS visual accent (Blue, Teal, Orange, or Red).
+            </p>
+          </div>
+        </div>
+        <div className="max-w-md pt-2">
+          <AccentColorSelector isDarkMode={isDarkMode} />
+        </div>
       </div>
 
     </div>

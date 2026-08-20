@@ -117,10 +117,22 @@ export interface CustomerOrder {
   paymentStatus?: 'UNPAID' | 'PARTIAL' | 'PAID';
   paidAmount?: number;
   outstandingAmount?: number;
+  paymentHistory?: any[];
   // PRD v1.0: POD tracking
   podDocumentUrl?: string;
   podAttachmentName?: string;
   podReceivedAt?: string;
+  podReceivedDate?: string;
+  podReceivedBy?: string;
+  // PRD v1.0: Logistics & Invoicing Progression
+  invoiceNo?: string;
+  deliveryChallanNo?: string;
+  transporterName?: string;
+  dispatchedAt?: string;
+  pdiCertificateNo?: string;
+  pdiCertificateUrl?: string;
+  closedAt?: string;
+  closedBy?: string;
   // PRD v1.0: Change Order versioning
   version?: number;
   changeOrderNotes?: string;
@@ -342,19 +354,30 @@ export interface PDIInspection {
   partCode: string;
   partDescription: string;
   qty: number;
-  pdiStatus: 'PASS' | 'PENDING';
+  pdiStatus: 'PASS' | 'PENDING' | 'FAIL';
   certificateNo?: string;
   reportDate?: string;
+  acceptedQty?: number;
+  rejectedQty?: number;
+  inspectorNotes?: string;
+  pdiReportUrl?: string;
+  checklist?: {
+    visualFinish?: boolean;
+    dimensionalAudit?: boolean;
+    gaugesChecked?: boolean;
+    packagingRustProof?: boolean;
+  };
 }
 
 export interface DispatchChallan {
+  id?: string;
   challanNo: string;
   orderPo: string;
   status: 'GENERATED' | 'DISPATCHED' | 'IN_TRANSIT' | 'DELIVERED';
   date: string;
   transporter: string;
   vehicleNo: string;
-  linesCount: number;
+  linesCount?: number;
   driverContact?: string;
   totalInvoiceValue?: number;
   podDocumentUrl?: string;
@@ -493,18 +516,43 @@ export interface SubcontractOrder {
   notes?: string;
 }
 
+export interface InvoiceItem {
+  id?: string;
+  itemCode: string;
+  itemDescription: string;
+  hsnCode: string;
+  qty: number;
+  unitPrice: number;
+  taxableValue?: number;
+  gstRate: number;
+  gstOverrideReason?: string;
+}
+
 export interface CustomerInvoice {
   id?: string;
   invoiceNo: string;
+  customerId?: string;
   customerName: string;
+  customerGstin?: string;
   orderPo: string;
-  challanNo: string;
-  status: 'PAID' | 'OVERDUE' | 'PARTIAL' | 'DRAFT';
-  date: string;
+  challanNo?: string;
+  status: 'PAID' | 'OVERDUE' | 'PARTIAL' | 'PARTIALLY_PAID' | 'DRAFT' | 'UNPAID' | 'ISSUED' | 'CANCELLED' | string;
+  date?: string;
+  invoiceDate?: string;
   dueDate: string;
+  amount?: number;
+  taxableAmount?: number;
+  cgstAmount?: number;
+  sgstAmount?: number;
+  igstAmount?: number;
   totalAmount: number;
-  paidAmount: number;
-  balanceAmount: number;
+  taxAmount?: number;
+  paidAmount?: number;
+  balanceAmount?: number;
+  items?: InvoiceItem[];
+  isIntraState?: boolean;
+  isEInvoiceApplicable?: boolean;
+  irnNumber?: string;
 }
 
 export interface VendorBill {

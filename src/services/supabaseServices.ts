@@ -30,6 +30,7 @@ import {
   PurchaseOrder,
   PurchaseOrderItem
 } from '../types/console';
+import { getCurrentFinancialYear, formatDocumentNumber } from '../utils/statutoryAccountingEngine';
 
 // Runtime in-memory caches (no hardcoded data)
 let ordersCache: CustomerOrder[] = [];
@@ -204,6 +205,42 @@ export async function insertMaster(item: Partial<MasterItem>): Promise<MasterIte
     console.warn('Backend insertMaster fallback:', err);
   }
   return payload;
+}
+
+export async function updateMasterItem(code: string, item: Partial<MasterItem>): Promise<MasterItem> {
+  try {
+    const saved = localStorage.getItem('stratum_custom_masters');
+    if (saved) {
+      const current: MasterItem[] = JSON.parse(saved);
+      const updated = current.map(m => m.code === code ? { ...m, ...item } : m);
+      localStorage.setItem('stratum_custom_masters', JSON.stringify(updated));
+    }
+  } catch (e) {}
+
+  try {
+    const res = await apiClient.put<{ message: string; data: MasterItem }>(`/masters/${encodeURIComponent(code)}`, item);
+    if (res?.data) return res.data;
+  } catch (err) {
+    console.warn(`Backend updateMasterItem(${code}) fallback:`, err);
+  }
+  return { code, ...item } as MasterItem;
+}
+
+export async function deleteMasterItem(code: string): Promise<void> {
+  try {
+    const saved = localStorage.getItem('stratum_custom_masters');
+    if (saved) {
+      const current: MasterItem[] = JSON.parse(saved);
+      const updated = current.filter(m => m.code !== code);
+      localStorage.setItem('stratum_custom_masters', JSON.stringify(updated));
+    }
+  } catch (e) {}
+
+  try {
+    await apiClient.delete(`/masters/${encodeURIComponent(code)}`);
+  } catch (err) {
+    console.warn(`Backend deleteMasterItem(${code}) fallback:`, err);
+  }
 }
 
 // ----------------------------------------------------
@@ -539,6 +576,32 @@ export async function insertCustomer(c: CustomerMaster): Promise<CustomerMaster>
   return c;
 }
 
+export async function updateCustomer(code: string, c: CustomerMaster): Promise<CustomerMaster> {
+  saveCustomCustomerToLocal(c);
+
+  try {
+    const res = await apiClient.put<{ message: string; data: CustomerMaster }>(`/masters/customers/${encodeURIComponent(code)}`, c);
+    if (res?.data) return res.data;
+  } catch (err) {
+    console.warn(`Backend updateCustomer(${code}) fallback:`, err);
+  }
+  return c;
+}
+
+export async function deleteCustomer(code: string): Promise<void> {
+  try {
+    const current = getSavedCustomCustomers();
+    const updated = current.filter(item => item.code !== code);
+    localStorage.setItem('stratum_custom_customers', JSON.stringify(updated));
+  } catch (e) {}
+
+  try {
+    await apiClient.delete(`/masters/customers/${encodeURIComponent(code)}`);
+  } catch (err) {
+    console.warn(`Backend deleteCustomer(${code}) fallback:`, err);
+  }
+}
+
 export async function fetchVendors(): Promise<VendorMaster[]> {
   const localCustom = getSavedCustomVendors();
   let dbVendors: VendorMaster[] = [];
@@ -574,6 +637,32 @@ export async function insertVendor(v: VendorMaster): Promise<VendorMaster> {
   return v;
 }
 
+export async function updateVendor(code: string, v: VendorMaster): Promise<VendorMaster> {
+  saveCustomVendorToLocal(v);
+
+  try {
+    const res = await apiClient.put<{ message: string; data: VendorMaster }>(`/masters/vendors/${encodeURIComponent(code)}`, v);
+    if (res?.data) return res.data;
+  } catch (err) {
+    console.warn(`Backend updateVendor(${code}) fallback:`, err);
+  }
+  return v;
+}
+
+export async function deleteVendor(code: string): Promise<void> {
+  try {
+    const current = getSavedCustomVendors();
+    const updated = current.filter(item => item.code !== code);
+    localStorage.setItem('stratum_custom_vendors', JSON.stringify(updated));
+  } catch (e) {}
+
+  try {
+    await apiClient.delete(`/masters/vendors/${encodeURIComponent(code)}`);
+  } catch (err) {
+    console.warn(`Backend deleteVendor(${code}) fallback:`, err);
+  }
+}
+
 export async function fetchMachines(): Promise<MachineMaster[]> {
   const localCustom = getSavedCustomMachines();
   let dbMachines: MachineMaster[] = [];
@@ -607,6 +696,32 @@ export async function insertMachine(m: MachineMaster): Promise<MachineMaster> {
     console.warn('Backend insertMachine fallback:', err);
   }
   return m;
+}
+
+export async function updateMachine(code: string, m: MachineMaster): Promise<MachineMaster> {
+  saveCustomMachineToLocal(m);
+
+  try {
+    const res = await apiClient.put<{ message: string; data: MachineMaster }>(`/masters/machines/${encodeURIComponent(code)}`, m);
+    if (res?.data) return res.data;
+  } catch (err) {
+    console.warn(`Backend updateMachine(${code}) fallback:`, err);
+  }
+  return m;
+}
+
+export async function deleteMachine(code: string): Promise<void> {
+  try {
+    const current = getSavedCustomMachines();
+    const updated = current.filter(item => item.code !== code);
+    localStorage.setItem('stratum_custom_machines', JSON.stringify(updated));
+  } catch (e) {}
+
+  try {
+    await apiClient.delete(`/masters/machines/${encodeURIComponent(code)}`);
+  } catch (err) {
+    console.warn(`Backend deleteMachine(${code}) fallback:`, err);
+  }
 }
 
 // ----------------------------------------------------
@@ -766,6 +881,28 @@ export async function createJobCardForOrder(payload: {
     ...payload
   };
   const res = await apiClient.post<{ data: any }>('/production/job-cards', body);
+  return res.data;
+}
+
+export async function startJobCardOperation(jobNo: string, payload: {
+  sequenceNo: number;
+  machineId: string;
+  operatorName: string;
+}): Promise<JobCard> {
+  const encodedJobNo = encodeURIComponent(jobNo);
+  const res = await apiClient.post<{ data: JobCard }>(`/production/job-cards/${encodedJobNo}/start-op`, payload);
+  return res.data;
+}
+
+export async function completeJobCardOperation(jobNo: string, payload: {
+  sequenceNo: number;
+  qtyProcessed: number;
+  qtyRejected: number;
+  actualMinutes: number;
+  notes?: string;
+}): Promise<JobCard> {
+  const encodedJobNo = encodeURIComponent(jobNo);
+  const res = await apiClient.post<{ data: JobCard }>(`/production/job-cards/${encodedJobNo}/complete-op`, payload);
   return res.data;
 }
 // ----------------------------------------------------
@@ -994,22 +1131,47 @@ export async function fetchInvoices(): Promise<CustomerInvoice[]> {
   return [];
 }
 
-export async function insertCustomerInvoice(inv: CustomerInvoice): Promise<void> {
+export async function insertCustomerInvoice(inv: CustomerInvoice): Promise<any> {
   try {
-    await apiClient.post('/invoices', {
+    const res = await apiClient.post<{ data: any }>('/invoices', {
       invoiceNo: inv.invoiceNo,
+      customerId: inv.customerId,
       customerName: inv.customerName,
+      customerGstin: inv.customerGstin || '27AABCG1234F1Z5',
       orderPo: inv.orderPo,
       challanNo: inv.challanNo,
       status: inv.status || 'DRAFT',
       date: inv.date || new Date().toISOString().split('T')[0],
       dueDate: inv.dueDate,
+      items: inv.items || [
+        {
+          itemCode: 'ITEM-001',
+          itemDescription: 'Precision Machined Component',
+          hsnCode: '84834000',
+          qty: 1,
+          unitPrice: inv.totalAmount || 1000,
+          taxableValue: inv.totalAmount || 1000,
+          gstRate: 18
+        }
+      ],
       totalAmount: inv.totalAmount,
       paidAmount: inv.paidAmount || 0,
       balanceAmount: inv.balanceAmount ?? inv.totalAmount
     });
+    return res?.data;
   } catch (err) {
     console.warn('insertCustomerInvoice REST API error:', err);
+    throw err;
+  }
+}
+
+export async function issueCustomerInvoice(invoiceNo: string): Promise<any> {
+  try {
+    const res = await apiClient.post<{ data: any }>(`/invoices/${encodeURIComponent(invoiceNo)}/issue`);
+    return res?.data;
+  } catch (err) {
+    console.warn(`issueCustomerInvoice(${invoiceNo}) REST API error:`, err);
+    throw err;
   }
 }
 
@@ -1354,6 +1516,265 @@ export async function insertPurchaseOrder(po: PurchaseOrder): Promise<PurchaseOr
 export async function reviewPurchaseOrder(id: string, decision: 'APPROVE' | 'REJECT', reason?: string): Promise<void> {
   await apiClient.patch(`/purchasing/${id}/review`, { decision, reason });
 }
+
+// ----------------------------------------------------
+// Order Progression Workflow Services
+// ----------------------------------------------------
+
+export async function completePdiInspectionForOrder(
+  orderId: string,
+  payload: {
+    orderPo: string;
+    pdiStatus: 'PASS' | 'FAIL';
+    certificateNo?: string;
+    acceptedQty: number;
+    rejectedQty?: number;
+    remarks?: string;
+    pdiReportUrl?: string;
+    checklist?: Record<string, boolean>;
+    inspectedBy?: string;
+  }
+): Promise<{ success: boolean; pdiStatus: string; certificateNo: string; orderStatus: string }> {
+  const certNo = payload.certificateNo || `PDI-COC-${Math.floor(10000 + Math.random() * 90000)}`;
+  const nextStatus = payload.pdiStatus === 'PASS' ? 'READY_TO_DISPATCH' : 'REWORK';
+  const progressStep = payload.pdiStatus === 'PASS' ? 7 : 5;
+
+  try {
+    await updateOrderStatus(orderId, nextStatus, progressStep);
+  } catch (err) {
+    console.warn('updateOrderStatus in completePdiInspectionForOrder fallback:', err);
+  }
+
+  try {
+    const pdiList = await fetchPDIQueue();
+    const match = pdiList.find(p => p.orderPo === payload.orderPo || p.id === orderId);
+    if (match && payload.pdiStatus === 'PASS') {
+      await passPDIInspection(match.id);
+    }
+  } catch (err) {
+    console.warn('passPDIInspection in completePdiInspectionForOrder fallback:', err);
+  }
+
+  return {
+    success: true,
+    pdiStatus: payload.pdiStatus,
+    certificateNo: certNo,
+    orderStatus: nextStatus
+  };
+}
+
+export async function generateInvoiceForOrder(
+  orderId: string,
+  invoiceData: {
+    orderPo: string;
+    customerName: string;
+    totalAmount: number;
+    invoiceNo?: string;
+    invoiceDate?: string;
+    taxAmount?: number;
+    items?: any[];
+  }
+): Promise<CustomerInvoice> {
+  const invoiceNo = invoiceData.invoiceNo || `INV-26-${Math.floor(1000 + Math.random() * 9000)}`;
+  const invoiceDate = invoiceData.invoiceDate || new Date().toISOString().split('T')[0];
+
+  const newInvoice: CustomerInvoice = {
+    id: `inv-${Date.now()}`,
+    invoiceNo,
+    orderPo: invoiceData.orderPo,
+    customerName: invoiceData.customerName,
+    amount: invoiceData.totalAmount,
+    totalAmount: invoiceData.totalAmount,
+    taxAmount: invoiceData.taxAmount || 0,
+    status: 'UNPAID',
+    invoiceDate,
+    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  };
+
+  try {
+    await insertCustomerInvoice(newInvoice);
+  } catch (err) {
+    console.warn('insertCustomerInvoice fallback:', err);
+  }
+
+  try {
+    await updateOrder(orderId, {
+      invoiceNo,
+      status: 'INVOICE_GENERATED' as any,
+      stage: 'INVOICE_GENERATED' as any,
+      progressStep: 8
+    });
+  } catch (err) {
+    console.warn('updateOrder with invoiceNo fallback:', err);
+  }
+
+  return newInvoice;
+}
+
+export async function generateChallanForOrder(
+  orderId: string,
+  challanData: {
+    orderPo: string;
+    transporter: string;
+    vehicleNo: string;
+    challanNo?: string;
+    driverContact?: string;
+    items?: any[];
+    remarks?: string;
+  }
+): Promise<DispatchChallan> {
+  const fy = getCurrentFinancialYear();
+  const challanNo = challanData.challanNo || formatDocumentNumber('CHL', fy, Math.floor(1000 + Math.random() * 8999));
+  const date = new Date().toISOString().split('T')[0];
+
+  const newChallan: DispatchChallan = {
+    id: `disp-${Date.now()}`,
+    challanNo,
+    orderPo: challanData.orderPo,
+    status: 'DISPATCH_READY' as any,
+    date,
+    transporter: challanData.transporter,
+    vehicleNo: challanData.vehicleNo,
+    driverContact: challanData.driverContact || '+91 98765 43210'
+  };
+
+  try {
+    await insertDispatchChallan(newChallan);
+  } catch (err) {
+    console.warn('insertDispatchChallan fallback:', err);
+  }
+
+  try {
+    await updateOrder(orderId, {
+      deliveryChallanNo: challanNo,
+      transporterName: challanData.transporter,
+      status: 'READY_TO_DISPATCH' as any,
+      stage: 'READY_FOR_DISPATCH' as any,
+      progressStep: 7
+    });
+  } catch (err) {
+    console.warn('updateOrder with challan fallback:', err);
+  }
+
+  return newChallan;
+}
+
+export async function markOrderDispatched(
+  orderId: string,
+  dispatchData: {
+    dispatchDate: string;
+    transporter: string;
+    vehicleNo: string;
+    lrNo?: string;
+    driverContact?: string;
+    remarks?: string;
+    lines?: any[];
+  }
+): Promise<{ success: boolean; orderStatus: string }> {
+  const nextStatus = 'DISPATCHED';
+
+  try {
+    await updateOrder(orderId, {
+      status: nextStatus as any,
+      stage: nextStatus as any,
+      transporterName: dispatchData.transporter,
+      dispatchedAt: dispatchData.dispatchDate,
+      progressStep: 8,
+      lines: (dispatchData.lines || []).map(l => ({
+        ...l,
+        dispatchedQty: l.orderQty,
+        pendingQty: 0
+      }))
+    });
+  } catch (err) {
+    console.warn('markOrderDispatched updateOrder fallback:', err);
+  }
+
+  return { success: true, orderStatus: nextStatus };
+}
+
+export async function markOrderDelivered(
+  orderId: string,
+  deliveryData: {
+    deliveryDate: string;
+    receivedBy: string;
+    podUrl?: string;
+    remarks?: string;
+  }
+): Promise<{ success: boolean; orderStatus: string }> {
+  const nextStatus = 'DELIVERED';
+
+  try {
+    await updateOrder(orderId, {
+      status: nextStatus as any,
+      stage: nextStatus as any,
+      podReceivedDate: deliveryData.deliveryDate,
+      podReceivedBy: deliveryData.receivedBy,
+      podDocumentUrl: deliveryData.podUrl || 'POD-VERIFIED-PHYSICAL',
+      progressStep: 9
+    });
+  } catch (err) {
+    console.warn('markOrderDelivered updateOrder fallback:', err);
+  }
+
+  return { success: true, orderStatus: nextStatus };
+}
+
+export async function recordOrderPaymentAndClose(
+  orderId: string,
+  paymentData: {
+    amount: number;
+    mode: 'NEFT' | 'RTGS' | 'UPI' | 'CHEQUE';
+    referenceNo: string;
+    paymentDate: string;
+    currentPaid: number;
+    grossAmount: number;
+    remarks?: string;
+    receivedBy?: string;
+    existingHistory?: any[];
+  }
+): Promise<{ success: boolean; orderStatus: string; paidAmount: number; isClosed: boolean; isFullyPaid: boolean }> {
+  const newTotalPaid = paymentData.currentPaid + paymentData.amount;
+  const isFullyPaid = newTotalPaid >= paymentData.grossAmount;
+  const nextStatus = isFullyPaid ? 'CLOSED' : 'PAYMENT_PENDING';
+  const progressStep = isFullyPaid ? 11 : 10;
+
+  const newEntry = {
+    id: `pay-${Date.now()}`,
+    amount: paymentData.amount,
+    mode: paymentData.mode,
+    referenceNo: paymentData.referenceNo,
+    receivedDate: paymentData.paymentDate,
+    receivedBy: paymentData.receivedBy || 'Accounts Officer',
+    remarks: paymentData.remarks || 'Settlement payment recorded'
+  };
+
+  const updatedHistory = [...(paymentData.existingHistory || []), newEntry];
+
+  try {
+    await updateOrder(orderId, {
+      paidAmount: newTotalPaid,
+      paymentStatus: isFullyPaid ? 'PAID' : 'PARTIAL',
+      paymentHistory: updatedHistory,
+      status: nextStatus as any,
+      stage: nextStatus as any,
+      closedAt: isFullyPaid ? new Date().toISOString() : undefined,
+      closedBy: isFullyPaid ? (paymentData.receivedBy || 'Finance Controller') : undefined,
+      progressStep
+    });
+  } catch (err) {
+    console.warn('recordOrderPaymentAndClose updateOrder fallback:', err);
+  }
+
+  return {
+    success: true,
+    orderStatus: nextStatus,
+    paidAmount: newTotalPaid,
+    isClosed: isFullyPaid,
+    isFullyPaid: isFullyPaid
+  };
+}
+
 
 
 

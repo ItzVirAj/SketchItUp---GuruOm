@@ -154,13 +154,31 @@ export class OrdersService {
    * Directly synchronizes order status across micro-services during real-time stage progression.
    */
   async updateOrderStageDirectly(orderPoOrId: string, stage: OrderStage, progressStep?: number) {
+    const step = progressStep || ORDER_STAGE_STEPS[stage] || 1;
     try {
-      const payload: any = { status: stage, updated_at: new Date().toISOString() };
-      if (progressStep) payload.progress_step = progressStep;
+      const payload: any = { status: stage, progress_step: step, updated_at: new Date().toISOString() };
       await this.db.from('customer_orders').update(payload).or(`id.eq.${orderPoOrId},po_no.eq.${orderPoOrId}`);
     } catch (err) {
       console.warn('Database updateOrderStageDirectly error:', err);
     }
+
+    // Real-Time Push: Broadcast stage transition across all dashboards
+    notificationsService.broadcastEvent('order_transitioned', {
+      orderId: orderPoOrId,
+      poNo: orderPoOrId,
+      status: stage,
+      stage,
+      progressStep: step,
+      updatedAt: new Date().toISOString()
+    });
+    notificationsService.broadcastEvent('order_updated', {
+      id: orderPoOrId,
+      poNo: orderPoOrId,
+      status: stage,
+      stage,
+      progressStep: step,
+      updatedAt: new Date().toISOString()
+    });
   }
 
   /**

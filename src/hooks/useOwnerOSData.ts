@@ -28,10 +28,13 @@ import {
   updateCompanyProfile,
   fetchProfiles,
   createProfile,
+  updateProfile,
   updateProfileRole,
   updateProfileStatus,
   fetchMasters,
   insertMaster,
+  updateMasterItem,
+  deleteMasterItem,
   fetchOrders,
   insertOrder,
   updateOrder,
@@ -42,6 +45,8 @@ import {
   fetchShortages,
   fetchJobCards,
   createJobCardForOrder,
+  startJobCardOperation,
+  completeJobCardOperation,
   fetchProductionLogs,
   insertProductionLogAndQC,
   fetchQCQueue,
@@ -54,7 +59,14 @@ import {
   insertDispatchChallan,
   fetchInvoices,
   insertCustomerInvoice,
+  issueCustomerInvoice,
   payInvoice,
+  completePdiInspectionForOrder,
+  generateInvoiceForOrder,
+  generateChallanForOrder,
+  markOrderDispatched,
+  markOrderDelivered,
+  recordOrderPaymentAndClose,
   fetchPayables,
   insertVendorBill,
   payVendorBill,
@@ -67,10 +79,16 @@ import {
   insertAuditLog,
   fetchCustomers,
   insertCustomer,
+  updateCustomer,
+  deleteCustomer,
   fetchVendors,
   insertVendor,
+  updateVendor,
+  deleteVendor,
   fetchMachines,
   insertMachine,
+  updateMachine,
+  deleteMachine,
   deleteProfile,
   seedAllDataToSupabase,
   clearOperationalDataInSupabase
@@ -227,7 +245,26 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       eventSource.addEventListener('order_updated', (event: MessageEvent) => {
         try {
           const updated = JSON.parse(event.data);
-          setOrders(prev => prev.map(o => (o.id === updated.id || o.poNo === updated.poNo || o.id === updated.poNo) ? { ...o, ...updated } : o));
+          const targetKey = updated.id || updated.poNo || updated.orderId;
+          setOrders(prev => prev.map(o => {
+            const isMatch = o.id === updated.id || 
+                            o.poNo === updated.poNo || 
+                            o.id === updated.poNo || 
+                            o.poNo === updated.id || 
+                            (updated.orderId && (o.id === updated.orderId || o.poNo === updated.orderId));
+            if (isMatch) {
+              return {
+                ...o,
+                ...updated,
+                id: o.id || updated.id,
+                poNo: o.poNo || updated.poNo,
+                status: updated.status || updated.stage || o.status,
+                stage: updated.stage || updated.status || o.stage,
+                progressStep: updated.progressStep ?? updated.progress_step ?? o.progressStep
+              };
+            }
+            return o;
+          }));
         } catch (_) {}
       });
 
@@ -235,12 +272,18 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         try {
           const payload = JSON.parse(event.data);
           setOrders(prev => prev.map(o => {
-            if (o.id === payload.orderId || o.poNo === payload.poNo) {
+            const isMatch = o.id === payload.orderId || 
+                            o.poNo === payload.poNo || 
+                            o.id === payload.poNo || 
+                            o.poNo === payload.orderId ||
+                            o.id === payload.id ||
+                            o.poNo === payload.id;
+            if (isMatch) {
               return {
                 ...o,
-                status: payload.status || payload.newStage,
-                stage: payload.stage || payload.newStage,
-                progressStep: payload.progressStep ?? o.progressStep,
+                status: payload.status || payload.newStage || payload.stage || o.status,
+                stage: payload.stage || payload.newStage || payload.status || o.stage,
+                progressStep: payload.progressStep ?? payload.progress_step ?? o.progressStep,
                 heatLotNumber: payload.heatLotNumber || o.heatLotNumber
               };
             }
@@ -520,6 +563,22 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     await loadAllData();
   };
 
+  const handleStartOperation = async (jobNo: string, payload: { sequenceNo: number; machineId: string; operatorName: string }) => {
+    const updatedJobCard = await startJobCardOperation(jobNo, payload);
+    setJobCards(prev => prev.map(j => (j.jobNo === jobNo || j.id === jobNo ? { ...j, ...updatedJobCard } : j)));
+    await addAuditLog('production', 'start_operation', `Op ${payload.sequenceNo} started on ${payload.machineId} by ${payload.operatorName} for ${jobNo}`);
+    await loadAllData();
+    return updatedJobCard;
+  };
+
+  const handleCompleteOperation = async (jobNo: string, payload: { sequenceNo: number; qtyProcessed: number; qtyRejected: number; actualMinutes: number; notes?: string }) => {
+    const updatedJobCard = await completeJobCardOperation(jobNo, payload);
+    setJobCards(prev => prev.map(j => (j.jobNo === jobNo || j.id === jobNo ? { ...j, ...updatedJobCard } : j)));
+    await addAuditLog('production', 'complete_operation', `Op ${payload.sequenceNo} completed (${payload.qtyProcessed} good, ${payload.qtyRejected} rejected) for ${jobNo}`);
+    await loadAllData();
+    return updatedJobCard;
+  };
+
   const handleLogProduction = async (job: JobCard, qtyDone: number) => {
     await insertProductionLogAndQC(job, qtyDone);
     await addAuditLog('production', 'log', `Logged ${qtyDone} units produced for ${job.jobNo}`);
@@ -576,13 +635,21 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     await loadAllData();
   };
 
-  const handlePassPDI = async (id: string) => {
+  const handlePassPDI = async (id: string, payload?: Partial<PDIInspection>) => {
     const target = pdiQueue.find(p => p.id === id);
-    setPdiQueue(prev => prev.map(p => p.id === id ? { ...p, pdiStatus: 'PASS', certificateNo: `PDI-2026-${Math.floor(1000 + Math.random() * 9000)}` } : p));
+    const targetOrderPo = payload?.orderPo || target?.orderPo;
+    const certNo = payload?.certificateNo || target?.certificateNo || `PDI-COC-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    if (target?.orderPo) {
+    setPdiQueue(prev => prev.map(p => (p.id === id || (targetOrderPo && p.orderPo === targetOrderPo)) ? { 
+      ...p, 
+      ...payload,
+      pdiStatus: 'PASS', 
+      certificateNo: certNo 
+    } : p));
+
+    if (targetOrderPo) {
       setOrders(prev => prev.map(ord => {
-        if (ord.poNo === target.orderPo || ord.id === target.orderPo) {
+        if (ord.poNo === targetOrderPo || ord.id === targetOrderPo) {
           return {
             ...ord,
             stage: 'READY_TO_DISPATCH',
@@ -595,7 +662,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     }
 
     await passPDIInspection(id);
-    await addAuditLog('pdi', 'pass', `Passed PDI inspection #${id}`);
+    await addAuditLog('pdi', 'pass', `Passed PDI inspection #${id} (Cert: ${certNo}, PO: ${targetOrderPo || 'N/A'})`);
     await loadAllData();
   };
 
@@ -628,6 +695,21 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     await loadAllData();
   };
 
+  const handleIssueInvoice = async (invoiceNo: string) => {
+    setInvoices(prev => prev.map(inv => {
+      if (inv.id === invoiceNo || inv.invoiceNo === invoiceNo) {
+        return {
+          ...inv,
+          status: 'ISSUED'
+        };
+      }
+      return inv;
+    }));
+    await issueCustomerInvoice(invoiceNo);
+    await addAuditLog('invoice', 'issue', `Issued tax invoice #${invoiceNo}`);
+    await loadAllData();
+  };
+
   const handleRecordPayablePayment = async (billNo: string) => {
     setPayables(prev => prev.map(bill => {
       if (bill.id === billNo || bill.billNo === billNo) {
@@ -657,10 +739,43 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     await loadAllData();
   };
 
-  const handleAddMasterItem = async (item: MasterItem) => {
-    await insertMaster(item);
-    await addAuditLog('masters', 'add_item', `Added master item ${item.code} (${item.partNo})`);
+  const handleCompletePDI = async (orderId: string, payload: any) => {
+    await completePdiInspectionForOrder(orderId, payload);
+    await addAuditLog('qc', 'complete_pdi', `Completed PDI for order ${payload.orderPo}: Status ${payload.pdiStatus} (${payload.acceptedQty} Accepted)`);
     await loadAllData();
+  };
+
+  const handleGenerateInvoice = async (orderId: string, invoiceData: any) => {
+    const inv = await generateInvoiceForOrder(orderId, invoiceData);
+    await addAuditLog('invoices', 'generate', `Generated Tax Invoice ${inv.invoiceNo} for Order ${invoiceData.orderPo}`);
+    await loadAllData();
+    return inv;
+  };
+
+  const handleGenerateChallan = async (orderId: string, challanData: any) => {
+    const ch = await generateChallanForOrder(orderId, challanData);
+    await addAuditLog('dispatch', 'generate_challan', `Generated Delivery Challan ${ch.challanNo} via ${challanData.transporter}`);
+    await loadAllData();
+    return ch;
+  };
+
+  const handleMarkDispatched = async (orderId: string, dispatchData: any) => {
+    await markOrderDispatched(orderId, dispatchData);
+    await addAuditLog('dispatch', 'mark_dispatched', `Dispatched consignment for Order #${orderId} via ${dispatchData.transporter} (${dispatchData.vehicleNo})`);
+    await loadAllData();
+  };
+
+  const handleMarkDelivered = async (orderId: string, deliveryData: any) => {
+    await markOrderDelivered(orderId, deliveryData);
+    await addAuditLog('dispatch', 'mark_delivered', `Marked Order #${orderId} as Delivered to ${deliveryData.receivedBy}`);
+    await loadAllData();
+  };
+
+  const handleRecordPayment = async (orderId: string, paymentData: any) => {
+    const res = await recordOrderPaymentAndClose(orderId, paymentData);
+    await addAuditLog('finance', 'record_payment', `Recorded payment of ₹${paymentData.amount.toLocaleString()} for Order #${orderId} (${res.isClosed ? 'ORDER CLOSED' : 'PARTIALLY PAID'})`);
+    await loadAllData();
+    return res;
   };
 
   const handleAddUser = async (user: Partial<SystemUser>) => {
@@ -745,7 +860,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
 
   const handleSync = async () => {
     await loadAllData();
-    await addAuditLog('system', 'sync', 'Telemetry synchronized with Supabase database.');
+    await addAuditLog('system', 'sync', 'Synchronized live system state with database in real-time.');
   };
 
   const handleResetAllData = async () => {
@@ -780,6 +895,39 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     await loadAllData();
   };
 
+  const handleAddMasterItem = async (item: Partial<MasterItem>) => {
+    try {
+      const created = await insertMaster(item);
+      setMasters(prev => [created, ...prev.filter(m => m.code !== created.code)]);
+      await addAuditLog('masters', 'add_master', `Added item master ${created.code} (${created.name})`);
+    } catch (err) {
+      console.warn('handleAddMasterItem error:', err);
+    }
+    await loadAllData();
+  };
+
+  const handleUpdateMasterItem = async (code: string, item: Partial<MasterItem>) => {
+    try {
+      const updated = await updateMasterItem(code, item);
+      setMasters(prev => prev.map(m => m.code === code ? { ...m, ...updated } : m));
+      await addAuditLog('masters', 'update_master', `Updated item master ${code} (${item.name || item.description || ''})`);
+    } catch (err) {
+      console.warn('handleUpdateMasterItem error:', err);
+    }
+    await loadAllData();
+  };
+
+  const handleDeleteMasterItem = async (code: string) => {
+    setMasters(prev => prev.filter(m => m.code !== code));
+    try {
+      await deleteMasterItem(code);
+    } catch (err) {
+      console.warn('handleDeleteMasterItem error:', err);
+    }
+    await addAuditLog('masters', 'delete_master', `Deleted item master ${code}`);
+    await loadAllData();
+  };
+
   const handleAddCustomer = async (c: CustomerMaster) => {
     setCustomers(prev => [c, ...prev.filter(item => item.code !== c.code)]);
     try {
@@ -788,6 +936,28 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       console.warn('Realtime Supabase customer insert error:', err);
     }
     await addAuditLog('masters', 'add_customer', `Added/updated customer master ${c.code} (${c.name})`);
+    await loadAllData();
+  };
+
+  const handleUpdateCustomer = async (code: string, c: CustomerMaster) => {
+    setCustomers(prev => prev.map(item => item.code === code ? { ...item, ...c } : item));
+    try {
+      await updateCustomer(code, c);
+    } catch (err) {
+      console.warn('Realtime Supabase customer update error:', err);
+    }
+    await addAuditLog('masters', 'update_customer', `Updated customer master ${code} (${c.name})`);
+    await loadAllData();
+  };
+
+  const handleDeleteCustomer = async (code: string) => {
+    setCustomers(prev => prev.filter(item => item.code !== code));
+    try {
+      await deleteCustomer(code);
+    } catch (err) {
+      console.warn('Realtime Supabase customer delete error:', err);
+    }
+    await addAuditLog('masters', 'delete_customer', `Deleted customer master ${code}`);
     await loadAllData();
   };
 
@@ -802,6 +972,28 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     await loadAllData();
   };
 
+  const handleUpdateVendor = async (code: string, v: VendorMaster) => {
+    setVendors(prev => prev.map(item => item.code === code ? { ...item, ...v } : item));
+    try {
+      await updateVendor(code, v);
+    } catch (err) {
+      console.warn('Realtime Supabase vendor update error:', err);
+    }
+    await addAuditLog('masters', 'update_vendor', `Updated vendor master ${code} (${v.name})`);
+    await loadAllData();
+  };
+
+  const handleDeleteVendor = async (code: string) => {
+    setVendors(prev => prev.filter(item => item.code !== code));
+    try {
+      await deleteVendor(code);
+    } catch (err) {
+      console.warn('Realtime Supabase vendor delete error:', err);
+    }
+    await addAuditLog('masters', 'delete_vendor', `Deleted vendor master ${code}`);
+    await loadAllData();
+  };
+
   const handleAddMachine = async (m: MachineMaster) => {
     setMachines(prev => [m, ...prev.filter(item => item.code !== m.code)]);
     try {
@@ -810,6 +1002,28 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       console.warn('Realtime Supabase machine insert error:', err);
     }
     await addAuditLog('masters', 'add_machine', `Added/updated machine master ${m.code} (${m.name})`);
+    await loadAllData();
+  };
+
+  const handleUpdateMachine = async (code: string, m: MachineMaster) => {
+    setMachines(prev => prev.map(item => item.code === code ? { ...item, ...m } : item));
+    try {
+      await updateMachine(code, m);
+    } catch (err) {
+      console.warn('Realtime Supabase machine update error:', err);
+    }
+    await addAuditLog('masters', 'update_machine', `Updated machine master ${code} (${m.name})`);
+    await loadAllData();
+  };
+
+  const handleDeleteMachine = async (code: string) => {
+    setMachines(prev => prev.filter(item => item.code !== code));
+    try {
+      await deleteMachine(code);
+    } catch (err) {
+      console.warn('Realtime Supabase machine delete error:', err);
+    }
+    await addAuditLog('masters', 'delete_machine', `Deleted machine master ${code}`);
     await loadAllData();
   };
 
@@ -873,19 +1087,36 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     handleCancelOrder,
     handleAdjustStock,
     handleCreateJobCard,
+    handleStartOperation,
+    handleCompleteOperation,
     handleLogProduction,
     handleUpdateQC,
     handlePassPDI,
+    handleCompletePDI,
+    handleGenerateInvoice,
+    handleGenerateChallan,
+    handleMarkDispatched,
+    handleMarkDelivered,
+    handleRecordPayment,
     handleIssueDispatch,
     handleRecordInvoicePayment,
     handleCreateInvoice,
+    handleIssueInvoice,
     handleRecordPayablePayment,
     handleCreateVendorBill,
     handleCreateOutwork,
     handleAddMasterItem,
+    handleUpdateMasterItem,
+    handleDeleteMasterItem,
     handleAddCustomer,
+    handleUpdateCustomer,
+    handleDeleteCustomer,
     handleAddVendor,
+    handleUpdateVendor,
+    handleDeleteVendor,
     handleAddMachine,
+    handleUpdateMachine,
+    handleDeleteMachine,
     handleImportOMGST,
     handleAddUser,
     handleUpdateUser,

@@ -180,13 +180,24 @@ export class QcService {
 
           // Real-Time Push: Auto-create PDI inspection in PDI queue & update order
           notificationsService.broadcastEvent('pdi_created', pdiRecord);
-          notificationsService.broadcastEvent('order_updated', {
-            id: target.orderPo,
+          notificationsService.broadcastEvent('order_transitioned', {
+            orderId: target.orderPo,
             poNo: target.orderPo,
             status: 'QC_INSPECTION',
             stage: 'QC_INSPECTION',
             progressStep: 6,
-            hasOpenNcr: false
+            hasOpenNcr: false,
+            updatedAt: new Date().toISOString()
+          });
+          notificationsService.broadcastEvent('order_updated', {
+            id: target.orderPo,
+            orderId: target.orderPo,
+            poNo: target.orderPo,
+            status: 'QC_INSPECTION',
+            stage: 'QC_INSPECTION',
+            progressStep: 6,
+            hasOpenNcr: false,
+            updatedAt: new Date().toISOString()
           });
         } else if (qcStatus === 'QC_HOLD' || qcStatus === 'REJECTED') {
           // Set open NCR block on parent order & put job card on QC hold
@@ -283,7 +294,7 @@ export class QcService {
   async passPDIInspection(id: string) {
     const certNo = `PDI-2026-${Math.floor(1000 + Math.random() * 9000)}`;
     const reportDate = new Date().toISOString().split('T')[0];
-
+    let dbPdi: any = null;
     try {
       await this.db.from('pdi_inspections').update({
         pdi_status: 'PASS',
@@ -292,6 +303,7 @@ export class QcService {
       }).eq('id', id);
 
       const { data: pdi } = await this.db.from('pdi_inspections').select('*').eq('id', id).single();
+      dbPdi = pdi;
       if (pdi) {
         const fgId = `fg-${Date.now()}`;
         await this.db.from('finished_goods').insert({
@@ -324,8 +336,10 @@ export class QcService {
       local.reportDate = reportDate;
     }
 
-    const orderPo = local?.orderPo || 'PO';
-    const partDesc = local?.partDescription || 'Manufactured Item';
+    const orderPo = dbPdi?.order_po || local?.orderPo || 'PO';
+    const partCode = dbPdi?.part_code || local?.partCode;
+    const partDesc = dbPdi?.part_description || local?.partDescription || 'Manufactured Item';
+    const qty = dbPdi?.qty || local?.qty;
 
     try {
       await notificationsService.triggerNotification({
@@ -342,13 +356,23 @@ export class QcService {
 
     // Real-Time Push: Broadcast PDI pass, Finished Goods update, and Order progression
     notificationsService.broadcastEvent('pdi_updated', { id, pdiStatus: 'PASS', certificateNo: certNo, reportDate, orderPo });
-    notificationsService.broadcastEvent('finished_goods_updated', { orderPo, partCode: local?.partCode, qty: local?.qty });
-    notificationsService.broadcastEvent('order_updated', {
-      id: orderPo,
+    notificationsService.broadcastEvent('finished_goods_updated', { orderPo, partCode, qty });
+    notificationsService.broadcastEvent('order_transitioned', {
+      orderId: orderPo,
       poNo: orderPo,
       status: 'READY_TO_DISPATCH',
-      stage: 'READY_FOR_DISPATCH',
-      progressStep: 7
+      stage: 'READY_TO_DISPATCH',
+      progressStep: 7,
+      updatedAt: new Date().toISOString()
+    });
+    notificationsService.broadcastEvent('order_updated', {
+      id: orderPo,
+      orderId: orderPo,
+      poNo: orderPo,
+      status: 'READY_TO_DISPATCH',
+      stage: 'READY_TO_DISPATCH',
+      progressStep: 7,
+      updatedAt: new Date().toISOString()
     });
 
     return { id, pdiStatus: 'PASS', certificateNo: certNo, reportDate };

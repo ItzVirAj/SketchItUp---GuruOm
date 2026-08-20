@@ -37,7 +37,9 @@ import {
   Sliders,
   AlertTriangle,
   FileCheck,
-  Truck
+  Truck,
+  Pencil,
+  Trash2
 } from 'lucide-react';
 import { MasterItem, CustomerMaster, VendorMaster, MachineMaster, SystemUser } from '../../../types/console';
 import { Modal } from '../../common/Modal';
@@ -76,11 +78,19 @@ interface MastersViewProps {
   machines?: MachineMaster[];
   users?: SystemUser[];
   isDarkMode?: boolean;
-  onAddMaster?: (item: Partial<MasterItem>) => void;
-  onAddMasterItem?: (item: Partial<MasterItem>) => void;
-  onAddCustomer?: (customer: CustomerMaster) => void;
-  onAddVendor?: (vendor: VendorMaster) => void;
-  onAddMachine?: (machine: MachineMaster) => void;
+  onAddMaster?: (item: Partial<MasterItem>) => void | Promise<void>;
+  onUpdateMaster?: (code: string, item: Partial<MasterItem>) => void | Promise<void>;
+  onDeleteMaster?: (code: string) => void | Promise<void>;
+  onAddMasterItem?: (item: Partial<MasterItem>) => void | Promise<void>;
+  onAddCustomer?: (customer: CustomerMaster) => void | Promise<void>;
+  onUpdateCustomer?: (code: string, customer: CustomerMaster) => void | Promise<void>;
+  onDeleteCustomer?: (code: string) => void | Promise<void>;
+  onAddVendor?: (vendor: VendorMaster) => void | Promise<void>;
+  onUpdateVendor?: (code: string, vendor: VendorMaster) => void | Promise<void>;
+  onDeleteVendor?: (code: string) => void | Promise<void>;
+  onAddMachine?: (machine: MachineMaster) => void | Promise<void>;
+  onUpdateMachine?: (code: string, machine: MachineMaster) => void | Promise<void>;
+  onDeleteMachine?: (code: string) => void | Promise<void>;
   onImportOMGST?: (data: { customers?: CustomerMaster[]; vendors?: VendorMaster[]; machines?: MachineMaster[]; items?: MasterItem[] }) => void;
 }
 
@@ -92,10 +102,18 @@ export const MastersView: React.FC<MastersViewProps> = ({
   users = [],
   isDarkMode = true,
   onAddMaster,
+  onUpdateMaster,
+  onDeleteMaster,
   onAddMasterItem,
   onAddCustomer,
+  onUpdateCustomer,
+  onDeleteCustomer,
   onAddVendor,
+  onUpdateVendor,
+  onDeleteVendor,
   onAddMachine,
+  onUpdateMachine,
+  onDeleteMachine,
   onImportOMGST
 }) => {
   const location = useLocation();
@@ -239,9 +257,23 @@ export const MastersView: React.FC<MastersViewProps> = ({
   const [mResponsiblePerson, setMResponsiblePerson] = useState('');
   const [mHourlyCost, setMHourlyCost] = useState<number>(600);
 
+  // Edit & Delete States
+  const [editingCustomer, setEditingCustomer] = useState<CustomerMaster | null>(null);
+  const [editingVendor, setEditingVendor] = useState<VendorMaster | null>(null);
+  const [editingItem, setEditingItem] = useState<MasterItem | null>(null);
+  const [editingMachine, setEditingMachine] = useState<MachineMaster | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    isOpen: boolean;
+    type: 'CUSTOMER' | 'VENDOR' | 'ITEM' | 'MACHINE';
+    code: string;
+    name: string;
+  } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // Init Code Generators on opening modals
   const openCustomerModal = () => {
     setFormErrors({});
+    setEditingCustomer(null);
     const nextCode = generateNextCode(customers.map(c => c.code), 'CUST');
     setCCode(nextCode);
     setCName('');
@@ -268,8 +300,38 @@ export const MastersView: React.FC<MastersViewProps> = ({
     setShowAddCustomerModal(true);
   };
 
+  const openEditCustomer = (c: CustomerMaster) => {
+    setFormErrors({});
+    setEditingCustomer(c);
+    setCCode(c.code);
+    setCName(c.name);
+    setCLegalName(c.legalName || '');
+    setCCustomerType(c.customerType || 'OEM');
+    setCContactPerson(c.contactPerson || '');
+    setCMobile(c.mobile || '');
+    setCEmail(c.email || '');
+    const isExempt = isGstExempt(c.gstin);
+    setCGstExempt(isExempt);
+    setCGstin(isExempt ? '' : (c.gstin || ''));
+    setCPan(c.pan || '');
+    setCBillingAddress(c.billingAddress || (c as any).address || '');
+    setCShippingAddress(c.shippingAddress || c.billingAddress || (c as any).address || '');
+    setCSameAddress(c.shippingAddress === c.billingAddress || !c.shippingAddress);
+    setCCity(c.city || '');
+    setCState(c.state || 'Maharashtra');
+    setCPincode(c.pincode || (c as any).pin || '');
+    setCPaymentTerms(c.paymentTerms || 'Net 30');
+    setCCreditDays(c.creditDays ?? 30);
+    setCCreditLimit(c.creditLimit ?? 1000000);
+    setCSalesperson(c.salesperson || '');
+    setCStatus(c.status || 'Active');
+    setCNotes(c.notes || '');
+    setShowAddCustomerModal(true);
+  };
+
   const openVendorModal = () => {
     setFormErrors({});
+    setEditingVendor(null);
     const nextCode = generateNextCode(vendors.map(v => v.code), 'VEND');
     setVCode(nextCode);
     setVName('');
@@ -300,8 +362,42 @@ export const MastersView: React.FC<MastersViewProps> = ({
     setShowAddVendorModal(true);
   };
 
+  const openEditVendor = (v: VendorMaster) => {
+    setFormErrors({});
+    setEditingVendor(v);
+    setVCode(v.code);
+    setVName(v.name);
+    setVLegalName(v.legalName || '');
+    setVVendorType(v.vendorType || 'Supplier');
+    setVVendorCategory(v.vendorCategory || 'Raw Material');
+    setVContactPerson(v.contactPerson || '');
+    setVMobile(v.mobile || '');
+    setVEmail(v.email || '');
+    setVBillingAddress(v.billingAddress || (v as any).address || '');
+    setVShippingAddress(v.shippingAddress || v.billingAddress || (v as any).address || '');
+    setVCity(v.city || '');
+    setVState(v.state || 'Maharashtra');
+    setVPincode(v.pincode || (v as any).pin || '');
+    const isExempt = isGstExempt(v.gstin);
+    setVGstExempt(isExempt);
+    setVGstin(isExempt ? '' : (v.gstin || ''));
+    setVPan(v.pan || '');
+    setVBankAccountName(v.bankAccountName || '');
+    setVBankAccountNumber(v.bankAccountNumber || '');
+    setVIfsc(v.ifsc || '');
+    setVPaymentTerms(v.paymentTerms || 'Net 30');
+    setVCreditDays(v.creditDays ?? 30);
+    setVCreditLimit(v.creditLimit ?? 500000);
+    setVProcessType(v.processType || 'Plating / Anodizing / Zinc Coating');
+    setVTurnaroundTimeDays(v.turnaroundTimeDays ?? 3);
+    setVStatus(v.status || 'Active');
+    setVNotes(v.notes || '');
+    setShowAddVendorModal(true);
+  };
+
   const openItemModal = () => {
     setFormErrors({});
+    setEditingItem(null);
     const prefix = getItemPrefix(iItemType);
     const nextCode = generateNextCode(masters.map(m => m.code), prefix);
     setICode(nextCode);
@@ -324,8 +420,33 @@ export const MastersView: React.FC<MastersViewProps> = ({
     setShowAddItemModal(true);
   };
 
+  const openEditItem = (item: MasterItem) => {
+    setFormErrors({});
+    setEditingItem(item);
+    setICode(item.code);
+    setIName(item.name || item.description || '');
+    setIItemType(item.itemType || (item.isFinishedGoods ? 'Finished Good' : 'Raw Material'));
+    setICategory(item.category || '');
+    setIDescription(item.description || item.name || '');
+    setIPartNo(item.partNo || '');
+    setIUnit(item.unit || 'Nos');
+    setIHsnCode(item.hsnCode || '8483');
+    setIGstRate(item.gstRate ?? 18);
+    setIStandardCost(item.standardCost || item.purchaseRate || 0);
+    setISellingPrice(item.sellingPrice || item.saleRate || 0);
+    setIMinStock(item.minStock ?? 50);
+    setIMaxStock(item.maxStock ?? 500);
+    setIReorderLevel(item.reorderLevel ?? 100);
+    setILeadTimeDays(item.leadTimeDays ?? 7);
+    setIPreferredVendor(item.preferredVendor || '');
+    setIDefaultWarehouse(item.defaultWarehouse || item.storeLocation || 'Main Raw Material Store');
+    setIStatus(item.status || 'Active');
+    setShowAddItemModal(true);
+  };
+
   const openMachineModal = () => {
     setFormErrors({});
+    setEditingMachine(null);
     const nextCode = generateNextCode(machines.map(m => m.code), 'MCH');
     setMCode(nextCode);
     setMName('');
@@ -344,6 +465,54 @@ export const MastersView: React.FC<MastersViewProps> = ({
     setMResponsiblePerson(users[0]?.name || '');
     setMHourlyCost(600);
     setShowAddMachineModal(true);
+  };
+
+  const openEditMachine = (m: MachineMaster) => {
+    setFormErrors({});
+    setEditingMachine(m);
+    setMCode(m.code);
+    setMName(m.name);
+    setMType(m.type || 'CNC Machining');
+    setMDepartment(m.department || 'Machine Shop');
+    setMLocation(m.location || 'Bay 1 — Machine Shop');
+    setMManufacturer(m.manufacturer || '');
+    setMModel(m.model || '');
+    setMSerialNumber(m.serialNumber || '');
+    setMInstallationDate(m.installationDate || '');
+    setMCapacity(m.capacity);
+    setMCapacityUom(m.capacityUom || '');
+    setMOperatingHours(m.operatingHours ?? 16);
+    setMShift(m.shift || 'General-Day');
+    setMStatus(m.status || 'Active');
+    setMResponsiblePerson(m.responsiblePerson || '');
+    setMHourlyCost(m.hourlyCost ?? 600);
+    setShowAddMachineModal(true);
+  };
+
+  const handleDeletePrompt = (type: 'CUSTOMER' | 'VENDOR' | 'ITEM' | 'MACHINE', code: string, name: string) => {
+    setDeleteConfirm({ isOpen: true, type, code, name });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirm) return;
+    setIsDeleting(true);
+    const { type, code } = deleteConfirm;
+    try {
+      if (type === 'CUSTOMER') {
+        await onDeleteCustomer?.(code);
+      } else if (type === 'VENDOR') {
+        await onDeleteVendor?.(code);
+      } else if (type === 'ITEM') {
+        await onDeleteMaster?.(code);
+      } else if (type === 'MACHINE') {
+        await onDeleteMachine?.(code);
+      }
+    } catch (err) {
+      console.error('Delete master error:', err);
+    } finally {
+      setIsDeleting(false);
+      setDeleteConfirm(null);
+    }
   };
 
   // Dynamic Item Prefix update on type change
@@ -445,10 +614,13 @@ export const MastersView: React.FC<MastersViewProps> = ({
       notes: cNotes.trim()
     };
 
-    if (onAddCustomer) {
+    if (editingCustomer && onUpdateCustomer) {
+      onUpdateCustomer(cCode, newCust);
+    } else if (onAddCustomer) {
       onAddCustomer(newCust);
     }
 
+    setEditingCustomer(null);
     setShowAddCustomerModal(false);
   };
 
@@ -529,10 +701,13 @@ export const MastersView: React.FC<MastersViewProps> = ({
       notes: vNotes.trim()
     };
 
-    if (onAddVendor) {
+    if (editingVendor && onUpdateVendor) {
+      onUpdateVendor(vCode, newVend);
+    } else if (onAddVendor) {
       onAddVendor(newVend);
     }
 
+    setEditingVendor(null);
     setShowAddVendorModal(false);
   };
 
@@ -590,12 +765,15 @@ export const MastersView: React.FC<MastersViewProps> = ({
       status: iStatus
     };
 
-    if (onAddMasterItem) {
+    if (editingItem && onUpdateMaster) {
+      onUpdateMaster(iCode, newItem);
+    } else if (onAddMasterItem) {
       onAddMasterItem(newItem);
     } else if (onAddMaster) {
       onAddMaster(newItem);
     }
 
+    setEditingItem(null);
     setShowAddItemModal(false);
   };
 
@@ -605,7 +783,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
 
     if (!mName.trim()) {
       errors.name = 'Machine Name is mandatory and must be unique (e.g. VMC-01)';
-    } else if (machines.some(m => m.name.toLowerCase() === mName.trim().toLowerCase())) {
+    } else if (machines.some(m => m.code !== (editingMachine?.code || '') && m.name.toLowerCase() === mName.trim().toLowerCase())) {
       errors.name = `Machine "${mName.trim()}" already exists. Name must be unique.`;
     }
 
@@ -645,10 +823,13 @@ export const MastersView: React.FC<MastersViewProps> = ({
       active: mStatus === 'Active'
     };
 
-    if (onAddMachine) {
+    if (editingMachine && onUpdateMachine) {
+      onUpdateMachine(mCode, newMachine);
+    } else if (onAddMachine) {
       onAddMachine(newMachine);
     }
 
+    setEditingMachine(null);
     setShowAddMachineModal(false);
   };
 
@@ -930,12 +1111,13 @@ export const MastersView: React.FC<MastersViewProps> = ({
                   <th className="py-4 px-5">Credit Days / Limit</th>
                   <th className="py-4 px-5">Salesperson</th>
                   <th className="py-4 px-5 text-center">Status</th>
+                  <th className="py-4 px-5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200/70'}`}>
                 {filteredCustomers.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-14 text-center">
+                    <td colSpan={10} className="py-14 text-center">
                       <Building className="w-9 h-9 mx-auto mb-2 opacity-40 text-slate-400" />
                       <p className={`text-sm font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-800'}`}>No customer master records found.</p>
                       <p className={`text-xs mt-1 ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>Click "New Customer" to register an account.</p>
@@ -1006,6 +1188,36 @@ export const MastersView: React.FC<MastersViewProps> = ({
                           <span>{cust.status}</span>
                         </span>
                       </td>
+                      <td className="py-4 px-5 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => openEditCustomer(cust)}
+                            className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                              isDarkMode 
+                                ? 'bg-slate-800 hover:bg-slate-700 text-blue-400 border-slate-700 hover:border-blue-500/50' 
+                                : 'bg-white hover:bg-blue-50 text-blue-600 border-slate-200 hover:border-blue-300 shadow-xs'
+                            }`}
+                            title="Edit Customer"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                            <span>Edit</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePrompt('CUSTOMER', cust.code, cust.name)}
+                            className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                              isDarkMode 
+                                ? 'bg-slate-800 hover:bg-rose-950/40 text-rose-400 border-slate-700 hover:border-rose-500/50' 
+                                : 'bg-white hover:bg-rose-50 text-rose-600 border-slate-200 hover:border-rose-300 shadow-xs'
+                            }`}
+                            title="Delete Customer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -1037,12 +1249,13 @@ export const MastersView: React.FC<MastersViewProps> = ({
                   <th className="py-4 px-5">City / State</th>
                   <th className="py-4 px-5">Terms</th>
                   <th className="py-4 px-5 text-center">Status</th>
+                  <th className="py-4 px-5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200/70'}`}>
                 {filteredVendors.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-14 text-center">
+                    <td colSpan={10} className="py-14 text-center">
                       <Users className="w-9 h-9 mx-auto mb-2 opacity-40 text-slate-400" />
                       <p className={`text-sm font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-800'}`}>No vendor master records found.</p>
                       <p className={`text-xs mt-1 ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>Click "New Vendor" to register a supplier or subcontractor.</p>
@@ -1127,6 +1340,36 @@ export const MastersView: React.FC<MastersViewProps> = ({
                           <span>{vend.status}</span>
                         </span>
                       </td>
+                      <td className="py-4 px-5 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => openEditVendor(vend)}
+                            className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                              isDarkMode 
+                                ? 'bg-slate-800 hover:bg-slate-700 text-indigo-400 border-slate-700 hover:border-indigo-500/50' 
+                                : 'bg-white hover:bg-indigo-50 text-indigo-600 border-slate-200 hover:border-indigo-300 shadow-xs'
+                            }`}
+                            title="Edit Vendor"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                            <span>Edit</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePrompt('VENDOR', vend.code, vend.name)}
+                            className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                              isDarkMode 
+                                ? 'bg-slate-800 hover:bg-rose-950/40 text-rose-400 border-slate-700 hover:border-rose-500/50' 
+                                : 'bg-white hover:bg-rose-50 text-rose-600 border-slate-200 hover:border-rose-300 shadow-xs'
+                            }`}
+                            title="Delete Vendor"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -1158,12 +1401,13 @@ export const MastersView: React.FC<MastersViewProps> = ({
                   <th className="py-4 px-5">Reorder / Stock Thresholds</th>
                   <th className="py-4 px-5">Preferred Vendor / Store</th>
                   <th className="py-4 px-5 text-center">Status</th>
+                  <th className="py-4 px-5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200/70'}`}>
                 {filteredItems.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-14 text-center">
+                    <td colSpan={10} className="py-14 text-center">
                       <Package className="w-9 h-9 mx-auto mb-2 opacity-40 text-slate-400" />
                       <p className={`text-sm font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-800'}`}>No item catalog records found.</p>
                       <p className={`text-xs mt-1 ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>Click "New Item" to register raw material or finished goods.</p>
@@ -1228,6 +1472,36 @@ export const MastersView: React.FC<MastersViewProps> = ({
                           <span>{item.status || 'Active'}</span>
                         </span>
                       </td>
+                      <td className="py-4 px-5 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => openEditItem(item)}
+                            className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                              isDarkMode 
+                                ? 'bg-slate-800 hover:bg-slate-700 text-emerald-400 border-slate-700 hover:border-emerald-500/50' 
+                                : 'bg-white hover:bg-emerald-50 text-emerald-600 border-slate-200 hover:border-emerald-300 shadow-xs'
+                            }`}
+                            title="Edit Item"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                            <span>Edit</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePrompt('ITEM', item.code, item.name || item.description || item.code)}
+                            className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                              isDarkMode 
+                                ? 'bg-slate-800 hover:bg-rose-950/40 text-rose-400 border-slate-700 hover:border-rose-500/50' 
+                                : 'bg-white hover:bg-rose-50 text-rose-600 border-slate-200 hover:border-rose-300 shadow-xs'
+                            }`}
+                            title="Delete Item"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -1259,12 +1533,13 @@ export const MastersView: React.FC<MastersViewProps> = ({
                   <th className="py-4 px-5">Hourly Cost (₹)</th>
                   <th className="py-4 px-5">Responsible Person</th>
                   <th className="py-4 px-5 text-center">Status</th>
+                  <th className="py-4 px-5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200/70'}`}>
                 {filteredMachines.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-14 text-center">
+                    <td colSpan={10} className="py-14 text-center">
                       <Wrench className="w-9 h-9 mx-auto mb-2 opacity-40 text-slate-400" />
                       <p className={`text-sm font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-800'}`}>No machine records found.</p>
                       <p className={`text-xs mt-1 ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>Click "New Machine" to register production assets.</p>
@@ -1320,6 +1595,36 @@ export const MastersView: React.FC<MastersViewProps> = ({
                           <span>{mch.status}</span>
                         </span>
                       </td>
+                      <td className="py-4 px-5 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => openEditMachine(mch)}
+                            className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                              isDarkMode 
+                                ? 'bg-slate-800 hover:bg-slate-700 text-amber-400 border-slate-700 hover:border-amber-500/50' 
+                                : 'bg-white hover:bg-amber-50 text-amber-600 border-slate-200 hover:border-amber-300 shadow-xs'
+                            }`}
+                            title="Edit Machine"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                            <span>Edit</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePrompt('MACHINE', mch.code, mch.name)}
+                            className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                              isDarkMode 
+                                ? 'bg-slate-800 hover:bg-rose-950/40 text-rose-400 border-slate-700 hover:border-rose-500/50' 
+                                : 'bg-white hover:bg-rose-50 text-rose-600 border-slate-200 hover:border-rose-300 shadow-xs'
+                            }`}
+                            title="Delete Machine"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -1345,7 +1650,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
               Upload standard Indian GST sales registers, purchase bills, or inventory item CSV/Excel spreadsheets. The engine will automatically validate 15-char GSTINs, 10-char PANs, 10-digit mobile numbers, and generate sequential master codes.
             </p>
             
-            <div className="p-6 border-2 border-dashed border-slate-700/80 rounded-2xl bg-slate-800/30 hover:border-[#5B75F8] transition-all cursor-pointer">
+<div className="p-6 border-2 border-dashed border-slate-700/80 rounded-2xl bg-slate-800/30 hover:border-[#5B75F8] transition-all cursor-pointer">
               <FileSpreadsheet className="w-10 h-10 mx-auto text-slate-400 mb-2" />
               <div className="text-xs font-semibold text-slate-200">Drag & Drop master files here or click to browse</div>
               <div className="text-[10px] text-slate-500 font-mono mt-1">Supports CSV, XLSX up to 25MB (Customers, Vendors, Items, Machines)</div>
@@ -1355,21 +1660,27 @@ export const MastersView: React.FC<MastersViewProps> = ({
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL 1: ADD CUSTOMER (LIGHT & DARK THEME POLISHED) */}
+      {/* MODAL 1: ADD / EDIT CUSTOMER (LIGHT & DARK THEME POLISHED) */}
       {/* ========================================================================= */}
       <Modal
         isOpen={showAddCustomerModal}
-        onClose={() => setShowAddCustomerModal(false)}
+        onClose={() => {
+          setShowAddCustomerModal(false);
+          setEditingCustomer(null);
+        }}
         maxWidth="4xl"
         isDarkMode={isDarkMode}
         icon={<Building className="w-5 h-5" />}
-        title="New Customer Master"
-        subtitle={`Auto ID: ${cCode} • Indian GSTIN & Credit Terms Engine`}
+        title={editingCustomer ? "Edit Customer Master" : "New Customer Master"}
+        subtitle={editingCustomer ? `Edit Master: ${cCode} • Indian GSTIN & Credit Terms` : `Auto ID: ${cCode} • Indian GSTIN & Credit Terms Engine`}
         footer={
           <div className="flex items-center justify-end gap-3 w-full">
             <button
               type="button"
-              onClick={() => setShowAddCustomerModal(false)}
+              onClick={() => {
+                setShowAddCustomerModal(false);
+                setEditingCustomer(null);
+              }}
               className={`px-4 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
                 isDarkMode 
                   ? 'text-slate-400 hover:text-white hover:bg-slate-800' 
@@ -1384,7 +1695,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
               className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-blue-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
             >
               <Check className="w-4 h-4" />
-              <span>Save Customer Master</span>
+              <span>{editingCustomer ? 'Update Customer Master' : 'Save Customer Master'}</span>
             </button>
           </div>
         }
@@ -1395,7 +1706,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                Customer ID (Auto)
+                {editingCustomer ? 'Customer ID' : 'Customer ID (Auto)'}
               </label>
               <input
                 type="text"
@@ -1463,116 +1774,130 @@ export const MastersView: React.FC<MastersViewProps> = ({
               <input
                 type="text"
                 required
-                placeholder="e.g. Rajeev Menon"
+                placeholder="Key accounts manager"
                 value={cContactPerson}
                 onChange={(e) => setCContactPerson(e.target.value)}
                 className={`w-full p-2.5 rounded-xl border ${
                   formErrors.contactPerson 
                     ? 'border-rose-500 ring-1 ring-rose-500' 
-                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:bg-white'
                 }`}
               />
               {formErrors.contactPerson && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.contactPerson}</p>}
             </div>
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                Mobile (10-digit) <span className="text-rose-500">*</span>
+                Mobile (10 Digits) <span className="text-rose-500">*</span>
               </label>
-              <input
-                type="text"
-                required
-                maxLength={10}
-                placeholder="9822011234"
-                value={cMobile}
-                onChange={(e) => setCMobile(e.target.value.replace(/\D/g, ''))}
-                className={`w-full p-2.5 rounded-xl border font-mono ${
-                  formErrors.mobile 
-                    ? 'border-rose-500 ring-1 ring-rose-500' 
-                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
-                }`}
-              />
+              <div className="relative">
+                <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-mono font-bold">+91</span>
+                <input
+                  type="text"
+                  required
+                  maxLength={10}
+                  placeholder="9876543210"
+                  value={cMobile}
+                  onChange={(e) => setCMobile(e.target.value.replace(/\D/g, ''))}
+                  className={`w-full pl-11 pr-3 py-2.5 rounded-xl border font-mono ${
+                    formErrors.mobile 
+                      ? 'border-rose-500 ring-1 ring-rose-500' 
+                      : isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:bg-white'
+                  }`}
+                />
+              </div>
               {formErrors.mobile && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.mobile}</p>}
             </div>
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                Email
+                Email Address
               </label>
               <input
                 type="email"
-                placeholder="contact@company.com"
+                placeholder="accounts@client.com"
                 value={cEmail}
                 onChange={(e) => setCEmail(e.target.value)}
                 className={`w-full p-2.5 rounded-xl border ${
-                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:bg-white'
                 }`}
               />
             </div>
           </div>
 
-          {/* Row 3: Statutory GSTIN (with GST-Exempt toggle) & PAN */}
-          <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl border ${
-            isDarkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/80 border-slate-200'
-          }`}>
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className={`text-[11px] font-mono font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                  GSTIN (15-digit)
-                </label>
-                <label className="flex items-center gap-1.5 text-[10px] text-amber-600 dark:text-amber-400 font-mono font-semibold cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={cGstExempt} 
-                    onChange={(e) => setCGstExempt(e.target.checked)}
-                    className="rounded text-amber-600 focus:ring-0 cursor-pointer"
-                  />
-                  <span>N/A — GST-exempt</span>
-                </label>
-              </div>
-              <input
-                type="text"
-                disabled={cGstExempt}
-                placeholder={cGstExempt ? "N/A — GST-exempt (Provide reason in Notes)" : "27AABCL1234M1ZP"}
-                maxLength={15}
-                value={cGstExempt ? GST_EXEMPT_VALUE : cGstin}
-                onChange={(e) => {
-                  const val = e.target.value.toUpperCase();
-                  setCGstin(val);
-                  if (val.length >= 12 && !cPan) {
-                    setCPan(val.slice(2, 12));
-                  }
-                }}
-                className={`w-full p-2.5 rounded-xl border font-mono transition-all ${
-                  cGstExempt 
-                    ? isDarkMode ? 'bg-slate-800/50 text-amber-400 border-slate-700 cursor-not-allowed' : 'bg-slate-100 text-amber-700 border-slate-200 cursor-not-allowed'
-                    : formErrors.gstin 
-                      ? 'border-rose-500 ring-1 ring-rose-500' 
-                      : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
-                }`}
-              />
-              {formErrors.gstin && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.gstin}</p>}
-            </div>
-            <div>
-              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                PAN (10-char)
+          {/* Row 3: Statutory GSTIN & PAN */}
+          <div className={`p-3.5 rounded-2xl border space-y-3 ${isDarkMode ? 'bg-slate-800/40 border-slate-700/80' : 'bg-slate-50 border-slate-200'}`}>
+            <div className="flex items-center justify-between">
+              <span className={`text-[11px] font-mono font-bold flex items-center gap-1.5 ${isDarkMode ? 'text-blue-400' : 'text-blue-700'}`}>
+                <ShieldCheck className="w-4 h-4" />
+                <span>Statutory GSTIN & PAN Compliance Engine</span>
+              </span>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={cGstExempt}
+                  onChange={(e) => {
+                    setCGstExempt(e.target.checked);
+                    if (e.target.checked) setCGstin('');
+                  }}
+                  className="rounded border-slate-600 text-[#5B75F8] focus:ring-[#5B75F8]"
+                />
+                <span className={`text-[11px] font-mono font-bold ${cGstExempt ? 'text-amber-500' : isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                  GST-Exempt (N/A — GST-exempt)
+                </span>
               </label>
-              <input
-                type="text"
-                maxLength={10}
-                placeholder="AABCL1234M"
-                value={cPan}
-                onChange={(e) => setCPan(e.target.value.toUpperCase())}
-                className={`w-full p-2.5 rounded-xl border font-mono ${
-                  formErrors.pan 
-                    ? 'border-rose-500 ring-1 ring-rose-500' 
-                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
-                }`}
-              />
-              {formErrors.pan && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.pan}</p>}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  GSTIN (15 Chars) {!cGstExempt && <span className="text-rose-500">*</span>}
+                </label>
+                <input
+                  type="text"
+                  maxLength={15}
+                  disabled={cGstExempt}
+                  placeholder={cGstExempt ? "N/A — GST-exempt" : "27AABCL1234M1ZP"}
+                  value={cGstExempt ? "N/A — GST-exempt" : cGstin}
+                  onChange={(e) => {
+                    const val = e.target.value.toUpperCase();
+                    setCGstin(val);
+                    if (val.length >= 12 && !cPan) {
+                      setCPan(val.slice(2, 12));
+                    }
+                  }}
+                  className={`w-full p-2.5 rounded-xl border font-mono uppercase font-bold tracking-wider ${
+                    cGstExempt 
+                      ? isDarkMode ? 'bg-slate-800/40 text-amber-400 border-slate-700' : 'bg-amber-50 text-amber-700 border-amber-200'
+                      : formErrors.gstin 
+                        ? 'border-rose-500 ring-1 ring-rose-500' 
+                        : isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400'
+                  }`}
+                />
+                {formErrors.gstin && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.gstin}</p>}
+              </div>
+
+              <div>
+                <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  PAN (Auto from GSTIN or 10 Chars)
+                </label>
+                <input
+                  type="text"
+                  maxLength={10}
+                  placeholder="AABCL1234M"
+                  value={cPan}
+                  onChange={(e) => setCPan(e.target.value.toUpperCase())}
+                  className={`w-full p-2.5 rounded-xl border font-mono uppercase font-bold tracking-wider ${
+                    formErrors.pan 
+                      ? 'border-rose-500 ring-1 ring-rose-500' 
+                      : isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400'
+                  }`}
+                />
+                {formErrors.pan && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.pan}</p>}
+              </div>
             </div>
           </div>
 
-          {/* Row 4: Billing Address & Shipping Address */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Row 4: Billing Address, Shipping Address */}
+          <div className="space-y-3">
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                 Billing Address <span className="text-rose-500">*</span>
@@ -1580,48 +1905,50 @@ export const MastersView: React.FC<MastersViewProps> = ({
               <textarea
                 rows={2}
                 required
-                placeholder="Factory / Office street address"
+                placeholder="Plot No., Industrial Area, Street Address"
                 value={cBillingAddress}
                 onChange={(e) => setCBillingAddress(e.target.value)}
-                className={`w-full p-2 rounded-xl border ${
+                className={`w-full p-2.5 rounded-xl border ${
                   formErrors.billingAddress 
                     ? 'border-rose-500 ring-1 ring-rose-500' 
-                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:bg-white'
                 }`}
               />
               {formErrors.billingAddress && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.billingAddress}</p>}
             </div>
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className={`text-[11px] font-mono font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                  Shipping Address
-                </label>
-                <label className="flex items-center gap-1.5 text-[10px] text-blue-600 dark:text-blue-400 font-mono font-semibold cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={cSameAddress} 
-                    onChange={(e) => setCSameAddress(e.target.checked)}
-                    className="rounded text-blue-600 focus:ring-0 cursor-pointer"
-                  />
-                  <span>Same as billing</span>
-                </label>
-              </div>
-              <textarea
-                rows={2}
-                disabled={cSameAddress}
-                placeholder={cSameAddress ? "Same as billing address" : "Delivery plant / warehouse address"}
-                value={cSameAddress ? cBillingAddress : cShippingAddress}
-                onChange={(e) => setCShippingAddress(e.target.value)}
-                className={`w-full p-2 rounded-xl border ${
-                  cSameAddress 
-                    ? isDarkMode ? 'bg-slate-800/40 text-slate-400 border-slate-700 cursor-not-allowed' : 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed' 
-                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
-                }`}
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="c-same-address"
+                checked={cSameAddress}
+                onChange={(e) => setCSameAddress(e.target.checked)}
+                className="rounded border-slate-600 text-[#5B75F8] focus:ring-[#5B75F8]"
               />
+              <label htmlFor="c-same-address" className={`text-xs font-semibold cursor-pointer ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Shipping Address same as Billing Address
+              </label>
             </div>
+
+            {!cSameAddress && (
+              <div>
+                <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Shipping / Delivery Plant Address
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Factory gate / receiving plant address"
+                  value={cShippingAddress}
+                  onChange={(e) => setCShippingAddress(e.target.value)}
+                  className={`w-full p-2.5 rounded-xl border ${
+                    isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                  }`}
+                />
+              </div>
+            )}
           </div>
 
-          {/* Row 5: City, State (Indian states dropdown), Pincode */}
+          {/* Row 5: City, State, Pincode */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
@@ -1639,31 +1966,35 @@ export const MastersView: React.FC<MastersViewProps> = ({
                     : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
                 }`}
               />
+              {formErrors.city && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.city}</p>}
             </div>
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                State (India) <span className="text-rose-500">*</span>
+                State <span className="text-rose-500">*</span>
               </label>
               <select
                 value={cState}
                 onChange={(e) => setCState(e.target.value)}
-                className={`w-full p-2.5 rounded-xl border ${
-                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                className={`w-full p-2.5 rounded-xl border font-semibold ${
+                  formErrors.state 
+                    ? 'border-rose-500 ring-1 ring-rose-500' 
+                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
                 }`}
               >
                 {INDIAN_STATES.map(s => (
-                  <option key={s.code} value={s.name}>{s.name} ({s.code})</option>
+                  <option key={s.name} value={s.name}>{s.code} — {s.name}</option>
                 ))}
               </select>
+              {formErrors.state && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.state}</p>}
             </div>
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                Pincode (6-digit)
+                Pincode (6 Digits)
               </label>
               <input
                 type="text"
                 maxLength={6}
-                placeholder="411026"
+                placeholder="411018"
                 value={cPincode}
                 onChange={(e) => setCPincode(e.target.value.replace(/\D/g, ''))}
                 className={`w-full p-2.5 rounded-xl border font-mono ${
@@ -1672,30 +2003,26 @@ export const MastersView: React.FC<MastersViewProps> = ({
                     : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
                 }`}
               />
+              {formErrors.pincode && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.pincode}</p>}
             </div>
           </div>
 
-          {/* Row 6: Payment Terms & Dynamic Credit Days/Limit (Conditional) */}
-          <div className={`grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-2xl border ${
-            isDarkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/80 border-slate-200'
-          }`}>
+          {/* Row 6: Payment Terms, Credit Days, Credit Limit */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                Payment Terms <span className="text-rose-500">*</span>
+                Payment Terms
               </label>
               <select
                 value={cPaymentTerms}
                 onChange={(e) => {
                   const val = e.target.value;
                   setCPaymentTerms(val);
-                  if (val === 'Net 15') setCCreditDays(15);
-                  else if (val === 'Net 30') setCCreditDays(30);
+                  if (val === 'Net 30') setCCreditDays(30);
                   else if (val === 'Net 45') setCCreditDays(45);
                   else if (val === 'Net 60') setCCreditDays(60);
-                  else if (val === 'Advance') {
-                    setCCreditDays(0);
-                    setCCreditLimit(0);
-                  }
+                  else if (val === 'Net 90') setCCreditDays(90);
+                  else if (val === '100% Advance' || val === 'Against Delivery (CAD)') setCCreditDays(0);
                 }}
                 className={`w-full p-2.5 rounded-xl border font-bold ${
                   isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
@@ -1706,44 +2033,29 @@ export const MastersView: React.FC<MastersViewProps> = ({
             </div>
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                Credit Days (0-180) {cPaymentTerms.startsWith('Net') && <span className="text-rose-500">*</span>}
+                Credit Days
               </label>
               <input
                 type="number"
-                min={0}
-                max={180}
-                disabled={!cPaymentTerms.startsWith('Net')}
                 value={cCreditDays}
                 onChange={(e) => setCCreditDays(Number(e.target.value))}
                 className={`w-full p-2.5 rounded-xl border font-mono ${
-                  !cPaymentTerms.startsWith('Net') 
-                    ? isDarkMode ? 'bg-slate-800/40 text-slate-500 border-slate-700 cursor-not-allowed' : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
-                    : formErrors.creditDays 
-                      ? 'border-rose-500 ring-1 ring-rose-500' 
-                      : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
                 }`}
               />
-              {formErrors.creditDays && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.creditDays}</p>}
             </div>
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                Credit Limit (₹) {cPaymentTerms.startsWith('Net') && <span className="text-rose-500">*</span>}
+                Credit Limit (₹)
               </label>
               <input
                 type="number"
-                min={0}
-                disabled={!cPaymentTerms.startsWith('Net')}
                 value={cCreditLimit}
                 onChange={(e) => setCCreditLimit(Number(e.target.value))}
                 className={`w-full p-2.5 rounded-xl border font-mono ${
-                  !cPaymentTerms.startsWith('Net') 
-                    ? isDarkMode ? 'bg-slate-800/40 text-slate-500 border-slate-700 cursor-not-allowed' : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
-                    : formErrors.creditLimit 
-                      ? 'border-rose-500 ring-1 ring-rose-500' 
-                      : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
                 }`}
               />
-              {formErrors.creditLimit && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.creditLimit}</p>}
             </div>
           </div>
 
@@ -1760,7 +2072,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
                   isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
                 }`}
               >
-                <option value="">-- Select Salesperson / Employee --</option>
+                <option value="">-- Unassigned --</option>
                 {users.map(u => (
                   <option key={u.id} value={u.name}>{u.name} ({u.role})</option>
                 ))}
@@ -1793,7 +2105,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
                 className={`w-full p-2.5 rounded-xl border ${
                   formErrors.notes 
                     ? 'border-rose-500 ring-1 ring-rose-500' 
-                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:bg-white'
                 }`}
               />
               {formErrors.notes && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.notes}</p>}
@@ -1804,21 +2116,27 @@ export const MastersView: React.FC<MastersViewProps> = ({
       </Modal>
 
       {/* ========================================================================= */}
-      {/* MODAL 2: ADD VENDOR (LIGHT & DARK THEME POLISHED) */}
+      {/* MODAL 2: ADD / EDIT VENDOR (LIGHT & DARK THEME POLISHED) */}
       {/* ========================================================================= */}
       <Modal
         isOpen={showAddVendorModal}
-        onClose={() => setShowAddVendorModal(false)}
+        onClose={() => {
+          setShowAddVendorModal(false);
+          setEditingVendor(null);
+        }}
         maxWidth="4xl"
         isDarkMode={isDarkMode}
         icon={<Users className="w-5 h-5" />}
-        title="New Vendor Master"
-        subtitle={`Auto ID: ${vCode} • Mandatory TDS PAN, Bank Encryption & Subcontractor Rules`}
+        title={editingVendor ? "Edit Vendor Master" : "New Vendor Master"}
+        subtitle={editingVendor ? `Edit Master: ${vCode} • Mandatory TDS PAN, Bank Encryption & Subcontractor Rules` : `Auto ID: ${vCode} • Mandatory TDS PAN, Bank Encryption & Subcontractor Rules`}
         footer={
           <div className="flex items-center justify-end gap-3 w-full">
             <button
               type="button"
-              onClick={() => setShowAddVendorModal(false)}
+              onClick={() => {
+                setShowAddVendorModal(false);
+                setEditingVendor(null);
+              }}
               className={`px-4 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
                 isDarkMode 
                   ? 'text-slate-400 hover:text-white hover:bg-slate-800' 
@@ -1833,7 +2151,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
               className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-indigo-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
             >
               <Check className="w-4 h-4" />
-              <span>Save Vendor Master</span>
+              <span>{editingVendor ? 'Update Vendor Master' : 'Save Vendor Master'}</span>
             </button>
           </div>
         }
@@ -1844,7 +2162,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                Vendor ID (Auto)
+                {editingVendor ? 'Vendor ID' : 'Vendor ID (Auto)'}
               </label>
               <input
                 type="text"
@@ -2227,21 +2545,27 @@ export const MastersView: React.FC<MastersViewProps> = ({
       </Modal>
 
       {/* ========================================================================= */}
-      {/* MODAL 3: ADD ITEM (LIGHT & DARK THEME POLISHED) */}
+      {/* MODAL 3: ADD / EDIT ITEM (LIGHT & DARK THEME POLISHED) */}
       {/* ========================================================================= */}
       <Modal
         isOpen={showAddItemModal}
-        onClose={() => setShowAddItemModal(false)}
+        onClose={() => {
+          setShowAddItemModal(false);
+          setEditingItem(null);
+        }}
         maxWidth="4xl"
         isDarkMode={isDarkMode}
         icon={<Package className="w-5 h-5" />}
-        title="New Item Master"
-        subtitle={`Auto ID: ${iCode} • Dynamic Cost / Price & Vendor Requirements`}
+        title={editingItem ? "Edit Item Master" : "New Item Master"}
+        subtitle={editingItem ? `Edit Master: ${iCode} • Dynamic Cost / Price & Vendor Requirements` : `Auto ID: ${iCode} • Dynamic Cost / Price & Vendor Requirements`}
         footer={
           <div className="flex items-center justify-end gap-3 w-full">
             <button
               type="button"
-              onClick={() => setShowAddItemModal(false)}
+              onClick={() => {
+                setShowAddItemModal(false);
+                setEditingItem(null);
+              }}
               className={`px-4 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
                 isDarkMode 
                   ? 'text-slate-400 hover:text-white hover:bg-slate-800' 
@@ -2256,7 +2580,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
               className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
             >
               <Check className="w-4 h-4" />
-              <span>Save Item Master</span>
+              <span>{editingItem ? 'Update Item Master' : 'Save Item Master'}</span>
             </button>
           </div>
         }
@@ -2283,7 +2607,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
             </div>
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                Item Code (Auto-Prefixed)
+                {editingItem ? 'Item Code' : 'Item Code (Auto-Prefixed)'}
               </label>
               <input
                 type="text"
@@ -2585,21 +2909,27 @@ export const MastersView: React.FC<MastersViewProps> = ({
       </Modal>
 
       {/* ========================================================================= */}
-      {/* MODAL 4: ADD MACHINE (LIGHT & DARK THEME POLISHED) */}
+      {/* MODAL 4: ADD / EDIT MACHINE (LIGHT & DARK THEME POLISHED) */}
       {/* ========================================================================= */}
       <Modal
         isOpen={showAddMachineModal}
-        onClose={() => setShowAddMachineModal(false)}
+        onClose={() => {
+          setShowAddMachineModal(false);
+          setEditingMachine(null);
+        }}
         maxWidth="4xl"
         isDarkMode={isDarkMode}
         icon={<Wrench className="w-5 h-5" />}
-        title="New Machine Master"
-        subtitle={`Auto ID: ${mCode} • Unique Name for Route Cards & Shop Scheduling`}
+        title={editingMachine ? "Edit Machine Master" : "New Machine Master"}
+        subtitle={editingMachine ? `Edit Asset: ${mCode} • Work Center & Capacity Engine` : `Auto ID: ${mCode} • Unique Name for Route Cards & Shop Scheduling`}
         footer={
           <div className="flex items-center justify-end gap-3 w-full">
             <button
               type="button"
-              onClick={() => setShowAddMachineModal(false)}
+              onClick={() => {
+                setShowAddMachineModal(false);
+                setEditingMachine(null);
+              }}
               className={`px-4 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
                 isDarkMode 
                   ? 'text-slate-400 hover:text-white hover:bg-slate-800' 
@@ -2614,7 +2944,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
               className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-amber-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
             >
               <Check className="w-4 h-4" />
-              <span>Save Machine Master</span>
+              <span>{editingMachine ? 'Update Machine Master' : 'Save Machine Master'}</span>
             </button>
           </div>
         }
@@ -2625,7 +2955,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                Machine ID (Auto)
+                {editingMachine ? 'Machine ID' : 'Machine ID (Auto)'}
               </label>
               <input
                 type="text"
@@ -2887,6 +3217,61 @@ export const MastersView: React.FC<MastersViewProps> = ({
           </div>
 
         </form>
+      </Modal>
+
+      {/* ========================================================================= */}
+      {/* MODAL 5: DELETE CONFIRMATION MODAL */}
+      {/* ========================================================================= */}
+      <Modal
+        isOpen={!!deleteConfirm?.isOpen}
+        onClose={() => !isDeleting && setDeleteConfirm(null)}
+        maxWidth="md"
+        isDarkMode={isDarkMode}
+        icon={<AlertTriangle className="w-5 h-5 text-rose-500" />}
+        title={`Delete ${deleteConfirm?.type === 'CUSTOMER' ? 'Customer' : deleteConfirm?.type === 'VENDOR' ? 'Vendor' : deleteConfirm?.type === 'ITEM' ? 'Item' : 'Machine'} Master`}
+        subtitle="This action cannot be undone and will permanently remove this record."
+        footer={
+          <div className="flex items-center justify-end gap-3 w-full">
+            <button
+              type="button"
+              disabled={isDeleting}
+              onClick={() => setDeleteConfirm(null)}
+              className={`px-4 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
+                isDarkMode 
+                  ? 'text-slate-400 hover:text-white hover:bg-slate-800' 
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={isDeleting}
+              onClick={handleConfirmDelete}
+              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-rose-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>{isDeleting ? 'Deleting...' : 'Confirm Delete'}</span>
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-3 py-2 text-xs">
+          <div className={`p-4 rounded-2xl border flex items-start gap-3 ${
+            isDarkMode ? 'bg-rose-950/20 border-rose-900/40 text-rose-300' : 'bg-rose-50 border-rose-200 text-rose-800'
+          }`}>
+            <AlertTriangle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold text-sm">Are you sure you want to delete this master record?</p>
+              <p className="text-xs opacity-80 mt-1">
+                Record: <strong className="font-mono">{deleteConfirm?.code}</strong> — <strong className="font-sans">{deleteConfirm?.name}</strong>
+              </p>
+            </div>
+          </div>
+          <p className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>
+            Deleting this master entry may affect operational tracking, route card travelers, and statutory reports that reference this identifier.
+          </p>
+        </div>
       </Modal>
 
     </div>

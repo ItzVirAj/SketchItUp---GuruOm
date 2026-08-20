@@ -53,7 +53,10 @@ export type OrderStage =
   | 'MATERIAL_ISSUED'     // Alias -> JOB_RELEASED
   | 'QC_INSPECTION'       // Alias -> QC
   | 'READY_FOR_QC'        // Alias -> QC
+  | 'MANUFACTURING_COMPLETED' // Alias -> QC
   | 'READY_TO_DISPATCH'   // Alias -> READY_FOR_DISPATCH
+  | 'PDI_PASS'            // Alias -> READY_FOR_DISPATCH
+  | 'PDI_PASSED'          // Alias -> READY_FOR_DISPATCH
   | 'WITH_SUBCONTRACTOR'  // Alias -> IN_PRODUCTION
   | 'PO_SENT'             // Alias -> PROCUREMENT_PENDING
   | 'GRN_RECEIVED'        // Alias -> GRN
@@ -67,8 +70,8 @@ export type OrderStage =
 export const ALLOWED_TRANSITIONS: Record<CanonicalOrderState, CanonicalOrderState[]> = {
   'DRAFT': ['SUBMITTED', 'APPROVED'],
   'SUBMITTED': ['APPROVED', 'DRAFT'],
-  'APPROVED': ['RELEASED', 'PENDING_VERIFICATION', 'MATERIAL_CHECK', 'MATERIAL_READY', 'DRAFT'],
-  'RELEASED': ['PENDING_VERIFICATION', 'MATERIAL_CHECK', 'MATERIAL_READY'],
+  'APPROVED': ['RELEASED', 'PENDING_VERIFICATION', 'MATERIAL_CHECK', 'MATERIAL_READY', 'JOB_RELEASED', 'IN_PRODUCTION', 'DRAFT'],
+  'RELEASED': ['PENDING_VERIFICATION', 'MATERIAL_CHECK', 'MATERIAL_READY', 'JOB_RELEASED', 'IN_PRODUCTION'],
   'PENDING_VERIFICATION': ['MATERIAL_READY', 'MATERIAL_SHORT', 'MATERIAL_CHECK', 'PROCUREMENT_PENDING'],
   'MATERIAL_CHECK': ['MATERIAL_READY', 'MATERIAL_SHORT', 'PROCUREMENT_PENDING'],
   'MATERIAL_SHORT': ['PROCUREMENT_PENDING'],
@@ -76,22 +79,22 @@ export const ALLOWED_TRANSITIONS: Record<CanonicalOrderState, CanonicalOrderStat
   'GRN': ['MATERIAL_READY', 'PENDING_VERIFICATION', 'MATERIAL_CHECK'],
   'MATERIAL_READY': ['JOB_RELEASED', 'IN_PRODUCTION'],
   'JOB_RELEASED': ['IN_PRODUCTION'],
-  'IN_PRODUCTION': ['QC', 'QC_REPORT_UPLOADED', 'REWORK'],
+  'IN_PRODUCTION': ['QC', 'QC_REPORT_UPLOADED', 'PDI', 'PDI_COMPLETE', 'READY_FOR_DISPATCH', 'REWORK'],
   'REWORK': ['IN_PRODUCTION', 'JOB_RELEASED'],        // NCR loop-back
-  'QC': ['QC_HOLD', 'QC_REPORT_UPLOADED', 'PDI', 'READY_FOR_DISPATCH'],
+  'QC': ['QC_HOLD', 'QC_REPORT_UPLOADED', 'PDI', 'PDI_COMPLETE', 'READY_FOR_DISPATCH'],
   'QC_HOLD': ['QC', 'REWORK'],                        // Cleared via NCR Disposition or Rework
-  'QC_REPORT_UPLOADED': ['PDI', 'PDI_COMPLETE'],
-  'PDI': ['PDI_HOLD', 'PDI_COMPLETE', 'READY_FOR_DISPATCH'],
+  'QC_REPORT_UPLOADED': ['PDI', 'PDI_COMPLETE', 'READY_FOR_DISPATCH'],
+  'PDI': ['PDI_HOLD', 'PDI_COMPLETE', 'READY_FOR_DISPATCH', 'REWORK'],
   'PDI_HOLD': ['PDI', 'REWORK'],                      // Cleared via Re-inspection or Rework
-  'PDI_COMPLETE': ['READY_FOR_DISPATCH', 'REWORK'],   // Ready to Dispatch or NCR Rework
-  'READY_FOR_DISPATCH': ['INVOICE_GENERATED', 'DISPATCHED', 'INVOICED'],
-  'INVOICE_GENERATED': ['DISPATCH_READY', 'DISPATCHED'],
+  'PDI_COMPLETE': ['READY_FOR_DISPATCH', 'REWORK', 'INVOICE_GENERATED', 'DISPATCH_READY'],   // Ready to Dispatch or NCR Rework
+  'READY_FOR_DISPATCH': ['INVOICE_GENERATED', 'DISPATCH_READY', 'DISPATCHED', 'INVOICED'],
+  'INVOICE_GENERATED': ['DISPATCH_READY', 'DISPATCHED', 'READY_FOR_DISPATCH', 'INVOICED'],
   'DISPATCH_READY': ['IN_TRANSIT', 'DISPATCHED'],
-  'IN_TRANSIT': ['DELIVERED'],
-  'DISPATCHED': ['INVOICED', 'DELIVERED', 'IN_TRANSIT'],
+  'IN_TRANSIT': ['DELIVERED', 'PAYMENT_PENDING'],
+  'DISPATCHED': ['INVOICED', 'DELIVERED', 'IN_TRANSIT', 'PAYMENT_PENDING'],
   'DELIVERED': ['PAYMENT_PENDING', 'INVOICED', 'COMPLETED'],
-  'PAYMENT_PENDING': ['COMPLETED'],
-  'INVOICED': ['COMPLETED', 'DELIVERED'],
+  'PAYMENT_PENDING': ['COMPLETED', 'CLOSED' as any],
+  'INVOICED': ['COMPLETED', 'DELIVERED', 'PAYMENT_PENDING'],
   'COMPLETED': []
 };
 
@@ -112,8 +115,11 @@ export function normalizeOrderState(stage: any): CanonicalOrderState {
       return 'JOB_RELEASED';
     case 'QC_INSPECTION':
     case 'READY_FOR_QC':
+    case 'MANUFACTURING_COMPLETED':
       return 'QC';
     case 'READY_TO_DISPATCH':
+    case 'PDI_PASS':
+    case 'PDI_PASSED':
       return 'READY_FOR_DISPATCH';
     case 'WITH_SUBCONTRACTOR':
       return 'IN_PRODUCTION';
@@ -130,6 +136,14 @@ export function normalizeOrderState(stage: any): CanonicalOrderState {
       }
       return 'SUBMITTED';
   }
+}
+
+export function isValidTransition(fromState: any, toState: any): boolean {
+  const normFrom = normalizeOrderState(fromState);
+  const normTo = normalizeOrderState(toState);
+  if (normFrom === normTo) return true;
+  const allowed = ALLOWED_TRANSITIONS[normFrom] || [];
+  return allowed.includes(normTo);
 }
 
 export const ORDER_STAGE_STEPS: Record<OrderStage, number> = {
@@ -155,6 +169,7 @@ export const ORDER_STAGE_STEPS: Record<OrderStage, number> = {
   'IN_PRODUCTION': 5,
   'REWORK': 5,
   'READY_FOR_QC': 6,
+  'MANUFACTURING_COMPLETED': 6,
   'QC': 6,
   'QC_INSPECTION': 6,
   'QC_HOLD': 6,
@@ -162,6 +177,8 @@ export const ORDER_STAGE_STEPS: Record<OrderStage, number> = {
   'PDI': 7,
   'PDI_HOLD': 7,
   'PDI_COMPLETE': 7,
+  'PDI_PASS': 7,
+  'PDI_PASSED': 7,
   'READY_FOR_DISPATCH': 7,
   'READY_TO_DISPATCH': 7,
   'INVOICE_GENERATED': 8,
@@ -199,6 +216,7 @@ export const ORDER_STAGE_LABELS: Record<OrderStage, string> = {
   'IN_PRODUCTION': '5. In Production (Shop Floor)',
   'REWORK': '5. Rework (NCR Disposition)',
   'READY_FOR_QC': '6. Ready for QC',
+  'MANUFACTURING_COMPLETED': '6. Manufacturing Completed (QC Pending)',
   'QC': '6. Quality Control Inspection',
   'QC_INSPECTION': '6. Quality Cleared (QC)',
   'QC_HOLD': '6. QC Deficit Hold',
@@ -206,6 +224,8 @@ export const ORDER_STAGE_LABELS: Record<OrderStage, string> = {
   'PDI': '7. Pre-Dispatch Inspection (PDI)',
   'PDI_HOLD': '7. PDI Quarantine Hold',
   'PDI_COMPLETE': '7. PDI Complete',
+  'PDI_PASS': '7. PDI Passed (Ready for Invoicing)',
+  'PDI_PASSED': '7. PDI Passed (Ready for Invoicing)',
   'READY_FOR_DISPATCH': '7. Ready to Dispatch',
   'READY_TO_DISPATCH': '7. Ready to Dispatch',
   'INVOICE_GENERATED': '8. Invoice Generated',

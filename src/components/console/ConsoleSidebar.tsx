@@ -266,11 +266,11 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
             {!isCollapsed ? (
               <>
                 <div className="flex items-center gap-2.5 overflow-hidden">
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#FF5000] to-indigo-600 flex items-center justify-center text-white text-xs font-black shadow-xs shrink-0">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#5B75F8] to-indigo-600 flex items-center justify-center text-white text-xs font-black shadow-xs shrink-0">
                     G
                   </div>
                   <div className="flex flex-col leading-tight overflow-hidden">
-                    <span className="text-sm font-black text-[#FF5000] tracking-tight truncate">
+                    <span className="text-sm font-black text-[#5B75F8] tracking-tight truncate">
                       GuruOm OS
                     </span>
                     <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
@@ -294,7 +294,7 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
               <button
                 type="button"
                 onClick={toggleCollapse}
-                className="relative w-10 h-10 rounded-xl bg-gradient-to-tr from-[#FF5000] to-indigo-600 flex items-center justify-center text-white text-sm font-black shadow-xs transition-all hover:scale-105 hover:shadow-md cursor-pointer group overflow-hidden"
+                className="relative w-10 h-10 rounded-xl bg-gradient-to-tr from-[#5B75F8] to-indigo-600 flex items-center justify-center text-white text-sm font-black shadow-xs transition-all hover:scale-105 hover:shadow-md cursor-pointer group overflow-hidden"
                 title="Expand Sidebar"
               >
                 <span className="transition-opacity duration-200 group-hover:opacity-0">G</span>

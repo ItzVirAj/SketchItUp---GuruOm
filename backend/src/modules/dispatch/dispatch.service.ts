@@ -8,10 +8,39 @@ import { ordersService } from '../orders/orders.service';
 import { logAudit } from '../../services/auditLog';
 
 
+import { getCurrentFinancialYear, formatDocumentNumber } from '../../../../src/utils/statutoryAccountingEngine';
+
 const SEED_DISPATCHES: any[] = [];
+const documentSequenceState: Record<string, number> = {};
 
 export class DispatchService {
   private db = getDbClient();
+
+  /**
+   * Generates next atomic document number in format CHL-[FY]-[0001]
+   */
+  async getNextDocumentNumber(seriesCode = 'CHL', prefix = 'CHL'): Promise<string> {
+    const fy = getCurrentFinancialYear();
+    const seqKey = `${seriesCode}-${fy}`;
+
+    try {
+      const { data, error } = await this.db.rpc('get_next_document_number', {
+        p_series_code: seriesCode,
+        p_prefix: prefix,
+        p_fy: fy
+      });
+
+      if (!error && data) {
+        return data as string;
+      }
+    } catch (err) {
+      console.warn('DB getNextDocumentNumber fallback for dispatch:', err);
+    }
+
+    const current = (documentSequenceState[seqKey] || 0) + 1;
+    documentSequenceState[seqKey] = current;
+    return formatDocumentNumber(prefix, fy, current);
+  }
 
   async getDispatches() {
     try {
@@ -80,12 +109,43 @@ export class DispatchService {
     }
 
     const challanId = validated.id || `chl-${Date.now()}`;
+    let challanNo = validated.challanNo;
     let fullyDispatched = false;
 
+    // Check if challan_no is already in use
+    if (challanNo) {
+      try {
+        const { data: existing } = await this.db
+          .from('dispatch_challans')
+          .select('id, challan_no, order_po')
+          .eq('challan_no', challanNo)
+          .maybeSingle();
+
+        if (existing) {
+          if (existing.order_po === validated.orderPo) {
+            console.log(`Challan ${challanNo} already exists for order ${validated.orderPo}, updating record.`);
+            await this.db
+              .from('dispatch_challans')
+              .update({
+                transporter: validated.transporter,
+                vehicle_no: validated.vehicleNo,
+                status: validated.status || 'DISPATCHED',
+                date: validated.date
+              })
+              .eq('id', existing.id);
+          } else {
+            challanNo = await this.getNextDocumentNumber('CHL', 'CHL');
+          }
+        }
+      } catch (_) {}
+    } else {
+      challanNo = await this.getNextDocumentNumber('CHL', 'CHL');
+    }
+
     try {
-      const { error } = await this.db.from('dispatch_challans').insert({
+      const insertData = {
         id: challanId,
-        challan_no: validated.challanNo,
+        challan_no: challanNo,
         order_po: validated.orderPo,
         status: validated.status,
         date: validated.date,
@@ -93,9 +153,21 @@ export class DispatchService {
         vehicle_no: validated.vehicleNo,
         lines_count: validated.linesCount,
         created_at: new Date().toISOString()
-      });
+      };
 
-      if (error) throw error;
+      const { error } = await this.db.from('dispatch_challans').insert(insertData);
+
+      if (error) {
+        if (error.code === '23505') {
+          console.warn(`Unique constraint 23505 on challan_no "${challanNo}". Generating fresh sequence...`);
+          challanNo = await this.getNextDocumentNumber('CHL', 'CHL');
+          insertData.challan_no = challanNo;
+          const retry = await this.db.from('dispatch_challans').insert(insertData);
+          if (retry.error && retry.error.code !== '23505') throw retry.error;
+        } else {
+          throw error;
+        }
+      }
 
       // Resolve order lines and allocate dispatch quantities (defaults to each line's full pending qty)
       const { data: order } = await this.db
@@ -132,7 +204,7 @@ export class DispatchService {
           .from('finished_goods')
           .select('id, dispatched_qty')
           .eq('order_po', order?.po_no || validated.orderPo)
-          .eq('item_code', line.item_code);
+          .or(`part_code.eq.${line.item_code},item_code.eq.${line.item_code}`);
         const fg = (fgRows || [])[0];
         if (fg) {
           await this.db
@@ -146,10 +218,10 @@ export class DispatchService {
           itemCode: line.item_code,
           quantityChange: -dispatchQty,
           movementType: 'DISPATCH',
-          referenceId: validated.challanNo,
+          referenceId: challanNo,
           referenceType: 'dispatch',
           actorEmail: 'dispatch@guruom.in',
-          notes: `Dispatch via ${validated.transporter} (PO #${validated.orderPo}, Challan #${validated.challanNo})`
+          notes: `Dispatch via ${validated.transporter} (PO #${validated.orderPo}, Challan #${challanNo})`
         }).catch(() => {});
       }
       if (!orderLines || orderLines.length === 0) fullyDispatched = false;
@@ -161,6 +233,8 @@ export class DispatchService {
         .update({
           status: orderStatus,
           stage: orderStatus,
+          delivery_challan_no: challanNo,
+          transporter_name: validated.transporter,
           progress_step: 8,
           updated_at: new Date().toISOString()
         })
@@ -169,7 +243,7 @@ export class DispatchService {
       console.warn('Database createDispatch fallback:', err);
     }
 
-    const created = { id: challanId, ...validated };
+    const created = { id: challanId, ...validated, challanNo };
     SEED_DISPATCHES.unshift(created as any);
 
     // Synchronize in-memory order status
@@ -180,9 +254,9 @@ export class DispatchService {
       actorEmail: 'dispatch@guruom.in',
       action: 'DISPATCH_CREATED',
       entityType: 'dispatch_challans',
-      entityId: String(validated.challanNo),
-      afterState: { orderPo: validated.orderPo, transporter: validated.transporter, vehicleNo: validated.vehicleNo, linesCount: validated.linesCount },
-      metadata: { details: `Challan ${validated.challanNo} dispatched for PO ${validated.orderPo} via ${validated.transporter}` }
+      entityId: String(challanNo),
+      afterState: { orderPo: validated.orderPo, transporter: validated.transporter, vehicleNo: validated.vehicleNo, linesCount: validated.linesCount, challanNo },
+      metadata: { details: `Challan ${challanNo} dispatched for PO ${validated.orderPo} via ${validated.transporter}` }
     }).catch(() => {});
 
     notificationsService.broadcastEvent('dispatch_created', created);
@@ -191,12 +265,12 @@ export class DispatchService {
       poNo: validated.orderPo,
       status: fullyDispatched ? 'DISPATCHED' : 'PARTIALLY_DISPATCHED',
       stage: fullyDispatched ? 'DISPATCHED' : 'PARTIALLY_DISPATCHED',
+      deliveryChallanNo: challanNo,
       progressStep: 8
     });
-    notificationsService.broadcastEvent('stock_updated', { challanNo: validated.challanNo, type: 'DISPATCH' });
+    notificationsService.broadcastEvent('stock_updated', { challanNo, type: 'DISPATCH' });
 
     return created;
-
   }
 
   async getDispatchableQty(orderPo: string) {

@@ -8,7 +8,9 @@ export const ATTACHMENTS_BUCKET = 'attachments';
  * Generates short-lived signed URLs for authorized downloads.
  */
 export class StorageService {
-  private static db = getDbClient();
+  private static get db() {
+    return getDbClient();
+  }
   private static localBufferStore: Map<string, { buffer: Buffer; contentType: string }> = new Map();
 
   /**

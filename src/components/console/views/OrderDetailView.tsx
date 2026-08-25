@@ -40,7 +40,7 @@ import {
   Loader2,
   Eye
 } from 'lucide-react';
-import { CustomerOrder, OrderStatus, QCInspection, OrderLineItem, UserRole, VendorMaster, DispatchChallan } from '../../../types/console';
+import { CustomerOrder, OrderStatus, QCInspection, PDIInspection, OrderLineItem, UserRole, VendorMaster, DispatchChallan } from '../../../types/console';
 import { isRoleAuthorizedForCta, getCtaPermission, CtaId, normalizeRole } from '../../../utils/rbacMatrix';
 import { executeOrderStageTransition, validatePodRequired, validateOrderClosure, normalizeOrderState, CanonicalOrderState } from '../../../utils/orderStateMachine';
 import { runMaterialCheckForOrder, overrideMaterialCheckForOrder } from '../../../services/supabaseServices';
@@ -236,18 +236,6 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
     }
   };
 
-  const linkedQc = (qcQueue || []).filter(q => 
-    (q.orderPo && (q.orderPo.trim().toUpperCase() === (order.poNo || '').trim().toUpperCase() || q.orderPo.trim().toUpperCase() === (order.id || '').trim().toUpperCase())) ||
-    (order.jobCards && order.jobCards.some(j => j.jobNo && j.jobNo.trim().toUpperCase() === (q.jobNo || '').trim().toUpperCase()))
-  );
-
-  const isQcRejected = linkedQc.some(q => q.qcStatus === 'REJECTED');
-  const isQcHold = linkedQc.some(q => q.qcStatus === 'QC_HOLD');
-  const allQcPassed = (linkedQc.length > 0 && linkedQc.every(q => q.qcStatus === 'PASS' || q.qcStatus === 'PASSED')) ||
-    ['QC_INSPECTION', 'QC_PASS', 'QC_PASSED', 'QC_COMPLETE', 'PDI', 'PDI_HOLD', 'PDI_COMPLETE', 'READY_TO_DISPATCH', 'READY_FOR_DISPATCH', 'DISPATCHED', 'IN_TRANSIT', 'DELIVERED', 'INVOICED', 'CLOSED'].includes((order.status || order.stage || '').toUpperCase()) ||
-    Boolean(isPdiPassed);
-  const hasNcr = order.hasOpenNcr || isQcRejected || isQcHold;
-
   const linkedDispatches = (dispatches || []).filter(d => 
     (d.orderPo && ((order.poNo && d.orderPo.trim().toUpperCase() === order.poNo.trim().toUpperCase()) || (order.id && d.orderPo.trim().toUpperCase() === order.id.trim().toUpperCase()))) ||
     (order.deliveryChallanNo && d.challanNo && d.challanNo.trim().toUpperCase() === order.deliveryChallanNo.trim().toUpperCase())
@@ -265,6 +253,18 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   const isPdiPassed = (linkedPdi.length > 0 && linkedPdi.every(p => p.pdiStatus === 'PASS')) ||
     ['PDI_COMPLETE', 'READY_FOR_DISPATCH', 'READY_TO_DISPATCH', 'INVOICE_GENERATED', 'DISPATCH_READY', 'PARTIALLY_DISPATCHED', 'DISPATCHED', 'IN_TRANSIT', 'DELIVERED', 'CLOSED', 'PAID'].includes((order.status || order.stage || '').toUpperCase()) ||
     Boolean(effectiveChallanNo);
+
+  const linkedQc = (qcQueue || []).filter(q => 
+    (q.orderPo && (q.orderPo.trim().toUpperCase() === (order.poNo || '').trim().toUpperCase() || q.orderPo.trim().toUpperCase() === (order.id || '').trim().toUpperCase())) ||
+    (order.jobCards && order.jobCards.some(j => j.jobNo && j.jobNo.trim().toUpperCase() === (q.jobNo || '').trim().toUpperCase()))
+  );
+
+  const isQcRejected = linkedQc.some(q => q.qcStatus === 'REJECTED');
+  const isQcHold = linkedQc.some(q => q.qcStatus === 'QC_HOLD');
+  const allQcPassed = (linkedQc.length > 0 && linkedQc.every(q => q.qcStatus === 'PASS' || q.qcStatus === 'PASSED')) ||
+    ['QC_INSPECTION', 'QC_PASS', 'QC_PASSED', 'QC_COMPLETE', 'PDI', 'PDI_HOLD', 'PDI_COMPLETE', 'READY_TO_DISPATCH', 'READY_FOR_DISPATCH', 'DISPATCHED', 'IN_TRANSIT', 'DELIVERED', 'INVOICED', 'CLOSED'].includes((order.status || order.stage || '').toUpperCase()) ||
+    Boolean(isPdiPassed);
+  const hasNcr = order.hasOpenNcr || isQcRejected || isQcHold;
 
   // Active step index calculation matching the 8-stage lifecycle
   let activeStepIndex = 0;

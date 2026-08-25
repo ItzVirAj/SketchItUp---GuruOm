@@ -81,8 +81,10 @@ export async function fetchProfiles(): Promise<SystemUser[]> {
     if (res?.data && res.data.length > 0) {
       return res.data;
     }
-  } catch (err) {
-    console.warn('fetchProfiles REST error, falling back:', err);
+  } catch (err: any) {
+    if (err?.statusCode !== 401) {
+      console.warn('fetchProfiles REST error, falling back:', err);
+    }
   }
   return [];
 }
@@ -1364,7 +1366,7 @@ export async function fetchAuditLogs(filters?: {
   } catch (err) {
     console.warn('fetchAuditLogs REST API error, falling back:', err);
   }
-  return initialAuditLogs;
+  return [];
 }
 
 export async function exportAuditLogsApi(filters?: {

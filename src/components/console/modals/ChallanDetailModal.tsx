@@ -211,7 +211,6 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
       if (onDispatchChallan) {
         await onDispatchChallan(challan.challanNo);
       }
-      setLocalChallan(prev => prev ? { ...prev, status: 'DISPATCHED' } : null);
       setSuccessMsg(`Challan ${challan.challanNo} marked as DISPATCHED & In-Transit.`);
     } catch (err: any) {
       setErrorMsg(err?.message || 'Failed to dispatch challan.');

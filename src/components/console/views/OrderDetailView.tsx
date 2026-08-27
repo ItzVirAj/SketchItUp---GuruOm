@@ -468,80 +468,6 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
     }
   };
 
-  const handleDeliverySubmit = async () => {
-    try {
-      setIsConfirming(true);
-      const deliveryData = {
-        deliveryDate,
-        receivedBy: deliveryReceivedBy.trim() || 'Stores Gate Security',
-        podUrl: deliveryPodUrl.trim(),
-        remarks: deliveryRemarks.trim()
-      };
-
-      if (onMarkDelivered) {
-        await onMarkDelivered(order.id, deliveryData);
-      } else if (onUpdateOrder) {
-        await onUpdateOrder(order.id, {
-          status: 'DELIVERED' as any,
-          stage: 'DELIVERED' as any,
-          podReceivedDate: deliveryData.deliveryDate,
-          podReceivedBy: deliveryData.receivedBy,
-          podDocumentUrl: deliveryData.podUrl || 'POD-CONFIRMED',
-          progressStep: 9
-        });
-      }
-
-      setShowDeliveryModal(false);
-    } catch (err: any) {
-      setConfirmError(err?.message || 'Failed to record delivery.');
-    } finally {
-      setIsConfirming(false);
-    }
-  };
-
-  const handleRecordPaymentSubmit = async () => {
-    try {
-      setIsConfirming(true);
-      if (paymentAmount <= 0) {
-        setPaymentError('Payment amount must be greater than ₹0.');
-        return;
-      }
-
-      const paymentData = {
-        amount: paymentAmount,
-        mode: paymentMode,
-        referenceNo: paymentRefNo.trim(),
-        paymentDate,
-        currentPaid,
-        grossAmount: gross,
-        remarks: 'Payment settled in full / partially',
-        receivedBy: currentUser?.name || 'Accounts Officer',
-        existingHistory: order.paymentHistory || []
-      };
-
-      if (onRecordPayment) {
-        await onRecordPayment(order.id, paymentData);
-      } else if (onUpdateOrder) {
-        const newTotalPaid = currentPaid + paymentAmount;
-        const isFullyPaid = newTotalPaid >= gross;
-        await onUpdateOrder(order.id, {
-          paidAmount: newTotalPaid,
-          paymentStatus: isFullyPaid ? 'PAID' : 'PARTIAL',
-          status: (isFullyPaid ? 'CLOSED' : 'PAYMENT_PENDING') as any,
-          stage: (isFullyPaid ? 'CLOSED' : 'PAYMENT_PENDING') as any,
-          closedAt: isFullyPaid ? new Date().toISOString() : undefined,
-          closedBy: isFullyPaid ? (currentUser?.name || 'Finance Controller') : undefined,
-          progressStep: isFullyPaid ? 11 : 10
-        });
-      }
-
-      setShowPaymentModal(false);
-    } catch (err: any) {
-      setPaymentError(err?.message || 'Failed to record payment.');
-    } finally {
-      setIsConfirming(false);
-    }
-  };
 
   const addEditLineItem = () => {
     setEditLines(prev => [
@@ -894,31 +820,49 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
     }
   };
 
-  // PRD v1.0 Hard Gate: POD Submission
-  const handleSavePodDelivery = () => {
-    if (!podDocUrl.trim()) {
-      setPodError('POD / E-POD Document URL or File Name is required.');
+  // PRD v1.0 Hard Gate: Confirm Customer Delivery with Mandatory POD
+  const handleDeliverySubmit = async () => {
+    if (!deliveryPodUrl.trim()) {
+      setConfirmError('Proof of Delivery (POD/E-POD) document is required to confirm delivery.');
       return;
     }
-    if (!podReceivedBy.trim()) {
-      setPodError('Receiver name is required.');
+    if (!deliveryReceivedBy.trim()) {
+      setConfirmError('Receiver name is required.');
       return;
     }
 
-    onUpdateOrder?.(order.id, {
-      status: 'DELIVERED',
-      stage: 'DELIVERED',
-      podDocumentUrl: podDocUrl.trim(),
-      transporterName: podCarrier.trim() || order.transporterName,
-      podReceivedBy: podReceivedBy.trim(),
-      podReceivedDate: podDate,
-      paymentStatus: order.paymentStatus || 'UNPAID',
-      progressStep: 9
-    });
+    try {
+      setIsConfirming(true);
+      setConfirmError(null);
 
-    setShowPodModal(false);
-    setPodError(null);
+      if (onMarkDelivered) {
+        await onMarkDelivered(order.id, {
+          deliveryDate,
+          receivedBy: deliveryReceivedBy.trim(),
+          podUrl: deliveryPodUrl.trim(),
+          remarks: deliveryRemarks.trim()
+        });
+      } else if (onUpdateOrder) {
+        await onUpdateOrder(order.id, {
+          status: 'DELIVERED',
+          stage: 'DELIVERED',
+          podDocumentUrl: deliveryPodUrl.trim(),
+          podReceivedBy: deliveryReceivedBy.trim(),
+          podReceivedDate: deliveryDate,
+          progressStep: 9
+        });
+      }
+
+      setShowDeliveryModal(false);
+    } catch (err: any) {
+      setConfirmError(err?.message || 'Failed to mark delivery.');
+    } finally {
+      setIsConfirming(false);
+    }
   };
+
+  // PRD v1.0 Hard Gate: POD Submission modal handler
+  const handleSavePodDelivery = handleDeliverySubmit;
 
   const handleGenerateInvoiceAction = async () => {
     try {
@@ -941,40 +885,73 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   };
 
   // PRD v1.0 Hard Gate: Record Payment & Settle
-  const handleSavePayment = () => {
+  const handleRecordPaymentSubmit = async () => {
     if (paymentAmount <= 0) {
       setPaymentError('Payment amount must be greater than ₹0.');
       return;
     }
 
-    const newTotalPaid = currentPaid + paymentAmount;
-    const isFullyPaid = newTotalPaid >= gross;
+    try {
+      setIsConfirming(true);
+      setPaymentError(null);
 
-    onUpdateOrder?.(order.id, {
-      paidAmount: newTotalPaid,
-      paymentStatus: isFullyPaid ? 'PAID' : 'PARTIAL',
-      paymentHistory: [
-        ...(order.paymentHistory || []),
-        {
-          id: `pay-${Date.now()}`,
+      const newTotalPaid = currentPaid + paymentAmount;
+      const isFullyPaid = newTotalPaid >= gross;
+
+      if (onRecordPayment) {
+        await onRecordPayment(order.id, {
           amount: paymentAmount,
           mode: paymentMode,
           referenceNo: paymentRefNo.trim(),
-          receivedDate: paymentDate,
+          paymentDate,
+          currentPaid,
+          grossAmount: gross,
+          remarks: 'Commercial settlement payment',
           receivedBy: currentUser?.name || 'Accounts Officer'
-        }
-      ]
-    });
+        });
+      } else if (onUpdateOrder) {
+        await onUpdateOrder(order.id, {
+          paidAmount: newTotalPaid,
+          paymentStatus: isFullyPaid ? 'PAID' : 'PARTIAL',
+          paymentHistory: [
+            ...(order.paymentHistory || []),
+            {
+              id: `pay-${Date.now()}`,
+              amount: paymentAmount,
+              mode: paymentMode,
+              referenceNo: paymentRefNo.trim(),
+              receivedDate: paymentDate,
+              receivedBy: currentUser?.name || 'Accounts Officer'
+            }
+          ]
+        });
+      }
 
-    setShowPaymentModal(false);
-    setPaymentError(null);
+      setShowPaymentModal(false);
+    } catch (err: any) {
+      setPaymentError(err?.message || 'Failed to record payment.');
+    } finally {
+      setIsConfirming(false);
+    }
   };
+
+  const handleSavePayment = handleRecordPaymentSubmit;
 
   // PRD v1.0 Hard Gate: Order Closure (Must be Delivered + Full Payment)
   const handleCloseOrderAction = async () => {
     try {
       setIsConfirming(true);
       setConfirmError(null);
+
+      const isDeliveredState = ['DELIVERED', 'COMPLETED', 'CLOSED'].includes((order.status || '').toUpperCase()) || Boolean(order.podReceivedDate);
+      const isFullyPaidState = remainingOutstanding <= 0 || order.paymentStatus === 'PAID';
+
+      if (!isDeliveredState) {
+        throw new Error('Awaiting delivery confirmation — consignment must be marked Delivered with POD before closing.');
+      }
+      if (!isFullyPaidState) {
+        throw new Error(`Awaiting full payment — ₹${currentPaid.toLocaleString('en-IN')} of ₹${gross.toLocaleString('en-IN')} received. ₹${remainingOutstanding.toLocaleString('en-IN')} outstanding.`);
+      }
 
       const closeRes = validateOrderClosure(
         currentStage as any,
@@ -1121,7 +1098,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       };
     }
 
-    // Stage 6 (Dispatched): shipped / in transit -> Generate Invoice or Mark Delivered
+    // Stage 6 (Dispatched / In Transit): shipped / in transit -> Generate Invoice or Mark Delivered
     if (isDispatched || ['PARTIALLY_DISPATCHED', 'DISPATCHED', 'IN_TRANSIT'].includes(st)) {
       if (!order.invoiceNo) {
         const allowed = isRoleAuthorizedForCta(currentRole, 'GENERATE_INVOICE');
@@ -1134,10 +1111,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           disabledReason: !allowed ? 'Only Finance / Accounts or Owner can generate tax invoices' : undefined,
           ownerRole: 'Accounts / Finance'
         };
-      } else {
+      } else if (!['DELIVERED', 'COMPLETED', 'CLOSED'].includes(st) && !order.podReceivedDate && !order.podDocumentUrl) {
         const allowed = isRoleAuthorizedForCta(currentRole, 'MARK_DELIVERED');
         return {
-          label: 'Mark as Delivered (Confirm Goods Received)',
+          label: 'Mark Delivered (Stage 10a)',
           icon: CheckCircle2,
           buttonClass: 'bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-emerald-600 hover:to-blue-600 text-white shadow-blue-500/25',
           handler: () => setShowDeliveryModal(true),
@@ -1174,8 +1151,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       }
     }
 
-    // Stage 7 (Delivered / Payment Pending / Invoiced): Invoicing or Payment
-    if (['DELIVERED', 'PAYMENT_PENDING', 'INVOICED'].includes(st)) {
+    // Stage 7 (Delivered / Payment Pending / Invoiced): Invoicing, Payment Collection, or Order Closure
+    if (['DELIVERED', 'PAYMENT_PENDING', 'INVOICED'].includes(st) || Boolean(order.podReceivedDate) || Boolean(order.podDocumentUrl)) {
       if (!order.invoiceNo) {
         const allowed = isRoleAuthorizedForCta(currentRole, 'GENERATE_INVOICE');
         return {
@@ -1189,26 +1166,45 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         };
       }
 
+      const isDeliveredState = ['DELIVERED', 'COMPLETED', 'CLOSED'].includes(st) || Boolean(order.podReceivedDate);
+      if (!isDeliveredState) {
+        const allowed = isRoleAuthorizedForCta(currentRole, 'MARK_DELIVERED');
+        return {
+          label: 'Mark Delivered (Stage 10a)',
+          icon: CheckCircle2,
+          buttonClass: 'bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-emerald-600 hover:to-blue-600 text-white shadow-blue-500/25',
+          handler: () => setShowDeliveryModal(true),
+          disabled: !allowed,
+          disabledReason: !allowed ? 'Only Dispatch Clerk or Owner can mark delivered' : undefined,
+          ownerRole: 'Dispatch & Transport Desk'
+        };
+      }
+
       const isPaid = order.paymentStatus === 'PAID' || remainingOutstanding <= 0;
       if (!isPaid) {
         const allowed = isRoleAuthorizedForCta(currentRole, 'RECORD_PAYMENT');
+        const isPartial = currentPaid > 0;
         return {
-          label: `Record Payment Received (Bal: ₹${remainingOutstanding.toLocaleString('en-IN')})`,
+          label: isPartial 
+            ? `Record Payment (Stage 11 — Bal: ₹${remainingOutstanding.toLocaleString('en-IN')})` 
+            : `Record Payment (Stage 11 — Total: ₹${gross.toLocaleString('en-IN')})`,
           icon: CreditCard,
           buttonClass: 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white shadow-emerald-500/25',
           handler: () => setShowPaymentModal(true),
           disabled: !allowed,
           disabledReason: !allowed ? 'Only Finance / Accounts or Owner can record payments' : undefined,
-          ownerRole: 'Finance / Accounts'
+          ownerRole: 'Accounts & Finance Controller'
         };
       } else {
+        const allowed = isRoleAuthorizedForCta(currentRole, 'MARK_ORDER_CLOSED');
         return {
-          label: isConfirming ? 'Closing...' : 'Order Paid in Full (Close Order)',
+          label: isConfirming ? 'Closing...' : 'Mark Order Closed (Stage 11a)',
           icon: CheckCircle2,
-          buttonClass: 'bg-gradient-to-r from-emerald-700 to-slate-800 hover:from-slate-800 hover:to-emerald-700 text-white shadow-emerald-500/25',
-          handler: handleCloseOrderSubmit,
-          disabled: isConfirming,
-          ownerRole: 'System / Super Admin'
+          buttonClass: 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white shadow-emerald-500/25',
+          handler: handleCloseOrderAction,
+          disabled: isConfirming || !allowed,
+          disabledReason: !allowed ? 'Only Accounts/Finance or Owner can close orders' : undefined,
+          ownerRole: 'Finance Controller / Owner'
         };
       }
     }
@@ -1544,31 +1540,31 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               renderActions: () => {
                 const allowed = isRoleAuthorizedForCta(currentRole, 'CONFIRM_ORDER');
                 return (
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
                     <button
                       onClick={openEditModal}
-                      className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
                         isDarkMode 
                           ? 'border-indigo-500/40 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20' 
                           : 'border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
                       }`}
                     >
-                      <Edit3 className="w-3.5 h-3.5" />
+                      <Edit3 className="w-3.5 h-3.5 shrink-0" />
                       <span>Request Revision / Edit</span>
                     </button>
                     <button
                       disabled={isConfirming || !allowed}
                       onClick={handleConfirmAction}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white text-xs font-bold shadow-lg shadow-emerald-500/20 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white text-xs font-bold shadow-lg shadow-emerald-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
                     >
-                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                       <span>{isConfirming ? 'Confirming...' : 'Confirm Order'}</span>
                     </button>
                     <button
                       onClick={() => onCancelOrder?.(order.id)}
-                      className="px-3 py-2 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 text-xs font-bold cursor-pointer transition-all"
+                      className="px-3 py-2 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 text-xs font-bold cursor-pointer transition-all flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
                     >
-                      <XCircle className="w-3.5 h-3.5" />
+                      <XCircle className="w-3.5 h-3.5 shrink-0" />
                       <span>Cancel</span>
                     </button>
                   </div>
@@ -1585,24 +1581,24 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
                 n === 'APPROVED' || ['CONFIRMED', 'APPROVED', 'PO_APPROVED'].includes((o.status || '').toUpperCase()),
               renderActions: () => (
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
                   <button
                     onClick={openEditModal}
-                    className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
                       isDarkMode 
                         ? 'border-purple-500/40 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20' 
                         : 'border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100'
                     }`}
                   >
-                    <Edit3 className="w-3.5 h-3.5" />
+                    <Edit3 className="w-3.5 h-3.5 shrink-0" />
                     <span>Raise Change Order</span>
                   </button>
                   <button
                     disabled={isRunningMaterialCheck}
                     onClick={handleMaterialCheckAction}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold shadow-lg shadow-[#5B75F8]/20 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold shadow-lg shadow-[#5B75F8]/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
                   >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isRunningMaterialCheck ? 'animate-spin' : ''}`} />
+                    <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${isRunningMaterialCheck ? 'animate-spin' : ''}`} />
                     <span>{isRunningMaterialCheck ? 'Checking Material...' : 'Proceed to Material Check'}</span>
                   </button>
                 </div>
@@ -1618,25 +1614,25 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
                 ['RELEASED', 'PENDING_VERIFICATION', 'MATERIAL_CHECK'].includes(n) || ['MATERIAL_CHECK', 'PENDING_VERIFICATION'].includes((o.status || '').toUpperCase()),
               renderActions: () => (
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
                   <button
                     disabled={isRunningMaterialCheck}
                     onClick={handleMaterialCheckAction}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold shadow-md shadow-[#5B75F8]/20 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold shadow-md shadow-[#5B75F8]/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
                   >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isRunningMaterialCheck ? 'animate-spin' : ''}`} />
+                    <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${isRunningMaterialCheck ? 'animate-spin' : ''}`} />
                     <span>{isRunningMaterialCheck ? 'Checking...' : 'Re-run Material Check'}</span>
                   </button>
                   {isOwner && (
                     <button
                       onClick={() => setShowOverrideModal(true)}
-                      className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
                         isDarkMode 
                           ? 'border-purple-500/40 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20' 
                           : 'border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100'
                       }`}
                     >
-                      <Zap className="w-3.5 h-3.5" />
+                      <Zap className="w-3.5 h-3.5 shrink-0" />
                       <span>Owner Override</span>
                     </button>
                   )}
@@ -1653,12 +1649,12 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
                 n === 'MATERIAL_SHORT' || ['MATERIAL_SHORT', 'MATERIAL_SHORTAGE'].includes((o.status || '').toUpperCase()),
               renderActions: () => (
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
                   <button
                     onClick={() => onNavigate?.('inventory')}
-                    className="px-3.5 py-2 rounded-xl bg-amber-500/20 text-amber-500 dark:text-amber-300 border border-amber-500/40 text-xs font-bold cursor-pointer hover:bg-amber-500/30 flex items-center gap-1.5"
+                    className="px-3.5 py-2 rounded-xl bg-amber-500/20 text-amber-500 dark:text-amber-300 border border-amber-500/40 text-xs font-bold cursor-pointer hover:bg-amber-500/30 flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
                   >
-                    <AlertTriangle className="w-3.5 h-3.5" />
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                     <span>Open Purchase Requisitions ➔</span>
                   </button>
                 </div>
@@ -1675,12 +1671,12 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
                 n === 'PROCUREMENT_PENDING' || ['PROCUREMENT_PENDING', 'PO_SENT', 'UNDER_PROCUREMENT'].includes((o.status || '').toUpperCase()),
               renderActions: () => (
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
                   <button
                     onClick={() => onNavigate?.('inventory')}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-500 text-white text-xs font-bold cursor-pointer shadow-md shadow-amber-500/20 hover:from-orange-500 hover:to-amber-600 flex items-center gap-1.5"
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-500 text-white text-xs font-bold cursor-pointer shadow-md shadow-amber-500/20 hover:from-orange-500 hover:to-amber-600 flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
                   >
-                    <Building className="w-3.5 h-3.5" />
+                    <Building className="w-3.5 h-3.5 shrink-0" />
                     <span>Create Purchase Order</span>
                   </button>
                 </div>
@@ -1697,12 +1693,12 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
                 n === 'GRN' || ['GRN', 'GRN_PENDING', 'AWAITING_GRN'].includes((o.status || '').toUpperCase()),
               renderActions: () => (
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
                   <button
                     onClick={() => onNavigate?.('inventory')}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 text-white text-xs font-bold cursor-pointer shadow-md shadow-teal-500/20 hover:from-emerald-600 hover:to-teal-600 flex items-center gap-1.5"
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 text-white text-xs font-bold cursor-pointer shadow-md shadow-teal-500/20 hover:from-emerald-600 hover:to-teal-600 flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
                   >
-                    <Package className="w-3.5 h-3.5" />
+                    <Package className="w-3.5 h-3.5 shrink-0" />
                     <span>Record GRN</span>
                   </button>
                 </div>
@@ -1721,13 +1717,13 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 const allowed = isRoleAuthorizedForCta(currentRole, 'CREATE_JOB_CARD');
                 const lineCount = (order.lines || []).length;
                 return (
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
                     <button
                       disabled={!allowed || lineCount === 0}
                       onClick={handleGoToCreateJobCard}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-500 hover:from-orange-500 hover:to-amber-600 text-white text-xs font-bold shadow-md shadow-amber-500/20 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-500 hover:from-orange-500 hover:to-amber-600 text-white text-xs font-bold shadow-md shadow-amber-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
                     >
-                      <RefreshCw className="w-3.5 h-3.5" />
+                      <RefreshCw className="w-3.5 h-3.5 shrink-0" />
                       <span>Create Job Card ({lineCount} item{lineCount === 1 ? '' : 's'})</span>
                     </button>
                   </div>
@@ -1745,12 +1741,12 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
                 ['WITH_SUBCONTRACTOR', 'OUTWORK_DISPATCHED', 'OUTWORK_RECEIVED'].includes((o.status || '').toUpperCase()),
               renderActions: () => (
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
                   <button
                     onClick={() => onNavigate?.('production')}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-indigo-600 hover:to-purple-600 text-white text-xs font-bold shadow-md shadow-purple-500/20 transition-all cursor-pointer flex items-center gap-1.5"
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-indigo-600 hover:to-purple-600 text-white text-xs font-bold shadow-md shadow-purple-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
                   >
-                    <RefreshCw className="w-3.5 h-3.5" />
+                    <RefreshCw className="w-3.5 h-3.5 shrink-0" />
                     <span>Issue / Receive Subcontractor Outwork</span>
                   </button>
                 </div>
@@ -1766,12 +1762,12 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
                 n === 'IN_PRODUCTION' || ['IN_PRODUCTION', 'IN_PROGRESS', 'MANUFACTURING'].includes((o.status || '').toUpperCase()),
               renderActions: () => (
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
                   <button
                     onClick={() => onNavigate?.('production')}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-indigo-600 hover:to-purple-600 text-white text-xs font-bold shadow-md shadow-purple-500/20 transition-all cursor-pointer flex items-center gap-1.5"
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-indigo-600 hover:to-purple-600 text-white text-xs font-bold shadow-md shadow-purple-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
                   >
-                    <Flame className="w-3.5 h-3.5" />
+                    <Flame className="w-3.5 h-3.5 shrink-0" />
                     <span>Log Production / Start Operations</span>
                   </button>
                 </div>
@@ -1787,10 +1783,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
                 !allQcPassed && !isPdiPassed && ['MANUFACTURING_COMPLETED', 'READY_FOR_QC'].includes((o.status || o.stage || '').toUpperCase()),
               renderActions: () => (
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
                   <button
                     onClick={() => onNavigate?.('qc')}
-                    className="px-3.5 py-2 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 text-xs font-bold cursor-pointer hover:bg-indigo-500/30 flex items-center gap-1.5"
+                    className="px-3.5 py-2 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 text-xs font-bold cursor-pointer hover:bg-indigo-500/30 flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
                   >
                     <span>Proceed to QC Queue ➔</span>
                   </button>
@@ -1807,7 +1803,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
                 !allQcPassed && !isPdiPassed && (['QC', 'QC_INSPECTION'].includes(n) || ['QC', 'QC_INSPECTION', 'QC_IN_PROGRESS', 'INSPECTION_PENDING'].includes((o.status || '').toUpperCase())),
               renderActions: () => (
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
                   {allQcPassed && !hasNcr ? (
                     <button
                       onClick={() => {
@@ -1816,17 +1812,17 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                         else setShowPdiModal(true);
                       }}
                       title={`Inspect PDI for ${order.jobCards?.[0]?.jobNo || 'JC'} (${order.poNo || order.id})`}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-all cursor-pointer flex items-center gap-1.5"
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
                     >
-                      <ClipboardCheck className="w-3.5 h-3.5" />
+                      <ClipboardCheck className="w-3.5 h-3.5 shrink-0" />
                       <span>Proceed to PDI / Inspect PDI ➔</span>
                     </button>
                   ) : (
                     <button
                       onClick={() => onNavigate?.('qc')}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white text-xs font-bold shadow-md shadow-indigo-500/20 transition-all cursor-pointer flex items-center gap-1.5"
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white text-xs font-bold shadow-md shadow-indigo-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
                     >
-                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
                       <span>Upload Quality Report / Perform QC</span>
                     </button>
                   )}
@@ -1843,7 +1839,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
                 !isPdiPassed && ((allQcPassed && !hasNcr) || ['PDI', 'PDI_HOLD', 'QC_REPORT_UPLOADED'].includes(n) || ['PDI', 'PDI_PENDING', 'AWAITING_PDI', 'QC_REPORT_UPLOADED'].includes((o.status || '').toUpperCase())),
               renderActions: () => (
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
                   <button
                     onClick={() => {
                       if (onNavigateToPDI) onNavigateToPDI(order.poNo || order.id, order.jobCards?.[0]?.jobNo);
@@ -1851,9 +1847,9 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                       else setShowPdiModal(true);
                     }}
                     title={`Inspect PDI for ${order.jobCards?.[0]?.jobNo || 'JC'} (${order.poNo || order.id})`}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold shadow-md shadow-[#5B75F8]/20 transition-all cursor-pointer flex items-center gap-1.5"
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold shadow-md shadow-[#5B75F8]/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
                   >
-                    <ClipboardCheck className="w-3.5 h-3.5" />
+                    <ClipboardCheck className="w-3.5 h-3.5 shrink-0" />
                     <span>Inspect PDI</span>
                   </button>
                 </div>
@@ -1869,19 +1865,19 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
                 !isPdiPassed && (['REWORK', 'QC_HOLD'].includes(n) || ['REWORK', 'QC_HOLD'].includes((o.status || '').toUpperCase()) || isQcHold || hasNcr),
               renderActions: () => (
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
                   <button
                     onClick={() => setShowPdiModal(true)}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-all cursor-pointer flex items-center gap-1.5"
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
                   >
-                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
                     <span>Mark Ready to Dispatch</span>
                   </button>
                   <button
                     onClick={() => setShowPdiModal(true)}
-                    className="px-3.5 py-2 rounded-xl bg-rose-500/10 text-rose-500 dark:text-rose-400 border border-rose-500/30 text-xs font-bold cursor-pointer hover:bg-rose-500/20 flex items-center gap-1.5"
+                    className="px-3.5 py-2 rounded-xl bg-rose-500/10 text-rose-500 dark:text-rose-400 border border-rose-500/30 text-xs font-bold cursor-pointer hover:bg-rose-500/20 flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
                   >
-                    <AlertTriangle className="w-3.5 h-3.5" />
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                     <span>Raise NCR & Send to Rework</span>
                   </button>
                 </div>
@@ -1899,14 +1895,14 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               renderActions: () => {
                 const allowed = isRoleAuthorizedForCta(currentRole, 'GENERATE_DELIVERY_CHALLAN');
                 return (
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
                     {!effectiveChallanNo ? (
                       <button
                         disabled={isConfirming || hasNcr || !allowed}
                         onClick={handleGoToCreateChallan}
-                        className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                        className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 whitespace-nowrap shrink-0"
                       >
-                        <Plus className="w-4 h-4" />
+                        <Plus className="w-4 h-4 shrink-0" />
                         <span>Generate Delivery Challan</span>
                       </button>
                     ) : (
@@ -1914,18 +1910,18 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                         <button
                           type="button"
                           onClick={handleOpenChallanDetailModal}
-                          className="px-3.5 py-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-400 border border-cyan-500/30 text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                          className="px-3.5 py-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-400 border border-cyan-500/30 text-xs font-mono font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
                         >
-                          <Eye className="w-3.5 h-3.5" />
+                          <Eye className="w-3.5 h-3.5 shrink-0" />
                           <span>View / Edit {effectiveChallanNo}</span>
                         </button>
                         {!isDispatched && (
                           <button
                             disabled={isConfirming || hasNcr || !allowed}
                             onClick={() => setShowDispatchModal(true)}
-                            className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-blue-600 hover:to-cyan-600 text-white text-xs font-bold shadow-md shadow-cyan-500/20 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                            className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-blue-600 hover:to-cyan-600 text-white text-xs font-bold shadow-md shadow-cyan-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
                           >
-                            <Truck className="w-3.5 h-3.5" />
+                            <Truck className="w-3.5 h-3.5 shrink-0" />
                             <span>Mark In Transit (Confirm Dispatch)</span>
                           </button>
                         )}
@@ -1947,13 +1943,13 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               renderActions: () => {
                 const allowed = isRoleAuthorizedForCta(currentRole, 'GENERATE_INVOICE');
                 return (
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
                     <button
                       disabled={isConfirming || !allowed}
                       onClick={handleGoToCreateInvoice}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white text-xs font-bold shadow-md shadow-indigo-500/20 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white text-xs font-bold shadow-md shadow-indigo-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
                     >
-                      <Receipt className="w-3.5 h-3.5" />
+                      <Receipt className="w-3.5 h-3.5 shrink-0" />
                       <span>Generate GST Tax Invoice</span>
                     </button>
                   </div>
@@ -1963,71 +1959,104 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             {
               id: 'stage-10a',
               stageNumber: 'Stage 10a',
-              name: 'Customer Delivery Confirmation',
-              role: 'Logistics & Proof of Delivery (POD)',
-              description: 'Outward shipping in transit to customer site. Confirm delivery arrival with signed Proof of Delivery (POD).',
+              name: 'Delivery Confirmation',
+              role: 'Dispatch & Transport Desk',
+              description: 'Confirm the dispatched consignment has reached the customer. Requires proof of delivery.',
               icon: CheckCircle2,
               matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
-                (n === 'IN_TRANSIT' || ['IN_TRANSIT', 'DISPATCHED'].includes((o.status || '').toUpperCase())) && !['DELIVERED', 'COMPLETED', 'CLOSED'].includes((o.status || '').toUpperCase()),
-              renderActions: () => (
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={() => setShowDeliveryModal(true)}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-emerald-600 hover:to-blue-600 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-all cursor-pointer flex items-center gap-1.5"
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Mark Delivered (Attach POD)</span>
-                  </button>
-                </div>
-              )
+                (Boolean(o.invoiceNo) || isDispatched || ['DISPATCHED', 'IN_TRANSIT', 'PARTIALLY_DISPATCHED'].includes((o.status || '').toUpperCase())) && 
+                !['DELIVERED', 'COMPLETED', 'CLOSED'].includes((o.status || '').toUpperCase()) &&
+                !Boolean(o.podDocumentUrl || o.podReceivedDate),
+              renderActions: () => {
+                const allowed = isRoleAuthorizedForCta(currentRole, 'MARK_DELIVERED');
+                return (
+                  <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
+                    <button
+                      disabled={isConfirming || !allowed}
+                      onClick={() => setShowDeliveryModal(true)}
+                      title={!allowed ? 'Only Dispatch Clerk or Owner can confirm delivery' : undefined}
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-emerald-600 hover:to-blue-600 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                      <span>Mark Delivered</span>
+                    </button>
+                  </div>
+                );
+              }
             },
             {
               id: 'stage-11',
               stageNumber: 'Stage 11',
-              name: 'Commercial Payment Settlement',
-              role: 'Accounts Receivable',
-              description: 'Accounts receivable settlement. Settle outstanding customer invoice collections.',
+              name: 'Payment Collection',
+              role: 'Accounts & Finance Controller',
+              description: 'Record customer payment against the issued invoice.',
               icon: CreditCard,
               matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
-                (o.status === 'DELIVERED' || n === 'DELIVERED' || n === 'PAYMENT_PENDING') && remainingOutstanding > 0 && o.paymentStatus !== 'PAID',
-              renderActions: () => (
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={() => setShowPaymentModal(true)}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-all cursor-pointer flex items-center gap-1.5"
-                  >
-                    <CreditCard className="w-3.5 h-3.5" />
-                    <span>Record Payment Received (₹{remainingOutstanding.toLocaleString('en-IN')})</span>
-                  </button>
-                </div>
-              )
+                (['DELIVERED', 'INVOICED', 'PAYMENT_PENDING'].includes((o.status || '').toUpperCase()) || Boolean(o.podReceivedDate) || Boolean(o.podDocumentUrl)) && 
+                !['COMPLETED', 'CLOSED'].includes((o.status || '').toUpperCase()) &&
+                (remainingOutstanding > 0 || o.paymentStatus !== 'PAID'),
+              renderActions: () => {
+                const allowed = isRoleAuthorizedForCta(currentRole, 'RECORD_PAYMENT');
+                const isPartial = currentPaid > 0 && remainingOutstanding > 0;
+                return (
+                  <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
+                    {isPartial && (
+                      <span className="text-xs font-mono font-bold px-3 py-1.5 rounded-xl bg-amber-500/15 text-amber-400 border border-amber-500/30 whitespace-nowrap shrink-0">
+                        ₹{currentPaid.toLocaleString('en-IN')} of ₹{gross.toLocaleString('en-IN')} received (₹{remainingOutstanding.toLocaleString('en-IN')} due)
+                      </span>
+                    )}
+                    <button
+                      disabled={isConfirming || !allowed}
+                      onClick={() => setShowPaymentModal(true)}
+                      title={!allowed ? 'Only Finance / Accounts or Owner can record payment' : undefined}
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
+                    >
+                      <CreditCard className="w-3.5 h-3.5 shrink-0" />
+                      <span>{isPartial ? 'Record Remaining Payment' : 'Record Payment'}</span>
+                    </button>
+                  </div>
+                );
+              }
             },
             {
               id: 'stage-11a',
               stageNumber: 'Stage 11a',
               name: 'Order Closure',
               role: 'Finance Controller / Owner',
-              description: 'Order lifecycle complete. All line items delivered and accounts receivable settled in full.',
+              description: 'Finalize and lock this order. Requires delivery confirmation and full payment.',
               icon: Lock,
               matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
-                (o.status === 'DELIVERED' && (remainingOutstanding <= 0 || o.paymentStatus === 'PAID')) || ['COMPLETED', 'CLOSED'].includes((o.status || '').toUpperCase()),
+                ['COMPLETED', 'CLOSED'].includes((o.status || '').toUpperCase()) || 
+                ((['DELIVERED'].includes((o.status || '').toUpperCase()) || Boolean(o.podReceivedDate)) && (remainingOutstanding <= 0 || o.paymentStatus === 'PAID')),
               renderActions: () => {
-                const canClose = (order.status === 'DELIVERED' || (order.status || '').toUpperCase() === 'CLOSED') && remainingOutstanding <= 0;
+                const isDeliveredState = ['DELIVERED', 'COMPLETED', 'CLOSED'].includes((order.status || '').toUpperCase()) || Boolean(order.podReceivedDate);
+                const isFullyPaidState = remainingOutstanding <= 0 || order.paymentStatus === 'PAID';
+                const canClose = isDeliveredState && isFullyPaidState;
+                const isClosed = order.status === 'CLOSED' || order.status === 'COMPLETED';
+
+                let disabledReason = '';
+                if (!isDeliveredState) {
+                  disabledReason = 'Awaiting delivery confirmation (POD required)';
+                } else if (!isFullyPaidState) {
+                  disabledReason = `Awaiting full payment — ₹${currentPaid.toLocaleString('en-IN')} of ₹${gross.toLocaleString('en-IN')} received`;
+                }
+
                 return (
-                  <div className="flex flex-wrap items-center gap-2">
-                    {order.status !== 'CLOSED' && order.status !== 'COMPLETED' ? (
+                  <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
+                    {!isClosed ? (
                       <button
                         disabled={isConfirming || !canClose}
                         onClick={handleCloseOrderAction}
-                        title={!canClose ? 'Order must be Delivered and fully Paid before closing' : undefined}
-                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                        title={!canClose ? disabledReason : undefined}
+                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
                       >
-                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                         <span>Mark Order Closed</span>
                       </button>
                     ) : (
-                      <span className="px-3 py-1 rounded-xl text-xs font-bold bg-slate-800 text-slate-400 border border-slate-700">
-                        Order Closed & Archived
+                      <span className="px-3 py-1.5 rounded-xl text-xs font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5 whitespace-nowrap shrink-0">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Order Closed & Locked</span>
                       </span>
                     )}
                   </div>
@@ -2056,28 +2085,28 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           const isClosed = order.status === 'CLOSED' || order.status === 'COMPLETED';
 
           return (
-            <div className="space-y-2.5">
+            <div className="space-y-2.5 w-full">
               <div
                 key={currentStageDef.id}
-                className={`p-5 sm:p-6 rounded-2xl sm:rounded-3xl border transition-all ${
+                className={`p-5 sm:p-6 rounded-2xl sm:rounded-3xl border transition-all w-full ${
                   isDarkMode
                     ? 'bg-gradient-to-r from-slate-900/95 via-indigo-950/40 to-slate-900/95 border-[#5B75F8]/50 ring-1 ring-[#5B75F8]/30 shadow-2xl text-white'
                     : 'bg-gradient-to-r from-indigo-50/90 via-white to-blue-50/90 border-indigo-200 ring-1 ring-indigo-300 shadow-lg text-slate-900'
                 }`}
               >
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                  <div className="flex items-start sm:items-center gap-3.5">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full">
+                  <div className="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
                     <div className={`p-3 rounded-2xl shrink-0 transition-all ${
                       isDarkMode
                         ? 'bg-gradient-to-br from-[#5B75F8]/25 to-indigo-500/25 text-[#7B92FF] border border-[#5B75F8]/40 shadow-sm'
                         : 'bg-indigo-100/80 text-indigo-700 border border-indigo-200 shadow-sm'
                     }`}>
-                      <StageIcon className="w-6 h-6" />
+                      <StageIcon className="w-6 h-6 shrink-0" />
                     </div>
 
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className={`text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-md font-mono ${
+                        <span className={`text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-md font-mono shrink-0 ${
                           isDarkMode
                             ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/30'
                             : 'bg-indigo-100 text-indigo-800 border border-indigo-200'
@@ -2091,7 +2120,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                           {currentStageDef.name}
                         </h3>
 
-                        <span className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1.5 ${
+                        <span className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shrink-0 ${
                           isClosed
                             ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                             : 'bg-indigo-500/20 text-[#7B92FF] border border-indigo-500/40 animate-pulse'
@@ -2099,7 +2128,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                           {isClosed ? '✓ Order Closed' : '● Active Stage'}
                         </span>
 
-                        <span className={`hidden sm:inline text-[10px] font-mono px-2 py-0.5 rounded-md ${
+                        <span className={`hidden sm:inline text-[10px] font-mono px-2 py-0.5 rounded-md shrink-0 ${
                           isDarkMode ? 'bg-slate-800/80 text-slate-300 border border-slate-700' : 'bg-slate-100 text-slate-700 border border-slate-200'
                         }`}>
                           {currentStageDef.role}
@@ -2115,7 +2144,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   </div>
 
                   {/* Action Buttons Right-Aligned */}
-                  <div className="shrink-0">
+                  <div className="w-full lg:w-auto flex items-center justify-start lg:justify-end shrink-0 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-200/60 dark:border-slate-800/80">
                     {currentStageDef.renderActions && currentStageDef.renderActions()}
                   </div>
                 </div>
@@ -3208,14 +3237,21 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Proof of Delivery (POD) Document (Optional)</label>
+                <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">
+                  Proof of Delivery (POD / E-POD) Document *
+                </label>
                 <input
                   type="text"
                   placeholder="e.g. signed-pod-challan.pdf or attachment URL"
                   value={deliveryPodUrl}
                   onChange={(e) => setDeliveryPodUrl(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-xs outline-none focus:border-blue-500"
+                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white font-bold text-xs outline-none focus:border-blue-500"
                 />
+                {!deliveryPodUrl.trim() && (
+                  <span className="text-[10px] text-amber-400 mt-1 block">
+                    * POD attachment is strictly required to mark order as Delivered.
+                  </span>
+                )}
               </div>
 
               <div>
@@ -3240,11 +3276,12 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               <button
                 type="button"
                 onClick={handleDeliverySubmit}
-                disabled={isConfirming || !deliveryReceivedBy.trim()}
+                disabled={isConfirming || !deliveryReceivedBy.trim() || !deliveryPodUrl.trim()}
+                title={!deliveryPodUrl.trim() ? 'Attach POD to mark as delivered' : undefined}
                 className="px-5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-emerald-600 hover:to-blue-600 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-lg shadow-blue-500/25 disabled:opacity-50"
               >
                 <CheckCircle2 className="w-4 h-4" />
-                <span>{isConfirming ? 'Confirming...' : 'Confirm Delivery (Move to Receivable)'}</span>
+                <span>{isConfirming ? 'Confirming...' : 'Confirm Delivery (Mark Delivered)'}</span>
               </button>
             </div>
           </div>
@@ -3454,6 +3491,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               lines: order.lines
             });
           }
+          setSelectedChallanDetail(prev => prev ? { ...prev, status: 'DISPATCHED' } : null);
         }}
       />
 

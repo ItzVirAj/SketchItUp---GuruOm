@@ -890,6 +890,7 @@ export async function startJobCardOperation(jobNo: string, payload: {
   sequenceNo: number;
   machineId: string;
   operatorName: string;
+  actualStartTime?: string;
 }): Promise<JobCard> {
   const encodedJobNo = encodeURIComponent(jobNo);
   const res = await apiClient.post<{ data: JobCard }>(`/production/job-cards/${encodedJobNo}/start-op`, payload);
@@ -902,6 +903,8 @@ export async function completeJobCardOperation(jobNo: string, payload: {
   qtyRejected: number;
   actualMinutes: number;
   notes?: string;
+  actualStartTime?: string;
+  actualEndTime?: string;
 }): Promise<JobCard> {
   const encodedJobNo = encodeURIComponent(jobNo);
   const res = await apiClient.post<{ data: JobCard }>(`/production/job-cards/${encodedJobNo}/complete-op`, payload);
@@ -1829,8 +1832,8 @@ export async function recordOrderPaymentAndClose(
 ): Promise<{ success: boolean; orderStatus: string; paidAmount: number; isClosed: boolean; isFullyPaid: boolean }> {
   const newTotalPaid = paymentData.currentPaid + paymentData.amount;
   const isFullyPaid = newTotalPaid >= paymentData.grossAmount;
-  const nextStatus = isFullyPaid ? 'CLOSED' : 'PAYMENT_PENDING';
-  const progressStep = isFullyPaid ? 11 : 10;
+  const paymentStatus = isFullyPaid ? 'PAID' : 'PARTIAL';
+  const progressStep = isFullyPaid ? 10 : 10;
 
   const newEntry = {
     id: `pay-${Date.now()}`,
@@ -1847,12 +1850,8 @@ export async function recordOrderPaymentAndClose(
   try {
     await updateOrder(orderId, {
       paidAmount: newTotalPaid,
-      paymentStatus: isFullyPaid ? 'PAID' : 'PARTIAL',
+      paymentStatus: paymentStatus as any,
       paymentHistory: updatedHistory,
-      status: nextStatus as any,
-      stage: nextStatus as any,
-      closedAt: isFullyPaid ? new Date().toISOString() : undefined,
-      closedBy: isFullyPaid ? (paymentData.receivedBy || 'Finance Controller') : undefined,
       progressStep
     });
   } catch (err) {
@@ -1861,9 +1860,9 @@ export async function recordOrderPaymentAndClose(
 
   return {
     success: true,
-    orderStatus: nextStatus,
+    orderStatus: paymentStatus,
     paidAmount: newTotalPaid,
-    isClosed: isFullyPaid,
+    isClosed: false,
     isFullyPaid: isFullyPaid
   };
 }

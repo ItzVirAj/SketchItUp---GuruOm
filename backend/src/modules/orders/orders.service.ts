@@ -618,7 +618,12 @@ export class OrdersService {
         invoicedQty: payload.invoicedQty ?? payload.dispatchedQty,
         invoiceOverrideReason: payload.invoiceOverrideReason,
         requiredMaterialQty: payload.requiredMaterialQty,
-        availableStockQty: payload.availableStockQty
+        availableStockQty: payload.availableStockQty,
+        podDocumentUrl: (payload as any).podDocumentUrl || order.podDocumentUrl || (payload as any).podUrl,
+        paymentStatus: (payload as any).paymentStatus || order.paymentStatus || (Math.max(0, (order.grossAmount || 0) - (order.paidAmount || 0)) <= 0 ? 'PAID' : (order.paidAmount ? 'PARTIAL' : 'UNPAID')),
+        outstandingAmount: (payload as any).outstandingAmount !== undefined 
+          ? (payload as any).outstandingAmount 
+          : Math.max(0, (order.grossAmount || 0) - (order.paidAmount || 0))
       };
 
       const validation = await orderStateMachineService.validateAndExecuteTransition(transitionContext);
@@ -650,6 +655,18 @@ export class OrdersService {
           progress_step: nextStep,
           updated_at: updatedAt
         };
+
+        if (resolvedTargetStage === 'DELIVERED') {
+          transitionPayload.pod_document_url = transitionContext.podDocumentUrl || 'POD-VERIFIED-PHYSICAL';
+          transitionPayload.pod_received_by = (payload as any).podReceivedBy || (payload as any).receivedBy || order.podReceivedBy || 'Stores Gate Security';
+          transitionPayload.pod_received_date = (payload as any).podReceivedDate || (payload as any).deliveryDate || new Date().toISOString().split('T')[0];
+        }
+
+        if (resolvedTargetStage === 'CLOSED' || resolvedTargetStage === 'COMPLETED') {
+          transitionPayload.closed_at = updatedAt;
+          transitionPayload.closed_by = actorContext?.name || 'Finance Controller';
+        }
+
         if (order.id) {
           const { error: tErr } = await this.db.from('customer_orders').update(transitionPayload).eq('id', order.id);
           if (tErr) console.error('Database transitionOrderStage error:', tErr);

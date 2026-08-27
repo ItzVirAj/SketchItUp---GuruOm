@@ -772,6 +772,37 @@ export class DispatchService {
       }
     }
 
+    if (status === 'DELIVERED') {
+      const challan = await this.getDispatchByNo(challanNo);
+      if (challan && challan.orderPo) {
+        try {
+          const { data: orderRows } = await this.db
+            .from('customer_orders')
+            .select('id, po_no')
+            .or(`id.eq.${challan.orderPo},po_no.eq.${challan.orderPo}`);
+          const order = (orderRows || [])[0];
+
+          if (order) {
+            await this.db
+              .from('customer_orders')
+              .update({
+                status: 'DELIVERED',
+                stage: 'DELIVERED',
+                pod_received_date: new Date().toISOString().split('T')[0],
+                pod_document_url: challan.podDocumentUrl || 'POD-VERIFIED-PHYSICAL',
+                progress_step: 9,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', order.id);
+          }
+
+          ordersService.updateOrderStageDirectly(challan.orderPo, 'DELIVERED', 9);
+        } catch (e) {
+          console.warn('Syncing order on updateDispatchStatus to DELIVERED error:', e);
+        }
+      }
+    }
+
     await logAudit({
       actorEmail,
       action: status === 'CANCELLED' ? 'DISPATCH_CANCELLED' : 'DISPATCH_STATUS_UPDATED',

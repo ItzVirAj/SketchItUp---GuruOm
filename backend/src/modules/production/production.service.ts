@@ -5,7 +5,8 @@ import {
   StartOperationSchema, 
   CompleteOperationSchema,
   RaiseNcrSchema,
-  NcrDispositionSchema
+  NcrDispositionSchema,
+  ProductionLogSchema
 } from './production.schema';
 import { auditService } from '../audit/audit.service';
 import { inventoryService } from '../inventory/inventory.service';
@@ -289,12 +290,15 @@ export class ProductionService {
             requiredCertification: o.required_certification,
             isCertificationVerified: o.is_certification_verified,
             standardTimeMinutes: Number(o.standard_time_minutes),
+            actualStartTime: o.actual_start_time,
+            actualEndTime: o.actual_end_time,
             actualTimeMinutes: Number(o.actual_time_minutes || 0),
             qtyProcessed: Number(o.qty_processed || 0),
             qtyRejected: Number(o.qty_rejected || 0),
             inspectionRequired: o.inspection_required,
             inspectionPassed: o.inspection_passed,
-            opStatus: o.op_status
+            opStatus: o.op_status,
+            notes: o.notes
           }))
         }));
       }
@@ -641,7 +645,7 @@ export class ProductionService {
       console.warn('DB completeOperation fallback:', err);
     }
 
-    // AUTOMATED CHAIN TRIGGER: If all operations complete -> Auto-create QC inspection & advance order
+    // AUTOMATED CHAIN TRIGGER: If all operations on this job card complete -> Auto-create QC inspection & advance order
     if (allOpsCompleted || result.jobCard.jobStatus === 'COMPLETED') {
       try {
         await qcService.createQCInspection({
@@ -658,31 +662,59 @@ export class ProductionService {
       }
 
       if (result.jobCard.orderPo) {
+        // Multi-Job-Card check: Check whether all job cards under this parent order are now complete
+        let allOrderJobsCompleted = true;
         try {
-          await this.db.from('customer_orders').update({
-            status: 'READY_FOR_QC',
-            progress_step: 6,
-            updated_at: new Date().toISOString()
-          }).or(`po_no.eq.${result.jobCard.orderPo},id.eq.${result.jobCard.orderPo}`);
-        } catch (_) {}
+          const allJobCards = await this.getJobCards();
+          const siblingJobs = allJobCards.filter(j => 
+            (j.orderPo === result.jobCard.orderPo || j.orderId === result.jobCard.orderPo) && 
+            j.jobNo !== result.jobCard.jobNo
+          );
+          if (siblingJobs.length > 0) {
+            allOrderJobsCompleted = siblingJobs.every(j => j.status === 'COMPLETED' || j.jobStatus === 'COMPLETED');
+          }
+        } catch (jErr) {
+          console.warn('Job card siblings check fallback:', jErr);
+        }
 
-        notificationsService.broadcastEvent('order_transitioned', {
-          orderId: result.jobCard.orderPo,
-          poNo: result.jobCard.orderPo,
-          status: 'READY_FOR_QC',
-          stage: 'READY_FOR_QC',
-          progressStep: 6,
-          updatedAt: new Date().toISOString()
-        });
-        notificationsService.broadcastEvent('order_updated', {
-          id: result.jobCard.orderPo,
-          orderId: result.jobCard.orderPo,
-          poNo: result.jobCard.orderPo,
-          status: 'READY_FOR_QC',
-          stage: 'READY_FOR_QC',
-          progressStep: 6,
-          updatedAt: new Date().toISOString()
-        });
+        if (allOrderJobsCompleted) {
+          // Route through the shared ordersService.transitionOrderStage function
+          try {
+            await ordersService.transitionOrderStage(
+              result.jobCard.orderPo,
+              'READY_FOR_QC',
+              {},
+              { role: 'Production Planner', name: operatorName }
+            );
+          } catch (transErr) {
+            console.warn('ordersService.transitionOrderStage in completeOperation fallback:', transErr);
+            try {
+              await this.db.from('customer_orders').update({
+                status: 'READY_FOR_QC',
+                progress_step: 6,
+                updated_at: new Date().toISOString()
+              }).or(`po_no.eq.${result.jobCard.orderPo},id.eq.${result.jobCard.orderPo}`);
+            } catch (_) {}
+
+            notificationsService.broadcastEvent('order_transitioned', {
+              orderId: result.jobCard.orderPo,
+              poNo: result.jobCard.orderPo,
+              status: 'READY_FOR_QC',
+              stage: 'READY_FOR_QC',
+              progressStep: 6,
+              updatedAt: new Date().toISOString()
+            });
+            notificationsService.broadcastEvent('order_updated', {
+              id: result.jobCard.orderPo,
+              orderId: result.jobCard.orderPo,
+              poNo: result.jobCard.orderPo,
+              status: 'READY_FOR_QC',
+              stage: 'READY_FOR_QC',
+              progressStep: 6,
+              updatedAt: new Date().toISOString()
+            });
+          }
+        }
       }
     }
 
@@ -698,6 +730,7 @@ export class ProductionService {
     // Real-Time Push: Broadcast operation completion & updated Job Card
     notificationsService.broadcastEvent('operation_completed', {
       jobNo,
+      orderPo: result.jobCard.orderPo,
       sequenceNo: validated.sequenceNo,
       qtyProcessed: validated.qtyProcessed,
       allCompleted: allOpsCompleted,
@@ -881,6 +914,207 @@ export class ProductionService {
     };
   }
 
+  /**
+   * Shared real-time bridge: when a Job Card reaches COMPLETED, advance the parent
+   * Order to READY_FOR_QC (step 6) ONLY once EVERY job card under that order is
+   * complete, routing through the same shared broadcast used by Confirmed /
+   * In-Production / QC-PDI transitions so the live pipeline stepper updates
+   * without a manual refresh.
+   */
+  private async advanceOrderToReadyForQcWhenAllJobsComplete(
+    orderPo: string,
+    sourceJobNo: string,
+    actorName: string
+  ): Promise<void> {
+    // Multi-Job-Card gate: do not advance while any sibling job for this order is open.
+    let allOrderJobsCompleted = true;
+    try {
+      const allJobCards = await this.getJobCards();
+      const siblingJobs = allJobCards.filter(j =>
+        (j.orderPo === orderPo || j.orderId === orderPo) &&
+        j.jobNo !== sourceJobNo
+      );
+      if (siblingJobs.length > 0) {
+        allOrderJobsCompleted = siblingJobs.every(j => j.status === 'COMPLETED' || j.jobStatus === 'COMPLETED');
+      }
+    } catch (jErr) {
+      console.warn('Job card siblings check fallback:', jErr);
+    }
+
+    if (!allOrderJobsCompleted) return;
+    if (!orderPo || orderPo === 'PO') return;
+
+    // Route through the SHARED ordersService.transitionOrderStage helper (broadcasts
+    // order_transitioned + order_updated), with a consistent raw fallback.
+    try {
+      await ordersService.transitionOrderStage(
+        orderPo,
+        'READY_FOR_QC',
+        {},
+        { role: 'Production Planner', name: actorName }
+      );
+    } catch (transErr) {
+      console.warn('advanceOrderToReadyForQcWhenAllJobsComplete fallback:', transErr);
+      try {
+        await this.db.from('customer_orders').update({
+          status: 'READY_FOR_QC',
+          progress_step: 6,
+          updated_at: new Date().toISOString()
+        }).or(`po_no.eq.${orderPo},id.eq.${orderPo}`);
+      } catch (_) {}
+
+      notificationsService.broadcastEvent('order_transitioned', {
+        orderId: orderPo,
+        poNo: orderPo,
+        status: 'READY_FOR_QC',
+        stage: 'READY_FOR_QC',
+        progressStep: 6,
+        updatedAt: new Date().toISOString()
+      });
+      notificationsService.broadcastEvent('order_updated', {
+        id: orderPo,
+        orderId: orderPo,
+        poNo: orderPo,
+        status: 'READY_FOR_QC',
+        stage: 'READY_FOR_QC',
+        progressStep: 6,
+        updatedAt: new Date().toISOString()
+      });
+    }
+  }
+
+  /**
+   * Records a qty-based per-route-step production log and, when the cumulative
+   * logged quantity across the job reaches the target, flips the Job Card to
+   * COMPLETED and advances the order via the shared broadcast bridge. This wires
+   * the previously-dead POST /production/logs path into the same real-time
+   * mechanism used by the operation-completion path.
+   */
+  async recordProductionLog(data: z.infer<typeof ProductionLogSchema>, actorName = 'Machine Operator') {
+    const validated = ProductionLogSchema.parse(data);
+    const job = await this.getJobCardByJobNo(validated.jobNo);
+    if (!job) {
+      throw new Error(`Job Card ${validated.jobNo} not found`);
+    }
+
+    const created: any = {
+      id: validated.id || `pl-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      itemCode: validated.itemCode,
+      description: validated.description,
+      jobNo: validated.jobNo,
+      stepNo: validated.stepNo,
+      operationName: validated.operationName,
+      qtyDone: validated.qtyDone,
+      loggedTimestamp: validated.loggedTimestamp || new Date().toISOString(),
+      orderPo: job.orderPo
+    };
+
+    try {
+      await this.db.from('production_logs').insert({
+        id: created.id,
+        item_code: created.itemCode,
+        description: created.description,
+        job_no: created.jobNo,
+        step_no: created.stepNo,
+        operation_name: created.operationName,
+        qty_done: created.qtyDone,
+        logged_timestamp: created.loggedTimestamp
+      });
+    } catch (err) {
+      console.warn('recordProductionLog DB insert fallback:', err);
+    }
+
+    // Derive cumulative logged quantity; auto-complete when target reached.
+    let cumulative = 0;
+    try {
+      const { data: rows } = await this.db
+        .from('production_logs')
+        .select('qty_done')
+        .eq('job_no', validated.jobNo);
+      if (rows) cumulative = rows.reduce((s, r) => s + Number(r.qty_done || 0), 0);
+    } catch (err) {
+      console.warn('recordProductionLog cumulative read fallback:', err);
+    }
+
+    const persisted: any = { ...created, cumulative };
+    notificationsService.broadcastEvent('production_log_created', persisted);
+
+    const targetQty = Number(job.targetQty || job.qty || 0);
+    const reachedTarget = targetQty > 0 && cumulative >= targetQty;
+
+    if (reachedTarget) {
+      try {
+        await this.db
+          .from('job_cards')
+          .update({ status: 'COMPLETED', jobStatus: 'COMPLETED', updated_at: new Date().toISOString() })
+          .eq('job_no', validated.jobNo);
+      } catch (err) {
+        console.warn('recordProductionLog job complete update fallback:', err);
+      }
+
+      const completedJob: any = { ...job, status: 'COMPLETED', jobStatus: 'COMPLETED' };
+      notificationsService.broadcastEvent('job_card_updated', completedJob);
+
+      if (validated.autoTriggerQC !== false) {
+        try {
+          await qcService.createQCInspection({
+            jobNo: job.jobNo,
+            orderPo: job.orderPo,
+            partCode: job.partCode,
+            partDescription: job.partDescription,
+            qty: targetQty,
+            jobStatus: 'COMPLETED',
+            qcStatus: 'PENDING'
+          });
+        } catch (qcErr) {
+          console.warn('Auto QC inspection generation fallback:', qcErr);
+        }
+      }
+
+      if (job.orderPo) {
+        await this.advanceOrderToReadyForQcWhenAllJobsComplete(job.orderPo, job.jobNo, actorName);
+      }
+    }
+
+    return {
+      log: persisted,
+      jobStatus: reachedTarget ? 'COMPLETED' : 'IN_PROGRESS',
+      cumulativeQty: cumulative,
+      targetQty,
+      qcTriggered: reachedTarget && validated.autoTriggerQC !== false
+    };
+  }
+
+  /**
+   * Lists recent production logs (qty-based route-step logs). This provides the
+   * GET /production/logs endpoint consumed by the frontend reports / production UI.
+   */
+  async getProductionLogs(limit = 200) {
+    try {
+      const { data } = await this.db
+        .from('production_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      if (data) {
+        return data.map((r: any) => ({
+          id: r.id,
+          itemCode: r.item_code,
+          description: r.description,
+          jobNo: r.job_no,
+          orderPo: r.order_po || undefined,
+          stepNo: r.step_no,
+          operationName: r.operation_name,
+          qtyDone: Number(r.qty_done || 0),
+          loggedTimestamp: r.logged_timestamp || r.created_at
+        }));
+      }
+    } catch (err) {
+      console.warn('getProductionLogs DB read fallback:', err);
+    }
+    return [];
+  }
+
   async updateJobStatus(jobNo: string, payload: { status: string }) {
     const job = await this.getJobCardByJobNo(jobNo);
     if (job) {
@@ -890,6 +1124,60 @@ export class ProductionService {
         console.error('Database updateJobStatus error:', err);
       }
       notificationsService.broadcastEvent('job_card_updated', { ...job, status: payload.status, jobStatus: payload.status });
+
+      if (payload.status === 'COMPLETED' && job.orderPo) {
+        let allOrderJobsCompleted = true;
+        try {
+          const allJobCards = await this.getJobCards();
+          const siblingJobs = allJobCards.filter(j => 
+            (j.orderPo === job.orderPo || j.orderId === job.orderPo) && 
+            j.jobNo !== job.jobNo
+          );
+          if (siblingJobs.length > 0) {
+            allOrderJobsCompleted = siblingJobs.every(j => j.status === 'COMPLETED' || j.jobStatus === 'COMPLETED');
+          }
+        } catch (jErr) {
+          console.warn('Job card siblings check fallback:', jErr);
+        }
+
+        if (allOrderJobsCompleted) {
+          try {
+            await ordersService.transitionOrderStage(
+              job.orderPo,
+              'READY_FOR_QC',
+              {},
+              { role: 'Production Planner', name: 'System / PPC' }
+            );
+          } catch (transErr) {
+            console.warn('ordersService.transitionOrderStage in updateJobStatus fallback:', transErr);
+            try {
+              await this.db.from('customer_orders').update({
+                status: 'READY_FOR_QC',
+                progress_step: 6,
+                updated_at: new Date().toISOString()
+              }).or(`po_no.eq.${job.orderPo},id.eq.${job.orderPo}`);
+            } catch (_) {}
+
+            notificationsService.broadcastEvent('order_transitioned', {
+              orderId: job.orderPo,
+              poNo: job.orderPo,
+              status: 'READY_FOR_QC',
+              stage: 'READY_FOR_QC',
+              progressStep: 6,
+              updatedAt: new Date().toISOString()
+            });
+            notificationsService.broadcastEvent('order_updated', {
+              id: job.orderPo,
+              orderId: job.orderPo,
+              poNo: job.orderPo,
+              status: 'READY_FOR_QC',
+              stage: 'READY_FOR_QC',
+              progressStep: 6,
+              updatedAt: new Date().toISOString()
+            });
+          }
+        }
+      }
     }
     return { jobNo, status: payload.status };
   }

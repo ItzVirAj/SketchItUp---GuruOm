@@ -229,6 +229,49 @@
   color: var(--accent-text-dark) !important;
 }
 
+/* Sidebar Module Item Hover Accent System (User Configurable) */
+.sidebar-module-btn {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sidebar-module-btn:not(.is-active):hover {
+  background-color: var(--accent-soft-light) !important;
+  color: var(--accent-text-light) !important;
+  border-color: var(--accent-border-light) !important;
+}
+
+.sidebar-module-btn:not(.is-active):hover .sidebar-icon,
+.sidebar-module-btn:not(.is-active):hover .sidebar-chevron {
+  color: var(--accent-text-light) !important;
+}
+
+.dark .sidebar-module-btn:not(.is-active):hover,
+[data-accent].dark .sidebar-module-btn:not(.is-active):hover {
+  background-color: var(--accent-soft-dark) !important;
+  color: #ffffff !important;
+  border-color: var(--accent-border-dark) !important;
+}
+
+.dark .sidebar-module-btn:not(.is-active):hover .sidebar-icon,
+[data-accent].dark .sidebar-module-btn:not(.is-active):hover .sidebar-icon,
+.dark .sidebar-module-btn:not(.is-active):hover .sidebar-chevron,
+[data-accent].dark .sidebar-module-btn:not(.is-active):hover .sidebar-chevron {
+  color: var(--accent-text-dark) !important;
+}
+
+.sidebar-module-btn.is-active {
+  background-color: var(--accent-primary) !important;
+  background-image: linear-gradient(135deg, var(--accent-gradient-from), var(--accent-gradient-to)) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  box-shadow: 0 6px 20px -2px var(--accent-shadow) !important;
+}
+
+.sidebar-module-btn.is-active .sidebar-icon,
+.sidebar-module-btn.is-active .sidebar-chevron {
+  color: #ffffff !important;
+}
+
 /* Accent Glow Shadows */
 [data-accent] .shadow-\[\#5B75F8\]\/20,
 [data-accent] .shadow-\[\#5B75F8\]\/25,

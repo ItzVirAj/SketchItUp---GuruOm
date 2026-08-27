@@ -127,6 +127,26 @@ export class ProductionController {
       return res.status(500).json({ error: 'InternalServerError', message: err.message });
     }
   }
+
+  async postProductionLog(req: Request, res: Response) {
+    try {
+      const operatorName = req.rbacScope?.userName || req.user?.name || 'Machine Operator';
+      const data = await productionService.recordProductionLog(req.body, operatorName);
+      return res.status(201).json({ message: 'Production logged & QC triggered where applicable', data });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
+
+  async getProductionLogs(req: Request, res: Response) {
+    try {
+      const limit = Number(req.query.limit) || 200;
+      const data = await productionService.getProductionLogs(limit);
+      return res.json({ data });
+    } catch (err: any) {
+      return res.status(500).json({ error: 'InternalServerError', message: err.message });
+    }
+  }
 }
 
 export const productionController = new ProductionController();

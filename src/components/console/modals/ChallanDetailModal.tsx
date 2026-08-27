@@ -58,6 +58,8 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  const [currentStatus, setCurrentStatus] = useState<string>(challan?.status || 'DRAFT');
+
   // Edit form state
   const [editTransporter, setEditTransporter] = useState('');
   const [editVehicleNo, setEditVehicleNo] = useState('');
@@ -76,6 +78,7 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
 
   useEffect(() => {
     if (challan) {
+      setCurrentStatus(challan.status || 'DRAFT');
       setEditTransporter(challan.transporter || transporters[0] || 'VRL Logistics Ltd');
       setEditVehicleNo(challan.vehicleNo || '');
       setEditLrNo(challan.lrNo || '');
@@ -123,10 +126,11 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
 
   if (!isOpen || !challan) return null;
 
-  const isDraft = ['DRAFT', 'GENERATED', 'DISPATCH_READY'].includes(challan.status);
-  const isDispatched = challan.status === 'DISPATCHED' || challan.status === 'IN_TRANSIT';
-  const isDelivered = challan.status === 'DELIVERED';
-  const isCancelled = challan.status === 'CANCELLED';
+  const effectiveStatus = currentStatus || challan.status || 'DRAFT';
+  const isDispatched = ['DISPATCHED', 'IN_TRANSIT'].includes(effectiveStatus);
+  const isDelivered = effectiveStatus === 'DELIVERED';
+  const isCancelled = effectiveStatus === 'CANCELLED';
+  const isDraft = !isDispatched && !isDelivered && !isCancelled && ['DRAFT', 'GENERATED', 'DISPATCH_READY'].includes(effectiveStatus);
 
   const handleUpdateQuantity = (idx: number, newQty: number) => {
     setEditLines(prev => {
@@ -211,7 +215,8 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
       if (onDispatchChallan) {
         await onDispatchChallan(challan.challanNo);
       }
-      setSuccessMsg(`Challan ${challan.challanNo} marked as DISPATCHED & In-Transit.`);
+      setCurrentStatus('DISPATCHED');
+      setSuccessMsg(`Challan ${challan.challanNo} successfully authorized and marked IN-TRANSIT.`);
     } catch (err: any) {
       setErrorMsg(err?.message || 'Failed to dispatch challan.');
     } finally {
@@ -264,7 +269,7 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
                   <span className={`w-1.5 h-1.5 rounded-full ${
                     isDraft ? 'bg-amber-400' : isDispatched ? 'bg-cyan-400' : isDelivered ? 'bg-emerald-400' : 'bg-rose-400'
                   }`} />
-                  <span>{challan.status || 'DRAFT'}</span>
+                  <span>{effectiveStatus}</span>
                 </span>
               </div>
               <p className={`text-xs mt-0.5 flex items-center gap-2 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
@@ -839,7 +844,7 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
               Close
             </button>
 
-            {isDraft && (
+            {isDraft ? (
               <button
                 type="button"
                 disabled={isSaving}
@@ -849,7 +854,17 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
                 <Truck className="w-4 h-4" />
                 <span>{isSaving ? 'Processing...' : 'Authorize & Mark In-Transit'}</span>
               </button>
-            )}
+            ) : isDispatched ? (
+              <span className="px-4 py-2 rounded-xl bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 text-xs font-mono font-bold flex items-center gap-1.5 shadow-xs">
+                <Truck className="w-4 h-4 text-cyan-400 animate-pulse" />
+                <span>In-Transit / Dispatched</span>
+              </span>
+            ) : isDelivered ? (
+              <span className="px-4 py-2 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-xs font-mono font-bold flex items-center gap-1.5 shadow-xs">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>Delivered to Customer</span>
+              </span>
+            ) : null}
           </div>
         </div>
       </div>

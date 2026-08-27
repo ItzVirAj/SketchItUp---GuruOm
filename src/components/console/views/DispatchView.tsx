@@ -576,8 +576,12 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
         isDarkMode={isDarkMode}
         transporters={allTransporterOptions}
         onUpdateChallan={onUpdateChallan}
-        onCancelChallan={onCancelChallan}
-        onDispatchChallan={onDispatchChallan}
+        onDispatchChallan={async (challanNo) => {
+          if (onDispatchChallan) {
+            await onDispatchChallan(challanNo);
+          }
+          setSelectedChallan(prev => prev ? { ...prev, status: 'DISPATCHED' } : null);
+        }}
         onNavigateToOrder={onNavigateToOrder}
       />
 

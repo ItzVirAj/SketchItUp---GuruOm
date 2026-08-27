@@ -373,7 +373,19 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
     }
   };
 
-  const selectedOrder = orders.find(o => o.id === selectedOrderId || o.poNo === selectedOrderId) || dynamicFetchedOrder || orders[0];
+  const liveSelected = orders.find(o => o.id === selectedOrderId || o.poNo === selectedOrderId);
+
+  // Realtime bridge: when the viewed order was opened via a dynamic fetch (not present
+  // in the shared `orders` list), SSE order broadcasts only update `orders`. Merging the
+  // live `orders` entry over the dynamic snapshot guarantees the OrderDetail pipeline
+  // stepper (Production & Order Fulfillment Pipeline) updates live without a refresh.
+  const dynamicLive = dynamicFetchedOrder
+    ? orders.find(o => o.id === dynamicFetchedOrder.id || o.poNo === dynamicFetchedOrder.poNo ||
+                       o.id === dynamicFetchedOrder.poNo || o.poNo === dynamicFetchedOrder.id)
+    : null;
+  const selectedOrder = liveSelected ||
+    (dynamicFetchedOrder ? { ...dynamicFetchedOrder, ...(dynamicLive || {}) } : null) ||
+    orders[0];
 
 
 

@@ -367,8 +367,27 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         } catch (_) {}
       });
 
-      eventSource.addEventListener('operation_completed', () => {
+      eventSource.addEventListener('operation_completed', (event: MessageEvent) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload?.allCompleted && (payload?.orderPo || payload?.jobCard?.orderPo)) {
+            const orderPo = payload.orderPo || payload.jobCard.orderPo;
+            setOrders(prev => prev.map(o => {
+              if (o.poNo === orderPo || o.id === orderPo) {
+                return {
+                  ...o,
+                  status: 'READY_FOR_QC',
+                  stage: 'READY_FOR_QC',
+                  progressStep: 6,
+                  updatedAt: new Date().toISOString()
+                };
+              }
+              return o;
+            }));
+          }
+        } catch (_) {}
         fetchJobCards().then(setJobCards).catch(() => {});
+        fetchOrders().then(setOrders).catch(() => {});
         fetchQCQueue().then(setQcQueue).catch(() => {});
       });
 
@@ -565,20 +584,117 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     await loadAllData();
   };
 
-  const handleStartOperation = async (jobNo: string, payload: { sequenceNo: number; machineId: string; operatorName: string }) => {
-    const updatedJobCard = await startJobCardOperation(jobNo, payload);
-    setJobCards(prev => prev.map(j => (j.jobNo === jobNo || j.id === jobNo ? { ...j, ...updatedJobCard } : j)));
+  const handleStartOperation = async (jobNo: string, payload: { sequenceNo: number; machineId: string; operatorName: string; actualStartTime?: string }) => {
+    const nowIso = payload.actualStartTime || new Date().toISOString();
+    let updatedJobCard: JobCard | null = null;
+    try {
+      updatedJobCard = await startJobCardOperation(jobNo, { ...payload, actualStartTime: nowIso });
+    } catch (e) {
+      console.warn('REST startJobCardOperation error, applying local state update:', e);
+    }
+
+    setJobCards(prev => prev.map(j => {
+      if (j.jobNo === jobNo || j.id === jobNo) {
+        if (updatedJobCard) return { ...j, ...updatedJobCard };
+        const ops = (j.operations || []).map(op => {
+          if (op.sequenceNo === payload.sequenceNo) {
+            return {
+              ...op,
+              machineId: payload.machineId,
+              operatorName: payload.operatorName,
+              actualStartTime: nowIso,
+              opStatus: 'IN_PROGRESS'
+            };
+          }
+          return op;
+        });
+        return {
+          ...j,
+          status: 'RUNNING',
+          jobStatus: 'IN_PROGRESS',
+          operations: ops
+        };
+      }
+      return j;
+    }));
+
     await addAuditLog('production', 'start_operation', `Op ${payload.sequenceNo} started on ${payload.machineId} by ${payload.operatorName} for ${jobNo}`);
     await loadAllData();
     return updatedJobCard;
   };
 
-  const handleCompleteOperation = async (jobNo: string, payload: { sequenceNo: number; qtyProcessed: number; qtyRejected: number; actualMinutes: number; notes?: string }) => {
-    const updatedJobCard = await completeJobCardOperation(jobNo, payload);
-    setJobCards(prev => prev.map(j => (j.jobNo === jobNo || j.id === jobNo ? { ...j, ...updatedJobCard } : j)));
-    await addAuditLog('production', 'complete_operation', `Op ${payload.sequenceNo} completed (${payload.qtyProcessed} good, ${payload.qtyRejected} rejected) for ${jobNo}`);
+  const handleCompleteOperation = async (jobNo: string, payload: { sequenceNo: number; qtyProcessed: number; qtyRejected: number; actualMinutes: number; notes?: string; actualStartTime?: string; actualEndTime?: string }) => {
+    const endIso = payload.actualEndTime || new Date().toISOString();
+    let updatedJobCard: JobCard | null = null;
+    try {
+      updatedJobCard = await completeJobCardOperation(jobNo, { ...payload, actualEndTime: endIso });
+    } catch (e) {
+      console.warn('REST completeJobCardOperation error, applying local state update:', e);
+    }
+
+    let targetJobCard: JobCard | undefined;
+
+    setJobCards(prev => prev.map(j => {
+      if (j.jobNo === jobNo || j.id === jobNo) {
+        if (updatedJobCard) {
+          targetJobCard = updatedJobCard;
+          return { ...j, ...updatedJobCard };
+        }
+        const ops = (j.operations || []).map(op => {
+          if (op.sequenceNo === payload.sequenceNo) {
+            return {
+              ...op,
+              qtyProcessed: payload.qtyProcessed,
+              qtyRejected: payload.qtyRejected,
+              actualTimeMinutes: payload.actualMinutes,
+              actualStartTime: payload.actualStartTime || op.actualStartTime || new Date(Date.now() - (payload.actualMinutes || 15) * 60000).toISOString(),
+              actualEndTime: endIso,
+              notes: payload.notes,
+              opStatus: 'COMPLETED'
+            };
+          }
+          return op;
+        });
+        const allDone = ops.length > 0 && ops.every(o => o.opStatus === 'COMPLETED');
+        const updated = {
+          ...j,
+          status: allDone ? 'COMPLETED' : 'IN_PROGRESS',
+          jobStatus: allDone ? 'COMPLETED' : 'IN_PROGRESS',
+          operations: ops
+        };
+        targetJobCard = updated;
+        return updated;
+      }
+      return j;
+    }));
+
+    // If target job card is now completed, check if order should advance live
+    const effectiveJob = targetJobCard || updatedJobCard || jobCards.find(j => j.jobNo === jobNo || j.id === jobNo);
+    const orderPo = effectiveJob?.orderPo;
+    const isJobCompleted = (effectiveJob?.operations || []).length > 0 && effectiveJob?.operations?.every(o => o.opStatus === 'COMPLETED');
+
+    if (orderPo && (isJobCompleted || effectiveJob?.status === 'COMPLETED' || effectiveJob?.jobStatus === 'COMPLETED')) {
+      const siblingJobs = jobCards.filter(j => (j.orderPo === orderPo || j.orderId === orderPo) && j.jobNo !== jobNo && j.id !== jobNo);
+      const allSiblingsDone = siblingJobs.length === 0 || siblingJobs.every(j => j.status === 'COMPLETED' || j.jobStatus === 'COMPLETED');
+      if (allSiblingsDone) {
+        setOrders(prev => prev.map(o => {
+          if (o.poNo === orderPo || o.id === orderPo) {
+            return {
+              ...o,
+              status: 'READY_FOR_QC',
+              stage: 'READY_FOR_QC',
+              progressStep: 6,
+              updatedAt: new Date().toISOString()
+            };
+          }
+          return o;
+        }));
+      }
+    }
+
+    await addAuditLog('production', 'complete_operation', `Op ${payload.sequenceNo} completed (${payload.qtyProcessed} good, ${payload.qtyRejected} rejected, ${payload.actualMinutes}m) for ${jobNo}`);
     await loadAllData();
-    return updatedJobCard;
+    return updatedJobCard || targetJobCard;
   };
 
   const handleLogProduction = async (job: JobCard, qtyDone: number) => {
@@ -842,14 +958,43 @@ export function useOwnerOSData(currentUser?: SystemUser) {
   };
 
   const handleMarkDelivered = async (orderId: string, deliveryData: any) => {
+    setOrders(prev => prev.map(ord => {
+      if (ord.id === orderId || ord.poNo === orderId) {
+        return {
+          ...ord,
+          status: 'DELIVERED',
+          stage: 'DELIVERED',
+          podDocumentUrl: deliveryData.podUrl || 'POD-VERIFIED-PHYSICAL',
+          podReceivedBy: deliveryData.receivedBy,
+          podReceivedDate: deliveryData.deliveryDate,
+          progressStep: 9
+        };
+      }
+      return ord;
+    }));
+
     await markOrderDelivered(orderId, deliveryData);
     await addAuditLog('dispatch', 'mark_delivered', `Marked Order #${orderId} as Delivered to ${deliveryData.receivedBy}`);
     await loadAllData();
   };
 
   const handleRecordPayment = async (orderId: string, paymentData: any) => {
+    setOrders(prev => prev.map(ord => {
+      if (ord.id === orderId || ord.poNo === orderId) {
+        const gross = Number(ord.grossAmount || 0);
+        const newPaid = Number(ord.paidAmount || 0) + Number(paymentData.amount || 0);
+        const isPaid = newPaid >= gross;
+        return {
+          ...ord,
+          paidAmount: newPaid,
+          paymentStatus: isPaid ? 'PAID' : 'PARTIAL'
+        };
+      }
+      return ord;
+    }));
+
     const res = await recordOrderPaymentAndClose(orderId, paymentData);
-    await addAuditLog('finance', 'record_payment', `Recorded payment of ₹${paymentData.amount.toLocaleString()} for Order #${orderId} (${res.isClosed ? 'ORDER CLOSED' : 'PARTIALLY PAID'})`);
+    await addAuditLog('finance', 'record_payment', `Recorded payment of ₹${paymentData.amount.toLocaleString()} for Order #${orderId} (${res.isFullyPaid ? 'PAID IN FULL' : 'PARTIALLY PAID'})`);
     await loadAllData();
     return res;
   };

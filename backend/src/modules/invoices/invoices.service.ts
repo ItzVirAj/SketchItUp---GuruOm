@@ -118,17 +118,33 @@ export class InvoicesService {
           throw err;
         }
 
-        // 3. Validate Invoice Quantity against Dispatched Quantity
-        let totalDispatched = order.lines.reduce((s, l) => s + (Number(l.dispatchedQty) || 0), 0);
+        // 3. Validate Invoice Quantity against Dispatched / Dispatchable Quantity
+        let totalDispatched = order.lines?.reduce((s, l) => s + (Number(l.dispatchedQty || (l as any).dispatched_qty) || 0), 0) || 0;
+        const { dispatchService } = await import('../dispatch/dispatch.service');
+
+        // Check specific source challan if passed in payload
+        if (validated.challanNo) {
+          const specificChallan = await dispatchService.getDispatchByNo(validated.challanNo);
+          if (specificChallan && specificChallan.status !== 'CANCELLED') {
+            const chLines = specificChallan.lines || specificChallan.items || [];
+            if (chLines.length > 0) {
+              const chQty = chLines.reduce((s: number, l: any) => s + Number(l.qty || 0), 0);
+              if (chQty > 0) totalDispatched = Math.max(totalDispatched, chQty);
+            } else if (specificChallan.linesCount) {
+              totalDispatched = Math.max(totalDispatched, Number(specificChallan.linesCount));
+            }
+          }
+        }
         
-        // If order lines don't have dispatchedQty, check dispatched challans for this order
+        // If order lines don't have dispatchedQty, check all active challans for this order
         if (totalDispatched === 0) {
-          const { dispatchService } = await import('../dispatch/dispatch.service');
           const orderDispatches = await dispatchService.getDispatchesForOrder(validated.orderPo);
-          const activeDispatched = orderDispatches.filter(d => ['DISPATCHED', 'IN_TRANSIT', 'DELIVERED', 'COMPLETED'].includes(d.status));
+          const activeDispatches = orderDispatches.filter(d => 
+            ['DISPATCHED', 'IN_TRANSIT', 'DELIVERED', 'COMPLETED', 'DISPATCH_READY', 'READY_FOR_DISPATCH', 'GENERATED', 'READY', 'DRAFT'].includes(d.status)
+          );
           
-          if (activeDispatched.length > 0) {
-            totalDispatched = activeDispatched.reduce((sum, d) => {
+          if (activeDispatches.length > 0) {
+            totalDispatched = activeDispatches.reduce((sum, d) => {
               const lines = d.lines || d.items || [];
               if (lines.length > 0) {
                 return sum + lines.reduce((ls: number, l: any) => ls + Number(l.qty || 0), 0);
@@ -138,8 +154,16 @@ export class InvoicesService {
           }
         }
 
+        // If totalDispatched is still 0 and order is in a valid post-PDI / dispatchable state, allow up to order total quantity
+        if (totalDispatched === 0 && (allowedStages.includes(currentStage.toUpperCase()) || ['DISPATCHED', 'READY_FOR_DISPATCH', 'DELIVERED', 'INVOICED'].includes(normalized))) {
+          const totalOrderQty = order.lines?.reduce((s, l) => s + (Number(l.orderQty || (l as any).order_qty || (l as any).qty) || 0), 0) || 0;
+          if (totalOrderQty > 0) {
+            totalDispatched = totalOrderQty;
+          }
+        }
+
         const requestedQty = validated.items.reduce((s, it) => s + Number(it.qty || 0), 0);
-        if (requestedQty > totalDispatched) {
+        if (totalDispatched > 0 && requestedQty > totalDispatched) {
           const err: any = new Error(`Commercial Gate Blocked: Total invoice quantity (${requestedQty}) exceeds eligible physically dispatched quantity (${totalDispatched}). Over-invoicing is prohibited.`);
           err.errorCode = 'ERR_INVOICE_EXCEEDS_DISPATCH';
           err.statusCode = 400;
@@ -531,27 +555,28 @@ export class InvoicesService {
       SEED_INVOICES[seedIdx] = updatedInvoice;
     }
 
-    // If fully paid, also update parent order to COMPLETED / PAID (Stage 11)
-    if (newStatus === 'PAID' && invoice.orderPo) {
+    // Synchronize parent order paidAmount and paymentStatus
+    if (invoice.orderPo) {
       try {
         await this.db
           .from('customer_orders')
           .update({
-            status: 'COMPLETED',
-            progress_step: 11,
+            paid_amount: newPaid,
+            payment_status: newStatus === 'PAID' ? 'PAID' : 'PARTIAL',
             updated_at: new Date().toISOString()
           })
           .or(`po_no.eq.${invoice.orderPo},id.eq.${invoice.orderPo}`);
       } catch (ordErr) {
-        console.warn('DB update order to COMPLETED fallback:', ordErr);
+        console.warn('DB update order payment fallback:', ordErr);
       }
 
       notificationsService.broadcastEvent('order_updated', {
         id: invoice.orderPo,
         poNo: invoice.orderPo,
-        status: 'COMPLETED',
-        stage: 'COMPLETED',
-        progressStep: 11
+        paidAmount: newPaid,
+        paymentStatus: newStatus === 'PAID' ? 'PAID' : 'PARTIAL',
+        isFullyPaid: newStatus === 'PAID',
+        remainingOutstanding: newBalance
       });
     }
 

@@ -1180,7 +1180,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         const allowed = isRoleAuthorizedForCta(currentRole, 'MARK_DELIVERED') || isRoleAuthorizedForCta(currentRole, 'ORDER_RECEIVED');
         const isDelayed = st === 'DELIVERY_DELAYED';
         return {
-          label: isDelayed ? 'Order Received / Confirm Delivery (Stage 10a)' : 'Order Received / Mark Delivered (Stage 10a)',
+          label: isDelayed ? 'Confirm Delivery (Stage 10a)' : 'Mark Delivered (Stage 10a)',
           icon: CheckCircle2,
           buttonClass: isDelayed
             ? 'bg-gradient-to-r from-amber-600 to-emerald-600 hover:from-emerald-600 hover:to-amber-600 text-white shadow-amber-500/25'
@@ -1239,7 +1239,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       if (!isDeliveredState) {
         const allowed = isRoleAuthorizedForCta(currentRole, 'MARK_DELIVERED') || isRoleAuthorizedForCta(currentRole, 'ORDER_RECEIVED');
         return {
-          label: 'Order Received / Mark Delivered (Stage 10a)',
+          label: 'Mark Delivered (Stage 10a)',
           icon: CheckCircle2,
           buttonClass: 'bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-emerald-600 hover:to-blue-600 text-white shadow-blue-500/25',
           handler: () => setShowDeliveryModal(true),
@@ -1393,17 +1393,17 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
     <div className="space-y-6 font-sans">
       
       {/* 1. Header Navigation & Action Bar */}
-      <div className={`p-6 rounded-3xl border transition-all ${
+      <div className={`p-4 sm:p-6 rounded-3xl border transition-all ${
         isDarkMode 
           ? 'bg-slate-900/85 border-slate-800/80 text-white backdrop-blur-xl shadow-2xl' 
           : 'bg-white border-slate-200 shadow-md text-slate-900'
       }`}>
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 sm:gap-4">
           
-          <div className="flex items-center gap-3.5">
+          <div className="flex items-start sm:items-center gap-3">
             <button
               onClick={onBack}
-              className={`p-2.5 rounded-2xl border cursor-pointer transition-all hover:scale-105 active:scale-95 ${
+              className={`p-2 sm:p-2.5 rounded-2xl border cursor-pointer transition-all hover:scale-105 active:scale-95 shrink-0 ${
                 isDarkMode 
                   ? 'border-slate-800 bg-slate-950/70 text-slate-300 hover:bg-slate-800 hover:text-white' 
                   : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
@@ -1414,8 +1414,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             </button>
 
             <div>
-              <div className="flex flex-wrap items-center gap-2.5">
-                <h1 className="text-2xl font-bold font-mono tracking-tight text-[#5B75F8] dark:text-[#7B92FF] flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-bold font-mono tracking-tight text-[#5B75F8] dark:text-[#7B92FF] flex items-center gap-2">
                   <span>{order.poNo}</span>
                 </h1>
                 
@@ -1429,7 +1429,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   </span>
                 )}
 
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono font-bold uppercase border ${
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-xl text-[11px] sm:text-xs font-mono font-bold uppercase border ${
                   isQcRejected ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/15 dark:text-rose-400 dark:border-rose-500/30' :
                   isQcHold || hasNcr ? 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/30' :
                   order.status === 'CANCELLED' ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/15 dark:text-rose-400 dark:border-rose-500/30' :
@@ -1460,7 +1460,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   <span>{isQcRejected ? 'QC Rejected' : (isQcHold || hasNcr) ? 'QC Hold / NCR' : (order.status || order.stage || 'DRAFT').replace(/_/g, ' ')}</span>
                 </span>
               </div>
-              <p className={`text-xs mt-1 flex items-center gap-1.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+              <p className={`text-xs mt-1 flex flex-wrap items-center gap-1.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                 <span>Customer:</span>
                 <strong className="text-[#5B75F8] dark:text-[#7B92FF] font-semibold">{order.customerName}</strong>
                 <span className="text-slate-500">•</span>
@@ -1469,11 +1469,11 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             </div>
           </div>
 
-          {/* Clean Header Info Strip (No Floating Workflow Buttons) */}
-          <div className="flex items-center gap-2.5">
+          {/* Clean Header Info Strip */}
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
             <button
               onClick={() => setShowUploadModal(true)}
-              className={`px-3.5 py-2 rounded-2xl border text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`w-full sm:w-auto px-3.5 py-2 rounded-2xl border text-xs font-mono font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                 isDarkMode 
                   ? 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800 hover:text-white' 
                   : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
@@ -1502,7 +1502,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       </div>
 
       {/* 2. Redesigned Milestone Progress Pipeline */}
-      <div className={`p-6 sm:p-8 rounded-3xl border transition-all shadow-xl relative overflow-hidden ${
+      <div className={`p-4 sm:p-8 rounded-2xl sm:rounded-3xl border transition-all shadow-xl relative overflow-hidden ${
         isDarkMode 
           ? 'bg-slate-900/90 border-slate-800/90 backdrop-blur-xl text-white' 
           : 'bg-white border-slate-200 text-slate-900 shadow-sm'
@@ -1511,22 +1511,22 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         {/* Subtle Ambient Background Gradient */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-indigo-500/10 via-blue-500/5 to-transparent rounded-full blur-3xl pointer-events-none -z-0" />
         
-        <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100 dark:border-slate-800/80 relative z-10">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6 pb-4 border-b border-slate-100 dark:border-slate-800/80 relative z-10">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-indigo-500/15 text-indigo-500 dark:text-indigo-400">
+            <div className="p-2 rounded-xl bg-indigo-500/15 text-indigo-500 dark:text-indigo-400 shrink-0">
               <RefreshCw className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="font-bold text-sm uppercase tracking-wider">
+              <h2 className="font-bold text-xs sm:text-sm uppercase tracking-wider">
                 Production & Order Fulfillment Pipeline
               </h2>
-              <p className={`text-[11px] font-mono mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              <p className={`text-[10px] sm:text-[11px] font-mono mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                 Gated Lifecycle Stages • Single Source of Truth Action Gateways
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className={`px-3 py-1 rounded-xl text-xs font-mono font-bold border ${
+            <span className={`px-2.5 py-1 sm:px-3 rounded-xl text-[11px] sm:text-xs font-mono font-bold border ${
               isDarkMode ? 'bg-indigo-500/10 border-indigo-500/30 text-[#7B92FF]' : 'bg-indigo-50 border-indigo-200 text-indigo-700'
             }`}>
               Status: {(order.status || order.stage || 'DRAFT').replace(/_/g, ' ')}
@@ -2084,7 +2084,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                       className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-emerald-600 hover:to-blue-600 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                      <span>Order Received (POD)</span>
+                      <span>Mark Delivered (POD)</span>
                     </button>
                     {!isDelayed && (
                       <button
@@ -2274,66 +2274,66 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       </div>
 
       {/* 3. Executive KPI & Order Metadata Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 font-mono">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 font-mono">
         
         {/* Card 1: Gross Commercials */}
-        <div className={`p-5 rounded-3xl border transition-all ${
+        <div className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border transition-all ${
           isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
         }`}>
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[11px] text-slate-400 uppercase font-bold tracking-wider">Gross Order Value</span>
-            <div className="p-2 rounded-xl bg-emerald-500/15 text-emerald-500">
-              <DollarSign className="w-4 h-4" />
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <span className="text-[10px] sm:text-[11px] text-slate-400 uppercase font-bold tracking-wider">Gross Value</span>
+            <div className="p-1.5 sm:p-2 rounded-xl bg-emerald-500/15 text-emerald-500">
+              <DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">
+          <div className="text-base sm:text-xl font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">
             ₹{order.grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </div>
-          <div className="mt-2 flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <div className="mt-2 flex items-center justify-between text-[10px] sm:text-[11px] text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
             <span>Tax Bracket:</span>
             <span className={`font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>{order.taxCategory || 'GST 18%'}</span>
           </div>
         </div>
 
         {/* Card 2: Delivery & Timeline */}
-        <div className={`p-5 rounded-3xl border transition-all ${
+        <div className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border transition-all ${
           isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
         }`}>
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[11px] text-slate-400 uppercase font-bold tracking-wider">Delivery Target</span>
-            <div className="p-2 rounded-xl bg-amber-500/15 text-amber-500">
-              <Calendar className="w-4 h-4" />
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <span className="text-[10px] sm:text-[11px] text-slate-400 uppercase font-bold tracking-wider">Target Date</span>
+            <div className="p-1.5 sm:p-2 rounded-xl bg-amber-500/15 text-amber-500">
+              <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="text-xl font-bold text-amber-600 dark:text-amber-400 tracking-tight">
+          <div className="text-base sm:text-xl font-bold text-amber-600 dark:text-amber-400 tracking-tight truncate">
             {order.deliveryDate || '—'}
           </div>
-          <div className="mt-2 flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <div className="mt-2 flex items-center justify-between text-[10px] sm:text-[11px] text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
             <span>PO Raised:</span>
             <span className={`font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>{order.poDate || '—'}</span>
           </div>
         </div>
 
         {/* Card 3: Quality & Heat Traceability */}
-        <div className={`p-5 rounded-3xl border transition-all ${
+        <div className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border transition-all ${
           isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
         }`}>
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[11px] text-slate-400 uppercase font-bold tracking-wider">Trace & QA Gate</span>
-            <div className={`p-2 rounded-xl ${
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <span className="text-[10px] sm:text-[11px] text-slate-400 uppercase font-bold tracking-wider">QA Gate</span>
+            <div className={`p-1.5 sm:p-2 rounded-xl ${
               isQcRejected ? 'bg-rose-500/15 text-rose-500' : isQcHold || hasNcr ? 'bg-amber-500/15 text-amber-500' : 'bg-blue-500/15 text-blue-500'
             }`}>
-              <ShieldCheck className="w-4 h-4" />
+              <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="text-sm font-bold truncate">
+          <div className="text-xs sm:text-sm font-bold truncate">
             {order.heatLotNumber ? (
               <span className="text-amber-500 font-bold">{order.heatLotNumber}</span>
             ) : (
               <span className="text-slate-400 font-normal">Pending Issue</span>
             )}
           </div>
-          <div className="mt-2 flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <div className="mt-2 flex items-center justify-between text-[10px] sm:text-[11px] text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
             <span>QA Status:</span>
             <span className={`font-bold ${isQcRejected ? 'text-rose-500' : isQcHold || hasNcr ? 'text-amber-500' : 'text-emerald-500'}`}>
               {isQcRejected ? 'Rejected' : isQcHold || hasNcr ? 'Hold' : 'Cleared'}
@@ -2342,17 +2342,17 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         </div>
 
         {/* Card 4: Fulfillment Progress */}
-        <div className={`p-5 rounded-3xl border transition-all ${
+        <div className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border transition-all ${
           isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
         }`}>
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[11px] text-slate-400 uppercase font-bold tracking-wider">Dispatched / Total</span>
-            <div className="p-2 rounded-xl bg-purple-500/15 text-purple-500">
-              <Package className="w-4 h-4" />
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <span className="text-[10px] sm:text-[11px] text-slate-400 uppercase font-bold tracking-wider">Dispatched</span>
+            <div className="p-1.5 sm:p-2 rounded-xl bg-purple-500/15 text-purple-500">
+              <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="text-xl font-bold text-indigo-600 dark:text-indigo-400 tracking-tight">
-            {totalDispatchedQty} / {totalOrderedQty} <span className="text-xs font-normal text-slate-400">units</span>
+          <div className="text-base sm:text-xl font-bold text-indigo-600 dark:text-indigo-400 tracking-tight">
+            {totalDispatchedQty} / {totalOrderedQty} <span className="text-[10px] sm:text-xs font-normal text-slate-400">units</span>
           </div>
           <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
             <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
@@ -2367,38 +2367,38 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       </div>
 
       {/* 4. Client PO Document & Special Instructions Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono text-xs">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-4 font-mono text-xs">
         
-        <div className={`p-5 rounded-3xl border flex items-center justify-between gap-3 ${
+        <div className={`p-4 sm:p-5 rounded-2xl sm:rounded-3xl border flex items-center justify-between gap-3 ${
           isDarkMode ? 'bg-slate-900/70 border-slate-800/80 text-white' : 'bg-white border-slate-200 text-slate-900 shadow-xs'
         }`}>
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-[#5B75F8]/20 text-[#7B92FF]">
-              <FileText className="w-5 h-5" />
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-2 sm:p-2.5 rounded-2xl bg-[#5B75F8]/20 text-[#7B92FF] shrink-0">
+              <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <span className="font-bold block text-sm font-sans">Client PO Document</span>
-              <span className="text-slate-400 text-[11px] block mt-0.5">{poFileName ? poFileName : 'No document attached yet'}</span>
+            <div className="min-w-0">
+              <span className="font-bold block text-xs sm:text-sm font-sans">Client PO Document</span>
+              <span className="text-slate-400 text-[10px] sm:text-[11px] block mt-0.5 truncate">{poFileName ? poFileName : 'No document attached yet'}</span>
             </div>
           </div>
           <button
             onClick={() => setShowUploadModal(true)}
-            className="px-3.5 py-1.5 rounded-xl border border-[#5B75F8]/30 bg-[#5B75F8]/10 text-[#5B75F8] dark:text-[#7B92FF] font-bold hover:bg-[#5B75F8]/20 cursor-pointer text-xs flex items-center gap-1.5 transition-all"
+            className="px-3 py-1.5 sm:px-3.5 sm:py-1.5 rounded-xl border border-[#5B75F8]/30 bg-[#5B75F8]/10 text-[#5B75F8] dark:text-[#7B92FF] font-bold hover:bg-[#5B75F8]/20 cursor-pointer text-[11px] sm:text-xs flex items-center gap-1.5 transition-all shrink-0"
           >
             <Upload className="w-3.5 h-3.5" />
             <span>Upload</span>
           </button>
         </div>
 
-        <div className={`p-5 rounded-3xl border flex items-center gap-3 ${
+        <div className={`p-4 sm:p-5 rounded-2xl sm:rounded-3xl border flex items-center gap-3 ${
           isDarkMode ? 'bg-slate-900/70 border-slate-800/80 text-white' : 'bg-white border-slate-200 text-slate-900 shadow-xs'
         }`}>
-          <div className="p-2.5 rounded-2xl bg-amber-500/20 text-amber-400">
-            <Tag className="w-5 h-5" />
+          <div className="p-2 sm:p-2.5 rounded-2xl bg-amber-500/20 text-amber-400 shrink-0">
+            <Tag className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div className="overflow-hidden">
-            <span className="font-bold block text-sm font-sans">Special Instructions</span>
-            <span className={`text-[11px] block mt-0.5 truncate ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+            <span className="font-bold block text-xs sm:text-sm font-sans">Special Instructions</span>
+            <span className={`text-[10px] sm:text-[11px] block mt-0.5 truncate ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
               {order.remark || 'No special order notes recorded.'}
             </span>
           </div>
@@ -2406,19 +2406,73 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
       </div>
 
-      {/* 5. LINE ITEMS TABLE */}
-      <div className={`p-6 rounded-3xl border space-y-4 font-mono text-xs transition-all shadow-lg ${
+      {/* 5. LINE ITEMS SECTION */}
+      <div className={`p-4 sm:p-6 rounded-2xl sm:rounded-3xl border space-y-4 font-mono text-xs transition-all shadow-lg ${
         isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl text-white' : 'bg-white border-slate-200 text-slate-900 shadow-xs'
       }`}>
-        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-          <h3 className="font-bold uppercase tracking-wider text-[#5B75F8] dark:text-[#7B92FF] text-sm flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-4 border-b border-slate-200 dark:border-slate-800 pb-3">
+          <h3 className="font-bold uppercase tracking-wider text-[#5B75F8] dark:text-[#7B92FF] text-xs sm:text-sm flex items-center gap-2">
             <Package className="w-4 h-4" />
             <span>Order Line Items ({order.lines?.length || 0})</span>
           </h3>
-          <span className="text-slate-400 text-xs">Gross Line Total: ₹{order.grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+          <span className="text-slate-400 text-[11px] sm:text-xs">Gross Line Total: ₹{order.grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Mobile Line Items Cards (< md) */}
+        <div className="block md:hidden space-y-2.5">
+          {order.lines.map((ln, idx) => (
+            <div key={ln.id} className={`p-3.5 rounded-2xl border transition-all space-y-2.5 ${
+              isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+            }`}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold">
+                      #{idx + 1}
+                    </span>
+                    <span className="font-mono font-bold text-xs text-[#5B75F8] dark:text-[#7B92FF] truncate">
+                      {ln.itemCode}
+                    </span>
+                  </div>
+                  <div className="text-xs font-semibold mt-1 text-slate-800 dark:text-slate-200 font-sans line-clamp-2">
+                    {ln.itemDescription}
+                  </div>
+                  {ln.custPartNo && (
+                    <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                      Part No: {ln.custPartNo}
+                    </div>
+                  )}
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="text-xs sm:text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                    ₹{(Number(ln.orderQty) * Number(ln.rate)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </div>
+                  <div className="text-[9px] text-slate-400 font-mono">
+                    @ ₹{ln.rate.toFixed(2)} / {ln.unit}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-200 dark:border-slate-800/80 text-[10px] font-mono text-center">
+                <div className="p-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                  <div className="text-[8px] text-slate-400 uppercase">Ordered</div>
+                  <div className="font-bold text-slate-800 dark:text-slate-100">{ln.orderQty} {ln.unit}</div>
+                </div>
+                <div className="p-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                  <div className="text-[8px] text-emerald-500 uppercase">Dispatched</div>
+                  <div className="font-bold text-emerald-600 dark:text-emerald-400">{ln.dispatchedQty || 0}</div>
+                </div>
+                <div className="p-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                  <div className="text-[8px] text-amber-500 uppercase">Pending</div>
+                  <div className="font-bold text-amber-600 dark:text-amber-400">{ln.pendingQty || 0}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop Line Items Table (>= md) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className={`border-b text-[10px] font-bold uppercase tracking-wider ${

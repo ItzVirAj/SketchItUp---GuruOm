@@ -898,12 +898,12 @@ export const MastersView: React.FC<MastersViewProps> = ({
     <div className="space-y-6 font-sans">
       
       {/* Top Banner Header with Summary Telemetry */}
-      <div className={`p-6 rounded-3xl border transition-all ${
+      <div className={`p-4 sm:p-6 rounded-3xl border transition-all ${
         isDarkMode 
           ? 'bg-slate-900/80 border-slate-800/80 text-white backdrop-blur-xl shadow-2xl' 
           : 'bg-white border-slate-200 shadow-sm text-slate-900'
       }`}>
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider ${
@@ -911,95 +911,97 @@ export const MastersView: React.FC<MastersViewProps> = ({
               }`}>
                 Precision Master Data Registry
               </span>
-              <span className="text-xs text-slate-400 font-mono">• ERP Core Modules Specification</span>
+              <span className={`text-[11px] sm:text-xs font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                • ERP Core Modules Specification
+              </span>
             </div>
-            <h1 className={`text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+            <h1 className={`text-xl sm:text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
               Master Data Hub
             </h1>
-            <p className={`text-xs mt-1 max-w-xl ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+            <p className={`text-xs mt-0.5 sm:mt-1 max-w-xl ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
               Manage Customers, Vendors, Item Catalog, Machine Routing Fleet & Users with strict GSTIN/PAN and conditional rules.
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
             {activeTab === 'CUSTOMERS' && (
               <button
                 onClick={openCustomerModal}
-                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-blue-600 text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-blue-600 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
               >
                 <Plus className="w-4 h-4" />
-                <span>New Customer (CUST-####)</span>
+                <span>New Customer</span>
               </button>
             )}
 
             {activeTab === 'VENDORS' && (
               <button
                 onClick={openVendorModal}
-                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
               >
                 <Plus className="w-4 h-4" />
-                <span>New Vendor (VEND-####)</span>
+                <span>New Vendor</span>
               </button>
             )}
 
             {activeTab === 'ITEMS' && (
               <button
                 onClick={openItemModal}
-                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-emerald-600 text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
               >
                 <Plus className="w-4 h-4" />
-                <span>New Item (RM/FG-####)</span>
+                <span>New Item</span>
               </button>
             )}
 
             {activeTab === 'MACHINES' && (
               <button
                 onClick={openMachineModal}
-                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-amber-600 text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-amber-600 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
               >
                 <Plus className="w-4 h-4" />
-                <span>New Machine (MCH-####)</span>
+                <span>New Machine</span>
               </button>
             )}
           </div>
         </div>
 
         {/* Master Metrics Strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 pt-4 border-t border-slate-200 dark:border-slate-800/60">
-          <div className={`p-4 rounded-2xl border transition-all ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
-            <div className={`text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Total Customers</div>
-            <div className="text-xl font-bold text-blue-600 dark:text-blue-400 mt-1">{customers.length} Accounts</div>
-            <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-mono font-semibold mt-0.5">● {customers.filter(c => c.status === 'Active').length} Active</div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 mt-4 sm:mt-5 pt-3 sm:pt-4 border-t border-slate-200 dark:border-slate-800/60">
+          <div className={`p-3 sm:p-4 rounded-2xl border transition-all ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
+            <div className={`text-[10px] sm:text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Total Customers</div>
+            <div className="text-base sm:text-xl font-bold text-blue-600 dark:text-blue-400 mt-0.5 sm:mt-1">{customers.length} Accounts</div>
+            <div className="text-[10px] sm:text-[11px] text-emerald-600 dark:text-emerald-400 font-mono font-semibold mt-0.5">● {customers.filter(c => c.status === 'Active').length} Active</div>
           </div>
-          <div className={`p-4 rounded-2xl border transition-all ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
-            <div className={`text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Total Vendors</div>
-            <div className="text-xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">{vendors.length} Suppliers</div>
-            <div className="text-[11px] text-indigo-600 dark:text-indigo-400 font-mono font-semibold mt-0.5">● {vendors.filter(v => v.vendorType === 'Subcontractor / Job Worker').length} Subcontractors</div>
+          <div className={`p-3 sm:p-4 rounded-2xl border transition-all ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
+            <div className={`text-[10px] sm:text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Total Vendors</div>
+            <div className="text-base sm:text-xl font-bold text-indigo-600 dark:text-indigo-400 mt-0.5 sm:mt-1">{vendors.length} Suppliers</div>
+            <div className="text-[10px] sm:text-[11px] text-indigo-600 dark:text-indigo-400 font-mono font-semibold mt-0.5">● {vendors.filter(v => v.vendorType === 'Subcontractor / Job Worker').length} Subcontractors</div>
           </div>
-          <div className={`p-4 rounded-2xl border transition-all ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
-            <div className={`text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Item Master Parts</div>
-            <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{masters.length} SKUs</div>
-            <div className={`text-[11px] font-mono font-semibold mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{masters.filter(m => m.isFinishedGoods || m.itemType === 'Finished Good').length} FG / {masters.filter(m => m.itemType === 'Raw Material').length} RM</div>
+          <div className={`p-3 sm:p-4 rounded-2xl border transition-all ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
+            <div className={`text-[10px] sm:text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Item Master Parts</div>
+            <div className="text-base sm:text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 sm:mt-1">{masters.length} SKUs</div>
+            <div className={`text-[10px] sm:text-[11px] font-mono font-semibold mt-0.5 truncate ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{masters.filter(m => m.isFinishedGoods || m.itemType === 'Finished Good').length} FG / {masters.filter(m => m.itemType === 'Raw Material').length} RM</div>
           </div>
-          <div className={`p-4 rounded-2xl border transition-all ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
-            <div className={`text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Machine Fleet</div>
-            <div className="text-xl font-bold text-amber-600 dark:text-amber-400 mt-1">{machines.length} Units</div>
-            <div className="text-[11px] text-amber-600 dark:text-amber-400 font-mono font-semibold mt-0.5">● {machines.filter(m => m.status === 'Active').length} Operational</div>
+          <div className={`p-3 sm:p-4 rounded-2xl border transition-all ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
+            <div className={`text-[10px] sm:text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Machine Fleet</div>
+            <div className="text-base sm:text-xl font-bold text-amber-600 dark:text-amber-400 mt-0.5 sm:mt-1">{machines.length} Units</div>
+            <div className="text-[10px] sm:text-[11px] text-amber-600 dark:text-amber-400 font-mono font-semibold mt-0.5">● {machines.filter(m => m.status === 'Active').length} Operational</div>
           </div>
         </div>
       </div>
 
       {/* Main Tab Controls Bar */}
-      <div className={`p-4 rounded-3xl border transition-all flex flex-wrap items-center justify-between gap-4 shadow-sm ${
+      <div className={`p-3.5 sm:p-4 rounded-3xl border transition-all space-y-3 ${
         isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-sm'
       }`}>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
           <button
             onClick={() => handleSelectTab('CUSTOMERS')}
-            className={`px-4 py-2 rounded-2xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
               activeTab === 'CUSTOMERS'
-                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white shadow-md'
-                : isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-md'
+                : isDarkMode ? 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-white' : 'bg-slate-100 text-slate-600 border-slate-200 hover:text-slate-900'
             }`}
           >
             <Building className="w-3.5 h-3.5" />
@@ -1008,10 +1010,10 @@ export const MastersView: React.FC<MastersViewProps> = ({
           
           <button
             onClick={() => handleSelectTab('VENDORS')}
-            className={`px-4 py-2 rounded-2xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
               activeTab === 'VENDORS'
-                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white shadow-md'
-                : isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-md'
+                : isDarkMode ? 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-white' : 'bg-slate-100 text-slate-600 border-slate-200 hover:text-slate-900'
             }`}
           >
             <Users className="w-3.5 h-3.5" />
@@ -1020,34 +1022,34 @@ export const MastersView: React.FC<MastersViewProps> = ({
 
           <button
             onClick={() => handleSelectTab('ITEMS')}
-            className={`px-4 py-2 rounded-2xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
               activeTab === 'ITEMS'
-                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white shadow-md'
-                : isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-md'
+                : isDarkMode ? 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-white' : 'bg-slate-100 text-slate-600 border-slate-200 hover:text-slate-900'
             }`}
           >
             <Package className="w-3.5 h-3.5" />
-            <span>Item Catalog ({masters.length})</span>
+            <span>Items ({masters.length})</span>
           </button>
 
           <button
             onClick={() => handleSelectTab('MACHINES')}
-            className={`px-4 py-2 rounded-2xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
               activeTab === 'MACHINES'
-                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white shadow-md'
-                : isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-md'
+                : isDarkMode ? 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-white' : 'bg-slate-100 text-slate-600 border-slate-200 hover:text-slate-900'
             }`}
           >
             <Wrench className="w-3.5 h-3.5" />
-            <span>Machine Fleet ({machines.length})</span>
+            <span>Machines ({machines.length})</span>
           </button>
 
           <button
             onClick={() => handleSelectTab('IMPORT_OMGST')}
-            className={`px-4 py-2 rounded-2xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
               activeTab === 'IMPORT_OMGST'
-                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white shadow-md'
-                : isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-md'
+                : isDarkMode ? 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-white' : 'bg-slate-100 text-slate-600 border-slate-200 hover:text-slate-900'
             }`}
           >
             <FileSpreadsheet className="w-3.5 h-3.5" />
@@ -1057,28 +1059,31 @@ export const MastersView: React.FC<MastersViewProps> = ({
 
         {/* Filter & Search Toolbar */}
         {activeTab !== 'IMPORT_OMGST' && (
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className={`relative flex items-center rounded-2xl border px-3.5 py-2 transition-all flex-1 ${
+              isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white focus-within:border-[#5B75F8]' : 'bg-slate-50 border-slate-200 text-slate-900 focus-within:border-[#5B75F8]'
+            }`}>
+              <Search className="w-3.5 h-3.5 text-slate-400 shrink-0 mr-2" />
               <input
                 type="text"
-                placeholder={`Search ${activeTab.toLowerCase()}...`}
+                placeholder={`Search ${activeTab.toLowerCase()} by code, name, tax ID...`}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className={`pl-9 pr-4 py-2 rounded-xl text-xs border transition-all focus:outline-none focus:ring-2 focus:ring-[#5B75F8]/50 ${
-                  isDarkMode 
-                    ? 'bg-slate-800/80 border-slate-700 text-white placeholder:text-slate-500' 
-                    : 'bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 shadow-inner'
-                }`}
+                className="bg-transparent outline-none text-xs w-full font-mono"
               />
+              {searchTerm && (
+                <button onClick={() => setSearchTerm('')} className="text-slate-400 hover:text-white ml-2 cursor-pointer">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
 
             {/* Status Filter */}
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as any)}
-              className={`px-3 py-2 rounded-xl text-xs border font-medium transition-all focus:outline-none ${
-                isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-900 shadow-xs'
+              className={`px-3 py-2 rounded-2xl border text-xs font-bold font-mono outline-none cursor-pointer w-full sm:w-auto ${
+                isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
               }`}
             >
               <option value="ALL">Status: All</option>
@@ -1093,136 +1098,242 @@ export const MastersView: React.FC<MastersViewProps> = ({
       {/* 1. CUSTOMERS TAB */}
       {/* ========================================================================= */}
       {activeTab === 'CUSTOMERS' && (
-        <div className={`rounded-3xl border overflow-hidden transition-all shadow-xl ${
-          isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-sm'
-        }`}>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className={`border-b font-mono font-bold uppercase tracking-wider text-[11px] ${
-                  isDarkMode ? 'bg-slate-800/80 border-slate-700/80 text-slate-300' : 'bg-slate-100/90 border-slate-200 text-slate-700'
-                }`}>
-                  <th className="py-4 px-5">Customer ID</th>
-                  <th className="py-4 px-5">Customer Name & Type</th>
-                  <th className="py-4 px-5">GSTIN & PAN</th>
-                  <th className="py-4 px-5">Contact & Mobile</th>
-                  <th className="py-4 px-5">City & State</th>
-                  <th className="py-4 px-5">Payment Terms</th>
-                  <th className="py-4 px-5">Credit Days / Limit</th>
-                  <th className="py-4 px-5">Salesperson</th>
-                  <th className="py-4 px-5 text-center">Status</th>
-                  <th className="py-4 px-5 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200/70'}`}>
-                {filteredCustomers.length === 0 ? (
-                  <tr>
-                    <td colSpan={10} className="py-14 text-center">
-                      <Building className="w-9 h-9 mx-auto mb-2 opacity-40 text-slate-400" />
-                      <p className={`text-sm font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-800'}`}>No customer master records found.</p>
-                      <p className={`text-xs mt-1 ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>Click "New Customer" to register an account.</p>
-                    </td>
-                  </tr>
-                ) : (
-                  filteredCustomers.map((cust) => (
-                    <tr 
-                      key={cust.code}
-                      className={`transition-colors ${
-                        cust.status === 'Inactive'
-                          ? isDarkMode ? 'bg-slate-950/40 text-slate-500' : 'bg-slate-100/60 text-slate-400'
-                          : isDarkMode ? 'hover:bg-slate-800/40 text-slate-200' : 'hover:bg-slate-50 text-slate-900'
-                      }`}
+        <div className="space-y-3">
+          {/* Mobile Customer Cards (Viewport < md) */}
+          <div className="block md:hidden space-y-3">
+            {filteredCustomers.length === 0 ? (
+              <div className={`p-8 text-center rounded-3xl border ${
+                isDarkMode ? 'bg-slate-900/60 border-slate-800 text-slate-400' : 'bg-white border-slate-200 text-slate-500'
+              }`}>
+                <Building className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                <p className="text-xs font-mono font-bold">No customer master records found.</p>
+              </div>
+            ) : (
+              filteredCustomers.map((cust) => (
+                <div
+                  key={cust.code}
+                  className={`p-4 rounded-3xl border transition-all space-y-3 shadow-sm ${
+                    cust.status === 'Inactive'
+                      ? isDarkMode ? 'bg-slate-950/70 border-slate-800/80 text-slate-500' : 'bg-slate-100/60 border-slate-200 text-slate-400'
+                      : isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'
+                  }`}
+                >
+                  {/* Header: Code + Name + Status */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="font-mono font-bold text-xs text-blue-500 dark:text-blue-400">
+                        {cust.code}
+                      </span>
+                      <h3 className={`text-xs font-bold font-sans mt-0.5 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                        {cust.name}
+                      </h3>
+                      {cust.legalName && (
+                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">{cust.legalName}</div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className={`px-2 py-0.5 rounded-md text-[9px] font-mono font-bold uppercase border ${
+                        isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-blue-50 text-blue-700 border-blue-200'
+                      }`}>
+                        {cust.customerType}
+                      </span>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase border ${
+                        cust.status === 'Active'
+                          ? isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : isDarkMode ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${cust.status === 'Active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                        <span>{cust.status}</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Commercial & Contact Metadata Box */}
+                  <div className={`p-2.5 rounded-2xl border space-y-1.5 text-xs font-mono ${
+                    isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50 border-slate-200'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-slate-400">GSTIN / PAN:</span>
+                      <span className={`font-bold ${isGstExempt(cust.gstin) ? 'text-amber-400' : isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+                        {cust.gstin} {cust.pan ? `(${cust.pan})` : ''}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-[10px] text-slate-400">Contact:</span>
+                      <span className={isDarkMode ? 'text-slate-200' : 'text-slate-800'}>
+                        {cust.contactPerson} (+91 {cust.mobile})
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-[10px] text-slate-400">Location:</span>
+                      <span className="text-slate-400">
+                        {cust.city}, {cust.state} {cust.pincode ? `(${cust.pincode})` : ''}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-[10px] text-slate-400">Terms & Limit:</span>
+                      <span className="text-emerald-400 font-bold">
+                        {cust.paymentTerms} ({cust.creditDays}d) • ₹{(cust.creditLimit || 0).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 pt-1 border-t border-slate-800/60">
+                    <button
+                      type="button"
+                      onClick={() => openEditCustomer(cust)}
+                      className="flex-1 py-2 rounded-xl bg-blue-500/15 text-blue-400 border border-blue-500/30 font-mono text-xs font-bold flex items-center justify-center gap-1 cursor-pointer"
                     >
-                      <td className="py-4 px-5 font-mono font-bold text-blue-600 dark:text-blue-400">{cust.code}</td>
-                      <td className="py-4 px-5">
-                        <div className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{cust.name}</div>
-                        <div className="text-[10px] font-mono flex items-center gap-1.5 mt-1">
-                          <span className={`px-2 py-0.5 rounded-md font-bold uppercase border ${
-                            isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-blue-50 text-blue-700 border-blue-200'
-                          }`}>{cust.customerType}</span>
-                          {cust.legalName && <span className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>• {cust.legalName}</span>}
-                        </div>
-                      </td>
-                      <td className="py-4 px-5 font-mono">
-                        <div className={`text-xs font-bold ${isGstExempt(cust.gstin) ? 'text-amber-600 dark:text-amber-400' : isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>
-                          {cust.gstin}
-                        </div>
-                        {cust.pan && <div className={`text-[10px] mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>PAN: {cust.pan}</div>}
-                      </td>
-                      <td className="py-4 px-5">
-                        <div className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{cust.contactPerson}</div>
-                        <div className={`text-[11px] font-mono flex items-center gap-1.5 mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                          <Phone className="w-3 h-3 text-[#5B75F8]" />
-                          <span>+91 {cust.mobile}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-5">
-                        <div className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{cust.city}</div>
-                        <div className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{cust.state} {cust.pincode ? `(${cust.pincode})` : ''}</div>
-                      </td>
-                      <td className="py-4 px-5">
-                        <span className={`px-2.5 py-1 rounded-xl text-[11px] font-mono font-bold border ${
-                          cust.paymentTerms.startsWith('Net') 
-                            ? isDarkMode ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' : 'bg-blue-50 text-blue-700 border-blue-200'
-                            : isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        }`}>
-                          {cust.paymentTerms}
-                        </span>
-                      </td>
-                      <td className="py-4 px-5 font-mono">
-                        <div className={`font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{cust.creditDays} Days</div>
-                        {cust.creditLimit ? (
-                          <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold mt-0.5">₹{cust.creditLimit.toLocaleString('en-IN')}</div>
-                        ) : null}
-                      </td>
-                      <td className={`py-4 px-5 font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                        {cust.salesperson || '—'}
-                      </td>
-                      <td className="py-4 px-5 text-center">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono font-bold uppercase border ${
-                          cust.status === 'Active'
-                            ? isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : isDarkMode ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
-                        }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${cust.status === 'Active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                          <span>{cust.status}</span>
-                        </span>
-                      </td>
-                      <td className="py-4 px-5 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => openEditCustomer(cust)}
-                            className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
-                              isDarkMode 
-                                ? 'bg-slate-800 hover:bg-slate-700 text-blue-400 border-slate-700 hover:border-blue-500/50' 
-                                : 'bg-white hover:bg-blue-50 text-blue-600 border-slate-200 hover:border-blue-300 shadow-xs'
-                            }`}
-                            title="Edit Customer"
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                            <span>Edit</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeletePrompt('CUSTOMER', cust.code, cust.name)}
-                            className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
-                              isDarkMode 
-                                ? 'bg-slate-800 hover:bg-rose-950/40 text-rose-400 border-slate-700 hover:border-rose-500/50' 
-                                : 'bg-white hover:bg-rose-50 text-rose-600 border-slate-200 hover:border-rose-300 shadow-xs'
-                            }`}
-                            title="Delete Customer"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            <span>Delete</span>
-                          </button>
-                        </div>
+                      <Pencil className="w-3.5 h-3.5" />
+                      <span>Edit Customer</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePrompt('CUSTOMER', cust.code, cust.name)}
+                      className="px-3 py-2 rounded-xl bg-rose-500/15 text-rose-400 border border-rose-500/30 font-mono text-xs font-bold flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop Table (Viewport >= md) */}
+          <div className={`hidden md:block rounded-3xl border overflow-hidden transition-all shadow-xl ${
+            isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-sm'
+          }`}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className={`border-b font-mono font-bold uppercase tracking-wider text-[11px] ${
+                    isDarkMode ? 'bg-slate-800/80 border-slate-700/80 text-slate-300' : 'bg-slate-100/90 border-slate-200 text-slate-700'
+                  }`}>
+                    <th className="py-4 px-5">Customer ID</th>
+                    <th className="py-4 px-5">Customer Name & Type</th>
+                    <th className="py-4 px-5">GSTIN & PAN</th>
+                    <th className="py-4 px-5">Contact & Mobile</th>
+                    <th className="py-4 px-5">City & State</th>
+                    <th className="py-4 px-5">Payment Terms</th>
+                    <th className="py-4 px-5">Credit Days / Limit</th>
+                    <th className="py-4 px-5">Salesperson</th>
+                    <th className="py-4 px-5 text-center">Status</th>
+                    <th className="py-4 px-5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200/70'}`}>
+                  {filteredCustomers.length === 0 ? (
+                    <tr>
+                      <td colSpan={10} className="py-14 text-center">
+                        <Building className="w-9 h-9 mx-auto mb-2 opacity-40 text-slate-400" />
+                        <p className={`text-sm font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-800'}`}>No customer master records found.</p>
+                        <p className={`text-xs mt-1 ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>Click "New Customer" to register an account.</p>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    filteredCustomers.map((cust) => (
+                      <tr 
+                        key={cust.code}
+                        className={`transition-colors ${
+                          cust.status === 'Inactive'
+                            ? isDarkMode ? 'bg-slate-950/40 text-slate-500' : 'bg-slate-100/60 text-slate-400'
+                            : isDarkMode ? 'hover:bg-slate-800/40 text-slate-200' : 'hover:bg-slate-50 text-slate-900'
+                        }`}
+                      >
+                        <td className="py-4 px-5 font-mono font-bold text-blue-600 dark:text-blue-400">{cust.code}</td>
+                        <td className="py-4 px-5">
+                          <div className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{cust.name}</div>
+                          <div className="text-[10px] font-mono flex items-center gap-1.5 mt-1">
+                            <span className={`px-2 py-0.5 rounded-md font-bold uppercase border ${
+                              isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-blue-50 text-blue-700 border-blue-200'
+                            }`}>{cust.customerType}</span>
+                            {cust.legalName && <span className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>• {cust.legalName}</span>}
+                          </div>
+                        </td>
+                        <td className="py-4 px-5 font-mono">
+                          <div className={`text-xs font-bold ${isGstExempt(cust.gstin) ? 'text-amber-600 dark:text-amber-400' : isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>
+                            {cust.gstin}
+                          </div>
+                          {cust.pan && <div className={`text-[10px] mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>PAN: {cust.pan}</div>}
+                        </td>
+                        <td className="py-4 px-5">
+                          <div className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{cust.contactPerson}</div>
+                          <div className={`text-[11px] font-mono flex items-center gap-1.5 mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                            <Phone className="w-3 h-3 text-[#5B75F8]" />
+                            <span>+91 {cust.mobile}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-5">
+                          <div className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{cust.city}</div>
+                          <div className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{cust.state} {cust.pincode ? `(${cust.pincode})` : ''}</div>
+                        </td>
+                        <td className="py-4 px-5">
+                          <span className={`px-2.5 py-1 rounded-xl text-[11px] font-mono font-bold border ${
+                            cust.paymentTerms.startsWith('Net') 
+                              ? isDarkMode ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' : 'bg-blue-50 text-blue-700 border-blue-200'
+                            : isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          }`}>
+                            {cust.paymentTerms}
+                          </span>
+                        </td>
+                        <td className="py-4 px-5 font-mono">
+                          <div className={`font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{cust.creditDays} Days</div>
+                          {cust.creditLimit ? (
+                            <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold mt-0.5">₹{cust.creditLimit.toLocaleString('en-IN')}</div>
+                          ) : null}
+                        </td>
+                        <td className={`py-4 px-5 font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                          {cust.salesperson || '—'}
+                        </td>
+                        <td className="py-4 px-5 text-center">
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono font-bold uppercase border ${
+                            cust.status === 'Active'
+                              ? isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : isDarkMode ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${cust.status === 'Active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                            <span>{cust.status}</span>
+                          </span>
+                        </td>
+                        <td className="py-4 px-5 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => openEditCustomer(cust)}
+                              className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                                isDarkMode 
+                                  ? 'bg-slate-800 hover:bg-slate-700 text-blue-400 border-slate-700 hover:border-blue-500/50' 
+                                  : 'bg-white hover:bg-blue-50 text-blue-600 border-slate-200 hover:border-blue-300 shadow-xs'
+                              }`}
+                              title="Edit Customer"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePrompt('CUSTOMER', cust.code, cust.name)}
+                              className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                                isDarkMode 
+                                  ? 'bg-slate-800 hover:bg-rose-950/40 text-rose-400 border-slate-700 hover:border-rose-500/50' 
+                                  : 'bg-white hover:bg-rose-50 text-rose-600 border-slate-200 hover:border-rose-300 shadow-xs'
+                              }`}
+                              title="Delete Customer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
@@ -1231,150 +1342,269 @@ export const MastersView: React.FC<MastersViewProps> = ({
       {/* 2. VENDORS TAB */}
       {/* ========================================================================= */}
       {activeTab === 'VENDORS' && (
-        <div className={`rounded-3xl border overflow-hidden transition-all shadow-xl ${
-          isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-sm'
-        }`}>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className={`border-b font-mono font-bold uppercase tracking-wider text-[11px] ${
-                  isDarkMode ? 'bg-slate-800/80 border-slate-700/80 text-slate-300' : 'bg-slate-100/90 border-slate-200 text-slate-700'
-                }`}>
-                  <th className="py-4 px-5">Vendor ID</th>
-                  <th className="py-4 px-5">Vendor Name & Category</th>
-                  <th className="py-4 px-5">Vendor Type</th>
-                  <th className="py-4 px-5">PAN (TDS) & GSTIN</th>
-                  <th className="py-4 px-5">Bank Account & IFSC</th>
-                  <th className="py-4 px-5">Contact & Mobile</th>
-                  <th className="py-4 px-5">City / State</th>
-                  <th className="py-4 px-5">Terms</th>
-                  <th className="py-4 px-5 text-center">Status</th>
-                  <th className="py-4 px-5 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200/70'}`}>
-                {filteredVendors.length === 0 ? (
-                  <tr>
-                    <td colSpan={10} className="py-14 text-center">
-                      <Users className="w-9 h-9 mx-auto mb-2 opacity-40 text-slate-400" />
-                      <p className={`text-sm font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-800'}`}>No vendor master records found.</p>
-                      <p className={`text-xs mt-1 ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>Click "New Vendor" to register a supplier or subcontractor.</p>
-                    </td>
-                  </tr>
-                ) : (
-                  filteredVendors.map((vend) => (
-                    <tr 
-                      key={vend.code}
-                      className={`transition-colors ${
-                        vend.status === 'Inactive'
-                          ? isDarkMode ? 'bg-slate-950/40 text-slate-500' : 'bg-slate-100/60 text-slate-400'
-                          : isDarkMode ? 'hover:bg-slate-800/40 text-slate-200' : 'hover:bg-slate-50 text-slate-900'
-                      }`}
+        <div className="space-y-3">
+          {/* Mobile Vendor Cards (Viewport < md) */}
+          <div className="block md:hidden space-y-3">
+            {filteredVendors.length === 0 ? (
+              <div className={`p-8 text-center rounded-3xl border ${
+                isDarkMode ? 'bg-slate-900/60 border-slate-800 text-slate-400' : 'bg-white border-slate-200 text-slate-500'
+              }`}>
+                <Users className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                <p className="text-xs font-mono font-bold">No vendor master records found.</p>
+              </div>
+            ) : (
+              filteredVendors.map((vend) => (
+                <div
+                  key={vend.code}
+                  className={`p-4 rounded-3xl border transition-all space-y-3 shadow-sm ${
+                    vend.status === 'Inactive'
+                      ? isDarkMode ? 'bg-slate-950/70 border-slate-800/80 text-slate-500' : 'bg-slate-100/60 border-slate-200 text-slate-400'
+                      : isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'
+                  }`}
+                >
+                  {/* Header: Code + Name + Status */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="font-mono font-bold text-xs text-indigo-500 dark:text-indigo-400">
+                        {vend.code}
+                      </span>
+                      <h3 className={`text-xs font-bold font-sans mt-0.5 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                        {vend.name}
+                      </h3>
+                      <div className="text-[10px] text-slate-400 font-mono mt-0.5">{vend.vendorCategory}</div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className={`px-2 py-0.5 rounded-md text-[9px] font-mono font-bold uppercase border ${
+                        vend.vendorType === 'Subcontractor / Job Worker'
+                          ? isDarkMode ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-200'
+                          : isDarkMode ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                      }`}>
+                        {vend.vendorType === 'Subcontractor / Job Worker' ? 'Subcontractor' : 'Supplier'}
+                      </span>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase border ${
+                        vend.status === 'Active'
+                          ? isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : isDarkMode ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${vend.status === 'Active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                        <span>{vend.status}</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Process Type if Subcontractor */}
+                  {vend.vendorType === 'Subcontractor / Job Worker' && vend.processType && (
+                    <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-mono">
+                      Process: <strong>{vend.processType}</strong> ({vend.turnaroundTimeDays || 3}d TAT)
+                    </div>
+                  )}
+
+                  {/* Commercial & Contact Metadata Box */}
+                  <div className={`p-2.5 rounded-2xl border space-y-1.5 text-xs font-mono ${
+                    isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50 border-slate-200'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-slate-400">PAN / GSTIN:</span>
+                      <span className="font-bold text-emerald-400">
+                        {vend.pan} {vend.gstin ? `• ${vend.gstin}` : ''}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-[10px] text-slate-400">Bank Details:</span>
+                      <span className="text-slate-300">
+                        {unmaskedBankVendorCode === vend.code ? vend.bankAccountNumber : maskBankAccount(vend.bankAccountNumber)} ({vend.ifsc})
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-[10px] text-slate-400">Contact:</span>
+                      <span className={isDarkMode ? 'text-slate-200' : 'text-slate-800'}>
+                        {vend.contactPerson} (+91 {vend.mobile})
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-[10px] text-slate-400">Location:</span>
+                      <span className="text-slate-400">
+                        {vend.city}, {vend.state}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-[10px] text-slate-400">Payment Terms:</span>
+                      <span className="text-indigo-400 font-bold">
+                        {vend.paymentTerms} {vend.creditDays ? `(${vend.creditDays}d)` : ''}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 pt-1 border-t border-slate-800/60">
+                    <button
+                      type="button"
+                      onClick={() => openEditVendor(vend)}
+                      className="flex-1 py-2 rounded-xl bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 font-mono text-xs font-bold flex items-center justify-center gap-1 cursor-pointer"
                     >
-                      <td className="py-4 px-5 font-mono font-bold text-indigo-600 dark:text-indigo-400">{vend.code}</td>
-                      <td className="py-4 px-5">
-                        <div className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{vend.name}</div>
-                        <div className="text-[10px] font-mono mt-1">
-                          <span className={`px-2 py-0.5 rounded-md font-bold border ${
-                            isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-300'
-                          }`}>{vend.vendorCategory}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-5">
-                        <span className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
-                          vend.vendorType === 'Subcontractor / Job Worker'
-                            ? isDarkMode ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-200'
-                            : isDarkMode ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' : 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                        }`}>
-                          {vend.vendorType}
-                        </span>
-                        {vend.vendorType === 'Subcontractor / Job Worker' && vend.processType && (
-                          <div className="text-[11px] text-amber-600 dark:text-amber-400 font-mono font-semibold mt-1">
-                            {vend.processType} ({vend.turnaroundTimeDays || 3}d TAT)
-                          </div>
-                        )}
-                      </td>
-                      <td className="py-4 px-5 font-mono">
-                        <div className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
-                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-                          <span>PAN: {vend.pan}</span>
-                        </div>
-                        <div className={`text-[11px] mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>GST: {vend.gstin || 'N/A'}</div>
-                      </td>
-                      <td className="py-4 px-5 font-mono">
-                        <div className={`flex items-center gap-1.5 font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>
-                          <span>{unmaskedBankVendorCode === vend.code ? vend.bankAccountNumber : maskBankAccount(vend.bankAccountNumber)}</span>
-                          <button
-                            type="button"
-                            onClick={() => setUnmaskedBankVendorCode(unmaskedBankVendorCode === vend.code ? null : vend.code)}
-                            className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-0.5 cursor-pointer"
-                            title="Toggle account mask"
-                          >
-                            {unmaskedBankVendorCode === vend.code ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                          </button>
-                        </div>
-                        <div className={`text-[10px] mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>IFSC: {vend.ifsc} • {vend.bankAccountName}</div>
-                      </td>
-                      <td className="py-4 px-5">
-                        <div className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{vend.contactPerson}</div>
-                        <div className={`text-[11px] font-mono flex items-center gap-1.5 mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                          <Phone className="w-3 h-3 text-indigo-500" />
-                          <span>+91 {vend.mobile}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-5">
-                        <div className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{vend.city}</div>
-                        <div className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{vend.state}</div>
-                      </td>
-                      <td className="py-4 px-5 font-mono">
-                        <div className={`font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{vend.paymentTerms}</div>
-                        {vend.creditDays ? <div className={`text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{vend.creditDays} Days</div> : null}
-                      </td>
-                      <td className="py-4 px-5 text-center">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono font-bold uppercase border ${
-                          vend.status === 'Active'
-                            ? isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : isDarkMode ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
-                        }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${vend.status === 'Active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                          <span>{vend.status}</span>
-                        </span>
-                      </td>
-                      <td className="py-4 px-5 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => openEditVendor(vend)}
-                            className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
-                              isDarkMode 
-                                ? 'bg-slate-800 hover:bg-slate-700 text-indigo-400 border-slate-700 hover:border-indigo-500/50' 
-                                : 'bg-white hover:bg-indigo-50 text-indigo-600 border-slate-200 hover:border-indigo-300 shadow-xs'
-                            }`}
-                            title="Edit Vendor"
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                            <span>Edit</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeletePrompt('VENDOR', vend.code, vend.name)}
-                            className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
-                              isDarkMode 
-                                ? 'bg-slate-800 hover:bg-rose-950/40 text-rose-400 border-slate-700 hover:border-rose-500/50' 
-                                : 'bg-white hover:bg-rose-50 text-rose-600 border-slate-200 hover:border-rose-300 shadow-xs'
-                            }`}
-                            title="Delete Vendor"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            <span>Delete</span>
-                          </button>
-                        </div>
+                      <Pencil className="w-3.5 h-3.5" />
+                      <span>Edit Vendor</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePrompt('VENDOR', vend.code, vend.name)}
+                      className="px-3 py-2 rounded-xl bg-rose-500/15 text-rose-400 border border-rose-500/30 font-mono text-xs font-bold flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop Table (Viewport >= md) */}
+          <div className={`hidden md:block rounded-3xl border overflow-hidden transition-all shadow-xl ${
+            isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-sm'
+          }`}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className={`border-b font-mono font-bold uppercase tracking-wider text-[11px] ${
+                    isDarkMode ? 'bg-slate-800/80 border-slate-700/80 text-slate-300' : 'bg-slate-100/90 border-slate-200 text-slate-700'
+                  }`}>
+                    <th className="py-4 px-5">Vendor ID</th>
+                    <th className="py-4 px-5">Vendor Name & Category</th>
+                    <th className="py-4 px-5">Vendor Type</th>
+                    <th className="py-4 px-5">PAN (TDS) & GSTIN</th>
+                    <th className="py-4 px-5">Bank Account & IFSC</th>
+                    <th className="py-4 px-5">Contact & Mobile</th>
+                    <th className="py-4 px-5">City / State</th>
+                    <th className="py-4 px-5">Terms</th>
+                    <th className="py-4 px-5 text-center">Status</th>
+                    <th className="py-4 px-5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200/70'}`}>
+                  {filteredVendors.length === 0 ? (
+                    <tr>
+                      <td colSpan={10} className="py-14 text-center">
+                        <Users className="w-9 h-9 mx-auto mb-2 opacity-40 text-slate-400" />
+                        <p className={`text-sm font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-800'}`}>No vendor master records found.</p>
+                        <p className={`text-xs mt-1 ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>Click "New Vendor" to register a supplier or subcontractor.</p>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    filteredVendors.map((vend) => (
+                      <tr 
+                        key={vend.code}
+                        className={`transition-colors ${
+                          vend.status === 'Inactive'
+                            ? isDarkMode ? 'bg-slate-950/40 text-slate-500' : 'bg-slate-100/60 text-slate-400'
+                            : isDarkMode ? 'hover:bg-slate-800/40 text-slate-200' : 'hover:bg-slate-50 text-slate-900'
+                        }`}
+                      >
+                        <td className="py-4 px-5 font-mono font-bold text-indigo-600 dark:text-indigo-400">{vend.code}</td>
+                        <td className="py-4 px-5">
+                          <div className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{vend.name}</div>
+                          <div className="text-[10px] font-mono mt-1">
+                            <span className={`px-2 py-0.5 rounded-md font-bold border ${
+                              isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-300'
+                            }`}>{vend.vendorCategory}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-5">
+                          <span className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
+                            vend.vendorType === 'Subcontractor / Job Worker'
+                              ? isDarkMode ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-200'
+                              : isDarkMode ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                          }`}>
+                            {vend.vendorType}
+                          </span>
+                          {vend.vendorType === 'Subcontractor / Job Worker' && vend.processType && (
+                            <div className="text-[11px] text-amber-600 dark:text-amber-400 font-mono font-semibold mt-1">
+                              {vend.processType} ({vend.turnaroundTimeDays || 3}d TAT)
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-4 px-5 font-mono">
+                          <div className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                            <span>PAN: {vend.pan}</span>
+                          </div>
+                          <div className={`text-[11px] mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>GST: {vend.gstin || 'N/A'}</div>
+                        </td>
+                        <td className="py-4 px-5 font-mono">
+                          <div className={`flex items-center gap-1.5 font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>
+                            <span>{unmaskedBankVendorCode === vend.code ? vend.bankAccountNumber : maskBankAccount(vend.bankAccountNumber)}</span>
+                            <button
+                              type="button"
+                              onClick={() => setUnmaskedBankVendorCode(unmaskedBankVendorCode === vend.code ? null : vend.code)}
+                              className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-0.5 cursor-pointer"
+                              title="Toggle account mask"
+                            >
+                              {unmaskedBankVendorCode === vend.code ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
+                          <div className={`text-[10px] mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>IFSC: {vend.ifsc} • {vend.bankAccountName}</div>
+                        </td>
+                        <td className="py-4 px-5">
+                          <div className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{vend.contactPerson}</div>
+                          <div className={`text-[11px] font-mono flex items-center gap-1.5 mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                            <Phone className="w-3 h-3 text-indigo-500" />
+                            <span>+91 {vend.mobile}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-5">
+                          <div className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{vend.city}</div>
+                          <div className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{vend.state}</div>
+                        </td>
+                        <td className="py-4 px-5 font-mono">
+                          <div className={`font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{vend.paymentTerms}</div>
+                          {vend.creditDays ? <div className={`text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{vend.creditDays} Days</div> : null}
+                        </td>
+                        <td className="py-4 px-5 text-center">
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono font-bold uppercase border ${
+                            vend.status === 'Active'
+                              ? isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : isDarkMode ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${vend.status === 'Active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                            <span>{vend.status}</span>
+                          </span>
+                        </td>
+                        <td className="py-4 px-5 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => openEditVendor(vend)}
+                              className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                                isDarkMode 
+                                  ? 'bg-slate-800 hover:bg-slate-700 text-indigo-400 border-slate-700 hover:border-indigo-500/50' 
+                                  : 'bg-white hover:bg-indigo-50 text-indigo-600 border-slate-200 hover:border-indigo-300 shadow-xs'
+                              }`}
+                              title="Edit Vendor"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePrompt('VENDOR', vend.code, vend.name)}
+                              className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                                isDarkMode 
+                                  ? 'bg-slate-800 hover:bg-rose-950/40 text-rose-400 border-slate-700 hover:border-rose-500/50' 
+                                  : 'bg-white hover:bg-rose-50 text-rose-600 border-slate-200 hover:border-rose-300 shadow-xs'
+                              }`}
+                              title="Delete Vendor"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
@@ -1383,130 +1613,244 @@ export const MastersView: React.FC<MastersViewProps> = ({
       {/* 3. ITEM CATALOG TAB */}
       {/* ========================================================================= */}
       {activeTab === 'ITEMS' && (
-        <div className={`rounded-3xl border overflow-hidden transition-all shadow-xl ${
-          isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-sm'
-        }`}>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className={`border-b font-mono font-bold uppercase tracking-wider text-[11px] ${
-                  isDarkMode ? 'bg-slate-800/80 border-slate-700/80 text-slate-300' : 'bg-slate-100/90 border-slate-200 text-slate-700'
-                }`}>
-                  <th className="py-4 px-5">Item Code</th>
-                  <th className="py-4 px-5">Item Name / Part Description</th>
-                  <th className="py-4 px-5">Type & Category</th>
-                  <th className="py-4 px-5">HSN & GST%</th>
-                  <th className="py-4 px-5">UOM</th>
-                  <th className="py-4 px-5">Standard Cost / Selling Price</th>
-                  <th className="py-4 px-5">Reorder / Stock Thresholds</th>
-                  <th className="py-4 px-5">Preferred Vendor / Store</th>
-                  <th className="py-4 px-5 text-center">Status</th>
-                  <th className="py-4 px-5 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200/70'}`}>
-                {filteredItems.length === 0 ? (
-                  <tr>
-                    <td colSpan={10} className="py-14 text-center">
-                      <Package className="w-9 h-9 mx-auto mb-2 opacity-40 text-slate-400" />
-                      <p className={`text-sm font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-800'}`}>No item catalog records found.</p>
-                      <p className={`text-xs mt-1 ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>Click "New Item" to register raw material or finished goods.</p>
-                    </td>
-                  </tr>
-                ) : (
-                  filteredItems.map((item) => (
-                    <tr 
-                      key={item.code}
-                      className={`transition-colors ${
-                        item.status === 'Inactive'
-                          ? isDarkMode ? 'bg-slate-950/40 text-slate-500' : 'bg-slate-100/60 text-slate-400'
-                          : isDarkMode ? 'hover:bg-slate-800/40 text-slate-200' : 'hover:bg-slate-50 text-slate-900'
-                      }`}
-                    >
-                      <td className="py-4 px-5 font-mono font-bold text-emerald-600 dark:text-emerald-400">{item.code}</td>
-                      <td className="py-4 px-5">
-                        <div className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{item.name || item.description}</div>
-                        {item.partNo && <div className={`text-[11px] font-mono mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Part: {item.partNo}</div>}
-                      </td>
-                      <td className="py-4 px-5">
-                        <span className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
-                          item.itemType === 'Finished Good' || item.isFinishedGoods
-                            ? isDarkMode ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' : 'bg-purple-50 text-purple-700 border-purple-200'
-                            : item.itemType === 'Raw Material'
-                            ? isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : isDarkMode ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30' : 'bg-cyan-50 text-cyan-700 border-cyan-200'
-                        }`}>
-                          {item.itemType || (item.isFinishedGoods ? 'Finished Good' : 'Raw Material')}
-                        </span>
-                        {item.category && <div className={`text-[10px] mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{item.category}</div>}
-                      </td>
-                      <td className="py-4 px-5 font-mono">
-                        <div className={`font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>HSN: {item.hsnCode}</div>
-                        <div className="text-[11px] text-blue-600 dark:text-blue-400 font-bold mt-0.5">GST {item.gstRate ?? 18}%</div>
-                      </td>
-                      <td className="py-4 px-5 font-mono font-bold text-slate-800 dark:text-slate-200">
-                        {item.unit}
-                      </td>
-                      <td className="py-4 px-5 font-mono">
-                        {item.itemType === 'Finished Good' || item.isFinishedGoods ? (
-                          <div className="text-purple-600 dark:text-purple-400 font-bold">₹{item.sellingPrice || item.saleRate || 0} <span className="text-[10px] opacity-80">(Selling)</span></div>
+        <div className="space-y-3">
+          {/* Mobile Item Cards (Viewport < md) */}
+          <div className="block md:hidden space-y-3">
+            {filteredItems.length === 0 ? (
+              <div className={`p-8 text-center rounded-3xl border ${
+                isDarkMode ? 'bg-slate-900/60 border-slate-800 text-slate-400' : 'bg-white border-slate-200 text-slate-500'
+              }`}>
+                <Package className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                <p className="text-xs font-mono font-bold">No item catalog records found.</p>
+              </div>
+            ) : (
+              filteredItems.map((item) => (
+                <div
+                  key={item.code}
+                  className={`p-4 rounded-3xl border transition-all space-y-3 shadow-sm ${
+                    item.status === 'Inactive'
+                      ? isDarkMode ? 'bg-slate-950/70 border-slate-800/80 text-slate-500' : 'bg-slate-100/60 border-slate-200 text-slate-400'
+                      : isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'
+                  }`}
+                >
+                  {/* Header: Code + Name + Status */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="font-mono font-bold text-xs text-emerald-500 dark:text-emerald-400">
+                        {item.code}
+                      </span>
+                      <h3 className={`text-xs font-bold font-sans mt-0.5 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                        {item.name || item.description}
+                      </h3>
+                      {item.partNo && (
+                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">Part: {item.partNo}</div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className={`px-2 py-0.5 rounded-md text-[9px] font-mono font-bold uppercase border ${
+                        item.itemType === 'Finished Good' || item.isFinishedGoods
+                          ? isDarkMode ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' : 'bg-purple-50 text-purple-700 border-purple-200'
+                          : item.itemType === 'Raw Material'
+                          ? isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : isDarkMode ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30' : 'bg-cyan-50 text-cyan-700 border-cyan-200'
+                      }`}>
+                        {item.itemType || (item.isFinishedGoods ? 'Finished Good' : 'Raw Material')}
+                      </span>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase border ${
+                        (item.status || 'Active') === 'Active'
+                          ? isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : isDarkMode ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${(item.status || 'Active') === 'Active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                        <span>{item.status || 'Active'}</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Commercial & Stock Metadata Box */}
+                  <div className={`p-2.5 rounded-2xl border space-y-1.5 text-xs font-mono ${
+                    isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50 border-slate-200'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-slate-400">HSN & Tax:</span>
+                      <span className={isDarkMode ? 'text-slate-200' : 'text-slate-800'}>
+                        HSN {item.hsnCode} • <strong className="text-blue-400">GST {item.gstRate ?? 18}%</strong>
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-[10px] text-slate-400">UOM / Pricing:</span>
+                      <span className="font-bold">
+                        {item.unit} • {item.itemType === 'Finished Good' || item.isFinishedGoods ? (
+                          <span className="text-purple-400">₹{item.sellingPrice || item.saleRate || 0} (Selling)</span>
                         ) : (
-                          <div className="text-emerald-600 dark:text-emerald-400 font-bold">₹{item.standardCost || item.purchaseRate || 0} <span className="text-[10px] opacity-80">(Std Cost)</span></div>
+                          <span className="text-emerald-400">₹{item.standardCost || item.purchaseRate || 0} (Std Cost)</span>
                         )}
-                      </td>
-                      <td className="py-4 px-5 font-mono">
-                        <div className="text-amber-600 dark:text-amber-400 font-bold">Reorder: {item.reorderLevel} {item.unit}</div>
-                        <div className={`text-[10px] mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Min: {item.minStock || 0} • Max: {item.maxStock || 0}</div>
-                      </td>
-                      <td className="py-4 px-5">
-                        <div className={`font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{item.preferredVendor || '—'}</div>
-                        <div className={`text-[10px] font-mono mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{item.defaultWarehouse || item.storeLocation}</div>
-                      </td>
-                      <td className="py-4 px-5 text-center">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono font-bold uppercase border ${
-                          (item.status || 'Active') === 'Active'
-                            ? isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : isDarkMode ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
-                        }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${(item.status || 'Active') === 'Active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                          <span>{item.status || 'Active'}</span>
-                        </span>
-                      </td>
-                      <td className="py-4 px-5 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => openEditItem(item)}
-                            className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
-                              isDarkMode 
-                                ? 'bg-slate-800 hover:bg-slate-700 text-emerald-400 border-slate-700 hover:border-emerald-500/50' 
-                                : 'bg-white hover:bg-emerald-50 text-emerald-600 border-slate-200 hover:border-emerald-300 shadow-xs'
-                            }`}
-                            title="Edit Item"
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                            <span>Edit</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeletePrompt('ITEM', item.code, item.name || item.description || item.code)}
-                            className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
-                              isDarkMode 
-                                ? 'bg-slate-800 hover:bg-rose-950/40 text-rose-400 border-slate-700 hover:border-rose-500/50' 
-                                : 'bg-white hover:bg-rose-50 text-rose-600 border-slate-200 hover:border-rose-300 shadow-xs'
-                            }`}
-                            title="Delete Item"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            <span>Delete</span>
-                          </button>
-                        </div>
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-[10px] text-slate-400">Reorder / Stock:</span>
+                      <span className="text-amber-400 font-bold">
+                        Level: {item.reorderLevel} {item.unit} (Min: {item.minStock || 0} • Max: {item.maxStock || 0})
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-[10px] text-slate-400">Warehouse:</span>
+                      <span className="text-slate-400">
+                        {item.defaultWarehouse || item.storeLocation || 'Main Store'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 pt-1 border-t border-slate-800/60">
+                    <button
+                      type="button"
+                      onClick={() => openEditItem(item)}
+                      className="flex-1 py-2 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-mono text-xs font-bold flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      <span>Edit Item</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePrompt('ITEM', item.code, item.name || item.description || item.code)}
+                      className="px-3 py-2 rounded-xl bg-rose-500/15 text-rose-400 border border-rose-500/30 font-mono text-xs font-bold flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop Table (Viewport >= md) */}
+          <div className={`hidden md:block rounded-3xl border overflow-hidden transition-all shadow-xl ${
+            isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-sm'
+          }`}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className={`border-b font-mono font-bold uppercase tracking-wider text-[11px] ${
+                    isDarkMode ? 'bg-slate-800/80 border-slate-700/80 text-slate-300' : 'bg-slate-100/90 border-slate-200 text-slate-700'
+                  }`}>
+                    <th className="py-4 px-5">Item Code</th>
+                    <th className="py-4 px-5">Item Name / Part Description</th>
+                    <th className="py-4 px-5">Type & Category</th>
+                    <th className="py-4 px-5">HSN & GST%</th>
+                    <th className="py-4 px-5">UOM</th>
+                    <th className="py-4 px-5">Standard Cost / Selling Price</th>
+                    <th className="py-4 px-5">Reorder / Stock Thresholds</th>
+                    <th className="py-4 px-5">Preferred Vendor / Store</th>
+                    <th className="py-4 px-5 text-center">Status</th>
+                    <th className="py-4 px-5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200/70'}`}>
+                  {filteredItems.length === 0 ? (
+                    <tr>
+                      <td colSpan={10} className="py-14 text-center">
+                        <Package className="w-9 h-9 mx-auto mb-2 opacity-40 text-slate-400" />
+                        <p className={`text-sm font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-800'}`}>No item catalog records found.</p>
+                        <p className={`text-xs mt-1 ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>Click "New Item" to register raw material or finished goods.</p>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    filteredItems.map((item) => (
+                      <tr 
+                        key={item.code}
+                        className={`transition-colors ${
+                          item.status === 'Inactive'
+                            ? isDarkMode ? 'bg-slate-950/40 text-slate-500' : 'bg-slate-100/60 text-slate-400'
+                            : isDarkMode ? 'hover:bg-slate-800/40 text-slate-200' : 'hover:bg-slate-50 text-slate-900'
+                        }`}
+                      >
+                        <td className="py-4 px-5 font-mono font-bold text-emerald-600 dark:text-emerald-400">{item.code}</td>
+                        <td className="py-4 px-5">
+                          <div className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{item.name || item.description}</div>
+                          {item.partNo && <div className={`text-[11px] font-mono mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Part: {item.partNo}</div>}
+                        </td>
+                        <td className="py-4 px-5">
+                          <span className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
+                            item.itemType === 'Finished Good' || item.isFinishedGoods
+                              ? isDarkMode ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' : 'bg-purple-50 text-purple-700 border-purple-200'
+                              : item.itemType === 'Raw Material'
+                              ? isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : isDarkMode ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30' : 'bg-cyan-50 text-cyan-700 border-cyan-200'
+                          }`}>
+                            {item.itemType || (item.isFinishedGoods ? 'Finished Good' : 'Raw Material')}
+                          </span>
+                          {item.category && <div className={`text-[10px] mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{item.category}</div>}
+                        </td>
+                        <td className="py-4 px-5 font-mono">
+                          <div className={`font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>HSN: {item.hsnCode}</div>
+                          <div className="text-[11px] text-blue-600 dark:text-blue-400 font-bold mt-0.5">GST {item.gstRate ?? 18}%</div>
+                        </td>
+                        <td className="py-4 px-5 font-mono font-bold text-slate-800 dark:text-slate-200">
+                          {item.unit}
+                        </td>
+                        <td className="py-4 px-5 font-mono">
+                          {item.itemType === 'Finished Good' || item.isFinishedGoods ? (
+                            <div className="text-purple-600 dark:text-purple-400 font-bold">₹{item.sellingPrice || item.saleRate || 0} <span className="text-[10px] opacity-80">(Selling)</span></div>
+                          ) : (
+                            <div className="text-emerald-600 dark:text-emerald-400 font-bold">₹{item.standardCost || item.purchaseRate || 0} <span className="text-[10px] opacity-80">(Std Cost)</span></div>
+                          )}
+                        </td>
+                        <td className="py-4 px-5 font-mono">
+                          <div className="text-amber-600 dark:text-amber-400 font-bold">Reorder: {item.reorderLevel} {item.unit}</div>
+                          <div className={`text-[10px] mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Min: {item.minStock || 0} • Max: {item.maxStock || 0}</div>
+                        </td>
+                        <td className="py-4 px-5">
+                          <div className={`font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{item.preferredVendor || '—'}</div>
+                          <div className={`text-[10px] font-mono mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{item.defaultWarehouse || item.storeLocation}</div>
+                        </td>
+                        <td className="py-4 px-5 text-center">
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono font-bold uppercase border ${
+                            (item.status || 'Active') === 'Active'
+                              ? isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : isDarkMode ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${(item.status || 'Active') === 'Active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                            <span>{item.status || 'Active'}</span>
+                          </span>
+                        </td>
+                        <td className="py-4 px-5 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => openEditItem(item)}
+                              className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                                isDarkMode 
+                                  ? 'bg-slate-800 hover:bg-slate-700 text-emerald-400 border-slate-700 hover:border-emerald-500/50' 
+                                  : 'bg-white hover:bg-emerald-50 text-emerald-600 border-slate-200 hover:border-emerald-300 shadow-xs'
+                              }`}
+                              title="Edit Item"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePrompt('ITEM', item.code, item.name || item.description || item.code)}
+                              className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                                isDarkMode 
+                                  ? 'bg-slate-800 hover:bg-rose-950/40 text-rose-400 border-slate-700 hover:border-rose-500/50' 
+                                  : 'bg-white hover:bg-rose-50 text-rose-600 border-slate-200 hover:border-rose-300 shadow-xs'
+                              }`}
+                              title="Delete Item"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
@@ -1515,121 +1859,221 @@ export const MastersView: React.FC<MastersViewProps> = ({
       {/* 4. MACHINE FLEET TAB */}
       {/* ========================================================================= */}
       {activeTab === 'MACHINES' && (
-        <div className={`rounded-3xl border overflow-hidden transition-all shadow-xl ${
-          isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-sm'
-        }`}>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className={`border-b font-mono font-bold uppercase tracking-wider text-[11px] ${
-                  isDarkMode ? 'bg-slate-800/80 border-slate-700/80 text-slate-300' : 'bg-slate-100/90 border-slate-200 text-slate-700'
-                }`}>
-                  <th className="py-4 px-5">Machine ID</th>
-                  <th className="py-4 px-5">Machine Name (Job Card Ref)</th>
-                  <th className="py-4 px-5">Machine Type</th>
-                  <th className="py-4 px-5">Department & Location</th>
-                  <th className="py-4 px-5">Capacity & Shift</th>
-                  <th className="py-4 px-5">Operating Hours / Day</th>
-                  <th className="py-4 px-5">Hourly Cost (₹)</th>
-                  <th className="py-4 px-5">Responsible Person</th>
-                  <th className="py-4 px-5 text-center">Status</th>
-                  <th className="py-4 px-5 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200/70'}`}>
-                {filteredMachines.length === 0 ? (
-                  <tr>
-                    <td colSpan={10} className="py-14 text-center">
-                      <Wrench className="w-9 h-9 mx-auto mb-2 opacity-40 text-slate-400" />
-                      <p className={`text-sm font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-800'}`}>No machine records found.</p>
-                      <p className={`text-xs mt-1 ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>Click "New Machine" to register production assets.</p>
-                    </td>
-                  </tr>
-                ) : (
-                  filteredMachines.map((mch) => (
-                    <tr 
-                      key={mch.code}
-                      className={`transition-colors ${
-                        mch.status === 'Under Maintenance' || mch.status === 'Decommissioned'
-                          ? isDarkMode ? 'bg-amber-950/20 text-slate-300' : 'bg-amber-50/70 text-slate-900'
-                          : isDarkMode ? 'hover:bg-slate-800/40 text-slate-200' : 'hover:bg-slate-50 text-slate-900'
-                      }`}
-                    >
-                      <td className="py-4 px-5 font-mono font-bold text-amber-600 dark:text-amber-400">{mch.code}</td>
-                      <td className={`py-4 px-5 font-bold font-mono text-sm ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+        <div className="space-y-3">
+          {/* Mobile Machine Cards (Viewport < md) */}
+          <div className="block md:hidden space-y-3">
+            {filteredMachines.length === 0 ? (
+              <div className={`p-8 text-center rounded-3xl border ${
+                isDarkMode ? 'bg-slate-900/60 border-slate-800 text-slate-400' : 'bg-white border-slate-200 text-slate-500'
+              }`}>
+                <Wrench className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                <p className="text-xs font-mono font-bold">No machine records found.</p>
+              </div>
+            ) : (
+              filteredMachines.map((mch) => (
+                <div
+                  key={mch.code}
+                  className={`p-4 rounded-3xl border transition-all space-y-3 shadow-sm ${
+                    mch.status === 'Under Maintenance' || mch.status === 'Decommissioned'
+                      ? isDarkMode ? 'bg-amber-950/20 border-amber-900/40' : 'bg-amber-50/70 border-amber-200'
+                      : isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'
+                  }`}
+                >
+                  {/* Header: Code + Name + Status */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="font-mono font-bold text-xs text-amber-500 dark:text-amber-400">
+                        {mch.code}
+                      </span>
+                      <h3 className={`text-xs font-bold font-sans mt-0.5 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                         {mch.name}
-                      </td>
-                      <td className="py-4 px-5">
-                        <span className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
-                          isDarkMode ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-200'
-                        }`}>
-                          {mch.type}
-                        </span>
-                      </td>
-                      <td className="py-4 px-5">
-                        <div className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{mch.department}</div>
-                        <div className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{mch.location}</div>
-                      </td>
-                      <td className="py-4 px-5 font-mono">
-                        <div className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{mch.capacity ? `${mch.capacity} ${mch.capacityUom}` : 'Standard Capacity'}</div>
-                        <div className={`text-[10px] mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{mch.shift || 'General-Day'}</div>
-                      </td>
-                      <td className="py-4 px-5 font-mono">
-                        <span className={`font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{mch.operatingHours || 16} hrs/day</span>
-                      </td>
-                      <td className="py-4 px-5 font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                        ₹{mch.hourlyCost || 500}/hr
-                      </td>
-                      <td className={`py-4 px-5 font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                      </h3>
+                      <div className="text-[10px] text-slate-400 font-mono mt-0.5">{mch.department} • {mch.location}</div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className={`px-2 py-0.5 rounded-md text-[9px] font-mono font-bold uppercase border ${
+                        isDarkMode ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-200'
+                      }`}>
+                        {mch.type}
+                      </span>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase border ${
+                        mch.status === 'Active'
+                          ? isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : mch.status === 'Under Maintenance'
+                          ? isDarkMode ? 'bg-amber-500/10 text-amber-400 border-amber-500/30 animate-pulse' : 'bg-amber-50 text-amber-800 border-amber-200 animate-pulse'
+                          : isDarkMode ? 'bg-slate-500/10 text-slate-400 border-slate-500/30' : 'bg-slate-100 text-slate-700 border-slate-300'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${mch.status === 'Active' ? 'bg-emerald-500' : mch.status === 'Under Maintenance' ? 'bg-amber-500' : 'bg-slate-400'}`} />
+                        <span>{mch.status}</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Machine Specifications Box */}
+                  <div className={`p-2.5 rounded-2xl border space-y-1.5 text-xs font-mono ${
+                    isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50 border-slate-200'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-slate-400">Capacity & Shift:</span>
+                      <span className={isDarkMode ? 'text-slate-200' : 'text-slate-800'}>
+                        {mch.capacity ? `${mch.capacity} ${mch.capacityUom}` : 'Standard'} • {mch.shift || 'General-Day'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-[10px] text-slate-400">Operation & Cost:</span>
+                      <span className="font-bold text-emerald-400">
+                        ₹{mch.hourlyCost || 500}/hr • {mch.operatingHours || 16} hrs/day
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-[10px] text-slate-400">Responsible:</span>
+                      <span className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>
                         {mch.responsiblePerson || '—'}
-                      </td>
-                      <td className="py-4 px-5 text-center">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono font-bold uppercase border ${
-                          mch.status === 'Active'
-                            ? isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : mch.status === 'Under Maintenance'
-                            ? isDarkMode ? 'bg-amber-500/10 text-amber-400 border-amber-500/30 animate-pulse' : 'bg-amber-50 text-amber-800 border-amber-200 animate-pulse'
-                            : isDarkMode ? 'bg-slate-500/10 text-slate-400 border-slate-500/30' : 'bg-slate-100 text-slate-700 border-slate-300'
-                        }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${mch.status === 'Active' ? 'bg-emerald-500' : mch.status === 'Under Maintenance' ? 'bg-amber-500' : 'bg-slate-400'}`} />
-                          <span>{mch.status}</span>
-                        </span>
-                      </td>
-                      <td className="py-4 px-5 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => openEditMachine(mch)}
-                            className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
-                              isDarkMode 
-                                ? 'bg-slate-800 hover:bg-slate-700 text-amber-400 border-slate-700 hover:border-amber-500/50' 
-                                : 'bg-white hover:bg-amber-50 text-amber-600 border-slate-200 hover:border-amber-300 shadow-xs'
-                            }`}
-                            title="Edit Machine"
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                            <span>Edit</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeletePrompt('MACHINE', mch.code, mch.name)}
-                            className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
-                              isDarkMode 
-                                ? 'bg-slate-800 hover:bg-rose-950/40 text-rose-400 border-slate-700 hover:border-rose-500/50' 
-                                : 'bg-white hover:bg-rose-50 text-rose-600 border-slate-200 hover:border-rose-300 shadow-xs'
-                            }`}
-                            title="Delete Machine"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            <span>Delete</span>
-                          </button>
-                        </div>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 pt-1 border-t border-slate-800/60">
+                    <button
+                      type="button"
+                      onClick={() => openEditMachine(mch)}
+                      className="flex-1 py-2 rounded-xl bg-amber-500/15 text-amber-400 border border-amber-500/30 font-mono text-xs font-bold flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      <span>Edit Machine</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePrompt('MACHINE', mch.code, mch.name)}
+                      className="px-3 py-2 rounded-xl bg-rose-500/15 text-rose-400 border border-rose-500/30 font-mono text-xs font-bold flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop Table (Viewport >= md) */}
+          <div className={`hidden md:block rounded-3xl border overflow-hidden transition-all shadow-xl ${
+            isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-sm'
+          }`}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className={`border-b font-mono font-bold uppercase tracking-wider text-[11px] ${
+                    isDarkMode ? 'bg-slate-800/80 border-slate-700/80 text-slate-300' : 'bg-slate-100/90 border-slate-200 text-slate-700'
+                  }`}>
+                    <th className="py-4 px-5">Machine ID</th>
+                    <th className="py-4 px-5">Machine Name (Job Card Ref)</th>
+                    <th className="py-4 px-5">Machine Type</th>
+                    <th className="py-4 px-5">Department & Location</th>
+                    <th className="py-4 px-5">Capacity & Shift</th>
+                    <th className="py-4 px-5">Operating Hours / Day</th>
+                    <th className="py-4 px-5">Hourly Cost (₹)</th>
+                    <th className="py-4 px-5">Responsible Person</th>
+                    <th className="py-4 px-5 text-center">Status</th>
+                    <th className="py-4 px-5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200/70'}`}>
+                  {filteredMachines.length === 0 ? (
+                    <tr>
+                      <td colSpan={10} className="py-14 text-center">
+                        <Wrench className="w-9 h-9 mx-auto mb-2 opacity-40 text-slate-400" />
+                        <p className={`text-sm font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-800'}`}>No machine records found.</p>
+                        <p className={`text-xs mt-1 ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>Click "New Machine" to register production assets.</p>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    filteredMachines.map((mch) => (
+                      <tr 
+                        key={mch.code}
+                        className={`transition-colors ${
+                          mch.status === 'Under Maintenance' || mch.status === 'Decommissioned'
+                            ? isDarkMode ? 'bg-amber-950/20 text-slate-300' : 'bg-amber-50/70 text-slate-900'
+                            : isDarkMode ? 'hover:bg-slate-800/40 text-slate-200' : 'hover:bg-slate-50 text-slate-900'
+                        }`}
+                      >
+                        <td className="py-4 px-5 font-mono font-bold text-amber-600 dark:text-amber-400">{mch.code}</td>
+                        <td className={`py-4 px-5 font-bold font-mono text-sm ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                          {mch.name}
+                        </td>
+                        <td className="py-4 px-5">
+                          <span className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
+                            isDarkMode ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-200'
+                          }`}>
+                            {mch.type}
+                          </span>
+                        </td>
+                        <td className="py-4 px-5">
+                          <div className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{mch.department}</div>
+                          <div className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{mch.location}</div>
+                        </td>
+                        <td className="py-4 px-5 font-mono">
+                          <div className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{mch.capacity ? `${mch.capacity} ${mch.capacityUom}` : 'Standard Capacity'}</div>
+                          <div className={`text-[10px] mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{mch.shift || 'General-Day'}</div>
+                        </td>
+                        <td className="py-4 px-5 font-mono">
+                          <span className={`font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{mch.operatingHours || 16} hrs/day</span>
+                        </td>
+                        <td className="py-4 px-5 font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                          ₹{mch.hourlyCost || 500}/hr
+                        </td>
+                        <td className={`py-4 px-5 font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                          {mch.responsiblePerson || '—'}
+                        </td>
+                        <td className="py-4 px-5 text-center">
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono font-bold uppercase border ${
+                            mch.status === 'Active'
+                              ? isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : mch.status === 'Under Maintenance'
+                              ? isDarkMode ? 'bg-amber-500/10 text-amber-400 border-amber-500/30 animate-pulse' : 'bg-amber-50 text-amber-800 border-amber-200 animate-pulse'
+                              : isDarkMode ? 'bg-slate-500/10 text-slate-400 border-slate-500/30' : 'bg-slate-100 text-slate-700 border-slate-300'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${mch.status === 'Active' ? 'bg-emerald-500' : mch.status === 'Under Maintenance' ? 'bg-amber-500' : 'bg-slate-400'}`} />
+                            <span>{mch.status}</span>
+                          </span>
+                        </td>
+                        <td className="py-4 px-5 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => openEditMachine(mch)}
+                              className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                                isDarkMode 
+                                  ? 'bg-slate-800 hover:bg-slate-700 text-amber-400 border-slate-700 hover:border-amber-500/50' 
+                                  : 'bg-white hover:bg-amber-50 text-amber-600 border-slate-200 hover:border-amber-300 shadow-xs'
+                              }`}
+                              title="Edit Machine"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePrompt('MACHINE', mch.code, mch.name)}
+                              className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                                isDarkMode 
+                                  ? 'bg-slate-800 hover:bg-rose-950/40 text-rose-400 border-slate-700 hover:border-rose-500/50' 
+                                  : 'bg-white hover:bg-rose-50 text-rose-600 border-slate-200 hover:border-rose-300 shadow-xs'
+                              }`}
+                              title="Delete Machine"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

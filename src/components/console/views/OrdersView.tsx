@@ -25,10 +25,14 @@ import {
   Flame,
   Layers,
   FileSpreadsheet,
-  RefreshCw
+  RefreshCw,
+  ArrowRight,
+  Building2,
+  Calendar,
+  Layers3
 } from 'lucide-react';
 import { CustomerOrder, OrderStatus, OrderLineItem, CustomerMaster, QCInspection, MasterItem } from '../../../types/console';
-import { ORDER_STAGE_LABELS, ORDER_STAGE_STEPS, OrderStage, OrderSubType } from '../../../utils/orderStateMachine';
+import { ORDER_STAGE_LABELS, ORDER_STAGE_STEPS, OrderStage, OrderSubType, normalizeOrderState } from '../../../utils/orderStateMachine';
 import { Modal } from '../../common/Modal';
 
 interface OrdersViewProps {
@@ -138,7 +142,6 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
   };
 
   const addLineItem = () => {
-    // Pick the next available master item if present
     const availableMaster = masters[lines.length % Math.max(1, masters.length)];
     if (availableMaster) {
       const defaultRate = Number(availableMaster.sellingPrice || availableMaster.saleRate || (availableMaster.standardCost ? availableMaster.standardCost : 100));
@@ -187,7 +190,6 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
     const found = customers.find(c => c.code === code || c.id === code);
     if (found) {
       setNewCustomer(found.name);
-      // Simulate customer credit check
       if (found.name.toLowerCase().includes('mahindra') || found.notes?.toLowerCase().includes('overdue') || (found as any).isOverdue) {
         setIsCustomerCreditHeld(true);
       } else {
@@ -201,151 +203,124 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
     }
   };
 
-  const selectedCustomer = customers.find(c => c.code === selectedCustomerCode || c.id === selectedCustomerCode);
-
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setValidationError(null);
 
-    // Customer Master Validation
-    if (!newCustomer || !selectedCustomerCode) {
-      if (customers.length === 0) {
-        setValidationError('No Customer Master found. Please create a customer in the Customers master first.');
-      } else {
-        setValidationError('Please select a valid customer from the Customer Master.');
-      }
+    if (customers.length > 0 && !selectedCustomerCode) {
+      setValidationError('Please select a verified customer from the Customer Master index.');
       return;
     }
 
-    // Customer Credit Hold Check
-    if (isCustomerCreditHeld) {
-      if (!creditOverrideBy || !creditOverrideReason) {
-        setValidationError(`Customer Credit Hold Gate Blocked: "${newCustomer}" has overdue receivables exceeding 90 days. An explicit Owner-level override authorization and reason are mandatory.`);
-        return;
-      }
-    }
-
-    // Line Items Validation
-    if (lines.length === 0) {
-      setValidationError('At least one order line item is required.');
+    if (!newCustomer.trim()) {
+      setValidationError('Customer Name is required.');
       return;
     }
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      if (!line.itemCode || !line.itemDescription) {
-        setValidationError(`Line ${i + 1}: Please select a valid item from the Master Item Catalog.`);
-        return;
-      }
-      if (Number(line.orderQty) <= 0) {
-        setValidationError(`Line ${i + 1}: Order quantity must be greater than 0.`);
-        return;
-      }
-      if (Number(line.rate) < 0) {
-        setValidationError(`Line ${i + 1}: Unit rate cannot be negative.`);
-        return;
-      }
+
+    if (isCustomerCreditHeld && !creditOverrideBy.trim()) {
+      setValidationError('Customer has an active 90-Day Credit Overdue / Hold. An authorized Owner override username is required to proceed.');
+      return;
     }
 
-    onCreateOrder({
-      id: `ord-${Date.now()}`,
-      poNo: newPoNo,
-      customerName: newCustomer,
-      poDate: newPoDate,
-      orderDate: newPoDate,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      deliveryDate: newDeliveryDate,
-      status: 'DRAFT',
-      stage: 'DRAFT',
-      progressStep: 0,
+    if (!newPoNo.trim()) {
+      setValidationError('Customer PO Number is required.');
+      return;
+    }
+
+    if (lines.length === 0 || lines.some(l => !l.itemCode || Number(l.orderQty) <= 0 || Number(l.rate) <= 0)) {
+      setValidationError('Please specify at least one valid line item with positive quantity and unit rate.');
+      return;
+    }
+
+    const firstLine = lines[0];
+
+    const orderPayload: Partial<CustomerOrder> = {
+      id: `ord_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+      poNo: newPoNo.trim(),
+      customerName: newCustomer.trim(),
+      partCode: firstLine.itemCode,
+      partDescription: firstLine.itemDescription,
+      drawingRevision: firstLine.drawingRevision,
+      orderedQty: totalOrderQty,
+      rate: firstLine.rate,
       grossAmount: totalCalculatedGross,
-      taxCategory: newTaxCategory,
-      remark: newRemark,
+      netAmount: totalCalculatedGross * 1.18,
+      status: 'CONFIRMED',
+      stage: 'PO_RECEIVED',
+      progressStep: 1,
+      orderDate: newPoDate,
+      poDate: newPoDate,
+      deliveryDate: newDeliveryDate,
       subType: newSubType,
-      blanketPoId: newSubType === 'BLANKET_CALLOFF' ? newBlanketPoId : undefined,
-      blanketPoBalance: newSubType === 'BLANKET_CALLOFF' ? newBlanketBalance - totalOrderQty : undefined,
-      drawingRevision: 'REV-A',
-      masterDrawingRevision: 'REV-A',
-      isDrawingRevisionMatched: true,
       isCustomerOnCreditHold: isCustomerCreditHeld,
       creditHoldOverrideBy: isCustomerCreditHeld ? creditOverrideBy : undefined,
       creditHoldOverrideReason: isCustomerCreditHeld ? creditOverrideReason : undefined,
+      blanketPoId: newSubType === 'BLANKET_CALLOFF' ? newBlanketPoId : undefined,
+      blanketBalanceQty: newSubType === 'BLANKET_CALLOFF' ? newBlanketBalance : undefined,
       lines: lines.map((l, idx) => ({
-        id: `line-${Date.now()}-${idx}`,
+        id: `line_${Date.now()}_${idx}`,
         itemCode: l.itemCode,
-        itemDescription: l.itemDescription,
-        custPartNo: l.custPartNo,
-        orderQty: l.orderQty,
+        partCode: l.itemCode,
+        description: l.itemDescription,
+        orderQty: Number(l.orderQty),
         unit: l.unit,
-        rate: l.rate,
+        unitRate: Number(l.rate),
+        rate: Number(l.rate),
+        amount: Number(l.orderQty) * Number(l.rate),
+        grossAmount: Number(l.orderQty) * Number(l.rate),
+        drawingRevision: l.drawingRevision,
+        producedQty: 0,
         dispatchedQty: 0,
-        pendingQty: l.orderQty,
-        drawingRevision: l.drawingRevision
+        invoicedQty: 0
       })),
-      jobCards: [],
-      dispatches: []
-    });
+      createdAt: new Date().toISOString()
+    };
 
+    onCreateOrder(orderPayload);
     setShowNewModal(false);
   };
 
+  // Filter orders
   const filteredOrders = orders.filter(o => {
+    const q = searchQuery.toLowerCase().trim();
+    const matchesSearch = !q ||
+      o.poNo.toLowerCase().includes(q) ||
+      o.customerName.toLowerCase().includes(q) ||
+      (o.partDescription && o.partDescription.toLowerCase().includes(q)) ||
+      (o.partCode && o.partCode.toLowerCase().includes(q)) ||
+      (o.drawingRevision && o.drawingRevision.toLowerCase().includes(q)) ||
+      (o.heatLotNumber && o.heatLotNumber.toLowerCase().includes(q));
+
     const matchesStatus = statusFilter === 'ALL' || o.status === statusFilter || o.stage === statusFilter;
-    const matchesSubType = subTypeFilter === 'ALL' || o.subType === subTypeFilter;
-    const matchesSearch = o.poNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      o.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (o.drawingRevision || '').toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesStatus && matchesSubType && matchesSearch;
+    const matchesSubType = subTypeFilter === 'ALL' || (o.subType || 'FRESH_PO') === subTypeFilter;
+
+    return matchesSearch && matchesStatus && matchesSubType;
   });
 
-  // Helper to parse date strings across multiple international and ISO formats
-  const parseDateToTimestamp = (val?: string | number | null): number => {
-    if (!val) return 0;
-    if (typeof val === 'number') return val > 0 ? val : 0;
-    const str = String(val).trim();
-    if (!str) return 0;
-
-    // 1. Numeric timestamp string (e.g. '1786858123456')
-    if (/^\d{10,13}$/.test(str)) {
-      const num = parseInt(str, 10);
-      if (!isNaN(num) && num > 0) return num;
+  const parseDateToTimestamp = (dateVal: any): number => {
+    if (!dateVal) return 0;
+    if (typeof dateVal === 'number') return dateVal;
+    if (dateVal instanceof Date) return dateVal.getTime();
+    if (typeof dateVal === 'string') {
+      const parsed = Date.parse(dateVal);
+      if (!isNaN(parsed)) return parsed;
+      const parts = dateVal.split(/[-/]/);
+      if (parts.length === 3) {
+        const year = parts[0].length === 4 ? Number(parts[0]) : Number(parts[2]);
+        const month = Number(parts[1]) - 1;
+        const day = parts[0].length === 4 ? Number(parts[2]) : Number(parts[0]);
+        const d = new Date(year, month, day);
+        if (!isNaN(d.getTime())) return d.getTime();
+      }
     }
-
-    // 2. ID with embedded timestamp (e.g. 'ord-1786858123456')
-    const idMatch = str.match(/ord-(\d{10,13})/);
-    if (idMatch) {
-      const num = parseInt(idMatch[1], 10);
-      if (!isNaN(num) && num > 0) return num;
-    }
-
-    // 3. Indian / British date format DD/MM/YYYY or DD-MM-YYYY
-    const ddmmyyyy = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
-    if (ddmmyyyy) {
-      const day = parseInt(ddmmyyyy[1], 10);
-      const month = parseInt(ddmmyyyy[2], 10) - 1;
-      const year = parseInt(ddmmyyyy[3], 10);
-      const d = new Date(year, month, day).getTime();
-      if (!isNaN(d) && d > 0) return d;
-    }
-
-    // 4. ISO format YYYY-MM-DD or standard parseable string
-    const parsed = new Date(str).getTime();
-    if (!isNaN(parsed) && parsed > 0) {
-      return parsed;
-    }
-
     return 0;
   };
 
-  // Helper to extract robust timestamp from order records
   const getOrderTime = (o: CustomerOrder): number => {
     if (o.createdAt) {
       const t = parseDateToTimestamp(o.createdAt);
       if (t > 0) return t;
     }
-    const idTime = parseDateToTimestamp(o.id);
-    if (idTime > 0) return idTime;
-
     if (o.poDate) {
       const t = parseDateToTimestamp(o.poDate);
       if (t > 0) return t;
@@ -358,7 +333,6 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
       const t = parseDateToTimestamp(o.deliveryDate);
       if (t > 0) return t;
     }
-
     return 0;
   };
 
@@ -375,7 +349,6 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
       const cmp = (a.grossAmount || 0) - (b.grossAmount || 0);
       return sortDirection === 'ASC' ? cmp : -cmp;
     }
-    // Default RECENCY: newest orders first (createdAt / poDate / ID DESC)
     const timeB = getOrderTime(b);
     const timeA = getOrderTime(a);
     if (timeB !== timeA) {
@@ -386,67 +359,263 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
       : String(b.id || b.poNo).localeCompare(String(a.id || a.poNo), undefined, { numeric: true });
   });
 
-  const getStatusBadge = (status: string, stage?: string) => {
-    const key = stage || status;
-    switch (key) {
-      case 'PO_RECEIVED':
-      case 'CONFIRMED':
-        return {
-          bg: isDarkMode ? 'bg-blue-500/15 text-blue-400 border-blue-500/30' : 'bg-blue-50 text-blue-700 border-blue-200',
-          dot: 'bg-blue-500',
-          label: '1. PO Received'
-        };
-      case 'MATERIAL_CHECKED':
-        return {
-          bg: isDarkMode ? 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30' : 'bg-indigo-50 text-indigo-700 border-indigo-200',
-          dot: 'bg-indigo-500',
-          label: '3. Material Checked'
-        };
-      case 'MATERIAL_ISSUED':
-      case 'IN_PRODUCTION':
-        return {
-          bg: isDarkMode ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-200',
-          dot: 'bg-amber-500',
-          label: '5. In Production'
-        };
-      case 'QC_INSPECTION':
-        return {
-          bg: isDarkMode ? 'bg-purple-500/15 text-purple-400 border-purple-500/30' : 'bg-purple-50 text-purple-700 border-purple-200',
-          dot: 'bg-purple-500',
-          label: '6. QC Cleared'
-        };
-      case 'READY_TO_DISPATCH':
-        return {
-          bg: isDarkMode ? 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30' : 'bg-cyan-50 text-cyan-700 border-cyan-200',
-          dot: 'bg-cyan-500',
-          label: '7. Ready to Dispatch'
-        };
-      case 'DISPATCHED':
-        return {
-          bg: isDarkMode ? 'bg-teal-500/15 text-teal-400 border-teal-500/30' : 'bg-teal-50 text-teal-700 border-teal-200',
-          dot: 'bg-teal-500',
-          label: '8. Dispatched'
-        };
-      case 'INVOICED':
-        return {
-          bg: isDarkMode ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200',
-          dot: 'bg-emerald-500',
-          label: '9. Invoiced'
-        };
-      case 'CLOSED':
-      case 'PAID':
-        return {
-          bg: isDarkMode ? 'bg-slate-500/15 text-slate-400 border-slate-500/30' : 'bg-slate-100 text-slate-700 border-slate-300',
-          dot: 'bg-slate-500',
-          label: '10. Closed'
-        };
-      default:
-        return {
-          bg: isDarkMode ? 'bg-blue-500/15 text-blue-400 border-blue-500/30' : 'bg-blue-50 text-blue-700 border-blue-200',
-          dot: 'bg-blue-500',
-          label: status
-        };
+  const ORDER_PROGRESSION_STEPS = [
+    { code: 'PO', label: 'PO', fullLabel: 'PO Confirmed' },
+    { code: 'MAT', label: 'Mat', fullLabel: 'Material Checked' },
+    { code: 'PROD', label: 'Prod', fullLabel: 'Production' },
+    { code: 'QC', label: 'QC', fullLabel: 'Quality Check & NCR' },
+    { code: 'PDI', label: 'PDI', fullLabel: 'Pre-Dispatch Insp.' },
+    { code: 'DISP', label: 'Disp', fullLabel: 'Outward Dispatch' },
+    { code: 'INV', label: 'Inv', fullLabel: 'GST Tax Invoice' },
+    { code: 'DONE', label: 'Done', fullLabel: 'Delivered & Closed' },
+  ];
+
+  const STAGE_THEMES: Record<number, { code: string; label: string; activeColor: string; activeBadge: string; completedColor: string; badgeDot: string }> = {
+    0: {
+      code: 'PO',
+      label: 'PO Received',
+      activeColor: 'bg-slate-400 shadow-[0_0_12px_rgba(148,163,184,0.8)] ring-1 ring-slate-300 scale-105',
+      activeBadge: 'bg-slate-400/10 text-slate-500 dark:text-slate-400 border-slate-400/30',
+      completedColor: 'bg-slate-400/70',
+      badgeDot: 'bg-slate-400'
+    },
+    1: {
+      code: 'MAT',
+      label: 'Material Checked',
+      activeColor: 'bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.8)] ring-1 ring-amber-300 scale-105',
+      activeBadge: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30',
+      completedColor: 'bg-amber-500/70',
+      badgeDot: 'bg-amber-500'
+    },
+    2: {
+      code: 'PROD',
+      label: 'In Production',
+      activeColor: 'bg-[#5B75F8] shadow-[0_0_12px_rgba(91,117,248,0.8)] ring-1 ring-[#5B75F8]/50 scale-105',
+      activeBadge: 'bg-[#5B75F8]/10 text-[#5B75F8] dark:text-[#7B92FF] border-[#5B75F8]/30',
+      completedColor: 'bg-[#5B75F8]/70',
+      badgeDot: 'bg-[#5B75F8]'
+    },
+    3: {
+      code: 'QC',
+      label: 'QC Inspection',
+      activeColor: 'bg-orange-600 shadow-[0_0_12px_rgba(234,88,12,0.8)] ring-1 ring-orange-400 scale-105',
+      activeBadge: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30',
+      completedColor: 'bg-orange-500/70',
+      badgeDot: 'bg-orange-500'
+    },
+    4: {
+      code: 'PDI',
+      label: 'Ready to Dispatch (PDI)',
+      activeColor: 'bg-purple-500 shadow-[0_0_12px_rgba(139,92,246,0.8)] ring-1 ring-purple-300 scale-105',
+      activeBadge: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30',
+      completedColor: 'bg-purple-500/70',
+      badgeDot: 'bg-purple-500'
+    },
+    5: {
+      code: 'DISP',
+      label: 'Dispatched',
+      activeColor: 'bg-cyan-600 shadow-[0_0_12px_rgba(8,145,178,0.8)] ring-1 ring-cyan-400 scale-105',
+      activeBadge: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/30',
+      completedColor: 'bg-cyan-500/70',
+      badgeDot: 'bg-cyan-500'
+    },
+    6: {
+      code: 'INV',
+      label: 'Invoiced',
+      activeColor: 'bg-teal-600 shadow-[0_0_12px_rgba(13,148,136,0.8)] ring-1 ring-teal-400 scale-105',
+      activeBadge: 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/30',
+      completedColor: 'bg-teal-500/70',
+      badgeDot: 'bg-teal-500'
+    },
+    7: {
+      code: 'DONE',
+      label: 'Closed',
+      activeColor: 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.8)] ring-1 ring-emerald-300 scale-105',
+      activeBadge: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
+      completedColor: 'bg-emerald-500/70',
+      badgeDot: 'bg-emerald-500'
     }
+  };
+
+  const getOrderProgression = (ord?: Partial<CustomerOrder> | null) => {
+    if (!ord) {
+      return {
+        activeStepIndex: 0,
+        statusLabel: '1. PO Received',
+        badgeBg: 'bg-slate-400/10 text-slate-500 dark:text-slate-400 border-slate-400/30',
+        badgeDot: 'bg-slate-400',
+        isQcRejected: false,
+        isQcHold: false,
+        isPdiHold: false,
+        steps: ORDER_PROGRESSION_STEPS
+      };
+    }
+
+    const rawStatus = String(ord.status || ord.stage || '').trim().toUpperCase();
+    const norm = normalizeOrderState(ord.stage || ord.status);
+    const orderPoStr = String(ord.poNo || '').trim().toUpperCase();
+    const orderIdStr = String(ord.id || '').trim().toUpperCase();
+
+    const linkedQc = (qcQueue || []).filter(q => {
+      const qPo = String(q.orderPo || '').trim().toUpperCase();
+      if (qPo && ((orderPoStr && qPo === orderPoStr) || (orderIdStr && qPo === orderIdStr))) return true;
+      if (ord.jobCards && ord.jobCards.some(j => j.jobNo && String(j.jobNo || '').trim().toUpperCase() === String(q.jobNo || '').trim().toUpperCase())) {
+        return true;
+      }
+      return false;
+    });
+
+    const isQcRejected = linkedQc.some(q => q.qcStatus === 'REJECTED') || rawStatus === 'QC_REJECTED';
+    const isQcHold = linkedQc.some(q => q.qcStatus === 'QC_HOLD') || rawStatus === 'QC_HOLD' || Boolean(ord.hasOpenNcr);
+    const isPdiHold = rawStatus === 'PDI_HOLD';
+    const isDelayed = rawStatus === 'DELIVERY_DELAYED';
+
+    let activeStepIndex = 0;
+    let statusLabel = '1. PO Received';
+    let badgeBg = 'bg-slate-400/10 text-slate-500 dark:text-slate-400 border-slate-400/30';
+    let badgeDot = 'bg-slate-400';
+
+    if (isQcRejected) {
+      activeStepIndex = 3;
+      statusLabel = '4. QC Rejected (NCR)';
+      badgeBg = isDarkMode ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200';
+      badgeDot = 'bg-rose-500 animate-ping';
+    } else if (isQcHold) {
+      activeStepIndex = 3;
+      statusLabel = '4. QC Hold / NCR Open';
+      badgeBg = isDarkMode ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-200';
+      badgeDot = 'bg-amber-500 animate-pulse';
+    } else if (isPdiHold) {
+      activeStepIndex = 4;
+      statusLabel = '5. PDI Hold';
+      badgeBg = isDarkMode ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-200';
+      badgeDot = 'bg-amber-500 animate-pulse';
+    } else if (['CLOSED', 'COMPLETED', 'PAID'].includes(rawStatus) || norm === 'COMPLETED') {
+      activeStepIndex = 7;
+      statusLabel = '8. Closed & Settled';
+      badgeBg = 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30';
+      badgeDot = 'bg-emerald-500';
+    } else if (['INVOICED', 'INVOICE_GENERATED'].includes(rawStatus) || norm === 'INVOICED') {
+      activeStepIndex = 6;
+      statusLabel = ord.invoiceNumber ? `7. Invoiced (${ord.invoiceNumber})` : '7. GST Invoiced';
+      badgeBg = 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/30';
+      badgeDot = 'bg-teal-500';
+    } else if (['DISPATCHED', 'PARTIALLY_DISPATCHED', 'IN_TRANSIT', 'DELIVERED', 'ORDER_RECEIVED', 'PAYMENT_PENDING'].includes(rawStatus) || norm === 'DISPATCHED' || norm === 'DELIVERED' || norm === 'IN_TRANSIT' || norm === 'PAYMENT_PENDING') {
+      activeStepIndex = 5;
+      statusLabel = isDelayed ? '6. Delivery Delayed' : (rawStatus === 'PARTIALLY_DISPATCHED' ? '6. Partially Dispatched' : '6. Outward Dispatched');
+      badgeBg = isDelayed
+        ? (isDarkMode ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-200')
+        : 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/30';
+      badgeDot = isDelayed ? 'bg-amber-500' : 'bg-cyan-500';
+    } else if (['READY_TO_DISPATCH', 'READY_FOR_DISPATCH', 'PDI', 'PDI_COMPLETE', 'PDI_PASS', 'PDI_PASSED', 'DISPATCH_READY'].includes(rawStatus) || norm === 'READY_FOR_DISPATCH' || norm === 'PDI' || norm === 'PDI_COMPLETE' || norm === 'DISPATCH_READY') {
+      activeStepIndex = 4;
+      statusLabel = rawStatus.includes('PDI') ? '5. PDI Passed (Dispatch Ready)' : '5. Ready for Dispatch';
+      badgeBg = 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30';
+      badgeDot = 'bg-purple-500';
+    } else if (['QC', 'QC_INSPECTION', 'READY_FOR_QC', 'MANUFACTURING_COMPLETED', 'QC_REPORT_UPLOADED'].includes(rawStatus) || norm === 'QC' || norm === 'QC_REPORT_UPLOADED') {
+      activeStepIndex = 3;
+      statusLabel = '4. QC Inspection';
+      badgeBg = 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30';
+      badgeDot = 'bg-orange-500';
+    } else if (['IN_PRODUCTION', 'JOB_RELEASED', 'WITH_SUBCONTRACTOR', 'REWORK'].includes(rawStatus) || norm === 'IN_PRODUCTION' || norm === 'JOB_RELEASED' || norm === 'REWORK') {
+      activeStepIndex = 2;
+      statusLabel = rawStatus === 'JOB_RELEASED' ? '3. Job Card Released' : '3. In Production';
+      badgeBg = 'bg-[#5B75F8]/10 text-[#5B75F8] dark:text-[#7B92FF] border-[#5B75F8]/30';
+      badgeDot = 'bg-[#5B75F8]';
+    } else if (['MATERIAL_READY', 'MATERIAL_CHECKED', 'MATERIAL_VERIFIED', 'MATERIAL_CHECK', 'MATERIAL_SHORT', 'PROCUREMENT_PENDING', 'GRN', 'PENDING_VERIFICATION'].includes(rawStatus) || ['MATERIAL_READY', 'MATERIAL_CHECK', 'MATERIAL_SHORT', 'PROCUREMENT_PENDING', 'GRN', 'PENDING_VERIFICATION'].includes(norm)) {
+      activeStepIndex = 1;
+      statusLabel = (rawStatus === 'MATERIAL_SHORT' || norm === 'MATERIAL_SHORT') ? '2. Material Shortage' : (rawStatus === 'PROCUREMENT_PENDING' ? '2. Procurement Pending' : '2. Material Verified');
+      badgeBg = (rawStatus === 'MATERIAL_SHORT' || norm === 'MATERIAL_SHORT')
+        ? (isDarkMode ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-200')
+        : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30';
+      badgeDot = 'bg-amber-500';
+    } else {
+      activeStepIndex = 0;
+      statusLabel = '1. PO Received';
+      badgeBg = 'bg-slate-400/10 text-slate-500 dark:text-slate-400 border-slate-400/30';
+      badgeDot = 'bg-slate-400';
+    }
+
+    return {
+      activeStepIndex,
+      statusLabel,
+      badgeBg,
+      badgeDot,
+      isQcRejected,
+      isQcHold,
+      isPdiHold,
+      steps: ORDER_PROGRESSION_STEPS
+    };
+  };
+
+  const getStatusBadge = (status: string, stage?: string) => {
+    const dummyOrder = { status, stage } as CustomerOrder;
+    const prog = getOrderProgression(dummyOrder);
+    return {
+      bg: prog.badgeBg,
+      dot: prog.badgeDot,
+      label: prog.statusLabel
+    };
+  };
+
+  const renderProgressionStepper = (ord?: CustomerOrder, variant: 'table' | 'card' | 'grid' = 'table') => {
+    const prog = getOrderProgression(ord);
+    const stagePct = Math.round(((prog.activeStepIndex + 1) / 8) * 100);
+
+    let progressGradient = 'from-rose-500 via-amber-500 to-emerald-500';
+    if (prog.isQcRejected) {
+      progressGradient = 'from-rose-600 to-rose-700';
+    } else if (prog.isQcHold || prog.isPdiHold) {
+      progressGradient = 'from-amber-500 to-amber-600';
+    } else if (stagePct <= 25) {
+      progressGradient = 'from-rose-500 to-orange-500';
+    } else if (stagePct <= 50) {
+      progressGradient = 'from-rose-500 via-orange-500 to-amber-400';
+    } else if (stagePct <= 75) {
+      progressGradient = 'from-rose-500 via-amber-500 to-teal-400';
+    } else {
+      progressGradient = 'from-rose-500 via-amber-500 to-emerald-500';
+    }
+
+    return (
+      <div className={`space-y-1.5 select-none font-mono ${variant === 'table' ? 'min-w-[220px] max-w-[300px]' : 'w-full'}`}>
+        {/* Status Header */}
+        <div className="flex items-center justify-between gap-2">
+          {/* Active Stage Pill */}
+          <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase border transition-all ${prog.badgeBg}`}>
+            <span className="relative flex h-1.5 w-1.5 shrink-0">
+              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                prog.isQcRejected ? 'bg-rose-400' : (prog.isQcHold || prog.isPdiHold) ? 'bg-amber-400' : prog.badgeDot
+              }`} />
+              <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${
+                prog.isQcRejected ? 'bg-rose-500' : (prog.isQcHold || prog.isPdiHold) ? 'bg-amber-500' : prog.badgeDot
+              }`} />
+            </span>
+            <span className="tracking-wide truncate max-w-[160px]">{prog.statusLabel}</span>
+          </div>
+
+          {/* Telemetry Gate & % Badge */}
+          <div className="flex items-center gap-1 text-[9px] font-bold shrink-0 text-slate-400 dark:text-slate-500">
+            <span>{prog.activeStepIndex + 1}/8</span>
+            <span>•</span>
+            <span>{stagePct}%</span>
+          </div>
+        </div>
+
+        {/* Continuous Seamless Red-to-Green Progress Bar */}
+        <div
+          title={`Stage ${prog.activeStepIndex + 1}/8: ${prog.statusLabel} (${stagePct}% complete)`}
+          className={`w-full h-2 rounded-full overflow-hidden relative cursor-help ${
+            isDarkMode ? 'bg-slate-800/80 border border-slate-700/60' : 'bg-slate-200/80 border border-slate-300/60'
+          }`}
+        >
+          <div
+            className={`h-full rounded-full bg-gradient-to-r ${progressGradient} transition-all duration-500 ease-out shadow-xs`}
+            style={{ width: `${Math.max(stagePct, 6)}%` }}
+          />
+        </div>
+      </div>
+    );
   };
 
   // Calculated KPI stats
@@ -455,500 +624,375 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
   const qcGateCount = orders.filter(o => o.status === 'QC_INSPECTION' || o.stage === 'QC_INSPECTION' || o.stage === 'QC').length;
   const dispatchReadyCount = orders.filter(o => o.status === 'READY_TO_DISPATCH' || o.stage === 'READY_TO_DISPATCH' || o.status === 'DISPATCHED').length;
 
+  const openNewOrderModal = () => {
+    setValidationError(null);
+    setNewPoNo(`PO-2026-${Math.floor(100 + Math.random() * 900)}`);
+    if (customers.length > 0) {
+      const defaultCust = customers[0];
+      setSelectedCustomerCode(defaultCust.code);
+      setNewCustomer(defaultCust.name);
+      if (defaultCust.name.toLowerCase().includes('mahindra') || defaultCust.notes?.toLowerCase().includes('overdue') || (defaultCust as any).isOverdue) {
+        setIsCustomerCreditHeld(true);
+      } else {
+        setIsCustomerCreditHeld(false);
+        setCreditOverrideBy('');
+        setCreditOverrideReason('');
+      }
+    } else {
+      setSelectedCustomerCode('');
+      setNewCustomer('');
+      setIsCustomerCreditHeld(false);
+      setCreditOverrideBy('');
+      setCreditOverrideReason('');
+    }
+    setShowNewModal(true);
+  };
+
   return (
-    <div className="space-y-6 font-sans">
+    <div className="space-y-4 sm:space-y-6 font-sans select-none pb-4">
 
-      {/* Hero Header Banner */}
-      <div className={`p-6 rounded-3xl border transition-all ${isDarkMode
-        ? 'bg-slate-900/80 border-slate-800/80 text-white backdrop-blur-xl shadow-2xl'
-        : 'bg-white border-slate-200 shadow-sm text-slate-900'
-        }`}>
-        <div className="flex flex-wrap items-center justify-between gap-4">
+      {/* ========================================================================= */}
+      {/* ── MOBILE-FIRST TOP HEADER & QUICK ACTION BAR (< md) ──                   */}
+      {/* ========================================================================= */}
+      <div className="block md:hidden space-y-3">
+        <div className="flex items-center justify-between gap-2">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider ${isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/30' : 'bg-[#5B75F8]/10 text-[#5B75F8] border border-[#5B75F8]/20'
-                }`}>
-                Sales & Order Management Hub
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                Sales & Orders Hub
               </span>
-              <span className={`text-xs font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>• 10-Stage State Machine with Hard Precondition Gates</span>
             </div>
-            <h1 className={`text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-              Sales Orders & Blanket Call-Offs
+            <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+              Customer POs ({orders.length})
             </h1>
-            <p className={`text-xs mt-1 max-w-xl ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-              Enforce BOM Drawing Revision Matching, 90-Day Credit Limits, Material Availability Checks, and Job Card Traceability through Final Invoicing.
-            </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => {
-                setValidationError(null);
-                setNewPoNo(`PO-2026-${Math.floor(100 + Math.random() * 900)}`);
-                if (customers.length > 0) {
-                  const defaultCust = customers[0];
-                  setSelectedCustomerCode(defaultCust.code);
-                  setNewCustomer(defaultCust.name);
-                  if (defaultCust.name.toLowerCase().includes('mahindra') || defaultCust.notes?.toLowerCase().includes('overdue') || (defaultCust as any).isOverdue) {
-                    setIsCustomerCreditHeld(true);
-                  } else {
-                    setIsCustomerCreditHeld(false);
-                    setCreditOverrideBy('');
-                    setCreditOverrideReason('');
-                  }
-                } else {
-                  setSelectedCustomerCode('');
-                  setNewCustomer('');
-                  setIsCustomerCreditHeld(false);
-                  setCreditOverrideBy('');
-                  setCreditOverrideReason('');
-                }
-                setShowNewModal(true);
-              }}
-              className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Create Purchase Order</span>
-            </button>
-          </div>
+          <button
+            onClick={openNewOrderModal}
+            className="min-h-[44px] px-3.5 py-2 rounded-xl bg-gradient-to-r from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer shrink-0 active:scale-95 transition-transform font-mono"
+          >
+            <Plus className="w-4 h-4" />
+            <span>New PO</span>
+          </button>
         </div>
-      </div>
 
-      {/* 4 Executive KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 font-mono">
-        <div className={`p-4 sm:p-5 rounded-3xl border transition-all ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
-          }`}>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Active Order Book</span>
-            <div className="p-2 rounded-xl bg-indigo-500/15 text-[#7B92FF]">
-              <FileSpreadsheet className="w-4 h-4" />
+        {/* Mobile 2x2 Executive KPI Strip */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Order Book Value</div>
+            <div className="text-base font-black text-slate-900 dark:text-white tracking-tight mt-0.5">
+              ₹{totalActiveValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
             </div>
           </div>
-          <div className="text-xl font-bold text-indigo-600 dark:text-[#7B92FF]">
-            {orders.length} <span className="text-xs font-normal text-slate-400">orders</span>
-          </div>
-          <div className="text-[11px] text-slate-400 mt-1">
-            Total Pipeline Value: <strong className="text-emerald-500 font-bold">₹{totalActiveValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</strong>
-          </div>
-        </div>
 
-        <div className={`p-4 sm:p-5 rounded-3xl border transition-all ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
-          }`}>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Shop-Floor In Production</span>
-            <div className="p-2 rounded-xl bg-amber-500/15 text-amber-500">
-              <RefreshCw className="w-4 h-4" />
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">In Production</div>
+            <div className="text-base font-black text-amber-500 tracking-tight mt-0.5">
+              {inProdCount} Active Jobs
             </div>
           </div>
-          <div className="text-xl font-bold text-amber-600 dark:text-amber-400">
-            {inProdCount} <span className="text-xs font-normal text-slate-400">active</span>
-          </div>
-          <div className="text-[11px] text-slate-400 mt-1">
-            <span>Machine routing in progress</span>
-          </div>
-        </div>
 
-        <div className={`p-4 sm:p-5 rounded-3xl border transition-all ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
-          }`}>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">QC & NCR Gates</span>
-            <div className="p-2 rounded-xl bg-purple-500/15 text-purple-500">
-              <ShieldCheck className="w-4 h-4" />
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">QC Gate & Hold</div>
+            <div className="text-base font-black text-purple-500 tracking-tight mt-0.5">
+              {qcGateCount} Inspected
             </div>
           </div>
-          <div className="text-xl font-bold text-purple-600 dark:text-purple-400">
-            {qcGateCount} <span className="text-xs font-normal text-slate-400">in inspection</span>
-          </div>
-          <div className="text-[11px] text-slate-400 mt-1">
-            <span>QA gating enforced</span>
-          </div>
-        </div>
 
-        <div className={`p-4 sm:p-5 rounded-3xl border transition-all ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
-          }`}>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Dispatch / Ready</span>
-            <div className="p-2 rounded-xl bg-emerald-500/15 text-emerald-500">
-              <Truck className="w-4 h-4" />
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Ready to Dispatch</div>
+            <div className="text-base font-black text-emerald-500 tracking-tight mt-0.5">
+              {dispatchReadyCount} Orders
             </div>
           </div>
-          <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
-            {dispatchReadyCount} <span className="text-xs font-normal text-slate-400">orders</span>
-          </div>
-          <div className="text-[11px] text-slate-400 mt-1">
-            <span>4-Way clearance verified</span>
-          </div>
         </div>
-      </div>
 
-      <div className={`p-4 rounded-3xl border transition-all flex flex-wrap items-center justify-between gap-4 ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-xs'
+        {/* Mobile Full-Width Search Input */}
+        <div className={`flex items-center gap-2 px-3.5 py-2.5 rounded-2xl border text-xs min-h-[44px] ${
+          isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
         }`}>
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={subTypeFilter}
-            onChange={(e) => setSubTypeFilter(e.target.value)}
-            className={`px-3 py-1.5 rounded-2xl border text-xs font-mono font-bold outline-none cursor-pointer ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-              }`}
-          >
-            <option value="ALL">All Order Types ({orders.length})</option>
-            <option value="FRESH_PO">Fresh POs ({orders.filter(o => (o.subType || 'FRESH_PO') === 'FRESH_PO').length})</option>
-            <option value="BLANKET_CALLOFF">Blanket Call-Offs ({orders.filter(o => o.subType === 'BLANKET_CALLOFF').length})</option>
-            <option value="AMENDMENT">Amendments ({orders.filter(o => o.subType === 'AMENDMENT').length})</option>
-          </select>
-
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className={`px-3 py-1.5 rounded-2xl border text-xs font-mono font-bold outline-none cursor-pointer ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-              }`}
-          >
-            <option value="ALL">All Stages ({orders.length})</option>
-            <option value="PO_RECEIVED">1. PO Received</option>
-            <option value="CONFIRMED">2. Confirmed & Released</option>
-            <option value="MATERIAL_CHECKED">3. Material Checked</option>
-            <option value="IN_PRODUCTION">5. In Production</option>
-            <option value="QC_INSPECTION">6. QC Cleared</option>
-            <option value="READY_TO_DISPATCH">7. Ready to Dispatch</option>
-            <option value="DISPATCHED">8. Dispatched</option>
-            <option value="INVOICED">9. Invoiced</option>
-          </select>
-
-          <select
-            value={`${sortField}_${sortDirection}`}
-            onChange={(e) => {
-              const [field, dir] = e.target.value.split('_');
-              setSortField(field as any);
-              setSortDirection(dir as any);
-            }}
-            className={`px-3 py-1.5 rounded-2xl border text-xs font-mono font-bold outline-none cursor-pointer ${sortField === 'RECENCY' && sortDirection === 'DESC'
-              ? isDarkMode ? 'bg-[#5B75F8]/20 border-[#5B75F8]/40 text-[#7B92FF]' : 'bg-blue-50 border-blue-200 text-[#5B75F8]'
-              : isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-              }`}
-          >
-            <option value="RECENCY_DESC">Sort: Recent Orders (Newest First)</option>
-            <option value="RECENCY_ASC">Sort: Oldest Orders First</option>
-            <option value="PO_NO_ASC">Sort: PO Number (A → Z)</option>
-            <option value="PO_NO_DESC">Sort: PO Number (Z → A)</option>
-            <option value="CUSTOMER_ASC">Sort: Customer (A → Z)</option>
-            <option value="AMOUNT_DESC">Sort: Amount (High → Low)</option>
-            <option value="AMOUNT_ASC">Sort: Amount (Low → High)</option>
-          </select>
-
-          {(statusFilter !== 'ALL' || subTypeFilter !== 'ALL' || searchQuery.trim() !== '' || sortField !== 'RECENCY' || sortDirection !== 'DESC') && (
-            <button
-              onClick={() => {
-                setStatusFilter('ALL');
-                setSubTypeFilter('ALL');
-                setSearchQuery('');
-                setSortField('RECENCY');
-                setSortDirection('DESC');
-              }}
-              className="px-3 py-1.5 rounded-2xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-mono font-bold transition-all cursor-pointer text-slate-500 hover:text-slate-900 dark:hover:text-white"
-            >
-              Reset Filters
+          <Search className="w-4 h-4 text-slate-400 shrink-0" />
+          <input
+            type="text"
+            placeholder="Search PO#, Customer, Part..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="bg-transparent outline-none w-full font-mono text-xs"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className="text-slate-400 p-1">
+              <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-2xl border text-xs w-64 ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white focus-within:border-[#5B75F8]/50' : 'bg-slate-50 border-slate-200 text-slate-900 focus-within:border-[#5B75F8]'
+        {/* Mobile Horizontal Stage Filter Chips */}
+        <div className="flex items-center gap-1.5 overflow-x-auto py-1 no-scrollbar">
+          {[
+            { id: 'ALL', label: `All (${orders.length})`, active: 'bg-slate-600 text-white', idle: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/30' },
+            { id: 'PO_RECEIVED', label: '1. PO', active: 'bg-slate-500 text-white', idle: 'bg-slate-400/10 text-slate-500 dark:text-slate-400 border-slate-400/30' },
+            { id: 'MATERIAL_CHECKED', label: '2. Material', active: 'bg-amber-500 text-white', idle: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30' },
+            { id: 'IN_PRODUCTION', label: '3. Prod', active: 'bg-[#5B75F8] text-white', idle: 'bg-[#5B75F8]/10 text-[#5B75F8] dark:text-[#7B92FF] border-[#5B75F8]/30' },
+            { id: 'QC_INSPECTION', label: '4. QC', active: 'bg-orange-600 text-white', idle: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30' },
+            { id: 'READY_TO_DISPATCH', label: '5. PDI', active: 'bg-purple-600 text-white', idle: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30' },
+            { id: 'DISPATCHED', label: '6. Dispatch', active: 'bg-cyan-600 text-white', idle: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/30' },
+            { id: 'INVOICED', label: '7. Invoice', active: 'bg-teal-600 text-white', idle: 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/30' },
+            { id: 'CLOSED', label: '8. Closed', active: 'bg-emerald-600 text-white', idle: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' }
+          ].map((stage) => {
+            const isSelected = statusFilter === stage.id;
+            return (
+              <button
+                key={stage.id}
+                onClick={() => setStatusFilter(stage.id)}
+                className={`min-h-[36px] px-3 py-1 rounded-xl text-xs font-bold font-mono shrink-0 transition-all border cursor-pointer ${
+                  isSelected
+                    ? `${stage.active} shadow-xs border-transparent scale-105`
+                    : `${stage.idle}`
+                }`}
+              >
+                {stage.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* ── DESKTOP HEADER & KPI ROW (≥ md) ──                                      */}
+      {/* ========================================================================= */}
+      <div className="hidden md:block space-y-6">
+        {/* Hero Header Banner */}
+        <div className={`p-6 rounded-3xl border transition-all ${isDarkMode
+          ? 'bg-slate-900/80 border-slate-800/80 text-white backdrop-blur-xl shadow-2xl'
+          : 'bg-white border-slate-200 shadow-sm text-slate-900'
+          }`}>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider ${isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/30' : 'bg-[#5B75F8]/10 text-[#5B75F8] border border-[#5B75F8]/20'
+                  }`}>
+                  Sales & Order Management Hub
+                </span>
+                <span className={`text-xs font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>• 8-Stage Gated Pipeline with QC & PDI Quality Control</span>
+              </div>
+              <h1 className={`text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                Sales Orders & Blanket Call-Offs
+              </h1>
+              <p className={`text-xs mt-1 max-w-xl ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                Enforce BOM Drawing Revision Matching, 90-Day Credit Limits, Material Availability Checks, and Job Card Traceability through Final Invoicing.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={openNewOrderModal}
+                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create Purchase Order</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* 4 Executive KPI Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 font-mono">
+          <div className={`p-5 rounded-3xl border transition-all ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
             }`}>
-            <Search className="w-3.5 h-3.5 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search PO#, Customer, Rev..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-transparent outline-none w-full font-mono text-xs"
-            />
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Active Order Book</span>
+              <div className="p-2 rounded-xl bg-indigo-500/15 text-[#7B92FF]">
+                <FileSpreadsheet className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-xl font-bold text-indigo-600 dark:text-[#7B92FF]">
+              {orders.length} <span className="text-xs font-normal text-slate-400">orders</span>
+            </div>
+            <div className="text-[11px] text-slate-400 mt-1">
+              Total Pipeline Value: <strong className="text-emerald-500 font-bold">₹{totalActiveValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</strong>
+            </div>
           </div>
 
-          <div className={`flex items-center p-1 rounded-2xl border ${isDarkMode ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-slate-100'
+          <div className={`p-5 rounded-3xl border transition-all ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
             }`}>
-            <button
-              onClick={() => setViewMode('table')}
-              className={`p-1.5 rounded-xl transition-all cursor-pointer ${viewMode === 'table'
-                ? isDarkMode ? 'bg-slate-800 text-[#7B92FF]' : 'bg-white text-[#5B75F8] shadow-xs'
-                : isDarkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-900'
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Shop-Floor In Production</span>
+              <div className="p-2 rounded-xl bg-amber-500/15 text-amber-500">
+                <RefreshCw className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-xl font-bold text-amber-600 dark:text-amber-400">
+              {inProdCount} <span className="text-xs font-normal text-slate-400">active</span>
+            </div>
+            <div className="text-[11px] text-slate-400 mt-1">
+              <span>Machine routing in progress</span>
+            </div>
+          </div>
+
+          <div className={`p-5 rounded-3xl border transition-all ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
+            }`}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">QC & NCR Gates</span>
+              <div className="p-2 rounded-xl bg-purple-500/15 text-purple-500">
+                <ShieldCheck className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-xl font-bold text-purple-600 dark:text-purple-400">
+              {qcGateCount} <span className="text-xs font-normal text-slate-400">in inspection</span>
+            </div>
+            <div className="text-[11px] text-slate-400 mt-1">
+              <span>QA gating enforced</span>
+            </div>
+          </div>
+
+          <div className={`p-5 rounded-3xl border transition-all ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
+            }`}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Ready to Dispatch</span>
+              <div className="p-2 rounded-xl bg-emerald-500/15 text-emerald-500">
+                <Truck className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+              {dispatchReadyCount} <span className="text-xs font-normal text-slate-400">orders</span>
+            </div>
+            <div className="text-[11px] text-slate-400 mt-1">
+              <span>PDI cleared & ready</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Global Controls Filter & Search Bar */}
+        <div className={`p-4 rounded-3xl border flex flex-wrap items-center justify-between gap-4 ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
+          }`}>
+          <div className="flex flex-wrap items-center gap-3">
+            <select
+              value={subTypeFilter}
+              onChange={(e) => setSubTypeFilter(e.target.value)}
+              className={`px-3 py-1.5 rounded-2xl border text-xs font-mono font-bold outline-none cursor-pointer ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                 }`}
-              title="Table View"
             >
-              <List className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-xl transition-all cursor-pointer ${viewMode === 'grid'
-                ? isDarkMode ? 'bg-slate-800 text-[#7B92FF]' : 'bg-white text-[#5B75F8] shadow-xs'
-                : isDarkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-900'
+              <option value="ALL">All Order Types ({orders.length})</option>
+              <option value="FRESH_PO">Fresh POs ({orders.filter(o => (o.subType || 'FRESH_PO') === 'FRESH_PO').length})</option>
+              <option value="BLANKET_CALLOFF">Blanket Call-Offs ({orders.filter(o => o.subType === 'BLANKET_CALLOFF').length})</option>
+              <option value="AMENDMENT">Amendments ({orders.filter(o => o.subType === 'AMENDMENT').length})</option>
+            </select>
+
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className={`px-3 py-1.5 rounded-2xl border text-xs font-mono font-bold outline-none cursor-pointer ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                 }`}
-              title="Grid View"
             >
-              <LayoutGrid className="w-4 h-4" />
-            </button>
+              <option value="ALL">All Stages ({orders.length})</option>
+              <option value="PO_RECEIVED">1. PO Confirmed</option>
+              <option value="MATERIAL_CHECKED">2. Material Verified</option>
+              <option value="IN_PRODUCTION">3. In Production</option>
+              <option value="QC_INSPECTION">4. QC Inspection & NCR</option>
+              <option value="READY_TO_DISPATCH">5. PDI / Ready to Dispatch</option>
+              <option value="DISPATCHED">6. Outward Dispatched</option>
+              <option value="INVOICED">7. GST Invoiced</option>
+              <option value="CLOSED">8. Closed & Settled</option>
+            </select>
+
+            <select
+              value={`${sortField}_${sortDirection}`}
+              onChange={(e) => {
+                const [field, dir] = e.target.value.split('_');
+                setSortField(field as any);
+                setSortDirection(dir as any);
+              }}
+              className={`px-3 py-1.5 rounded-2xl border text-xs font-mono font-bold outline-none cursor-pointer ${sortField === 'RECENCY' && sortDirection === 'DESC'
+                ? isDarkMode ? 'bg-[#5B75F8]/20 border-[#5B75F8]/40 text-[#7B92FF]' : 'bg-blue-50 border-blue-200 text-[#5B75F8]'
+                : isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                }`}
+            >
+              <option value="RECENCY_DESC">Sort: Recent Orders (Newest First)</option>
+              <option value="RECENCY_ASC">Sort: Oldest Orders First</option>
+              <option value="PO_NO_ASC">Sort: PO Number (A → Z)</option>
+              <option value="PO_NO_DESC">Sort: PO Number (Z → A)</option>
+              <option value="CUSTOMER_ASC">Sort: Customer (A → Z)</option>
+              <option value="AMOUNT_DESC">Sort: Amount (High → Low)</option>
+              <option value="AMOUNT_ASC">Sort: Amount (Low → High)</option>
+            </select>
+
+            {(statusFilter !== 'ALL' || subTypeFilter !== 'ALL' || searchQuery.trim() !== '' || sortField !== 'RECENCY' || sortDirection !== 'DESC') && (
+              <button
+                onClick={() => {
+                  setStatusFilter('ALL');
+                  setSubTypeFilter('ALL');
+                  setSearchQuery('');
+                  setSortField('RECENCY');
+                  setSortDirection('DESC');
+                }}
+                className="px-3 py-1.5 rounded-2xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-mono font-bold transition-all cursor-pointer text-slate-500 hover:text-slate-900 dark:hover:text-white"
+              >
+                Reset Filters
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-2xl border text-xs w-64 ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white focus-within:border-[#5B75F8]/50' : 'bg-slate-50 border-slate-200 text-slate-900 focus-within:border-[#5B75F8]'
+              }`}>
+              <Search className="w-3.5 h-3.5 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search PO#, Customer, Rev..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="bg-transparent outline-none w-full font-mono text-xs"
+              />
+            </div>
+
+            <div className={`flex items-center p-1 rounded-2xl border ${isDarkMode ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-slate-100'
+              }`}>
+              <button
+                onClick={() => setViewMode('table')}
+                className={`p-1.5 rounded-xl transition-all cursor-pointer ${viewMode === 'table'
+                  ? isDarkMode ? 'bg-slate-800 text-[#7B92FF]' : 'bg-white text-[#5B75F8] shadow-xs'
+                  : isDarkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                title="Table View"
+              >
+                <List className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-1.5 rounded-xl transition-all cursor-pointer ${viewMode === 'grid'
+                  ? isDarkMode ? 'bg-slate-800 text-[#7B92FF]' : 'bg-white text-[#5B75F8] shadow-xs'
+                  : isDarkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                title="Grid View"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {viewMode === 'table' ? (
-        <div className={`rounded-3xl border overflow-hidden transition-all shadow-xl ${isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200'
-          }`}>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse font-sans">
-              <thead>
-                <tr className={`border-b font-mono font-bold uppercase tracking-wider text-[11px] ${isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'
-                  }`}>
-                  <th
-                    onClick={() => {
-                      if (sortField === 'RECENCY') {
-                        setSortDirection(d => d === 'DESC' ? 'ASC' : 'DESC');
-                      } else {
-                        setSortField('RECENCY');
-                        setSortDirection('DESC');
-                      }
-                    }}
-                    className="py-4 px-5 cursor-pointer hover:text-[#5B75F8] select-none transition-colors"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <span>Purchase Order & Date</span>
-                      {sortField === 'RECENCY' && (
-                        <span className="text-[#5B75F8] font-bold text-[10px] bg-[#5B75F8]/10 px-1.5 py-0.5 rounded border border-[#5B75F8]/20">
-                          {sortDirection === 'DESC' ? '↓ Recent' : '↑ Oldest'}
-                        </span>
-                      )}
-                      {sortField === 'PO_NO' && (
-                        <span className="text-[#5B75F8]">{sortDirection === 'ASC' ? '↑' : '↓'}</span>
-                      )}
-                    </div>
-                  </th>
-                  <th
-                    onClick={() => {
-                      if (sortField === 'CUSTOMER') {
-                        setSortDirection(d => d === 'ASC' ? 'DESC' : 'ASC');
-                      } else {
-                        setSortField('CUSTOMER');
-                        setSortDirection('ASC');
-                      }
-                    }}
-                    className="py-4 px-5 cursor-pointer hover:text-[#5B75F8] select-none transition-colors"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <span>Customer & Credit Status</span>
-                      {sortField === 'CUSTOMER' && <span className="text-[#5B75F8]">{sortDirection === 'ASC' ? '↑' : '↓'}</span>}
-                    </div>
-                  </th>
-                  <th className="py-4 px-5">Heat / Lot Trace</th>
-                  <th className="py-4 px-5">10-Stage Pipeline</th>
-                  <th className="py-4 px-5">Quality / NCR Gate</th>
-                  <th
-                    onClick={() => {
-                      if (sortField === 'AMOUNT') {
-                        setSortDirection(d => d === 'ASC' ? 'DESC' : 'ASC');
-                      } else {
-                        setSortField('AMOUNT');
-                        setSortDirection('DESC');
-                      }
-                    }}
-                    className="py-4 px-5 text-right cursor-pointer hover:text-[#5B75F8] select-none transition-colors"
-                  >
-                    <div className="flex items-center justify-end gap-1.5">
-                      <span>Gross Amount</span>
-                      {sortField === 'AMOUNT' && <span className="text-[#5B75F8]">{sortDirection === 'ASC' ? '↑' : '↓'}</span>}
-                    </div>
-                  </th>
-                  <th className="py-4 px-5 text-center">Action</th>
-                </tr>
-              </thead>
-              <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
-                {sortedOrders.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-12 text-center">
-                      <div className="flex flex-col items-center justify-center gap-2">
-                        <ShoppingCart className="w-8 h-8 text-slate-400 opacity-50" />
-                        <p className={`text-sm font-semibold ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>No purchase orders found</p>
-                        <p className={`text-xs ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>Try adjusting your status or sub-type filter</p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  sortedOrders.map((ord) => {
-                    const subType = ord.subType || 'FRESH_PO';
-                    const hasCreditHold = ord.isCustomerOnCreditHold;
-
-                    // Match all related QC inspection records
-                    const linkedQc = (qcQueue || []).filter(q =>
-                      (q.orderPo && (q.orderPo.trim().toUpperCase() === ord.poNo.trim().toUpperCase() || q.orderPo.trim().toUpperCase() === ord.id.trim().toUpperCase())) ||
-                      (ord.jobCards && ord.jobCards.some(j => j.jobNo && j.jobNo.trim().toUpperCase() === (q.jobNo || '').trim().toUpperCase()))
-                    );
-
-                    const isQcRejected = linkedQc.some(q => q.qcStatus === 'REJECTED');
-                    const isQcHold = linkedQc.some(q => q.qcStatus === 'QC_HOLD');
-                    const isQcPassed = linkedQc.length > 0 && linkedQc.every(q => q.qcStatus === 'PASS' || q.qcStatus === 'PASSED');
-                    const hasNcr = ord.hasOpenNcr || isQcRejected || isQcHold;
-
-                    // Dynamic pipeline badge that accurately surfaces QC Rejection / Hold
-                    let badge = getStatusBadge(ord.status as string, ord.stage);
-                    if (isQcRejected) {
-                      badge = {
-                        bg: isDarkMode ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200',
-                        dot: 'bg-rose-500 animate-pulse',
-                        label: '6. QC Rejected'
-                      };
-                    } else if (isQcHold || hasNcr) {
-                      badge = {
-                        bg: isDarkMode ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-200',
-                        dot: 'bg-amber-500 animate-pulse',
-                        label: '6. QC Hold / NCR'
-                      };
-                    }
-
-                    return (
-                      <tr
-                        key={ord.id}
-                        onClick={() => onSelectOrder(ord)}
-                        className={`group transition-all cursor-pointer ${isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'
-                          }`}
-                      >
-                        <td className="py-4 px-5 font-bold font-mono">
-                          <div className="flex items-center gap-2.5">
-                            <div className={`p-2 rounded-xl transition-transform group-hover:scale-105 ${subType === 'BLANKET_CALLOFF'
-                              ? isDarkMode ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' : 'bg-purple-100 text-purple-700 border border-purple-200'
-                              : isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/30' : 'bg-[#5B75F8]/10 text-[#5B75F8] border border-[#5B75F8]/20'
-                              }`}>
-                              <ShoppingCart className="w-3.5 h-3.5" />
-                            </div>
-                            <div>
-                              <div className={`text-xs font-bold flex items-center gap-1.5 ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>
-                                <span>{ord.poNo}</span>
-                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase border ${subType === 'BLANKET_CALLOFF'
-                                  ? isDarkMode ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' : 'bg-purple-100 text-purple-800 border-purple-200'
-                                  : subType === 'AMENDMENT'
-                                    ? isDarkMode ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' : 'bg-amber-100 text-amber-800 border-amber-200'
-                                    : isDarkMode ? 'bg-blue-500/20 text-blue-300 border-blue-500/30' : 'bg-blue-100 text-blue-800 border-blue-200'
-                                  }`}>
-                                  {subType === 'BLANKET_CALLOFF' ? 'Blanket Call-off' : subType === 'AMENDMENT' ? 'Amendment' : 'Fresh PO'}
-                                </span>
-                              </div>
-                              <div className={`text-[10px] font-mono font-normal mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                                {ord.lines ? `${ord.lines.length} Lines` : '0 Lines'} • PO Date: <span className="font-semibold">{ord.poDate || ord.createdAt?.split('T')[0] || 'N/A'}</span> • Del: {ord.deliveryDate}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-
-                        <td className="py-4 px-5">
-                          <div className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>{ord.customerName}</div>
-                          {hasCreditHold ? (
-                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold mt-1 border ${isDarkMode ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
-                              }`}>
-                              <AlertCircle className="w-3 h-3 text-rose-500" />
-                              <span>Credit Hold {ord.creditHoldOverrideBy ? '(Owner Overridden)' : '(Blocked)'}</span>
-                            </span>
-                          ) : (
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-mono font-medium mt-1 border ${isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              }`}>
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                              <span>Credit Verified OK</span>
-                            </span>
-                          )}
-                        </td>
-
-                        <td className="py-4 px-5 font-mono text-[11px]">
-                          {ord.heatLotNumber ? (
-                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold border ${isDarkMode ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-200'
-                              }`}>
-                              <Flame className="w-3 h-3 text-amber-500" />
-                              <span>{ord.heatLotNumber}</span>
-                            </span>
-                          ) : (
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-mono border ${isDarkMode ? 'bg-slate-800/40 text-slate-400 border-slate-700/50' : 'bg-slate-100 text-slate-500 border-slate-200'
-                              }`}>
-                              <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                              <span>Pending Issue</span>
-                            </span>
-                          )}
-                        </td>
-
-                        <td className="py-4 px-5">
-                          <div className="space-y-1.5">
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${badge.bg}`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
-                              <span>{badge.label}</span>
-                            </span>
-                            <div className="flex items-center gap-1 pt-0.5">
-                              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((stepNum) => {
-                                const currentStep = ord.progressStep || 1;
-                                const isComplete = stepNum <= currentStep;
-                                return (
-                                  <div
-                                    key={stepNum}
-                                    className={`w-1.5 h-1.5 rounded-full ${isComplete
-                                      ? isQcRejected ? 'bg-rose-500' : 'bg-[#5B75F8]'
-                                      : (isDarkMode ? 'bg-slate-800' : 'bg-slate-200')
-                                      }`}
-                                    title={`Step ${stepNum}`}
-                                  />
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </td>
-
-                        <td className="py-4 px-5">
-                          {isQcRejected ? (
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${isDarkMode ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
-                              }`}>
-                              <AlertTriangle className="w-3 h-3 text-rose-500" />
-                              <span>QC Rejected</span>
-                            </span>
-                          ) : (isQcHold || hasNcr) ? (
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${isDarkMode ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-200'
-                              }`}>
-                              <AlertTriangle className="w-3 h-3 text-amber-500" />
-                              <span>Open NCR Block</span>
-                            </span>
-                          ) : (isQcPassed || (ord.progressStep && ord.progressStep >= 6)) ? (
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              }`}>
-                              <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                              <span>QC Clear</span>
-                            </span>
-                          ) : (
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${isDarkMode ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' : 'bg-blue-50 text-blue-700 border-blue-200'
-                              }`}>
-                              <Clock className="w-3 h-3 text-blue-500" />
-                              <span>Pending QC</span>
-                            </span>
-                          )}
-                        </td>
-
-                        <td className={`py-4 px-5 text-right font-bold font-mono text-xs ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                          ₹{ord.grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                        </td>
-
-                        <td className="py-4 px-5 text-center">
-                          <button className={`px-3 py-1.5 rounded-xl border text-xs font-bold font-mono transition-all flex items-center justify-center gap-1 mx-auto cursor-pointer ${isDarkMode
-                            ? 'bg-[#5B75F8]/10 text-[#7B92FF] border-[#5B75F8]/30 hover:bg-[#5B75F8]/20'
-                            : 'bg-[#5B75F8]/10 text-[#5B75F8] border-[#5B75F8]/20 hover:bg-[#5B75F8]/20'
-                            }`}>
-                            <span>Inspect</span>
-                            <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+      {/* ========================================================================= */}
+      {/* ── DEDICATED MOBILE ORDER CARDS (< md) ──                                  */}
+      {/* ========================================================================= */}
+      <div className="block md:hidden space-y-3">
+        {sortedOrders.length === 0 ? (
+          <div className={`p-8 rounded-3xl border text-center ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <ShoppingCart className="w-8 h-8 text-slate-400 mx-auto mb-2 opacity-50" />
+            <p className="text-xs font-bold text-slate-700 dark:text-slate-300">No purchase orders found</p>
+            <p className="text-[10px] text-slate-400 mt-0.5">Try clearing your filters</p>
           </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {sortedOrders.map((ord) => {
+        ) : (
+          sortedOrders.map((ord) => {
+            const subType = ord.subType || 'FRESH_PO';
+            const hasCreditHold = ord.isCustomerOnCreditHold;
+
             const linkedQc = (qcQueue || []).filter(q =>
               (q.orderPo && (q.orderPo.trim().toUpperCase() === ord.poNo.trim().toUpperCase() || q.orderPo.trim().toUpperCase() === ord.id.trim().toUpperCase())) ||
               (ord.jobCards && ord.jobCards.some(j => j.jobNo && j.jobNo.trim().toUpperCase() === (q.jobNo || '').trim().toUpperCase()))
             );
+
             const isQcRejected = linkedQc.some(q => q.qcStatus === 'REJECTED');
             const isQcHold = linkedQc.some(q => q.qcStatus === 'QC_HOLD');
             const hasNcr = ord.hasOpenNcr || isQcRejected || isQcHold;
@@ -972,28 +1016,318 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
               <div
                 key={ord.id}
                 onClick={() => onSelectOrder(ord)}
-                className={`p-5 rounded-3xl border transition-all cursor-pointer hover:scale-[1.01] shadow-lg ${isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'
-                  }`}
+                className={`p-4 rounded-2xl border space-y-3 cursor-pointer shadow-2xs active:scale-[0.99] transition-all ${
+                  isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+                }`}
               >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="font-bold font-mono text-sm text-[#5B75F8]">{ord.poNo}</div>
-                  <span className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold uppercase border ${badge.bg}`}>
-                    {badge.label}
+                {/* Header: PO Number + Type Pill */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-mono font-black text-sm text-[var(--accent-primary)] truncate">
+                      {ord.poNo}
+                    </span>
+                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase border shrink-0 ${
+                      subType === 'BLANKET_CALLOFF'
+                        ? 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30'
+                        : 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30'
+                    }`}>
+                      {subType === 'BLANKET_CALLOFF' ? 'Blanket' : 'Fresh PO'}
+                    </span>
+                  </div>
+
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    {ord.lines ? `${ord.lines.length} Lines` : `${ord.orderedQty || 1} Units`}
                   </span>
                 </div>
-                <div className={`text-xs font-bold ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>{ord.customerName}</div>
-                <div className={`text-[10px] font-mono mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                  PO Date: <span className="font-semibold">{ord.poDate || ord.createdAt?.split('T')[0] || 'N/A'}</span> • Del: {ord.deliveryDate}
+
+                {/* Customer Name & Tags */}
+                <div>
+                  <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                    {ord.customerName}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                    {hasCreditHold ? (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+                        <AlertCircle className="w-2.5 h-2.5" />
+                        <span>Credit Hold</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">
+                        <CheckCircle2 className="w-2.5 h-2.5" />
+                        <span>Credit OK</span>
+                      </span>
+                    )}
+
+                    {ord.heatLotNumber && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                        <Flame className="w-2.5 h-2.5" />
+                        <span>Lot: {ord.heatLotNumber}</span>
+                      </span>
+                    )}
+
+                    {ord.drawingRevision && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800">
+                        <span>Rev: {ord.drawingRevision}</span>
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-2">
-                  ₹{ord.grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+
+                {/* Quantitative Details */}
+                <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
+                  <div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                      PO Date: <span className="font-semibold text-slate-700 dark:text-slate-300">{ord.poDate || 'N/A'}</span> • Del: <span className="font-semibold text-slate-700 dark:text-slate-300">{ord.deliveryDate || 'N/A'}</span>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <div className="text-sm font-black font-mono text-slate-900 dark:text-white">
+                      ₹{ord.grossAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                    </div>
+                  </div>
                 </div>
+
+                {/* 8-Stage Gated Progression Stepper Bar (QC & PDI Integrated) */}
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80">
+                  {renderProgressionStepper(ord, 'card')}
+                </div>
+
+                {/* Mobile Tap Action */}
+                <button
+                  type="button"
+                  className="w-full min-h-[40px] py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <span>Inspect Order Lifecycle</span>
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
+                </button>
               </div>
             );
-          })}
-        </div>
-      )}
+          })
+        )}
+      </div>
 
+      {/* ========================================================================= */}
+      {/* ── DESKTOP TABLE & GRID VIEWS (≥ md) ──                                    */}
+      {/* ========================================================================= */}
+      <div className="hidden md:block">
+        {viewMode === 'table' ? (
+          <div className={`rounded-3xl border overflow-hidden transition-all shadow-xl ${isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200'
+            }`}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse font-sans">
+                <thead>
+                  <tr className={`border-b font-mono font-bold uppercase tracking-wider text-[11px] ${isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'
+                    }`}>
+                    <th
+                      onClick={() => {
+                        if (sortField === 'RECENCY') {
+                          setSortDirection(d => d === 'DESC' ? 'ASC' : 'DESC');
+                        } else {
+                          setSortField('RECENCY');
+                          setSortDirection('DESC');
+                        }
+                      }}
+                      className="py-4 px-5 cursor-pointer hover:text-[#5B75F8] select-none transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span>Purchase Order & Date</span>
+                        {sortField === 'RECENCY' && (
+                          <span className="text-[#5B75F8] font-bold text-[10px] bg-[#5B75F8]/10 px-1.5 py-0.5 rounded border border-[#5B75F8]/20">
+                            {sortDirection === 'DESC' ? '↓ Recent' : '↑ Oldest'}
+                          </span>
+                        )}
+                        {sortField === 'PO_NO' && (
+                          <span className="text-[#5B75F8]">{sortDirection === 'ASC' ? '↑' : '↓'}</span>
+                        )}
+                      </div>
+                    </th>
+                    <th
+                      onClick={() => {
+                        if (sortField === 'CUSTOMER') {
+                          setSortDirection(d => d === 'ASC' ? 'DESC' : 'ASC');
+                        } else {
+                          setSortField('CUSTOMER');
+                          setSortDirection('ASC');
+                        }
+                      }}
+                      className="py-4 px-5 cursor-pointer hover:text-[#5B75F8] select-none transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span>Customer & Credit Status</span>
+                        {sortField === 'CUSTOMER' && <span className="text-[#5B75F8]">{sortDirection === 'ASC' ? '↑' : '↓'}</span>}
+                      </div>
+                    </th>
+                    <th className="py-4 px-5">Current State</th>
+                    <th
+                      onClick={() => {
+                        if (sortField === 'AMOUNT') {
+                          setSortDirection(d => d === 'ASC' ? 'DESC' : 'ASC');
+                        } else {
+                          setSortField('AMOUNT');
+                          setSortDirection('DESC');
+                        }
+                      }}
+                      className="py-4 px-5 text-right cursor-pointer hover:text-[#5B75F8] select-none transition-colors"
+                    >
+                      <div className="flex items-center justify-end gap-1.5">
+                        <span>Gross Amount</span>
+                        {sortField === 'AMOUNT' && <span className="text-[#5B75F8]">{sortDirection === 'ASC' ? '↑' : '↓'}</span>}
+                      </div>
+                    </th>
+                    <th className="py-4 px-5 text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
+                  {sortedOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-12 text-center">
+                        <div className="flex flex-col items-center justify-center gap-2">
+                          <ShoppingCart className="w-8 h-8 text-slate-400 opacity-50" />
+                          <p className={`text-sm font-semibold ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>No purchase orders found</p>
+                          <p className={`text-xs ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>Try adjusting your status or sub-type filter</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    sortedOrders.map((ord) => {
+                      const subType = ord.subType || 'FRESH_PO';
+                      const hasCreditHold = ord.isCustomerOnCreditHold;
+
+                      const linkedQc = (qcQueue || []).filter(q =>
+                        (q.orderPo && (q.orderPo.trim().toUpperCase() === ord.poNo.trim().toUpperCase() || q.orderPo.trim().toUpperCase() === ord.id.trim().toUpperCase())) ||
+                        (ord.jobCards && ord.jobCards.some(j => j.jobNo && j.jobNo.trim().toUpperCase() === (q.jobNo || '').trim().toUpperCase()))
+                      );
+
+                      const isQcRejected = linkedQc.some(q => q.qcStatus === 'REJECTED');
+                      const isQcHold = linkedQc.some(q => q.qcStatus === 'QC_HOLD');
+                      const isQcPassed = linkedQc.length > 0 && linkedQc.every(q => q.qcStatus === 'PASS' || q.qcStatus === 'PASSED');
+                      const hasNcr = ord.hasOpenNcr || isQcRejected || isQcHold;
+
+                      let badge = getStatusBadge(ord.status as string, ord.stage);
+                      if (isQcRejected) {
+                        badge = {
+                          bg: isDarkMode ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200',
+                          dot: 'bg-rose-500 animate-pulse',
+                          label: '6. QC Rejected'
+                        };
+                      } else if (isQcHold || hasNcr) {
+                        badge = {
+                          bg: isDarkMode ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-200',
+                          dot: 'bg-amber-500 animate-pulse',
+                          label: '6. QC Hold / NCR'
+                        };
+                      }
+
+                      return (
+                        <tr
+                          key={ord.id}
+                          onClick={() => onSelectOrder(ord)}
+                          className={`group transition-all cursor-pointer ${isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'
+                            }`}
+                        >
+                          <td className="py-4 px-5 font-bold font-mono">
+                            <div className="flex items-center gap-2.5">
+                              <div className={`p-2 rounded-xl transition-transform group-hover:scale-105 ${subType === 'BLANKET_CALLOFF'
+                                ? isDarkMode ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' : 'bg-purple-100 text-purple-700 border border-purple-200'
+                                : isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/30' : 'bg-[#5B75F8]/10 text-[#5B75F8] border border-[#5B75F8]/20'
+                                }`}>
+                                <ShoppingCart className="w-3.5 h-3.5" />
+                              </div>
+                              <div>
+                                <div className={`text-xs font-bold flex items-center gap-1.5 ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>
+                                  <span>{ord.poNo}</span>
+                                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase border ${subType === 'BLANKET_CALLOFF'
+                                    ? isDarkMode ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' : 'bg-purple-100 text-purple-800 border-purple-200'
+                                    : subType === 'AMENDMENT'
+                                      ? isDarkMode ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' : 'bg-amber-100 text-amber-800 border-amber-200'
+                                      : isDarkMode ? 'bg-blue-500/20 text-blue-300 border-blue-500/30' : 'bg-blue-100 text-blue-800 border-blue-200'
+                                    }`}>
+                                    {subType === 'BLANKET_CALLOFF' ? 'Blanket Call-off' : subType === 'AMENDMENT' ? 'Amendment' : 'Fresh PO'}
+                                  </span>
+                                </div>
+                                <div className={`text-[10px] font-mono font-normal mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                                  {ord.lines ? `${ord.lines.length} Lines` : '0 Lines'} • PO Date: <span className="font-semibold">{ord.poDate || ord.createdAt?.split('T')[0] || 'N/A'}</span> • Del: {ord.deliveryDate}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="py-4 px-5">
+                            <div className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>{ord.customerName}</div>
+                            {hasCreditHold ? (
+                              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold mt-1 border ${isDarkMode ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
+                                }`}>
+                                <AlertCircle className="w-3 h-3 text-rose-500" />
+                                <span>Credit Hold {ord.creditHoldOverrideBy ? '(Owner Overridden)' : '(Blocked)'}</span>
+                              </span>
+                            ) : (
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-mono font-medium mt-1 border ${isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                }`}>
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                <span>Credit Verified OK</span>
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="py-4 px-5">
+                            {renderProgressionStepper(ord, 'table')}
+                          </td>
+
+                          <td className={`py-4 px-5 text-right font-bold font-mono text-xs ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                            ₹{ord.grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </td>
+
+                          <td className="py-4 px-5 text-center">
+                            <button className={`px-3 py-1.5 rounded-xl border text-xs font-bold font-mono transition-all flex items-center justify-center gap-1 mx-auto cursor-pointer ${isDarkMode
+                              ? 'bg-[#5B75F8]/10 text-[#7B92FF] border-[#5B75F8]/30 hover:bg-[#5B75F8]/20'
+                              : 'bg-[#5B75F8]/10 text-[#5B75F8] border-[#5B75F8]/20 hover:bg-[#5B75F8]/20'
+                              }`}>
+                              <span>Inspect</span>
+                              <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {sortedOrders.map((ord) => {
+              return (
+                <div
+                  key={ord.id}
+                  onClick={() => onSelectOrder(ord)}
+                  className={`p-5 rounded-3xl border transition-all cursor-pointer hover:scale-[1.01] shadow-lg space-y-3 ${isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'
+                    }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="font-bold font-mono text-sm text-[#5B75F8]">{ord.poNo}</div>
+                    <div className="text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                      ₹{ord.grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </div>
+                  </div>
+                  <div className={`text-xs font-bold ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>{ord.customerName}</div>
+                  <div className={`text-[10px] font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                    PO Date: <span className="font-semibold">{ord.poDate || ord.createdAt?.split('T')[0] || 'N/A'}</span> • Del: {ord.deliveryDate}
+                  </div>
+                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80">
+                    {renderProgressionStepper(ord, 'grid')}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* ========================================================================= */}
+      {/* ── CREATE PURCHASE ORDER MODAL ──                                          */}
+      {/* ========================================================================= */}
       <Modal
         isOpen={showNewModal}
         onClose={() => setShowNewModal(false)}
@@ -1016,7 +1350,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
               <button
                 type="button"
                 onClick={() => setShowNewModal(false)}
-                className={`px-4 py-2.5 rounded-xl text-xs font-mono font-bold cursor-pointer transition-all ${isDarkMode ? 'text-slate-400 hover:text-white bg-slate-800/50 hover:bg-slate-800' : 'border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                className={`min-h-[44px] px-4 py-2.5 rounded-xl text-xs font-mono font-bold cursor-pointer transition-all ${isDarkMode ? 'text-slate-400 hover:text-white bg-slate-800/50 hover:bg-slate-800' : 'border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`}
               >
                 Cancel
@@ -1024,7 +1358,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
               <button
                 type="submit"
                 form="create-po-form"
-                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white font-bold text-xs font-mono shadow-lg cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="min-h-[44px] px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white font-bold text-xs font-mono shadow-lg cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]"
               >
                 Validate & Confirm Order
               </button>
@@ -1148,7 +1482,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                       }}
                       className="text-[10px] font-mono font-bold text-indigo-500 hover:underline cursor-pointer flex items-center gap-0.5"
                     >
-                      <span>+ New Customer</span>
+                      <span>+ New Master Customer</span>
+                      <ArrowUpRight className="w-3 h-3" />
                     </button>
                   )}
                 </div>
@@ -1156,13 +1491,13 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                   required
                   value={selectedCustomerCode}
                   onChange={(e) => handleSelectCustomer(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all cursor-pointer font-sans ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white focus:border-indigo-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500 focus:bg-white'
+                  className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none transition-all ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white focus:border-indigo-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500 focus:bg-white'
                     }`}
                 >
-                  <option value="">-- Select Customer ({customers.length} in Master) --</option>
+                  <option value="">Select registered customer from Master...</option>
                   {customers.map(c => (
-                    <option key={c.code || c.id} value={c.code}>
-                      {c.name} ({c.code}{c.gstin ? ` • ${c.gstin}` : ''}{c.city ? ` • ${c.city}` : ''})
+                    <option key={c.code || c.id} value={c.code || c.id}>
+                      {c.code} — {c.name} {c.notes?.toLowerCase().includes('overdue') || (c as any).isOverdue ? '⚠️ [Credit Hold 90d]' : ''}
                     </option>
                   ))}
                 </select>
@@ -1170,279 +1505,234 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
             </div>
           )}
 
-          {/* Selected Customer Info Badge */}
-          {selectedCustomer && (
-            <div className={`p-3 rounded-2xl border flex flex-wrap items-center justify-between gap-2 text-xs font-mono ${isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
-              }`}>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-indigo-400">{selectedCustomer.name}</span>
-                <span className="text-[10px] text-slate-400">[{selectedCustomer.code}]</span>
-              </div>
-              <div className="flex items-center gap-3 text-[11px]">
-                <span>GSTIN: <strong className={isDarkMode ? 'text-white' : 'text-slate-900'}>{selectedCustomer.gstin || 'N/A'}</strong></span>
-                <span>Terms: <strong className={isDarkMode ? 'text-white' : 'text-slate-900'}>{selectedCustomer.paymentTerms || 'Net 30'} ({selectedCustomer.creditDays || 30}d)</strong></span>
-              </div>
-            </div>
-          )}
-
-          {/* Gate 2: Customer Credit Hold Override Panel */}
+          {/* Hard Precondition Alert: 90-Day Customer Credit Hold */}
           {isCustomerCreditHeld && (
-            <div className={`p-3.5 rounded-2xl border space-y-2 ${isDarkMode ? 'bg-rose-950/20 border-rose-500/40 text-rose-300' : 'bg-rose-50 border-rose-300 text-rose-900'
+            <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-rose-950/30 border-rose-500/40 text-rose-300' : 'bg-rose-50 border-rose-300 text-rose-900'
               }`}>
-              <div className="flex items-center gap-2 text-rose-500 font-bold text-xs font-mono">
-                <AlertTriangle className="w-4 h-4" />
-                <span>Customer On Credit Hold (Overdue Receivables &gt; 90 Days)</span>
+              <div className="flex items-center gap-2 font-bold text-xs">
+                <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                <span>Customer on 90-Day Credit Overdue Hold</span>
               </div>
-              <p className={`text-[11px] ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                This customer has unpaid invoices overdue exceeding 90 days. An Owner-level override is required to proceed.
+              <p className={`text-[11px] mt-1 leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                {newCustomer || 'Selected customer'} has overdue payment receivables exceeding approved 90-day credit limits. New order creation is locked.
               </p>
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <input
-                  type="text"
-                  required
-                  placeholder="Override Authorized By (Owner/Admin)"
-                  value={creditOverrideBy}
-                  onChange={(e) => setCreditOverrideBy(e.target.value)}
-                  className={`p-2 rounded-xl border text-xs font-mono outline-none ${isDarkMode ? 'bg-slate-900 border-rose-500/40 text-white' : 'bg-white border-rose-300 text-slate-900'
-                    }`}
-                />
-                <input
-                  type="text"
-                  required
-                  placeholder="Override Business Justification"
-                  value={creditOverrideReason}
-                  onChange={(e) => setCreditOverrideReason(e.target.value)}
-                  className={`p-2 rounded-xl border text-xs outline-none ${isDarkMode ? 'bg-slate-900 border-rose-500/40 text-white' : 'bg-white border-rose-300 text-slate-900'
-                    }`}
-                />
+
+              <div className={`mt-3 pt-3 border-t grid grid-cols-1 sm:grid-cols-2 gap-3 ${isDarkMode ? 'border-rose-500/30' : 'border-rose-200'}`}>
+                <div>
+                  <label className="block text-[10px] font-mono uppercase font-bold text-rose-400 mb-1">
+                    Owner Override Authorizer Username *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. sachin.owner / superadmin"
+                    value={creditOverrideBy}
+                    onChange={(e) => setCreditOverrideBy(e.target.value)}
+                    className={`w-full p-2 rounded-xl border text-xs font-mono outline-none ${isDarkMode ? 'bg-slate-950 border-rose-500/50 text-white' : 'bg-white border-rose-300 text-slate-900'
+                      }`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-mono uppercase font-bold text-rose-400 mb-1">
+                    Override Justification Reason
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 50% advance received via RTGS"
+                    value={creditOverrideReason}
+                    onChange={(e) => setCreditOverrideReason(e.target.value)}
+                    className={`w-full p-2 rounded-xl border text-xs outline-none ${isDarkMode ? 'bg-slate-950 border-rose-500/50 text-white' : 'bg-white border-rose-300 text-slate-900'
+                      }`}
+                  />
+                </div>
               </div>
             </div>
           )}
 
-          {/* PO Date & Delivery Target */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Dates & Tax */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className={`block text-[11px] font-mono mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>PO Date</label>
+              <label className={`block text-[11px] font-mono font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                PO Date
+              </label>
               <input
                 type="date"
                 value={newPoDate}
                 onChange={(e) => setNewPoDate(e.target.value)}
-                className={`w-full p-2.5 rounded-xl border text-xs font-mono outline-none ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white'
+                className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none transition-all ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white focus:border-indigo-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500 focus:bg-white'
                   }`}
               />
             </div>
             <div>
-              <label className={`block text-[11px] font-mono mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Delivery Target</label>
+              <label className={`block text-[11px] font-mono font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                Promised Delivery Date
+              </label>
               <input
                 type="date"
                 value={newDeliveryDate}
                 onChange={(e) => setNewDeliveryDate(e.target.value)}
-                className={`w-full p-2.5 rounded-xl border text-xs font-mono outline-none ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white'
+                className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none transition-all ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white focus:border-indigo-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500 focus:bg-white'
                   }`}
               />
             </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                Tax Category
+              </label>
+              <select
+                value={newTaxCategory}
+                onChange={(e) => setNewTaxCategory(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none transition-all ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white focus:border-indigo-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500 focus:bg-white'
+                  }`}
+              >
+                <option value="GST 18%">GST 18% (Standard Engineering)</option>
+                <option value="GST 12%">GST 12% (Machined Castings)</option>
+                <option value="GST 28%">GST 28% (Automotive Spares)</option>
+                <option value="EXEMPT">Exempt / Export SEZ (0%)</option>
+              </select>
+            </div>
           </div>
 
-          {/* Line Items - Indexed to Master Item Catalog */}
-          <div className={`p-4 rounded-2xl border space-y-3 ${isDarkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50 border-slate-200'
-            }`}>
-            <div className="flex flex-wrap items-center justify-between gap-2">
+          {/* Line Items Table with Master Part Indexing */}
+          <div className="space-y-2 pt-2">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className={`font-bold font-mono text-xs ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+                <span className={`text-xs font-mono font-bold uppercase ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
                   Order Line Items ({lines.length})
                 </span>
-                <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                  Master Items Catalog Indexed
+                <span className={`text-[10px] font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                  • Drawing Revision & Master Matching
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                {onNavigateToMasters && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowNewModal(false);
-                      onNavigateToMasters();
-                    }}
-                    className="text-[11px] font-mono font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer flex items-center gap-1"
-                  >
-                    <Plus className="w-3 h-3" />
-                    <span>Manage Items in Master</span>
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={addLineItem}
-                  className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white text-xs font-mono cursor-pointer font-bold shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  + Add Line Item
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={addLineItem}
+                className="px-3 py-1 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 text-xs font-mono font-bold flex items-center gap-1 cursor-pointer transition-all"
+              >
+                <Plus className="w-3 h-3" />
+                <span>Add Part Line</span>
+              </button>
             </div>
 
-            {lines.map((line, idx) => {
-              const matchedMaster = masters.find(m => m.code === line.itemCode || m.id === line.itemCode);
-              return (
-                <div key={idx} className={`p-3.5 rounded-2xl border space-y-3 transition-all ${isDarkMode ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
-                  }`}>
-                  {/* Master Item Selector Dropdown */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className={`block text-[11px] font-mono font-bold uppercase ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                        Line {idx + 1}: Select Item from Master Catalog <span className="text-rose-500">*</span>
-                      </label>
-                      {matchedMaster && (
-                        <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
-                          <span>✓ Catalog Verified:</span>
-                          <strong>{matchedMaster.code}</strong>
-                        </span>
-                      )}
-                    </div>
-                    <select
-                      required
-                      value={line.itemCode}
-                      onChange={(e) => handleSelectItemForLine(idx, e.target.value)}
-                      className={`w-full p-2.5 rounded-xl border text-xs font-mono font-medium outline-none transition-all cursor-pointer ${isDarkMode
-                        ? 'bg-slate-800 border-slate-700 text-white focus:border-indigo-500'
-                        : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white'
-                        }`}
-                    >
-                      <option value="">-- Choose Item from Master Catalog ({masters.length} registered) --</option>
-                      {masters.map((m) => {
-                        const rate = m.sellingPrice || m.saleRate || (m.standardCost ? m.standardCost : 0);
-                        const type = m.itemType || (m.isFinishedGoods ? 'Finished Good' : 'Raw Material');
-                        return (
-                          <option key={m.code || m.id} value={m.code}>
-                            {m.code} — {m.name || m.partNo || m.description} [{type} • ₹{rate.toLocaleString('en-IN')}/{m.unit || 'Nos'}]
-                          </option>
-                        );
-                      })}
-                      <option value="CUSTOM_ITEM">+ Unindexed / Custom Part Number</option>
-                    </select>
-                  </div>
+            <div className={`rounded-2xl border overflow-hidden ${isDarkMode ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50/80 border-slate-200'}`}>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs font-mono">
+                  <thead>
+                    <tr className={`border-b text-[10px] uppercase ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'}`}>
+                      <th className="p-2.5 px-3">Master Part Code</th>
+                      <th className="p-2.5 px-3">Description</th>
+                      <th className="p-2.5 px-3">Cust Part No</th>
+                      <th className="p-2.5 px-3">Rev</th>
+                      <th className="p-2.5 px-3 w-20">Qty</th>
+                      <th className="p-2.5 px-3 w-24">Rate (₹)</th>
+                      <th className="p-2.5 px-3 text-right">Gross (₹)</th>
+                      <th className="p-2.5 px-2 text-center"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
+                    {lines.map((line, idx) => (
+                      <tr key={idx} className={isDarkMode ? 'hover:bg-slate-900/40' : 'hover:bg-white'}>
+                        <td className="p-2 px-3">
+                          <select
+                            value={line.itemCode}
+                            onChange={(e) => handleSelectItemForLine(idx, e.target.value)}
+                            className={`w-36 p-1.5 rounded-lg border text-xs font-mono outline-none ${isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                              }`}
+                          >
+                            <option value="">-- Choose Master Part --</option>
+                            {masters.map(m => (
+                              <option key={m.code || m.id} value={m.code}>
+                                {m.code} - {m.name || m.description || m.partNo}
+                              </option>
+                            ))}
+                            <option value="CUSTOM_ITEM">+ Custom / Ad-hoc Part</option>
+                          </select>
+                        </td>
+                        <td className="p-2 px-3">
+                          <input
+                            type="text"
+                            value={line.itemDescription}
+                            onChange={(e) => updateLineItem(idx, 'itemDescription', e.target.value)}
+                            placeholder="Part description"
+                            className={`w-36 p-1.5 rounded-lg border text-xs font-sans outline-none ${isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                              }`}
+                          />
+                        </td>
+                        <td className="p-2 px-3">
+                          <input
+                            type="text"
+                            value={line.custPartNo}
+                            onChange={(e) => updateLineItem(idx, 'custPartNo', e.target.value)}
+                            placeholder="Drawing Part #"
+                            className={`w-28 p-1.5 rounded-lg border text-xs font-mono outline-none ${isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                              }`}
+                          />
+                        </td>
+                        <td className="p-2 px-3">
+                          <input
+                            type="text"
+                            value={line.drawingRevision}
+                            onChange={(e) => updateLineItem(idx, 'drawingRevision', e.target.value)}
+                            placeholder="Rev"
+                            className={`w-16 p-1.5 rounded-lg border text-xs font-mono text-center outline-none ${isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                              }`}
+                          />
+                        </td>
+                        <td className="p-2 px-3">
+                          <input
+                            type="number"
+                            min="1"
+                            value={line.orderQty}
+                            onChange={(e) => updateLineItem(idx, 'orderQty', Number(e.target.value))}
+                            className={`w-16 p-1.5 rounded-lg border text-xs font-mono text-right outline-none ${isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                              }`}
+                          />
+                        </td>
+                        <td className="p-2 px-3">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.5"
+                            value={line.rate}
+                            onChange={(e) => updateLineItem(idx, 'rate', Number(e.target.value))}
+                            className={`w-20 p-1.5 rounded-lg border text-xs font-mono text-right outline-none ${isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                              }`}
+                          />
+                        </td>
+                        <td className="p-2 px-3 text-right font-bold text-slate-900 dark:text-white">
+                          ₹{(Number(line.orderQty) * Number(line.rate)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                        </td>
+                        <td className="p-2 px-2 text-center">
+                          <button
+                            type="button"
+                            disabled={lines.length <= 1}
+                            onClick={() => removeLineItem(idx)}
+                            className="p-1 rounded-lg text-slate-400 hover:text-rose-500 disabled:opacity-30 cursor-pointer"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
 
-                  {/* Selected Master Item Metadata Badge */}
-                  {matchedMaster && (
-                    <div className={`p-2.5 rounded-xl border text-[11px] font-mono flex flex-wrap items-center justify-between gap-2 ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
-                      }`}>
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded-md font-bold text-[10px] uppercase bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
-                          {matchedMaster.itemType || (matchedMaster.isFinishedGoods ? 'Finished Good' : 'Raw Material')}
-                        </span>
-                        <span className="font-semibold text-slate-900 dark:text-white">{matchedMaster.name || matchedMaster.description}</span>
-                      </div>
-                      <div className="flex items-center gap-3 text-[10px]">
-                        <span>HSN: <strong className="text-slate-900 dark:text-white">{matchedMaster.hsnCode || 'N/A'}</strong></span>
-                        <span>UOM: <strong className="text-slate-900 dark:text-white">{matchedMaster.unit || 'Nos'}</strong></span>
-                        <span>Catalog Rate: <strong className="text-emerald-600 dark:text-emerald-400">₹{(matchedMaster.sellingPrice || matchedMaster.saleRate || matchedMaster.standardCost || 0).toLocaleString('en-IN')}</strong></span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Part Code & Description manual refine/view */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    <div>
-                      <label className={`block text-[10px] font-mono mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Part / Item Code</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Part Code"
-                        value={line.itemCode}
-                        onChange={(e) => updateLineItem(idx, 'itemCode', e.target.value)}
-                        className={`w-full p-2 rounded-lg border font-mono text-xs outline-none ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white'
-                          }`}
-                      />
-                    </div>
-                    <div className="sm:col-span-2">
-                      <label className={`block text-[10px] font-mono mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Item Description</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Item description"
-                        value={line.itemDescription}
-                        onChange={(e) => updateLineItem(idx, 'itemDescription', e.target.value)}
-                        className={`w-full p-2 rounded-lg border text-xs outline-none ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white'
-                          }`}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Qty, Unit, Rate, Drawing Rev, Line Total & Remove */}
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 items-end">
-                    <div>
-                      <label className={`text-[10px] font-mono font-semibold block mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                        Order Qty <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="number"
-                        min={1}
-                        required
-                        value={line.orderQty}
-                        onChange={(e) => updateLineItem(idx, 'orderQty', Number(e.target.value))}
-                        className={`w-full p-2 rounded-lg border font-mono font-bold text-xs outline-none ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white'
-                          }`}
-                      />
-                    </div>
-                    <div>
-                      <label className={`text-[10px] font-mono font-semibold block mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                        UOM
-                      </label>
-                      <input
-                        type="text"
-                        value={line.unit}
-                        onChange={(e) => updateLineItem(idx, 'unit', e.target.value)}
-                        placeholder="Nos"
-                        className={`w-full p-2 rounded-lg border font-mono text-xs outline-none ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white'
-                          }`}
-                      />
-                    </div>
-                    <div>
-                      <label className={`text-[10px] font-mono font-semibold block mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                        Unit Rate (₹) <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="number"
-                        min={0}
-                        required
-                        value={line.rate}
-                        onChange={(e) => updateLineItem(idx, 'rate', Number(e.target.value))}
-                        className={`w-full p-2 rounded-lg border font-mono font-bold text-xs outline-none ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white'
-                          }`}
-                      />
-                    </div>
-                    <div>
-                      <label className={`text-[10px] font-mono font-semibold block mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                        Drawing Rev
-                      </label>
-                      <input
-                        type="text"
-                        value={line.drawingRevision}
-                        onChange={(e) => updateLineItem(idx, 'drawingRevision', e.target.value)}
-                        placeholder="REV-A"
-                        className={`w-full p-2 rounded-lg border font-mono text-xs outline-none ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white'
-                          }`}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between p-2 rounded-lg bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
-                      <div>
-                        <div className="text-[9px] font-mono text-slate-400">Line Amount</div>
-                        <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-xs">
-                          ₹{(Number(line.orderQty) * Number(line.rate)).toLocaleString('en-IN')}
-                        </div>
-                      </div>
-                      {lines.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeLineItem(idx)}
-                          className="text-rose-500 hover:text-rose-600 text-xs font-mono font-bold cursor-pointer hover:underline"
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+          {/* Remarks */}
+          <div>
+            <label className={`block text-[11px] font-mono font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+              Special Packing / Quality Instructions
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. VCI Anti-rust polybag packing with Mill TC inspection report attached"
+              value={newRemark}
+              onChange={(e) => setNewRemark(e.target.value)}
+              className={`w-full p-2.5 rounded-xl border font-sans text-xs outline-none transition-all ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white focus:border-indigo-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500 focus:bg-white'
+                }`}
+            />
           </div>
 
         </form>

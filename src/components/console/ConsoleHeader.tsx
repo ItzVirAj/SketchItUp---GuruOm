@@ -14,11 +14,11 @@ import {
   ArrowRight,
   ChevronDown,
   SlidersHorizontal,
-  ShieldCheck,
   Palette
 } from 'lucide-react';
 import { AccentColorSelector } from './AccentColorSelector';
 import { CustomerOrder, StockItem, CustomerInvoice, JobCard, UserRole, ConsoleView, SystemUser } from '../../types/console';
+import { getViewTitle } from '../../utils/navigationConfig';
 
 interface ConsoleHeaderProps {
   fiscalYear: string;
@@ -44,6 +44,7 @@ interface ConsoleHeaderProps {
   onNavigate?: (view: ConsoleView) => void;
   onSelectOrder?: (orderId: string) => void;
   onSignOut?: () => void;
+  currentView?: ConsoleView;
 }
 
 export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
@@ -69,15 +70,18 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
   jobCards = [],
   onNavigate,
   onSelectOrder,
-  onSignOut
+  onSignOut,
+  currentView = 'command-centre'
 }) => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [showScopeDropdown, setShowScopeDropdown] = useState(false);
   const [showCustomizeMenu, setShowCustomizeMenu] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const mobileSearchInputRef = useRef<HTMLInputElement>(null);
   const searchDropdownRef = useRef<HTMLDivElement>(null);
   const scopeDropdownRef = useRef<HTMLDivElement>(null);
   const customizeDropdownRef = useRef<HTMLDivElement>(null);
@@ -89,7 +93,9 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
         searchDropdownRef.current && 
         !searchDropdownRef.current.contains(event.target as Node) &&
         searchInputRef.current &&
-        !searchInputRef.current.contains(event.target as Node)
+        !searchInputRef.current.contains(event.target as Node) &&
+        mobileSearchInputRef.current &&
+        !mobileSearchInputRef.current.contains(event.target as Node)
       ) {
         setIsSearchFocused(false);
       }
@@ -167,6 +173,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
 
   const handleSearchResultClick = (type: 'order' | 'stock' | 'invoice' | 'job', id?: string) => {
     setIsSearchFocused(false);
+    setIsMobileSearchOpen(false);
     setSearchQuery('');
     
     if (type === 'order') {
@@ -182,43 +189,53 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
   };
 
   const scopeOptions = ['FY 26-27', 'FY 25-26', 'Q3 2026', 'All-Time'];
+  const activeTitle = getViewTitle(currentView);
 
   return (
-    <header className={`px-4 lg:px-6 py-3 border-b transition-colors flex items-center justify-between gap-4 font-sans relative z-30 ${
-      isDarkMode ? 'bg-[#16171B] border-[#262832] text-slate-200' : 'bg-[#ebedf0] border-[#d8dde8] text-slate-900'
+    <header className={`px-3 sm:px-4 lg:px-6 py-2.5 sm:py-3 border-b transition-colors flex items-center justify-between gap-2 sm:gap-4 font-sans relative z-30 ${
+      isDarkMode ? 'bg-[#16171B] border-[#262832] text-slate-200' : 'bg-[#F8FAFC] border-[#E2E8F0] text-slate-900'
     }`}>
       
-      {/* Left Brand / Menu */}
-      <div className="flex items-center gap-3 md:gap-4">
+      {/* Left Brand / Hamburger Menu / Page Title */}
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         {onToggleMobileMenu && (
           <button
+            type="button"
             onClick={onToggleMobileMenu}
-            className={`p-2 rounded-xl border md:hidden cursor-pointer ${
-              isDarkMode ? 'border-slate-800 hover:bg-slate-800' : 'border-[#d8dde8] hover:bg-white'
+            aria-label="Open Navigation Drawer"
+            className={`p-2 rounded-xl border lg:hidden cursor-pointer shrink-0 transition-colors ${
+              isDarkMode ? 'border-slate-800 bg-[#1A1B1F] hover:bg-slate-800 text-slate-200' : 'border-[#d8dde8] bg-white hover:bg-slate-50 text-slate-700'
             }`}
           >
             <Menu className="w-5 h-5" />
           </button>
         )}
 
-        {/* sketchItUP Brand Text */}
+        {/* Brand Indicator */}
         <div 
           id="sketchitup-logo-badge"
-          className="flex items-center font-sans"
+          className="flex items-center font-sans shrink-0"
         >
           <div className="flex flex-col leading-none">
-            <span className="text-base font-black tracking-tight text-slate-900 dark:text-white">
-              sketch<span className="text-[#5B75F8]">ItUP</span>
+            <span className="text-sm sm:text-base font-black tracking-tight text-slate-900 dark:text-white">
+              sketch<span className="text-[var(--accent-primary)]">ItUP</span>
             </span>
-            <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mt-0.5">
+            <span className="text-[9px] sm:text-[10px] font-mono text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mt-0.5">
               Owner OS
             </span>
           </div>
         </div>
+
+        {/* Mobile-only Active View Title Divider & Badge */}
+        <div className="flex lg:hidden items-center gap-1.5 min-w-0 pl-1 border-l border-slate-300 dark:border-slate-700">
+          <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+            {activeTitle}
+          </span>
+        </div>
       </div>
 
-      {/* Center Search Input with Generous Length */}
-      <div className="hidden lg:flex items-center relative flex-1 max-w-xl xl:max-w-2xl">
+      {/* Desktop OmniSearch Input */}
+      <div className="hidden lg:flex items-center relative flex-1 max-w-xl xl:max-w-2xl mx-4">
         <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
         <input 
           ref={searchInputRef}
@@ -227,11 +244,12 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
           onChange={(e) => setSearchQuery(e.target.value)}
           onFocus={() => setIsSearchFocused(true)}
           placeholder="Search orders, parts, invoices, jobs..."
-          className="w-full bg-white dark:bg-slate-900 border border-[#d8dde8] dark:border-slate-800 rounded-xl pl-9 pr-16 py-2.5 text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#5B75F8]/20 focus:border-[#5B75F8] transition-all placeholder:text-slate-400 shadow-2xs"
+          className="w-full bg-white dark:bg-slate-900 border border-[#d8dde8] dark:border-slate-800 rounded-xl pl-9 pr-16 py-2.5 text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[var(--accent-ring)] focus:border-[var(--accent-primary)] transition-all placeholder:text-slate-400 shadow-2xs"
         />
         
         {searchQuery ? (
           <button 
+            type="button"
             onClick={() => setSearchQuery('')}
             className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 cursor-pointer"
           >
@@ -268,7 +286,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
                       className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/80 cursor-pointer flex items-center justify-between transition-colors"
                     >
                       <div className="flex items-center gap-2.5">
-                        <ShoppingCart className="w-4 h-4 text-[#5B75F8] shrink-0" />
+                        <ShoppingCart className="w-4 h-4 text-[var(--accent-primary)] shrink-0" />
                         <div>
                           <div className="text-xs font-bold">{order.poNo || 'PO'} • {order.customerName || 'Customer'}</div>
                           <div className="text-[10px] text-slate-400 font-mono">{(order.lines || []).length} line items • ₹{(order.grossAmount || 0).toLocaleString()} • {order.status}</div>
@@ -314,7 +332,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
                       className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/80 cursor-pointer flex items-center justify-between transition-colors"
                     >
                       <div className="flex items-center gap-2.5">
-                        <FileText className="w-4 h-4 text-[#5B75F8] shrink-0" />
+                        <FileText className="w-4 h-4 text-[var(--accent-primary)] shrink-0" />
                         <div>
                           <div className="text-xs font-bold">{inv.invoiceNo} • {inv.customerName}</div>
                           <div className="text-[10px] text-slate-400 font-mono">PO: {inv.orderPo} • Status: {inv.status} • Due: {inv.dueDate || 'Immediate'}</div>
@@ -360,10 +378,22 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
       </div>
 
       {/* Right Controls */}
-      <div className="flex items-center gap-2 sm:gap-2.5">
+      <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
         
-        {/* Scope Selector Dropdown (Shifted to upper right nav) */}
-        <div className="relative" ref={scopeDropdownRef}>
+        {/* Mobile Search Toggle Button */}
+        <button
+          type="button"
+          onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+          aria-label="Toggle Quick Search"
+          className={`p-2 rounded-xl border lg:hidden cursor-pointer transition-colors ${
+            isDarkMode ? 'border-slate-800 bg-[#1A1B1F] text-slate-300' : 'border-[#d8dde8] bg-white text-slate-700'
+          }`}
+        >
+          <Search className="w-4 h-4" />
+        </button>
+
+        {/* Scope Selector (Desktop Only) */}
+        <div className="relative hidden lg:block" ref={scopeDropdownRef}>
           <button
             type="button"
             onClick={() => setShowScopeDropdown(!showScopeDropdown)}
@@ -372,7 +402,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
           >
             <span className="text-slate-400 hidden sm:inline">Scope:</span>
             <span>{scope}</span>
-            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${showScopeDropdown ? 'rotate-180 text-[#5B75F8]' : ''}`} />
+            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${showScopeDropdown ? 'rotate-180 text-[var(--accent-primary)]' : ''}`} />
           </button>
 
           {showScopeDropdown && (
@@ -387,7 +417,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
                   }}
                   className={`w-full text-left px-3 py-1.5 rounded-lg cursor-pointer transition-colors ${
                     scope === sc 
-                      ? 'bg-[#5B75F8] text-white font-bold' 
+                      ? 'bg-[var(--accent-primary)] text-white font-bold' 
                       : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >
@@ -403,7 +433,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
           <button 
             type="button"
             onClick={() => setShowCustomizeMenu(prev => !prev)}
-            className={`flex items-center gap-1.5 border rounded-xl px-3 py-1.5 text-xs font-semibold shadow-2xs transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 border rounded-xl px-2 sm:px-3 py-1.5 text-xs font-semibold shadow-2xs transition-all cursor-pointer ${
               showCustomizeMenu
                 ? 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white'
                 : 'bg-white dark:bg-slate-900 border-[#d8dde8] dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -411,7 +441,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
             title="Appearance & Dashboard Customization"
           >
             <Palette className="w-3.5 h-3.5 text-slate-500" />
-            <span className="hidden md:inline">Customize</span>
+            <span className="hidden md:inline">Theme</span>
             <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${showCustomizeMenu ? 'rotate-180' : ''}`} />
           </button>
 
@@ -441,7 +471,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
                   >
                     <div className="flex items-center gap-2">
                       <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Configure Widgets & Layout</span>
+                      <span>Configure Widgets</span>
                     </div>
                     <ArrowRight className="w-3 h-3 text-slate-400" />
                   </button>
@@ -456,57 +486,114 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
           type="button"
           onClick={handleSyncClick}
           disabled={isSyncing}
-          title="Refresh & Synchronize all system data with database"
-          className={`bg-[#5B75F8]/10 hover:bg-[#5B75F8]/20 border border-[#5B75F8]/30 text-[#5B75F8] dark:text-[#7B92FF] text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-xl flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs shrink-0 active:scale-95 ${
+          title="Refresh & Synchronize all system data"
+          className={`bg-[var(--accent-soft-light)] dark:bg-[var(--accent-soft-dark)] hover:opacity-90 border border-[var(--accent-border-light)] dark:border-[var(--accent-border-dark)] text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-xl flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs shrink-0 active:scale-95 ${
             isSyncing ? 'opacity-80 cursor-wait' : ''
           }`}
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-[#5B75F8]' : ''}`} />
-          <span className="hidden sm:inline">{isSyncing ? 'Syncing...' : 'Sync Now'}</span>
+          <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-[var(--accent-primary)]' : ''}`} />
+          <span className="hidden sm:inline">{isSyncing ? 'Syncing...' : 'Sync'}</span>
         </button>
 
-        {/* Sync Status Label */}
+        {/* Sync Status Label (Desktop Extra Wide Only) */}
         <div className="hidden 2xl:flex items-center gap-1.5 text-xs text-slate-500 font-medium shrink-0">
           <span>Last synced: {lastSynced}</span>
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
         </div>
 
-        {/* Animated Single-Click Theme Mode Switch Toggle */}
+        {/* Theme Switch Toggle */}
         <button
           type="button"
           onClick={() => setIsDarkMode(!isDarkMode)}
-          className={`relative w-14 h-8 rounded-full p-1 border transition-colors duration-300 flex items-center cursor-pointer shadow-2xs select-none shrink-0 ${
+          className={`relative w-12 sm:w-14 h-7 sm:h-8 rounded-full p-0.5 sm:p-1 border transition-colors duration-300 flex items-center cursor-pointer shadow-2xs select-none shrink-0 ${
             isDarkMode 
               ? 'bg-slate-900 border-slate-700 text-slate-200' 
               : 'bg-white border-[#d8dde8] text-slate-700'
           }`}
-          title={isDarkMode ? "Click to switch to Light Mode" : "Click to switch to Dark Mode"}
+          title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
         >
-          {/* Animated Sliding Thumb */}
           <motion.div
             layout
             transition={{ type: "spring", stiffness: 500, damping: 30 }}
-            className={`w-6 h-6 rounded-full flex items-center justify-center shadow-xs z-10 ${
+            className={`w-5 sm:w-6 h-5 sm:h-6 rounded-full flex items-center justify-center shadow-xs z-10 ${
               isDarkMode 
                 ? 'bg-indigo-600 text-white ml-auto' 
-                : 'bg-[#5B75F8] text-white mr-auto'
+                : 'bg-[var(--accent-primary)] text-white mr-auto'
             }`}
           >
             {isDarkMode ? (
-              <Moon className="w-3.5 h-3.5" />
+              <Moon className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
             ) : (
-              <Sun className="w-3.5 h-3.5" />
+              <Sun className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
             )}
           </motion.div>
           
-          {/* Subtle Background Icons */}
-          <div className="absolute inset-0 px-2 flex items-center justify-between pointer-events-none text-slate-400">
-            <Sun className={`w-3.5 h-3.5 transition-opacity ${!isDarkMode ? 'opacity-0' : 'opacity-50'}`} />
-            <Moon className={`w-3.5 h-3.5 transition-opacity ${isDarkMode ? 'opacity-0' : 'opacity-50'}`} />
+          <div className="absolute inset-0 px-1.5 sm:px-2 flex items-center justify-between pointer-events-none text-slate-400">
+            <Sun className={`w-3 sm:w-3.5 h-3 sm:h-3.5 transition-opacity ${!isDarkMode ? 'opacity-0' : 'opacity-50'}`} />
+            <Moon className={`w-3 sm:w-3.5 h-3 sm:h-3.5 transition-opacity ${isDarkMode ? 'opacity-0' : 'opacity-50'}`} />
           </div>
         </button>
 
       </div>
+
+      {/* Mobile Search Overlay Input Panel */}
+      {isMobileSearchOpen && (
+        <div className={`absolute top-full left-0 right-0 p-3 border-b shadow-lg z-40 lg:hidden flex flex-col gap-2 font-sans ${
+          isDarkMode ? 'bg-[#16171B] border-[#262832]' : 'bg-white border-[#d8dde8]'
+        }`}>
+          <div className="relative flex items-center">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3" />
+            <input
+              ref={mobileSearchInputRef}
+              autoFocus
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search orders, parts, invoices, jobs..."
+              className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl pl-9 pr-8 py-2 text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[var(--accent-ring)]"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 p-1 text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {searchQuery.trim() !== '' && (
+            <div className="max-h-60 overflow-y-auto space-y-2 pt-1">
+              {matchingOrders.map(order => (
+                <div 
+                  key={order.id}
+                  onClick={() => handleSearchResultClick('order', order.id)}
+                  className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 flex items-center justify-between text-xs cursor-pointer"
+                >
+                  <div className="truncate font-semibold">{order.poNo || 'PO'} • {order.customerName}</div>
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0 ml-2" />
+                </div>
+              ))}
+              {matchingStock.map(item => (
+                <div 
+                  key={item.code}
+                  onClick={() => handleSearchResultClick('stock', item.code)}
+                  className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 flex items-center justify-between text-xs cursor-pointer"
+                >
+                  <div className="truncate font-semibold">{item.code} • {item.description}</div>
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0 ml-2" />
+                </div>
+              ))}
+              {totalResultsCount === 0 && (
+                <div className="py-3 text-center text-xs text-slate-400">
+                  No matching results.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </header>
   );
 };

@@ -37,6 +37,11 @@ import {
   MovementType,
   MasterItem
 } from '../../../types/console';
+import {
+  INVENTORY_CATEGORIES,
+  InventoryCategoryKey,
+  resolveInventoryPartCodes
+} from '../../../utils/inventoryCategorization';
 import { 
   fetchPurchaseOrders, 
   insertPurchaseOrder, 
@@ -69,6 +74,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 }) => {
   const { user } = useAuth();
   const [subTab, setSubTab] = useState<'stock' | 'shortages' | 'purchases' | 'grn' | 'movements' | 'reconciliation'>('stock');
+  const [selectedCategory, setSelectedCategory] = useState<InventoryCategoryKey>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStockForAdjust, setSelectedStockForAdjust] = useState<StockItem | null>(null);
   const [adjustQty, setAdjustQty] = useState<number>(0);
@@ -96,16 +102,17 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
     try {
       if (subTab === 'purchases') {
         const data = await fetchPurchaseOrders();
-        setPurchaseOrders(data);
+        setPurchaseOrders(Array.isArray(data) ? data : []);
       } else if (subTab === 'grn') {
         const data = await fetchGrnList();
-        setGrnList(data);
+        setGrnList(Array.isArray(data) ? data : []);
       } else if (subTab === 'movements') {
         const data = await fetchInventoryMovements();
-        setMovements(data);
+        const list = Array.isArray(data) ? data : (data as any)?.movements || [];
+        setMovements(Array.isArray(list) ? list : []);
       } else if (subTab === 'reconciliation') {
         const data = await fetchStockReconciliation();
-        setReconciliationReport(data);
+        setReconciliationReport(Array.isArray(data) ? data : []);
       }
     } catch (err) {
       console.warn('InventoryView async fetch error:', err);
@@ -120,7 +127,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
   const handleOpenItemHistory = async (stk: StockItem) => {
     try {
-      const history = await fetchItemStockHistory(stk.code);
+      const targetCode = stk.rawCode || stk.code;
+      const history = await fetchItemStockHistory(targetCode);
       setSelectedItemHistory({
         itemCode: stk.code,
         description: stk.description,
@@ -147,20 +155,63 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
     }
   };
 
-  // Stock Master = full Item Catalog (Masters section) LEFT JOINed with live stock levels.
-  // Every catalog item appears in realtime; items with no ledger movement yet show zero levels.
+  // Resolved part codes & structured categories mapping for all stock and master items
+  const resolvedCodeMap = useMemo(() => {
+    const allInputItems = [
+      ...masters.map(m => ({
+        code: m.code,
+        name: m.name,
+        description: m.description,
+        itemType: m.itemType,
+        category: m.category,
+        storeLocation: m.storeLocation,
+        isFinishedGoods: m.isFinishedGoods,
+        partNo: m.partNo
+      })),
+      ...stock.map(s => ({
+        code: s.code,
+        description: s.description,
+        storeLocation: s.storeLocation,
+        partNo: s.partNo
+      }))
+    ];
+    return resolveInventoryPartCodes(allInputItems);
+  }, [masters, stock]);
+
+  // Stock Master = full Item Catalog LEFT JOINed with live stock levels.
+  // Each item gets persistent category-based sequential part code and structured category data.
   const stockMasterRows = useMemo<StockItem[]>(() => {
     const byCode = new Map<string, StockItem>(stock.map(s => [s.code, s] as [string, StockItem]));
     const rows: StockItem[] = [];
+
     for (const item of masters) {
+      const resolved = resolvedCodeMap.get(item.code) || {
+        partCode: item.code,
+        category: 'OTHER' as InventoryCategoryKey,
+        rawCode: item.code
+      };
+      const catMeta = INVENTORY_CATEGORIES.find(c => c.key === resolved.category);
       const existing = byCode.get(item.code);
+
       if (existing) {
-        rows.push(existing);
+        rows.push({
+          ...existing,
+          code: resolved.partCode,
+          partCode: resolved.partCode,
+          rawCode: item.code,
+          category: resolved.category,
+          categoryLabel: catMeta?.label || 'Other',
+          storeLocation: item.storeLocation || existing.storeLocation,
+          partNo: item.partNo || existing.partNo,
+          hsnCode: item.hsnCode || existing.hsnCode
+        });
         byCode.delete(item.code);
       } else {
         rows.push({
-          code: item.code,
-          description: item.name || item.description || 'Catalog Item',
+          code: resolved.partCode,
+          partCode: resolved.partCode,
+          rawCode: item.code,
+          description: item.name || item.description || item.partNo || 'Catalog Item',
           onHand: 0,
           reserved: 0,
           available: 0,
@@ -168,32 +219,104 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
           reorderLevel: Number(item.reorderLevel ?? 0),
           shortage: 0,
           unit: item.unit || 'NOS',
-          status: 'OK'
+          status: 'OK',
+          category: resolved.category,
+          categoryLabel: catMeta?.label || 'Other',
+          storeLocation: item.storeLocation,
+          partNo: item.partNo,
+          hsnCode: item.hsnCode
         });
       }
     }
-    rows.push(...byCode.values());
-    return rows;
-  }, [stock, masters]);
 
-  const filteredStock = stockMasterRows.filter(s =>
-    s.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+    for (const [code, existing] of byCode.entries()) {
+      const resolved = resolvedCodeMap.get(code) || {
+        partCode: code,
+        category: 'OTHER' as InventoryCategoryKey,
+        rawCode: code
+      };
+      const catMeta = INVENTORY_CATEGORIES.find(c => c.key === resolved.category);
+      rows.push({
+        ...existing,
+        code: resolved.partCode,
+        partCode: resolved.partCode,
+        rawCode: code,
+        category: resolved.category,
+        categoryLabel: catMeta?.label || 'Other'
+      });
+    }
+
+    return rows;
+  }, [stock, masters, resolvedCodeMap]);
+
+  // Telemetry counts by category
+  const categoryCounts = useMemo(() => {
+    const counts: Record<InventoryCategoryKey, number> = {
+      ALL: stockMasterRows.length,
+      RAW_MATERIAL: 0,
+      FINISHED_GOODS: 0,
+      CONSUMABLES: 0,
+      TOOLS: 0,
+      SPARE_PARTS: 0,
+      OTHER: 0
+    };
+    for (const s of stockMasterRows) {
+      const cat = (s.category as InventoryCategoryKey) || 'OTHER';
+      if (counts[cat] !== undefined) {
+        counts[cat]++;
+      } else {
+        counts.OTHER++;
+      }
+    }
+    return counts;
+  }, [stockMasterRows]);
+
+  // Filtered stock based on selected category tab and search query
+  const filteredStock = useMemo(() => {
+    return stockMasterRows.filter(s => {
+      const matchesCategory = selectedCategory === 'ALL' || s.category === selectedCategory;
+      if (!matchesCategory) return false;
+
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        s.code.toLowerCase().includes(q) ||
+        (s.rawCode && s.rawCode.toLowerCase().includes(q)) ||
+        (s.partNo && s.partNo.toLowerCase().includes(q)) ||
+        (s.categoryLabel && s.categoryLabel.toLowerCase().includes(q)) ||
+        s.description.toLowerCase().includes(q)
+      );
+    });
+  }, [stockMasterRows, selectedCategory, searchQuery]);
 
   const handleAdjustSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedStockForAdjust) return;
-    // The form collects a delta (+/-); the backend API expects the absolute new on-hand value
     const newOnHand = Math.max(0, (Number(selectedStockForAdjust.onHand) || 0) + adjustQty);
     try {
       setActionError(null);
-      await onAdjustStock(selectedStockForAdjust.code, newOnHand, adjustReason);
+      const targetCode = selectedStockForAdjust.rawCode || selectedStockForAdjust.code;
+      await onAdjustStock(targetCode, newOnHand, adjustReason);
+      setActionSuccess(`Stock adjusted for ${selectedStockForAdjust.code} (${selectedStockForAdjust.description}) to ${newOnHand} ${selectedStockForAdjust.unit}`);
       setSelectedStockForAdjust(null);
       setAdjustQty(0);
     } catch (err: any) {
       setActionError(err?.message || 'Failed to adjust stock. Check your role permissions.');
     }
+  };
+
+  const renderCategoryBadge = (categoryKey?: string, categoryLabel?: string) => {
+    const cat = INVENTORY_CATEGORIES.find(c => c.key === categoryKey) || INVENTORY_CATEGORIES[6];
+    return (
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase tracking-wider border ${
+        isDarkMode 
+          ? `${cat.badgeBgDark} ${cat.badgeTextDark} ${cat.badgeBorderDark}`
+          : `${cat.badgeBgLight} ${cat.badgeTextLight} ${cat.badgeBorderLight}`
+      }`}>
+        <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80" />
+        <span>{categoryLabel || cat.label}</span>
+      </span>
+    );
   };
 
   const handlePoApproval = async (id: string, decision: 'APPROVE' | 'REJECT') => {
@@ -411,91 +534,240 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
       {/* 1. Main Stock Table */}
       {subTab === 'stock' && (
-        <div className={`rounded-3xl border overflow-hidden transition-all shadow-xl ${
-          isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200'
-        }`}>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className={`border-b font-mono font-bold uppercase tracking-wider text-[11px] ${
-                  isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'
-                }`}>
-                  <th className="py-4 px-5">Part Code</th>
-                  <th className="py-4 px-5">Description</th>
-                  <th className="py-4 px-5 text-right">On Hand</th>
-                  <th className="py-4 px-5 text-right">Reserved</th>
-                  <th className="py-4 px-5 text-right">Available</th>
-                  <th className="py-4 px-5 text-right">Demand</th>
-                  <th className="py-4 px-5 text-right">Reorder Level</th>
-                  <th className="py-4 px-5 text-center">Status</th>
-                  <th className="py-4 px-5 text-center">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
-                {filteredStock.map((stk) => {
-                  const isShort = stk.status === 'SHORTAGE' || (stk.shortage || 0) > 0;
-                  return (
-                    <tr 
-                      key={stk.code}
-                      className={isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}
-                    >
-                      <td className="py-4 px-5 font-bold font-mono text-[#5B75F8] dark:text-[#7B92FF]">
-                        {stk.code}
-                      </td>
-                      <td className={`py-4 px-5 font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
-                        {stk.description}
-                      </td>
-                      <td className={`py-4 px-5 text-right font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                        {stk.onHand} {stk.unit}
-                      </td>
-                      <td className="py-4 px-5 text-right font-mono text-slate-400">
-                        {stk.reserved}
-                      </td>
-                      <td className="py-4 px-5 text-right font-bold font-mono text-emerald-500">
-                        {stk.available}
-                      </td>
-                      <td className="py-4 px-5 text-right font-mono text-amber-500 font-semibold">
-                        {stk.demand}
-                      </td>
-                      <td className="py-4 px-5 text-right font-mono text-slate-400">
-                        {stk.reorderLevel}
-                      </td>
-                      <td className="py-4 px-5 text-center">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
-                          isShort
-                            ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-                            : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                        }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${isShort ? 'bg-rose-500' : 'bg-emerald-500'}`} />
-                          <span>{stk.status}</span>
-                        </span>
-                      </td>
-                      <td className="py-4 px-5 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => setSelectedStockForAdjust(stk)}
-                            className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer ${
-                              isDarkMode ? 'bg-[#5B75F8]/10 text-[#7B92FF] hover:bg-[#5B75F8]/20 border border-[#5B75F8]/30' : 'bg-[#5B75F8]/10 text-[#5B75F8] hover:bg-[#5B75F8]/20 border border-[#5B75F8]/20'
-                            }`}
-                          >
-                            Adjust
-                          </button>
-                          <button
-                            onClick={() => handleOpenItemHistory(stk)}
-                            title="View Append-Only Movement History"
-                            className={`p-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer ${
-                              isDarkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                            }`}
-                          >
-                            <History className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+        <div className="space-y-4">
+          {/* Category Filter Tabs Bar: All | Raw Materials | Finished Goods | Consumables | Tools | Spare Parts | Other */}
+          <div className={`p-3 rounded-2xl border flex items-center gap-2 overflow-x-auto scrollbar-none transition-all ${
+            isDarkMode ? 'bg-slate-900/80 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
+          }`}>
+            {INVENTORY_CATEGORIES.map(cat => {
+              const isActive = selectedCategory === cat.key;
+              const count = categoryCounts[cat.key] || 0;
+              return (
+                <button
+                  key={cat.key}
+                  onClick={() => setSelectedCategory(cat.key)}
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer whitespace-nowrap border ${
+                    isActive
+                      ? isDarkMode 
+                        ? 'bg-[#5B75F8]/20 text-[#7B92FF] border-[#5B75F8]/50 shadow-xs'
+                        : 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-xs'
+                      : isDarkMode
+                        ? 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-slate-200 hover:bg-slate-800/70'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
+                  <span>{cat.label}</span>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    isActive
+                      ? isDarkMode ? 'bg-[#5B75F8]/35 text-white' : 'bg-white/25 text-white'
+                      : isDarkMode ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-700'
+                  }`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Desktop Stock Master Table */}
+          <div className={`hidden md:block rounded-3xl border overflow-hidden transition-all shadow-xl ${
+            isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200'
+          }`}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className={`border-b font-mono font-bold uppercase tracking-wider text-[11px] ${
+                    isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'
+                  }`}>
+                    <th className="py-4 px-5">Part Code</th>
+                    <th className="py-4 px-5">Category</th>
+                    <th className="py-4 px-5">Description</th>
+                    <th className="py-4 px-5 text-right">On Hand</th>
+                    <th className="py-4 px-5 text-right">Reserved</th>
+                    <th className="py-4 px-5 text-right">Available</th>
+                    <th className="py-4 px-5 text-right">Demand</th>
+                    <th className="py-4 px-5 text-right">Reorder Level</th>
+                    <th className="py-4 px-5 text-center">Status</th>
+                    <th className="py-4 px-5 text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
+                  {filteredStock.map((stk) => {
+                    const isShort = stk.status === 'SHORTAGE' || (stk.shortage || 0) > 0;
+                    return (
+                      <tr 
+                        key={stk.code}
+                        className={isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}
+                      >
+                        <td className="py-4 px-5">
+                          <div className="flex items-center gap-2 font-mono">
+                            <span className="font-bold text-sm text-[#5B75F8] dark:text-[#7B92FF]">
+                              {stk.code}
+                            </span>
+                            {stk.rawCode && stk.rawCode !== stk.code && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800/80 text-slate-400 border border-slate-700/60 font-mono" title={`Catalog ID: ${stk.rawCode}`}>
+                                {stk.rawCode}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-4 px-5">
+                          {renderCategoryBadge(stk.category, stk.categoryLabel)}
+                        </td>
+                        <td className={`py-4 px-5 font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
+                          <div>{stk.description}</div>
+                          {stk.partNo && stk.partNo !== stk.description && (
+                            <div className="text-[11px] text-slate-400 font-mono mt-0.5">{stk.partNo}</div>
+                          )}
+                        </td>
+                        <td className={`py-4 px-5 text-right font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                          {stk.onHand} {stk.unit}
+                        </td>
+                        <td className="py-4 px-5 text-right font-mono text-slate-400">
+                          {stk.reserved}
+                        </td>
+                        <td className="py-4 px-5 text-right font-bold font-mono text-emerald-500">
+                          {stk.available}
+                        </td>
+                        <td className="py-4 px-5 text-right font-mono text-amber-500 font-semibold">
+                          {stk.demand}
+                        </td>
+                        <td className="py-4 px-5 text-right font-mono text-slate-400">
+                          {stk.reorderLevel}
+                        </td>
+                        <td className="py-4 px-5 text-center">
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
+                            isShort
+                              ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                              : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${isShort ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+                            <span>{stk.status}</span>
+                          </span>
+                        </td>
+                        <td className="py-4 px-5 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => setSelectedStockForAdjust(stk)}
+                              className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer ${
+                                isDarkMode ? 'bg-[#5B75F8]/10 text-[#7B92FF] hover:bg-[#5B75F8]/20 border border-[#5B75F8]/30' : 'bg-[#5B75F8]/10 text-[#5B75F8] hover:bg-[#5B75F8]/20 border border-[#5B75F8]/20'
+                              }`}
+                            >
+                              Adjust
+                            </button>
+                            <button
+                              onClick={() => handleOpenItemHistory(stk)}
+                              title="View Append-Only Movement History"
+                              className={`p-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer ${
+                                isDarkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                              }`}
+                            >
+                              <History className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {filteredStock.length === 0 && (
+                    <tr>
+                      <td colSpan={10} className="py-12 text-center text-slate-400 font-mono text-xs">
+                        No inventory items found matching the selected category or search term.
                       </td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Mobile Stock Cards (Viewport < md) */}
+          <div className="block md:hidden space-y-3">
+            {filteredStock.map((stk) => {
+              const isShort = stk.status === 'SHORTAGE' || (stk.shortage || 0) > 0;
+              return (
+                <div
+                  key={stk.code}
+                  className={`p-4 rounded-2xl border transition-all space-y-3 shadow-sm ${
+                    isDarkMode ? 'bg-slate-900/90 border-slate-800/80 text-white' : 'bg-white border-slate-200 text-slate-900'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono font-bold text-sm text-[#5B75F8] dark:text-[#7B92FF]">
+                        {stk.code}
+                      </span>
+                      {renderCategoryBadge(stk.category, stk.categoryLabel)}
+                      {stk.rawCode && stk.rawCode !== stk.code && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700 font-mono">
+                          {stk.rawCode}
+                        </span>
+                      )}
+                    </div>
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold uppercase border shrink-0 ${
+                      isShort ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${isShort ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+                      {stk.status}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h4 className={`text-xs font-bold ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>
+                      {stk.description}
+                    </h4>
+                    {stk.partNo && stk.partNo !== stk.description && (
+                      <p className="text-[10px] text-slate-400 font-mono mt-0.5">{stk.partNo}</p>
+                    )}
+                  </div>
+
+                  <div className={`grid grid-cols-3 gap-2 text-center font-mono text-[11px] p-2.5 rounded-xl border ${
+                    isDarkMode ? 'bg-slate-950/70 border-slate-800/80' : 'bg-slate-50 border-slate-200'
+                  }`}>
+                    <div>
+                      <span className="text-[10px] text-slate-500 uppercase block">On Hand</span>
+                      <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                        {stk.onHand} {stk.unit}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-500 uppercase block">Available</span>
+                      <span className="font-bold text-emerald-500">{stk.available} {stk.unit}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-500 uppercase block">Reserved</span>
+                      <span className="font-bold text-slate-400">{stk.reserved} {stk.unit}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <button
+                      onClick={() => setSelectedStockForAdjust(stk)}
+                      className="flex-1 py-2 rounded-xl bg-[#5B75F8]/15 hover:bg-[#5B75F8]/25 text-[#7B92FF] border border-[#5B75F8]/30 text-xs font-mono font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <SlidersHorizontal className="w-3.5 h-3.5" />
+                      <span>Adjust Stock</span>
+                    </button>
+                    <button
+                      onClick={() => handleOpenItemHistory(stk)}
+                      className={`p-2 rounded-xl border transition-all cursor-pointer ${
+                        isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+                      }`}
+                      title="View History"
+                    >
+                      <History className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+            {filteredStock.length === 0 && (
+              <div className={`p-8 text-center rounded-2xl border font-mono text-xs ${
+                isDarkMode ? 'bg-slate-900/60 border-slate-800 text-slate-400' : 'bg-white border-slate-200 text-slate-500'
+              }`}>
+                No inventory items found matching the selected category.
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -746,7 +1018,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
-                  {movements
+                  {(Array.isArray(movements) ? movements : [])
                     .filter(m => movementTypeFilter === 'ALL' || m.movementType === movementTypeFilter)
                     .filter(m => !searchQuery || m.itemCode.toLowerCase().includes(searchQuery.toLowerCase()) || m.referenceId?.toLowerCase().includes(searchQuery.toLowerCase()))
                     .map((mov) => {
@@ -817,7 +1089,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                         </tr>
                       );
                     })}
-                  {movements.length === 0 && (
+                  {(movements?.length ?? 0) === 0 && (
                     <tr>
                       <td colSpan={9} className="py-8 text-center text-slate-500">
                         No ledger movements recorded yet. Movements automatically generate from GRNs, Job Cards, and Dispatches.
@@ -837,18 +1109,18 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className={`p-4 rounded-3xl border ${isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'}`}>
               <div className="text-xs text-slate-400 font-mono">Audited Items</div>
-              <div className="text-2xl font-bold font-mono mt-1 text-[#5B75F8]">{reconciliationReport.length}</div>
+              <div className="text-2xl font-bold font-mono mt-1 text-[#5B75F8]">{(reconciliationReport || []).length}</div>
             </div>
             <div className={`p-4 rounded-3xl border ${isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'}`}>
               <div className="text-xs text-slate-400 font-mono">100% Ledger Matched</div>
               <div className="text-2xl font-bold font-mono mt-1 text-emerald-400">
-                {reconciliationReport.filter(r => r.status === 'MATCHED').length}
+                {(reconciliationReport || []).filter(r => r.status === 'MATCHED').length}
               </div>
             </div>
             <div className={`p-4 rounded-3xl border ${isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'}`}>
               <div className="text-xs text-slate-400 font-mono">Discrepancies Flagged</div>
               <div className="text-2xl font-bold font-mono mt-1 text-rose-400">
-                {reconciliationReport.filter(r => r.status === 'DISCREPANCY').length}
+                {(reconciliationReport || []).filter(r => r.status === 'DISCREPANCY').length}
               </div>
             </div>
           </div>
@@ -872,7 +1144,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
-                  {reconciliationReport.map((rec) => {
+                  {(reconciliationReport || []).map((rec) => {
                     const isDiscrepancy = rec.status === 'DISCREPANCY';
                     return (
                       <tr key={rec.itemCode} className={isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}>
@@ -950,10 +1222,13 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             </div>
 
             <form onSubmit={handleAdjustSubmit} className="space-y-4">
-              <div>
-                <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">
-                  Target SKU / Material Component *
-                </label>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[11px] font-mono uppercase font-bold text-slate-400">
+                    Target SKU / Material Component *
+                  </label>
+                  {renderCategoryBadge(selectedStockForAdjust.category, selectedStockForAdjust.categoryLabel)}
+                </div>
                 <select
                   value={selectedStockForAdjust.code}
                   onChange={(e) => {
@@ -968,10 +1243,18 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 >
                   {stockMasterRows.map((s) => (
                     <option key={s.code} value={s.code} className={isDarkMode ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>
-                      {s.code} — {s.description} ({s.onHand} {s.unit || 'units'} on hand)
+                      [{s.categoryLabel || 'Item'}] {s.code} — {s.description} ({s.onHand} {s.unit || 'units'} on hand)
                     </option>
                   ))}
                 </select>
+                {selectedStockForAdjust.rawCode && selectedStockForAdjust.rawCode !== selectedStockForAdjust.code && (
+                  <div className="text-[10px] font-mono text-slate-400 flex items-center gap-1.5">
+                    <span>Catalog Reference:</span>
+                    <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-bold border border-slate-700">
+                      {selectedStockForAdjust.rawCode}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">

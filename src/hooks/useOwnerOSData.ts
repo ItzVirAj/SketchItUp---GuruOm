@@ -97,7 +97,7 @@ import {
   clearOperationalDataInSupabase
 } from '../services/supabaseServices';
 import { getAccessToken } from '../lib/apiClient';
-
+import { toast } from '../context/ToastContext';
 
 export function useOwnerOSData(currentUser?: SystemUser) {
   const [loading, setLoading] = useState<boolean>(true);
@@ -500,11 +500,17 @@ export function useOwnerOSData(currentUser?: SystemUser) {
   };
 
   const handleCreateOrder = async (order: CustomerOrder) => {
-    // Immediately prepend to local state so newest order appears at the top of the table
-    setOrders(prev => [order, ...prev.filter(o => o.id !== order.id && o.poNo !== order.poNo)]);
-    await insertOrder(order);
-    await addAuditLog('order', 'create', `Created order #${order.poNo} for ${order.customerName}`);
-    await loadAllData();
+    try {
+      // Immediately prepend to local state so newest order appears at the top of the table
+      setOrders(prev => [order, ...prev.filter(o => o.id !== order.id && o.poNo !== order.poNo)]);
+      await insertOrder(order);
+      await addAuditLog('order', 'create', `Created order #${order.poNo} for ${order.customerName}`);
+      toast.success(`Created order #${order.poNo} for ${order.customerName}`, 'Order Created');
+      await loadAllData();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to create order', 'Creation Failed');
+      throw err;
+    }
   };
 
   const handleUpdateOrder = async (orderId: string, updates: Partial<CustomerOrder>) => {
@@ -519,8 +525,10 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     setOrders(prev => prev.map(o => (o.id === targetId || o.poNo === targetPo) ? { ...o, ...updates } : o));
     try {
       await updateOrder(targetId, updates);
-    } catch (err) {
+      toast.success(`Updated order #${updates.poNo || targetPo}`, 'Order Updated');
+    } catch (err: any) {
       console.warn('Backend updateOrder warning:', err);
+      toast.error(err?.message || 'Failed to update order', 'Update Failed');
     }
     await addAuditLog('order', 'update', `Updated order #${updates.poNo || targetPo}`);
     await loadAllData();
@@ -542,8 +550,10 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       if (confirmed) {
         setOrders(prev => prev.map(o => (o.id === targetId || o.poNo === targetPo) ? { ...o, ...confirmed, status: 'CONFIRMED', stage: 'CONFIRMED', progressStep: 2 } : o));
       }
-    } catch (err) {
+      toast.success(`Executive authorized order #${targetPo}`, 'Order Confirmed');
+    } catch (err: any) {
       console.warn('Backend handleConfirmOrder fallback:', err);
+      toast.error(err?.message || 'Failed to confirm order', 'Confirmation Failed');
       // Re-sync on failure
       await loadAllData();
       throw err;
@@ -553,40 +563,61 @@ export function useOwnerOSData(currentUser?: SystemUser) {
   };
 
   const handleCloseOrder = async (orderId: string) => {
-    await updateOrderStatus(orderId, 'CLOSED', 6);
-    await addAuditLog('order', 'close', `Closed order ${orderId}`);
-    await loadAllData();
+    try {
+      await updateOrderStatus(orderId, 'CLOSED', 6);
+      await addAuditLog('order', 'close', `Closed order ${orderId}`);
+      toast.info(`Closed order #${orderId}`, 'Order Closed');
+      await loadAllData();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to close order', 'Error Closing Order');
+    }
   };
 
   const handleCancelOrder = async (orderId: string) => {
-    await updateOrderStatus(orderId, 'CANCELLED');
-    await addAuditLog('order', 'cancel', `Cancelled order ${orderId}`);
-    await loadAllData();
+    try {
+      await updateOrderStatus(orderId, 'CANCELLED');
+      await addAuditLog('order', 'cancel', `Cancelled order ${orderId}`);
+      toast.warning(`Cancelled order #${orderId}`, 'Order Cancelled');
+      await loadAllData();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to cancel order', 'Error Cancelling Order');
+    }
   };
 
   const handleAdjustStock = async (code: string, newOnHand: number, reason?: string) => {
-    await adjustStockItem(code, newOnHand, reason);
-    await addAuditLog('stock', 'adjust', `Adjusted stock for item ${code} to ${newOnHand}${reason ? ` (${reason})` : ''}`);
-    await loadAllData();
+    try {
+      await adjustStockItem(code, newOnHand, reason);
+      await addAuditLog('stock', 'adjust', `Adjusted stock for item ${code} to ${newOnHand}${reason ? ` (${reason})` : ''}`);
+      toast.success(`Stock level for ${code} set to ${newOnHand}`, 'Stock Adjusted');
+      await loadAllData();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to adjust stock', 'Adjustment Failed');
+    }
   };
 
   const handleCreateJobCard = async (job: JobCard) => {
-    // Manual creation from the Production floor form — posts to the job card release API
-    const res = await createJobCardForOrder({
-      jobNo: job.jobNo,
-      orderPo: job.orderPo,
-      partCode: job.partCode,
-      partDescription: job.partDescription,
-      drawingRevision: job.drawingRevision || 'REV-A',
-      targetQty: Number(job.targetQty ?? job.qty ?? 0),
-      qty: Number(job.qty ?? job.targetQty ?? 0),
-      machine: job.machine || 'CNC-01',
-      materialIssuedLot: job.materialIssuedLot || 'HEAT-LOT-NA',
-      targetDate: job.targetDate,
-      remarks: `Manually created on Production floor for PO ${job.orderPo}${job.machine ? ` (${job.machine})` : ''}`
-    });
-    await addAuditLog('job_card', 'create', `Created job card ${res?.jobNo || job.jobNo} for PO ${job.orderPo} (${job.partCode} x ${Number(job.targetQty ?? job.qty ?? 0)})`);
-    await loadAllData();
+    try {
+      // Manual creation from the Production floor form — posts to the job card release API
+      const res = await createJobCardForOrder({
+        jobNo: job.jobNo,
+        orderPo: job.orderPo,
+        partCode: job.partCode,
+        partDescription: job.partDescription,
+        drawingRevision: job.drawingRevision || 'REV-A',
+        targetQty: Number(job.targetQty ?? job.qty ?? 0),
+        qty: Number(job.qty ?? job.targetQty ?? 0),
+        machine: job.machine || 'CNC-01',
+        materialIssuedLot: job.materialIssuedLot || 'HEAT-LOT-NA',
+        targetDate: job.targetDate,
+        remarks: `Manually created on Production floor for PO ${job.orderPo}${job.machine ? ` (${job.machine})` : ''}`
+      });
+      await addAuditLog('job_card', 'create', `Created job card ${res?.jobNo || job.jobNo} for PO ${job.orderPo} (${job.partCode} x ${Number(job.targetQty ?? job.qty ?? 0)})`);
+      toast.success(`Created job card #${res?.jobNo || job.jobNo} for PO ${job.orderPo}`, 'Job Card Released');
+      await loadAllData();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to create job card', 'Job Card Error');
+      throw err;
+    }
   };
 
   const handleStartOperation = async (jobNo: string, payload: { sequenceNo: number; machineId: string; operatorName: string; actualStartTime?: string }) => {
@@ -624,6 +655,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     }));
 
     await addAuditLog('production', 'start_operation', `Op ${payload.sequenceNo} started on ${payload.machineId} by ${payload.operatorName} for ${jobNo}`);
+    toast.info(`Op ${payload.sequenceNo} started on ${payload.machineId} (${jobNo})`, 'Operation Started');
     await loadAllData();
     return updatedJobCard;
   };
@@ -698,214 +730,274 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     }
 
     await addAuditLog('production', 'complete_operation', `Op ${payload.sequenceNo} completed (${payload.qtyProcessed} good, ${payload.qtyRejected} rejected, ${payload.actualMinutes}m) for ${jobNo}`);
+    toast.success(`Op ${payload.sequenceNo} completed (${payload.qtyProcessed} processed) for ${jobNo}`, 'Operation Finished');
     await loadAllData();
     return updatedJobCard || targetJobCard;
   };
 
   const handleLogProduction = async (logOrJob: Partial<ProductionLogReport> | JobCard, qtyDoneParam?: number) => {
-    const res = await insertProductionLogAndQC(logOrJob, qtyDoneParam);
-    const logDetails = ('jobNo' in logOrJob && 'qtyDone' in logOrJob && qtyDoneParam === undefined)
-      ? (logOrJob as Partial<ProductionLogReport>)
-      : { jobNo: (logOrJob as JobCard).jobNo, qtyDone: qtyDoneParam || 1, operationName: undefined };
-    await addAuditLog(
-      'production',
-      'log',
-      `Logged ${logDetails.qtyDone} units for ${logDetails.jobNo}${logDetails.operationName ? ` (${logDetails.operationName})` : ''}`
-    );
-    await loadAllData();
-    return res;
+    try {
+      const res = await insertProductionLogAndQC(logOrJob, qtyDoneParam);
+      const logDetails = ('jobNo' in logOrJob && 'qtyDone' in logOrJob && qtyDoneParam === undefined)
+        ? (logOrJob as Partial<ProductionLogReport>)
+        : { jobNo: (logOrJob as JobCard).jobNo, qtyDone: qtyDoneParam || 1, operationName: undefined };
+      await addAuditLog(
+        'production',
+        'log',
+        `Logged ${logDetails.qtyDone} units for ${logDetails.jobNo}${logDetails.operationName ? ` (${logDetails.operationName})` : ''}`
+      );
+      toast.success(`Logged ${logDetails.qtyDone} units for ${logDetails.jobNo}`, 'Production Logged');
+      await loadAllData();
+      return res;
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to log production', 'Production Error');
+      throw err;
+    }
   };
 
   const handleUpdateQC = async (id: string, qcStatus: 'PASS' | 'QC_HOLD' | 'REJECTED', notes?: string) => {
-    const target = qcQueue.find(q => q.id === id);
-    const targetOrderPo = target?.orderPo;
-    const targetJobNo = target?.jobNo;
+    try {
+      const target = qcQueue.find(q => q.id === id);
+      const targetOrderPo = target?.orderPo;
+      const targetJobNo = target?.jobNo;
 
-    // Synchronize all QC entries for this order/job to prevent conflicting statuses
-    setQcQueue(prev => prev.map(q => {
-      if (q.id === id || (targetOrderPo && q.orderPo === targetOrderPo)) {
-        return { 
-          ...q, 
-          qcStatus, 
-          inspectorNotes: notes || q.inspectorNotes,
-          inspectedAt: new Date().toISOString()
-        };
+      // Synchronize all QC entries for this order/job to prevent conflicting statuses
+      setQcQueue(prev => prev.map(q => {
+        if (q.id === id || (targetOrderPo && q.orderPo === targetOrderPo)) {
+          return { 
+            ...q, 
+            qcStatus, 
+            inspectorNotes: notes || q.inspectorNotes,
+            inspectedAt: new Date().toISOString()
+          };
+        }
+        return q;
+      }));
+
+      if (targetOrderPo) {
+        setOrders(prev => prev.map(ord => {
+          if (ord.poNo === targetOrderPo || ord.id === targetOrderPo) {
+            return {
+              ...ord,
+              hasOpenNcr: qcStatus !== 'PASS',
+              stage: qcStatus === 'PASS' ? 'QC_INSPECTION' : ord.stage,
+              status: qcStatus === 'PASS' ? 'QC_INSPECTION' : ord.status,
+              progressStep: qcStatus === 'PASS' ? Math.max(ord.progressStep || 1, 6) : ord.progressStep
+            };
+          }
+          return ord;
+        }));
       }
-      return q;
-    }));
 
-    if (targetOrderPo) {
-      setOrders(prev => prev.map(ord => {
-        if (ord.poNo === targetOrderPo || ord.id === targetOrderPo) {
-          return {
-            ...ord,
-            hasOpenNcr: qcStatus !== 'PASS',
-            stage: qcStatus === 'PASS' ? 'QC_INSPECTION' : ord.stage,
-            status: qcStatus === 'PASS' ? 'QC_INSPECTION' : ord.status,
-            progressStep: qcStatus === 'PASS' ? Math.max(ord.progressStep || 1, 6) : ord.progressStep
-          };
-        }
-        return ord;
-      }));
+      if (targetJobNo) {
+        setJobCards(prev => prev.map(j => {
+          if (j.jobNo === targetJobNo || j.id === targetJobNo) {
+            return {
+              ...j,
+              status: qcStatus === 'PASS' ? 'COMPLETED' : 'QC_HOLD'
+            };
+          }
+          return j;
+        }));
+      }
+
+      await updateQCInspection(id, qcStatus, notes);
+      await addAuditLog('qc', 'inspect', `QC status updated to ${qcStatus} for inspection #${id} (PO: ${targetOrderPo || 'N/A'})`);
+      
+      if (qcStatus === 'PASS') {
+        toast.success(`QC Inspection Passed for #${targetOrderPo || id}`, 'QC Passed');
+      } else if (qcStatus === 'REJECTED') {
+        toast.error(`QC Inspection Rejected (NCR Raised) for #${targetOrderPo || id}`, 'QC Rejected');
+      } else {
+        toast.warning(`QC Inspection placed on Hold for #${targetOrderPo || id}`, 'QC Hold');
+      }
+
+      await loadAllData();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update QC inspection', 'QC Error');
     }
-
-    if (targetJobNo) {
-      setJobCards(prev => prev.map(j => {
-        if (j.jobNo === targetJobNo || j.id === targetJobNo) {
-          return {
-            ...j,
-            status: qcStatus === 'PASS' ? 'COMPLETED' : 'QC_HOLD'
-          };
-        }
-        return j;
-      }));
-    }
-
-    await updateQCInspection(id, qcStatus, notes);
-    await addAuditLog('qc', 'inspect', `QC status updated to ${qcStatus} for inspection #${id} (PO: ${targetOrderPo || 'N/A'})`);
-    await loadAllData();
   };
 
   const handlePassPDI = async (id: string, payload?: Partial<PDIInspection>) => {
-    const target = pdiQueue.find(p => p.id === id || p.orderPo === id);
-    const targetOrderPo = (payload?.orderPo || target?.orderPo || id || '').trim();
-    const certNo = payload?.certificateNo || target?.certificateNo || `PDI-COC-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    try {
+      const target = pdiQueue.find(p => p.id === id || p.orderPo === id);
+      const targetOrderPo = (payload?.orderPo || target?.orderPo || id || '').trim();
+      const certNo = payload?.certificateNo || target?.certificateNo || `PDI-COC-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    const normPo = targetOrderPo.toUpperCase();
+      const normPo = targetOrderPo.toUpperCase();
 
-    setPdiQueue(prev => prev.map(p => {
-      const match = p.id === id || (normPo && (p.orderPo || '').trim().toUpperCase() === normPo);
-      if (match) {
-        return {
-          ...p,
-          ...payload,
-          pdiStatus: 'PASS',
-          certificateNo: certNo,
-          reportDate: new Date().toISOString().split('T')[0]
-        };
-      }
-      return p;
-    }));
-
-    if (normPo) {
-      setOrders(prev => prev.map(ord => {
-        if ((ord.poNo || '').trim().toUpperCase() === normPo || (ord.id || '').trim().toUpperCase() === normPo) {
+      setPdiQueue(prev => prev.map(p => {
+        const match = p.id === id || (normPo && (p.orderPo || '').trim().toUpperCase() === normPo);
+        if (match) {
           return {
-            ...ord,
-            stage: 'READY_TO_DISPATCH' as any,
-            status: 'READY_TO_DISPATCH' as any,
-            progressStep: Math.max(ord.progressStep || 1, 7)
+            ...p,
+            ...payload,
+            pdiStatus: 'PASS',
+            certificateNo: certNo,
+            reportDate: new Date().toISOString().split('T')[0]
           };
         }
-        return ord;
+        return p;
       }));
 
-      // Explicitly update the order status
-      const matchedOrder = orders.find(o => (o.poNo || '').trim().toUpperCase() === normPo || (o.id || '').trim().toUpperCase() === normPo);
-      if (matchedOrder) {
-        await updateOrder(matchedOrder.id, {
-          stage: 'READY_TO_DISPATCH' as any,
-          status: 'READY_TO_DISPATCH' as any,
-          progressStep: 7
-        }).catch(() => {});
-      }
-    }
+      if (normPo) {
+        setOrders(prev => prev.map(ord => {
+          if ((ord.poNo || '').trim().toUpperCase() === normPo || (ord.id || '').trim().toUpperCase() === normPo) {
+            return {
+              ...ord,
+              stage: 'READY_TO_DISPATCH' as any,
+              status: 'READY_TO_DISPATCH' as any,
+              progressStep: Math.max(ord.progressStep || 1, 7)
+            };
+          }
+          return ord;
+        }));
 
-    await passPDIInspection(id);
-    await addAuditLog('pdi', 'pass', `Passed PDI inspection #${id} (Cert: ${certNo}, PO: ${targetOrderPo || 'N/A'})`);
-    await loadAllData();
+        // Explicitly update the order status
+        const matchedOrder = orders.find(o => (o.poNo || '').trim().toUpperCase() === normPo || (o.id || '').trim().toUpperCase() === normPo);
+        if (matchedOrder) {
+          await updateOrder(matchedOrder.id, {
+            stage: 'READY_TO_DISPATCH' as any,
+            status: 'READY_TO_DISPATCH' as any,
+            progressStep: 7
+          }).catch(() => {});
+        }
+      }
+
+      await passPDIInspection(id);
+      await addAuditLog('pdi', 'pass', `Passed PDI inspection #${id} (Cert: ${certNo}, PO: ${targetOrderPo || 'N/A'})`);
+      toast.success(`Passed PDI inspection for #${targetOrderPo || id} (Cert #${certNo})`, 'PDI Passed');
+      await loadAllData();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to pass PDI inspection', 'PDI Error');
+    }
   };
 
   const handleIssueDispatch = async (challan: DispatchChallan) => {
-    await insertDispatchChallan(challan);
-    await addAuditLog('dispatch', 'create', `Issued dispatch challan #${challan.challanNo}`);
-    await loadAllData();
+    try {
+      await insertDispatchChallan(challan);
+      await addAuditLog('dispatch', 'create', `Issued dispatch challan #${challan.challanNo}`);
+      toast.success(`Issued delivery challan #${challan.challanNo}`, 'Challan Created');
+      await loadAllData();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to issue dispatch challan', 'Challan Error');
+    }
   };
 
   const handleRecordInvoicePayment = async (invoiceNo: string, paymentData?: any) => {
-    const payAmt = paymentData?.paymentAmount;
-    setInvoices(prev => prev.map(inv => {
-      if (inv.id === invoiceNo || inv.invoiceNo === invoiceNo) {
-        const amt = payAmt !== undefined ? Number(payAmt) : (inv.balanceAmount || inv.totalAmount);
-        const newPaid = Math.min(inv.totalAmount, Number(inv.paidAmount || 0) + amt);
-        const newBal = Math.max(0, inv.totalAmount - newPaid);
-        return {
-          ...inv,
-          paidAmount: newPaid,
-          balanceAmount: newBal,
-          status: newBal <= 0 ? 'PAID' : 'PARTIAL'
-        };
-      }
-      return inv;
-    }));
-    await payInvoice(invoiceNo, paymentData);
-    await addAuditLog('invoice', 'payment', `Recorded payment for invoice #${invoiceNo} (Amount: ₹${payAmt !== undefined ? payAmt : 'Full'})`);
-    await loadAllData();
+    try {
+      const payAmt = paymentData?.paymentAmount;
+      setInvoices(prev => prev.map(inv => {
+        if (inv.id === invoiceNo || inv.invoiceNo === invoiceNo) {
+          const amt = payAmt !== undefined ? Number(payAmt) : (inv.balanceAmount || inv.totalAmount);
+          const newPaid = Math.min(inv.totalAmount, Number(inv.paidAmount || 0) + amt);
+          const newBal = Math.max(0, inv.totalAmount - newPaid);
+          return {
+            ...inv,
+            paidAmount: newPaid,
+            balanceAmount: newBal,
+            status: newBal <= 0 ? 'PAID' : 'PARTIAL'
+          };
+        }
+        return inv;
+      }));
+      await payInvoice(invoiceNo, paymentData);
+      await addAuditLog('invoice', 'payment', `Recorded payment for invoice #${invoiceNo} (Amount: ₹${payAmt !== undefined ? payAmt : 'Full'})`);
+      toast.success(`Recorded payment for invoice #${invoiceNo}`, 'Payment Recorded');
+      await loadAllData();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to record invoice payment', 'Payment Error');
+    }
   };
 
   const handleCreateInvoice = async (inv: CustomerInvoice) => {
-    setInvoices(prev => [inv, ...prev.filter(i => i.invoiceNo !== inv.invoiceNo && i.id !== inv.id)]);
-    if (inv.orderPo) {
-      setOrders(prev => prev.map(o => {
-        if ((o.poNo && o.poNo.trim().toUpperCase() === inv.orderPo?.trim().toUpperCase()) || (o.id && o.id.trim().toUpperCase() === inv.orderPo?.trim().toUpperCase())) {
-          return {
-            ...o,
-            invoiceNo: inv.invoiceNo,
-            status: 'INVOICED',
-            stage: 'INVOICED',
-            progressStep: 8
-          };
-        }
-        return o;
-      }));
+    try {
+      setInvoices(prev => [inv, ...prev.filter(i => i.invoiceNo !== inv.invoiceNo && i.id !== inv.id)]);
+      if (inv.orderPo) {
+        setOrders(prev => prev.map(o => {
+          if ((o.poNo && o.poNo.trim().toUpperCase() === inv.orderPo?.trim().toUpperCase()) || (o.id && o.id.trim().toUpperCase() === inv.orderPo?.trim().toUpperCase())) {
+            return {
+              ...o,
+              invoiceNo: inv.invoiceNo,
+              status: 'INVOICED',
+              stage: 'INVOICED',
+              progressStep: 8
+            };
+          }
+          return o;
+        }));
+      }
+      await insertCustomerInvoice(inv);
+      await addAuditLog('invoice', 'create', `Created invoice #${inv.invoiceNo} for ${inv.customerName}`);
+      toast.success(`Created invoice #${inv.invoiceNo} for ${inv.customerName}`, 'Invoice Generated');
+      await loadAllData();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to create invoice', 'Invoice Error');
     }
-    await insertCustomerInvoice(inv);
-    await addAuditLog('invoice', 'create', `Created invoice #${inv.invoiceNo} for ${inv.customerName}`);
-    await loadAllData();
   };
 
   const handleIssueInvoice = async (invoiceNo: string) => {
-    setInvoices(prev => prev.map(inv => {
-      if (inv.id === invoiceNo || inv.invoiceNo === invoiceNo) {
-        return {
-          ...inv,
-          status: 'ISSUED'
-        };
-      }
-      return inv;
-    }));
-    await issueCustomerInvoice(invoiceNo);
-    await addAuditLog('invoice', 'issue', `Issued tax invoice #${invoiceNo}`);
-    await loadAllData();
+    try {
+      setInvoices(prev => prev.map(inv => {
+        if (inv.id === invoiceNo || inv.invoiceNo === invoiceNo) {
+          return {
+            ...inv,
+            status: 'ISSUED'
+          };
+        }
+        return inv;
+      }));
+      await issueCustomerInvoice(invoiceNo);
+      await addAuditLog('invoice', 'issue', `Issued tax invoice #${invoiceNo}`);
+      toast.success(`Issued tax invoice #${invoiceNo}`, 'Invoice Issued');
+      await loadAllData();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to issue invoice', 'Invoice Error');
+    }
   };
 
   const handleRecordPayablePayment = async (billNo: string) => {
-    setPayables(prev => prev.map(bill => {
-      if (bill.id === billNo || bill.billNo === billNo) {
-        return {
-          ...bill,
-          paidAmount: bill.amount,
-          balanceAmount: 0,
-          status: 'PAID'
-        };
-      }
-      return bill;
-    }));
-    await payVendorBill(billNo);
-    await addAuditLog('payable', 'payment', `Recorded payment for vendor bill #${billNo}`);
-    await loadAllData();
+    try {
+      setPayables(prev => prev.map(bill => {
+        if (bill.id === billNo || bill.billNo === billNo) {
+          return {
+            ...bill,
+            paidAmount: bill.amount,
+            balanceAmount: 0,
+            status: 'PAID'
+          };
+        }
+        return bill;
+      }));
+      await payVendorBill(billNo);
+      await addAuditLog('payable', 'payment', `Recorded payment for vendor bill #${billNo}`);
+      toast.success(`Recorded payment for vendor bill #${billNo}`, 'Payable Settled');
+      await loadAllData();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to record bill payment', 'Payment Error');
+    }
   };
 
   const handleCreateVendorBill = async (bill: VendorBill) => {
-    await insertVendorBill(bill);
-    await addAuditLog('payable', 'create', `Created vendor bill #${bill.billNo} for ${bill.vendorName}`);
-    await loadAllData();
+    try {
+      await insertVendorBill(bill);
+      await addAuditLog('payable', 'create', `Created vendor bill #${bill.billNo} for ${bill.vendorName}`);
+      toast.success(`Created vendor bill #${bill.billNo} for ${bill.vendorName}`, 'Bill Created');
+      await loadAllData();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to create vendor bill', 'Bill Error');
+    }
   };
 
   const handleCreateOutwork = async (outwork: OutworkSendOut) => {
-    await insertOutworkSendOut(outwork);
-    await addAuditLog('outwork', 'create', `Issued outwork process #${outwork.sendOutId} to ${outwork.vendorName}`);
-    await loadAllData();
+    try {
+      await insertOutworkSendOut(outwork);
+      await addAuditLog('outwork', 'create', `Issued outwork process #${outwork.sendOutId} to ${outwork.vendorName}`);
+      toast.success(`Issued outwork process #${outwork.sendOutId}`, 'Outwork Issued');
+      await loadAllData();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to issue outwork', 'Outwork Error');
+    }
   };
 
   const handleCompletePDI = async (orderId: string, payload: any) => {
@@ -1216,8 +1308,10 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       const created = await insertMaster(item);
       setMasters(prev => [created, ...prev.filter(m => m.code !== created.code)]);
       await addAuditLog('masters', 'add_master', `Added item master ${created.code} (${created.name})`);
-    } catch (err) {
+      toast.success(`Added item master ${created.code} (${created.name})`, 'Item Master Created');
+    } catch (err: any) {
       console.warn('handleAddMasterItem error:', err);
+      toast.error(err?.message || 'Failed to add item master', 'Error Adding Item');
     }
     await loadAllData();
   };
@@ -1227,8 +1321,10 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       const updated = await updateMasterItem(code, item);
       setMasters(prev => prev.map(m => m.code === code ? { ...m, ...updated } : m));
       await addAuditLog('masters', 'update_master', `Updated item master ${code} (${item.name || item.description || ''})`);
-    } catch (err) {
+      toast.success(`Updated item master ${code}`, 'Item Master Updated');
+    } catch (err: any) {
       console.warn('handleUpdateMasterItem error:', err);
+      toast.error(err?.message || 'Failed to update item master', 'Error Updating Item');
     }
     await loadAllData();
   };
@@ -1237,8 +1333,10 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     setMasters(prev => prev.filter(m => m.code !== code));
     try {
       await deleteMasterItem(code);
-    } catch (err) {
+      toast.info(`Deleted item master ${code}`, 'Item Master Deleted');
+    } catch (err: any) {
       console.warn('handleDeleteMasterItem error:', err);
+      toast.error(err?.message || 'Failed to delete item master', 'Delete Error');
     }
     await addAuditLog('masters', 'delete_master', `Deleted item master ${code}`);
     await loadAllData();
@@ -1248,8 +1346,10 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     setCustomers(prev => [c, ...prev.filter(item => item.code !== c.code)]);
     try {
       await insertCustomer(c);
-    } catch (err) {
+      toast.success(`Saved customer ${c.name} (${c.code})`, 'Customer Saved');
+    } catch (err: any) {
       console.warn('Realtime Supabase customer insert error:', err);
+      toast.error(err?.message || 'Failed to save customer', 'Customer Error');
     }
     await addAuditLog('masters', 'add_customer', `Added/updated customer master ${c.code} (${c.name})`);
     await loadAllData();
@@ -1259,8 +1359,10 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     setCustomers(prev => prev.map(item => item.code === code ? { ...item, ...c } : item));
     try {
       await updateCustomer(code, c);
-    } catch (err) {
+      toast.success(`Updated customer ${c.name}`, 'Customer Updated');
+    } catch (err: any) {
       console.warn('Realtime Supabase customer update error:', err);
+      toast.error(err?.message || 'Failed to update customer', 'Update Error');
     }
     await addAuditLog('masters', 'update_customer', `Updated customer master ${code} (${c.name})`);
     await loadAllData();
@@ -1270,8 +1372,10 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     setCustomers(prev => prev.filter(item => item.code !== code));
     try {
       await deleteCustomer(code);
-    } catch (err) {
+      toast.info(`Deleted customer ${code}`, 'Customer Deleted');
+    } catch (err: any) {
       console.warn('Realtime Supabase customer delete error:', err);
+      toast.error(err?.message || 'Failed to delete customer', 'Delete Error');
     }
     await addAuditLog('masters', 'delete_customer', `Deleted customer master ${code}`);
     await loadAllData();
@@ -1281,8 +1385,10 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     setVendors(prev => [v, ...prev.filter(item => item.code !== v.code)]);
     try {
       await insertVendor(v);
-    } catch (err) {
+      toast.success(`Saved vendor ${v.name} (${v.code})`, 'Vendor Saved');
+    } catch (err: any) {
       console.warn('Realtime Supabase vendor insert error:', err);
+      toast.error(err?.message || 'Failed to save vendor', 'Vendor Error');
     }
     await addAuditLog('masters', 'add_vendor', `Added/updated vendor master ${v.code} (${v.name})`);
     await loadAllData();
@@ -1292,8 +1398,10 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     setVendors(prev => prev.map(item => item.code === code ? { ...item, ...v } : item));
     try {
       await updateVendor(code, v);
-    } catch (err) {
+      toast.success(`Updated vendor ${v.name}`, 'Vendor Updated');
+    } catch (err: any) {
       console.warn('Realtime Supabase vendor update error:', err);
+      toast.error(err?.message || 'Failed to update vendor', 'Update Error');
     }
     await addAuditLog('masters', 'update_vendor', `Updated vendor master ${code} (${v.name})`);
     await loadAllData();
@@ -1303,8 +1411,10 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     setVendors(prev => prev.filter(item => item.code !== code));
     try {
       await deleteVendor(code);
-    } catch (err) {
+      toast.info(`Deleted vendor ${code}`, 'Vendor Deleted');
+    } catch (err: any) {
       console.warn('Realtime Supabase vendor delete error:', err);
+      toast.error(err?.message || 'Failed to delete vendor', 'Delete Error');
     }
     await addAuditLog('masters', 'delete_vendor', `Deleted vendor master ${code}`);
     await loadAllData();
@@ -1314,8 +1424,10 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     setMachines(prev => [m, ...prev.filter(item => item.code !== m.code)]);
     try {
       await insertMachine(m);
-    } catch (err) {
+      toast.success(`Saved machine ${m.name} (${m.code})`, 'Machine Saved');
+    } catch (err: any) {
       console.warn('Realtime Supabase machine insert error:', err);
+      toast.error(err?.message || 'Failed to save machine', 'Machine Error');
     }
     await addAuditLog('masters', 'add_machine', `Added/updated machine master ${m.code} (${m.name})`);
     await loadAllData();
@@ -1325,8 +1437,10 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     setMachines(prev => prev.map(item => item.code === code ? { ...item, ...m } : item));
     try {
       await updateMachine(code, m);
-    } catch (err) {
+      toast.success(`Updated machine ${m.name}`, 'Machine Updated');
+    } catch (err: any) {
       console.warn('Realtime Supabase machine update error:', err);
+      toast.error(err?.message || 'Failed to update machine', 'Update Error');
     }
     await addAuditLog('masters', 'update_machine', `Updated machine master ${code} (${m.name})`);
     await loadAllData();
@@ -1336,8 +1450,10 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     setMachines(prev => prev.filter(item => item.code !== code));
     try {
       await deleteMachine(code);
-    } catch (err) {
+      toast.info(`Deleted machine ${code}`, 'Machine Deleted');
+    } catch (err: any) {
       console.warn('Realtime Supabase machine delete error:', err);
+      toast.error(err?.message || 'Failed to delete machine', 'Delete Error');
     }
     await addAuditLog('masters', 'delete_machine', `Deleted machine master ${code}`);
     await loadAllData();

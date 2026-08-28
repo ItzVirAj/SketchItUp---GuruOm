@@ -147,6 +147,8 @@ export interface CustomerOrder {
 
 export interface StockItem {
   code: string;
+  rawCode?: string;
+  partCode?: string;
   description: string;
   onHand: number;
   reserved: number;
@@ -156,6 +158,11 @@ export interface StockItem {
   shortage: number;
   unit: string;
   status: 'OK' | 'SHORTAGE' | 'CRITICAL';
+  category?: 'RAW_MATERIAL' | 'FINISHED_GOODS' | 'CONSUMABLES' | 'TOOLS' | 'SPARE_PARTS' | 'OTHER' | string;
+  categoryLabel?: string;
+  storeLocation?: string;
+  hsnCode?: string;
+  partNo?: string;
 }
 
 export interface ShortageItem {

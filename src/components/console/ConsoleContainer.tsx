@@ -23,6 +23,8 @@ import {
 
 import { ConsoleHeader } from './ConsoleHeader';
 import { ConsoleSidebar } from './ConsoleSidebar';
+import { MobileDrawer } from './MobileDrawer';
+import { MobileBottomTabBar } from './MobileBottomTabBar';
 
 import { CommandCentreView } from './views/CommandCentreView';
 import { OrdersView } from './views/OrdersView';
@@ -390,9 +392,11 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
 
 
 
+  const pendingApprovalsCount = (approvals || []).filter(a => a.status === 'PENDING').length;
+
   return (
     <div className={`h-screen flex flex-col font-sans transition-colors overflow-hidden ${
-      isDarkMode ? 'bg-[#121316] text-[#F3F4F6]' : 'bg-[#F4F6F9] text-slate-900'
+      isDarkMode ? 'bg-[#121316] text-[#F3F4F6]' : 'bg-[#F8FAFC] text-slate-900'
     }`}>
       {/* Console Header */}
       <ConsoleHeader
@@ -419,11 +423,12 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
         onNavigate={(view) => handleNavigateView(view)}
         onSelectOrder={handleSelectOrder}
         onSignOut={onSignOut}
+        currentView={currentView}
       />
 
       {/* Main Workspace Body */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar */}
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Desktop Persistent Sidebar (≥1024px) */}
         <ConsoleSidebar
           currentView={currentView}
           setCurrentView={(view) => handleNavigateView(view)}
@@ -437,8 +442,24 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
           setIsOpenMobile={setIsOpenMobile}
         />
 
-        {/* Dynamic View Canvas */}
-        <main ref={mainScrollRef} className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 bg-[#F4F6F9] dark:bg-[#121316]">
+        {/* Mobile Off-canvas Drawer Navigation (<1024px) */}
+        <MobileDrawer
+          isOpen={isOpenMobile}
+          onClose={() => setIsOpenMobile(false)}
+          currentView={currentView}
+          onSelectView={(view) => handleNavigateView(view)}
+          currentRole={currentRole}
+          currentUser={currentUser}
+          userName={currentUser ? currentUser.name : "Sachin Gharbude"}
+          isDarkMode={isDarkMode}
+          onSignOut={onSignOut}
+          onOpenSecurityModal={() => setIsSecurityModalOpen(true)}
+          onOpenSwitchUser={() => setIsSwitchUserOpen(true)}
+          pendingApprovalsCount={pendingApprovalsCount}
+        />
+
+        {/* Dynamic View Canvas with safe bottom padding for mobile tab bar */}
+        <main ref={mainScrollRef} className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 lg:p-8 pb-24 lg:pb-8 bg-[#F8FAFC] dark:bg-[#121316]">
           <div key={currentView} className="space-y-6">
             {!isViewAllowedForRole(currentRole, currentView) ? (
               <AccessRestrictedGate
@@ -465,6 +486,8 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
               machines={machines}
               users={users}
               auditLogs={auditLogs}
+              approvals={approvals}
+              containerScrollRef={mainScrollRef}
               isDarkMode={isDarkMode}
               isRealtimeStreaming={isRealtimeStreaming}
               onToggleRealtimeStreaming={() => setIsRealtimeStreaming(!isRealtimeStreaming)}
@@ -885,6 +908,17 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
           </div>
         </main>
       </div>
+
+      {/* Mobile Bottom Tab Bar (<1024px) */}
+      <MobileBottomTabBar
+        currentView={currentView}
+        onSelectView={(view) => handleNavigateView(view)}
+        onOpenDrawer={() => setIsOpenMobile(true)}
+        isDrawerOpen={isOpenMobile}
+        currentRole={currentUser?.role || currentRole}
+        isDarkMode={isDarkMode}
+        pendingApprovalsCount={pendingApprovalsCount}
+      />
 
       {/* Switch User / Role Modal */}
       <SwitchUserModal

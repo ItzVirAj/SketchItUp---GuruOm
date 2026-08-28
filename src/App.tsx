@@ -4,6 +4,7 @@ import { ConsoleContainer } from './components/console/ConsoleContainer';
 import { LoginPage } from './components/auth/LoginPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AccentThemeProvider } from './context/AccentThemeContext';
+import { ToastProvider } from './context/ToastContext';
 import { useSmoothScroll } from './hooks/useSmoothScroll';
 import { Agentation } from 'agentation';
 
@@ -74,8 +75,10 @@ export default function App() {
   return (
     <AuthProvider>
       <AccentThemeProvider>
-        <MainApp />
-        <Agentation />
+        <ToastProvider>
+          <MainApp />
+          <Agentation />
+        </ToastProvider>
       </AccentThemeProvider>
     </AuthProvider>
   );

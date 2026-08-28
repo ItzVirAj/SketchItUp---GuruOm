@@ -85,6 +85,13 @@ import {
   RoleDefinitionRecord 
 } from '../../../utils/rbacMatrix';
 
+const getRoleBadgeClasses = (role: string): string => {
+  const c = getRoleColor(role);
+  if (!c) return 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700';
+  if (typeof c === 'string') return c;
+  return `${c.bg} ${c.text} ${c.border}`;
+};
+
 interface UsersAuditViewProps {
   users: SystemUser[];
   auditLogs: AuditLogEntry[];
@@ -733,13 +740,13 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
   return (
     <div className="space-y-6 font-sans">
       
-      {/* Top Banner Header */}
-      <div className={`p-6 rounded-3xl border transition-all ${
+      {/* Top Banner Header with Summary Telemetry */}
+      <div className={`p-4 sm:p-6 rounded-3xl border transition-all ${
         isDarkMode 
           ? 'bg-slate-900/80 border-slate-800/80 text-white backdrop-blur-xl shadow-2xl' 
           : 'bg-white border-slate-200 shadow-sm text-slate-900'
       }`}>
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider ${
@@ -747,21 +754,23 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
               }`}>
                 Governance & Authorization Hub
               </span>
-              <span className="text-xs text-slate-400 font-mono">• Exact 12-Role RBAC & Monetary Escalation Engine</span>
+              <span className={`text-[11px] sm:text-xs font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                • Exact 12-Role RBAC & Monetary Escalation Engine
+              </span>
             </div>
-            <h1 className={`text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+            <h1 className={`text-xl sm:text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
               Identity & Access Control Suite
             </h1>
-            <p className={`text-xs mt-1 max-w-xl ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+            <p className={`text-xs mt-0.5 sm:mt-1 max-w-xl ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
               Manage users, explore the 12-role RBAC permission matrix with server-side monetary limits (Purchase: ₹1.0L, Accounts: ₹50k), and audit immutable logs.
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
             {activeTab === 'AUDIT' && (
               <button
                 onClick={handleExportCSV}
-                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-blue-600 text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-blue-600 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
               >
                 {copiedExport ? <Check className="w-4 h-4" /> : <Download className="w-4 h-4" />}
                 <span>{copiedExport ? 'Exported Log!' : 'Export Log CSV'}</span>
@@ -771,7 +780,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
             {activeTab === 'USERS' && onAddUser && (
               <button
                 onClick={openAddUserModal}
-                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
               >
                 <Plus className="w-4 h-4" />
                 <span>Provision New User</span>
@@ -785,7 +794,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                     onResetAllData();
                   }
                 }}
-                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
               >
                 <RotateCcw className="w-4 h-4" />
                 <span>Populate Test Seed Data</span>
@@ -793,70 +802,94 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
             )}
           </div>
         </div>
+
+        {/* Master Metrics Strip */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 mt-4 sm:mt-5 pt-3 sm:pt-4 border-t border-slate-200 dark:border-slate-800/60">
+          <div className={`p-3 sm:p-4 rounded-2xl border transition-all ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
+            <div className={`text-[10px] sm:text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>System Directory</div>
+            <div className="text-base sm:text-xl font-bold text-indigo-600 dark:text-indigo-400 mt-0.5 sm:mt-1">{users.length} Users</div>
+            <div className="text-[10px] sm:text-[11px] text-emerald-600 dark:text-emerald-400 font-mono font-semibold mt-0.5">● {users.filter(u => u.status === 'ACTIVE' || u.status === 'Active').length} Active Accounts</div>
+          </div>
+          <div className={`p-3 sm:p-4 rounded-2xl border transition-all ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
+            <div className={`text-[10px] sm:text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Immutable Audit Ledger</div>
+            <div className="text-base sm:text-xl font-bold text-blue-600 dark:text-blue-400 mt-0.5 sm:mt-1">{auditLogs.length} Events</div>
+            <div className="text-[10px] sm:text-[11px] text-blue-600 dark:text-blue-400 font-mono font-semibold mt-0.5">● Real-time Stream</div>
+          </div>
+          <div className={`p-3 sm:p-4 rounded-2xl border transition-all ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
+            <div className={`text-[10px] sm:text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>RBAC Architecture</div>
+            <div className="text-base sm:text-xl font-bold text-purple-600 dark:text-purple-400 mt-0.5 sm:mt-1">12 Matrix Roles</div>
+            <div className="text-[10px] sm:text-[11px] text-purple-600 dark:text-purple-400 font-mono font-semibold mt-0.5">● Strict Boundaries</div>
+          </div>
+          <div className={`p-3 sm:p-4 rounded-2xl border transition-all ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
+            <div className={`text-[10px] sm:text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Monetary Ceilings</div>
+            <div className="text-base sm:text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 sm:mt-1">PO ₹1L • Pay ₹50k</div>
+            <div className="text-[10px] sm:text-[11px] text-emerald-600 dark:text-emerald-400 font-mono font-semibold mt-0.5">● Auto-Escalation</div>
+          </div>
+        </div>
       </div>
 
       {/* Main Tab Controls Bar */}
-      <div className={`p-4 rounded-3xl border transition-all flex flex-wrap items-center justify-between gap-4 ${
+      <div className={`p-3.5 sm:p-4 rounded-3xl border transition-all space-y-3 ${
         isDarkMode ? 'bg-slate-900/70 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-xs'
       }`}>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
           <button
             onClick={() => setActiveTab('AUDIT')}
-            className={`px-4 py-2 rounded-2xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
               activeTab === 'AUDIT'
-                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white shadow-xs'
-                : isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-xs'
+                : isDarkMode ? 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-white' : 'bg-slate-100 text-slate-600 border-slate-200 hover:text-slate-900'
             }`}
           >
             <History className="w-3.5 h-3.5" />
-            <span>Audit Trail Stream ({auditLogs.length})</span>
+            <span>Audit Trail ({auditLogs.length})</span>
           </button>
           
           <button
             onClick={() => setActiveTab('USERS')}
-            className={`px-4 py-2 rounded-2xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
               activeTab === 'USERS'
-                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white shadow-xs'
-                : isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-xs'
+                : isDarkMode ? 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-white' : 'bg-slate-100 text-slate-600 border-slate-200 hover:text-slate-900'
             }`}
           >
             <Users className="w-3.5 h-3.5" />
-            <span>User Directory ({users.length})</span>
+            <span>Users ({users.length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('RBAC_MATRIX')}
-            className={`px-4 py-2 rounded-2xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
               activeTab === 'RBAC_MATRIX'
-                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white shadow-xs'
-                : isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-xs'
+                : isDarkMode ? 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-white' : 'bg-slate-100 text-slate-600 border-slate-200 hover:text-slate-900'
             }`}
           >
             <ShieldCheck className="w-3.5 h-3.5" />
-            <span>RBAC Matrix & Escalations (12 Roles)</span>
+            <span>RBAC Matrix (12 Roles)</span>
           </button>
 
           <button
             onClick={() => setActiveTab('DATA_ADMIN')}
-            className={`px-4 py-2 rounded-2xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
               activeTab === 'DATA_ADMIN'
-                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white shadow-xs'
-                : isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-xs'
+                : isDarkMode ? 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-white' : 'bg-slate-100 text-slate-600 border-slate-200 hover:text-slate-900'
             }`}
           >
             <HardDrive className="w-3.5 h-3.5" />
-            <span>Data Control Suite</span>
+            <span>Data Control</span>
           </button>
         </div>
 
         {/* Search Bar & Actions */}
         {activeTab !== 'DATA_ADMIN' && activeTab !== 'RBAC_MATRIX' && (
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             {activeTab === 'USERS' && (
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as any)}
-                className={`px-3 py-1.5 rounded-2xl border text-xs font-bold font-mono outline-none cursor-pointer ${
+                className={`px-3 py-2 rounded-2xl border text-xs font-bold font-mono outline-none cursor-pointer w-full sm:w-auto ${
                   isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                 }`}
               >
@@ -866,17 +899,22 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
               </select>
             )}
 
-            <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-2xl border text-xs w-56 ${
-              isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+            <div className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl border text-xs flex-1 transition-all ${
+              isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white focus-within:border-[#5B75F8]' : 'bg-slate-50 border-slate-200 text-slate-900 focus-within:border-[#5B75F8]'
             }`}>
-              <Search className="w-3.5 h-3.5 text-slate-400" />
+              <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               <input
                 type="text"
-                placeholder={activeTab === 'AUDIT' ? "Filter logs..." : "Search users..."}
+                placeholder={activeTab === 'AUDIT' ? "Filter audit logs by keyword..." : "Search users by name, email, role..."}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="bg-transparent outline-none w-full"
+                className="bg-transparent outline-none w-full font-mono"
               />
+              {searchTerm && (
+                <button onClick={() => setSearchTerm('')} className="text-slate-400 hover:text-white cursor-pointer ml-1">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -1071,8 +1109,81 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                 </div>
               </div>
 
-              {/* Immutable Ledger Table */}
-              <div className={`rounded-3xl border overflow-hidden shadow-2xl transition-all ${
+              {/* Mobile Audit Cards (Viewport < md) */}
+              <div className="block md:hidden space-y-3">
+                {paginatedLogs.length === 0 ? (
+                  <div className={`p-8 text-center rounded-3xl border ${
+                    isDarkMode ? 'bg-slate-900/60 border-slate-800 text-slate-400' : 'bg-white border-slate-200 text-slate-500'
+                  }`}>
+                    <Lock className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                    <p className="text-xs font-mono font-bold">No Audit Events Matching Active Filters</p>
+                  </div>
+                ) : (
+                  paginatedLogs.map((log) => {
+                    const secInfo = getSectionInfo(log.entity || log.entityType || '');
+                    const isExpanded = !!expandedLogIds[log.id];
+
+                    return (
+                      <div
+                        key={log.id}
+                        onClick={() => toggleExpandLog(log.id)}
+                        className={`p-3.5 rounded-3xl border transition-all space-y-2.5 cursor-pointer shadow-sm ${
+                          isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'
+                        }`}
+                      >
+                        {/* Header: Action + Entity Pill */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase border ${secInfo.badgeClass}`}>
+                              {log.entity || log.entityType}
+                            </span>
+                            <span className="font-mono font-bold text-xs text-[#5B75F8] dark:text-[#7B92FF]">
+                              {log.action}
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-mono text-slate-400">
+                            {log.when || log.timestamp || (log.createdAt ? new Date(log.createdAt).toLocaleTimeString('en-IN', { hour12: true }) : 'Recent')}
+                          </span>
+                        </div>
+
+                        {/* Actor info & Details */}
+                        <div>
+                          <div className={`text-xs font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+                            {log.user || log.actorEmail}
+                            {log.actorRole && (
+                              <span className="ml-1.5 text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
+                                {log.actorRole}
+                              </span>
+                            )}
+                          </div>
+                          <p className={`text-xs mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                            {log.details}
+                          </p>
+                        </div>
+
+                        {/* Expanded Details Drawer on Mobile */}
+                        {isExpanded && (
+                          <div className={`pt-2.5 mt-2 border-t text-[11px] font-mono space-y-2 ${
+                            isDarkMode ? 'border-slate-800 text-slate-300' : 'border-slate-200 text-slate-700'
+                          }`}>
+                            {log.entityId && <div>Entity ID: <strong>{log.entityId}</strong></div>}
+                            {log.ipAddress && <div>IP Address: <strong>{log.ipAddress}</strong></div>}
+                            {log.createdAt && <div>Timestamp: <strong>{new Date(log.createdAt).toLocaleString('en-IN', { hour12: true })}</strong></div>}
+                            {log.metadata && (
+                              <pre className="p-2 rounded-xl bg-slate-950 border border-slate-800 text-indigo-300 text-[10px] overflow-x-auto">
+                                {JSON.stringify(log.metadata, null, 2)}
+                              </pre>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Desktop Immutable Ledger Table (Viewport >= md) */}
+              <div className={`hidden md:block rounded-3xl border overflow-hidden shadow-2xl transition-all ${
                 isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200'
               }`}>
                 <div className="overflow-x-auto">
@@ -1248,157 +1359,319 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
       {/* TAB 2: USER DIRECTORY */}
       {/* ========================================================================= */}
       {activeTab === 'USERS' && (
-        <div className={`rounded-3xl border overflow-hidden shadow-2xl transition-all ${
-          isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200'
-        }`}>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse font-sans">
-              <thead>
-                <tr className={`border-b font-mono font-bold text-[10px] uppercase tracking-wider ${
-                  isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'
-                }`}>
-                  <th className="py-4 px-5">User ID & Name</th>
-                  <th className="py-4 px-5">Department & Shift</th>
-                  <th className="py-4 px-5">Exact RBAC Role</th>
-                  <th className="py-4 px-5">Approval Authority</th>
-                  <th className="py-4 px-5 text-center">Status</th>
-                  <th className="py-4 px-5 text-right">User Governance</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800/60 font-sans">
-                {filteredUsers.map((usr) => {
-                  const isCurrent = usr.id === currentUserId;
-                  const isRevoked = usr.status === 'REVOKED' || usr.status === 'Inactive';
-                  const normRole = normalizeRole(usr.userRole || usr.role);
-                  const roleDef = RBAC_ROLE_MATRIX[normRole];
+        <div className="space-y-3">
+          {/* Mobile User Directory Cards (Viewport < md) */}
+          <div className="block md:hidden space-y-3">
+            {filteredUsers.length === 0 ? (
+              <div className={`p-8 text-center rounded-3xl border ${
+                isDarkMode ? 'bg-slate-900/60 border-slate-800 text-slate-400' : 'bg-white border-slate-200 text-slate-500'
+              }`}>
+                <Users className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                <p className="text-xs font-mono">No system users found matching search filters.</p>
+              </div>
+            ) : (
+              filteredUsers.map((usr) => {
+                const isCurrent = usr.id === currentUserId;
+                const isRevoked = usr.status === 'REVOKED' || usr.status === 'Inactive';
+                const normRole = normalizeRole(usr.userRole || usr.role);
+                const roleDef = RBAC_ROLE_MATRIX[normRole];
 
-                  return (
-                    <tr key={usr.id} className={isDarkMode ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50/80'}>
-                      <td className="py-4 px-5">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-2xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center font-bold text-xs shadow-xs">
-                            {usr.name.slice(0, 2).toUpperCase()}
+                return (
+                  <div
+                    key={usr.id}
+                    className={`p-4 rounded-3xl border transition-all space-y-3 shadow-sm ${
+                      isRevoked
+                        ? isDarkMode ? 'bg-slate-950/70 border-rose-500/30' : 'bg-rose-50/40 border-rose-200'
+                        : isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'
+                    }`}
+                  >
+                    {/* Header: Avatar, Name, Status */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
+                          {usr.name.slice(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className={`font-bold text-xs flex items-center gap-1.5 ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>
+                            <span>{usr.name}</span>
+                            {isCurrent && (
+                              <span className="px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 text-[9px] font-mono font-bold">
+                                YOU
+                              </span>
+                            )}
                           </div>
-                          <div>
-                            <div className={`font-bold text-xs flex items-center gap-1.5 ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>
-                              <span>{usr.name}</span>
-                              {usr.code && <span className="font-mono text-[10px] text-indigo-400">({usr.code})</span>}
-                              {isCurrent && (
-                                <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-400 border border-blue-500/30 text-[9px] font-mono font-bold">
-                                  ACTIVE YOU
-                                </span>
-                              )}
-                            </div>
-                            <div className={`text-[11px] font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                              {usr.email} • +91 {usr.mobile || usr.phone || '9822000000'}
-                            </div>
+                          <div className="text-[10px] font-mono text-slate-400">
+                            {usr.code ? `${usr.code} • ` : ''}{usr.email}
                           </div>
                         </div>
-                      </td>
-                      <td className={`py-4 px-5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                        <div className="font-medium">{usr.department || 'Operations'}</div>
-                        <div className="text-[10px] text-slate-400 font-mono">{usr.shift || 'General-Day'}</div>
-                      </td>
-                      <td className="py-4 px-5">
-                        <span className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${getRoleColor(normRole)}`}>
+                      </div>
+
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-xl text-[10px] font-mono font-bold uppercase border shrink-0 ${
+                        isRevoked 
+                          ? isDarkMode ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
+                          : isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${isRevoked ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+                        <span>{usr.status}</span>
+                      </span>
+                    </div>
+
+                    {/* Role & Department info */}
+                    <div className={`p-2.5 rounded-2xl border space-y-1 text-xs font-mono ${
+                      isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50 border-slate-200'
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-slate-400">Role:</span>
+                        <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase border whitespace-nowrap inline-flex items-center shrink-0 ${getRoleBadgeClasses(normRole)}`}>
                           {normRole}
                         </span>
-                      </td>
-                      <td className="py-4 px-5 font-mono text-[11px]">
-                        <div className="text-slate-300">{roleDef?.approvalLimitDisplay || 'Standard View/Edit'}</div>
-                        {roleDef?.scopeDescription && (
-                          <div className="text-[10px] text-slate-500 max-w-xs truncate mt-0.5">{roleDef.scopeDescription}</div>
-                        )}
-                      </td>
-                      <td className="py-4 px-5 text-center">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
-                          isRevoked 
-                            ? isDarkMode ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
-                            : isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                        }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${isRevoked ? 'bg-rose-500' : 'bg-emerald-500'}`} />
-                          <span>{usr.status}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-[10px] text-slate-400">Dept / Shift:</span>
+                        <span className={isDarkMode ? 'text-slate-200' : 'text-slate-800'}>
+                          {usr.department || 'Operations'} ({usr.shift || 'General'})
                         </span>
-                      </td>
-                      <td className="py-4 px-5 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => handleOpenEditUser(usr)}
-                            className={`p-1.5 px-2.5 rounded-xl border text-[11px] font-bold font-mono transition-all cursor-pointer flex items-center gap-1 ${
-                              isDarkMode 
-                                ? 'border-indigo-500/30 bg-indigo-500/10 text-indigo-300 hover:text-white hover:bg-indigo-500/20' 
-                                : 'border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
-                            }`}
-                            title="Edit User Master Record"
-                          >
-                            <Edit className="w-3 h-3 text-indigo-400" />
-                            <span>Edit</span>
-                          </button>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-[10px] text-slate-400">Authority:</span>
+                        <span className="text-emerald-400 font-bold">
+                          {roleDef?.approvalLimitDisplay || 'Standard'}
+                        </span>
+                      </div>
+                    </div>
 
-                          <button
-                            onClick={() => {
-                              setUserToEditRole(usr);
-                              setNewSelectedRole(normRole);
-                              setShowEditRoleModal(true);
-                            }}
-                            className={`p-1.5 px-2.5 rounded-xl border text-[11px] font-bold font-mono transition-all cursor-pointer flex items-center gap-1 ${
-                              isDarkMode 
-                                ? 'border-slate-800 bg-slate-950/70 text-slate-300 hover:text-white hover:bg-slate-800' 
-                                : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-                            }`}
-                            title="Edit Role Matrix"
-                          >
-                            <Shield className="w-3 h-3 text-blue-400" />
-                            <span>Role</span>
-                          </button>
+                    {/* Governance Action Buttons */}
+                    <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-200 dark:border-slate-800/60">
+                      <button
+                        onClick={() => handleOpenEditUser(usr)}
+                        className={`flex-1 py-2 rounded-xl border font-mono text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-all ${
+                          isDarkMode 
+                            ? 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30 hover:bg-indigo-500/25' 
+                            : 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100'
+                        }`}
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                        <span>Edit</span>
+                      </button>
 
-                          {!isRevoked ? (
-                            <button
-                              onClick={() => onRevokeUser && onRevokeUser(usr.id)}
-                              className={`p-1.5 px-2.5 rounded-xl border text-[11px] font-bold font-mono transition-all cursor-pointer flex items-center gap-1 ${
-                                isDarkMode 
-                                  ? 'border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20' 
-                                  : 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'
-                              }`}
-                              title="Revoke access"
-                            >
-                              <Ban className="w-3 h-3" />
-                              <span>Revoke</span>
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => onRestoreUser && onRestoreUser(usr.id)}
-                              className={`p-1.5 px-2.5 rounded-xl border text-[11px] font-bold font-mono transition-all cursor-pointer flex items-center gap-1 ${
-                                isDarkMode 
-                                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20' 
-                                  : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                              }`}
-                              title="Restore access"
-                            >
-                              <UserCheck className="w-3 h-3" />
-                              <span>Restore</span>
-                            </button>
+                      <button
+                        onClick={() => {
+                          setUserToEditRole(usr);
+                          setNewSelectedRole(normRole);
+                          setShowEditRoleModal(true);
+                        }}
+                        className={`flex-1 py-2 rounded-xl border font-mono text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-all ${
+                          isDarkMode 
+                            ? 'bg-blue-500/15 text-blue-300 border-blue-500/30 hover:bg-blue-500/25' 
+                            : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
+                        }`}
+                      >
+                        <Shield className="w-3.5 h-3.5" />
+                        <span>Role</span>
+                      </button>
+
+                      {!isRevoked ? (
+                        <button
+                          onClick={() => onRevokeUser && onRevokeUser(usr.id)}
+                          className={`px-3 py-2 rounded-xl border font-mono text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-all ${
+                            isDarkMode 
+                              ? 'bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25' 
+                              : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                          }`}
+                        >
+                          <Ban className="w-3.5 h-3.5" />
+                          <span>Revoke</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => onRestoreUser && onRestoreUser(usr.id)}
+                          className={`px-3 py-2 rounded-xl border font-mono text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-all ${
+                            isDarkMode 
+                              ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25' 
+                              : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                          }`}
+                        >
+                          <UserCheck className="w-3.5 h-3.5" />
+                          <span>Restore</span>
+                        </button>
+                      )}
+
+                      {!isCurrent && onDeleteUser && (
+                        <button
+                          onClick={() => {
+                            setUserToDelete(usr);
+                            setShowDeleteModal(true);
+                          }}
+                          className={`p-2 rounded-xl border cursor-pointer transition-all ${
+                            isDarkMode 
+                              ? 'bg-rose-500/15 text-rose-400 border-rose-500/30 hover:bg-rose-500/25' 
+                              : 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100'
+                          }`}
+                          title="Delete User"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Desktop User Directory Table (Viewport >= md) */}
+          <div className={`hidden md:block rounded-3xl border overflow-hidden shadow-2xl transition-all ${
+            isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200'
+          }`}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse font-sans">
+                <thead>
+                  <tr className={`border-b font-mono font-bold text-[10px] uppercase tracking-wider ${
+                    isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'
+                  }`}>
+                    <th className="py-4 px-5">User ID & Name</th>
+                    <th className="py-4 px-5">Department & Shift</th>
+                    <th className="py-4 px-5 whitespace-nowrap">Exact RBAC Role</th>
+                    <th className="py-4 px-5">Approval Authority</th>
+                    <th className="py-4 px-5 text-center">Status</th>
+                    <th className="py-4 px-5 text-right">User Governance</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800/60 font-sans">
+                  {filteredUsers.map((usr) => {
+                    const isCurrent = usr.id === currentUserId;
+                    const isRevoked = usr.status === 'REVOKED' || usr.status === 'Inactive';
+                    const normRole = normalizeRole(usr.userRole || usr.role);
+                    const roleDef = RBAC_ROLE_MATRIX[normRole];
+
+                    return (
+                      <tr key={usr.id} className={isDarkMode ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50/80'}>
+                        <td className="py-4 px-5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-2xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center font-bold text-xs shadow-xs">
+                              {usr.name.slice(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <div className={`font-bold text-xs flex items-center gap-1.5 ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>
+                                <span>{usr.name}</span>
+                                {usr.code && <span className="font-mono text-[10px] text-indigo-400">({usr.code})</span>}
+                                {isCurrent && (
+                                  <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-400 border border-blue-500/30 text-[9px] font-mono font-bold">
+                                    ACTIVE YOU
+                                  </span>
+                                )}
+                              </div>
+                              <div className={`text-[11px] font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                                {usr.email} • +91 {usr.mobile || usr.phone || '9822000000'}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className={`py-4 px-5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                          <div className="font-medium">{usr.department || 'Operations'}</div>
+                          <div className="text-[10px] text-slate-400 font-mono">{usr.shift || 'General-Day'}</div>
+                        </td>
+                        <td className="py-4 px-5 whitespace-nowrap">
+                          <span className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border whitespace-nowrap inline-flex items-center gap-1 shrink-0 ${getRoleBadgeClasses(normRole)}`}>
+                            {normRole}
+                          </span>
+                        </td>
+                        <td className="py-4 px-5 font-mono text-[11px]">
+                          <div className="text-slate-300">{roleDef?.approvalLimitDisplay || 'Standard View/Edit'}</div>
+                          {roleDef?.scopeDescription && (
+                            <div className="text-[10px] text-slate-500 max-w-xs truncate mt-0.5">{roleDef.scopeDescription}</div>
                           )}
+                        </td>
+                        <td className="py-4 px-5 text-center">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
+                            isRevoked 
+                              ? isDarkMode ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
+                              : isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${isRevoked ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+                            <span>{usr.status}</span>
+                          </span>
+                        </td>
+                        <td className="py-4 px-5 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => handleOpenEditUser(usr)}
+                              className={`p-1.5 px-2.5 rounded-xl border text-[11px] font-bold font-mono transition-all cursor-pointer flex items-center gap-1 ${
+                                isDarkMode 
+                                  ? 'border-indigo-500/30 bg-indigo-500/10 text-indigo-300 hover:text-white hover:bg-indigo-500/20' 
+                                  : 'border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
+                              }`}
+                              title="Edit User Master Record"
+                            >
+                              <Edit className="w-3 h-3 text-indigo-400" />
+                              <span>Edit</span>
+                            </button>
 
-                          {!isCurrent && onDeleteUser && (
                             <button
                               onClick={() => {
-                                setUserToDelete(usr);
-                                setShowDeleteModal(true);
+                                setUserToEditRole(usr);
+                                setNewSelectedRole(normRole);
+                                setShowEditRoleModal(true);
                               }}
-                              className="p-1.5 px-2 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 cursor-pointer"
-                              title="Delete user"
+                              className={`p-1.5 px-2.5 rounded-xl border text-[11px] font-bold font-mono transition-all cursor-pointer flex items-center gap-1 ${
+                                isDarkMode 
+                                  ? 'border-slate-800 bg-slate-950/70 text-slate-300 hover:text-white hover:bg-slate-800' 
+                                  : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                              }`}
+                              title="Edit Role Matrix"
                             >
-                              <Trash2 className="w-3 h-3 text-rose-400" />
+                              <Shield className="w-3 h-3 text-blue-400" />
+                              <span>Role</span>
                             </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+
+                            {!isRevoked ? (
+                              <button
+                                onClick={() => onRevokeUser && onRevokeUser(usr.id)}
+                                className={`p-1.5 px-2.5 rounded-xl border text-[11px] font-bold font-mono transition-all cursor-pointer flex items-center gap-1 ${
+                                  isDarkMode 
+                                    ? 'border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20' 
+                                    : 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'
+                                }`}
+                                title="Revoke access"
+                              >
+                                <Ban className="w-3 h-3" />
+                                <span>Revoke</span>
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => onRestoreUser && onRestoreUser(usr.id)}
+                                className={`p-1.5 px-2.5 rounded-xl border text-[11px] font-bold font-mono transition-all cursor-pointer flex items-center gap-1 ${
+                                  isDarkMode 
+                                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20' 
+                                    : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                                }`}
+                                title="Restore access"
+                              >
+                                <UserCheck className="w-3 h-3" />
+                                <span>Restore</span>
+                              </button>
+                            )}
+
+                            {!isCurrent && onDeleteUser && (
+                              <button
+                                onClick={() => {
+                                  setUserToDelete(usr);
+                                  setShowDeleteModal(true);
+                                }}
+                                className="p-1.5 px-2 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 cursor-pointer"
+                                title="Delete user"
+                              >
+                                <Trash2 className="w-3 h-3 text-rose-400" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
@@ -1461,7 +1734,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                     isDarkMode ? 'border-slate-800/60' : 'border-slate-200'
                   }`}>
                     <div className="flex items-center gap-3">
-                      <div className={`px-3 py-1 rounded-xl text-xs font-mono font-bold uppercase border ${getRoleColor(rDef.role)}`}>
+                      <div className={`px-3 py-1 rounded-xl text-xs font-mono font-bold uppercase border whitespace-nowrap inline-flex items-center shrink-0 ${getRoleBadgeClasses(rDef.role)}`}>
                         {rDef.role}
                       </div>
                       <div>
@@ -1978,7 +2251,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-1">
                         <span className={`font-bold text-xs ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{r.label}</span>
-                        <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-mono font-bold uppercase border ${getRoleColor(r.role)}`}>
+                        <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-mono font-bold uppercase border whitespace-nowrap inline-flex items-center shrink-0 ${getRoleBadgeClasses(r.role)}`}>
                           {r.role}
                         </span>
                       </div>
@@ -2279,7 +2552,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                     <span className={`font-bold text-xs ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                       {r.label}
                     </span>
-                    <span className={`px-2 py-0.5 rounded-lg text-[9px] font-mono font-bold uppercase border ${getRoleColor(r.role)}`}>
+                    <span className={`px-2 py-0.5 rounded-lg text-[9px] font-mono font-bold uppercase border whitespace-nowrap inline-flex items-center shrink-0 ${getRoleBadgeClasses(r.role)}`}>
                       {r.role}
                     </span>
                   </div>

@@ -654,6 +654,8 @@ export const initialMasters: MasterItem[] = [
   {
     code: 'ITEM-0001',
     partNo: 'MS Plate 20mm',
+    itemType: 'Raw Material',
+    category: 'RAW_MATERIAL',
     description: 'Mild steel plate, 20mm thickness, IS 2062 grade',
     unit: 'Kg',
     hsnCode: '7208',
@@ -666,6 +668,8 @@ export const initialMasters: MasterItem[] = [
   {
     code: 'ITEM-0002',
     partNo: 'Boom Bracket Sub-assembly',
+    itemType: 'Finished Good',
+    category: 'FINISHED_GOODS',
     description: 'Boom bracket sub-assembly per drawing Rev C',
     unit: 'Nos',
     hsnCode: '7326',
@@ -678,6 +682,8 @@ export const initialMasters: MasterItem[] = [
   {
     code: 'ITEM-0003',
     partNo: 'Taper Roller Bearing 6205',
+    itemType: 'Bought-Out',
+    category: 'SPARE_PARTS',
     description: 'Standard taper roller bearing, size 6205',
     unit: 'Nos',
     hsnCode: '8482',
@@ -690,6 +696,8 @@ export const initialMasters: MasterItem[] = [
   {
     code: 'ITEM-0004',
     partNo: 'MS Round Bar 25mm',
+    itemType: 'Raw Material',
+    category: 'RAW_MATERIAL',
     description: 'Mild steel round bar, 25mm dia, IS 2062 grade',
     unit: 'Kg',
     hsnCode: '7214',
@@ -702,6 +710,8 @@ export const initialMasters: MasterItem[] = [
   {
     code: 'ITEM-0005',
     partNo: 'Hydraulic Cylinder Barrel',
+    itemType: 'Semi-Finished',
+    category: 'TOOLS',
     description: 'Machined hydraulic cylinder barrel, per drawing Rev B',
     unit: 'Nos',
     hsnCode: '8412',
@@ -714,6 +724,8 @@ export const initialMasters: MasterItem[] = [
   {
     code: 'ITEM-0006',
     partNo: 'Control Panel Assembly',
+    itemType: 'Finished Good',
+    category: 'FINISHED_GOODS',
     description: 'Machine control panel with wiring, per drawing Rev A',
     unit: 'Nos',
     hsnCode: '8537',
@@ -726,6 +738,8 @@ export const initialMasters: MasterItem[] = [
   {
     code: 'ITEM-0007',
     partNo: 'Cutting Oil (Coolant)',
+    itemType: 'Consumable',
+    category: 'CONSUMABLES',
     description: 'Water-soluble cutting oil for CNC machining',
     unit: 'Litre',
     hsnCode: '2710',
@@ -738,6 +752,8 @@ export const initialMasters: MasterItem[] = [
   {
     code: 'ITEM-0008',
     partNo: 'Hex Bolt M12x50',
+    itemType: 'Bought-Out',
+    category: 'SPARE_PARTS',
     description: 'Standard hex head bolt, M12 x 50mm, Grade 8.8',
     unit: 'Nos',
     hsnCode: '7318',
@@ -750,6 +766,8 @@ export const initialMasters: MasterItem[] = [
   {
     code: 'ITEM-0009',
     partNo: 'Powder Coating Paint',
+    itemType: 'Consumable',
+    category: 'CONSUMABLES',
     description: 'Epoxy-polyester powder coat, RAL 9005 black',
     unit: 'Kg',
     hsnCode: '3208',
@@ -762,6 +780,8 @@ export const initialMasters: MasterItem[] = [
   {
     code: 'ITEM-0010',
     partNo: 'Base Frame Weldment',
+    itemType: 'Semi-Finished',
+    category: 'OTHER',
     description: 'Welded base frame, per drawing Rev D',
     unit: 'Nos',
     hsnCode: '7326',

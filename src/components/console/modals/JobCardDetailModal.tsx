@@ -92,6 +92,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
   // Local reactive logs and consumptions for immediate UI feedback without page refresh
   const [localLogs, setLocalLogs] = useState<ProductionLogReport[]>([]);
   const [localConsumptions, setLocalConsumptions] = useState<MaterialConsumptionRecord[]>([]);
+  const [activeMobileSection, setActiveMobileSection] = useState<'routes' | 'materials' | 'logs' | 'history'>('routes');
 
   // Action status messages
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -626,8 +627,8 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
   if (!isOpen || !jobCard) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md font-sans overflow-y-auto">
-      <div className={`relative w-full max-w-5xl max-h-[92vh] flex flex-col rounded-3xl border shadow-2xl transition-all overflow-hidden ${
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-slate-950/85 backdrop-blur-md font-sans overflow-y-auto">
+      <div className={`relative w-full max-w-5xl h-[100dvh] sm:h-auto sm:max-h-[92vh] flex flex-col rounded-none sm:rounded-3xl border shadow-2xl transition-all overflow-hidden ${
         isDarkMode 
           ? 'bg-slate-900/95 border-slate-800 text-white backdrop-blur-2xl shadow-[#5B75F8]/10' 
           : 'bg-white border-slate-200 text-slate-900 shadow-2xl'
@@ -636,19 +637,19 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
         {/* ========================================================================= */}
         {/* 1. HEADER BLOCK */}
         {/* ========================================================================= */}
-        <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-5 border-b border-slate-200 dark:border-slate-800/90 bg-slate-50/70 dark:bg-slate-950/50 shrink-0">
-          <div className="flex items-center gap-3.5">
-            <div className="p-3 rounded-2xl bg-gradient-to-tr from-[#5B75F8] to-indigo-600 text-white shadow-md shadow-[#5B75F8]/20 shrink-0">
-              <Factory className="w-6 h-6" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-200 dark:border-slate-800/90 bg-slate-50/80 dark:bg-slate-950/60 shrink-0">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="p-2.5 sm:p-3 rounded-2xl bg-gradient-to-tr from-[#5B75F8] to-indigo-600 text-white shadow-md shadow-[#5B75F8]/20 shrink-0">
+              <Factory className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2.5">
-                <h2 className="text-xl font-bold font-mono tracking-tight text-[#5B75F8] dark:text-[#7B92FF]">
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-lg sm:text-xl font-bold font-mono tracking-tight text-[#5B75F8] dark:text-[#7B92FF]">
                   {jobCard.jobNo}
                 </h2>
 
                 {/* Status Badge */}
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono font-bold uppercase border ${
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-xl text-[11px] font-mono font-bold uppercase border ${
                   allStepsDone || jobCard.jobStatus === 'COMPLETED' || jobCard.status === 'COMPLETED'
                     ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
                     : jobCard.jobStatus === 'QC_HOLD' || jobCard.status === 'QC_HOLD'
@@ -657,7 +658,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                     ? 'bg-purple-500/15 text-purple-300 border-purple-500/30 animate-pulse'
                     : 'bg-[#5B75F8]/15 text-[#7B92FF] border-[#5B75F8]/30'
                 }`}>
-                  <span className={`w-2 h-2 rounded-full ${
+                  <span className={`w-1.5 h-1.5 rounded-full ${
                     allStepsDone || jobCard.jobStatus === 'COMPLETED' || jobCard.status === 'COMPLETED'
                       ? 'bg-emerald-400'
                       : jobCard.jobStatus === 'QC_HOLD' || jobCard.status === 'QC_HOLD'
@@ -677,39 +678,24 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
               </div>
 
               {/* Part Description and Customer PO */}
-              <p className={`text-xs mt-1 font-sans ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                <span className="font-bold text-slate-100 dark:text-white">{jobCard.partCode}</span> — {jobCard.partDescription} • Customer PO: <span className="font-mono font-bold text-indigo-400">{jobCard.orderPo}</span>
+              <p className={`text-xs mt-1 truncate ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                <span className="font-bold text-slate-100 dark:text-white">{jobCard.partCode}</span> — {jobCard.partDescription}
               </p>
-
-              {/* "Next:" line showing next actionable stage */}
-              <div className="mt-1 flex items-center gap-1.5 text-xs font-mono">
-                <span className="text-slate-400">Next:</span>
-                {allStepsDone ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onClose();
-                      if (onSelectOrder && jobCard.orderPo) {
-                        onSelectOrder(jobCard.orderPo);
-                      } else if (onNavigate) {
-                        onNavigate('qc');
-                      }
-                    }}
-                    className="text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 underline underline-offset-2 transition-colors cursor-pointer"
-                  >
-                    <span>Pre-Dispatch Inspection (PDI)</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                ) : (
-                  <span className="text-indigo-400 font-medium">
-                    {nextIncompleteStep ? `Operation ${nextIncompleteStep.sequenceNo} (${nextIncompleteStep.operationName})` : 'In Production'}
-                  </span>
-                )}
+              <div className="flex items-center gap-2 mt-0.5 text-[11px] font-mono text-slate-400">
+                <span>PO: <strong className="text-indigo-400">{jobCard.orderPo}</strong></span>
+                <span>•</span>
+                <span className="truncate">
+                  {allStepsDone ? (
+                    <span className="text-emerald-400 font-bold">Ready for PDI</span>
+                  ) : (
+                    <span>Next: <strong className="text-indigo-300">{nextIncompleteStep ? `Op ${nextIncompleteStep.sequenceNo}` : 'Production'}</strong></span>
+                  )}
+                </span>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between sm:justify-end gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800/60">
             {allStepsDone ? (
               <button
                 type="button"
@@ -721,11 +707,10 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                     onNavigate('qc');
                   }
                 }}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-mono font-bold shadow-md shadow-emerald-500/20 flex items-center gap-1.5 cursor-pointer transition-all hover:scale-105"
-                title="Route process completed. Jump to QC / PDI Inspection"
+                className="flex-1 sm:flex-initial px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-mono font-bold shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>QC / PDI Inspection →</span>
+                <span>QC / PDI →</span>
               </button>
             ) : (
               <button
@@ -739,7 +724,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                   }
                   setShowLogProductionModal(true);
                 }}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-mono font-bold shadow-md shadow-[#5B75F8]/20 flex items-center gap-1.5 cursor-pointer transition-all hover:scale-105"
+                className="flex-1 sm:flex-initial px-4 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 text-white text-xs font-mono font-bold shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Log Production</span>
@@ -747,7 +732,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
             )}
             <button
               onClick={onClose}
-              className={`p-2.5 rounded-2xl border transition-all cursor-pointer ${
+              className={`p-2 rounded-2xl border transition-all cursor-pointer ${
                 isDarkMode 
                   ? 'border-slate-800 bg-slate-950/60 text-slate-400 hover:text-white hover:bg-slate-800' 
                   : 'border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
@@ -759,38 +744,164 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
         </div>
 
         {/* ========================================================================= */}
-        {/* SUMMARY FIELDS BAR */}
+        {/* SUMMARY KPI CARDS (Both Mobile & PC View) */}
         {/* ========================================================================= */}
-        <div className={`grid grid-cols-2 sm:grid-cols-4 gap-3 px-6 py-4 border-b text-xs font-mono ${
-          isDarkMode ? 'bg-slate-950/40 border-slate-800/80 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+        <div className={`p-3.5 sm:p-5 border-b shrink-0 transition-all ${
+          isDarkMode 
+            ? 'bg-slate-950/40 border-slate-800/80 backdrop-blur-xl' 
+            : 'bg-slate-50/70 border-slate-200'
         }`}>
-          <div className="space-y-0.5">
-            <div className="text-[10px] uppercase font-bold text-slate-400">Target Quantity</div>
-            <div className="text-sm font-bold text-emerald-400">{targetQuantity} NOS</div>
-          </div>
-          <div className="space-y-0.5">
-            <div className="text-[10px] uppercase font-bold text-slate-400">Target Date</div>
-            <div className="text-sm font-bold text-amber-400">{jobCard.targetDate || '2026-08-30'}</div>
-          </div>
-          <div className="space-y-0.5">
-            <div className="text-[10px] uppercase font-bold text-slate-400">Steps Done</div>
-            <div className="text-sm font-bold text-[#7B92FF] flex items-center gap-1">
-              <span>{completedStepsCount} / {totalStepsCount}</span>
-              {allStepsDone && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+            
+            {/* Card 1: Target Output */}
+            <div className={`p-3 sm:p-3.5 rounded-2xl border transition-all relative overflow-hidden group ${
+              isDarkMode 
+                ? 'bg-gradient-to-b from-slate-900/90 to-slate-950/90 border-slate-800/90 hover:border-emerald-500/40 shadow-xs' 
+                : 'bg-white border-slate-200/90 hover:border-emerald-500/30 shadow-xs'
+            }`}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-mono uppercase font-bold text-slate-400 tracking-wider">
+                  Target Qty
+                </span>
+                <div className="p-1.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <Package className="w-3.5 h-3.5" />
+                </div>
+              </div>
+              <div className="mt-1 flex items-baseline gap-1.5 font-mono">
+                <span className={`text-base sm:text-lg font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                  {targetQuantity}
+                </span>
+                <span className="text-xs font-semibold text-emerald-400">NOS</span>
+              </div>
+              <div className="mt-0.5 text-[10px] font-mono text-slate-400 truncate">
+                Customer PO Target
+              </div>
             </div>
-          </div>
-          <div className="space-y-0.5">
-            <div className="text-[10px] uppercase font-bold text-slate-400">Next Step</div>
-            <div className={`text-xs font-bold truncate ${allStepsDone ? 'text-emerald-400' : 'text-indigo-400'}`}>
-              {allStepsDone ? 'All steps done' : nextIncompleteStep?.operationName || 'All steps done'}
+
+            {/* Card 2: Target Date */}
+            <div className={`p-3 sm:p-3.5 rounded-2xl border transition-all relative overflow-hidden group ${
+              isDarkMode 
+                ? 'bg-gradient-to-b from-slate-900/90 to-slate-950/90 border-slate-800/90 hover:border-amber-500/40 shadow-xs' 
+                : 'bg-white border-slate-200/90 hover:border-amber-500/30 shadow-xs'
+            }`}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-mono uppercase font-bold text-slate-400 tracking-wider">
+                  Target Delivery
+                </span>
+                <div className="p-1.5 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                  <Clock className="w-3.5 h-3.5" />
+                </div>
+              </div>
+              <div className="mt-1 font-mono font-bold text-amber-400 text-sm sm:text-base truncate">
+                {jobCard.targetDate || '2026-08-30'}
+              </div>
+              <div className="mt-0.5 text-[10px] font-mono text-slate-400 truncate">
+                Shift Commitment
+              </div>
             </div>
+
+            {/* Card 3: Route Progress */}
+            <div className={`p-3 sm:p-3.5 rounded-2xl border transition-all relative overflow-hidden group ${
+              isDarkMode 
+                ? 'bg-gradient-to-b from-slate-900/90 to-slate-950/90 border-slate-800/90 hover:border-[#5B75F8]/40 shadow-xs' 
+                : 'bg-white border-slate-200/90 hover:border-[#5B75F8]/30 shadow-xs'
+            }`}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-mono uppercase font-bold text-slate-400 tracking-wider">
+                  Route Execution
+                </span>
+                <div className="p-1.5 rounded-xl bg-[#5B75F8]/10 text-[#7B92FF] border border-[#5B75F8]/20">
+                  <Route className="w-3.5 h-3.5" />
+                </div>
+              </div>
+              <div className="mt-1 flex items-baseline gap-2 font-mono">
+                <span className={`text-base sm:text-lg font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                  {completedStepsCount} / {totalStepsCount}
+                </span>
+                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-[#5B75F8]/15 text-[#7B92FF] border border-[#5B75F8]/25">
+                  {Math.round((completedStepsCount / (totalStepsCount || 1)) * 100)}%
+                </span>
+              </div>
+              <div className="mt-0.5 text-[10px] font-mono text-slate-400 truncate">
+                {allStepsDone ? 'All stages completed ✓' : `${totalStepsCount - completedStepsCount} stages remaining`}
+              </div>
+            </div>
+
+            {/* Card 4: Next Milestone */}
+            <div className={`p-3 sm:p-3.5 rounded-2xl border transition-all relative overflow-hidden group ${
+              isDarkMode 
+                ? 'bg-gradient-to-b from-slate-900/90 to-slate-950/90 border-slate-800/90 hover:border-purple-500/40 shadow-xs' 
+                : 'bg-white border-slate-200/90 hover:border-purple-500/30 shadow-xs'
+            }`}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-mono uppercase font-bold text-slate-400 tracking-wider">
+                  Next Milestone
+                </span>
+                <div className={`p-1.5 rounded-xl border ${
+                  allStepsDone
+                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                    : 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+                }`}>
+                  {allStepsDone ? <ShieldCheck className="w-3.5 h-3.5" /> : <Sparkles className="w-3.5 h-3.5" />}
+                </div>
+              </div>
+              <div className={`mt-1 font-mono font-bold text-xs sm:text-sm truncate ${
+                allStepsDone ? 'text-emerald-400' : 'text-indigo-400 dark:text-[#7B92FF]'
+              }`}>
+                {allStepsDone ? 'Pre-Dispatch QC (PDI)' : nextIncompleteStep ? `Op ${nextIncompleteStep.sequenceNo}: ${nextIncompleteStep.operationName}` : 'In Production'}
+              </div>
+              <div className="mt-0.5 text-[10px] font-mono text-slate-400 truncate">
+                {allStepsDone ? 'Ready for final inspection' : nextIncompleteStep ? `Work Center: ${nextIncompleteStep.workCenter}` : 'Pending line release'}
+              </div>
+            </div>
+
           </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* MOBILE SECTION NAVIGATION BAR (Viewport < md) */}
+        {/* ========================================================================= */}
+        <div className={`flex md:hidden items-center gap-1.5 p-2.5 border-b overflow-x-auto scrollbar-none shrink-0 ${
+          isDarkMode ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-100/90 border-slate-200'
+        }`}>
+          {[
+            { id: 'routes', label: 'Route Steps', icon: Route, count: `${completedStepsCount}/${totalStepsCount}` },
+            { id: 'materials', label: 'BOM Materials', icon: Layers, count: allMaterialRows.length },
+            { id: 'logs', label: 'Shift Logs', icon: Activity, count: allJobLogs.length },
+            { id: 'history', label: 'History', icon: History, count: localConsumptions.length },
+          ].map(tab => {
+            const isActive = activeMobileSection === tab.id;
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveMobileSection(tab.id as any)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-bold whitespace-nowrap transition-all cursor-pointer border ${
+                  isActive
+                    ? 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-sm'
+                    : isDarkMode 
+                      ? 'bg-slate-900/80 text-slate-400 border-slate-800 hover:text-white' 
+                      : 'bg-white text-slate-600 border-slate-200 hover:text-slate-900'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                <span>{tab.label}</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                  isActive 
+                    ? 'bg-white/25 text-white' 
+                    : isDarkMode ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-700'
+                }`}>
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         {/* ========================================================================= */}
         {/* SCROLLABLE BODY CONTENT */}
         {/* ========================================================================= */}
-        <div className="p-6 space-y-7 overflow-y-auto flex-1 font-sans">
+        <div className="p-4 sm:p-6 space-y-6 sm:space-y-7 overflow-y-auto flex-1 font-sans">
           
           {/* Feedback alerts */}
           {errorMsg && (
@@ -807,22 +918,23 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
           )}
 
           {/* ========================================================================= */}
-          {/* 2. ROUTE STEPS TABLE */}
+          {/* 2. ROUTE STEPS SECTION (Desktop Table + Mobile Stepper Cards) */}
           {/* ========================================================================= */}
-          <div className="space-y-3">
+          <div className={`space-y-3 ${activeMobileSection === 'routes' ? 'block' : 'hidden md:block'}`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Route className="w-4 h-4 text-[#5B75F8]" />
-                <h3 className="font-bold text-sm font-mono tracking-tight text-slate-200">
+                <h3 className={`font-bold text-sm font-mono tracking-tight ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
                   Route Steps
                 </h3>
               </div>
               <span className="text-[11px] font-mono text-slate-400">
-                {completedStepsCount} of {totalStepsCount} Operations Executed ({Math.round((completedStepsCount / (totalStepsCount || 1)) * 100)}%)
+                {completedStepsCount} of {totalStepsCount} Executed ({Math.round((completedStepsCount / (totalStepsCount || 1)) * 100)}%)
               </span>
             </div>
 
-            <div className={`rounded-2xl border overflow-hidden transition-all shadow-sm ${
+            {/* Desktop Table View */}
+            <div className={`hidden md:block rounded-2xl border overflow-hidden transition-all shadow-sm ${
               isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-white border-slate-200'
             }`}>
               <div className="overflow-x-auto">
@@ -854,15 +966,12 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                               : isDarkMode ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'
                           }`}
                         >
-                          {/* Seq */}
                           <td className="py-3 px-4 font-bold text-slate-400">
                             <div className="flex items-center gap-1.5">
                               {!step.isReachable && !step.isCompleted && <Lock className="w-3 h-3 text-slate-500 shrink-0" />}
                               <span>{step.sequenceNo}</span>
                             </div>
                           </td>
-
-                          {/* Operation */}
                           <td className={`py-3 px-4 font-sans font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
                             <div className="flex items-center gap-1.5">
                               <span>{step.operationName}</span>
@@ -873,13 +982,9 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                               )}
                             </div>
                           </td>
-
-                          {/* Machine */}
                           <td className="py-3 px-4 text-purple-400 font-medium">
                             {step.workCenter}
                           </td>
-
-                          {/* Progress: {qty_done} / {target_qty} with checkmark */}
                           <td className="py-3 px-4 text-center">
                             <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono font-bold ${
                               step.isCompleted
@@ -892,8 +997,6 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                               {step.isCompleted && <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[2.5]" />}
                             </span>
                           </td>
-
-                          {/* Material Needed: [Code] [Req] (left [X]) */}
                           <td className="py-3 px-4 text-xs font-mono">
                             {mats.length > 0 ? (
                               <div className="space-y-1">
@@ -911,8 +1014,6 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                               <span className="text-slate-500">—</span>
                             )}
                           </td>
-
-                          {/* Std Time */}
                           <td className="py-3 px-4 text-right font-mono text-slate-400">
                             {step.standardTimeMinutes || 15} mins
                           </td>
@@ -923,17 +1024,130 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                 </table>
               </div>
             </div>
+
+            {/* Mobile Stepper Cards (Viewport < md) */}
+            <div className="block md:hidden space-y-3">
+              {stepProgressList.map((step) => {
+                const mats = materialNeededPerStep[step.sequenceNo] || [];
+                const pct = Math.min(100, Math.round(((step.loggedQty || 0) / (targetQuantity || 1)) * 100));
+
+                return (
+                  <div
+                    key={step.sequenceNo}
+                    className={`p-4 rounded-2xl border transition-all space-y-3 shadow-xs ${
+                      step.isCompleted
+                        ? isDarkMode ? 'bg-slate-950/70 border-emerald-500/30' : 'bg-emerald-50/40 border-emerald-200'
+                        : step.isNextIncomplete
+                        ? isDarkMode ? 'bg-[#5B75F8]/10 border-[#5B75F8]/40 shadow-xs' : 'bg-indigo-50/80 border-indigo-200'
+                        : !step.isReachable
+                        ? isDarkMode ? 'bg-slate-950/40 border-slate-800/60 opacity-60' : 'bg-slate-100/60 border-slate-200 opacity-60'
+                        : isDarkMode ? 'bg-slate-950/70 border-slate-800' : 'bg-white border-slate-200'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <span className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-mono font-bold border shrink-0 ${
+                          step.isCompleted
+                            ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                            : step.isNextIncomplete
+                            ? 'bg-[#5B75F8]/20 text-[#7B92FF] border-[#5B75F8]/50'
+                            : 'bg-slate-800 text-slate-400 border-slate-700'
+                        }`}>
+                          {step.isCompleted ? <Check className="w-4 h-4 stroke-[3]" /> : step.sequenceNo}
+                        </span>
+                        <div>
+                          <h4 className={`text-xs font-bold font-sans ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>
+                            {step.operationName}
+                          </h4>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-[10px] font-mono font-medium text-purple-400">
+                              {step.workCenter}
+                            </span>
+                            {step.inspectionRequired && (
+                              <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                                QC Gate
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold uppercase border shrink-0 ${
+                        step.isCompleted
+                          ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                          : step.isNextIncomplete
+                          ? 'bg-[#5B75F8]/20 text-[#7B92FF] border-[#5B75F8]/40 animate-pulse'
+                          : !step.isReachable
+                          ? 'bg-slate-800/80 text-slate-500 border-slate-700'
+                          : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                      }`}>
+                        {step.isCompleted ? 'Done' : step.isNextIncomplete ? 'Active' : !step.isReachable ? 'Locked' : 'Queued'}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-[11px] font-mono">
+                        <span className="text-slate-400">Step Progress:</span>
+                        <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                          {step.loggedQty} / {targetQuantity} NOS ({pct}%)
+                        </span>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                        <div 
+                          className={`h-full rounded-full transition-all ${
+                            step.isCompleted ? 'bg-emerald-500' : 'bg-gradient-to-r from-[#5B75F8] to-indigo-500'
+                          }`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {mats.length > 0 && (
+                      <div className={`p-2.5 rounded-xl border text-[11px] font-mono space-y-1 ${
+                        isDarkMode ? 'bg-slate-900/60 border-slate-800/80' : 'bg-slate-50 border-slate-200'
+                      }`}>
+                        <span className="text-slate-400 font-bold block text-[10px] uppercase">Material Requirement:</span>
+                        {mats.map((m, idx) => (
+                          <div key={idx} className="flex items-center justify-between text-slate-300">
+                            <span className="font-bold">{m.code}</span>
+                            <span className={m.left > 0 ? 'text-amber-400 font-bold' : 'text-emerald-400 font-bold'}>
+                              Req: {m.req} {m.uom} (Left: {m.left})
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {!step.isCompleted && step.isReachable && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLogStepSeq(step.sequenceNo);
+                          const rem = Math.max(1, targetQuantity - (step.loggedQty || 0));
+                          setLogQty(rem);
+                          setShowLogProductionModal(true);
+                        }}
+                        className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 text-white text-xs font-mono font-bold flex items-center justify-center gap-1.5 shadow-md shadow-[#5B75F8]/20 cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>+ Log Output for Op {step.sequenceNo}</span>
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           {/* ========================================================================= */}
-          {/* 3. MATERIAL CONSUMPTION SECTION */}
+          {/* 3. MATERIAL CONSUMPTION SECTION (Desktop Table + Mobile Cards) */}
           {/* ========================================================================= */}
-          <div className="space-y-3">
+          <div className={`space-y-3 ${activeMobileSection === 'materials' ? 'block' : 'hidden md:block'}`}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <div className="flex items-center gap-2">
                   <Layers className="w-4 h-4 text-[#5B75F8]" />
-                  <h3 className="font-bold text-sm font-mono tracking-tight text-slate-200">
+                  <h3 className={`font-bold text-sm font-mono tracking-tight ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
                     Material Consumption
                   </h3>
                 </div>
@@ -956,7 +1170,8 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
               </button>
             </div>
 
-            <div className={`rounded-2xl border overflow-hidden transition-all shadow-sm ${
+            {/* Desktop Table View */}
+            <div className={`hidden md:block rounded-2xl border overflow-hidden transition-all shadow-sm ${
               isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-white border-slate-200'
             }`}>
               <div className="overflow-x-auto">
@@ -979,7 +1194,6 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
 
                       return (
                         <tr key={mat.componentCode} className={isDarkMode ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}>
-                          {/* Component (item code + name, plus operation tied to) */}
                           <td className="py-3.5 px-4 font-sans">
                             <div className="font-bold text-xs text-slate-100 dark:text-white font-mono">
                               {mat.componentCode}
@@ -991,20 +1205,14 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                               Op {mat.assignedStepSeq}: {mat.assignedOpName}
                             </span>
                           </td>
-
-                          {/* Required */}
                           <td className="py-3.5 px-4 text-right font-mono text-slate-300">
                             {mat.plannedTotal} {mat.uom}
                           </td>
-
-                          {/* Left */}
                           <td className={`py-3.5 px-4 text-right font-mono font-bold ${
                             mat.remainingLeft > 0 ? 'text-amber-400' : 'text-emerald-400'
                           }`}>
                             {mat.remainingLeft} {mat.uom}
                           </td>
-
-                          {/* To Book input */}
                           <td className="py-3.5 px-4 text-right">
                             <div className="flex items-center justify-end gap-1.5">
                               <input
@@ -1023,8 +1231,6 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                               <span className="text-[11px] text-slate-400 font-mono">{mat.uom}</span>
                             </div>
                           </td>
-
-                          {/* Action Button */}
                           <td className="py-3.5 px-4 text-center">
                             <button
                               type="button"
@@ -1047,16 +1253,99 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                 </table>
               </div>
             </div>
+
+            {/* Mobile Material Cards (Viewport < md) */}
+            <div className="block md:hidden space-y-3">
+              {allMaterialRows.map((mat) => {
+                const inputVal = toBookInputs[mat.componentCode]?.qty ?? '';
+                const isBooking = isBookingMaterial === mat.componentCode;
+
+                return (
+                  <div
+                    key={mat.componentCode}
+                    className={`p-4 rounded-2xl border transition-all space-y-3 shadow-xs ${
+                      isDarkMode ? 'bg-slate-950/70 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono font-bold text-xs text-[#5B75F8] dark:text-[#7B92FF]">
+                          {mat.componentCode}
+                        </span>
+                        <span className="px-2 py-0.5 rounded text-[9px] font-mono bg-purple-500/15 text-purple-300 border border-purple-500/25">
+                          Op {mat.assignedStepSeq}
+                        </span>
+                      </div>
+                      <p className={`text-xs font-semibold mt-0.5 ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+                        {mat.componentName}
+                      </p>
+                    </div>
+
+                    <div className={`grid grid-cols-2 gap-2 text-center font-mono text-[11px] p-2.5 rounded-xl border ${
+                      isDarkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+                    }`}>
+                      <div>
+                        <span className="text-[10px] text-slate-400 uppercase block">Required Total</span>
+                        <span className="font-bold">{mat.plannedTotal} {mat.uom}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 uppercase block">Remaining Left</span>
+                        <span className={`font-bold ${mat.remainingLeft > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                          {mat.remainingLeft} {mat.uom}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          step="any"
+                          min="0"
+                          placeholder={`Qty to Book (${mat.uom})`}
+                          value={inputVal}
+                          onChange={(e) => handleInputChange(mat.componentCode, 'qty', e.target.value)}
+                          className={`flex-1 rounded-xl border px-3 py-2 text-xs font-mono outline-none ${
+                            isDarkMode ? 'bg-slate-900 border-slate-700 text-white focus:border-[#5B75F8]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[#5B75F8]'
+                          }`}
+                        />
+                        {mat.remainingLeft > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => handleInputChange(mat.componentCode, 'qty', String(mat.remainingLeft))}
+                            className={`px-2.5 py-2 rounded-xl border text-[10px] font-mono font-bold cursor-pointer shrink-0 ${
+                              isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+                            }`}
+                          >
+                            Fill Left ({mat.remainingLeft})
+                          </button>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={isBooking}
+                        onClick={() => handleBookMaterialSubmit(mat)}
+                        className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-mono font-bold flex items-center justify-center gap-1.5 shadow-sm cursor-pointer disabled:opacity-50"
+                      >
+                        {isBooking ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckSquare className="w-3.5 h-3.5" />}
+                        <span>{isBooking ? 'Booking Consumption...' : `Book ${mat.componentCode} Issue`}</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           {/* ========================================================================= */}
-          {/* 4. PRODUCTION LOGGING SECTION */}
+          {/* 4. PRODUCTION LOGGING SECTION (Desktop Table + Mobile Cards) */}
           {/* ========================================================================= */}
-          <div className="space-y-3">
+          <div className={`space-y-3 ${activeMobileSection === 'logs' ? 'block' : 'hidden md:block'}`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Activity className="w-4 h-4 text-[#5B75F8]" />
-                <h3 className="font-bold text-sm font-mono tracking-tight text-slate-200">
+                <h3 className={`font-bold text-sm font-mono tracking-tight ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
                   Production Logging
                 </h3>
               </div>
@@ -1065,7 +1354,8 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
               </span>
             </div>
 
-            <div className={`rounded-2xl border overflow-hidden transition-all shadow-sm ${
+            {/* Desktop Table View */}
+            <div className={`hidden md:block rounded-2xl border overflow-hidden transition-all shadow-sm ${
               isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-white border-slate-200'
             }`}>
               <div className="overflow-x-auto">
@@ -1113,25 +1403,59 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                 </table>
               </div>
             </div>
+
+            {/* Mobile Shift Log Cards (Viewport < md) */}
+            <div className="block md:hidden space-y-2.5">
+              {allJobLogs.length === 0 ? (
+                <div className={`p-8 text-center rounded-2xl border font-mono text-xs ${
+                  isDarkMode ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-500'
+                }`}>
+                  No production output logged yet. Tap "+ Log Production" above to record output.
+                </div>
+              ) : (
+                allJobLogs.map((log, idx) => (
+                  <div 
+                    key={log.id || idx} 
+                    className={`p-3.5 rounded-2xl border space-y-1.5 font-mono text-xs ${
+                      isDarkMode ? 'bg-slate-950/70 border-slate-800' : 'bg-slate-50 border-slate-200'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className={`font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>
+                        Op {log.stepNo} — {log.operationName}
+                      </span>
+                      <span className="font-bold text-emerald-400 text-sm">
+                        +{log.qtyDone} NOS
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-slate-400 flex items-center justify-between">
+                      <span>{formatDateTime(log.loggedTimestamp)}</span>
+                      <span>Verified Shift Log</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
 
           {/* ========================================================================= */}
-          {/* 5. CONSUMPTION HISTORY SECTION */}
+          {/* 5. CONSUMPTION HISTORY SECTION (Desktop Table + Mobile Cards) */}
           {/* ========================================================================= */}
-          <div className="space-y-3">
+          <div className={`space-y-3 ${activeMobileSection === 'history' ? 'block' : 'hidden md:block'}`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <History className="w-4 h-4 text-[#5B75F8]" />
-                <h3 className="font-bold text-sm font-mono tracking-tight text-slate-200">
+                <h3 className={`font-bold text-sm font-mono tracking-tight ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
                   Consumption History
                 </h3>
               </div>
               <span className="text-[11px] font-mono text-slate-400">
-                Historical material booking audit trail
+                Historical material booking audit trail ({localConsumptions.length})
               </span>
             </div>
 
-            <div className={`rounded-2xl border overflow-hidden transition-all shadow-sm ${
+            {/* Desktop Table View */}
+            <div className={`hidden md:block rounded-2xl border overflow-hidden transition-all shadow-sm ${
               isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-white border-slate-200'
             }`}>
               <div className="overflow-x-auto">
@@ -1190,21 +1514,55 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                 </table>
               </div>
             </div>
+
+            {/* Mobile History Cards (Viewport < md) */}
+            <div className="block md:hidden space-y-2.5">
+              {localConsumptions.length === 0 ? (
+                <div className={`p-8 text-center rounded-2xl border font-mono text-xs ${
+                  isDarkMode ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-500'
+                }`}>
+                  No material consumption recorded yet.
+                </div>
+              ) : (
+                localConsumptions.map((c) => (
+                  <div 
+                    key={c.id} 
+                    className={`p-3.5 rounded-2xl border space-y-1.5 font-mono text-xs ${
+                      isDarkMode ? 'bg-slate-950/70 border-slate-800' : 'bg-slate-50 border-slate-200'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-[#5B75F8] dark:text-[#7B92FF]">{c.itemCode}</span>
+                      <span className="font-bold text-emerald-400 text-sm">
+                        {c.actualQty} {c.unit}
+                      </span>
+                    </div>
+                    <div className={`text-[11px] font-sans ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                      {c.itemName}
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-800/60">
+                      <span>Heat/Lot: <strong className="text-amber-400">{c.heatLotNumber || '—'}</strong></span>
+                      <span>{formatDateTime(c.bookedAt)}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
 
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800/90 bg-slate-50/50 dark:bg-slate-950/40 flex items-center justify-between font-mono text-xs">
-          <div className="text-slate-400 flex items-center gap-2">
-            <span>Job Card: <strong>{jobCard.jobNo}</strong></span>
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-t border-slate-200 dark:border-slate-800/90 bg-slate-50/50 dark:bg-slate-950/40 flex items-center justify-between font-mono text-xs shrink-0">
+          <div className="text-slate-400 flex items-center gap-2 text-[11px]">
+            <span>Job: <strong>{jobCard.jobNo}</strong></span>
             <span>•</span>
-            <span>Mill Heat/Lot: <strong className="text-amber-400">{jobCard.materialIssuedLot || 'HT-2026-9921'}</strong></span>
+            <span className="truncate">Heat/Lot: <strong className="text-amber-400">{jobCard.materialIssuedLot || 'HT-2026-9921'}</strong></span>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className={`px-5 py-2 rounded-xl border font-bold cursor-pointer transition-all ${
+            className={`px-4 sm:px-5 py-2 rounded-xl border font-bold cursor-pointer transition-all ${
               isDarkMode ? 'border-slate-800 text-slate-300 hover:bg-slate-800' : 'border-slate-200 text-slate-700 hover:bg-slate-100'
             }`}
           >

@@ -1202,10 +1202,94 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
   const completedJobsCount = jobCards.filter(j => j.status === 'COMPLETED').length;
 
   return (
-    <div className="space-y-6 font-sans">
+    <div className="space-y-4 sm:space-y-6 font-sans w-full max-w-full min-w-0 pb-6">
+
+      {/* ========================================================================= */}
+      {/* ── MOBILE-FIRST TOP HEADER (< md) ──                                      */}
+      {/* ========================================================================= */}
+      <div className="block md:hidden space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                Manufacturing Hub
+              </span>
+            </div>
+            <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+              {activeSection === 'job-cards' ? `Job Cards (${filteredCards.length})` :
+               activeSection === 'route-cards' ? `Route Cards (${routeCards.length})` :
+               activeSection === 'bom' ? `BOM Recipes (${boms.length})` : 'Engineering Hub'}
+            </h1>
+          </div>
+
+          <div className="shrink-0">
+            {activeSection === 'job-cards' && (
+              <button
+                onClick={openNewJobModal}
+                className="min-h-[44px] px-3.5 py-2 rounded-xl bg-gradient-to-r from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer active:scale-95 transition-transform font-mono"
+              >
+                <Plus className="w-4 h-4" />
+                <span>New Job</span>
+              </button>
+            )}
+            {activeSection === 'route-cards' && (
+              <button
+                onClick={handleOpenCreateRoute}
+                className="min-h-[44px] px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer active:scale-95 transition-transform font-mono"
+              >
+                <Route className="w-4 h-4" />
+                <span>+ Route</span>
+              </button>
+            )}
+            {activeSection === 'bom' && (
+              <button
+                onClick={handleOpenCreateBom}
+                className="min-h-[44px] px-3.5 py-2 rounded-xl bg-gradient-to-r from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer active:scale-95 transition-transform font-mono"
+              >
+                <Layers className="w-4 h-4" />
+                <span>+ BOM</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Mobile 2x2 Telemetry Matrix */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Active Job Cards</div>
+            <div className="text-base font-black text-indigo-500 tracking-tight mt-0.5">
+              {activeJobsCount} <span className="text-xs font-normal text-slate-400">active</span>
+            </div>
+          </div>
+
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">BOM Recipes</div>
+            <div className="text-base font-black text-slate-900 dark:text-white tracking-tight mt-0.5">
+              {boms.length} <span className="text-xs font-normal text-slate-400">formulas</span>
+            </div>
+          </div>
+
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Route Cards</div>
+            <div className="text-base font-black text-emerald-500 tracking-tight mt-0.5">
+              {routeCards.length} <span className="text-xs font-normal text-slate-400">routes</span>
+            </div>
+          </div>
+
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">OEE Efficiency</div>
+            <div className="text-base font-black text-amber-500 tracking-tight mt-0.5">
+              94.2% <span className="text-xs font-normal text-emerald-500">Nominal</span>
+            </div>
+          </div>
+        </div>
+      </div>
       
-      {/* Top Banner Header */}
-      <div className={`p-6 rounded-3xl border transition-all ${
+      {/* ========================================================================= */}
+      {/* ── DESKTOP TOP HERO BANNER (≥ md) ──                                      */}
+      {/* ========================================================================= */}
+      <div className={`hidden md:block p-6 rounded-3xl border transition-all ${
         isDarkMode 
           ? 'bg-slate-900/80 border-slate-800/80 text-white backdrop-blur-xl shadow-2xl' 
           : 'bg-white border-slate-200 shadow-sm text-slate-900'
@@ -1232,27 +1316,27 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
             {activeSection === 'job-cards' && (
               <button
                 onClick={openNewJobModal}
-                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] via-indigo-600 to-[#4F46E5] hover:from-indigo-500 hover:to-[#5B75F8] text-white font-mono font-bold text-xs flex items-center gap-2 cursor-pointer border border-[#7B92FF]/40 shadow-[0_4px_20px_rgba(91,117,248,0.35)] hover:shadow-[0_6px_24px_rgba(91,117,248,0.55)] transition-all hover:scale-[1.03] active:scale-[0.97]"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-4 h-4 text-white" />
                 <span>Create Job Card</span>
               </button>
             )}
             {activeSection === 'route-cards' && (
               <button
                 onClick={handleOpenCreateRoute}
-                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-teal-500 hover:to-emerald-600 text-white font-mono font-bold text-xs flex items-center gap-2 cursor-pointer border border-emerald-400/40 shadow-[0_4px_20px_rgba(16,185,129,0.35)] hover:shadow-[0_6px_24px_rgba(16,185,129,0.55)] transition-all hover:scale-[1.03] active:scale-[0.97]"
               >
-                <Route className="w-4 h-4" />
+                <Route className="w-4 h-4 text-white" />
                 <span>Create Route Card</span>
               </button>
             )}
             {activeSection === 'bom' && (
               <button
                 onClick={handleOpenCreateBom}
-                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] via-indigo-600 to-[#4F46E5] hover:from-indigo-500 hover:to-[#5B75F8] text-white font-mono font-bold text-xs flex items-center gap-2 cursor-pointer border border-[#7B92FF]/40 shadow-[0_4px_20px_rgba(91,117,248,0.35)] hover:shadow-[0_6px_24px_rgba(91,117,248,0.55)] transition-all hover:scale-[1.03] active:scale-[0.97]"
               >
-                <Layers className="w-4 h-4" />
+                <Layers className="w-4 h-4 text-white" />
                 <span>Create BOM Formula</span>
               </button>
             )}
@@ -1344,15 +1428,15 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
       </div>
 
       {/* Primary Section Switcher Navigation Tabs */}
-      <div className={`p-3 rounded-3xl border transition-all flex flex-wrap items-center justify-between gap-4 ${
+      <div className={`p-3 rounded-3xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
         isDarkMode ? 'bg-slate-900/70 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-xs'
       }`}>
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 no-scrollbar max-w-full">
           {[
             { id: 'job-cards', label: 'Job Cards (Shopfloor)', icon: Factory },
             { id: 'route-cards', label: 'Route Cards (HOW)', icon: Route },
             { id: 'bom', label: 'Bill of Materials (WHAT)', icon: Layers },
-            { id: 'matrix', label: 'Engineering Hub & Demand Matrix', icon: GitFork },
+            { id: 'matrix', label: 'Engineering Hub & Matrix', icon: GitFork },
           ].map(section => {
             const Icon = section.icon;
             const isActive = activeSection === section.id;
@@ -1360,7 +1444,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
               <button
                 key={section.id}
                 onClick={() => setActiveSection(section.id as ProductionSection)}
-                className={`px-4 py-2.5 rounded-2xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
+                className={`min-h-[40px] px-3.5 py-2 rounded-2xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap shrink-0 ${
                   isActive
                     ? isDarkMode 
                       ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' 
@@ -1377,8 +1461,8 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
           })}
         </div>
 
-        {/* Global Search Bar */}
-        <div className={`relative flex items-center rounded-2xl border px-3.5 py-1.5 transition-all ${
+        {/* Search Input */}
+        <div className={`relative flex items-center rounded-2xl border px-3.5 py-2 transition-all min-h-[40px] ${
           isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white focus-within:border-[#5B75F8]/50' : 'bg-slate-50 border-slate-200 text-slate-900 focus-within:border-[#5B75F8]'
         }`}>
           <Search className="w-4 h-4 text-slate-400 shrink-0 mr-2" />
@@ -1386,12 +1470,12 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
             type="text"
             placeholder={
               activeSection === 'job-cards' ? "Search Job #, Machine, Part..." :
-              activeSection === 'route-cards' ? "Search Part Code, Route, Work Center..." :
-              activeSection === 'bom' ? "Search BOM Code, Component SKU..." : "Search Finished Good SKU..."
+              activeSection === 'route-cards' ? "Search Part Code, Route..." :
+              activeSection === 'bom' ? "Search BOM Code, SKU..." : "Search Finished Good SKU..."
             }
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-transparent outline-none text-xs w-48 sm:w-64 font-mono"
+            className="bg-transparent outline-none text-xs w-full sm:w-56 font-mono"
           />
         </div>
       </div>
@@ -1400,10 +1484,10 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
       {/* SECTION 1: JOB CARDS & SHOPFLOOR EXECUTION */}
       {/* ========================================================================================= */}
       {activeSection === 'job-cards' && (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* View Filter Pill Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 no-scrollbar max-w-full">
               {[
                 { id: 'ALL', label: 'All Jobs' },
                 { id: 'SCHEDULED', label: 'Scheduled' },
@@ -1414,7 +1498,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                 <button
                   key={tab.id}
                   onClick={() => setStatusFilter(tab.id)}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  className={`min-h-[36px] px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                     statusFilter === tab.id
                       ? isDarkMode 
                         ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' 
@@ -1453,146 +1537,231 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
             </div>
           </div>
 
-          {/* Main Jobs Table / Kanban */}
-          {viewMode === 'list' ? (
-            <div className={`rounded-3xl border overflow-hidden transition-all shadow-xl ${
-              isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200'
-            }`}>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse font-mono">
-                  <thead>
-                    <tr className={`border-b font-bold uppercase tracking-wider text-[11px] ${
-                      isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'
-                    }`}>
-                      <th className="py-4 px-5">Job Card #</th>
-                      <th className="py-4 px-5">Customer Order PO</th>
-                      <th className="py-4 px-5">Part Description</th>
-                      <th className="py-4 px-5 text-right">Job Qty</th>
-                      <th className="py-4 px-5">Machine Center</th>
-                      <th className="py-4 px-5">Target Date</th>
-                      <th className="py-4 px-5 text-center">Status</th>
-                      <th className="py-4 px-5 text-center">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
-                    {filteredCards.length === 0 ? (
-                      <tr>
-                        <td colSpan={8} className="py-8 text-center text-slate-400">
-                          No job cards found matching criteria.
-                        </td>
-                      </tr>
-                    ) : null}
-                    {filteredCards.map((jc) => (
-                      <tr 
-                        key={jc.jobNo} 
-                        onClick={() => setSelectedJobForDetail(jc)}
-                        className={`cursor-pointer transition-colors ${isDarkMode ? 'hover:bg-slate-800/60' : 'hover:bg-indigo-50/40'}`}
-                      >
-                        <td className="py-4 px-5 font-bold font-mono text-[#5B75F8] dark:text-[#7B92FF]">
-                          <div className="hover:underline flex items-center gap-1.5">
-                            <span>{jc.jobNo}</span>
-                            <ArrowRight className="w-3 h-3 opacity-60" />
-                          </div>
-                          {jc.drawingRevision && (
-                            <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[9px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                              Rev: {jc.drawingRevision}
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-4 px-5 font-mono text-slate-400">
-                          <div>{jc.orderPo}</div>
-                          {jc.materialIssuedLot && (
-                            <div className="text-[10px] text-slate-500">
-                              Heat: {jc.materialIssuedLot}
-                            </div>
-                          )}
-                        </td>
-                        <td className={`py-4 px-5 font-semibold font-sans ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
-                          <div>{jc.partCode} — {jc.partDescription}</div>
-                          {jc.hasOpenNcr && (
-                            <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40">
-                              <AlertTriangle className="w-3 h-3" />
-                              <span>Hold: {jc.ncrReference || 'Open NCR'}</span>
-                            </span>
-                          )}
-                        </td>
-                        <td className={`py-4 px-5 text-right font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                          {jc.targetQty || jc.qty} NOS
-                        </td>
-                        <td className="py-4 px-5 font-mono text-purple-400 font-medium">
-                          {jc.machine || jc.currentOperation || 'VMC / Lathe Center'}
-                        </td>
-                        <td className="py-4 px-5 font-mono text-amber-500">
-                          {jc.targetDate}
-                        </td>
-                        <td className="py-4 px-5 text-center">
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
-                            jc.jobStatus === 'QC_HOLD' || jc.status === 'QC_HOLD'
-                              ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-                              : jc.jobStatus === 'IN_PROGRESS' || jc.status === 'RUNNING' || jc.status === 'IN_PROGRESS'
-                              ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
-                              : jc.jobStatus === 'COMPLETED' || jc.status === 'COMPLETED'
-                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                                : 'bg-[#5B75F8]/10 text-[#7B92FF] border-[#5B75F8]/30'
-                          }`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${
-                              jc.jobStatus === 'QC_HOLD' || jc.status === 'QC_HOLD' 
-                                ? 'bg-rose-500' 
-                                : jc.jobStatus === 'IN_PROGRESS' || jc.status === 'RUNNING' 
-                                ? 'bg-purple-500 animate-pulse' 
-                                : 'bg-[#5B75F8]'
-                            }`} />
-                            <span>{jc.jobStatus || jc.status}</span>
+          {/* Dedicated Mobile Job Cards (< md) */}
+          <div className="block md:hidden space-y-3">
+            {filteredCards.length === 0 ? (
+              <div className={`p-8 rounded-3xl border text-center ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                <Factory className="w-8 h-8 text-slate-400 mx-auto mb-2 opacity-50" />
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-300">No job cards found</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">Try adjusting your filters</p>
+              </div>
+            ) : (
+              filteredCards.map((jc) => {
+                const isRunning = jc.jobStatus === 'IN_PROGRESS' || jc.status === 'RUNNING' || jc.status === 'IN_PROGRESS';
+                const isHold = jc.jobStatus === 'QC_HOLD' || jc.status === 'QC_HOLD';
+                const isDone = jc.jobStatus === 'COMPLETED' || jc.status === 'COMPLETED';
+
+                return (
+                  <div
+                    key={jc.jobNo}
+                    onClick={() => setSelectedJobForDetail(jc)}
+                    className={`p-4 rounded-2xl border space-y-3 cursor-pointer shadow-2xs active:scale-[0.99] transition-all ${
+                      isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+                    }`}
+                  >
+                    {/* Top Row: Job # + Status Pill */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="font-mono font-black text-sm text-[var(--accent-primary)] truncate">
+                          {jc.jobNo}
+                        </span>
+                        {jc.drawingRevision && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                            Rev: {jc.drawingRevision}
                           </span>
-                        </td>
-                        <td className="py-4 px-5 text-center" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-center gap-2">
-                            {isJcCompleted(jc) && (
-                              <button
-                                onClick={() => {
-                                  if (onSelectOrder && jc.orderPo) {
-                                    onSelectOrder(jc.orderPo);
-                                  } else if (onNavigate) {
-                                    onNavigate('qc');
-                                  }
-                                }}
-                                className="px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white shadow-xs hover:scale-[1.02] flex items-center gap-1.5"
-                                title="Start QC / PDI Check"
-                              >
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                                <span>QC / PDI</span>
-                              </button>
+                        )}
+                      </div>
+
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase border shrink-0 flex items-center gap-1 ${
+                        isHold
+                          ? 'bg-rose-500/10 text-rose-500 dark:text-rose-400 border-rose-500/30'
+                          : isRunning
+                          ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30'
+                          : isDone
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                          : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          isHold ? 'bg-rose-500' : isRunning ? 'bg-purple-500 animate-pulse' : isDone ? 'bg-emerald-500' : 'bg-blue-500'
+                        }`} />
+                        <span>{jc.jobStatus || jc.status}</span>
+                      </span>
+                    </div>
+
+                    {/* Part & Order Info */}
+                    <div>
+                      <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                        {jc.partCode} — {jc.partDescription}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[10px] font-mono">
+                        <span className="text-slate-400">PO: <strong className="text-slate-700 dark:text-slate-300">{jc.orderPo}</strong></span>
+                        {jc.materialIssuedLot && (
+                          <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                            Heat: {jc.materialIssuedLot}
+                          </span>
+                        )}
+                        {jc.hasOpenNcr && (
+                          <span className="px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 font-bold">
+                            Hold: {jc.ncrReference || 'NCR'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Metrics Row */}
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs font-mono">
+                      <div>
+                        <div className="text-[10px] text-slate-400 uppercase">Target Qty</div>
+                        <div className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">
+                          {jc.targetQty || jc.qty} NOS
+                        </div>
+                      </div>
+
+                      <div className="text-center">
+                        <div className="text-[10px] text-slate-400 uppercase">Machine Center</div>
+                        <div className="text-xs font-semibold text-purple-600 dark:text-purple-400 mt-0.5">
+                          {jc.machine || jc.currentOperation || 'VMC Center'}
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <div className="text-[10px] text-slate-400 uppercase">Target Date</div>
+                        <div className="text-xs font-semibold text-amber-600 dark:text-amber-400 mt-0.5">
+                          {jc.targetDate}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Touch Action Buttons */}
+                    <div className="pt-1" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => setSelectedJobForDetail(jc)}
+                        className="w-full py-2 px-3 rounded-xl font-mono text-xs font-bold bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-500 hover:to-[#5B75F8] text-white border border-[#7B92FF]/30 shadow-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-98 transition-all"
+                      >
+                        <Route className="w-3.5 h-3.5 text-white" />
+                        <span>View Card</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Main Desktop Jobs Table / Kanban (≥ md) */}
+          <div className="hidden md:block">
+            {viewMode === 'list' ? (
+              <div className={`rounded-3xl border overflow-hidden transition-all shadow-xl ${
+                isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200'
+              }`}>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse font-mono">
+                    <thead>
+                      <tr className={`border-b font-bold uppercase tracking-wider text-[11px] ${
+                        isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'
+                      }`}>
+                        <th className="py-4 px-5">Job Card #</th>
+                        <th className="py-4 px-5">Customer Order PO</th>
+                        <th className="py-4 px-5">Part Description</th>
+                        <th className="py-4 px-5 text-right">Job Qty</th>
+                        <th className="py-4 px-5">Machine Center</th>
+                        <th className="py-4 px-5">Target Date</th>
+                        <th className="py-4 px-5 text-center">Status</th>
+                        <th className="py-4 px-5 text-center">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
+                      {filteredCards.length === 0 ? (
+                        <tr>
+                          <td colSpan={8} className="py-8 text-center text-slate-400">
+                            No job cards found matching criteria.
+                          </td>
+                        </tr>
+                      ) : null}
+                      {filteredCards.map((jc) => (
+                        <tr 
+                          key={jc.jobNo} 
+                          onClick={() => setSelectedJobForDetail(jc)}
+                          className={`cursor-pointer transition-colors ${isDarkMode ? 'hover:bg-slate-800/60' : 'hover:bg-indigo-50/40'}`}
+                        >
+                          <td className="py-4 px-5 font-bold font-mono text-[#5B75F8] dark:text-[#7B92FF]">
+                            <div className="hover:underline flex items-center gap-1.5">
+                              <span>{jc.jobNo}</span>
+                              <ArrowRight className="w-3 h-3 opacity-60" />
+                            </div>
+                            {jc.drawingRevision && (
+                              <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[9px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                Rev: {jc.drawingRevision}
+                              </span>
                             )}
+                          </td>
+                          <td className="py-4 px-5 font-mono text-slate-400">
+                            <div>{jc.orderPo}</div>
+                            {jc.materialIssuedLot && (
+                              <div className="text-[10px] text-slate-500">
+                                Heat: {jc.materialIssuedLot}
+                              </div>
+                            )}
+                          </td>
+                          <td className={`py-4 px-5 font-semibold font-sans ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
+                            <div>{jc.partCode} — {jc.partDescription}</div>
+                            {jc.hasOpenNcr && (
+                              <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40">
+                                <AlertTriangle className="w-3 h-3" />
+                                <span>Hold: {jc.ncrReference || 'Open NCR'}</span>
+                              </span>
+                            )}
+                          </td>
+                          <td className={`py-4 px-5 text-right font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                            {jc.targetQty || jc.qty} NOS
+                          </td>
+                          <td className="py-4 px-5 font-mono text-purple-400 font-medium">
+                            {jc.machine || jc.currentOperation || 'VMC / Lathe Center'}
+                          </td>
+                          <td className="py-4 px-5 font-mono text-amber-500">
+                            {jc.targetDate}
+                          </td>
+                          <td className="py-4 px-5 text-center">
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
+                              jc.jobStatus === 'QC_HOLD' || jc.status === 'QC_HOLD'
+                                ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                                : jc.jobStatus === 'IN_PROGRESS' || jc.status === 'RUNNING' || jc.status === 'IN_PROGRESS'
+                                ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
+                                : jc.jobStatus === 'COMPLETED' || jc.status === 'COMPLETED'
+                                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                                  : 'bg-[#5B75F8]/10 text-[#7B92FF] border-[#5B75F8]/30'
+                            }`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${
+                                jc.jobStatus === 'QC_HOLD' || jc.status === 'QC_HOLD' 
+                                  ? 'bg-rose-500' 
+                                  : jc.jobStatus === 'IN_PROGRESS' || jc.status === 'RUNNING' 
+                                  ? 'bg-purple-500 animate-pulse' 
+                                  : 'bg-[#5B75F8]'
+                              }`} />
+                              <span>{jc.jobStatus || jc.status}</span>
+                            </span>
+                          </td>
+                          <td className="py-3 px-5 text-center" onClick={(e) => e.stopPropagation()}>
                             <button
                               onClick={() => setSelectedJobForDetail(jc)}
-                              className="px-3.5 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white shadow-xs hover:scale-[1.02] flex items-center gap-1.5"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-mono text-[11px] font-bold tracking-wide transition-all cursor-pointer bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-500 hover:to-[#5B75F8] text-white border border-[#7B92FF]/30 shadow-xs hover:shadow-[0_2px_12px_rgba(91,117,248,0.35)] hover:scale-[1.02] active:scale-[0.98]"
                               title="Open Full Job Card Detail View"
                             >
-                              <Route className="w-3.5 h-3.5" />
+                              <Route className="w-3.5 h-3.5 shrink-0" />
                               <span>View Card</span>
                             </button>
-                            <button
-                              onClick={() => setSelectedJobForLog(jc)}
-                              className={`p-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer ${
-                                isDarkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'
-                              }`}
-                              title="Quick Shift Log"
-                            >
-                              <Activity className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-          ) : (
-            /* Kanban Board View */
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {['SCHEDULED', 'RUNNING', 'COMPLETED'].map((colStatus) => {
-                const colJobs = filteredCards.filter(j => j.status === colStatus || (colStatus === 'RUNNING' && j.status === 'IN_PROGRESS'));
+            ) : (
+              /* Kanban Board View */
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {['SCHEDULED', 'RUNNING', 'COMPLETED'].map((colStatus) => {
+                  const colJobs = filteredCards.filter(j => j.status === colStatus || (colStatus === 'RUNNING' && j.status === 'IN_PROGRESS'));
                 return (
                   <div key={colStatus} className={`p-4 rounded-3xl border ${
                     isDarkMode ? 'bg-slate-900/60 border-slate-800/80' : 'bg-slate-50 border-slate-200'
@@ -1642,7 +1811,8 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
             </div>
           )}
         </div>
-      )}
+      </div>
+    )}
 
       {/* ========================================================================================= */}
       {/* SECTION 2: ROUTE CARDS (HOW: SEQUENCE & PROCESS TRAVELERS) */}
@@ -1721,37 +1891,31 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       <button
                         onClick={() => handleOpenEditRoute(route)}
                         title="Edit Route Card Sequences"
-                        className={`p-2 rounded-xl border text-xs font-mono font-bold cursor-pointer transition-all ${
-                          isDarkMode ? 'border-slate-800 bg-slate-950 text-slate-300 hover:text-white hover:bg-slate-800' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-                        }`}
+                        className="p-2 rounded-xl border border-slate-700/80 bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white hover:border-[#5B75F8]/50 shadow-xs hover:shadow-[0_0_10px_rgba(91,117,248,0.2)] text-xs font-mono font-bold cursor-pointer transition-all hover:scale-105 active:scale-95"
                       >
                         <Edit className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => setDuplicatingRoute(route)}
                         title="Duplicate Route Card"
-                        className={`p-2 rounded-xl border text-xs font-mono font-bold cursor-pointer transition-all ${
-                          isDarkMode ? 'border-slate-800 bg-slate-950 text-slate-300 hover:text-white hover:bg-slate-800' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-                        }`}
+                        className="p-2 rounded-xl border border-slate-700/80 bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white hover:border-[#5B75F8]/50 shadow-xs hover:shadow-[0_0_10px_rgba(91,117,248,0.2)] text-xs font-mono font-bold cursor-pointer transition-all hover:scale-105 active:scale-95"
                       >
                         <Copy className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => setDeleteConfirmRoute(route)}
                         title="Delete Route Card"
-                        className={`p-2 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 text-xs font-mono font-bold cursor-pointer transition-all`}
+                        className="p-2 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 hover:border-rose-400/60 shadow-xs hover:shadow-[0_0_10px_rgba(244,63,94,0.2)] text-xs font-mono font-bold cursor-pointer transition-all hover:scale-105 active:scale-95"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => setExpandedRoutePart(isExpanded ? null : route.partCode)}
-                        className={`p-2 rounded-xl border cursor-pointer ${
-                          isDarkMode ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-400'
-                        }`}
+                        className="p-2 rounded-xl border border-slate-700/80 bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-white cursor-pointer transition-all hover:scale-105 active:scale-95"
                       >
                         {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                       </button>
@@ -1909,41 +2073,35 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                     </div>
 
                     {/* BOM Action Buttons */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       <button
                         onClick={() => handleOpenEditBom(bom)}
                         title="Edit BOM Formula & Components"
-                        className={`p-2 rounded-xl border text-xs font-mono font-bold cursor-pointer transition-all ${
-                          isDarkMode ? 'border-slate-800 bg-slate-950 text-slate-300 hover:text-white hover:bg-slate-800' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-                        }`}
+                        className="p-2 rounded-xl border border-slate-700/80 bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white hover:border-[#5B75F8]/50 shadow-xs hover:shadow-[0_0_10px_rgba(91,117,248,0.2)] text-xs font-mono font-bold cursor-pointer transition-all hover:scale-105 active:scale-95"
                       >
                         <Edit className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => setDuplicatingBom(bom)}
                         title="Duplicate BOM Formula"
-                        className={`p-2 rounded-xl border text-xs font-mono font-bold cursor-pointer transition-all ${
-                          isDarkMode ? 'border-slate-800 bg-slate-950 text-slate-300 hover:text-white hover:bg-slate-800' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-                        }`}
+                        className="p-2 rounded-xl border border-slate-700/80 bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white hover:border-[#5B75F8]/50 shadow-xs hover:shadow-[0_0_10px_rgba(91,117,248,0.2)] text-xs font-mono font-bold cursor-pointer transition-all hover:scale-105 active:scale-95"
                       >
                         <Copy className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => setRevisionBom(bom)}
                         title="Create New Revision (e.g. REV-B)"
-                        className={`p-2 rounded-xl border text-xs font-mono font-bold cursor-pointer transition-all ${
-                          isDarkMode ? 'border-slate-800 bg-slate-950 text-indigo-400 hover:text-indigo-300 hover:bg-slate-800' : 'border-slate-200 bg-slate-50 text-indigo-600 hover:bg-slate-100'
-                        }`}
+                        className="p-2 rounded-xl border border-indigo-500/30 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 hover:border-indigo-400/60 shadow-xs hover:shadow-[0_0_10px_rgba(99,102,241,0.2)] text-xs font-mono font-bold cursor-pointer transition-all hover:scale-105 active:scale-95"
                       >
                         <FolderPlus className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => handleToggleBOMStatus(bom, bom.status === 'ACTIVE' ? 'DRAFT' : 'ACTIVE')}
                         title={bom.status === 'ACTIVE' ? 'Set as Draft' : 'Set as Active'}
-                        className={`p-2 rounded-xl border text-xs font-mono font-bold cursor-pointer transition-all ${
+                        className={`p-2 rounded-xl border text-xs font-mono font-bold cursor-pointer transition-all hover:scale-105 active:scale-95 ${
                           bom.status === 'ACTIVE'
-                            ? 'border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20'
-                            : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
+                            ? 'border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:border-amber-400/60 shadow-xs'
+                            : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-400/60 shadow-xs'
                         }`}
                       >
                         <RefreshCw className="w-3.5 h-3.5" />
@@ -1951,15 +2109,13 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                       <button
                         onClick={() => setDeleteConfirmBom(bom)}
                         title="Delete BOM"
-                        className={`p-2 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 text-xs font-mono font-bold cursor-pointer transition-all`}
+                        className="p-2 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 hover:border-rose-400/60 shadow-xs hover:shadow-[0_0_10px_rgba(244,63,94,0.2)] text-xs font-mono font-bold cursor-pointer transition-all hover:scale-105 active:scale-95"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => setExpandedBomCode(isExpanded ? null : bom.bomCode)}
-                        className={`p-2 rounded-xl border cursor-pointer ${
-                          isDarkMode ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-400'
-                        }`}
+                        className="p-2 rounded-xl border border-slate-700/80 bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-white cursor-pointer transition-all hover:scale-105 active:scale-95"
                       >
                         {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                       </button>

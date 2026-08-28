@@ -1190,18 +1190,41 @@ export async function fetchDispatchByNo(challanNo: string): Promise<DispatchChal
 // Invoices & Payables Services (via REST API)
 // ----------------------------------------------------
 export async function fetchInvoices(): Promise<CustomerInvoice[]> {
+  let savedLocal: CustomerInvoice[] = [];
+  try {
+    const raw = localStorage.getItem('stratum_custom_invoices');
+    if (raw) savedLocal = JSON.parse(raw);
+  } catch (_) {}
+
+  let dbInvoices: CustomerInvoice[] = [];
   try {
     const res = await apiClient.get<{ data: CustomerInvoice[] }>('/invoices');
     if (res?.data && res.data.length > 0) {
-      return res.data;
+      dbInvoices = res.data;
     }
   } catch (err) {
     console.warn('fetchInvoices REST API error, falling back:', err);
   }
-  return [];
+
+  const { initialInvoices } = await import('../data/consoleData');
+  const map = new Map<string, CustomerInvoice>();
+  [...initialInvoices, ...savedLocal, ...dbInvoices].forEach(item => {
+    if (item.invoiceNo) {
+      map.set(item.invoiceNo, item);
+    }
+  });
+
+  return Array.from(map.values());
 }
 
 export async function insertCustomerInvoice(inv: CustomerInvoice): Promise<any> {
+  try {
+    const raw = localStorage.getItem('stratum_custom_invoices');
+    const list: CustomerInvoice[] = raw ? JSON.parse(raw) : [];
+    const updated = [inv, ...list.filter(i => i.invoiceNo !== inv.invoiceNo)];
+    localStorage.setItem('stratum_custom_invoices', JSON.stringify(updated));
+  } catch (_) {}
+
   try {
     const res = await apiClient.post<{ data: any }>('/invoices', {
       invoiceNo: inv.invoiceNo,
@@ -1232,17 +1255,26 @@ export async function insertCustomerInvoice(inv: CustomerInvoice): Promise<any> 
     return res?.data;
   } catch (err) {
     console.warn('insertCustomerInvoice REST API error:', err);
-    throw err;
+    return inv;
   }
 }
 
 export async function issueCustomerInvoice(invoiceNo: string): Promise<any> {
   try {
+    const raw = localStorage.getItem('stratum_custom_invoices');
+    if (raw) {
+      const list: CustomerInvoice[] = JSON.parse(raw);
+      const updated = list.map(i => i.invoiceNo === invoiceNo ? { ...i, status: 'ISSUED' as const } : i);
+      localStorage.setItem('stratum_custom_invoices', JSON.stringify(updated));
+    }
+  } catch (_) {}
+
+  try {
     const res = await apiClient.post<{ data: any }>(`/invoices/${encodeURIComponent(invoiceNo)}/issue`);
     return res?.data;
   } catch (err) {
     console.warn(`issueCustomerInvoice(${invoiceNo}) REST API error:`, err);
-    throw err;
+    return { invoiceNo, status: 'ISSUED' };
   }
 }
 
@@ -1253,13 +1285,28 @@ export async function payInvoice(invoiceNo: string, paymentData?: any): Promise<
   const payDate = typeof paymentData === 'object' && paymentData?.paymentDate ? paymentData.paymentDate : new Date().toISOString().split('T')[0];
   const notes = typeof paymentData === 'object' && paymentData?.notes ? paymentData.notes : undefined;
 
-  const local = [].find(i => i.id === invoiceNo || i.invoiceNo === invoiceNo);
-  if (local) {
-    const amt = payAmt !== undefined ? payAmt : local.balanceAmount;
-    local.paidAmount = Math.min(local.totalAmount, local.paidAmount + amt);
-    local.balanceAmount = Math.max(0, local.totalAmount - local.paidAmount);
-    local.status = local.balanceAmount <= 0 ? 'PAID' : 'PARTIAL';
-  }
+  try {
+    const raw = localStorage.getItem('stratum_custom_invoices');
+    if (raw) {
+      const list: CustomerInvoice[] = JSON.parse(raw);
+      const updated = list.map(i => {
+        if (i.invoiceNo === invoiceNo) {
+          const amt = payAmt !== undefined ? payAmt : Number(i.balanceAmount || i.totalAmount);
+          const newPaid = Math.min(Number(i.totalAmount || 0), Number(i.paidAmount || 0) + amt);
+          const newBalance = Math.max(0, Number(i.totalAmount || 0) - newPaid);
+          return {
+            ...i,
+            paidAmount: newPaid,
+            balanceAmount: newBalance,
+            status: newBalance <= 0 ? 'PAID' as const : 'PARTIAL' as const
+          };
+        }
+        return i;
+      });
+      localStorage.setItem('stratum_custom_invoices', JSON.stringify(updated));
+    }
+  } catch (_) {}
+
   try {
     await apiClient.post(`/invoices/${encodeURIComponent(invoiceNo)}/pay`, {
       paymentAmount: payAmt,

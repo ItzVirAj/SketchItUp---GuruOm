@@ -1,13 +1,8 @@
-import { createRequire } from 'module';
+import Redlock from 'redlock';
 import type { Lock } from 'redlock';
-import type RedlockType from 'redlock';
 
-// CJS/ESM interop: esbuild bundles as CJS so `import Redlock from 'redlock'` resolves
-// to the module object (not the class). Using createRequire ensures we always get the
-// constructor correctly in both `tsx watch` (ESM) and the esbuild CJS production bundle.
-const _require = createRequire(import.meta.url);
-const _redlockModule = _require('redlock');
-const RedlockClass: typeof RedlockType = _redlockModule.default ?? _redlockModule;
+// Support both ESM (default export is class) and CJS bundles (default export wrapped on object)
+const RedlockClass = ((Redlock as any)?.default || Redlock) as typeof Redlock;
 
 import { getRedisClient, isRedisConnected } from './redis';
 
@@ -27,10 +22,10 @@ export class LockServiceUnavailableError extends Error {
   }
 }
 
-let redlockInstance: RedlockType | null = null;
+let redlockInstance: Redlock | null = null;
 const inMemoryLocks = new Map<string, Promise<void>>();
 
-function getRedlock(): RedlockType {
+function getRedlock(): Redlock {
   if (!redlockInstance) {
     const redis = getRedisClient();
     redlockInstance = new RedlockClass([redis], {

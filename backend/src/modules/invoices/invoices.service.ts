@@ -18,6 +18,13 @@ import { logAudit } from '../../services/auditLog';
 const SEED_INVOICES: any[] = [];
 const documentSequenceState: Record<string, number> = {};
 
+/**
+ * In-memory idempotency cache for invoice creation (24h validity), mirroring the
+ * delivery-challan idempotency pattern. Survives rapid double-clicks / retries.
+ */
+const invoiceIdempotencyCache = new Map<string, { result: any; timestamp: number }>();
+const INVOICE_IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
+
 export class InvoicesService {
   private db = getDbClient();
 
@@ -101,6 +108,38 @@ export class InvoicesService {
       err.errorCode = 'ERR_INVALID_GSTIN';
       err.statusCode = 400;
       throw err;
+    }
+
+    // 1b. Idempotency check — rapid double-click / network retry with SAME key returns original result
+    if (validated.idempotencyKey) {
+      const cached = invoiceIdempotencyCache.get(validated.idempotencyKey);
+      if (cached && Date.now() - cached.timestamp < INVOICE_IDEMPOTENCY_TTL_MS) {
+        console.log(`[Idempotency] Returning cached invoice for key: ${validated.idempotencyKey}`);
+        return cached.result;
+      }
+    }
+
+    // 1c. Duplicate guard — reject a second non-cancelled invoice for the same order
+    if (validated.orderPo && validated.orderPo !== 'PO-GENERAL-001') {
+      try {
+        const { data: existing, error: dupErr } = await this.db
+          .from('customer_invoices')
+          .select('*')
+          .eq('order_po', validated.orderPo)
+          .neq('status', 'CANCELLED')
+          .limit(1);
+        const existingRow = (existing && existing.length > 0) ? existing[0] : null;
+        if (existingRow) {
+          const err: any = new Error(`An invoice already exists for this order: ${existingRow.invoice_no}`);
+          err.errorCode = 'ERR_DUPLICATE_INVOICE';
+          err.statusCode = 409;
+          throw err;
+        }
+        if (dupErr) console.warn('Invoice duplicate check query warning:', dupErr);
+      } catch (dupErr: any) {
+        if (dupErr.statusCode === 409) throw dupErr;
+        console.warn('Invoice duplicate check fallback:', dupErr);
+      }
     }
 
     // 2. Validate Order State Machine Gate (Must be in eligible dispatch or invoiced states)
@@ -268,7 +307,8 @@ export class InvoicesService {
         paid_amount: (data as any).paidAmount || 0,
         balance_amount: balanceAmount,
         is_einvoice_applicable: isEInvoice,
-        irn_number: irnNumber
+        irn_number: irnNumber,
+        idempotency_key: validated.idempotencyKey || null
       });
 
       if (validated.items && validated.items.length > 0) {
@@ -338,9 +378,50 @@ export class InvoicesService {
 
     SEED_INVOICES.unshift(createdInvoice);
 
+    // Persist idempotency cache so a repeated key returns this same invoice
+    if (validated.idempotencyKey) {
+      invoiceIdempotencyCache.set(validated.idempotencyKey, { result: createdInvoice, timestamp: Date.now() });
+    }
+
+    // Link the created invoice to the order AND persist the order's advancement through
+    // the shared broadcast helper (the previous flow left the order stuck in DISPATCHED /
+    // IN_TRANSIT with no invoiceNo because the separate updateOrder call was rejected by
+    // the workflow-mutation hard gate).
+    if (validated.orderPo && invoiceStatus !== 'CANCELLED') {
+      const { ordersService } = await import('../orders/orders.service');
+      try {
+        await this.db
+          .from('customer_orders')
+          .update({
+            invoice_no: invoiceNo,
+            status: 'INVOICE_GENERATED',
+            stage: 'INVOICE_GENERATED',
+            progress_step: 8,
+            updated_at: new Date().toISOString()
+          })
+          .or(`po_no.eq.${validated.orderPo},id.eq.${validated.orderPo}`);
+      } catch (ordErr) {
+        console.warn('DB link invoice to order fallback:', ordErr);
+      }
+
+      // Broadcast the persisted advancement through the shared stage-direct helper
+      ordersService.updateOrderStageDirectly(validated.orderPo, 'INVOICE_GENERATED', 8).catch(() => {});
+    }
+
     // Real-time Push: Broadcast invoice creation and update
     notificationsService.broadcastEvent('invoice_created', createdInvoice);
     notificationsService.broadcastEvent('invoice_updated', createdInvoice);
+
+    if (validated.orderPo) {
+      notificationsService.broadcastEvent('order_updated', {
+        id: validated.orderPo,
+        poNo: validated.orderPo,
+        invoiceNo,
+        status: 'INVOICE_GENERATED',
+        stage: 'INVOICE_GENERATED',
+        progressStep: 8
+      });
+    }
 
     return createdInvoice;
   }

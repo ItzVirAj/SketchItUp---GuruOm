@@ -140,6 +140,8 @@ ALTER TABLE public.customer_orders ADD COLUMN IF NOT EXISTS client_po_file TEXT;
 ALTER TABLE public.customer_orders ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
 ALTER TABLE public.customer_orders ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 ALTER TABLE public.customer_orders ADD COLUMN IF NOT EXISTS sub_type VARCHAR(30) DEFAULT 'FRESH_PO';
+ALTER TABLE public.customer_orders ADD COLUMN IF NOT EXISTS delayed_reason TEXT;
+ALTER TABLE public.customer_orders ADD COLUMN IF NOT EXISTS delayed_follow_up_date TEXT;
 
 -- order_line_items
 CREATE TABLE IF NOT EXISTS public.order_line_items (
@@ -474,6 +476,11 @@ ALTER TABLE public.customer_invoices ADD COLUMN IF NOT EXISTS paid_amount NUMERI
 ALTER TABLE public.customer_invoices ADD COLUMN IF NOT EXISTS balance_amount NUMERIC DEFAULT 0;
 ALTER TABLE public.customer_invoices ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
 ALTER TABLE public.customer_invoices ADD COLUMN IF NOT EXISTS pdf_status TEXT DEFAULT 'pending_pdf';
+ALTER TABLE public.customer_invoices ADD COLUMN IF NOT EXISTS idempotency_key TEXT;
+CREATE INDEX IF NOT EXISTS idx_customer_invoices_idempotency_key ON public.customer_invoices (idempotency_key);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_customer_invoices_active_order
+  ON public.customer_invoices (order_po)
+  WHERE status <> 'CANCELLED';
 
 -- vendor_bills
 CREATE TABLE IF NOT EXISTS public.vendor_bills (

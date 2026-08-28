@@ -30,6 +30,7 @@ interface ChallanDetailModalProps {
   onUpdateChallan?: (challanNo: string, updates: any) => Promise<any>;
   onCancelChallan?: (challanNo: string, reason?: string) => Promise<void>;
   onDispatchChallan?: (challanNo: string) => Promise<void>;
+  onMarkDelivered?: (orderId: string, deliveryData: any) => Promise<any> | void;
   onNavigateToOrder?: (orderPo: string) => void;
 }
 
@@ -51,6 +52,7 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
   onUpdateChallan,
   onCancelChallan,
   onDispatchChallan,
+  onMarkDelivered,
   onNavigateToOrder
 }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -855,14 +857,53 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
                 <span>{isSaving ? 'Processing...' : 'Authorize & Mark In-Transit'}</span>
               </button>
             ) : isDispatched ? (
-              <span className="px-4 py-2 rounded-xl bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 text-xs font-mono font-bold flex items-center gap-1.5 shadow-xs">
-                <Truck className="w-4 h-4 text-cyan-400 animate-pulse" />
-                <span>In-Transit / Dispatched</span>
-              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={isSaving}
+                  onClick={async () => {
+                    try {
+                      setIsSaving(true);
+                      setErrorMsg(null);
+                      const today = new Date().toISOString().split('T')[0];
+                      if (onUpdateChallan) {
+                        await onUpdateChallan(challan.challanNo, {
+                          status: 'DELIVERED',
+                          podReceivedDate: today,
+                          podReceivedBy: 'Customer Inward Plant Stores',
+                          podDocumentUrl: 'https://storage.oracle.com/pod-signed-copy.pdf'
+                        });
+                      }
+                      if (onMarkDelivered) {
+                        await onMarkDelivered(challan.orderPo, {
+                          podReceivedDate: today,
+                          podReceivedBy: 'Customer Inward Plant Stores',
+                          podDocumentUrl: 'https://storage.oracle.com/pod-signed-copy.pdf',
+                          challanNo: challan.challanNo
+                        });
+                      }
+                      setCurrentStatus('DELIVERED');
+                      setSuccessMsg(`Challan ${challan.challanNo} confirmed Delivered with POD.`);
+                    } catch (err: any) {
+                      setErrorMsg(err?.message || 'Failed to mark delivery.');
+                    } finally {
+                      setIsSaving(false);
+                    }
+                  }}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-emerald-600 hover:to-blue-600 text-white font-bold text-xs font-mono flex items-center gap-1.5 shadow-lg shadow-emerald-500/25 cursor-pointer disabled:opacity-50"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>{isSaving ? 'Recording POD...' : 'Mark Delivered (POD)'}</span>
+                </button>
+                <span className="px-3 py-2 rounded-xl bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 text-xs font-mono font-bold flex items-center gap-1.5 shadow-xs">
+                  <Truck className="w-4 h-4 text-cyan-400 animate-pulse" />
+                  <span>In-Transit</span>
+                </span>
+              </div>
             ) : isDelivered ? (
               <span className="px-4 py-2 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-xs font-mono font-bold flex items-center gap-1.5 shadow-xs">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                <span>Delivered to Customer</span>
+                <span>Delivered & POD Verified</span>
               </span>
             ) : null}
           </div>

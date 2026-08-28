@@ -5,6 +5,7 @@ import { LoginPage } from './components/auth/LoginPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AccentThemeProvider } from './context/AccentThemeContext';
 import { useSmoothScroll } from './hooks/useSmoothScroll';
+import { Agentation } from 'agentation';
 
 // Helper component to reset scroll position on page route changes
 function ScrollToTop() {
@@ -74,6 +75,7 @@ export default function App() {
     <AuthProvider>
       <AccentThemeProvider>
         <MainApp />
+        <Agentation />
       </AccentThemeProvider>
     </AuthProvider>
   );

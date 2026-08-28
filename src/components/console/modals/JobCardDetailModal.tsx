@@ -1,0 +1,1518 @@
+import React, { useState, useMemo, useEffect } from 'react';
+import {
+  X,
+  Factory,
+  Route,
+  Layers,
+  Clock,
+  CheckCircle2,
+  Check,
+  AlertTriangle,
+  Lock,
+  Plus,
+  ArrowRight,
+  ShieldCheck,
+  RefreshCw,
+  Package,
+  Activity,
+  History,
+  FileText,
+  Boxes,
+  Flame,
+  ChevronRight,
+  Sparkles,
+  Play,
+  CheckSquare
+} from 'lucide-react';
+import {
+  JobCard,
+  CustomerOrder,
+  ProductionLogReport,
+  StockItem,
+  MasterItem,
+  BillOfMaterials,
+  RouteCard,
+  QCInspection,
+  PDIInspection
+} from '../../../types/console';
+import { recordInventoryMovement } from '../../../services/supabaseServices';
+
+export interface MaterialConsumptionRecord {
+  id: string;
+  jobNo: string;
+  itemCode: string;
+  itemName: string;
+  operationSeq?: number;
+  operationName?: string;
+  plannedQty: number;
+  actualQty: number;
+  scrapQty: number;
+  unit: string;
+  heatLotNumber?: string;
+  bookedAt: string;
+  bookedBy: string;
+  notes?: string;
+}
+
+interface JobCardDetailModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  jobCard: JobCard | null;
+  orders?: CustomerOrder[];
+  boms?: BillOfMaterials[];
+  routeCards?: RouteCard[];
+  stock?: StockItem[];
+  masters?: MasterItem[];
+  productionLogs?: ProductionLogReport[];
+  isDarkMode?: boolean;
+  onLogProduction?: (log: Partial<ProductionLogReport>) => void | Promise<any>;
+  onStartOperation?: (jobNo: string, payload: any) => Promise<any>;
+  onCompleteOperation?: (jobNo: string, payload: any) => Promise<any>;
+  onNavigate?: (view: any) => void;
+  onSelectOrder?: (orderPo: string) => void;
+}
+
+export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
+  isOpen,
+  onClose,
+  jobCard,
+  orders = [],
+  boms = [],
+  routeCards = [],
+  stock = [],
+  masters = [],
+  productionLogs = [],
+  isDarkMode = true,
+  onLogProduction,
+  onStartOperation,
+  onCompleteOperation,
+  onNavigate,
+  onSelectOrder
+}) => {
+  // Local reactive logs and consumptions for immediate UI feedback without page refresh
+  const [localLogs, setLocalLogs] = useState<ProductionLogReport[]>([]);
+  const [localConsumptions, setLocalConsumptions] = useState<MaterialConsumptionRecord[]>([]);
+
+  // Action status messages
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Material booking row state (mapped by componentCode)
+  const [toBookInputs, setToBookInputs] = useState<Record<string, { qty: string; scrap: string; heatLot: string }>>({});
+  const [isBookingMaterial, setIsBookingMaterial] = useState<string | null>(null);
+
+  // Add Unplanned Material Modal / Form state
+  const [showAddMaterialModal, setShowAddMaterialModal] = useState(false);
+  const [addMatCode, setAddMatCode] = useState('');
+  const [addMatName, setAddMatName] = useState('');
+  const [addMatQty, setAddMatQty] = useState('');
+  const [addMatScrap, setAddMatScrap] = useState('0');
+  const [addMatUnit, setAddMatUnit] = useState('NOS');
+  const [addMatHeatLot, setAddMatHeatLot] = useState('');
+  const [addMatStepSeq, setAddMatStepSeq] = useState<number>(10);
+  const [isAddingCustomMaterial, setIsAddingCustomMaterial] = useState(false);
+
+  // Quick Production Log Modal state
+  const [showLogProductionModal, setShowLogProductionModal] = useState(false);
+  const [logStepSeq, setLogStepSeq] = useState<number>(10);
+  const [logQty, setLogQty] = useState<number>(1);
+  const [logMins, setLogMins] = useState<number>(15);
+  const [logNotes, setLogNotes] = useState<string>('');
+  const [isSubmittingLog, setIsSubmittingLog] = useState(false);
+
+  // Sync / Reset local state when target Job Card changes
+  useEffect(() => {
+    if (jobCard) {
+      // Load initial consumptions from local storage if available for this job card
+      const storageKey = `stratum_job_consumptions_${jobCard.jobNo}`;
+      try {
+        const stored = localStorage.getItem(storageKey);
+        if (stored) {
+          setLocalConsumptions(JSON.parse(stored));
+        } else {
+          // Initialize mock initial consumption if already in progress
+          if (jobCard.status === 'IN_PROGRESS' || jobCard.status === 'COMPLETED' || jobCard.jobStatus === 'IN_PROGRESS' || jobCard.jobStatus === 'COMPLETED') {
+            const initial: MaterialConsumptionRecord[] = [
+              {
+                id: `mc-${jobCard.jobNo}-01`,
+                jobNo: jobCard.jobNo,
+                itemCode: 'RM-EN24-RND-50',
+                itemName: 'EN24 Alloy Steel Round Bar 50mm Dia',
+                operationSeq: 10,
+                operationName: 'Billet Saw Cutting',
+                plannedQty: (jobCard.targetQty || jobCard.qty || 100) * 1.05,
+                actualQty: (jobCard.targetQty || jobCard.qty || 100) * 1.02,
+                scrapQty: 2.5,
+                unit: 'Kg',
+                heatLotNumber: jobCard.materialIssuedLot || 'HT-2026-9921',
+                bookedAt: new Date(Date.now() - 3600000 * 4).toISOString(),
+                bookedBy: 'Store Supervisor / PPC'
+              }
+            ];
+            setLocalConsumptions(initial);
+            localStorage.setItem(storageKey, JSON.stringify(initial));
+          } else {
+            setLocalConsumptions([]);
+          }
+        }
+      } catch (_) {
+        setLocalConsumptions([]);
+      }
+      setSuccessMsg(null);
+      setErrorMsg(null);
+    }
+  }, [jobCard?.jobNo]);
+
+  // Persist consumptions on update
+  const persistConsumptions = (newConsumptions: MaterialConsumptionRecord[]) => {
+    setLocalConsumptions(newConsumptions);
+    if (jobCard?.jobNo) {
+      try {
+        localStorage.setItem(`stratum_job_consumptions_${jobCard.jobNo}`, JSON.stringify(newConsumptions));
+      } catch (_) {}
+    }
+  };
+
+  // Resolve matching Customer Order, BOM, and Route Card
+  const matchedOrder = orders.find(o => o.poNo === jobCard?.orderPo || o.id === jobCard?.orderPo || o.id === jobCard?.orderId);
+  const cleanPartCode = (jobCard?.partCode || '').toLowerCase().trim();
+  const cleanPartDesc = (jobCard?.partDescription || '').toLowerCase().trim();
+
+  const matchedBOM = boms.find(b => 
+    (cleanPartCode && b.parentPartCode?.toLowerCase().trim() === cleanPartCode) ||
+    (cleanPartDesc && b.parentPartName?.toLowerCase().trim() === cleanPartDesc)
+  ) || boms[0] || null;
+
+  const matchedRoute = routeCards.find(r => 
+    (cleanPartCode && r.partCode?.toLowerCase().trim() === cleanPartCode) ||
+    (cleanPartCode && r.routeCode?.toLowerCase().trim() === cleanPartCode) ||
+    (cleanPartDesc && r.partDescription?.toLowerCase().trim() === cleanPartDesc)
+  ) || routeCards[0] || null;
+
+  // Target Quantity resolved from Job Card or matched Customer PO
+  const targetQuantity = Number(
+    jobCard?.targetQty || 
+    jobCard?.qty || 
+    matchedOrder?.lines?.find(l => l.partCode === jobCard?.partCode)?.orderQty || 
+    matchedOrder?.lines?.[0]?.orderQty || 
+    matchedOrder?.totalQty || 
+    100
+  );
+
+  // Operations defined on Route Card or fallback standard sequence
+  const routeOperations = useMemo(() => {
+    if (jobCard?.operations && jobCard.operations.length > 0) {
+      return jobCard.operations.map(op => ({
+        sequenceNo: Number(op.sequenceNo),
+        operationName: op.operationName,
+        workCenter: op.machineId || 'Machining Bay',
+        standardTimeMinutes: Number(op.standardTimeMinutes || 15),
+        inspectionRequired: Boolean(op.inspectionRequired)
+      })).sort((a, b) => a.sequenceNo - b.sequenceNo);
+    }
+    if (matchedRoute && matchedRoute.operations && matchedRoute.operations.length > 0) {
+      return matchedRoute.operations.map(op => ({
+        sequenceNo: Number(op.sequenceNo),
+        operationName: op.operationName,
+        workCenter: op.workCenter || 'Machining Bay',
+        standardTimeMinutes: Number(op.standardTimeMinutes || 15),
+        inspectionRequired: Boolean(op.inspectionRequired)
+      })).sort((a, b) => a.sequenceNo - b.sequenceNo);
+    }
+    return [
+      { sequenceNo: 10, operationName: 'Raw Material Saw Cutting', workCenter: 'BANDSAW-01', standardTimeMinutes: 8, inspectionRequired: false },
+      { sequenceNo: 20, operationName: 'CNC Facing, Turning & Grooving', workCenter: 'CNC-LATHE-01', standardTimeMinutes: 20, inspectionRequired: false },
+      { sequenceNo: 30, operationName: 'PCD Hole Pattern Drilling & Tapping', workCenter: 'RADIAL-DRILL-01', standardTimeMinutes: 15, inspectionRequired: false },
+      { sequenceNo: 40, operationName: 'Surface Flatness & Dimensional QC', workCenter: 'QC-LAB', standardTimeMinutes: 10, inspectionRequired: true },
+      { sequenceNo: 50, operationName: 'Rust Preventive Dipping & Wrapping', workCenter: 'PACK-01', standardTimeMinutes: 5, inspectionRequired: false }
+    ];
+  }, [jobCard, matchedRoute]);
+
+  // Merge all Production Logs for this Job Card (global + local reactive entries)
+  const allJobLogs = useMemo(() => {
+    if (!jobCard?.jobNo) return [];
+    const fromGlobal = productionLogs.filter(l => l.jobNo === jobCard.jobNo);
+    const combined = [...localLogs, ...fromGlobal];
+    // Deduplicate by id if any
+    const seen = new Set<string>();
+    const unique: ProductionLogReport[] = [];
+    for (const log of combined) {
+      const key = log.id || `${log.jobNo}-${log.stepNo}-${log.loggedTimestamp}-${log.qtyDone}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        unique.push(log);
+      }
+    }
+    // Reverse chronological (newest first)
+    return unique.sort((a, b) => new Date(b.loggedTimestamp).getTime() - new Date(a.loggedTimestamp).getTime());
+  }, [productionLogs, localLogs, jobCard?.jobNo]);
+
+  // Calculate live cumulative logged quantity per route step sequence
+  const loggedQtyPerStep = useMemo(() => {
+    const map: Record<number, number> = {};
+    for (const log of allJobLogs) {
+      const seq = Number(log.stepNo);
+      map[seq] = (map[seq] || 0) + Number(log.qtyDone || 0);
+    }
+    return map;
+  }, [allJobLogs]);
+
+  // Compute live step progress and sequential gating
+  const stepProgressList = useMemo(() => {
+    let previousStepCompleted = true;
+
+    return routeOperations.map((op) => {
+      const loggedQty = loggedQtyPerStep[op.sequenceNo] || 0;
+      const isCompleted = loggedQty >= targetQuantity;
+      const remainingQty = Math.max(0, targetQuantity - loggedQty);
+      const isReachable = previousStepCompleted; // sequential gating rule
+
+      if (!isCompleted) {
+        previousStepCompleted = false;
+      }
+
+      return {
+        ...op,
+        loggedQty,
+        remainingQty,
+        isCompleted,
+        isReachable,
+        isNextIncomplete: !isCompleted && isReachable
+      };
+    });
+  }, [routeOperations, loggedQtyPerStep, targetQuantity]);
+
+  // Available incomplete steps (reachable first, then any incomplete)
+  const incompleteSteps = useMemo(() => {
+    const reachable = stepProgressList.filter(s => !s.isCompleted && s.isReachable);
+    return reachable.length > 0 ? reachable : stepProgressList.filter(s => !s.isCompleted);
+  }, [stepProgressList]);
+
+  // Summary figures
+  const totalStepsCount = routeOperations.length;
+  const completedStepsCount = stepProgressList.filter(s => s.isCompleted).length;
+  const nextIncompleteStep = stepProgressList.find(s => !s.isCompleted && s.isReachable) || stepProgressList.find(s => !s.isCompleted);
+  const allStepsDone = completedStepsCount >= totalStepsCount && totalStepsCount > 0;
+
+  // Active step selected in Log Production modal
+  const selectedStepData = useMemo(() => {
+    const found = stepProgressList.find(s => s.sequenceNo === Number(logStepSeq));
+    if (found && !found.isCompleted) return found;
+    return incompleteSteps[0] || stepProgressList[0] || null;
+  }, [stepProgressList, logStepSeq, incompleteSteps]);
+
+  // Maximum allowed log quantity (cannot exceed remaining PO target)
+  const maxLoggableQty = useMemo(() => {
+    if (!selectedStepData) return 1;
+    const rem = targetQuantity - (selectedStepData.loggedQty || 0);
+    return Math.max(1, rem);
+  }, [selectedStepData, targetQuantity]);
+
+  // Derive BOM planned components and live consumed quantities
+  const rawMaterialRequirements = useMemo(() => {
+    const components = matchedBOM?.components && matchedBOM.components.length > 0 ? matchedBOM.components : [
+      {
+        componentCode: 'RM-EN24-RND-50',
+        componentName: 'EN24 Alloy Steel Round Bar 50mm Dia',
+        qtyPerUnit: 1.2,
+        uom: 'Kg',
+        scrapAllowancePct: 5,
+        unitCost: 145
+      },
+      {
+        componentCode: 'RM-COOLANT-SYNTH',
+        componentName: 'Synthetic Soluble Cutting Oil 5L',
+        qtyPerUnit: 0.05,
+        uom: 'Litre',
+        scrapAllowancePct: 2,
+        unitCost: 320
+      }
+    ];
+
+    return components.map((comp, idx) => {
+      const plannedTotal = Number((comp.qtyPerUnit * targetQuantity * (1 + (comp.scrapAllowancePct || 0) / 100)).toFixed(2));
+      
+      // Calculate total actual booked for this component across all bookings
+      const totalBooked = localConsumptions
+        .filter(c => c.itemCode.toLowerCase().trim() === comp.componentCode.toLowerCase().trim())
+        .reduce((sum, c) => sum + Number(c.actualQty || 0), 0);
+
+      const remainingLeft = Math.max(0, Number((plannedTotal - totalBooked).toFixed(2)));
+      
+      // Assign to operation step (first step 10 for primary RM, next steps for secondary)
+      const assignedStepSeq = idx === 0 ? 10 : (idx + 1) * 10;
+      const assignedOp = routeOperations.find(o => o.sequenceNo === assignedStepSeq) || routeOperations[0];
+
+      return {
+        componentCode: comp.componentCode,
+        componentName: comp.componentName,
+        uom: comp.uom || 'Nos',
+        plannedTotal,
+        totalBooked,
+        remainingLeft,
+        assignedStepSeq: assignedOp?.sequenceNo || 10,
+        assignedOpName: assignedOp?.operationName || 'Initial Stage'
+      };
+    });
+  }, [matchedBOM, targetQuantity, localConsumptions, routeOperations]);
+
+  // Combined Material items (BOM Planned + Any Custom Added Materials)
+  const allMaterialRows = useMemo(() => {
+    const rows = [...rawMaterialRequirements];
+    
+    // Check for custom materials booked that are not in BOM
+    const bomCodes = new Set(rawMaterialRequirements.map(r => r.componentCode.toLowerCase().trim()));
+    const customBookings = localConsumptions.filter(c => !bomCodes.has(c.itemCode.toLowerCase().trim()));
+    
+    // Group custom bookings by itemCode
+    const customGrouped: Record<string, MaterialConsumptionRecord[]> = {};
+    for (const c of customBookings) {
+      const k = c.itemCode;
+      if (!customGrouped[k]) customGrouped[k] = [];
+      customGrouped[k].push(c);
+    }
+
+    for (const [code, list] of Object.entries(customGrouped)) {
+      const first = list[0];
+      const totalBooked = list.reduce((sum, c) => sum + Number(c.actualQty || 0), 0);
+      rows.push({
+        componentCode: code,
+        componentName: `${first.itemName} (Custom / Unplanned)`,
+        uom: first.unit || 'Nos',
+        plannedTotal: first.plannedQty || totalBooked,
+        totalBooked,
+        remainingLeft: 0,
+        assignedStepSeq: first.operationSeq || 10,
+        assignedOpName: first.operationName || 'Ad-hoc Stage'
+      });
+    }
+
+    return rows;
+  }, [rawMaterialRequirements, localConsumptions]);
+
+  // Map material needed per route step for the Route Steps table
+  const materialNeededPerStep = useMemo(() => {
+    const map: Record<number, { code: string; req: number; left: number; uom: string }[]> = {};
+    for (const mat of allMaterialRows) {
+      const seq = mat.assignedStepSeq;
+      if (!map[seq]) map[seq] = [];
+      map[seq].push({
+        code: mat.componentCode,
+        req: mat.plannedTotal,
+        left: mat.remainingLeft,
+        uom: mat.uom
+      });
+    }
+    return map;
+  }, [allMaterialRows]);
+
+  // Helper for live input updates
+  const handleInputChange = (code: string, field: 'qty' | 'scrap' | 'heatLot', val: string) => {
+    setToBookInputs(prev => ({
+      ...prev,
+      [code]: {
+        qty: prev[code]?.qty || '',
+        scrap: prev[code]?.scrap || '0',
+        heatLot: prev[code]?.heatLot || jobCard.materialIssuedLot || 'HT-2026-9921',
+        [field]: val
+      }
+    }));
+  };
+
+  // ----------------------------------------------------------------
+  // MATERIAL CONSUMPTION BOOKING HANDLER
+  // ----------------------------------------------------------------
+  const handleBookMaterialSubmit = async (materialRow: typeof allMaterialRows[0]) => {
+    const input = toBookInputs[materialRow.componentCode];
+    const qtyToBook = Number(input?.qty || materialRow.remainingLeft || 0);
+
+    if (qtyToBook <= 0) {
+      setErrorMsg(`Please enter a valid quantity to book for ${materialRow.componentCode}.`);
+      return;
+    }
+
+    try {
+      setIsBookingMaterial(materialRow.componentCode);
+      setErrorMsg(null);
+      setSuccessMsg(null);
+
+      const scrapVal = Number(input?.scrap || 0);
+      const heatLotVal = input?.heatLot || jobCard.materialIssuedLot || 'HT-2026-9921';
+      const nowIso = new Date().toISOString();
+
+      // 1. Post signed ledger-based inventory movement (movementType: 'CONSUMPTION', negative quantityChange)
+      await recordInventoryMovement({
+        itemCode: materialRow.componentCode,
+        quantityChange: -qtyToBook,
+        movementType: 'CONSUMPTION',
+        referenceId: jobCard.jobNo,
+        referenceType: 'JOB_CARD',
+        notes: `Production consumption for Job #${jobCard.jobNo} (${materialRow.assignedOpName}) • Heat/Lot: ${heatLotVal} • Scrap: ${scrapVal} ${materialRow.uom}`
+      }).catch(err => console.warn('Ledger movement background warn:', err));
+
+      // 2. Create MaterialConsumption Record
+      const newConsumption: MaterialConsumptionRecord = {
+        id: `mc-${jobCard.jobNo}-${Date.now()}`,
+        jobNo: jobCard.jobNo,
+        itemCode: materialRow.componentCode,
+        itemName: materialRow.componentName,
+        operationSeq: materialRow.assignedStepSeq,
+        operationName: materialRow.assignedOpName,
+        plannedQty: materialRow.plannedTotal,
+        actualQty: qtyToBook,
+        scrapQty: scrapVal,
+        unit: materialRow.uom,
+        heatLotNumber: heatLotVal,
+        bookedAt: nowIso,
+        bookedBy: 'Shopfloor Operator / PPC',
+        notes: `Booked ${qtyToBook} ${materialRow.uom} against ${materialRow.assignedOpName}`
+      };
+
+      const updatedConsumptions = [newConsumption, ...localConsumptions];
+      persistConsumptions(updatedConsumptions);
+
+      // Clear input
+      setToBookInputs(prev => ({
+        ...prev,
+        [materialRow.componentCode]: { qty: '', scrap: '0', heatLot: heatLotVal }
+      }));
+
+      setSuccessMsg(`Successfully booked ${qtyToBook} ${materialRow.uom} for ${materialRow.componentCode}. Ledger updated.`);
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Failed to book material consumption.');
+    } finally {
+      setIsBookingMaterial(null);
+    }
+  };
+
+  // ----------------------------------------------------------------
+  // ADD CUSTOM MATERIAL HANDLER
+  // ----------------------------------------------------------------
+  const handleAddCustomMaterialSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const qty = Number(addMatQty);
+    if (!addMatCode || qty <= 0) {
+      setErrorMsg('Please specify component code and a positive quantity.');
+      return;
+    }
+
+    try {
+      setIsAddingCustomMaterial(true);
+      setErrorMsg(null);
+      setSuccessMsg(null);
+
+      const scrapVal = Number(addMatScrap || 0);
+      const heatLotVal = addMatHeatLot || jobCard.materialIssuedLot || 'HT-2026-CUSTOM';
+      const nowIso = new Date().toISOString();
+      const op = routeOperations.find(o => o.sequenceNo === Number(addMatStepSeq)) || routeOperations[0];
+
+      // 1. Post ledger movement
+      await recordInventoryMovement({
+        itemCode: addMatCode,
+        quantityChange: -qty,
+        movementType: 'CONSUMPTION',
+        referenceId: jobCard.jobNo,
+        referenceType: 'JOB_CARD',
+        notes: `Unplanned material booking for Job #${jobCard.jobNo} (${op.operationName}) • Heat/Lot: ${heatLotVal}`
+      }).catch(err => console.warn('Ledger movement background warn:', err));
+
+      // 2. Create consumption record
+      const newConsumption: MaterialConsumptionRecord = {
+        id: `mc-${jobCard.jobNo}-${Date.now()}`,
+        jobNo: jobCard.jobNo,
+        itemCode: addMatCode,
+        itemName: addMatName || addMatCode,
+        operationSeq: op.sequenceNo,
+        operationName: op.operationName,
+        plannedQty: qty,
+        actualQty: qty,
+        scrapQty: scrapVal,
+        unit: addMatUnit,
+        heatLotNumber: heatLotVal,
+        bookedAt: nowIso,
+        bookedBy: 'Shopfloor Lead / PPC',
+        notes: 'Unplanned ad-hoc material issue'
+      };
+
+      persistConsumptions([newConsumption, ...localConsumptions]);
+
+      setShowAddMaterialModal(false);
+      setAddMatCode('');
+      setAddMatName('');
+      setAddMatQty('');
+      setAddMatScrap('0');
+      setSuccessMsg(`Added & booked ${qty} ${addMatUnit} of ${addMatCode} to Job Card.`);
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Failed to add custom material.');
+    } finally {
+      setIsAddingCustomMaterial(false);
+    }
+  };
+
+  // ----------------------------------------------------------------
+  // PRODUCTION LOGGING HANDLER
+  // ----------------------------------------------------------------
+  const handleLogProductionSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const op = selectedStepData || routeOperations.find(o => o.sequenceNo === Number(logStepSeq)) || routeOperations[0];
+    const prevTotal = loggedQtyPerStep[op.sequenceNo] || 0;
+    const remainingForStep = Math.max(0, targetQuantity - prevTotal);
+
+    if (logQty <= 0) {
+      setErrorMsg('Please enter a valid positive quantity produced.');
+      return;
+    }
+
+    if (logQty > remainingForStep) {
+      setErrorMsg(`Quantity (${logQty} NOS) exceeds remaining PO target (${remainingForStep} NOS) for Step ${op.sequenceNo}.`);
+      return;
+    }
+
+    try {
+      setIsSubmittingLog(true);
+      setErrorMsg(null);
+      setSuccessMsg(null);
+
+      const nowIso = new Date().toISOString();
+
+      const newLog: ProductionLogReport = {
+        id: `pl-${jobCard.jobNo}-${Date.now()}`,
+        jobNo: jobCard.jobNo,
+        itemCode: jobCard.partCode,
+        description: jobCard.partDescription,
+        stepNo: op.sequenceNo,
+        operationName: op.operationName,
+        qtyDone: logQty,
+        loggedTimestamp: nowIso
+      };
+
+      // Call parent handler if available
+      if (onLogProduction) {
+        await onLogProduction(newLog);
+      }
+
+      setLocalLogs(prev => [newLog, ...prev]);
+
+      // Check if step now reached target
+      const newTotal = prevTotal + logQty;
+      const isNowDone = newTotal >= targetQuantity;
+
+      setShowLogProductionModal(false);
+      setLogQty(1);
+      setSuccessMsg(`Logged ${logQty} NOS output for Step ${op.sequenceNo} (${op.operationName}). Cumulative: ${newTotal}/${targetQuantity} NOS${isNowDone ? ' — Step Complete! ✓' : ''}`);
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Failed to log production output.');
+    } finally {
+      setIsSubmittingLog(false);
+    }
+  };
+
+  // Helper for formatting timestamps
+  const formatDateTime = (isoString?: string) => {
+    if (!isoString) return '—';
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return isoString;
+    return d.toLocaleString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
+  };
+
+  if (!isOpen || !jobCard) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md font-sans overflow-y-auto">
+      <div className={`relative w-full max-w-5xl max-h-[92vh] flex flex-col rounded-3xl border shadow-2xl transition-all overflow-hidden ${
+        isDarkMode 
+          ? 'bg-slate-900/95 border-slate-800 text-white backdrop-blur-2xl shadow-[#5B75F8]/10' 
+          : 'bg-white border-slate-200 text-slate-900 shadow-2xl'
+      }`}>
+        
+        {/* ========================================================================= */}
+        {/* 1. HEADER BLOCK */}
+        {/* ========================================================================= */}
+        <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-5 border-b border-slate-200 dark:border-slate-800/90 bg-slate-50/70 dark:bg-slate-950/50 shrink-0">
+          <div className="flex items-center gap-3.5">
+            <div className="p-3 rounded-2xl bg-gradient-to-tr from-[#5B75F8] to-indigo-600 text-white shadow-md shadow-[#5B75F8]/20 shrink-0">
+              <Factory className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2.5">
+                <h2 className="text-xl font-bold font-mono tracking-tight text-[#5B75F8] dark:text-[#7B92FF]">
+                  {jobCard.jobNo}
+                </h2>
+
+                {/* Status Badge */}
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono font-bold uppercase border ${
+                  allStepsDone || jobCard.jobStatus === 'COMPLETED' || jobCard.status === 'COMPLETED'
+                    ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                    : jobCard.jobStatus === 'QC_HOLD' || jobCard.status === 'QC_HOLD'
+                    ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                    : jobCard.jobStatus === 'IN_PROGRESS' || jobCard.status === 'IN_PROGRESS' || jobCard.status === 'RUNNING' || completedStepsCount > 0
+                    ? 'bg-purple-500/15 text-purple-300 border-purple-500/30 animate-pulse'
+                    : 'bg-[#5B75F8]/15 text-[#7B92FF] border-[#5B75F8]/30'
+                }`}>
+                  <span className={`w-2 h-2 rounded-full ${
+                    allStepsDone || jobCard.jobStatus === 'COMPLETED' || jobCard.status === 'COMPLETED'
+                      ? 'bg-emerald-400'
+                      : jobCard.jobStatus === 'QC_HOLD' || jobCard.status === 'QC_HOLD'
+                      ? 'bg-rose-400'
+                      : 'bg-purple-400'
+                  }`} />
+                  <span>
+                    {allStepsDone ? 'COMPLETED' : (jobCard.jobStatus || jobCard.status || 'PLANNED')}
+                  </span>
+                </span>
+
+                {jobCard.drawingRevision && (
+                  <span className="px-2 py-0.5 rounded-lg text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Rev: {jobCard.drawingRevision}
+                  </span>
+                )}
+              </div>
+
+              {/* Part Description and Customer PO */}
+              <p className={`text-xs mt-1 font-sans ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                <span className="font-bold text-slate-100 dark:text-white">{jobCard.partCode}</span> — {jobCard.partDescription} • Customer PO: <span className="font-mono font-bold text-indigo-400">{jobCard.orderPo}</span>
+              </p>
+
+              {/* "Next:" line showing next actionable stage */}
+              <div className="mt-1 flex items-center gap-1.5 text-xs font-mono">
+                <span className="text-slate-400">Next:</span>
+                {allStepsDone ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      if (onSelectOrder && jobCard.orderPo) {
+                        onSelectOrder(jobCard.orderPo);
+                      } else if (onNavigate) {
+                        onNavigate('qc');
+                      }
+                    }}
+                    className="text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 underline underline-offset-2 transition-colors cursor-pointer"
+                  >
+                    <span>Pre-Dispatch Inspection (PDI)</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                ) : (
+                  <span className="text-indigo-400 font-medium">
+                    {nextIncompleteStep ? `Operation ${nextIncompleteStep.sequenceNo} (${nextIncompleteStep.operationName})` : 'In Production'}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {allStepsDone ? (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  if (onSelectOrder && jobCard.orderPo) {
+                    onSelectOrder(jobCard.orderPo);
+                  } else if (onNavigate) {
+                    onNavigate('qc');
+                  }
+                }}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-mono font-bold shadow-md shadow-emerald-500/20 flex items-center gap-1.5 cursor-pointer transition-all hover:scale-105"
+                title="Route process completed. Jump to QC / PDI Inspection"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>QC / PDI Inspection →</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  const target = nextIncompleteStep || incompleteSteps[0] || stepProgressList[0];
+                  if (target) {
+                    setLogStepSeq(target.sequenceNo);
+                    const rem = Math.max(1, targetQuantity - (target.loggedQty || 0));
+                    setLogQty(rem);
+                  }
+                  setShowLogProductionModal(true);
+                }}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-mono font-bold shadow-md shadow-[#5B75F8]/20 flex items-center gap-1.5 cursor-pointer transition-all hover:scale-105"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Log Production</span>
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className={`p-2.5 rounded-2xl border transition-all cursor-pointer ${
+                isDarkMode 
+                  ? 'border-slate-800 bg-slate-950/60 text-slate-400 hover:text-white hover:bg-slate-800' 
+                  : 'border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* SUMMARY FIELDS BAR */}
+        {/* ========================================================================= */}
+        <div className={`grid grid-cols-2 sm:grid-cols-4 gap-3 px-6 py-4 border-b text-xs font-mono ${
+          isDarkMode ? 'bg-slate-950/40 border-slate-800/80 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+        }`}>
+          <div className="space-y-0.5">
+            <div className="text-[10px] uppercase font-bold text-slate-400">Target Quantity</div>
+            <div className="text-sm font-bold text-emerald-400">{targetQuantity} NOS</div>
+          </div>
+          <div className="space-y-0.5">
+            <div className="text-[10px] uppercase font-bold text-slate-400">Target Date</div>
+            <div className="text-sm font-bold text-amber-400">{jobCard.targetDate || '2026-08-30'}</div>
+          </div>
+          <div className="space-y-0.5">
+            <div className="text-[10px] uppercase font-bold text-slate-400">Steps Done</div>
+            <div className="text-sm font-bold text-[#7B92FF] flex items-center gap-1">
+              <span>{completedStepsCount} / {totalStepsCount}</span>
+              {allStepsDone && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+            </div>
+          </div>
+          <div className="space-y-0.5">
+            <div className="text-[10px] uppercase font-bold text-slate-400">Next Step</div>
+            <div className={`text-xs font-bold truncate ${allStepsDone ? 'text-emerald-400' : 'text-indigo-400'}`}>
+              {allStepsDone ? 'All steps done' : nextIncompleteStep?.operationName || 'All steps done'}
+            </div>
+          </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* SCROLLABLE BODY CONTENT */}
+        {/* ========================================================================= */}
+        <div className="p-6 space-y-7 overflow-y-auto flex-1 font-sans">
+          
+          {/* Feedback alerts */}
+          {errorMsg && (
+            <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-mono flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+          {successMsg && (
+            <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>{successMsg}</span>
+            </div>
+          )}
+
+          {/* ========================================================================= */}
+          {/* 2. ROUTE STEPS TABLE */}
+          {/* ========================================================================= */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Route className="w-4 h-4 text-[#5B75F8]" />
+                <h3 className="font-bold text-sm font-mono tracking-tight text-slate-200">
+                  Route Steps
+                </h3>
+              </div>
+              <span className="text-[11px] font-mono text-slate-400">
+                {completedStepsCount} of {totalStepsCount} Operations Executed ({Math.round((completedStepsCount / (totalStepsCount || 1)) * 100)}%)
+              </span>
+            </div>
+
+            <div className={`rounded-2xl border overflow-hidden transition-all shadow-sm ${
+              isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-white border-slate-200'
+            }`}>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse font-mono">
+                  <thead>
+                    <tr className={`border-b font-bold uppercase tracking-wider text-[10px] ${
+                      isDarkMode ? 'bg-slate-900/80 border-slate-800 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-500'
+                    }`}>
+                      <th className="py-3 px-4 w-14">Seq</th>
+                      <th className="py-3 px-4">Operation</th>
+                      <th className="py-3 px-4">Machine</th>
+                      <th className="py-3 px-4 text-center">Progress</th>
+                      <th className="py-3 px-4">Material Needed</th>
+                      <th className="py-3 px-4 text-right">Std Time</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
+                    {stepProgressList.map((step) => {
+                      const mats = materialNeededPerStep[step.sequenceNo] || [];
+
+                      return (
+                        <tr
+                          key={step.sequenceNo}
+                          className={`transition-colors ${
+                            !step.isReachable && !step.isCompleted
+                              ? isDarkMode ? 'opacity-40 bg-slate-950/20' : 'opacity-40 bg-slate-100/50'
+                              : step.isNextIncomplete
+                              ? isDarkMode ? 'bg-[#5B75F8]/10' : 'bg-indigo-50/70'
+                              : isDarkMode ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'
+                          }`}
+                        >
+                          {/* Seq */}
+                          <td className="py-3 px-4 font-bold text-slate-400">
+                            <div className="flex items-center gap-1.5">
+                              {!step.isReachable && !step.isCompleted && <Lock className="w-3 h-3 text-slate-500 shrink-0" />}
+                              <span>{step.sequenceNo}</span>
+                            </div>
+                          </td>
+
+                          {/* Operation */}
+                          <td className={`py-3 px-4 font-sans font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+                            <div className="flex items-center gap-1.5">
+                              <span>{step.operationName}</span>
+                              {step.inspectionRequired && (
+                                <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                                  QC Gate
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Machine */}
+                          <td className="py-3 px-4 text-purple-400 font-medium">
+                            {step.workCenter}
+                          </td>
+
+                          {/* Progress: {qty_done} / {target_qty} with checkmark */}
+                          <td className="py-3 px-4 text-center">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono font-bold ${
+                              step.isCompleted
+                                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                                : step.loggedQty > 0
+                                ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                                : 'bg-slate-800/60 text-slate-400 border border-slate-700'
+                            }`}>
+                              <span>{step.loggedQty} / {targetQuantity}</span>
+                              {step.isCompleted && <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[2.5]" />}
+                            </span>
+                          </td>
+
+                          {/* Material Needed: [Code] [Req] (left [X]) */}
+                          <td className="py-3 px-4 text-xs font-mono">
+                            {mats.length > 0 ? (
+                              <div className="space-y-1">
+                                {mats.map((m, mIdx) => (
+                                  <div key={mIdx} className="flex items-center gap-1.5">
+                                    <span className="font-bold text-slate-300">{m.code}:</span>
+                                    <span className="text-slate-400">{m.req} {m.uom}</span>
+                                    <span className={`font-bold ${m.left > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                                      (left {m.left} {m.uom})
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-slate-500">—</span>
+                            )}
+                          </td>
+
+                          {/* Std Time */}
+                          <td className="py-3 px-4 text-right font-mono text-slate-400">
+                            {step.standardTimeMinutes || 15} mins
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* ========================================================================= */}
+          {/* 3. MATERIAL CONSUMPTION SECTION */}
+          {/* ========================================================================= */}
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-[#5B75F8]" />
+                  <h3 className="font-bold text-sm font-mono tracking-tight text-slate-200">
+                    Material Consumption
+                  </h3>
+                </div>
+                <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                  Bill of Materials — expected/guide only · book any qty, or add material
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowAddMaterialModal(true)}
+                className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-all ${
+                  isDarkMode 
+                    ? 'border-indigo-500/40 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20' 
+                    : 'border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
+                }`}
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>+ Add Material</span>
+              </button>
+            </div>
+
+            <div className={`rounded-2xl border overflow-hidden transition-all shadow-sm ${
+              isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-white border-slate-200'
+            }`}>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse font-mono">
+                  <thead>
+                    <tr className={`border-b font-bold uppercase tracking-wider text-[10px] ${
+                      isDarkMode ? 'bg-slate-900/80 border-slate-800 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-500'
+                    }`}>
+                      <th className="py-3 px-4">Component</th>
+                      <th className="py-3 px-4 text-right">Required</th>
+                      <th className="py-3 px-4 text-right">Left</th>
+                      <th className="py-3 px-4 text-right">To Book (Qty)</th>
+                      <th className="py-3 px-4 text-center">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
+                    {allMaterialRows.map((mat) => {
+                      const inputVal = toBookInputs[mat.componentCode]?.qty ?? '';
+                      const isBooking = isBookingMaterial === mat.componentCode;
+
+                      return (
+                        <tr key={mat.componentCode} className={isDarkMode ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}>
+                          {/* Component (item code + name, plus operation tied to) */}
+                          <td className="py-3.5 px-4 font-sans">
+                            <div className="font-bold text-xs text-slate-100 dark:text-white font-mono">
+                              {mat.componentCode}
+                            </div>
+                            <div className="text-[11px] text-slate-400">
+                              {mat.componentName}
+                            </div>
+                            <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded text-[9px] font-mono bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                              Op {mat.assignedStepSeq}: {mat.assignedOpName}
+                            </span>
+                          </td>
+
+                          {/* Required */}
+                          <td className="py-3.5 px-4 text-right font-mono text-slate-300">
+                            {mat.plannedTotal} {mat.uom}
+                          </td>
+
+                          {/* Left */}
+                          <td className={`py-3.5 px-4 text-right font-mono font-bold ${
+                            mat.remainingLeft > 0 ? 'text-amber-400' : 'text-emerald-400'
+                          }`}>
+                            {mat.remainingLeft} {mat.uom}
+                          </td>
+
+                          {/* To Book input */}
+                          <td className="py-3.5 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <input
+                                type="number"
+                                step="any"
+                                min="0"
+                                placeholder={mat.remainingLeft > 0 ? String(mat.remainingLeft) : '0'}
+                                value={inputVal}
+                                onChange={(e) => handleInputChange(mat.componentCode, 'qty', e.target.value)}
+                                className={`w-28 rounded-xl border px-3 py-1.5 text-xs font-mono text-right outline-none transition-all ${
+                                  isDarkMode 
+                                    ? 'bg-slate-900 border-slate-700 text-white focus:border-[#5B75F8]' 
+                                    : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[#5B75F8]'
+                                }`}
+                              />
+                              <span className="text-[11px] text-slate-400 font-mono">{mat.uom}</span>
+                            </div>
+                          </td>
+
+                          {/* Action Button */}
+                          <td className="py-3.5 px-4 text-center">
+                            <button
+                              type="button"
+                              disabled={isBooking}
+                              onClick={() => handleBookMaterialSubmit(mat)}
+                              className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-mono font-bold shadow-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all"
+                            >
+                              {isBooking ? (
+                                <RefreshCw className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <CheckSquare className="w-3 h-3" />
+                              )}
+                              <span>{isBooking ? 'Booking...' : 'Book'}</span>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* ========================================================================= */}
+          {/* 4. PRODUCTION LOGGING SECTION */}
+          {/* ========================================================================= */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Activity className="w-4 h-4 text-[#5B75F8]" />
+                <h3 className="font-bold text-sm font-mono tracking-tight text-slate-200">
+                  Production Logging
+                </h3>
+              </div>
+              <span className="text-[11px] font-mono text-slate-400">
+                Append-only activity log ({allJobLogs.length} entries)
+              </span>
+            </div>
+
+            <div className={`rounded-2xl border overflow-hidden transition-all shadow-sm ${
+              isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-white border-slate-200'
+            }`}>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse font-mono">
+                  <thead>
+                    <tr className={`border-b font-bold uppercase tracking-wider text-[10px] ${
+                      isDarkMode ? 'bg-slate-900/80 border-slate-800 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-500'
+                    }`}>
+                      <th className="py-3 px-4">When</th>
+                      <th className="py-3 px-4 text-center w-16">Step</th>
+                      <th className="py-3 px-4">Operation</th>
+                      <th className="py-3 px-4 text-right">Qty Done</th>
+                      <th className="py-3 px-4 text-right">Mins</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
+                    {allJobLogs.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center text-slate-400 font-mono">
+                          No production shifts logged yet. Click "+ Log Production" above to record output.
+                        </td>
+                      </tr>
+                    ) : (
+                      allJobLogs.map((log, idx) => (
+                        <tr key={log.id || idx} className={isDarkMode ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}>
+                          <td className="py-3 px-4 text-slate-300 font-mono text-[11px]">
+                            {formatDateTime(log.loggedTimestamp)}
+                          </td>
+                          <td className="py-3 px-4 text-center font-bold text-slate-400">
+                            {log.stepNo}
+                          </td>
+                          <td className={`py-3 px-4 font-sans font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
+                            {log.operationName}
+                          </td>
+                          <td className="py-3 px-4 text-right font-bold text-emerald-400 font-mono">
+                            {log.qtyDone} NOS
+                          </td>
+                          <td className="py-3 px-4 text-right text-slate-400 font-mono">
+                            —
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* ========================================================================= */}
+          {/* 5. CONSUMPTION HISTORY SECTION */}
+          {/* ========================================================================= */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <History className="w-4 h-4 text-[#5B75F8]" />
+                <h3 className="font-bold text-sm font-mono tracking-tight text-slate-200">
+                  Consumption History
+                </h3>
+              </div>
+              <span className="text-[11px] font-mono text-slate-400">
+                Historical material booking audit trail
+              </span>
+            </div>
+
+            <div className={`rounded-2xl border overflow-hidden transition-all shadow-sm ${
+              isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-white border-slate-200'
+            }`}>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse font-mono">
+                  <thead>
+                    <tr className={`border-b font-bold uppercase tracking-wider text-[10px] ${
+                      isDarkMode ? 'bg-slate-900/80 border-slate-800 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-500'
+                    }`}>
+                      <th className="py-3 px-4">Component</th>
+                      <th className="py-3 px-4">When</th>
+                      <th className="py-3 px-4 text-right">Planned</th>
+                      <th className="py-3 px-4 text-right">Actual</th>
+                      <th className="py-3 px-4 text-right">Scrap</th>
+                      <th className="py-3 px-4 text-center">Unit</th>
+                      <th className="py-3 px-4">Heat / Lot</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
+                    {localConsumptions.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="py-8 text-center text-slate-400 font-mono">
+                          No consumption booked
+                        </td>
+                      </tr>
+                    ) : (
+                      localConsumptions.map((c) => (
+                        <tr key={c.id} className={isDarkMode ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}>
+                          <td className="py-3 px-4 font-mono font-bold text-slate-200">
+                            <div>{c.itemCode}</div>
+                            <div className="text-[10px] text-slate-400 font-sans font-normal truncate max-w-xs">
+                              {c.itemName}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-slate-300 font-mono text-[11px]">
+                            {formatDateTime(c.bookedAt)}
+                          </td>
+                          <td className="py-3 px-4 text-right text-slate-400">
+                            {c.plannedQty}
+                          </td>
+                          <td className="py-3 px-4 text-right font-bold text-emerald-400">
+                            {c.actualQty}
+                          </td>
+                          <td className="py-3 px-4 text-right text-rose-400">
+                            {c.scrapQty || 0}
+                          </td>
+                          <td className="py-3 px-4 text-center text-slate-300">
+                            {c.unit}
+                          </td>
+                          <td className="py-3 px-4 text-amber-400 font-bold">
+                            {c.heatLotNumber || '—'}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800/90 bg-slate-50/50 dark:bg-slate-950/40 flex items-center justify-between font-mono text-xs">
+          <div className="text-slate-400 flex items-center gap-2">
+            <span>Job Card: <strong>{jobCard.jobNo}</strong></span>
+            <span>•</span>
+            <span>Mill Heat/Lot: <strong className="text-amber-400">{jobCard.materialIssuedLot || 'HT-2026-9921'}</strong></span>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className={`px-5 py-2 rounded-xl border font-bold cursor-pointer transition-all ${
+              isDarkMode ? 'border-slate-800 text-slate-300 hover:bg-slate-800' : 'border-slate-200 text-slate-700 hover:bg-slate-100'
+            }`}
+          >
+            Close
+          </button>
+        </div>
+
+      </div>
+
+      {/* ========================================================================= */}
+      {/* SUB-MODAL 1: ADD UNPLANNED MATERIAL */}
+      {/* ========================================================================= */}
+      {showAddMaterialModal && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
+          <div className={`w-full max-w-md rounded-3xl border p-6 space-y-4 shadow-2xl transition-all ${
+            isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          }`}>
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                  <Plus className="w-5 h-5" />
+                </div>
+                <h4 className="font-bold text-sm">Add Material / Substitute</h4>
+              </div>
+              <button onClick={() => setShowAddMaterialModal(false)} className="text-slate-400 hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddCustomMaterialSubmit} className="space-y-3.5">
+              <div>
+                <label className="block text-[10px] font-mono uppercase font-bold text-slate-400 mb-1">
+                  Item / Material Code *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. RM-AL-6061-ROD-40 or TOOL-INSERT-CNMG"
+                  value={addMatCode}
+                  onChange={(e) => {
+                    const code = e.target.value;
+                    setAddMatCode(code);
+                    const matchedStock = stock.find(s => s.code.toLowerCase() === code.toLowerCase());
+                    if (matchedStock) {
+                      setAddMatName(matchedStock.description);
+                      setAddMatUnit(matchedStock.unit || 'Nos');
+                    }
+                  }}
+                  className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono border focus:outline-none transition-all ${
+                    isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                  }`}
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-mono uppercase font-bold text-slate-400 mb-1">
+                  Material Description
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Aluminum 6061 Round Bar 40mm"
+                  value={addMatName}
+                  onChange={(e) => setAddMatName(e.target.value)}
+                  className={`w-full px-3.5 py-2 rounded-xl text-xs border focus:outline-none transition-all ${
+                    isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                  }`}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-mono uppercase font-bold text-slate-400 mb-1">
+                    Qty to Book *
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    required
+                    value={addMatQty}
+                    onChange={(e) => setAddMatQty(e.target.value)}
+                    className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono border focus:outline-none transition-all ${
+                      isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                    }`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-mono uppercase font-bold text-slate-400 mb-1">
+                    Unit (UOM)
+                  </label>
+                  <select
+                    value={addMatUnit}
+                    onChange={(e) => setAddMatUnit(e.target.value)}
+                    className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono border focus:outline-none transition-all ${
+                      isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                    }`}
+                  >
+                    <option value="Nos">Nos</option>
+                    <option value="Kg">Kg</option>
+                    <option value="Meter">Meter</option>
+                    <option value="Litre">Litre</option>
+                    <option value="Set">Set</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-mono uppercase font-bold text-slate-400 mb-1">
+                    Scrap Allowance
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={addMatScrap}
+                    onChange={(e) => setAddMatScrap(e.target.value)}
+                    className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono border focus:outline-none transition-all ${
+                      isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                    }`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-mono uppercase font-bold text-slate-400 mb-1">
+                    Heat / Lot #
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="HT-2026-####"
+                    value={addMatHeatLot}
+                    onChange={(e) => setAddMatHeatLot(e.target.value)}
+                    className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono border focus:outline-none transition-all ${
+                      isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                    }`}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-mono uppercase font-bold text-slate-400 mb-1">
+                  Assign to Route Operation
+                </label>
+                <select
+                  value={addMatStepSeq}
+                  onChange={(e) => setAddMatStepSeq(Number(e.target.value))}
+                  className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono border focus:outline-none transition-all ${
+                    isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                  }`}
+                >
+                  {routeOperations.map(op => (
+                    <option key={op.sequenceNo} value={op.sequenceNo}>
+                      Op {op.sequenceNo} — {op.operationName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowAddMaterialModal(false)}
+                  className="px-4 py-2 rounded-xl border text-xs font-mono text-slate-400 hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isAddingCustomMaterial}
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 text-white text-xs font-mono font-bold shadow-md cursor-pointer disabled:opacity-50"
+                >
+                  {isAddingCustomMaterial ? 'Booking...' : 'Book & Add Material'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* SUB-MODAL 2: QUICK LOG PRODUCTION SHIFT OUTPUT */}
+      {/* ========================================================================= */}
+      {showLogProductionModal && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
+          <div className={`w-full max-w-md rounded-3xl border p-6 space-y-4 shadow-2xl transition-all ${
+            isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          }`}>
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-[#5B75F8]/10 text-[#5B75F8] border border-[#5B75F8]/20">
+                  <Activity className="w-5 h-5" />
+                </div>
+                <h4 className="font-bold text-sm">Log Production Shift Output</h4>
+              </div>
+              <button onClick={() => setShowLogProductionModal(false)} className="text-slate-400 hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleLogProductionSubmit} className="space-y-3.5">
+              <div>
+                <label className="block text-[10px] font-mono uppercase font-bold text-slate-400 mb-1">
+                  Operation Step *
+                </label>
+                <select
+                  value={selectedStepData?.sequenceNo || logStepSeq}
+                  onChange={(e) => {
+                    const newSeq = Number(e.target.value);
+                    setLogStepSeq(newSeq);
+                    const targetStep = stepProgressList.find(s => s.sequenceNo === newSeq);
+                    if (targetStep) {
+                      const rem = Math.max(1, targetQuantity - (targetStep.loggedQty || 0));
+                      setLogQty(rem);
+                    }
+                  }}
+                  className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-mono border focus:outline-none transition-all ${
+                    isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                  }`}
+                >
+                  {incompleteSteps.length === 0 ? (
+                    <option value="">All Operations Completed</option>
+                  ) : (
+                    incompleteSteps.map(s => (
+                      <option key={s.sequenceNo} value={s.sequenceNo}>
+                        Op {s.sequenceNo} — {s.operationName} ({s.remainingQty} NOS remaining of {targetQuantity})
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[10px] font-mono uppercase font-bold text-slate-400">
+                      Qty Produced (NOS) *
+                    </label>
+                    <span className="text-[10px] font-mono text-emerald-400 font-bold">
+                      Max: {maxLoggableQty} NOS
+                    </span>
+                  </div>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    max={maxLoggableQty}
+                    value={logQty}
+                    onChange={(e) => setLogQty(Number(e.target.value))}
+                    className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono font-bold border focus:outline-none transition-all ${
+                      logQty > maxLoggableQty
+                        ? 'border-rose-500 bg-rose-500/10 text-rose-300'
+                        : isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                    }`}
+                  />
+                  <p className="text-[9px] font-mono text-slate-400 mt-1">
+                    Capped at remaining PO target ({maxLoggableQty} of {targetQuantity} NOS)
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-mono uppercase font-bold text-slate-400 mb-1">
+                    Duration (Minutes)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={logMins}
+                    onChange={(e) => setLogMins(Number(e.target.value))}
+                    className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono border focus:outline-none transition-all ${
+                      isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                    }`}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-mono uppercase font-bold text-slate-400 mb-1">
+                  Operator Notes (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Completed batch with zero tool wear"
+                  value={logNotes}
+                  onChange={(e) => setLogNotes(e.target.value)}
+                  className={`w-full px-3.5 py-2 rounded-xl text-xs border focus:outline-none transition-all ${
+                    isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                  }`}
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowLogProductionModal(false)}
+                  className="px-4 py-2 rounded-xl border text-xs font-mono text-slate-400 hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingLog}
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 text-white text-xs font-mono font-bold shadow-md cursor-pointer disabled:opacity-50"
+                >
+                  {isSubmittingLog ? 'Logging...' : 'Save Production Log'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+};
+export default JobCardDetailModal;

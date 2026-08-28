@@ -69,6 +69,7 @@ import {
   duplicateRouteCard,
   deleteRouteCard
 } from '../../../services/supabaseServices';
+import { JobCardDetailModal } from '../modals/JobCardDetailModal';
 
 export const DEFAULT_ROUTE_CARDS: RouteCard[] = [
   {
@@ -235,6 +236,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
 
   // Job Cards Modal States
   const [showNewJobModal, setShowNewJobModal] = useState(false);
+  const [selectedJobForDetail, setSelectedJobForDetail] = useState<JobCard | null>(null);
   const [selectedJobForLog, setSelectedJobForLog] = useState<JobCard | null>(null);
   const [selectedJobForTraveler, setSelectedJobForTraveler] = useState<JobCard | null>(null);
   const [selectedOpSequence, setSelectedOpSequence] = useState<number | null>(null);
@@ -374,6 +376,34 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
     onJobCardModalOpened?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preselectedOrderPo]);
+
+  // Helper to determine if a Job Card is fully completed or ready for QC
+  const isJcCompleted = (jc: JobCard) => {
+    const st = (jc.jobStatus || jc.status || '').toUpperCase();
+    if (['COMPLETED', 'READY_FOR_QC', 'PDI_READY'].includes(st)) {
+      return true;
+    }
+    if (jc.operations && jc.operations.length > 0 && jc.operations.every((o: any) => o.opStatus === 'COMPLETED' || o.inspectionPassed)) {
+      return true;
+    }
+    const target = Number(jc.targetQty || jc.qty || 1);
+    const jcLogs = productionLogs.filter(l => l.jobNo === jc.jobNo);
+    if (jcLogs.length > 0) {
+      let stepSeqs: number[] = [];
+      if (jc.operations && jc.operations.length > 0) {
+        stepSeqs = jc.operations.map(o => Number(o.sequenceNo));
+      } else {
+        stepSeqs = Array.from(new Set(jcLogs.map(l => Number(l.stepNo))));
+      }
+      if (stepSeqs.length > 0 && stepSeqs.every(s => {
+        const stepTotal = jcLogs.filter(l => Number(l.stepNo) === s).reduce((sum, l) => sum + Number(l.qtyDone || 0), 0);
+        return stepTotal >= target;
+      })) {
+        return true;
+      }
+    }
+    return false;
+  };
 
   // Log Production Form State
   const [logStepNo, setLogStepNo] = useState<number>(1);
@@ -1453,9 +1483,16 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                       </tr>
                     ) : null}
                     {filteredCards.map((jc) => (
-                      <tr key={jc.jobNo} className={isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}>
+                      <tr 
+                        key={jc.jobNo} 
+                        onClick={() => setSelectedJobForDetail(jc)}
+                        className={`cursor-pointer transition-colors ${isDarkMode ? 'hover:bg-slate-800/60' : 'hover:bg-indigo-50/40'}`}
+                      >
                         <td className="py-4 px-5 font-bold font-mono text-[#5B75F8] dark:text-[#7B92FF]">
-                          <div>{jc.jobNo}</div>
+                          <div className="hover:underline flex items-center gap-1.5">
+                            <span>{jc.jobNo}</span>
+                            <ArrowRight className="w-3 h-3 opacity-60" />
+                          </div>
                           {jc.drawingRevision && (
                             <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[9px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                               Rev: {jc.drawingRevision}
@@ -1508,9 +1545,9 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                             <span>{jc.jobStatus || jc.status}</span>
                           </span>
                         </td>
-                        <td className="py-4 px-5 text-center">
+                        <td className="py-4 px-5 text-center" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-center gap-2">
-                            {(jc.jobStatus === 'COMPLETED' || jc.status === 'COMPLETED') && (
+                            {isJcCompleted(jc) && (
                               <button
                                 onClick={() => {
                                   if (onSelectOrder && jc.orderPo) {
@@ -1527,18 +1564,19 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                               </button>
                             )}
                             <button
-                              onClick={() => handleOpenJobTraveler(jc)}
+                              onClick={() => setSelectedJobForDetail(jc)}
                               className="px-3.5 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white shadow-xs hover:scale-[1.02] flex items-center gap-1.5"
+                              title="Open Full Job Card Detail View"
                             >
                               <Route className="w-3.5 h-3.5" />
-                              <span>Traveler</span>
+                              <span>View Card</span>
                             </button>
                             <button
                               onClick={() => setSelectedJobForLog(jc)}
                               className={`p-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer ${
                                 isDarkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'
                               }`}
-                              title="Legacy Shift Log"
+                              title="Quick Shift Log"
                             >
                               <Activity className="w-3.5 h-3.5" />
                             </button>
@@ -1570,7 +1608,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                       {colJobs.map(jc => (
                         <div 
                           key={jc.jobNo} 
-                          onClick={() => handleOpenJobTraveler(jc)}
+                          onClick={() => setSelectedJobForDetail(jc)}
                           className={`p-4 rounded-2xl border transition-all cursor-pointer hover:scale-[1.01] ${
                             isDarkMode ? 'bg-slate-900 border-slate-800 hover:border-[#5B75F8]/50' : 'bg-white border-slate-200 shadow-sm hover:border-[#5B75F8]'
                           }`}
@@ -1589,7 +1627,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                           <div className="mt-3 pt-2 border-t border-slate-200 dark:border-slate-800/60 flex items-center justify-between">
                             <span className="text-[10px] font-mono text-indigo-400 flex items-center gap-1">
                               <Route className="w-3 h-3" />
-                              <span>Route Traveler</span>
+                              <span>Job Card Details</span>
                             </span>
                             <span className="text-[10px] font-mono font-bold text-slate-400">
                               {(jc.operations?.filter((o: any) => o.opStatus === 'COMPLETED').length || 0)} / {(jc.operations?.length || 2)} Ops Done
@@ -4081,6 +4119,27 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 10: FULL JOB CARD DETAIL VIEW (DRILL-DOWN SOURCE OF TRUTH) */}
+      {/* ========================================================================= */}
+      <JobCardDetailModal
+        isOpen={Boolean(selectedJobForDetail)}
+        onClose={() => setSelectedJobForDetail(null)}
+        jobCard={jobCards.find(j => j.jobNo === selectedJobForDetail?.jobNo || j.id === selectedJobForDetail?.id) || selectedJobForDetail}
+        orders={orders}
+        boms={boms}
+        routeCards={routeCards}
+        stock={stock}
+        masters={masters}
+        productionLogs={productionLogs}
+        isDarkMode={isDarkMode}
+        onLogProduction={onLogProduction}
+        onStartOperation={onStartOperation}
+        onCompleteOperation={onCompleteOperation}
+        onNavigate={onNavigate}
+        onSelectOrder={onSelectOrder}
+      />
 
     </div>
   );

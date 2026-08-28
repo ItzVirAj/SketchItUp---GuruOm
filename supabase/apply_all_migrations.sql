@@ -236,6 +236,12 @@ CREATE TABLE IF NOT EXISTS public.customer_invoices (
   balance_amount NUMERIC NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- Invoice idempotency + duplicate guard (Parts 1 & 2): at most ONE non-cancelled invoice per order
+ALTER TABLE public.customer_invoices ADD COLUMN IF NOT EXISTS idempotency_key TEXT;
+CREATE INDEX IF NOT EXISTS idx_customer_invoices_idempotency_key ON public.customer_invoices (idempotency_key);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_customer_invoices_active_order
+  ON public.customer_invoices (order_po)
+  WHERE status <> 'CANCELLED';
 
 -- Vendor Bills Table
 CREATE TABLE IF NOT EXISTS public.vendor_bills (

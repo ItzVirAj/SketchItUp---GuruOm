@@ -68,6 +68,7 @@ import {
   generateChallanForOrder,
   markOrderDispatched,
   markOrderDelivered,
+  markOrderDelayed,
   recordOrderPaymentAndClose,
   fetchPayables,
   insertVendorBill,
@@ -471,6 +472,10 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       eventSource.addEventListener('approval_updated', () => {
         fetchApprovals().then(setApprovals).catch(() => {});
       });
+
+      eventSource.onerror = () => {
+        // SSE automatic reconnection will retry silently
+      };
     } catch (_) {}
 
     return () => {
@@ -697,10 +702,18 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     return updatedJobCard || targetJobCard;
   };
 
-  const handleLogProduction = async (job: JobCard, qtyDone: number) => {
-    await insertProductionLogAndQC(job, qtyDone);
-    await addAuditLog('production', 'log', `Logged ${qtyDone} units produced for ${job.jobNo}`);
+  const handleLogProduction = async (logOrJob: Partial<ProductionLogReport> | JobCard, qtyDoneParam?: number) => {
+    const res = await insertProductionLogAndQC(logOrJob, qtyDoneParam);
+    const logDetails = ('jobNo' in logOrJob && 'qtyDone' in logOrJob && qtyDoneParam === undefined)
+      ? (logOrJob as Partial<ProductionLogReport>)
+      : { jobNo: (logOrJob as JobCard).jobNo, qtyDone: qtyDoneParam || 1, operationName: undefined };
+    await addAuditLog(
+      'production',
+      'log',
+      `Logged ${logDetails.qtyDone} units for ${logDetails.jobNo}${logDetails.operationName ? ` (${logDetails.operationName})` : ''}`
+    );
     await loadAllData();
+    return res;
   };
 
   const handleUpdateQC = async (id: string, qcStatus: 'PASS' | 'QC_HOLD' | 'REJECTED', notes?: string) => {
@@ -809,20 +822,24 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     await loadAllData();
   };
 
-  const handleRecordInvoicePayment = async (invoiceNo: string) => {
+  const handleRecordInvoicePayment = async (invoiceNo: string, paymentData?: any) => {
+    const payAmt = paymentData?.paymentAmount;
     setInvoices(prev => prev.map(inv => {
       if (inv.id === invoiceNo || inv.invoiceNo === invoiceNo) {
+        const amt = payAmt !== undefined ? Number(payAmt) : (inv.balanceAmount || inv.totalAmount);
+        const newPaid = Math.min(inv.totalAmount, Number(inv.paidAmount || 0) + amt);
+        const newBal = Math.max(0, inv.totalAmount - newPaid);
         return {
           ...inv,
-          paidAmount: inv.totalAmount,
-          balanceAmount: 0,
-          status: 'PAID'
+          paidAmount: newPaid,
+          balanceAmount: newBal,
+          status: newBal <= 0 ? 'PAID' : 'PARTIAL'
         };
       }
       return inv;
     }));
-    await payInvoice(invoiceNo);
-    await addAuditLog('invoice', 'payment', `Recorded payment for invoice #${invoiceNo}`);
+    await payInvoice(invoiceNo, paymentData);
+    await addAuditLog('invoice', 'payment', `Recorded payment for invoice #${invoiceNo} (Amount: ₹${payAmt !== undefined ? payAmt : 'Full'})`);
     await loadAllData();
   };
 
@@ -898,6 +915,29 @@ export function useOwnerOSData(currentUser?: SystemUser) {
   };
 
   const handleGenerateInvoice = async (orderId: string, invoiceData: any) => {
+    const invNo = invoiceData.invoiceNo || `INV-26-${Math.floor(1000 + Math.random() * 9000)}`;
+    setInvoices(prev => [{
+      id: `inv-${Date.now()}`,
+      invoiceNo: invNo,
+      orderPo: invoiceData.orderPo,
+      challanNo: invoiceData.challanNo,
+      customerName: invoiceData.customerName,
+      amount: invoiceData.totalAmount,
+      totalAmount: invoiceData.totalAmount,
+      taxAmount: invoiceData.taxAmount || 0,
+      status: 'UNPAID',
+      invoiceDate: invoiceData.invoiceDate || new Date().toISOString().split('T')[0],
+      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    }, ...prev]);
+
+    setOrders(prev => prev.map(o => (o.id === orderId || o.poNo === invoiceData.orderPo) ? {
+      ...o,
+      invoiceNo: invNo,
+      status: 'INVOICE_GENERATED' as any,
+      stage: 'INVOICE_GENERATED' as any,
+      progressStep: 8
+    } : o));
+
     const inv = await generateInvoiceForOrder(orderId, invoiceData);
     await addAuditLog('invoices', 'generate', `Generated Tax Invoice ${inv.invoiceNo} for Order ${invoiceData.orderPo}`);
     await loadAllData();
@@ -978,11 +1018,32 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     await loadAllData();
   };
 
-  const handleRecordPayment = async (orderId: string, paymentData: any) => {
+  const handleMarkDelayed = async (orderId: string, delayData: { reason?: string; followUpDate?: string }) => {
     setOrders(prev => prev.map(ord => {
       if (ord.id === orderId || ord.poNo === orderId) {
-        const gross = Number(ord.grossAmount || 0);
-        const newPaid = Number(ord.paidAmount || 0) + Number(paymentData.amount || 0);
+        return {
+          ...ord,
+          status: 'DELIVERY_DELAYED' as any,
+          stage: 'DELIVERY_DELAYED' as any,
+          progressStep: 9
+        };
+      }
+      return ord;
+    }));
+
+    await markOrderDelayed(orderId, delayData);
+    await addAuditLog('dispatch', 'mark_delayed', `Marked Order #${orderId} as Delivery Delayed: ${delayData.reason || 'No reason specified'}`);
+    await loadAllData();
+  };
+
+  const handleRecordPayment = async (orderId: string, paymentData: any) => {
+    const payAmt = Number(paymentData.amount || paymentData.paymentAmount || 0);
+    const targetInvNo = paymentData.invoiceNo;
+
+    setOrders(prev => prev.map(ord => {
+      if (ord.id === orderId || ord.poNo === orderId) {
+        const gross = Number(ord.grossAmount || ord.totalAmount || 0);
+        const newPaid = Number(ord.paidAmount || 0) + payAmt;
         const isPaid = newPaid >= gross;
         return {
           ...ord,
@@ -993,8 +1054,42 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       return ord;
     }));
 
+    // Synchronize the linked invoice in Invoices & Payments state
+    setInvoices(prev => prev.map(inv => {
+      const order = orders.find(o => o.id === orderId || o.poNo === orderId);
+      const isMatch = (targetInvNo && (inv.invoiceNo === targetInvNo || inv.id === targetInvNo)) ||
+                      (order && order.invoiceNo && (inv.invoiceNo === order.invoiceNo || inv.id === order.invoiceNo)) ||
+                      (order && inv.orderPo && (inv.orderPo.trim().toUpperCase() === order.poNo?.trim().toUpperCase() || inv.orderPo.trim().toUpperCase() === order.id.trim().toUpperCase())) ||
+                      (inv.id === orderId || inv.invoiceNo === orderId);
+      if (isMatch) {
+        const total = Number(inv.totalAmount || 0);
+        const newPaid = Math.min(total, Number(inv.paidAmount || 0) + payAmt);
+        const newBal = Math.max(0, total - newPaid);
+        return {
+          ...inv,
+          paidAmount: newPaid,
+          balanceAmount: newBal,
+          status: newBal <= 0 ? 'PAID' : 'PARTIAL'
+        };
+      }
+      return inv;
+    }));
+
+    // If an invoice is linked, also call payInvoice to update backend invoice records
+    const targetOrder = orders.find(o => o.id === orderId || o.poNo === orderId);
+    const resolvedInvoiceNo = targetInvNo || targetOrder?.invoiceNo;
+    if (resolvedInvoiceNo) {
+      await payInvoice(resolvedInvoiceNo, {
+        paymentAmount: payAmt,
+        paymentMode: paymentData.mode || 'NEFT_RTGS',
+        referenceNo: paymentData.referenceNo,
+        paymentDate: paymentData.paymentDate,
+        notes: paymentData.remarks
+      });
+    }
+
     const res = await recordOrderPaymentAndClose(orderId, paymentData);
-    await addAuditLog('finance', 'record_payment', `Recorded payment of ₹${paymentData.amount.toLocaleString()} for Order #${orderId} (${res.isFullyPaid ? 'PAID IN FULL' : 'PARTIALLY PAID'})`);
+    await addAuditLog('finance', 'record_payment', `Recorded payment of ₹${payAmt.toLocaleString()} for Order #${orderId} (${res.isFullyPaid ? 'PAID IN FULL' : 'PARTIALLY PAID'})`);
     await loadAllData();
     return res;
   };
@@ -1320,6 +1415,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     handleCancelChallan,
     handleMarkDispatched,
     handleMarkDelivered,
+    handleMarkDelayed,
     handleRecordPayment,
     handleIssueDispatch,
     handleRecordInvoicePayment,

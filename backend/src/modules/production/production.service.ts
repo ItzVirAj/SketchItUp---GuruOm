@@ -1024,25 +1024,93 @@ export class ProductionService {
       console.warn('recordProductionLog DB insert fallback:', err);
     }
 
-    // Derive cumulative logged quantity; auto-complete when target reached.
-    let cumulative = 0;
+    // 1. Fetch all production logs for this job to compute per-step and overall quantities
+    let allLogs: any[] = [];
     try {
       const { data: rows } = await this.db
         .from('production_logs')
-        .select('qty_done')
+        .select('*')
         .eq('job_no', validated.jobNo);
-      if (rows) cumulative = rows.reduce((s, r) => s + Number(r.qty_done || 0), 0);
+      if (rows) allLogs = rows;
     } catch (err) {
-      console.warn('recordProductionLog cumulative read fallback:', err);
+      console.warn('recordProductionLog all logs read fallback:', err);
     }
 
-    const persisted: any = { ...created, cumulative };
+    // Include the just-created log if not already in rows
+    if (!allLogs.some(l => l.id === created.id)) {
+      allLogs.push({
+        id: created.id,
+        job_no: created.jobNo,
+        step_no: created.stepNo,
+        qty_done: created.qtyDone
+      });
+    }
+
+    // Calculate cumulative logged quantity per step sequence
+    const loggedPerStep: Record<number, number> = {};
+    let totalQtyLoggedAcrossJob = 0;
+    for (const log of allLogs) {
+      const seq = Number(log.step_no || log.stepNo || 10);
+      const q = Number(log.qty_done || log.qtyDone || 0);
+      loggedPerStep[seq] = (loggedPerStep[seq] || 0) + q;
+      totalQtyLoggedAcrossJob += q;
+    }
+
+    const targetQty = Number(job.targetQty || job.qty || 1);
+    const currentStepCumulative = loggedPerStep[created.stepNo] || created.qtyDone;
+
+    // 2. Update matching job_card_operations for this step_no if exists
+    try {
+      if (currentStepCumulative >= targetQty) {
+        await this.db
+          .from('job_card_operations')
+          .update({
+            qty_processed: currentStepCumulative,
+            op_status: 'COMPLETED',
+            inspection_passed: true,
+            actual_end_time: new Date().toISOString()
+          })
+          .eq('job_no', validated.jobNo)
+          .eq('sequence_no', created.stepNo);
+      } else {
+        await this.db
+          .from('job_card_operations')
+          .update({
+            qty_processed: currentStepCumulative,
+            op_status: 'IN_PROGRESS'
+          })
+          .eq('job_no', validated.jobNo)
+          .eq('sequence_no', created.stepNo);
+      }
+    } catch (err) {
+      console.warn('recordProductionLog op update fallback:', err);
+    }
+
+    // 3. Determine all required steps for this job
+    let requiredStepSeqs: number[] = [];
+    if (job.operations && job.operations.length > 0) {
+      requiredStepSeqs = job.operations.map((o: any) => Number(o.sequenceNo));
+    } else {
+      // Check Route Card templates for this partCode
+      const templates = await this.getRouteCardTemplates();
+      const matchingTemplates = templates.filter(t => t.partCode === job.partCode);
+      if (matchingTemplates.length > 0) {
+        requiredStepSeqs = matchingTemplates.map(t => Number(t.sequenceNo));
+      } else {
+        // Standard default steps
+        requiredStepSeqs = [10, 20, 30, 40, 50];
+      }
+    }
+
+    // Check if EVERY route step has logged qty >= targetQty
+    const allStepsCompleted = requiredStepSeqs.length > 0 && requiredStepSeqs.every(seq => {
+      return (loggedPerStep[seq] || 0) >= targetQty;
+    });
+
+    const persisted: any = { ...created, cumulative: totalQtyLoggedAcrossJob };
     notificationsService.broadcastEvent('production_log_created', persisted);
 
-    const targetQty = Number(job.targetQty || job.qty || 0);
-    const reachedTarget = targetQty > 0 && cumulative >= targetQty;
-
-    if (reachedTarget) {
+    if (allStepsCompleted) {
       try {
         await this.db
           .from('job_cards')
@@ -1074,14 +1142,24 @@ export class ProductionService {
       if (job.orderPo) {
         await this.advanceOrderToReadyForQcWhenAllJobsComplete(job.orderPo, job.jobNo, actorName);
       }
+    } else {
+      // Keep job IN_PROGRESS
+      try {
+        await this.db
+          .from('job_cards')
+          .update({ status: 'IN_PROGRESS', jobStatus: 'IN_PROGRESS', updated_at: new Date().toISOString() })
+          .eq('job_no', validated.jobNo);
+      } catch (err) {}
+      notificationsService.broadcastEvent('job_card_updated', { ...job, status: 'IN_PROGRESS', jobStatus: 'IN_PROGRESS' });
     }
 
     return {
       log: persisted,
-      jobStatus: reachedTarget ? 'COMPLETED' : 'IN_PROGRESS',
-      cumulativeQty: cumulative,
+      jobStatus: allStepsCompleted ? 'COMPLETED' : 'IN_PROGRESS',
+      allStepsCompleted,
+      loggedPerStep,
       targetQty,
-      qcTriggered: reachedTarget && validated.autoTriggerQC !== false
+      qcTriggered: allStepsCompleted && validated.autoTriggerQC !== false
     };
   }
 

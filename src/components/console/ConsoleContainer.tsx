@@ -237,6 +237,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
     handleCancelChallan,
     handleMarkDispatched,
     handleMarkDelivered,
+    handleMarkDelayed,
     handleRecordPayment
   } = useOwnerOSData(activeUserFallback);
 
@@ -504,6 +505,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
               qcQueue={qcQueue}
               pdiQueue={pdiQueue}
               dispatches={dispatches}
+              invoices={invoices}
               vendors={vendors}
               isDarkMode={isDarkMode}
               currentRole={currentRole}
@@ -541,14 +543,83 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
                 setPendingDispatchOrderPo(orderPo || null);
                 handleNavigateView('dispatch');
               }}
-              onCompletePDI={handleCompletePDI}
-              onGenerateInvoice={handleGenerateInvoice}
-              onGenerateChallan={handleGenerateChallan}
+              onCompletePDI={async (orderId, payload) => {
+                if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
+                  setDynamicFetchedOrder(prev => prev ? { ...prev, status: 'READY_TO_DISPATCH', stage: 'READY_TO_DISPATCH', progressStep: 4 } : null);
+                }
+                return handleCompletePDI(orderId, payload);
+              }}
+              onGenerateInvoice={async (orderId, invoiceData) => {
+                if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
+                  const invNo = typeof invoiceData === 'string' ? invoiceData : (invoiceData.invoiceNo || invoiceData.invoice_no);
+                  setDynamicFetchedOrder(prev => prev ? { ...prev, invoiceNo: invNo } : null);
+                }
+                return handleGenerateInvoice(orderId, invoiceData);
+              }}
+              onGenerateChallan={async (orderId, challanData) => {
+                if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
+                  const chNo = typeof challanData === 'string' ? challanData : (challanData.challanNo || challanData.challan_no);
+                  setDynamicFetchedOrder(prev => prev ? { ...prev, deliveryChallanNo: chNo } : null);
+                }
+                return handleGenerateChallan(orderId, challanData);
+              }}
               onUpdateChallan={handleUpdateChallan}
               onCancelChallan={handleCancelChallan}
-              onMarkDispatched={handleMarkDispatched}
-              onMarkDelivered={handleMarkDelivered}
-              onRecordPayment={handleRecordPayment}
+              onMarkDispatched={async (orderId, dispatchData) => {
+                if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
+                  setDynamicFetchedOrder(prev => prev ? {
+                    ...prev,
+                    status: 'DISPATCHED',
+                    stage: 'DISPATCHED',
+                    progressStep: 5,
+                    deliveryChallanNo: dispatchData?.challanNo || prev.deliveryChallanNo
+                  } : null);
+                }
+                return handleMarkDispatched(orderId, dispatchData);
+              }}
+              onMarkDelivered={async (orderId, deliveryData) => {
+                if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
+                  setDynamicFetchedOrder(prev => prev ? {
+                    ...prev,
+                    status: 'DELIVERED',
+                    stage: 'DELIVERED',
+                    progressStep: 6,
+                    podDocumentUrl: deliveryData?.podDocumentUrl || prev.podDocumentUrl,
+                    podReceivedDate: deliveryData?.podReceivedDate || new Date().toISOString().split('T')[0],
+                    podReceivedBy: deliveryData?.podReceivedBy || prev.podReceivedBy
+                  } : null);
+                }
+                return handleMarkDelivered(orderId, deliveryData);
+              }}
+              onMarkDelayed={async (orderId, delayData) => {
+                if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
+                  setDynamicFetchedOrder(prev => prev ? {
+                    ...prev,
+                    status: 'DELIVERY_DELAYED',
+                    stage: 'DELIVERY_DELAYED',
+                    delayedReason: delayData?.reason,
+                    delayedFollowUpDate: delayData?.followUpDate
+                  } : null);
+                }
+                return handleMarkDelayed(orderId, delayData);
+              }}
+              onRecordPayment={async (orderId, paymentData) => {
+                if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
+                  const payAmt = Number(paymentData.amount || paymentData.paymentAmount || 0);
+                  const gross = Number(dynamicFetchedOrder.grossAmount || 0);
+                  const newPaid = Number(dynamicFetchedOrder.paidAmount || 0) + payAmt;
+                  const isPaid = newPaid >= gross;
+                  setDynamicFetchedOrder(prev => prev ? {
+                    ...prev,
+                    paidAmount: newPaid,
+                    paymentStatus: isPaid ? 'PAID' : 'PARTIAL',
+                    stage: (isPaid ? 'INVOICED' : 'PAYMENT_PENDING') as any,
+                    status: (isPaid ? 'INVOICED' : 'PAYMENT_PENDING') as any,
+                    progressStep: 10
+                  } : null);
+                }
+                return handleRecordPayment(orderId, paymentData);
+              }}
             />
           )}
 
@@ -657,6 +728,23 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
                     lines: targetOrd.lines
                   });
                 }
+              }}
+              onMarkDelivered={async (orderIdOrPo, deliveryData) => {
+                const targetOrd = orders.find(o => o.id === orderIdOrPo || o.poNo === orderIdOrPo || o.deliveryChallanNo === orderIdOrPo) ||
+                  (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderIdOrPo || dynamicFetchedOrder.poNo === orderIdOrPo) ? dynamicFetchedOrder : null);
+                const orderId = targetOrd ? targetOrd.id : orderIdOrPo;
+                if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
+                  setDynamicFetchedOrder(prev => prev ? {
+                    ...prev,
+                    status: 'DELIVERED',
+                    stage: 'DELIVERED',
+                    progressStep: 6,
+                    podDocumentUrl: deliveryData?.podDocumentUrl || prev.podDocumentUrl,
+                    podReceivedDate: deliveryData?.podReceivedDate || new Date().toISOString().split('T')[0],
+                    podReceivedBy: deliveryData?.podReceivedBy || prev.podReceivedBy
+                  } : null);
+                }
+                return handleMarkDelivered(orderId, deliveryData);
               }}
               onNavigateToOrder={(po) => {
                 const ord = orders.find(o => o.poNo === po || o.id === po);

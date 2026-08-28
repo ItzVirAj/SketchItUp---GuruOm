@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   ArrowLeft, 
   Upload, 
@@ -38,9 +38,10 @@ import {
   Square,
   ClipboardCheck,
   Loader2,
-  Eye
+  Eye,
+  ExternalLink
 } from 'lucide-react';
-import { CustomerOrder, OrderStatus, QCInspection, PDIInspection, OrderLineItem, UserRole, VendorMaster, DispatchChallan } from '../../../types/console';
+import { CustomerOrder, OrderStatus, QCInspection, PDIInspection, OrderLineItem, UserRole, VendorMaster, DispatchChallan, CustomerInvoice } from '../../../types/console';
 import { isRoleAuthorizedForCta, getCtaPermission, CtaId, normalizeRole } from '../../../utils/rbacMatrix';
 import { executeOrderStageTransition, validatePodRequired, validateOrderClosure, normalizeOrderState, CanonicalOrderState } from '../../../utils/orderStateMachine';
 import { runMaterialCheckForOrder, overrideMaterialCheckForOrder } from '../../../services/supabaseServices';
@@ -52,6 +53,7 @@ interface OrderDetailViewProps {
   qcQueue?: QCInspection[];
   pdiQueue?: PDIInspection[];
   dispatches?: DispatchChallan[];
+  invoices?: CustomerInvoice[];
   vendors?: VendorMaster[];
   isDarkMode: boolean;
   currentRole?: UserRole | string;
@@ -72,6 +74,7 @@ interface OrderDetailViewProps {
   onCancelChallan?: (challanNo: string, reason?: string) => Promise<void>;
   onMarkDispatched?: (orderId: string, dispatchData: any) => Promise<any> | void;
   onMarkDelivered?: (orderId: string, deliveryData: any) => Promise<any> | void;
+  onMarkDelayed?: (orderId: string, delayData: { reason?: string; followUpDate?: string }) => Promise<any> | void;
   onRecordPayment?: (orderId: string, paymentData: any) => Promise<any> | void;
 }
 
@@ -80,6 +83,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   qcQueue = [],
   pdiQueue = [],
   dispatches = [],
+  invoices = [],
   vendors = [],
   isDarkMode,
   currentRole = 'SUPER ADMIN',
@@ -100,6 +104,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   onCancelChallan,
   onMarkDispatched,
   onMarkDelivered,
+  onMarkDelayed,
   onRecordPayment
 }) => {
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -113,6 +118,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   const [showChallanModal, setShowChallanModal] = useState(false);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
   const [showDeliveryModal, setShowDeliveryModal] = useState(false);
+  const [showDelayedModal, setShowDelayedModal] = useState(false);
   const [showChallanDetailModal, setShowChallanDetailModal] = useState(false);
   const [selectedChallanDetail, setSelectedChallanDetail] = useState<DispatchChallan | null>(null);
 
@@ -170,6 +176,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   const [dispatchRemarks, setDispatchRemarks] = useState('');
 
   // 5. Delivery Modal State
+  const podFileInputRef = useRef<HTMLInputElement>(null);
   const [deliveryDate, setDeliveryDate] = useState(new Date().toISOString().split('T')[0]);
   const [deliveryReceivedBy, setDeliveryReceivedBy] = useState(order.podReceivedBy || 'Stores Gate Security');
   const [deliveryRemarks, setDeliveryRemarks] = useState('Consignment received in intact condition');
@@ -182,10 +189,39 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   const [podDate, setPodDate] = useState(order.podReceivedDate || new Date().toISOString().split('T')[0]);
   const [podError, setPodError] = useState<string | null>(null);
 
+  // 6b. Delayed Form State (Part 3: DELIVERY_DELAYED)
+  const [delayedReason, setDelayedReason] = useState('Consignment delayed — delivery rescheduled');
+  const [delayedFollowUpDate, setDelayedFollowUpDate] = useState(
+    new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  );
+  const [delayedError, setDelayedError] = useState<string | null>(null);
+
+  const linkedDispatches = (dispatches || []).filter(d => 
+    (d.orderPo && ((order.poNo && d.orderPo.trim().toUpperCase() === order.poNo.trim().toUpperCase()) || (order.id && d.orderPo.trim().toUpperCase() === order.id.trim().toUpperCase()))) ||
+    (order.deliveryChallanNo && d.challanNo && d.challanNo.trim().toUpperCase() === order.deliveryChallanNo.trim().toUpperCase())
+  );
+
+  const latestDispatch = linkedDispatches[linkedDispatches.length - 1];
+  const effectiveChallanNo = order.deliveryChallanNo || latestDispatch?.challanNo || null;
+  const isDispatched = ['DISPATCHED', 'IN_TRANSIT', 'DELIVERED', 'CLOSED', 'PAID'].includes((order.status || order.stage || '').toUpperCase()) || latestDispatch?.status === 'DISPATCHED';
+
+  const linkedInvoices = (invoices || []).filter(inv => 
+    (inv.orderPo && ((order.poNo && inv.orderPo.trim().toUpperCase() === order.poNo.trim().toUpperCase()) || (order.id && inv.orderPo.trim().toUpperCase() === order.id.trim().toUpperCase()))) ||
+    (inv.poNo && ((order.poNo && inv.poNo.trim().toUpperCase() === order.poNo.trim().toUpperCase()) || (order.id && inv.poNo.trim().toUpperCase() === order.id.trim().toUpperCase()))) ||
+    (effectiveChallanNo && (inv as any).challanNo && (inv as any).challanNo.trim().toUpperCase() === effectiveChallanNo.trim().toUpperCase()) ||
+    (order.deliveryChallanNo && (inv as any).challanNo && (inv as any).challanNo.trim().toUpperCase() === order.deliveryChallanNo.trim().toUpperCase()) ||
+    (order.invoiceNo && (inv.invoiceNo === order.invoiceNo || inv.id === order.invoiceNo)) ||
+    (effectiveChallanNo && (inv as any).dispatchNo && (inv as any).dispatchNo.trim().toUpperCase() === effectiveChallanNo.trim().toUpperCase()) ||
+    (order.dispatchNo && (inv as any).dispatchNo && (inv as any).dispatchNo.trim().toUpperCase() === order.dispatchNo.trim().toUpperCase())
+  );
+
+  const latestInvoice = linkedInvoices[linkedInvoices.length - 1];
+  const effectiveInvoiceNo = order.invoiceNo || (latestDispatch as any)?.invoiceNo || latestInvoice?.invoiceNo || null;
+
   // 7. Payment Form State (PRD v1.0 Hard Gate)
-  const gross = Number(order.grossAmount || (order.lines || []).reduce((sum, l) => sum + (Number(l.orderQty || 0) * Number(l.rate || 0)), 0));
-  const currentPaid = Number(order.paidAmount || 0);
-  const remainingOutstanding = Math.max(0, gross - currentPaid);
+  const gross = Number(latestInvoice?.totalAmount || order.grossAmount || (order.lines || []).reduce((sum, l) => sum + (Number(l.orderQty || 0) * Number(l.rate || 0)), 0));
+  const currentPaid = Number(latestInvoice?.paidAmount !== undefined ? latestInvoice.paidAmount : (order.paidAmount || 0));
+  const remainingOutstanding = Number(latestInvoice?.balanceAmount !== undefined ? latestInvoice.balanceAmount : Math.max(0, gross - currentPaid));
   const [paymentAmount, setPaymentAmount] = useState<number>(remainingOutstanding > 0 ? remainingOutstanding : gross);
   const [paymentMode, setPaymentMode] = useState<'NEFT' | 'RTGS' | 'UPI' | 'CHEQUE'>('NEFT');
   const [paymentRefNo, setPaymentRefNo] = useState(`UTR-${Date.now().toString().slice(-6)}`);
@@ -223,7 +259,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
     { name: 'Production', subtitle: 'Job Cards & Machining', key: 1, icon: Package, stageMatch: ['MATERIAL_CHECKED', 'MATERIAL_CHECK', 'MATERIAL_READY', 'MATERIAL_VERIFIED', 'PROCUREMENT_PENDING', 'GRN', 'PO_SENT', 'GRN_RECEIVED', 'JOB_RELEASED', 'MATERIAL_ISSUED', 'IN_PRODUCTION', 'WITH_SUBCONTRACTOR', 'REWORK'] },
     { name: 'QC / PDI', subtitle: 'Compliance & Audit', key: 2, icon: ShieldCheck, stageMatch: ['READY_FOR_QC', 'QC', 'QC_INSPECTION', 'QC_HOLD', 'QC_REPORT_UPLOADED', 'PDI', 'PDI_HOLD'] },
     { name: 'Invoice & Challan', subtitle: 'Dispatch Prep', key: 3, icon: FileText, stageMatch: ['PDI_COMPLETE', 'READY_FOR_DISPATCH', 'READY_TO_DISPATCH', 'INVOICE_GENERATED', 'DISPATCH_READY'] },
-    { name: 'Dispatched', subtitle: 'Shipped to Customer', key: 4, icon: Truck, stageMatch: ['PARTIALLY_DISPATCHED', 'DISPATCHED', 'IN_TRANSIT'] },
+    { name: 'Dispatched', subtitle: 'Shipped to Customer', key: 4, icon: Truck, stageMatch: ['PARTIALLY_DISPATCHED', 'DISPATCHED', 'IN_TRANSIT', 'DELIVERY_DELAYED'] },
     { name: 'Delivered', subtitle: 'Goods Received', key: 5, icon: CheckCircle2, stageMatch: ['DELIVERED'] },
     { name: 'Receivable', subtitle: 'Payment Pending', key: 6, icon: DollarSign, stageMatch: ['PAYMENT_PENDING', 'INVOICED'] },
     { name: 'Closed', subtitle: 'Order Settled', key: 7, icon: CheckCircle, stageMatch: ['COMPLETED', 'CLOSED', 'PAID'] }
@@ -235,15 +271,6 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       setShowUploadModal(false);
     }
   };
-
-  const linkedDispatches = (dispatches || []).filter(d => 
-    (d.orderPo && ((order.poNo && d.orderPo.trim().toUpperCase() === order.poNo.trim().toUpperCase()) || (order.id && d.orderPo.trim().toUpperCase() === order.id.trim().toUpperCase()))) ||
-    (order.deliveryChallanNo && d.challanNo && d.challanNo.trim().toUpperCase() === order.deliveryChallanNo.trim().toUpperCase())
-  );
-
-  const latestDispatch = linkedDispatches[linkedDispatches.length - 1];
-  const effectiveChallanNo = order.deliveryChallanNo || latestDispatch?.challanNo || null;
-  const isDispatched = ['DISPATCHED', 'IN_TRANSIT', 'DELIVERED', 'CLOSED', 'PAID'].includes((order.status || order.stage || '').toUpperCase()) || latestDispatch?.status === 'DISPATCHED';
 
   const linkedPdi = (pdiQueue || []).filter(p => 
     (p.orderPo && ((order.poNo && p.orderPo.trim().toUpperCase() === order.poNo.trim().toUpperCase()) || (order.id && p.orderPo.trim().toUpperCase() === order.id.trim().toUpperCase()))) ||
@@ -269,13 +296,13 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   // Active step index calculation matching the 8-stage lifecycle
   let activeStepIndex = 0;
   const currentStage = (order.status || order.stage || 'DRAFT').toUpperCase();
-  if (['COMPLETED', 'CLOSED', 'PAID'].includes(currentStage)) {
+  if (['COMPLETED', 'CLOSED'].includes(currentStage)) {
     activeStepIndex = 7;
-  } else if (['PAYMENT_PENDING', 'INVOICED'].includes(currentStage)) {
+  } else if (['PAYMENT_PENDING', 'INVOICED'].includes(currentStage) || (['DELIVERED'].includes(currentStage) && (order.paymentStatus === 'PAID' || remainingOutstanding <= 0))) {
     activeStepIndex = 6;
-  } else if (['DELIVERED'].includes(currentStage)) {
-    activeStepIndex = 5;
-  } else if (isDispatched || ['PARTIALLY_DISPATCHED', 'DISPATCHED', 'IN_TRANSIT'].includes(currentStage)) {
+  } else if (['DELIVERED'].includes(currentStage) || Boolean(order.podReceivedDate)) {
+    activeStepIndex = (remainingOutstanding <= 0 || order.paymentStatus === 'PAID') ? 6 : 5;
+  } else if (isDispatched || ['PARTIALLY_DISPATCHED', 'DISPATCHED', 'IN_TRANSIT', 'DELIVERY_DELAYED'].includes(currentStage)) {
     activeStepIndex = 4;
   } else if (isPdiPassed || ['PDI_COMPLETE', 'READY_FOR_DISPATCH', 'READY_TO_DISPATCH', 'INVOICE_GENERATED', 'DISPATCH_READY'].includes(currentStage)) {
     activeStepIndex = 3;
@@ -357,11 +384,14 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   };
 
   const handleGenerateInvoiceSubmit = async () => {
+    if (isConfirming) return; // block double-click patently until request resolves
     try {
       setIsConfirming(true);
+      setConfirmError(null);
       const calculatedTax = Math.round(gross * 0.18);
       const totalInvoiceAmount = gross + calculatedTax;
 
+      const idempotencyKey = `idmp-inv-${order.poNo}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       const invoiceData = {
         orderPo: order.poNo || order.id,
         customerName: order.customerName || 'Customer Entity',
@@ -369,7 +399,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         taxAmount: calculatedTax,
         invoiceNo: genInvoiceNo.trim() || `INV-26-${Math.floor(1000 + Math.random() * 9000)}`,
         invoiceDate: genInvoiceDate,
-        items: order.lines || []
+        items: order.lines || [],
+        idempotencyKey
       };
 
       if (onGenerateInvoice) {
@@ -385,6 +416,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
       setShowInvoiceModal(false);
     } catch (err: any) {
+      // Duplicate/in-flight guard surfaced clearly (Part 2): keep the modal open so the
+      // user sees the "already exists: INV-XXXX" message instead of a silent false success.
       setConfirmError(err?.message || 'Failed to generate tax invoice.');
     } finally {
       setIsConfirming(false);
@@ -864,6 +897,36 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   // PRD v1.0 Hard Gate: POD Submission modal handler
   const handleSavePodDelivery = handleDeliverySubmit;
 
+  // Part 3: Mark Delayed handler
+  const handleMarkDelayedSubmit = async () => {
+    if (isConfirming) return;
+    if (!delayedReason.trim()) {
+      setDelayedError('A delay reason is required.');
+      return;
+    }
+    try {
+      setIsConfirming(true);
+      setDelayedError(null);
+      if (onMarkDelayed) {
+        await onMarkDelayed(order.id, {
+          reason: delayedReason.trim(),
+          followUpDate: delayedFollowUpDate
+        });
+      } else if (onUpdateOrder) {
+        await onUpdateOrder(order.id, {
+          status: 'DELIVERY_DELAYED' as any,
+          stage: 'DELIVERY_DELAYED' as any,
+          progressStep: 9
+        });
+      }
+      setShowDelayedModal(false);
+    } catch (err: any) {
+      setDelayedError(err?.message || 'Failed to mark delivery delayed.');
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
   const handleGenerateInvoiceAction = async () => {
     try {
       setIsConfirming(true);
@@ -872,7 +935,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         await onUpdateOrder(order.id, {
           status: 'INVOICED',
           stage: 'INVOICED',
-          invoiceNo: order.invoiceNo || `INV-2526-${Math.floor(1000 + Math.random() * 9000)}`,
+          invoiceNo: effectiveInvoiceNo || `INV-2526-${Math.floor(1000 + Math.random() * 9000)}`,
           paymentStatus: order.paymentStatus || 'UNPAID',
           progressStep: 10
         });
@@ -906,7 +969,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           paymentDate,
           currentPaid,
           grossAmount: gross,
-          remarks: 'Commercial settlement payment',
+          invoiceNo: effectiveInvoiceNo || latestInvoice?.invoiceNo,
+          remarks: `Commercial settlement for ${order.poNo || order.id} (Invoice: ${effectiveInvoiceNo || 'Direct'})`,
           receivedBy: currentUser?.name || 'Accounts Officer'
         });
       } else if (onUpdateOrder) {
@@ -956,7 +1020,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       const closeRes = validateOrderClosure(
         currentStage as any,
         order.paymentStatus || (remainingOutstanding <= 0 ? 'PAID' : 'UNPAID'),
-        remainingOutstanding
+        remainingOutstanding,
+        isDeliveredState
       );
 
       if (!closeRes.valid) {
@@ -1098,9 +1163,9 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       };
     }
 
-    // Stage 6 (Dispatched / In Transit): shipped / in transit -> Generate Invoice or Mark Delivered
-    if (isDispatched || ['PARTIALLY_DISPATCHED', 'DISPATCHED', 'IN_TRANSIT'].includes(st)) {
-      if (!order.invoiceNo) {
+    // Stage 6 (Dispatched / In Transit / Delivery Delayed): shipped / in transit -> Generate Invoice or Order Received (Mark Delivered)
+    if (isDispatched || ['PARTIALLY_DISPATCHED', 'DISPATCHED', 'IN_TRANSIT', 'DELIVERY_DELAYED'].includes(st)) {
+      if (!effectiveInvoiceNo) {
         const allowed = isRoleAuthorizedForCta(currentRole, 'GENERATE_INVOICE');
         return {
           label: 'Generate Statutory GST Tax Invoice (Stage 9)',
@@ -1112,11 +1177,14 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           ownerRole: 'Accounts / Finance'
         };
       } else if (!['DELIVERED', 'COMPLETED', 'CLOSED'].includes(st) && !order.podReceivedDate && !order.podDocumentUrl) {
-        const allowed = isRoleAuthorizedForCta(currentRole, 'MARK_DELIVERED');
+        const allowed = isRoleAuthorizedForCta(currentRole, 'MARK_DELIVERED') || isRoleAuthorizedForCta(currentRole, 'ORDER_RECEIVED');
+        const isDelayed = st === 'DELIVERY_DELAYED';
         return {
-          label: 'Mark Delivered (Stage 10a)',
+          label: isDelayed ? 'Order Received / Confirm Delivery (Stage 10a)' : 'Order Received / Mark Delivered (Stage 10a)',
           icon: CheckCircle2,
-          buttonClass: 'bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-emerald-600 hover:to-blue-600 text-white shadow-blue-500/25',
+          buttonClass: isDelayed
+            ? 'bg-gradient-to-r from-amber-600 to-emerald-600 hover:from-emerald-600 hover:to-amber-600 text-white shadow-amber-500/25'
+            : 'bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-emerald-600 hover:to-blue-600 text-white shadow-blue-500/25',
           handler: () => setShowDeliveryModal(true),
           disabled: !allowed,
           disabledReason: !allowed ? 'Only Dispatch Clerk or Owner can mark delivered' : undefined,
@@ -1140,10 +1208,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         };
       } else {
         return {
-          label: 'Mark as Dispatched (Outward Logistics)',
-          icon: Truck,
+          label: `View / Dispatch Challan (${effectiveChallanNo})`,
+          icon: Eye,
           buttonClass: 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-blue-600 hover:to-cyan-600 text-white shadow-cyan-500/25',
-          handler: () => setShowDispatchModal(true),
+          handler: handleOpenChallanDetailModal,
           disabled: isConfirming || hasNcr || !allowed,
           disabledReason: !allowed ? 'Only Dispatch Clerk or Owner can dispatch the order' : hasNcr ? 'Open NCR / QC Hold must be resolved before dispatch' : undefined,
           ownerRole: 'Quality & Dispatch'
@@ -1151,9 +1219,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       }
     }
 
-    // Stage 7 (Delivered / Payment Pending / Invoiced): Invoicing, Payment Collection, or Order Closure
-    if (['DELIVERED', 'PAYMENT_PENDING', 'INVOICED'].includes(st) || Boolean(order.podReceivedDate) || Boolean(order.podDocumentUrl)) {
-      if (!order.invoiceNo) {
+    // Stage 7 (Delivered / Payment Pending): Invoicing, Payment Collection, or Order Closure
+    // Strictly requires delivery confirmation (or POD) and excludes DELIVERY_DELAYED
+    if ((['DELIVERED', 'PAYMENT_PENDING'].includes(st) || Boolean(order.podReceivedDate) || (['INVOICED'].includes(st) && Boolean(order.podDocumentUrl))) && st !== 'DELIVERY_DELAYED') {
+      if (!effectiveInvoiceNo) {
         const allowed = isRoleAuthorizedForCta(currentRole, 'GENERATE_INVOICE');
         return {
           label: 'Generate Statutory GST Tax Invoice (Stage 9)',
@@ -1168,9 +1237,9 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
       const isDeliveredState = ['DELIVERED', 'COMPLETED', 'CLOSED'].includes(st) || Boolean(order.podReceivedDate);
       if (!isDeliveredState) {
-        const allowed = isRoleAuthorizedForCta(currentRole, 'MARK_DELIVERED');
+        const allowed = isRoleAuthorizedForCta(currentRole, 'MARK_DELIVERED') || isRoleAuthorizedForCta(currentRole, 'ORDER_RECEIVED');
         return {
-          label: 'Mark Delivered (Stage 10a)',
+          label: 'Order Received / Mark Delivered (Stage 10a)',
           icon: CheckCircle2,
           buttonClass: 'bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-emerald-600 hover:to-blue-600 text-white shadow-blue-500/25',
           handler: () => setShowDeliveryModal(true),
@@ -1194,6 +1263,15 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           disabled: !allowed,
           disabledReason: !allowed ? 'Only Finance / Accounts or Owner can record payments' : undefined,
           ownerRole: 'Accounts & Finance Controller'
+        };
+      } else if (['CLOSED', 'COMPLETED'].includes(st)) {
+        return {
+          label: 'Order Closed & Settled (Completed)',
+          icon: Lock,
+          buttonClass: 'bg-slate-800 text-emerald-400 border border-emerald-500/30 cursor-default opacity-90',
+          handler: () => {},
+          disabled: true,
+          ownerRole: 'Lifecycle Complete'
         };
       } else {
         const allowed = isRoleAuthorizedForCta(currentRole, 'MARK_ORDER_CLOSED');
@@ -1258,8 +1336,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           viewLabel: 'Open Dispatch Register ➔',
           endpoint: 'POST /api/v1/dispatch',
           role: 'DISPATCH_STORE / OPS_ADMIN',
-          testActionLabel: order.deliveryChallanNo ? '⚡ Confirm Outward Dispatch' : '⚡ Issue Delivery Challan',
-          onTest: () => order.deliveryChallanNo ? setShowDispatchModal(true) : setShowChallanModal(true)
+          testActionLabel: effectiveChallanNo ? '⚡ View / Dispatch Challan' : '⚡ Issue Delivery Challan',
+          onTest: () => effectiveChallanNo ? handleOpenChallanDetailModal() : setShowChallanModal(true)
         };
       case 4:
         return {
@@ -1280,10 +1358,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           viewLabel: 'Open Dispatch Register ➔',
           endpoint: 'POST /api/v1/dispatch/:id/deliver',
           role: 'DISPATCH_STORE / OPS_ADMIN',
-          testActionLabel: order.invoiceNo ? '⚡ Mark Delivered (POD)' : '⚡ Generate GST Invoice',
-          onTest: () => order.invoiceNo ? setShowDeliveryModal(true) : handleGoToCreateInvoice()
+          testActionLabel: effectiveInvoiceNo ? '⚡ Mark Delivered (POD)' : '⚡ Generate GST Invoice',
+          onTest: () => effectiveInvoiceNo ? setShowDeliveryModal(true) : handleGoToCreateInvoice()
         };
-      default:
+      case 6:
         return {
           title: 'Stage 7: Payment Realization',
           desc: 'Tax invoice issued. Record customer NEFT/RTGS collections against outstanding balance; full settlement closes the order.',
@@ -1291,8 +1369,20 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           viewLabel: 'Open Invoices & Accounts ➔',
           endpoint: 'POST /api/v1/invoices/:invoiceNo/pay',
           role: 'ACCOUNTS_ADMIN / FINANCE',
-          testActionLabel: remainingOutstanding > 0 ? '⚡ Record Payment Received' : 'Order Settled in Full',
-          onTest: remainingOutstanding > 0 ? () => setShowPaymentModal(true) : undefined
+          testActionLabel: remainingOutstanding > 0 ? '⚡ Record Payment Received' : '⚡ Mark Order Closed',
+          onTest: remainingOutstanding > 0 ? () => setShowPaymentModal(true) : handleCloseOrderAction
+        };
+      case 7:
+      default:
+        return {
+          title: 'Stage 8: Order Closed & Settled',
+          desc: 'Order lifecycle complete. Consignment delivered, verified POD received, and invoice settled in full.',
+          targetView: 'orders',
+          viewLabel: 'Open Order Register ➔',
+          endpoint: 'POST /api/v1/orders/:id/close',
+          role: 'FINANCE / SUPER_ADMIN',
+          testActionLabel: '✓ Order Closed & Locked',
+          onTest: undefined
         };
     }
   };
@@ -1906,26 +1996,14 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                         <span>Generate Delivery Challan</span>
                       </button>
                     ) : (
-                      <>
-                        <button
-                          type="button"
-                          onClick={handleOpenChallanDetailModal}
-                          className="px-3.5 py-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-400 border border-cyan-500/30 text-xs font-mono font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
-                        >
-                          <Eye className="w-3.5 h-3.5 shrink-0" />
-                          <span>View / Edit {effectiveChallanNo}</span>
-                        </button>
-                        {!isDispatched && (
-                          <button
-                            disabled={isConfirming || hasNcr || !allowed}
-                            onClick={() => setShowDispatchModal(true)}
-                            className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-blue-600 hover:to-cyan-600 text-white text-xs font-bold shadow-md shadow-cyan-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
-                          >
-                            <Truck className="w-3.5 h-3.5 shrink-0" />
-                            <span>Mark In Transit (Confirm Dispatch)</span>
-                          </button>
-                        )}
-                      </>
+                      <button
+                        type="button"
+                        onClick={handleOpenChallanDetailModal}
+                        className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-blue-600 hover:to-cyan-600 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-cyan-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap shrink-0"
+                      >
+                        <Eye className="w-4 h-4 shrink-0" />
+                        <span>View / Dispatch Challan ({effectiveChallanNo})</span>
+                      </button>
                     )}
                   </div>
                 );
@@ -1939,9 +2017,28 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               description: 'Statutory GST Tax Invoice (INV-2627-####) generation against outward dispatch challan.',
               icon: Receipt,
               matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
-                (isDispatched || ['DISPATCHED', 'PARTIALLY_DISPATCHED', 'INVOICE_GENERATED', 'INVOICED'].includes(n) || ['DISPATCHED', 'PARTIALLY_DISPATCHED'].includes((o.status || '').toUpperCase())) && (!o.invoiceNo || o.invoiceNo === ''),
+                (isDispatched || ['DISPATCHED', 'PARTIALLY_DISPATCHED', 'INVOICE_GENERATED', 'INVOICED'].includes(n) || ['DISPATCHED', 'PARTIALLY_DISPATCHED'].includes((o.status || '').toUpperCase())) && (!effectiveInvoiceNo || effectiveInvoiceNo === ''),
               renderActions: () => {
                 const allowed = isRoleAuthorizedForCta(currentRole, 'GENERATE_INVOICE');
+                if (effectiveInvoiceNo) {
+                  return (
+                    <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
+                      <span className="text-xs font-mono font-bold px-3 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Invoice: {effectiveInvoiceNo}</span>
+                      </span>
+                      {onNavigate && (
+                        <button
+                          onClick={() => onNavigate('invoices')}
+                          className="px-3 py-1.5 rounded-xl bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 border border-indigo-500/30 text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>View in Invoices</span>
+                        </button>
+                      )}
+                    </div>
+                  );
+                }
                 return (
                   <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
                     <button
@@ -1959,27 +2056,47 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             {
               id: 'stage-10a',
               stageNumber: 'Stage 10a',
-              name: 'Delivery Confirmation',
+              name: 'Order Received / Delivery Status',
               role: 'Dispatch & Transport Desk',
-              description: 'Confirm the dispatched consignment has reached the customer. Requires proof of delivery.',
+              description: 'Confirm customer receipt (with mandatory POD) or record in-transit delivery delay.',
               icon: CheckCircle2,
               matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
-                (Boolean(o.invoiceNo) || isDispatched || ['DISPATCHED', 'IN_TRANSIT', 'PARTIALLY_DISPATCHED'].includes((o.status || '').toUpperCase())) && 
+                (Boolean(effectiveInvoiceNo) || isDispatched || ['DISPATCHED', 'IN_TRANSIT', 'PARTIALLY_DISPATCHED', 'DELIVERY_DELAYED'].includes((o.status || '').toUpperCase())) && 
                 !['DELIVERED', 'COMPLETED', 'CLOSED'].includes((o.status || '').toUpperCase()) &&
                 !Boolean(o.podDocumentUrl || o.podReceivedDate),
               renderActions: () => {
-                const allowed = isRoleAuthorizedForCta(currentRole, 'MARK_DELIVERED');
+                const allowedDelivered = isRoleAuthorizedForCta(currentRole, 'MARK_DELIVERED') || isRoleAuthorizedForCta(currentRole, 'ORDER_RECEIVED');
+                const allowedDelayed = isRoleAuthorizedForCta(currentRole, 'MARK_DELAYED');
+                const isDelayed = (order.status || order.stage || '').toUpperCase() === 'DELIVERY_DELAYED';
+
                 return (
                   <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
+                    {isDelayed && (
+                      <span className="text-xs font-mono font-bold px-3 py-1.5 rounded-xl bg-amber-500/15 text-amber-400 border border-amber-500/30 whitespace-nowrap shrink-0 flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Delivery Delayed {order.delayedReason ? `(${order.delayedReason})` : ''}</span>
+                      </span>
+                    )}
                     <button
-                      disabled={isConfirming || !allowed}
+                      disabled={isConfirming || !allowedDelivered}
                       onClick={() => setShowDeliveryModal(true)}
-                      title={!allowed ? 'Only Dispatch Clerk or Owner can confirm delivery' : undefined}
+                      title={!allowedDelivered ? 'Only Dispatch Clerk or Owner can confirm delivery' : undefined}
                       className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-emerald-600 hover:to-blue-600 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                      <span>Mark Delivered</span>
+                      <span>Order Received (POD)</span>
                     </button>
+                    {!isDelayed && (
+                      <button
+                        disabled={isConfirming || !allowedDelayed}
+                        onClick={() => setShowDelayedModal(true)}
+                        title={!allowedDelayed ? 'Only Dispatch Clerk or Owner can mark delayed' : undefined}
+                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-bold shadow-md shadow-amber-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
+                      >
+                        <Clock className="w-3.5 h-3.5 shrink-0" />
+                        <span>Mark Delayed</span>
+                      </button>
+                    )}
                   </div>
                 );
               }
@@ -1989,12 +2106,14 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               stageNumber: 'Stage 11',
               name: 'Payment Collection',
               role: 'Accounts & Finance Controller',
-              description: 'Record customer payment against the issued invoice.',
+              description: 'Record customer payment against the issued invoice after goods are received.',
               icon: CreditCard,
-              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
-                (['DELIVERED', 'INVOICED', 'PAYMENT_PENDING'].includes((o.status || '').toUpperCase()) || Boolean(o.podReceivedDate) || Boolean(o.podDocumentUrl)) && 
-                !['COMPLETED', 'CLOSED'].includes((o.status || '').toUpperCase()) &&
-                (remainingOutstanding > 0 || o.paymentStatus !== 'PAID'),
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => {
+                const status = (o.status || o.stage || '').toUpperCase();
+                const isGenuinelyDelivered = ['DELIVERED', 'PAYMENT_PENDING'].includes(status) || Boolean(o.podReceivedDate) || Boolean(o.podDocumentUrl);
+                const isDelayed = status === 'DELIVERY_DELAYED';
+                return isGenuinelyDelivered && !isDelayed && !['COMPLETED', 'CLOSED'].includes(status) && (remainingOutstanding > 0 || o.paymentStatus !== 'PAID');
+              },
               renderActions: () => {
                 const allowed = isRoleAuthorizedForCta(currentRole, 'RECORD_PAYMENT');
                 const isPartial = currentPaid > 0 && remainingOutstanding > 0;
@@ -2338,26 +2457,40 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
       {/* Upload Modal */}
       {showUploadModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-md rounded-3xl border p-6 space-y-4 font-mono text-xs z-10 shadow-2xl ${
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
+          <div className={`relative w-full max-w-md rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${
             isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
           }`}>
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div className={`flex items-center justify-between border-b pb-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <h3 className="font-bold text-sm uppercase text-[#5B75F8] dark:text-[#7B92FF]">Upload Client PO Document</h3>
-              <button onClick={() => setShowUploadModal(false)} className="text-slate-400 hover:text-white font-bold cursor-pointer">
+              <button 
+                onClick={() => setShowUploadModal(false)} 
+                className={`p-1 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div>
-              <p className="text-xs text-slate-400 mb-3">Upload PDF or image file of the customer purchase order</p>
+              <p className={`text-xs mb-3 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                Upload PDF or image file of the customer purchase order
+              </p>
               <input 
                 type="file" 
                 onChange={handleFileUpload}
-                className="w-full p-3 border border-slate-800 rounded-xl text-xs bg-slate-900 cursor-pointer" 
+                className={`w-full p-3 border rounded-xl text-xs cursor-pointer ${
+                  isDarkMode ? 'border-slate-800 bg-slate-900 text-white' : 'border-slate-300 bg-slate-50 text-slate-800'
+                }`} 
               />
             </div>
-            <div className="pt-2 flex justify-end">
-              <button onClick={() => setShowUploadModal(false)} className="px-4 py-2 rounded-xl border border-slate-800 cursor-pointer">Close</button>
+            <div className={`pt-3 flex justify-end border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+              <button 
+                onClick={() => setShowUploadModal(false)} 
+                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                  isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
@@ -2867,20 +3000,23 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       {/* 2. GENERATE TAX INVOICE MODAL */}
       {showInvoiceModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-mono text-xs z-10 shadow-2xl ${
+          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${
             isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
           }`}>
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+            <div className={`flex items-center justify-between border-b pb-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400">
                   <FileText className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm uppercase text-emerald-400 tracking-tight">Generate GST Tax Invoice</h3>
-                  <p className="text-[11px] text-slate-400">Auto-populated from Order PO #{order.poNo}</p>
+                  <h3 className="font-bold text-sm uppercase text-emerald-500 dark:text-emerald-400 tracking-tight">Generate GST Tax Invoice</h3>
+                  <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Auto-populated from Order PO #{order.poNo}</p>
                 </div>
               </div>
-              <button onClick={() => setShowInvoiceModal(false)} className="text-slate-400 hover:text-white cursor-pointer">
+              <button 
+                onClick={() => setShowInvoiceModal(false)} 
+                className={`p-1 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -2888,70 +3024,80 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Invoice Number *</label>
+                  <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Invoice Number *</label>
                   <input
                     type="text"
                     value={genInvoiceNo}
                     onChange={(e) => setGenInvoiceNo(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white font-bold text-xs outline-none focus:border-emerald-500"
+                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${
+                      isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
+                    }`}
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Invoice Date</label>
+                  <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Invoice Date</label>
                   <input
                     type="date"
                     value={genInvoiceDate}
                     onChange={(e) => setGenInvoiceDate(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-xs outline-none focus:border-emerald-500"
+                    className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${
+                      isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
+                    }`}
                   />
                 </div>
               </div>
 
-              <div className="p-3 rounded-2xl bg-slate-900 border border-slate-800 space-y-1.5">
-                <div className="flex justify-between text-slate-400">
-                  <span>Customer Name:</span>
-                  <span className="font-bold text-white">{order.customerName}</span>
+              <div className={`p-3 rounded-2xl border space-y-1.5 font-mono text-xs ${
+                isDarkMode ? 'bg-slate-900/70 border-slate-800' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <div className="flex justify-between">
+                  <span className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>Customer Name:</span>
+                  <span className="font-bold">{order.customerName}</span>
                 </div>
-                <div className="flex justify-between text-slate-400">
-                  <span>Order Tax Category:</span>
-                  <span className="font-bold text-emerald-400">{order.taxCategory || 'GST 18%'}</span>
+                <div className="flex justify-between">
+                  <span className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>Order Tax Category:</span>
+                  <span className="font-bold text-emerald-500">{order.taxCategory || 'GST 18%'}</span>
                 </div>
-                <div className="flex justify-between text-slate-400">
-                  <span>Taxable Value:</span>
-                  <span className="font-bold text-white">₹{gross.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                <div className="flex justify-between">
+                  <span className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>Taxable Value:</span>
+                  <span className="font-bold">₹{gross.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                 </div>
-                <div className="flex justify-between text-slate-400">
-                  <span>GST (18%):</span>
-                  <span className="font-bold text-white">₹{(Math.round(gross * 0.18)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                <div className="flex justify-between">
+                  <span className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>GST (18%):</span>
+                  <span className="font-bold">₹{(Math.round(gross * 0.18)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                 </div>
-                <div className="flex justify-between text-white font-bold border-t border-slate-800 pt-1.5 text-xs">
-                  <span className="text-emerald-400">Total Invoice Amount:</span>
-                  <span className="text-emerald-400">₹{(gross + Math.round(gross * 0.18)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                <div className={`flex justify-between font-bold border-t pt-1.5 text-xs ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+                  <span className="text-emerald-500">Total Invoice Amount:</span>
+                  <span className="text-emerald-500">₹{(gross + Math.round(gross * 0.18)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                 </div>
               </div>
 
               {/* Line Items Summary */}
               <div className="space-y-1">
-                <label className="block text-[11px] text-slate-400 font-bold uppercase">Invoice Line Items</label>
-                <div className="divide-y divide-slate-800 rounded-2xl bg-slate-900/60 border border-slate-800 p-2">
+                <label className={`block text-[11px] font-bold uppercase ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Invoice Line Items</label>
+                <div className={`divide-y rounded-2xl border p-2 ${
+                  isDarkMode ? 'bg-slate-900/60 border-slate-800 divide-slate-800' : 'bg-slate-50 border-slate-200 divide-slate-200'
+                }`}>
                   {(order.lines || []).map((l, i) => (
                     <div key={l.id || i} className="py-1.5 flex items-center justify-between text-[11px]">
                       <div>
-                        <span className="font-bold text-slate-200">{l.itemCode}</span>
-                        <span className="text-slate-400 ml-1.5">({l.orderQty} {l.unit || 'NOS'} @ ₹{l.rate})</span>
+                        <span className="font-bold">{l.itemCode}</span>
+                        <span className={`ml-1.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>({l.orderQty} {l.unit || 'NOS'} @ ₹{l.rate})</span>
                       </div>
-                      <span className="font-bold text-emerald-400 font-mono">₹{(Number(l.orderQty) * Number(l.rate)).toLocaleString('en-IN')}</span>
+                      <span className="font-bold text-emerald-500 font-mono">₹{(Number(l.orderQty) * Number(l.rate)).toLocaleString('en-IN')}</span>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
 
-            <div className="pt-3 flex justify-end gap-2.5 border-t border-slate-800">
+            <div className={`pt-3 flex justify-end gap-2.5 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <button
                 type="button"
                 onClick={() => setShowInvoiceModal(false)}
-                className="px-4 py-2 rounded-xl border border-slate-800 text-slate-400 hover:text-white cursor-pointer"
+                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                  isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
               >
                 Cancel
               </button>
@@ -2972,20 +3118,23 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       {/* 3. GENERATE DELIVERY CHALLAN MODAL */}
       {showChallanModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-mono text-xs z-10 shadow-2xl ${
+          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${
             isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
           }`}>
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+            <div className={`flex items-center justify-between border-b pb-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-xl bg-cyan-500/20 text-cyan-400">
                   <Truck className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm uppercase text-cyan-400 tracking-tight">Generate Delivery Challan</h3>
-                  <p className="text-[11px] text-slate-400">Outward Transport Manifest for Order #{order.poNo}</p>
+                  <h3 className="font-bold text-sm uppercase text-cyan-500 dark:text-cyan-400 tracking-tight">Generate Delivery Challan</h3>
+                  <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Outward Transport Manifest for Order #{order.poNo}</p>
                 </div>
               </div>
-              <button onClick={() => setShowChallanModal(false)} className="text-slate-400 hover:text-white cursor-pointer">
+              <button 
+                onClick={() => setShowChallanModal(false)} 
+                className={`p-1 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -2993,35 +3142,41 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Challan Number *</label>
+                  <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Challan Number *</label>
                   <input
                     type="text"
                     value={genChallanNo}
                     onChange={(e) => setGenChallanNo(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white font-bold text-xs outline-none focus:border-cyan-500"
+                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${
+                      isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                    }`}
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Vehicle Registration # *</label>
+                  <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Vehicle Registration # *</label>
                   <input
                     type="text"
                     value={challanVehicleNo}
                     onChange={(e) => setChallanVehicleNo(e.target.value)}
                     placeholder="e.g. MH 12 AB 4589"
-                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white font-bold text-xs outline-none focus:border-cyan-500"
+                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${
+                      isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                    }`}
                   />
                 </div>
               </div>
 
               {/* Transporter selection fetched from Vendor Master */}
               <div>
-                <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">
+                <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                   Transporter Partner (Vendor Master) *
                 </label>
                 <select
                   value={challanTransporter}
                   onChange={(e) => setChallanTransporter(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-xs outline-none cursor-pointer focus:border-cyan-500"
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none cursor-pointer transition-all ${
+                    isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                  }`}
                 >
                   {allTransporterOptions.map((t, idx) => (
                     <option key={idx} value={t}>{t}</option>
@@ -3030,31 +3185,37 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Driver Contact / Phone</label>
+                <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Driver Contact / Phone</label>
                 <input
                   type="text"
                   value={challanDriverContact}
                   onChange={(e) => setChallanDriverContact(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-xs outline-none focus:border-cyan-500"
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${
+                    isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                  }`}
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Delivery Notes / Remarks</label>
+                <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Delivery Notes / Remarks</label>
                 <input
                   type="text"
                   value={challanRemarks}
                   onChange={(e) => setChallanRemarks(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-xs outline-none focus:border-cyan-500"
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${
+                    isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                  }`}
                 />
               </div>
             </div>
 
-            <div className="pt-3 flex justify-end gap-2.5 border-t border-slate-800">
+            <div className={`pt-3 flex justify-end gap-2.5 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <button
                 type="button"
                 onClick={() => setShowChallanModal(false)}
-                className="px-4 py-2 rounded-xl border border-slate-800 text-slate-400 hover:text-white cursor-pointer"
+                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                  isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
               >
                 Cancel
               </button>
@@ -3084,20 +3245,23 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       {/* 4. DISPATCH OUTWARD CONSIGNMENT MODAL */}
       {showDispatchModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-mono text-xs z-10 shadow-2xl ${
+          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${
             isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
           }`}>
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+            <div className={`flex items-center justify-between border-b pb-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-xl bg-cyan-500/20 text-cyan-400">
                   <Truck className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm uppercase text-cyan-400 tracking-tight">Confirm Outward Dispatch</h3>
-                  <p className="text-[11px] text-slate-400">Mark shipment as dispatched and in-transit</p>
+                  <h3 className="font-bold text-sm uppercase text-cyan-500 dark:text-cyan-400 tracking-tight">Confirm Outward Dispatch</h3>
+                  <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Mark shipment as dispatched and in-transit</p>
                 </div>
               </div>
-              <button onClick={() => setShowDispatchModal(false)} className="text-slate-400 hover:text-white cursor-pointer">
+              <button 
+                onClick={() => setShowDispatchModal(false)} 
+                className={`p-1 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -3105,31 +3269,37 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Dispatch Date *</label>
+                  <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Dispatch Date *</label>
                   <input
                     type="date"
                     value={dispatchDate}
                     onChange={(e) => setDispatchDate(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white font-bold text-xs outline-none focus:border-cyan-500"
+                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${
+                      isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                    }`}
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">LR / Consignment # *</label>
+                  <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>LR / Consignment # *</label>
                   <input
                     type="text"
                     value={dispatchLrNo}
                     onChange={(e) => setDispatchLrNo(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white font-bold text-xs outline-none focus:border-cyan-500"
+                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${
+                      isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                    }`}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Transporter Partner *</label>
+                <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Transporter Partner *</label>
                 <select
                   value={dispatchTransporter}
                   onChange={(e) => setDispatchTransporter(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-xs outline-none cursor-pointer focus:border-cyan-500"
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none cursor-pointer transition-all ${
+                    isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                  }`}
                 >
                   {allTransporterOptions.map((t, idx) => (
                     <option key={idx} value={t}>{t}</option>
@@ -3139,42 +3309,50 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Vehicle Registration # *</label>
+                  <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Vehicle Registration # *</label>
                   <input
                     type="text"
                     value={dispatchVehicleNo}
                     onChange={(e) => setDispatchVehicleNo(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white font-bold text-xs outline-none focus:border-cyan-500"
+                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${
+                      isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                    }`}
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Driver Contact Phone</label>
+                  <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Driver Contact Phone</label>
                   <input
                     type="text"
                     value={dispatchDriverContact}
                     onChange={(e) => setDispatchDriverContact(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-xs outline-none focus:border-cyan-500"
+                    className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${
+                      isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                    }`}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Dispatch Remarks</label>
+                <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Dispatch Remarks</label>
                 <input
                   type="text"
                   placeholder="e.g. Lorry loaded and sealed with GPS tracking active"
                   value={dispatchRemarks}
                   onChange={(e) => setDispatchRemarks(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-xs outline-none focus:border-cyan-500"
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${
+                    isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                  }`}
                 />
               </div>
             </div>
 
-            <div className="pt-3 flex justify-end gap-2.5 border-t border-slate-800">
+            <div className={`pt-3 flex justify-end gap-2.5 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <button
                 type="button"
                 onClick={() => setShowDispatchModal(false)}
-                className="px-4 py-2 rounded-xl border border-slate-800 text-slate-400 hover:text-white cursor-pointer"
+                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                  isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
               >
                 Cancel
               </button>
@@ -3192,23 +3370,26 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         </div>
       )}
 
-      {/* 5. CONFIRM DELIVERY MODAL */}
+      {/* 5. CONFIRM DELIVERY MODAL (WITH FILE CHOOSER & CLEAN UI) */}
       {showDeliveryModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-mono text-xs z-10 shadow-2xl ${
+          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${
             isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
           }`}>
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+            <div className={`flex items-center justify-between border-b pb-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-blue-500/20 text-blue-400">
+                <div className="p-2 rounded-xl bg-blue-500/20 text-blue-500 dark:text-blue-400">
                   <CheckCircle2 className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm uppercase text-blue-400 tracking-tight">Confirm Customer Delivery</h3>
-                  <p className="text-[11px] text-slate-400">Record destination arrival and move to Receivable</p>
+                  <h3 className="font-bold text-sm uppercase text-blue-500 dark:text-blue-400 tracking-tight">Confirm Customer Delivery</h3>
+                  <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Record destination arrival and move to Receivable</p>
                 </div>
               </div>
-              <button onClick={() => setShowDeliveryModal(false)} className="text-slate-400 hover:text-white cursor-pointer">
+              <button 
+                onClick={() => setShowDeliveryModal(false)} 
+                className={`p-1 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -3216,60 +3397,104 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Delivery Date *</label>
+                  <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Delivery Date *</label>
                   <input
                     type="date"
                     value={deliveryDate}
                     onChange={(e) => setDeliveryDate(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white font-bold text-xs outline-none focus:border-blue-500"
+                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${
+                      isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-blue-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-600 focus:bg-white'
+                    }`}
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Received By (Person) *</label>
+                  <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Received By (Person) *</label>
                   <input
                     type="text"
                     value={deliveryReceivedBy}
                     onChange={(e) => setDeliveryReceivedBy(e.target.value)}
                     placeholder="e.g. Ramesh Kumar (Stores)"
-                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white font-bold text-xs outline-none focus:border-blue-500"
+                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${
+                      isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-blue-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-600 focus:bg-white'
+                    }`}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">
-                  Proof of Delivery (POD / E-POD) Document *
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className={`text-[11px] font-bold uppercase ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                    Proof of Delivery (POD / E-POD) Document *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => podFileInputRef.current?.click()}
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition-all flex items-center gap-1 cursor-pointer ${
+                      isDarkMode ? 'bg-slate-900 border-slate-700 text-blue-400 hover:bg-slate-800' : 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100'
+                    }`}
+                  >
+                    <Upload className="w-3 h-3" />
+                    <span>Upload POD</span>
+                  </button>
+                </div>
+                <input
+                  type="file"
+                  ref={podFileInputRef}
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) setDeliveryPodUrl(f.name);
+                  }}
+                />
                 <input
                   type="text"
                   placeholder="e.g. signed-pod-challan.pdf or attachment URL"
                   value={deliveryPodUrl}
                   onChange={(e) => setDeliveryPodUrl(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white font-bold text-xs outline-none focus:border-blue-500"
+                  className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${
+                    isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-blue-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-600 focus:bg-white'
+                  }`}
                 />
-                {!deliveryPodUrl.trim() && (
-                  <span className="text-[10px] text-amber-400 mt-1 block">
-                    * POD attachment is strictly required to mark order as Delivered.
+                {!deliveryPodUrl.trim() ? (
+                  <div className="flex items-center justify-between mt-1.5">
+                    <span className="text-[10px] text-amber-500 font-bold">
+                      * POD document attachment is strictly required to confirm delivery.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setDeliveryPodUrl(`signed-pod-${effectiveChallanNo || order.poNo || 'CHL-2627'}.pdf`)}
+                      className="text-[10px] text-blue-500 underline font-bold cursor-pointer hover:text-blue-400"
+                    >
+                      ⚡ Auto-fill signed POD name
+                    </button>
+                  </div>
+                ) : (
+                  <span className="text-[10px] text-emerald-500 font-bold mt-1 block flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" /> POD Document linked: {deliveryPodUrl}
                   </span>
                 )}
               </div>
 
               <div>
-                <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Delivery Remarks</label>
+                <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Delivery Remarks</label>
                 <input
                   type="text"
                   value={deliveryRemarks}
                   onChange={(e) => setDeliveryRemarks(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-xs outline-none focus:border-blue-500"
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${
+                    isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-blue-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-600 focus:bg-white'
+                  }`}
                 />
               </div>
             </div>
 
-            <div className="pt-3 flex justify-end gap-2.5 border-t border-slate-800">
+            <div className={`pt-3 flex justify-end gap-2.5 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <button
                 type="button"
                 onClick={() => setShowDeliveryModal(false)}
-                className="px-4 py-2 rounded-xl border border-slate-800 text-slate-400 hover:text-white cursor-pointer"
+                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                  isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
               >
                 Cancel
               </button>
@@ -3288,65 +3513,220 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         </div>
       )}
 
+      {/* 5b. MARK DELIVERY DELAYED MODAL */}
+      {showDelayedModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
+          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${
+            isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          }`}>
+            <div className={`flex items-center justify-between border-b pb-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-amber-500/20 text-amber-500 dark:text-amber-400">
+                  <Clock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm uppercase text-amber-500 dark:text-amber-400 tracking-tight">Mark Delivery Delayed</h3>
+                  <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Record transit delay & reschedule follow-up date</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowDelayedModal(false)} 
+                className={`p-1 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {delayedError && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-500 dark:text-rose-400 text-xs">
+                {delayedError}
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <div>
+                <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Delay Reason *</label>
+                <textarea
+                  rows={3}
+                  placeholder="e.g. Transporter vehicle breakdown near highway checkpoint; rescheduled."
+                  value={delayedReason}
+                  onChange={(e) => setDelayedReason(e.target.value)}
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none resize-none transition-all ${
+                    isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-amber-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-amber-600 focus:bg-white'
+                  }`}
+                />
+              </div>
+
+              <div>
+                <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Expected Follow-Up Date</label>
+                <input
+                  type="date"
+                  value={delayedFollowUpDate}
+                  onChange={(e) => setDelayedFollowUpDate(e.target.value)}
+                  className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${
+                    isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-amber-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-amber-600 focus:bg-white'
+                  }`}
+                />
+              </div>
+            </div>
+
+            <div className={`pt-3 flex justify-end gap-2.5 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+              <button
+                type="button"
+                onClick={() => setShowDelayedModal(false)}
+                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                  isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleMarkDelayedSubmit}
+                disabled={isConfirming || !delayedReason.trim()}
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-lg shadow-amber-500/25 disabled:opacity-50"
+              >
+                <Clock className="w-4 h-4" />
+                <span>{isConfirming ? 'Updating...' : 'Confirm Delay (Mark Delayed)'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 6. RECORD PAYMENT & SETTLE MODAL */}
       {showPaymentModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-mono text-xs z-10 shadow-2xl ${
+          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${
             isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
           }`}>
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+            <div className={`flex items-center justify-between border-b pb-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400">
+                <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-500 dark:text-emerald-400">
                   <CreditCard className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm uppercase text-emerald-400 tracking-tight">Record Commercial Payment</h3>
-                  <p className="text-[11px] text-slate-400">Settle invoice receivable and close order</p>
+                  <h3 className="font-bold text-sm uppercase text-emerald-500 dark:text-emerald-400 tracking-tight">Record Commercial Payment</h3>
+                  <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                    {order.poNo || order.id} • {order.customerName}
+                  </p>
                 </div>
               </div>
-              <button onClick={() => setShowPaymentModal(false)} className="text-slate-400 hover:text-white cursor-pointer">
+              <button 
+                onClick={() => setShowPaymentModal(false)} 
+                className={`p-1 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {paymentError && (
-              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-500 dark:text-rose-400 text-xs">
                 {paymentError}
               </div>
             )}
 
-            <div className="p-3 rounded-2xl bg-slate-900 border border-slate-800 space-y-1.5">
+            {/* Linked Invoice Badge */}
+            {effectiveInvoiceNo && (
+              <div className={`p-2.5 rounded-xl border flex items-center justify-between font-mono text-xs ${
+                isDarkMode ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300' : 'bg-indigo-50 border-indigo-200 text-indigo-800'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <Receipt className="w-4 h-4 text-indigo-400" />
+                  <span>Linked Tax Invoice: <strong>{effectiveInvoiceNo}</strong></span>
+                </div>
+                {onNavigate && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPaymentModal(false);
+                      onNavigate('invoices');
+                    }}
+                    className="text-[11px] font-bold text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>View in Invoices & Payments</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            )}
+
+            <div className={`p-3 rounded-2xl border space-y-1.5 font-mono text-xs ${
+              isDarkMode ? 'bg-slate-900/70 border-slate-800' : 'bg-slate-50 border-slate-200'
+            }`}>
               <div className="flex justify-between">
-                <span className="text-slate-400">Gross Amount:</span>
-                <span className="font-bold text-white">₹{gross.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                <span className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>Gross Invoice Total:</span>
+                <span className="font-bold">₹{gross.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Already Received:</span>
-                <span className="font-bold text-emerald-400">₹{currentPaid.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                <span className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>Already Realized / Paid:</span>
+                <span className="font-bold text-emerald-500">₹{currentPaid.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               </div>
-              <div className="flex justify-between pt-1 border-t border-slate-800 font-bold">
-                <span className="text-amber-400">Outstanding Receivable Balance:</span>
-                <span className="text-amber-400">₹{remainingOutstanding.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+              <div className={`flex justify-between pt-1 border-t font-bold ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+                <span className="text-amber-500">Outstanding Receivable Balance:</span>
+                <span className="text-amber-500">₹{remainingOutstanding.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               </div>
             </div>
 
             <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Payment Amount ₹ *</label>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className={`block text-[11px] font-bold uppercase ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                    Payment Amount ₹ *
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentAmount(remainingOutstanding)}
+                      className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${
+                        paymentAmount === remainingOutstanding 
+                          ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
+                          : isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
+                      }`}
+                    >
+                      ⚡ Full (₹{remainingOutstanding.toLocaleString('en-IN')})
+                    </button>
+                    {remainingOutstanding > 100 && (
+                      <button
+                        type="button"
+                        onClick={() => setPaymentAmount(Math.round(remainingOutstanding / 2))}
+                        className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${
+                          paymentAmount === Math.round(remainingOutstanding / 2)
+                            ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
+                            : isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
+                        }`}
+                      >
+                        50% Partial
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-2.5 font-mono font-bold text-slate-400">₹</span>
                   <input
                     type="number"
+                    step="0.01"
                     value={paymentAmount}
                     onChange={(e) => setPaymentAmount(Number(e.target.value))}
-                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white font-bold text-xs outline-none focus:border-emerald-500"
+                    className={`w-full pl-8 pr-3.5 py-2.5 rounded-xl border font-mono font-bold text-sm outline-none transition-all ${
+                      isDarkMode 
+                        ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500' 
+                        : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
+                    }`}
+                    required
                   />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Payment Mode</label>
+                  <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Payment Mode</label>
                   <select
                     value={paymentMode}
                     onChange={(e) => setPaymentMode(e.target.value as any)}
-                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-xs outline-none cursor-pointer"
+                    className={`w-full p-2.5 rounded-xl border text-xs outline-none cursor-pointer transition-all ${
+                      isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
+                    }`}
                   >
                     <option value="NEFT">Bank NEFT</option>
                     <option value="RTGS">Bank RTGS</option>
@@ -3354,35 +3734,40 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     <option value="CHEQUE">Cheque / DD</option>
                   </select>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Reference / UTR No *</label>
-                  <input
-                    type="text"
-                    value={paymentRefNo}
-                    onChange={(e) => setPaymentRefNo(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-xs outline-none focus:border-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">Payment Date</label>
+                  <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Payment Date</label>
                   <input
                     type="date"
                     value={paymentDate}
                     onChange={(e) => setPaymentDate(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-xs outline-none focus:border-emerald-500"
+                    className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none transition-all ${
+                      isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
+                    }`}
                   />
                 </div>
               </div>
+
+              <div>
+                <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Reference / UTR No *</label>
+                <input
+                  type="text"
+                  placeholder="e.g. UTR-HDFC98234723 or CHQ-004521"
+                  value={paymentRefNo}
+                  onChange={(e) => setPaymentRefNo(e.target.value)}
+                  className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none transition-all ${
+                    isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
+                  }`}
+                />
+              </div>
             </div>
 
-            <div className="pt-3 flex justify-end gap-2.5 border-t border-slate-800">
+            <div className={`pt-3 flex justify-end gap-2.5 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <button
                 type="button"
                 onClick={() => setShowPaymentModal(false)}
-                className="px-4 py-2 rounded-xl border border-slate-800 text-slate-400 hover:text-white cursor-pointer"
+                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                  isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
               >
                 Cancel
               </button>
@@ -3390,10 +3775,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 type="button"
                 onClick={handleRecordPaymentSubmit}
                 disabled={isConfirming || paymentAmount <= 0}
-                className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-500/25"
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-500/25 disabled:opacity-50 transition-all"
               >
                 <CreditCard className="w-4 h-4" />
-                <span>{isConfirming ? 'Recording...' : 'Record Payment & Settle'}</span>
+                <span>{isConfirming ? 'Recording...' : `Confirm & Settle ₹${paymentAmount.toLocaleString('en-IN')}`}</span>
               </button>
             </div>
           </div>
@@ -3402,34 +3787,37 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
       {/* Owner Override Material Check Modal */}
       {showOverrideModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-md rounded-3xl border p-6 space-y-4 font-mono text-xs z-10 shadow-2xl ${
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
+          <div className={`relative w-full max-w-md rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${
             isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
           }`}>
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div className={`flex items-center justify-between border-b pb-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <div className="flex items-center gap-2">
                 <div className="p-2 rounded-xl bg-purple-500/20 text-purple-400">
                   <Zap className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm uppercase text-purple-400">Owner Material Override</h3>
-                  <p className="text-[11px] text-slate-400">Force Order to MATERIAL_READY with audit trace</p>
+                  <h3 className="font-bold text-sm uppercase text-purple-500 dark:text-purple-400">Owner Material Override</h3>
+                  <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Force Order to MATERIAL_READY with audit trace</p>
                 </div>
               </div>
-              <button onClick={() => setShowOverrideModal(false)} className="text-slate-400 hover:text-white cursor-pointer">
+              <button 
+                onClick={() => setShowOverrideModal(false)} 
+                className={`p-1 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {overrideError && (
-              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-500 dark:text-rose-400 text-xs">
                 {overrideError}
               </div>
             )}
 
             <form onSubmit={handleOverrideMaterialSubmit} className="space-y-3">
               <div>
-                <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">
+                <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                   Reason for Override (Mandatory) *
                 </label>
                 <textarea 
@@ -3437,20 +3825,24 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   placeholder="e.g. Raw material stock verified physically in bay 3 / Expedited demo order approval"
                   value={overrideReason}
                   onChange={(e) => setOverrideReason(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-white text-xs outline-none focus:border-purple-500"
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${
+                    isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-purple-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-purple-600 focus:bg-white'
+                  }`}
                   required
                 />
               </div>
 
-              <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-[11px] text-purple-300">
+              <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-[11px] text-purple-600 dark:text-purple-300">
                 ⚠️ This action will be permanently logged in the audit trail under your user ID: <strong>{currentUser?.name || 'Owner'}</strong>.
               </div>
 
-              <div className="pt-3 flex justify-end gap-2.5 border-t border-slate-800">
+              <div className={`pt-3 flex justify-end gap-2.5 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
                 <button 
                   type="button"
                   onClick={() => setShowOverrideModal(false)} 
-                  className="px-4 py-2 rounded-xl border border-slate-800 text-slate-400 hover:text-white cursor-pointer"
+                  className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                    isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
                 >
                   Cancel
                 </button>

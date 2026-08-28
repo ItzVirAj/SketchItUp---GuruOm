@@ -21,6 +21,8 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.2.0",
     "@vitejs/plugin-react": "^5.0.4",
+    "agentation": "^3.0.2",
+    "agentation-mcp": "^1.2.0",
     "argon2": "^0.45.1",
     "bullmq": "^6.1.1",
     "clsx": "^2.1.1",

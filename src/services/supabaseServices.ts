@@ -255,13 +255,22 @@ export async function fetchOrders(): Promise<CustomerOrder[]> {
       // Merge with ordersCache in case local confirmation occurred
       const merged = res.data.map(d => {
         const local = ordersCache.find(i => i.id === d.id || i.poNo === d.poNo);
-        if (local && (local.status === 'CONFIRMED' || local.status === 'APPROVED' || (local.progressStep || 1) >= 2)) {
+        if (local) {
           return {
+            ...local,
             ...d,
-            status: local.status,
-            stage: local.stage,
-            progressStep: local.progressStep,
-            heatLotNumber: local.heatLotNumber || d.heatLotNumber
+            paidAmount: d.paidAmount !== undefined ? d.paidAmount : local.paidAmount,
+            paymentStatus: d.paymentStatus || local.paymentStatus,
+            paymentHistory: (d.paymentHistory && d.paymentHistory.length > 0) ? d.paymentHistory : local.paymentHistory,
+            deliveryChallanNo: d.deliveryChallanNo || local.deliveryChallanNo,
+            invoiceNo: d.invoiceNo || local.invoiceNo,
+            podDocumentUrl: d.podDocumentUrl || local.podDocumentUrl,
+            podReceivedDate: d.podReceivedDate || local.podReceivedDate,
+            podReceivedBy: d.podReceivedBy || local.podReceivedBy,
+            status: d.status || local.status,
+            stage: d.stage || local.stage,
+            progressStep: d.progressStep || local.progressStep,
+            heatLotNumber: d.heatLotNumber || local.heatLotNumber
           };
         }
         return d;
@@ -299,32 +308,25 @@ export async function fetchOrders(): Promise<CustomerOrder[]> {
           const t = parseDateToTimestamp(o.createdAt);
           if (t > 0) return t;
         }
-        const idTime = parseDateToTimestamp(o.id);
-        if (idTime > 0) return idTime;
         if (o.poDate) {
           const t = parseDateToTimestamp(o.poDate);
           if (t > 0) return t;
         }
-        if (o.orderDate) {
-          const t = parseDateToTimestamp(o.orderDate);
-          if (t > 0) return t;
-        }
-        if (o.deliveryDate) {
-          const t = parseDateToTimestamp(o.deliveryDate);
+        if (o.id) {
+          const t = parseDateToTimestamp(o.id);
           if (t > 0) return t;
         }
         return 0;
       };
 
-      // Global Recency Sort: newest orders first (createdAt / poDate / ID DESC)
-      merged.sort((a, b) => {
+      ordersCache = merged.sort((a, b) => {
         const timeB = getOrderTime(b);
         const timeA = getOrderTime(a);
         if (timeB !== timeA) return timeB - timeA;
         return String(b.id || b.poNo).localeCompare(String(a.id || a.poNo), undefined, { numeric: true });
       });
 
-      return merged;
+      return [...ordersCache];
     }
   } catch (err) {
     console.warn('Backend fetchOrders fallback:', err);
@@ -362,18 +364,12 @@ export async function fetchOrders(): Promise<CustomerOrder[]> {
       const t = parseDateToTimestamp(o.createdAt);
       if (t > 0) return t;
     }
-    const idTime = parseDateToTimestamp(o.id);
-    if (idTime > 0) return idTime;
     if (o.poDate) {
       const t = parseDateToTimestamp(o.poDate);
       if (t > 0) return t;
     }
-    if (o.orderDate) {
-      const t = parseDateToTimestamp(o.orderDate);
-      if (t > 0) return t;
-    }
-    if (o.deliveryDate) {
-      const t = parseDateToTimestamp(o.deliveryDate);
+    if (o.id) {
+      const t = parseDateToTimestamp(o.id);
       if (t > 0) return t;
     }
     return 0;
@@ -391,11 +387,14 @@ export async function fetchOrderById(orderId: string): Promise<CustomerOrder | n
   try {
     const res = await apiClient.get<{ data: CustomerOrder }>(`/orders/${orderId}`);
     if (res?.data) {
-      const local = ordersCache.find(i => i.id === res.data.id || i.poNo === res.data.poNo);
-      if (local && (local.status === 'CONFIRMED' || local.status === 'APPROVED' || (local.progressStep || 1) >= 2)) {
-        return { ...res.data, status: local.status, stage: local.stage, progressStep: local.progressStep };
+      const d = res.data;
+      const idx = ordersCache.findIndex(i => i.id === d.id || i.poNo === d.poNo);
+      if (idx >= 0) {
+        ordersCache[idx] = { ...ordersCache[idx], ...d };
+      } else {
+        ordersCache.push(d);
       }
-      return res.data;
+      return d;
     }
   } catch (err) {
     console.warn(`Backend fetchOrderById (${orderId}) fallback:`, err);
@@ -925,19 +924,45 @@ export async function fetchProductionLogs(): Promise<ProductionLogReport[]> {
   return [];
 }
 
-export async function insertProductionLogAndQC(job: JobCard, qtyDone: number): Promise<void> {
+export async function insertProductionLogAndQC(
+  logOrJob: Partial<ProductionLogReport> | JobCard,
+  qtyDoneParam?: number
+): Promise<any> {
   try {
-    await apiClient.post('/production/logs', {
-      jobNo: job.jobNo,
-      itemCode: job.partCode,
-      description: job.partDescription,
-      stepNo: 1,
-      operationName: 'CNC / VMC Milling Operation',
-      qtyDone,
-      autoTriggerQC: true
-    });
+    let payload: any;
+    if ('jobNo' in logOrJob && 'qtyDone' in logOrJob && qtyDoneParam === undefined) {
+      // It's a Partial<ProductionLogReport> payload from UI modal
+      const log = logOrJob as Partial<ProductionLogReport>;
+      payload = {
+        id: log.id,
+        jobNo: log.jobNo,
+        itemCode: log.itemCode,
+        description: log.description,
+        stepNo: log.stepNo ?? 10,
+        operationName: log.operationName ?? 'Production Operation',
+        qtyDone: Number(log.qtyDone ?? 1),
+        loggedTimestamp: log.loggedTimestamp || new Date().toISOString(),
+        autoTriggerQC: true
+      };
+    } else {
+      // Compatibility signature (job: JobCard, qtyDone: number)
+      const job = logOrJob as JobCard;
+      payload = {
+        jobNo: job.jobNo,
+        itemCode: job.partCode,
+        description: job.partDescription,
+        stepNo: 10,
+        operationName: 'Machining / Assembly Operation',
+        qtyDone: Number(qtyDoneParam || job.targetQty || job.qty || 1),
+        loggedTimestamp: new Date().toISOString(),
+        autoTriggerQC: true
+      };
+    }
+    const res = await apiClient.post<{ message: string; data: any }>('/production/logs', payload);
+    return res?.data;
   } catch (err) {
     console.warn('insertProductionLogAndQC REST API error:', err);
+    throw err;
   }
 }
 
@@ -1201,7 +1226,8 @@ export async function insertCustomerInvoice(inv: CustomerInvoice): Promise<any> 
       ],
       totalAmount: inv.totalAmount,
       paidAmount: inv.paidAmount || 0,
-      balanceAmount: inv.balanceAmount ?? inv.totalAmount
+      balanceAmount: inv.balanceAmount ?? inv.totalAmount,
+      idempotencyKey: (inv as any).idempotencyKey
     });
     return res?.data;
   } catch (err) {
@@ -1220,18 +1246,27 @@ export async function issueCustomerInvoice(invoiceNo: string): Promise<any> {
   }
 }
 
-export async function payInvoice(invoiceNo: string, paymentAmount?: number): Promise<void> {
+export async function payInvoice(invoiceNo: string, paymentData?: any): Promise<void> {
+  const payAmt = typeof paymentData === 'number' ? paymentData : paymentData?.paymentAmount;
+  const payMode = typeof paymentData === 'object' && paymentData?.paymentMode ? paymentData.paymentMode : 'NEFT_RTGS';
+  const refNo = typeof paymentData === 'object' && paymentData?.referenceNo ? paymentData.referenceNo : undefined;
+  const payDate = typeof paymentData === 'object' && paymentData?.paymentDate ? paymentData.paymentDate : new Date().toISOString().split('T')[0];
+  const notes = typeof paymentData === 'object' && paymentData?.notes ? paymentData.notes : undefined;
+
   const local = [].find(i => i.id === invoiceNo || i.invoiceNo === invoiceNo);
   if (local) {
-    const payAmt = paymentAmount !== undefined ? paymentAmount : local.balanceAmount;
-    local.paidAmount = Math.min(local.totalAmount, local.paidAmount + payAmt);
+    const amt = payAmt !== undefined ? payAmt : local.balanceAmount;
+    local.paidAmount = Math.min(local.totalAmount, local.paidAmount + amt);
     local.balanceAmount = Math.max(0, local.totalAmount - local.paidAmount);
     local.status = local.balanceAmount <= 0 ? 'PAID' : 'PARTIAL';
   }
   try {
     await apiClient.post(`/invoices/${encodeURIComponent(invoiceNo)}/pay`, {
-      paymentAmount,
-      paymentMode: 'NEFT_RTGS'
+      paymentAmount: payAmt,
+      paymentMode: payMode,
+      referenceNo: refNo,
+      paymentDate: payDate,
+      notes
     });
   } catch (err) {
     console.warn(`payInvoice(${invoiceNo}) REST API error:`, err);
@@ -1649,6 +1684,19 @@ export async function completePdiInspectionForOrder(
   };
 }
 
+export async function markOrderDelayed(
+  orderId: string,
+  payload: { reason?: string; followUpDate?: string }
+): Promise<{ success: boolean; orderStatus: string }> {
+  const nextStatus = 'DELIVERY_DELAYED';
+  try {
+    await apiClient.post(`/orders/${encodeURIComponent(orderId)}/mark-delayed`, payload);
+  } catch (err: any) {
+    console.warn('markOrderDelayed REST API error:', err);
+  }
+  return { success: true, orderStatus: nextStatus };
+}
+
 export async function generateInvoiceForOrder(
   orderId: string,
   invoiceData: {
@@ -1659,6 +1707,8 @@ export async function generateInvoiceForOrder(
     invoiceDate?: string;
     taxAmount?: number;
     items?: any[];
+    idempotencyKey?: string;
+    challanNo?: string;
   }
 ): Promise<CustomerInvoice> {
   const invoiceNo = invoiceData.invoiceNo || `INV-26-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -1678,21 +1728,30 @@ export async function generateInvoiceForOrder(
   };
 
   try {
-    await insertCustomerInvoice(newInvoice);
-  } catch (err) {
+    const created = await insertCustomerInvoice({
+      ...newInvoice,
+      idempotencyKey: invoiceData.idempotencyKey,
+      challanNo: invoiceData.challanNo
+    } as any);
+    if (created && created.data?.invoiceNo) {
+      newInvoice.invoiceNo = created.data.invoiceNo;
+      newInvoice.id = created.data.id || newInvoice.id;
+    } else if (created?.invoiceNo) {
+      newInvoice.invoiceNo = created.invoiceNo;
+      newInvoice.id = created.id || newInvoice.id;
+    }
+  } catch (err: any) {
     console.warn('insertCustomerInvoice fallback:', err);
+    // Surface duplicate-generation rejection clearly to the UI (Part 2)
+    if (err && (err.response?.status === 409 || err.statusCode === 409 || /already exists/i.test(err.message || ''))) {
+      throw new Error(err.message || 'An invoice already exists for this order.');
+    }
   }
 
-  try {
-    await updateOrder(orderId, {
-      invoiceNo,
-      status: 'INVOICE_GENERATED' as any,
-      stage: 'INVOICE_GENERATED' as any,
-      progressStep: 8
-    });
-  } catch (err) {
-    console.warn('updateOrder with invoiceNo fallback:', err);
-  }
+  // NOTE: the order's status + invoiceNo are now persisted + broadcast by the backend
+  // createInvoice handler (through the shared stage-direct helper). The previous direct
+  // updateOrder() call here was rejected by the backend workflow-mutation hard gate,
+  // leaving the order stuck in DISPATCHED/IN_TRANSIT after refresh — removed.
 
   return newInvoice;
 }
@@ -1852,7 +1911,10 @@ export async function recordOrderPaymentAndClose(
       paidAmount: newTotalPaid,
       paymentStatus: paymentStatus as any,
       paymentHistory: updatedHistory,
-      progressStep
+      progressStep,
+      // Persist stage so the pipeline survives refresh
+      status: isFullyPaid ? 'INVOICED' : 'PAYMENT_PENDING',
+      stage: isFullyPaid ? 'INVOICED' : 'PAYMENT_PENDING'
     });
   } catch (err) {
     console.warn('recordOrderPaymentAndClose updateOrder fallback:', err);
@@ -1860,7 +1922,7 @@ export async function recordOrderPaymentAndClose(
 
   return {
     success: true,
-    orderStatus: paymentStatus,
+    orderStatus: isFullyPaid ? 'INVOICED' : 'PAYMENT_PENDING',
     paidAmount: newTotalPaid,
     isClosed: false,
     isFullyPaid: isFullyPaid

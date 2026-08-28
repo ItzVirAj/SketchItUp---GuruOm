@@ -39,6 +39,7 @@ router.post('/:id/material-check', requirePermission('orders', 'CREATE_EDIT'), (
 router.post('/:id/verify-materials', requirePermission('orders', 'CREATE_EDIT'), (req, res) => ordersController.runMaterialCheck(req, res));
 router.post('/:id/override-material-check', requirePermission('orders', 'CREATE_EDIT'), (req, res) => ordersController.overrideMaterialCheck(req, res));
 router.post('/:id/amendments', requirePermission('orders', 'CREATE_EDIT'), (req, res) => ordersController.createAmendment(req, res));
+router.post('/:id/mark-delayed', requirePermission('orders', 'CREATE_EDIT'), (req, res) => ordersController.markDelayed(req, res));
 
 // Step 7: No Deletes on Transactional Records
 router.delete('/:id', (req, res) => {

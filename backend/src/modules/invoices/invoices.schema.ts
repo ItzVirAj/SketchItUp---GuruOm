@@ -38,7 +38,8 @@ export const CustomerInvoiceSchema = z.object({
   totalAmount: z.coerce.number().nonnegative().optional(),
   paidAmount: z.coerce.number().nonnegative().default(0),
   balanceAmount: z.coerce.number().nonnegative().optional(),
-  gstOverrideReason: z.string().optional()
+  gstOverrideReason: z.string().optional(),
+  idempotencyKey: z.string().optional()
 });
 
 export const RecordPaymentSchema = z.object({

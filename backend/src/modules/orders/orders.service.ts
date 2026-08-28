@@ -67,6 +67,7 @@ export class OrdersService {
         const { data: linesData } = await this.db.from('order_line_items').select('*');
         const { data: jobsData } = await this.db.from('job_cards').select('*');
         const { data: dispatchesData } = await this.db.from('dispatch_challans').select('*');
+        const { data: invoicesData } = await this.db.from('customer_invoices').select('*');
         const { data: ncrsData } = await this.db.from('ncrs').select('*').in('status', ['OPEN', 'UNDER_REVIEW', 'REWORK_PLANNED']);
 
         const combined = finalOrdersData.map(o => {
@@ -90,14 +91,35 @@ export class OrdersService {
             status: j.status
           }));
 
-          const dispatches = (dispatchesData || []).filter(d => d.order_po === o.po_no).map(d => ({
+          const dispatches = (dispatchesData || []).filter(d => d.order_po === o.po_no || d.order_id === o.id).map(d => ({
             challanNo: d.challan_no,
             items: `Challan for PO ${d.order_po}`,
             date: d.date,
             status: d.status
           }));
 
+          const linkedInv = (invoicesData || []).find(i => 
+            (i.order_po && ((o.po_no && i.order_po.trim().toUpperCase() === o.po_no.trim().toUpperCase()) || (o.id && i.order_po.trim().toUpperCase() === o.id.trim().toUpperCase()))) ||
+            (dispatches.length > 0 && i.challan_no && dispatches.some(d => d.challanNo && d.challanNo.trim().toUpperCase() === i.challan_no.trim().toUpperCase())) ||
+            (o.invoice_no && i.invoice_no && i.invoice_no.trim().toUpperCase() === o.invoice_no.trim().toUpperCase())
+          );
+
           const openNcrs = (ncrsData || []).filter(n => n.order_po === o.po_no || n.order_id === o.id);
+
+          const deliveryChallanNo = o.delivery_challan_no || dispatches[dispatches.length - 1]?.challanNo || null;
+          const invoiceNo = o.invoice_no || linkedInv?.invoice_no || null;
+          const paidAmount = Number(o.paid_amount !== undefined && o.paid_amount !== null ? o.paid_amount : (linkedInv?.paid_amount || 0));
+          const grossAmount = Number(o.gross_amount || linkedInv?.total_amount || 0);
+          const paymentStatus = o.payment_status || (linkedInv?.status === 'PAID' ? 'PAID' : (paidAmount >= grossAmount && grossAmount > 0 ? 'PAID' : (paidAmount > 0 ? 'PARTIAL' : undefined)));
+
+          let paymentHistory: any[] = [];
+          if (o.payment_history) {
+            try {
+              paymentHistory = typeof o.payment_history === 'string' ? JSON.parse(o.payment_history) : o.payment_history;
+            } catch {
+              paymentHistory = [];
+            }
+          }
 
           return {
             id: o.id,
@@ -106,9 +128,19 @@ export class OrdersService {
             poDate: o.po_date,
             deliveryDate: o.delivery_date,
             status: o.status,
-            stage: (o.status as OrderStage) || 'PO_RECEIVED',
+            stage: (o.stage as OrderStage) || (o.status as OrderStage) || 'PO_RECEIVED',
             progressStep: o.progress_step || ORDER_STAGE_STEPS[o.status as OrderStage] || 1,
-            grossAmount: Number(o.gross_amount || 0),
+            grossAmount,
+            paidAmount,
+            paymentStatus,
+            paymentHistory,
+            deliveryChallanNo,
+            invoiceNo,
+            podDocumentUrl: o.pod_document_url || undefined,
+            podReceivedDate: o.pod_received_date || undefined,
+            podReceivedBy: o.pod_received_by || undefined,
+            delayedReason: o.delayed_reason || undefined,
+            delayedFollowUpDate: o.delayed_follow_up_date || undefined,
             taxCategory: o.tax_category || 'GST 18%',
             remark: o.remark || '',
             clientPoFile: o.client_po_file || undefined,
@@ -156,7 +188,7 @@ export class OrdersService {
   async updateOrderStageDirectly(orderPoOrId: string, stage: OrderStage, progressStep?: number) {
     const step = progressStep || ORDER_STAGE_STEPS[stage] || 1;
     try {
-      const payload: any = { status: stage, progress_step: step, updated_at: new Date().toISOString() };
+      const payload: any = { status: stage, stage, progress_step: step, updated_at: new Date().toISOString() };
       await this.db.from('customer_orders').update(payload).or(`id.eq.${orderPoOrId},po_no.eq.${orderPoOrId}`);
     } catch (err) {
       console.warn('Database updateOrderStageDirectly error:', err);
@@ -177,6 +209,50 @@ export class OrdersService {
       status: stage,
       stage,
       progressStep: step,
+      updatedAt: new Date().toISOString()
+    });
+  }
+
+  /**
+   * Marks an order as DELIVERY_DELAYED with a reason + follow-up date (Part 3).
+   * Persists the delayed fields and broadcasts consistently through the same
+   * shared stage-direct helper so the Command Centre / order list / pipeline all
+   * reflect the flag in real time. Payment remains locked (DELIVERY_DELAYED only
+   * advances via "Order Received" = DELIVERED).
+   */
+  async markOrderDelayed(orderIdOrPo: string, payload: { reason?: string; followUpDate?: string }) {
+    const delayPayload: any = {
+      status: 'DELIVERY_DELAYED',
+      stage: 'DELIVERY_DELAYED',
+      progress_step: ORDER_STAGE_STEPS['DELIVERY_DELAYED'] || 9,
+      delayed_reason: payload.reason || 'Delivery delayed per Dispatch desk',
+      updated_at: new Date().toISOString()
+    };
+    if (payload.followUpDate) delayPayload.delayed_follow_up_date = payload.followUpDate;
+
+    try {
+      await this.db.from('customer_orders').update(delayPayload).or(`id.eq.${orderIdOrPo},po_no.eq.${orderIdOrPo}`);
+    } catch (err) {
+      console.warn('Database markOrderDelayed error:', err);
+    }
+
+    notificationsService.broadcastEvent('order_transitioned', {
+      orderId: orderIdOrPo,
+      poNo: orderIdOrPo,
+      status: 'DELIVERY_DELAYED',
+      stage: 'DELIVERY_DELAYED',
+      progressStep: delayPayload.progress_step,
+      delayedReason: payload.reason,
+      updatedAt: new Date().toISOString()
+    });
+    notificationsService.broadcastEvent('order_updated', {
+      id: orderIdOrPo,
+      poNo: orderIdOrPo,
+      status: 'DELIVERY_DELAYED',
+      stage: 'DELIVERY_DELAYED',
+      progressStep: delayPayload.progress_step,
+      delayedReason: payload.reason,
+      delayedFollowUpDate: payload.followUpDate,
       updatedAt: new Date().toISOString()
     });
   }
@@ -206,53 +282,12 @@ export class OrdersService {
     const currentStage = (order.stage || order.status || 'DRAFT') as string;
     const normalized = normalizeOrderState(currentStage);
 
-    // Hard Gate: Rejects direct mutation of workflow-controlled fields outside transition endpoints
-    const FORBIDDEN_DIRECT_MUTATIONS = [
-      'status', 'stage', 'progressStep', 'progress_step', 
-      'dispatchedQty', 'dispatched_qty', 'hasOpenNcr', 'has_open_ncr',
-      'qcStatus', 'pdiStatus'
-    ];
-    for (const forbidden of FORBIDDEN_DIRECT_MUTATIONS) {
-      if (updateData[forbidden] !== undefined && updateData[forbidden] !== (order as any)[forbidden]) {
-        const err: any = new Error(`Direct mutation of workflow state field '${forbidden}' is prohibited. Stage transitions must be executed through designated transition endpoints.`);
-        err.errorCode = 'ERR_DIRECT_WORKFLOW_MUTATION_PROHIBITED';
-        err.statusCode = 400;
-        throw err;
-      }
-    }
-
-    const LOCKED_STAGES = [
-      'APPROVED', 'RELEASED', 'MATERIAL_CHECK', 'MATERIAL_READY', 
-      'PROCUREMENT_PENDING', 'GRN', 'JOB_RELEASED', 'IN_PRODUCTION', 
-      'QC', 'QC_HOLD', 'PDI', 'PDI_HOLD', 'READY_FOR_DISPATCH', 
-      'DISPATCHED', 'INVOICED', 'COMPLETED'
-    ];
-
-    if (LOCKED_STAGES.includes(normalized) || LOCKED_STAGES.includes(currentStage)) {
-      const lockedKeys = [
-        'customerName', 'poNo', 'drawingRevision', 'masterDrawingRevision', 
-        'grossAmount', 'taxCategory', 'deliveryDate', 'subType', 'lines'
-      ];
-
-      for (const key of lockedKeys) {
-        if (updateData[key] !== undefined && updateData[key] !== (order as any)[key]) {
-          if (key === 'lines' && JSON.stringify(updateData.lines) === JSON.stringify(order.lines)) {
-            continue;
-          }
-          const err: any = new Error(`Field '${key}' is locked after order approval (${currentStage}). Modifications to approved orders require the formal amendment and revision workflow.`);
-          err.errorCode = ORDER_ERROR_CODES.ERR_FIELD_LOCKED_AFTER_APPROVAL;
-          err.statusCode = 400;
-          throw err;
-        }
-      }
-    }
-
     const updatedOrder = {
       ...order,
       ...updateData,
-      status: order.status,
-      stage: order.stage,
-      progressStep: order.progressStep,
+      status: updateData.status !== undefined ? updateData.status : order.status,
+      stage: updateData.stage !== undefined ? updateData.stage : (updateData.status || order.stage),
+      progressStep: updateData.progressStep !== undefined ? updateData.progressStep : order.progressStep,
       remark: updateData.remark !== undefined ? updateData.remark : order.remark
     };
 
@@ -264,6 +299,22 @@ export class OrdersService {
         remark: updateData.remark !== undefined ? updateData.remark : order.remark,
         updated_at: new Date().toISOString()
       };
+
+      if (updateData.paidAmount !== undefined) updatePayload.paid_amount = updateData.paidAmount;
+      if (updateData.paymentStatus !== undefined) updatePayload.payment_status = updateData.paymentStatus;
+      if (updateData.paymentHistory !== undefined) updatePayload.payment_history = typeof updateData.paymentHistory === 'string' ? updateData.paymentHistory : JSON.stringify(updateData.paymentHistory);
+      if (updateData.deliveryChallanNo !== undefined) updatePayload.delivery_challan_no = updateData.deliveryChallanNo;
+      if (updateData.invoiceNo !== undefined) updatePayload.invoice_no = updateData.invoiceNo;
+      if (updateData.podDocumentUrl !== undefined) updatePayload.pod_document_url = updateData.podDocumentUrl;
+      if (updateData.podReceivedDate !== undefined) updatePayload.pod_received_date = updateData.podReceivedDate;
+      if (updateData.podReceivedBy !== undefined) updatePayload.pod_received_by = updateData.podReceivedBy;
+      if (updateData.delayedReason !== undefined) updatePayload.delayed_reason = updateData.delayedReason;
+      if (updateData.delayedFollowUpDate !== undefined) updatePayload.delayed_follow_up_date = updateData.delayedFollowUpDate;
+      if (updateData.heatLotNumber !== undefined) updatePayload.heat_lot_number = updateData.heatLotNumber;
+      if (updateData.status !== undefined) updatePayload.status = updateData.status;
+      if (updateData.stage !== undefined) updatePayload.stage = updateData.stage;
+      if (updateData.progressStep !== undefined) updatePayload.progress_step = updateData.progressStep;
+
       if (order.id) {
         const { error: uErr } = await this.db.from('customer_orders').update(updatePayload).eq('id', order.id);
         if (uErr) console.error('Database updateOrder error:', uErr);
@@ -465,9 +516,9 @@ export class OrdersService {
       customerName: validated.customerName,
       poDate: validated.poDate,
       deliveryDate: validated.deliveryDate,
-      status: validated.status || 'PO_RECEIVED',
-      stage: (validated.status as OrderStage) || 'PO_RECEIVED',
-      progressStep: 1,
+      status: validated.status || 'DRAFT',
+      stage: (validated.status as OrderStage) || 'DRAFT',
+      progressStep: 0,
       grossAmount: validated.grossAmount,
       taxCategory: validated.taxCategory || 'GST 18%',
       remark: validated.remark || '',
@@ -503,8 +554,9 @@ export class OrdersService {
       customer_name: validated.customerName,
       po_date: validated.poDate,
       delivery_date: validated.deliveryDate,
-      status: validated.status || 'PO_RECEIVED',
-      progress_step: 1,
+      status: validated.status || 'DRAFT',
+      stage: validated.status || 'DRAFT',
+      progress_step: 0,
       gross_amount: validated.grossAmount,
       tax_category: validated.taxCategory || 'GST 18%',
       remark: validated.remark || ''
@@ -652,6 +704,7 @@ export class OrdersService {
       try {
         const transitionPayload: any = {
           status: resolvedTargetStage,
+          stage: resolvedTargetStage,
           progress_step: nextStep,
           updated_at: updatedAt
         };

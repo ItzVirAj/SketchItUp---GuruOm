@@ -1,23 +1,77 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Mail, 
-  Lock, 
-  Eye, 
-  EyeOff, 
-  ArrowRight, 
-  AlertCircle, 
-  CheckCircle2, 
-  Key, 
-  Shield, 
-  Sparkles, 
+import {
+  Lock,
+  Mail,
+  ArrowRight,
+  ShieldCheck,
+  AlertCircle,
+  Sparkles,
+  Eye,
+  EyeOff,
+  Factory,
+  Cpu,
+  CheckCircle2,
   X,
-  Building2
+  Building2,
+  Route,
+  Boxes,
+  ChevronDown
 } from 'lucide-react';
-import { getRoleColor } from '../../utils/permissions';
 import { useAuth } from '../../context/AuthContext';
 import { fetchProfiles } from '../../services/supabaseServices';
 import type { SystemUser } from '../../types/console';
+
+export const DEV_ACCOUNTS = [
+  {
+    email: 'owner@guruom.in',
+    password: '1234567890',
+    label: 'Executive Owner',
+    role: 'SUPER ADMIN',
+    name: 'Sachin Gharbude',
+  },
+  {
+    email: 'ppc@guruom.in',
+    password: '1234567890',
+    label: 'Production Planner',
+    role: 'PLANNER',
+    name: 'PPC Lead',
+  },
+  {
+    email: 'operator@guruom.in',
+    password: '1234567890',
+    label: 'Machine Operator',
+    role: 'OPERATOR',
+    name: 'CNC Machinist',
+  },
+  {
+    email: 'qc@guruom.in',
+    password: '1234567890',
+    label: 'Quality Inspector',
+    role: 'QUALITY_INSPECTOR',
+    name: 'Quality Lead',
+  },
+  {
+    email: 'stores@guruom.in',
+    password: '1234567890',
+    label: 'Store Keeper',
+    role: 'STORE_KEEPER',
+    name: 'Inventory Manager',
+  },
+  {
+    email: 'dispatch@guruom.in',
+    password: '1234567890',
+    label: 'Dispatch Lead',
+    role: 'DISPATCH_OFFICER',
+    name: 'Logistics Supervisor',
+  },
+  {
+    email: 'accounts@guruom.in',
+    password: '1234567890',
+    label: 'Finance / Accounts',
+    role: 'ACCOUNTS',
+    name: 'Commercial Lead',
+  },
+];
 
 interface LoginPageProps {
   onLoginSuccess?: (email: string) => void;
@@ -25,80 +79,80 @@ interface LoginPageProps {
   onToggleTheme?: () => void;
 }
 
-export const LoginPage: React.FC<LoginPageProps> = ({
-  onLoginSuccess
-}) => {
+export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const { signIn, resetPassword } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
-  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [isForgotOpen, setIsForgotOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [isResetting, setIsResetting] = useState(false);
   const [isSignUpModalOpen, setIsSignUpModalOpen] = useState(false);
+  const [isDevLoginOpen, setIsDevLoginOpen] = useState(true);
   const [demoUsers, setDemoUsers] = useState<SystemUser[]>([]);
-  const [isDemoLoading, setIsDemoLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    setIsDemoLoading(true);
-    fetchProfiles().then(users => {
-      if (!cancelled) {
-        setDemoUsers(users);
-        setIsDemoLoading(false);
-        if (users && users.length > 0) {
+    fetchProfiles()
+      .then(users => {
+        if (!cancelled && users && users.length > 0) {
+          setDemoUsers(users);
           try {
             localStorage.setItem('stratum_demo_users', JSON.stringify(users));
           } catch (_) {}
         }
-      }
-    }).catch(() => { if (!cancelled) setIsDemoLoading(false); });
+      })
+      .catch(() => {});
     return () => { cancelled = true; };
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setSuccessMsg('');
-
-    const trimmedEmail = email.trim().toLowerCase();
-    const trimmedPassword = password.trim();
-
-    if (!trimmedEmail || !trimmedPassword) {
-      setError('Please enter both Email and Password.');
+    if (!email.trim() || !password) {
+      setLocalError('Please enter both email and password.');
       return;
     }
 
+    setLocalError(null);
+    setSuccessMsg(null);
     setIsLoading(true);
-    const { error: authError } = await signIn(trimmedEmail, trimmedPassword);
-    setIsLoading(false);
 
-    if (authError) {
-      setError(authError.message || 'Failed to sign in. Please verify your credentials.');
-    } else if (onLoginSuccess) {
-      onLoginSuccess(trimmedEmail);
+    try {
+      const trimmedEmail = email.trim().toLowerCase();
+      const { error: authError } = await signIn(trimmedEmail, password);
+      if (authError) {
+        setLocalError(authError.message || 'Invalid email or password. Please verify your credentials.');
+      } else if (onLoginSuccess) {
+        onLoginSuccess(trimmedEmail);
+      }
+    } catch (err: any) {
+      setLocalError(err.message || 'An unexpected error occurred during login.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleAutoFillAndLogin = async (userEmail: string) => {
-    setEmail(userEmail);
-    setPassword('1234567890');
-    setIsDemoModalOpen(false);
-    setError('');
-    setSuccessMsg('');
+  const handleDevQuickLogin = async (devEmail: string, devPass: string) => {
+    setEmail(devEmail);
+    setPassword(devPass);
+    setLocalError(null);
+    setSuccessMsg(null);
     setIsLoading(true);
-    const { error: authError } = await signIn(userEmail, '1234567890');
-    setIsLoading(false);
 
-    if (authError) {
-      setError(authError.message || 'Failed to log in via demo account.');
-    } else if (onLoginSuccess) {
-      onLoginSuccess(userEmail);
+    try {
+      const { error: authError } = await signIn(devEmail, devPass);
+      if (authError) {
+        setLocalError(`Login failed: ${authError.message}`);
+      } else if (onLoginSuccess) {
+        onLoginSuccess(devEmail);
+      }
+    } catch (err: any) {
+      setLocalError(err.message || 'Dev login error');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -106,462 +160,393 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     e.preventDefault();
     const targetEmail = (forgotEmail || email).trim().toLowerCase();
     if (!targetEmail) {
-      setError('Please enter your email address to receive reset instructions.');
+      setLocalError('Please enter your email address to receive reset instructions.');
       return;
     }
     setIsResetting(true);
-    const { error: resetError } = await resetPassword(targetEmail);
-    setIsResetting(false);
-
-    if (resetError) {
-      setError(resetError.message);
-    } else {
-      setSuccessMsg(`Password reset link sent to ${targetEmail}. Please check your inbox.`);
-      setIsForgotPasswordOpen(false);
+    setLocalError(null);
+    try {
+      const { error: resetError } = await resetPassword(targetEmail);
+      if (resetError) {
+        setLocalError(resetError.message);
+      } else {
+        setSuccessMsg(`Password reset link sent to ${targetEmail}. Please check your inbox.`);
+        setIsForgotOpen(false);
+      }
+    } catch (err: any) {
+      setLocalError(err.message || 'Failed to send reset link.');
+    } finally {
+      setIsResetting(false);
     }
   };
 
+  // Combine static dev accounts with any dynamic demo users from database
+  const effectiveDevAccounts = DEV_ACCOUNTS.map(acc => {
+    const matched = demoUsers.find(u => u.email?.toLowerCase() === acc.email.toLowerCase());
+    return {
+      ...acc,
+      name: matched?.name || acc.name,
+      role: matched?.role || acc.role,
+    };
+  });
+
   return (
-    <div 
-      className="min-h-screen w-full relative flex flex-col items-center justify-center overflow-hidden p-4 sm:p-6 md:p-8 font-sans selection:bg-[#6C63FF]/20 selection:text-[#5B4FE8]"
-      style={{
-        background: 'linear-gradient(180deg, #ffffff 0.000%, #6C63FF 100.000%)'
-      }}
-    >
-      
-      {/* Decorative Subtle Glow Accents */}
-      <div 
-        aria-hidden="true" 
-        className="pointer-events-none absolute -top-28 -left-28 w-[520px] h-[520px] rounded-full bg-white/70 blur-[100px] opacity-80"
-      />
-      <div 
-        aria-hidden="true" 
-        className="pointer-events-none absolute top-1/3 -right-20 w-[480px] h-[480px] rounded-full bg-[#6C63FF]/30 blur-[120px] opacity-60" 
-      />
-      <div 
-        aria-hidden="true" 
-        className="pointer-events-none absolute -bottom-28 -left-20 w-[580px] h-[580px] rounded-full bg-[#5B4FE8]/35 blur-[130px] opacity-70" 
-      />
-      <div 
-        aria-hidden="true" 
-        className="pointer-events-none absolute top-12 left-1/3 w-[360px] h-[360px] rounded-full bg-white/50 blur-[90px] opacity-80" 
-      />
+    <div className="min-h-screen w-screen bg-[#F0F3FA] flex items-center justify-center p-3 sm:p-6 lg:p-10 select-none font-sans">
+      {/* Split-screen Card Shell - Expanded Width */}
+      <div className="w-full max-w-6xl bg-white rounded-3xl sm:rounded-[36px] shadow-2xl border border-[#E0E7F5] overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[640px]">
+        
+        {/* ========================================================================= */}
+        {/* LEFT PANEL: Manufacturing-Themed Hero Brand Visual (#5B75F8 -> #384FD9)  */}
+        {/* ========================================================================= */}
+        <div className="lg:col-span-5 bg-gradient-to-br from-[#5B75F8] via-[#4860EB] to-[#2B3FB8] p-6 sm:p-10 text-white flex flex-col justify-between relative overflow-hidden pointer-events-none select-none">
+          {/* Subtle Background Pattern & Glow */}
+          <div className="absolute -right-16 -bottom-16 w-64 h-64 rounded-full bg-white/10 blur-2xl pointer-events-none"></div>
+          <div className="absolute -left-16 -top-16 w-56 h-56 rounded-full bg-indigo-400/20 blur-2xl pointer-events-none"></div>
 
-      {/* Main SaaS Card Container */}
-      <motion.div
-        initial={{ opacity: 0, y: 20, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-[440px] bg-[#FFFFFF] rounded-[24px] shadow-[0_20px_60px_-15px_rgba(108,99,255,0.25),0_10px_30px_-10px_rgba(0,0,0,0.06)] p-8 sm:p-10 relative z-10 border border-white/80"
-      >
-        {/* Logo Section */}
-        <div className="w-[44px] h-[44px] rounded-[12px] bg-gradient-to-br from-[#5B75F8] to-indigo-600 flex items-center justify-center text-white shadow-md shadow-[#5B75F8]/30 mb-6">
-          <span className="font-extrabold text-xl tracking-tight leading-none select-none">G</span>
-        </div>
+          {/* Top Brand Header */}
+          <div className="relative z-10">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-[#0F172A] flex items-center justify-center text-[#7B92FF] shadow-md shadow-[#5B75F8]/30">
+                <Factory className="w-6 h-6" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-black tracking-tight leading-none text-white flex items-center gap-1.5">
+                  Owner<span className="text-[#E0E7FF]">OS</span>
+                  <span className="text-[10px] uppercase font-extrabold tracking-wider px-2 py-0.5 rounded-full bg-white/20 text-white border border-white/30 font-mono">
+                    Enterprise
+                  </span>
+                </h1>
+                <p className="text-xs text-white/80 font-medium mt-0.5">Manufacturing & Shop Floor ERP</p>
+              </div>
+            </div>
 
-        {/* Heading Section */}
-        <div className="mb-7">
-          <h1 className="text-[28px] font-bold text-[#1A1B2E] leading-tight tracking-tight">
-            Sign In To Your Account.
-          </h1>
-          <p className="text-[15px] text-[#6B7280] mt-2 font-normal leading-relaxed">
-            Welcome back! Please enter your details.
-          </p>
-        </div>
-
-        {/* Alerts */}
-        <AnimatePresence mode="wait">
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, height: 0, y: -10 }}
-              animate={{ opacity: 1, height: 'auto', y: 0 }}
-              exit={{ opacity: 0, height: 0, y: -10 }}
-              className="mb-5 p-3.5 rounded-[14px] bg-rose-50 border border-rose-200/80 text-rose-700 text-xs font-medium flex items-start gap-2.5"
-            >
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-500 mt-0.5" />
-              <div className="flex-1 leading-snug">{error}</div>
-              <button 
-                type="button" 
-                onClick={() => setError('')}
-                className="text-rose-400 hover:text-rose-600 transition-colors"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </motion.div>
-          )}
-
-          {successMsg && (
-            <motion.div
-              initial={{ opacity: 0, height: 0, y: -10 }}
-              animate={{ opacity: 1, height: 'auto', y: 0 }}
-              exit={{ opacity: 0, height: 0, y: -10 }}
-              className="mb-5 p-3.5 rounded-[14px] bg-emerald-50 border border-emerald-200/80 text-emerald-700 text-xs font-medium flex items-start gap-2.5"
-            >
-              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500 mt-0.5" />
-              <div className="flex-1 leading-snug">{successMsg}</div>
-              <button 
-                type="button" 
-                onClick={() => setSuccessMsg('')}
-                className="text-emerald-400 hover:text-emerald-600 transition-colors"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Form Fields */}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          {/* Email Field */}
-          <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor="email"
-              className="text-[13px] font-medium text-[#1A1B2E]"
-            >
-              Email address
-            </label>
-            <div className="relative flex items-center">
-              <Mail className="w-[18px] h-[18px] absolute left-4 text-[#9CA3AF] pointer-events-none transition-colors" />
-              <input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email"
-                className="w-full h-[48px] rounded-[14px] border border-[#E5E7EB] bg-[#FFFFFF] pl-11 pr-4 text-[14px] text-[#1A1B2E] placeholder:text-[#9CA3AF] transition-all duration-200 focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/15 outline-none shadow-xs"
-              />
+            <div className="mt-8 sm:mt-12 space-y-3">
+              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight leading-tight text-white">
+                Intelligent Precision Manufacturing, Shop Floor & ERP OS.
+              </h2>
+              <p className="text-xs sm:text-sm text-white/85 leading-relaxed">
+                Unified operational command center for CNC machining, route travelers, FEFO inventory, traceability & dispatch.
+              </p>
             </div>
           </div>
 
-          {/* Password Field */}
-          <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor="password"
-              className="text-[13px] font-medium text-[#1A1B2E]"
-            >
-              Password
-            </label>
-            <div className="relative flex items-center">
-              <Lock className="w-[18px] h-[18px] absolute left-4 text-[#9CA3AF] pointer-events-none transition-colors" />
-              <input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                className="w-full h-[48px] rounded-[14px] border border-[#E5E7EB] bg-[#FFFFFF] pl-11 pr-11 text-[14px] text-[#1A1B2E] placeholder:text-[#9CA3AF] transition-all duration-200 focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/15 outline-none shadow-xs"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 text-[#9CA3AF] hover:text-[#6B7280] transition-colors p-1 cursor-pointer"
-                aria-label={showPassword ? "Hide password" : "Show password"}
-              >
-                {showPassword ? (
-                  <EyeOff className="w-[18px] h-[18px]" />
-                ) : (
-                  <Eye className="w-[18px] h-[18px]" />
-                )}
-              </button>
+          {/* Center Manufacturing Motifs Graphic (Hover effect removed) */}
+          <div className="my-6 relative z-10 py-4 border-y border-white/20 grid grid-cols-3 gap-2 text-center text-white/90 font-mono">
+            <div className="flex flex-col items-center gap-1 p-2 bg-white/10 rounded-2xl backdrop-blur-xs">
+              <Route className="w-5 h-5 text-[#FCD34D]" />
+              <span className="text-[11px] font-bold">Route Cards</span>
+            </div>
+
+            <div className="flex flex-col items-center gap-1 p-2 bg-white/10 rounded-2xl backdrop-blur-xs">
+              <Boxes className="w-5 h-5 text-white" />
+              <span className="text-[11px] font-bold">Heat Trace</span>
+            </div>
+
+            <div className="flex flex-col items-center gap-1 p-2 bg-white/10 rounded-2xl backdrop-blur-xs">
+              <Cpu className="w-5 h-5 text-[#93C5FD]" />
+              <span className="text-[11px] font-bold">Shop IoT</span>
             </div>
           </div>
 
-          {/* Options Row */}
-          <div className="flex items-center justify-between pt-0.5">
-            <label className="flex items-center gap-2 cursor-pointer select-none group">
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="w-4 h-4 rounded border-[#D1D5DB] text-[#6C63FF] accent-[#6C63FF] focus:ring-[#6C63FF]/20 cursor-pointer"
-              />
-              <span className="text-[13px] font-medium text-[#6B7280] group-hover:text-[#1A1B2E] transition-colors">
-                Remember For 30 Days
-              </span>
-            </label>
-
-            <button
-              type="button"
-              onClick={() => {
-                setForgotEmail(email);
-                setIsForgotPasswordOpen(true);
-              }}
-              className="text-[13px] font-medium text-[#5B4FE8] hover:text-[#4338CA] hover:underline transition-colors cursor-pointer"
-            >
-              Forgot Password
-            </button>
+          {/* Bottom Security / Trust Badge */}
+          <div className="relative z-10 flex items-center justify-between text-xs text-white/80">
+            <div className="flex items-center gap-2 font-mono">
+              <ShieldCheck className="w-4 h-4 text-white" />
+              <span>Role-Based Access Control</span>
+            </div>
+            <span className="font-mono text-[10px] text-white/70">v2.6 Production</span>
           </div>
-
-          {/* Primary Button */}
-          <div className="pt-2">
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full h-[50px] rounded-full bg-gradient-to-r from-[#5B4FE8] to-[#7C6FF0] hover:from-[#5043DB] hover:to-[#7163E8] text-white text-[15px] font-bold shadow-lg shadow-[#5B4FE8]/25 hover:shadow-xl hover:shadow-[#5B4FE8]/35 active:scale-[0.99] transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <>
-                  <span>Sign In</span>
-                  <ArrowRight className="w-4 h-4 ml-0.5" />
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-
-        {/* Footer Link */}
-        <div className="mt-7 text-center text-[14px] text-[#6B7280]">
-          Don't have an account?{' '}
-          <button
-            type="button"
-            onClick={() => setIsSignUpModalOpen(true)}
-            className="font-bold text-[#5B4FE8] hover:text-[#4338CA] hover:underline transition-colors cursor-pointer ml-1"
-          >
-            Sign Up
-          </button>
         </div>
-      </motion.div>
 
-      {/* Floating Subtle Demo Role Quick Access Pill */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2, duration: 0.4 }}
-        className="mt-6 z-10"
-      >
-        <button
-          type="button"
-          onClick={() => setIsDemoModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/70 hover:bg-white text-xs font-semibold text-[#5B4FE8] border border-white/80 shadow-[0_4px_16px_rgba(108,99,255,0.12)] backdrop-blur-md transition-all duration-200 hover:scale-105 cursor-pointer group"
-        >
-          <Key className="w-3.5 h-3.5 text-[#6C63FF] group-hover:rotate-12 transition-transform" />
-          <span>Demo Role Accounts & Directory</span>
-        </button>
-      </motion.div>
-
-      {/* POPUP MODAL: Forgot Password */}
-      <AnimatePresence>
-        {isForgotPasswordOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="relative w-full max-w-md bg-white rounded-[24px] shadow-2xl p-6 sm:p-8 border border-white/80"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-10 h-10 rounded-[12px] bg-[#6C63FF]/10 text-[#6C63FF] flex items-center justify-center font-bold">
-                  <Mail className="w-5 h-5" />
+        {/* ========================================================================= */}
+        {/* RIGHT PANEL: Form & Dev Quick Login                                       */}
+        {/* ========================================================================= */}
+        <div className="lg:col-span-7 bg-[#F8FAFC] p-6 sm:p-10 lg:p-12 flex flex-col justify-between overflow-y-auto">
+          <div>
+            {/* Top Brand Heading (Dedicated Division) */}
+            <div className="mb-7 pb-4 border-b border-[#E2E8F0]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#EEF2FF] text-[#5B75F8] border border-[#C7D2FE] flex items-center justify-center font-black shadow-xs">
+                  <Factory className="w-5 h-5" />
                 </div>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-black text-[#0F172A] tracking-tight flex items-center gap-1.5">
+                    GuruOm <span className="text-[#5B75F8]">OS</span>
+                  </h1>
+                  <p className="text-xs text-[#64748B] font-medium mt-0.5">
+                    Sign in to your manufacturing terminal & shop floor command center.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Error Notification */}
+            {localError && (
+              <div
+                id="login-error-alert"
+                className="mb-4 p-3.5 rounded-2xl flex items-start gap-2.5 text-xs bg-rose-50 border border-rose-200 text-rose-800 animate-in fade-in slide-in-from-top-1 duration-200 font-sans"
+              >
+                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0 text-rose-600" />
+                <div className="flex-1 font-medium leading-relaxed">{localError}</div>
                 <button
                   type="button"
-                  onClick={() => setIsForgotPasswordOpen(false)}
-                  className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+                  onClick={() => setLocalError(null)}
+                  className="text-rose-400 hover:text-rose-700 cursor-pointer"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
+            )}
 
-              <h2 className="text-xl font-bold text-[#1A1B2E]">Reset Your Password</h2>
-              <p className="text-xs text-[#6B7280] mt-1.5 mb-5 leading-relaxed">
-                Enter your registered workspace email address and we'll send you instructions to reset your password.
-              </p>
+            {/* Success Notification */}
+            {successMsg && (
+              <div className="mb-4 p-3.5 rounded-2xl flex items-start gap-2.5 text-xs bg-emerald-50 border border-emerald-200 text-emerald-800 animate-in fade-in slide-in-from-top-1 duration-200">
+                <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0 text-emerald-600" />
+                <div className="flex-1 font-medium leading-relaxed">{successMsg}</div>
+                <button
+                  type="button"
+                  onClick={() => setSuccessMsg(null)}
+                  className="text-emerald-400 hover:text-emerald-700 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
 
-              <form onSubmit={handleSendResetPassword} className="space-y-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-[#1A1B2E]">
-                    Email Address
-                  </label>
+            {/* Login Form */}
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-[#0F172A] mb-1.5 font-mono uppercase text-[11px]">
+                  Work Email Address
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#94A3B8]">
+                    <Mail className="w-4 h-4" />
+                  </div>
                   <input
                     type="email"
                     required
-                    value={forgotEmail}
-                    onChange={(e) => setForgotEmail(e.target.value)}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     placeholder="e.g. owner@guruom.in"
-                    className="w-full h-[46px] rounded-[14px] border border-[#E5E7EB] bg-white px-4 text-sm text-[#1A1B2E] placeholder:text-[#9CA3AF] focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/15 outline-none"
+                    className="w-full pl-10 pr-3.5 py-2.5 bg-white border border-[#CBD5E1] rounded-2xl text-xs font-semibold text-[#0F172A] placeholder-[#94A3B8] focus:border-[#5B75F8] focus:ring-2 focus:ring-[#5B75F8]/20 focus:outline-none transition-all shadow-2xs font-mono"
                   />
                 </div>
+              </div>
 
-                <div className="flex items-center gap-3 pt-2">
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-[#0F172A] font-mono uppercase text-[11px]">
+                    Password
+                  </label>
                   <button
                     type="button"
-                    onClick={() => setIsForgotPasswordOpen(false)}
-                    className="flex-1 h-[44px] rounded-full border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 transition-colors cursor-pointer"
+                    onClick={() => {
+                      setForgotEmail(email);
+                      setIsForgotOpen(true);
+                    }}
+                    className="text-[11px] font-bold text-[#5B75F8] hover:text-[#4355E8] hover:underline cursor-pointer"
                   >
-                    Cancel
+                    Forgot password?
                   </button>
+                </div>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#94A3B8]">
+                    <Lock className="w-4 h-4" />
+                  </div>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••••••"
+                    className="w-full pl-10 pr-10 py-2.5 bg-white border border-[#CBD5E1] rounded-2xl text-xs font-semibold text-[#0F172A] placeholder-[#94A3B8] focus:border-[#5B75F8] focus:ring-2 focus:ring-[#5B75F8]/20 focus:outline-none transition-all shadow-2xs font-mono"
+                  />
                   <button
-                    type="submit"
-                    disabled={isResetting}
-                    className="flex-1 h-[44px] rounded-full bg-gradient-to-r from-[#5B4FE8] to-[#7C6FF0] text-white text-xs font-bold hover:opacity-95 shadow-md shadow-[#5B4FE8]/20 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#94A3B8] hover:text-[#0F172A] cursor-pointer"
                   >
-                    {isResetting ? (
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <span>Send Link</span>
-                    )}
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* POPUP MODAL: Sign Up Notice */}
-      <AnimatePresence>
-        {isSignUpModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="relative w-full max-w-md bg-white rounded-[24px] shadow-2xl p-6 sm:p-8 border border-white/80 text-center"
-            >
-              <div className="w-12 h-12 rounded-2xl bg-[#6C63FF]/10 text-[#6C63FF] mx-auto flex items-center justify-center font-bold mb-4">
-                <Building2 className="w-6 h-6" />
               </div>
 
-              <h2 className="text-xl font-bold text-[#1A1B2E]">Enterprise Account Access</h2>
-              <p className="text-xs text-[#6B7280] mt-2 mb-6 leading-relaxed">
-                GuruOm Owner OS is an enterprise operating system. User accounts and security role permissions are provisioned by your system administrator.
-              </p>
-
-              <div className="bg-slate-50 border border-slate-200/70 rounded-[14px] p-3 text-xs text-slate-600 mb-6 text-left">
-                💡 <strong className="text-slate-800">Need immediate testing access?</strong> You can use any of the pre-configured role accounts from the Demo Directory.
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsSignUpModalOpen(false)}
-                  className="flex-1 h-[44px] rounded-full border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 transition-colors cursor-pointer"
-                >
-                  Close
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsSignUpModalOpen(false);
-                    setIsDemoModalOpen(true);
-                  }}
-                  className="flex-1 h-[44px] rounded-full bg-gradient-to-r from-[#5B4FE8] to-[#7C6FF0] text-white text-xs font-bold shadow-md shadow-[#5B4FE8]/20 hover:opacity-95 transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  <Key className="w-3.5 h-3.5" />
-                  <span>Demo Accounts</span>
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* POPUP MODAL: Demo Users & Passwords Directory */}
-      <AnimatePresence>
-        {isDemoModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 15 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              className="relative w-full max-w-xl rounded-[24px] bg-white border border-slate-200/80 shadow-2xl overflow-hidden font-sans text-slate-900"
-            >
-              {/* Modal Header */}
-              <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50 to-white">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-[14px] bg-gradient-to-br from-[#6C63FF] to-[#4338CA] text-white flex items-center justify-center font-bold shadow-xs">
-                    <Key className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-base text-[#1A1B2E]">Role Accounts & Passwords</h3>
-                    <p className="text-xs text-[#6B7280]">
-                      Click any account below to instantly log in as that role
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsDemoModalOpen(false)}
-                  className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Modal Body: Users List */}
-              <div className="p-6 max-h-[60vh] overflow-y-auto space-y-3">
-                <div className="p-3.5 rounded-[14px] border border-[#6C63FF]/20 bg-[#6C63FF]/5 text-xs text-[#5B4FE8] flex items-center gap-2.5">
-                  <Shield className="w-4 h-4 shrink-0 text-[#6C63FF]" />
-                  <span>Standard Password for all demo accounts: <strong className="font-mono px-2 py-0.5 rounded bg-white text-[#1A1B2E] border border-[#6C63FF]/30 font-bold ml-1">1234567890</strong></span>
-                </div>
-
-                {isDemoLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="w-6 h-6 border-2 border-[#6C63FF]/30 border-t-[#6C63FF] rounded-full animate-spin" />
-                  </div>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-3 px-4 bg-[#5B75F8] hover:bg-[#4860EB] active:scale-[0.99] text-white text-xs sm:text-sm font-bold rounded-2xl shadow-md shadow-[#5B75F8]/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer font-mono"
+              >
+                {isLoading ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                 ) : (
-                <div className="space-y-2.5 pt-2">
-                  {demoUsers.map((usr) => {
-                    const roleColors = getRoleColor(usr.role);
-
-                    return (
-                      <div
-                        key={usr.id}
-                        className="p-3.5 rounded-[16px] border border-slate-200/80 bg-slate-50/60 hover:bg-white hover:border-[#6C63FF]/40 hover:shadow-xs transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-[12px] bg-gradient-to-tr from-[#6C63FF] to-[#4338CA] flex items-center justify-center text-white font-black text-xs shrink-0 shadow-xs">
-                            {usr.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                          </div>
-                          <div>
-                            <div className="text-xs font-bold text-[#1A1B2E] flex items-center gap-2">
-                              <span>{usr.name}</span>
-                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase border ${roleColors.bg} ${roleColors.text} ${roleColors.border}`}>
-                                {usr.role}
-                              </span>
-                            </div>
-                            <div className="text-[11px] font-mono text-[#6B7280] mt-0.5">
-                              {usr.email}
-                            </div>
-                            <div className="text-[10px] text-slate-400 mt-0.5">
-                              Dept: {usr.department || 'Operations'}
-                            </div>
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => handleAutoFillAndLogin(usr.email)}
-                          className="px-3.5 py-2 rounded-full bg-gradient-to-r from-[#5B4FE8] to-[#7C6FF0] hover:from-[#5043DB] hover:to-[#7163E8] text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-xs shrink-0"
-                        >
-                          <Sparkles className="w-3.5 h-3.5" />
-                          <span>Login as {usr.role.split('_')[0]}</span>
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
+                  <>
+                    <span>Log In to Terminal</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
                 )}
-              </div>
+              </button>
+            </form>
 
-              {/* Modal Footer */}
-              <div className="p-4 border-t border-slate-100 bg-slate-50 text-center">
+            <div className="mt-4 text-center">
+              <p className="text-[11px] text-[#64748B]">
+                New employee? Accounts must be provisioned by a System Administrator.{' '}
                 <button
                   type="button"
-                  onClick={() => setIsDemoModalOpen(false)}
-                  className="px-6 py-2 rounded-full border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-200/80 transition-all cursor-pointer"
+                  onClick={() => setIsSignUpModalOpen(true)}
+                  className="font-bold text-[#5B75F8] hover:underline cursor-pointer"
                 >
-                  Close Directory
+                  Request Access
+                </button>
+              </p>
+            </div>
+          </div>
+
+          {/* ========================================================================= */}
+          {/* DEV DIRECT LOGIN - Collapsible Dropdown Accordion                          */}
+          {/* ========================================================================= */}
+          <div className="mt-6 pt-4 border-t border-[#E2E8F0]">
+            <button
+              type="button"
+              onClick={() => setIsDevLoginOpen(!isDevLoginOpen)}
+              className="w-full flex items-center justify-between py-1.5 text-left cursor-pointer group select-none rounded-xl hover:bg-slate-100/60 transition-colors px-1"
+            >
+              <div className="flex items-center gap-2 text-xs font-bold text-[#0F172A]">
+                <Sparkles className="w-3.5 h-3.5 text-[#F59E0B]" />
+                <span>Dev Quick Login (Direct Role Access)</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-slate-400 group-hover:text-[#5B75F8] transition-colors">
+                <span className="text-[10px] font-mono font-medium">
+                  {isDevLoginOpen ? 'Hide' : 'Show Roles'}
+                </span>
+                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isDevLoginOpen ? 'rotate-180' : ''}`} />
+              </div>
+            </button>
+
+            {isDevLoginOpen && (
+              <div className="mt-2.5 space-y-2 animate-in fade-in slide-in-from-top-1 duration-150">
+                <p className="text-[10px] text-[#64748B] font-sans">
+                  Click any role below to authenticate directly via real JWT token with password <code className="font-bold text-[#0F172A] font-mono bg-slate-200 px-1 py-0.5 rounded">1234567890</code>:
+                </p>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 font-sans">
+                  {effectiveDevAccounts.map((account) => (
+                    <button
+                      key={account.email}
+                      type="button"
+                      onClick={() => handleDevQuickLogin(account.email, account.password)}
+                      disabled={isLoading}
+                      className="p-2 rounded-xl bg-white hover:bg-[#F1F5F9] border border-[#CBD5E1] hover:border-[#5B75F8] text-left transition-all group flex flex-col justify-between shadow-2xs cursor-pointer"
+                    >
+                      <div className="text-[11px] font-bold text-[#0F172A] group-hover:text-[#5B75F8] truncate">
+                        {account.label}
+                      </div>
+                      <div className="text-[10px] text-[#64748B] truncate flex items-center justify-between mt-0.5 font-mono">
+                        <span className="font-semibold text-[9px] uppercase">{account.role}</span>
+                        <span className="text-[8px] px-1 py-0.2 rounded bg-[#EEF2FF] text-[#5B75F8] font-bold">
+                          Login →
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Forgot Password Modal */}
+      {isForgotOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm font-sans">
+          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl p-6 sm:p-8 border border-slate-200">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-10 h-10 rounded-2xl bg-[#EEF2FF] text-[#5B75F8] flex items-center justify-center font-bold">
+                <Mail className="w-5 h-5" />
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsForgotOpen(false)}
+                className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <h2 className="text-xl font-bold text-[#0F172A]">Reset Your Password</h2>
+            <p className="text-xs text-[#64748B] mt-1.5 mb-5 leading-relaxed">
+              Enter your registered workspace email address and we'll send you instructions to reset your password.
+            </p>
+
+            <form onSubmit={handleSendResetPassword} className="space-y-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-[#0F172A] font-mono text-[11px] uppercase">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  placeholder="e.g. owner@guruom.in"
+                  className="w-full h-[46px] rounded-2xl border border-slate-300 bg-white px-4 text-xs font-mono text-[#0F172A] placeholder:text-slate-400 focus:border-[#5B75F8] focus:ring-2 focus:ring-[#5B75F8]/20 outline-none"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 pt-2 font-mono">
+                <button
+                  type="button"
+                  onClick={() => setIsForgotOpen(false)}
+                  className="flex-1 h-[44px] rounded-2xl border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isResetting}
+                  className="flex-1 h-[44px] rounded-2xl bg-[#5B75F8] hover:bg-[#4860EB] text-white text-xs font-bold shadow-md shadow-[#5B75F8]/20 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  {isResetting ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <span>Send Link</span>
+                  )}
                 </button>
               </div>
-            </motion.div>
+            </form>
           </div>
-        )}
-      </AnimatePresence>
+        </div>
+      )}
+
+      {/* Sign Up / Enterprise Access Notice Modal */}
+      {isSignUpModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm font-sans">
+          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl p-6 sm:p-8 border border-slate-200 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-[#EEF2FF] text-[#5B75F8] mx-auto flex items-center justify-center font-bold mb-4">
+              <Building2 className="w-6 h-6" />
+            </div>
+
+            <h2 className="text-xl font-bold text-[#0F172A]">Enterprise Account Access</h2>
+            <p className="text-xs text-[#64748B] mt-2 mb-6 leading-relaxed">
+              GuruOm OS is an enterprise operating system. User accounts and security role permissions are provisioned by your system administrator.
+            </p>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 text-xs text-slate-600 mb-6 text-left">
+              💡 <strong className="text-slate-800">Need immediate testing access?</strong> Use any of the pre-configured role accounts from the Dev Quick Login panel.
+            </div>
+
+            <div className="flex items-center gap-3 font-mono">
+              <button
+                type="button"
+                onClick={() => setIsSignUpModalOpen(false)}
+                className="w-full h-[44px] rounded-2xl bg-[#5B75F8] hover:bg-[#4860EB] text-white text-xs font-bold transition-colors cursor-pointer"
+              >
+                Understood
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

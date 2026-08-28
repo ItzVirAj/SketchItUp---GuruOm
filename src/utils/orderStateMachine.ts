@@ -37,6 +37,7 @@ export type CanonicalOrderState =
   | 'DISPATCH_READY'
   | 'IN_TRANSIT'
   | 'DISPATCHED'
+  | 'DELIVERY_DELAYED'
   | 'DELIVERED'
   | 'PAYMENT_PENDING'
   | 'INVOICED'
@@ -90,8 +91,9 @@ export const ALLOWED_TRANSITIONS: Record<CanonicalOrderState, CanonicalOrderStat
   'READY_FOR_DISPATCH': ['INVOICE_GENERATED', 'DISPATCH_READY', 'DISPATCHED', 'INVOICED'],
   'INVOICE_GENERATED': ['DISPATCH_READY', 'DISPATCHED', 'READY_FOR_DISPATCH', 'INVOICED'],
   'DISPATCH_READY': ['IN_TRANSIT', 'DISPATCHED'],
-  'IN_TRANSIT': ['DELIVERED', 'PAYMENT_PENDING'],
-  'DISPATCHED': ['INVOICED', 'DELIVERED', 'IN_TRANSIT', 'PAYMENT_PENDING'],
+  'IN_TRANSIT': ['DELIVERED', 'DELIVERY_DELAYED', 'PAYMENT_PENDING'],
+  'DISPATCHED': ['INVOICED', 'DELIVERED', 'IN_TRANSIT', 'DELIVERY_DELAYED', 'PAYMENT_PENDING'],
+  'DELIVERY_DELAYED': ['DELIVERED'],     // Mark Delayed -> ONLY "Order Received" (DELIVERED) unlocks Payment
   'DELIVERED': ['PAYMENT_PENDING', 'INVOICED', 'COMPLETED'],
   'PAYMENT_PENDING': ['COMPLETED', 'CLOSED' as any],
   'INVOICED': ['COMPLETED', 'DELIVERED', 'PAYMENT_PENDING'],
@@ -118,9 +120,16 @@ export function normalizeOrderState(stage: any): CanonicalOrderState {
     case 'MANUFACTURING_COMPLETED':
       return 'QC';
     case 'READY_TO_DISPATCH':
+    case 'DISPATCH_READY':
     case 'PDI_PASS':
     case 'PDI_PASSED':
       return 'READY_FOR_DISPATCH';
+    case 'PARTIALLY_DISPATCHED':
+      return 'DISPATCHED';
+    case 'INVOICE_GENERATED':
+      return 'INVOICED';
+    case 'ORDER_RECEIVED':
+      return 'DELIVERED';
     case 'WITH_SUBCONTRACTOR':
       return 'IN_PRODUCTION';
     case 'PO_SENT':
@@ -185,6 +194,7 @@ export const ORDER_STAGE_STEPS: Record<OrderStage, number> = {
   'DISPATCH_READY': 8,
   'DISPATCHED': 8,
   'IN_TRANSIT': 9,
+  'DELIVERY_DELAYED': 9,
   'DELIVERED': 9,
   'PAYMENT_PENDING': 10,
   'INVOICED': 10,
@@ -232,6 +242,7 @@ export const ORDER_STAGE_LABELS: Record<OrderStage, string> = {
   'DISPATCH_READY': '8. Dispatch Ready (Challan)',
   'DISPATCHED': '8. Dispatched',
   'IN_TRANSIT': '9. In Transit',
+  'DELIVERY_DELAYED': '9a. Delivery Delayed',
   'DELIVERED': '9. Delivered (POD Received)',
   'PAYMENT_PENDING': '10. Delivered — Payment Pending',
   'INVOICED': '10. Invoiced (Finance)',
@@ -746,22 +757,24 @@ export function validatePodRequired(podDocumentUrl?: string): TransitionValidati
  * PRD v1.0 Hard Gate: Order Closure requires Delivered status AND full payment.
  */
 export function validateOrderClosure(
-  currentState: CanonicalOrderState,
+  currentState: any,
   paymentStatus?: 'UNPAID' | 'PARTIAL' | 'PAID',
-  outstandingAmount?: number
+  outstandingAmount?: number,
+  hasPod?: boolean
 ): TransitionValidationResult {
-  // Must be delivered first
-  const deliveredStates: CanonicalOrderState[] = ['DELIVERED', 'PAYMENT_PENDING', 'INVOICED'];
-  if (!deliveredStates.includes(currentState)) {
+  const normState = normalizeOrderState(currentState);
+  // Must be delivered or invoiced first, or have signed POD
+  const deliveredStates: CanonicalOrderState[] = ['DELIVERED', 'PAYMENT_PENDING', 'INVOICED', 'COMPLETED'];
+  if (!deliveredStates.includes(normState) && !hasPod) {
     return {
       valid: false,
       errorCode: ORDER_ERROR_CODES.ERR_ORDER_NOT_DELIVERED,
-      errorMessage: `Closure Gate Blocked: Order must be in Delivered/Invoiced status before closing. Current status: ${currentState}.`
+      errorMessage: `Closure Gate Blocked: Order must be in Delivered/Invoiced status with verified POD before closing. Current status: ${currentState}.`
     };
   }
 
   // Must have full payment
-  if (paymentStatus && paymentStatus !== 'PAID') {
+  if (paymentStatus && paymentStatus !== 'PAID' && (outstandingAmount ?? 0) > 0) {
     return {
       valid: false,
       errorCode: ORDER_ERROR_CODES.ERR_PAYMENT_INCOMPLETE,

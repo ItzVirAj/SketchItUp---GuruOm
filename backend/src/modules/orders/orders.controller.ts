@@ -124,6 +124,25 @@ export class OrdersController {
     }
   }
 
+  async markDelayed(req: Request, res: Response) {
+    const tenant = extractTenantId(req);
+    try {
+      const result = await ordersService.markOrderDelayed(req.params.id, {
+        reason: req.body.reason,
+        followUpDate: req.body.followUpDate || req.body.follow_up_date
+      });
+
+      await Promise.all([
+        CacheService.invalidatePattern(`cache:${tenant}:orders:*`),
+        CacheService.invalidatePattern(`cache:${tenant}:dashboard:*`)
+      ]);
+
+      return res.json({ message: 'Order marked as DELIVERY_DELAYED', data: result });
+    } catch (err: any) {
+      return res.status(err.statusCode || 400).json({ error: err.errorCode || 'MarkDelayedError', message: err.message });
+    }
+  }
+
   async createAmendment(req: Request, res: Response) {
     const tenant = extractTenantId(req);
     try {

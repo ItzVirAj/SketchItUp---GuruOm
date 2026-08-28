@@ -5,6 +5,7 @@ import {
   generateChallanForOrder,
   markOrderDispatched,
   markOrderDelivered,
+  markOrderDelayed,
   recordOrderPaymentAndClose
 } from '../src/services/supabaseServices';
 import { isValidTransition } from '../src/utils/orderStateMachine';
@@ -176,7 +177,9 @@ describe('End-to-End Order Progression Workflow', () => {
     const payRes = await recordOrderPaymentAndClose(sampleOrder.id, paymentData);
     expect(payRes.success).toBe(true);
     expect(payRes.isFullyPaid).toBe(true);
-    expect(payRes.orderStatus).toBe('CLOSED');
+    expect(payRes.orderStatus).toBe('PAID');
+    expect(isValidTransition('DELIVERED', 'PAYMENT_PENDING')).toBe(true);
+    expect(isValidTransition('PAYMENT_PENDING', 'CLOSED')).toBe(true);
   }, 15000);
 
   it('runs complete lifecycle: Route Card Operations -> Manufacturing Completed -> START QC/PDI -> PDI Pass -> Dispatched -> Delivered -> Closed', async () => {
@@ -259,7 +262,41 @@ describe('End-to-End Order Progression Workflow', () => {
       grossAmount: 59000,
       remarks: 'Full settlement received'
     });
-    expect(paymentResult.isClosed).toBe(true);
-    expect(paymentResult.orderStatus).toBe('CLOSED');
+    expect(paymentResult.success).toBe(true);
+    expect(paymentResult.isFullyPaid).toBe(true);
+    expect(paymentResult.orderStatus).toBe('PAID');
+    expect(isValidTransition('DELIVERED', 'COMPLETED')).toBe(true);
+  }, 15000);
+
+  it('validates DELIVERY_DELAYED stage transitions: allows transit->delayed->delivered, blocks delayed->payment/close', () => {
+    // In Transit -> Delivery Delayed is valid
+    expect(isValidTransition('IN_TRANSIT', 'DELIVERY_DELAYED')).toBe(true);
+    expect(isValidTransition('DISPATCHED', 'DELIVERY_DELAYED')).toBe(true);
+
+    // Delivery Delayed -> Delivered is the ONLY valid forward transition
+    expect(isValidTransition('DELIVERY_DELAYED', 'DELIVERED')).toBe(true);
+
+    // Delivery Delayed cannot jump directly to Payment or Closed
+    expect(isValidTransition('DELIVERY_DELAYED', 'PAYMENT_PENDING')).toBe(false);
+    expect(isValidTransition('DELIVERY_DELAYED', 'COMPLETED')).toBe(false);
+    expect(isValidTransition('DELIVERY_DELAYED', 'CLOSED' as any)).toBe(false);
+  });
+
+  it('handles markOrderDelayed and subsequent delivery resolution flow', async () => {
+    // 1. Mark Delayed
+    const delayRes = await markOrderDelayed(sampleOrder.id, {
+      reason: 'Transporter mechanical breakdown near checkpost',
+      followUpDate: '2026-08-25'
+    });
+    expect(delayRes.success).toBe(true);
+
+    // 2. Resolve via Order Received (Mark Delivered)
+    const deliverRes = await markOrderDelivered(sampleOrder.id, {
+      deliveryDate: '2026-08-25',
+      receivedBy: 'Stores Security (Gate 2)',
+      podUrl: 'https://storage.guruom.in/pod/delayed-resolved-pod.pdf'
+    });
+    expect(deliverRes.success).toBe(true);
+    expect(deliverRes.orderStatus).toBe('DELIVERED');
   }, 15000);
 });

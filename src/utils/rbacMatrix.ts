@@ -78,6 +78,8 @@ export type CtaId =
   | 'GENERATE_DELIVERY_CHALLAN'
   | 'MARK_IN_TRANSIT'
   | 'MARK_DELIVERED'
+  | 'ORDER_RECEIVED'
+  | 'MARK_DELAYED'
   | 'RECORD_PAYMENT'
   | 'MARK_ORDER_CLOSED';
 
@@ -113,6 +115,8 @@ export const CTA_PERMISSION_TABLE: CtaPermission[] = [
   { ctaId: 'GENERATE_DELIVERY_CHALLAN', label: 'Generate Delivery Challan', stage: 'Stage 9a', authorizedRoles: ['Accountant', 'Owner'], preCondition: 'Invoice generated', resultingStatus: 'DISPATCH_READY' },
   { ctaId: 'MARK_IN_TRANSIT', label: 'Mark In Transit', stage: 'Stage 10', authorizedRoles: ['Dispatch Executive', 'Owner'], preCondition: 'Challan generated; goods loaded', resultingStatus: 'IN_TRANSIT' },
   { ctaId: 'MARK_DELIVERED', label: 'Mark Delivered', stage: 'Stage 10a', authorizedRoles: ['Dispatch Executive', 'Owner'], preCondition: 'POD/E-POD document attached', resultingStatus: 'DELIVERED', hardGate: 'Server-side reject if POD attachment missing' },
+  { ctaId: 'ORDER_RECEIVED', label: 'Order Received', stage: 'Stage 10a', authorizedRoles: ['Dispatch Executive', 'Owner'], preCondition: 'Goods physically received by customer (POD optional)', resultingStatus: 'DELIVERED' },
+  { ctaId: 'MARK_DELAYED', label: 'Mark Delayed', stage: 'Stage 10b', authorizedRoles: ['Dispatch Executive', 'Owner'], preCondition: 'Consignment did not reach customer on schedule', resultingStatus: 'DELIVERY_DELAYED' },
   { ctaId: 'RECORD_PAYMENT', label: 'Record Payment Received', stage: 'Stage 11', authorizedRoles: ['Accountant', 'Owner'], preCondition: 'Invoice outstanding balance > 0', resultingStatus: 'PAYMENT_RECORDED' },
   { ctaId: 'MARK_ORDER_CLOSED', label: 'Mark Order Closed', stage: 'Stage 11a', authorizedRoles: ['Accountant', 'Owner'], preCondition: 'Order Delivered AND full payment received', resultingStatus: 'CLOSED', hardGate: 'Server-side block if partial payment or not Delivered' },
 ];

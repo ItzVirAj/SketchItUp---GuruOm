@@ -90,6 +90,64 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
   const [modalError, setModalError] = useState<string | null>(null);
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
 
+  // Dedicated Record Payment Modal State
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<CustomerInvoice | null>(null);
+  const [payAmount, setPayAmount] = useState<number>(0);
+  const [payMode, setPayMode] = useState<string>('NEFT_RTGS');
+  const [payRefNo, setPayRefNo] = useState<string>('');
+  const [payDate, setPayDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [payNotes, setPayNotes] = useState<string>('');
+  const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
+  const [paymentModalError, setPaymentModalError] = useState<string | null>(null);
+
+  const handleOpenPaymentModal = (invoice: CustomerInvoice) => {
+    setSelectedInvoiceForPayment(invoice);
+    const balance = Number(invoice.balanceAmount !== undefined ? invoice.balanceAmount : invoice.totalAmount);
+    setPayAmount(balance > 0 ? balance : Number(invoice.totalAmount));
+    setPayMode('NEFT_RTGS');
+    setPayRefNo(`UTR-${Math.floor(10000000 + Math.random() * 90000000)}`);
+    setPayDate(new Date().toISOString().split('T')[0]);
+    setPayNotes(`Payment realization against Tax Invoice ${invoice.invoiceNo}`);
+    setPaymentModalError(null);
+    setShowPaymentModal(true);
+  };
+
+  const handlePaymentSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!selectedInvoiceForPayment) return;
+    if (payAmount <= 0) {
+      setPaymentModalError('Payment amount must be greater than 0');
+      return;
+    }
+    const balance = Number(selectedInvoiceForPayment.balanceAmount !== undefined ? selectedInvoiceForPayment.balanceAmount : selectedInvoiceForPayment.totalAmount);
+    if (payAmount > balance) {
+      setPaymentModalError(`Payment amount cannot exceed outstanding balance of ₹${balance.toLocaleString('en-IN')}`);
+      return;
+    }
+
+    try {
+      setIsSubmittingPayment(true);
+      setPaymentModalError(null);
+      if (onRecordPayment) {
+        await onRecordPayment(selectedInvoiceForPayment.invoiceNo, {
+          paymentAmount: payAmount,
+          paymentMode: payMode,
+          referenceNo: payRefNo,
+          paymentDate: payDate,
+          notes: payNotes
+        });
+      }
+      setShowPaymentModal(false);
+      setActionSuccessMsg(`Payment of ₹${payAmount.toLocaleString('en-IN')} recorded successfully against ${selectedInvoiceForPayment.invoiceNo}.`);
+      setTimeout(() => setActionSuccessMsg(null), 5000);
+    } catch (err: any) {
+      setPaymentModalError(err?.message || 'Failed to record payment');
+    } finally {
+      setIsSubmittingPayment(false);
+    }
+  };
+
   // Role Permissions
   const canCreateInvoice = !currentRole || 
     ['OWNER', 'FINANCE', 'ACCOUNTS', 'SUPER ADMIN', 'FINANCE_MANAGER', 'ACCOUNTANT', 'ACCOUNTS_ADMIN', 'Accounts / Finance'].includes(currentRole.toUpperCase()) || 
@@ -634,14 +692,15 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                             <span>Issue</span>
                           </button>
                         )}
-                        {inv.status !== 'PAID' && inv.status !== 'DRAFT' && Number(inv.balanceAmount || inv.totalAmount) > 0 && onRecordPayment && (
+                        {inv.status !== 'PAID' && inv.status !== 'DRAFT' && Number(inv.balanceAmount || inv.totalAmount) > 0 && (
                           <button
-                            onClick={() => onRecordPayment(inv.invoiceNo)}
-                            className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer ${
-                              isDarkMode ? 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/30' : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
+                            onClick={() => handleOpenPaymentModal(inv)}
+                            className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-xs ${
+                              isDarkMode ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 border border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-300'
                             }`}
                           >
-                            Record Payment
+                            <CreditCard className="w-3.5 h-3.5" />
+                            <span>Record Payment</span>
                           </button>
                         )}
                       </div>
@@ -892,6 +951,253 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Dedicated Record Payment Modal Dialog */}
+      {showPaymentModal && selectedInvoiceForPayment && (() => {
+        const total = Number(selectedInvoiceForPayment.totalAmount || 0);
+        const alreadyPaid = Number(selectedInvoiceForPayment.paidAmount || 0);
+        const balance = Number(selectedInvoiceForPayment.balanceAmount !== undefined ? selectedInvoiceForPayment.balanceAmount : total);
+        const newBalance = Math.max(0, balance - payAmount);
+        const willBeFullyPaid = newBalance <= 0;
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in font-sans">
+            <div className={`relative w-full max-w-xl rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${
+              isDarkMode ? 'bg-slate-900/95 border-slate-800 text-white backdrop-blur-2xl' : 'bg-white border-slate-200 text-slate-900 shadow-2xl'
+            }`}>
+              {/* Header */}
+              <div className={`flex items-center justify-between pb-3.5 border-b ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 text-emerald-500 dark:text-emerald-400 border border-emerald-500/30">
+                    <CreditCard className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm uppercase tracking-tight text-emerald-500 dark:text-emerald-400">
+                      Record Payment Collection
+                    </h3>
+                    <p className={`text-[11px] font-mono mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                      {selectedInvoiceForPayment.invoiceNo} • {selectedInvoiceForPayment.customerName}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowPaymentModal(false)}
+                  className={`p-1.5 rounded-xl transition-all cursor-pointer ${
+                    isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {paymentModalError && (
+                <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-500 dark:text-rose-400 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{paymentModalError}</span>
+                </div>
+              )}
+
+              {/* Commercial Summary Box */}
+              <div className={`p-4 rounded-2xl border space-y-3 ${
+                isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <div className="grid grid-cols-3 gap-2.5 text-center font-mono">
+                  <div className={`p-2.5 rounded-xl border ${isDarkMode ? 'bg-slate-900/80 border-slate-800/80' : 'bg-white border-slate-200'}`}>
+                    <span className={`text-[10px] uppercase font-bold block ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Total Invoice</span>
+                    <span className="text-xs font-bold mt-0.5 block">₹{total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className={`p-2.5 rounded-xl border ${isDarkMode ? 'bg-slate-900/80 border-slate-800/80' : 'bg-white border-slate-200'}`}>
+                    <span className={`text-[10px] uppercase font-bold block ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Already Paid</span>
+                    <span className="text-xs font-bold text-emerald-500 mt-0.5 block">₹{alreadyPaid.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className={`p-2.5 rounded-xl border ${isDarkMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>
+                    <span className="text-[10px] uppercase font-bold block">Current Balance</span>
+                    <span className="text-xs font-bold mt-0.5 block">₹{balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                </div>
+
+                {/* References */}
+                <div className={`pt-2 border-t flex flex-wrap items-center justify-between text-[11px] font-mono ${isDarkMode ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-600'}`}>
+                  <span>PO: <strong className={isDarkMode ? 'text-slate-200' : 'text-slate-800'}>{selectedInvoiceForPayment.orderPo || 'Direct Invoice'}</strong></span>
+                  {selectedInvoiceForPayment.challanNo && (
+                    <span>Challan: <strong className={isDarkMode ? 'text-cyan-400' : 'text-cyan-700'}>{selectedInvoiceForPayment.challanNo}</strong></span>
+                  )}
+                  <span>Due: <strong className={isDarkMode ? 'text-slate-200' : 'text-slate-800'}>{selectedInvoiceForPayment.dueDate || '—'}</strong></span>
+                </div>
+              </div>
+
+              {/* Form Controls */}
+              <form onSubmit={handlePaymentSubmit} className="space-y-3.5">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className={`block text-[11px] font-bold uppercase ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                      Payment Amount (₹) *
+                    </label>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setPayAmount(balance)}
+                        className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${
+                          payAmount === balance 
+                            ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
+                            : isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
+                        }`}
+                      >
+                        ⚡ Full (₹{balance.toLocaleString('en-IN')})
+                      </button>
+                      {balance > 100 && (
+                        <button
+                          type="button"
+                          onClick={() => setPayAmount(Math.round(balance / 2))}
+                          className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${
+                            payAmount === Math.round(balance / 2)
+                              ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
+                              : isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
+                          }`}
+                        >
+                          50% Partial
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-2.5 font-mono font-bold text-slate-400">₹</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={payAmount}
+                      onChange={(e) => setPayAmount(Number(e.target.value))}
+                      className={`w-full pl-8 pr-3.5 py-2.5 rounded-xl border font-mono font-bold text-sm outline-none transition-all ${
+                        isDarkMode 
+                          ? 'border-slate-800 bg-slate-950 text-white focus:border-emerald-500' 
+                          : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
+                      }`}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                      Payment Mode *
+                    </label>
+                    <select
+                      value={payMode}
+                      onChange={(e) => setPayMode(e.target.value)}
+                      className={`w-full p-2.5 rounded-xl border text-xs outline-none cursor-pointer transition-all ${
+                        isDarkMode 
+                          ? 'border-slate-800 bg-slate-950 text-white focus:border-emerald-500' 
+                          : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
+                      }`}
+                    >
+                      <option value="NEFT_RTGS">Bank NEFT / RTGS</option>
+                      <option value="UPI">UPI Payment</option>
+                      <option value="CHEQUE">Bank Cheque / DD</option>
+                      <option value="IMPS">IMPS Instant Transfer</option>
+                      <option value="BANK_TRANSFER">Direct Account Transfer</option>
+                      <option value="CASH">Cash Deposit</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                      Payment Realization Date *
+                    </label>
+                    <input
+                      type="date"
+                      value={payDate}
+                      onChange={(e) => setPayDate(e.target.value)}
+                      className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none transition-all ${
+                        isDarkMode 
+                          ? 'border-slate-800 bg-slate-950 text-white focus:border-emerald-500' 
+                          : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
+                      }`}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                    Bank Transaction / UTR / Cheque Ref # *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. UTR-HDFC98234723 or CHQ-004521"
+                    value={payRefNo}
+                    onChange={(e) => setPayRefNo(e.target.value)}
+                    className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none transition-all ${
+                      isDarkMode 
+                        ? 'border-slate-800 bg-slate-950 text-white focus:border-emerald-500' 
+                        : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
+                    }`}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                    Deposit Account / Settlement Remarks
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. HDFC Current A/c • Verified with Bank Statement"
+                    value={payNotes}
+                    onChange={(e) => setPayNotes(e.target.value)}
+                    className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${
+                      isDarkMode 
+                        ? 'border-slate-800 bg-slate-950 text-white focus:border-emerald-500' 
+                        : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
+                    }`}
+                  />
+                </div>
+
+                {/* Live Settlement Outcome Preview */}
+                <div className={`p-3 rounded-xl border flex items-center justify-between font-mono text-xs ${
+                  willBeFullyPaid 
+                    ? isDarkMode ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                    : isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    {willBeFullyPaid ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <Clock className="w-4 h-4 text-amber-500" />}
+                    <span>Remaining Balance: <strong>₹{newBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong></span>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] uppercase border ${
+                    willBeFullyPaid 
+                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                      : 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                  }`}>
+                    {willBeFullyPaid ? 'Fully Settled (PAID)' : 'Partial Payment'}
+                  </span>
+                </div>
+
+                {/* Actions */}
+                <div className={`pt-3 flex justify-end gap-2.5 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+                  <button
+                    type="button"
+                    onClick={() => setShowPaymentModal(false)}
+                    disabled={isSubmittingPayment}
+                    className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                      isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    }`}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingPayment || payAmount <= 0 || payAmount > balance}
+                    className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-500/25 disabled:opacity-50 transition-all"
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    <span>{isSubmittingPayment ? 'Recording...' : `Confirm & Settle ₹${payAmount.toLocaleString('en-IN')}`}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
   );

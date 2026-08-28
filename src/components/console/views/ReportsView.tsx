@@ -2,17 +2,14 @@ import React, { useState } from 'react';
 import { 
   FileText, 
   Download, 
-  RefreshCw, 
-  Calendar, 
   Search, 
   BarChart3, 
   TrendingUp, 
-  Filter,
-  X,
-  Layers,
-  Clock,
+  X, 
+  Clock, 
   CheckCircle2,
-  Sparkles
+  Calendar,
+  Package
 } from 'lucide-react';
 import { ProductionLogReport } from '../../../types/console';
 
@@ -60,193 +57,186 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6 font-sans">
+    <div className="space-y-4 sm:space-y-6 font-sans w-full max-w-full min-w-0 pb-6">
       
-      {/* Top Banner Header */}
-      <div className={`p-4 sm:p-6 rounded-3xl border transition-all ${
-        isDarkMode 
-          ? 'bg-slate-900/80 border-slate-800/80 text-white backdrop-blur-xl shadow-2xl' 
-          : 'bg-white border-slate-200 shadow-sm text-slate-900'
-      }`}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+      {/* ========================================================================= */}
+      {/* ── MOBILE-FIRST TOP HEADER (< md) ──                                      */}
+      {/* ========================================================================= */}
+      <div className="block md:hidden space-y-3">
+        <div className="flex items-center justify-between gap-2">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider ${
-                isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/30' : 'bg-[#5B75F8]/10 text-[#5B75F8] border border-[#5B75F8]/20'
-              }`}>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
                 Executive Analytics
               </span>
-              <span className={`text-[11px] sm:text-xs font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                • Production Audit Logs
-              </span>
             </div>
-            <h1 className={`text-xl sm:text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-              Production & Shift Logs
+            <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+              Production Logs ({filteredLogs.length})
             </h1>
-            <p className={`text-xs mt-0.5 sm:mt-1 max-w-xl ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-              Audit operation steps completed across all shopfloor job cards, analyze machine output, and export compliance reports.
-            </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={exportCSV}
-              className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 transition-all active:scale-[0.98]"
-            >
-              <Download className="w-4 h-4" />
-              <span>Export CSV Report</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={exportCSV}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold shadow-md active:scale-95 transition-all"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Export</span>
+          </button>
         </div>
 
-        {/* Telemetry Stat Cards Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 mt-4 sm:mt-6">
-          {/* Card 1: Shift Steps */}
-          <div className={`p-3 sm:p-4 rounded-2xl border transition-all ${
-            isDarkMode 
-              ? 'bg-gradient-to-b from-slate-900/90 to-slate-950/90 border-slate-800/90' 
-              : 'bg-slate-50/80 border-slate-200/80'
-          }`}>
-            <div className="flex items-center justify-between">
-              <span className={`text-[11px] sm:text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                Shift Steps Logged
-              </span>
-              <div className={`p-1.5 sm:p-2 rounded-xl ${isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF]' : 'bg-[#5B75F8]/10 text-[#5B75F8]'}`}>
-                <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              </div>
-            </div>
-            <div className="mt-1 sm:mt-2 flex items-baseline justify-between font-mono">
-              <span className={`text-xl sm:text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                {activeLogs.length}
-              </span>
-              <span className="text-[10px] sm:text-[11px] font-semibold text-[#7B92FF]">Records</span>
+        {/* Mobile 2x2 Telemetry Matrix */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Shift Steps Logged</div>
+            <div className="text-base font-black text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)] tracking-tight mt-0.5">
+              {activeLogs.length} <span className="text-xs font-normal text-slate-400">Records</span>
             </div>
           </div>
 
-          {/* Card 2: Total Output */}
-          <div className={`p-3 sm:p-4 rounded-2xl border transition-all ${
-            isDarkMode 
-              ? 'bg-gradient-to-b from-slate-900/90 to-slate-950/90 border-slate-800/90' 
-              : 'bg-slate-50/80 border-slate-200/80'
-          }`}>
-            <div className="flex items-center justify-between">
-              <span className={`text-[11px] sm:text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                Total Quantity Produced
-              </span>
-              <div className={`p-1.5 sm:p-2 rounded-xl ${isDarkMode ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-700'}`}>
-                <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              </div>
-            </div>
-            <div className="mt-1 sm:mt-2 flex items-baseline justify-between font-mono">
-              <span className="text-xl sm:text-2xl font-bold text-emerald-500">
-                {totalLoggedQty.toLocaleString()}
-              </span>
-              <span className="text-[10px] sm:text-[11px] font-semibold text-emerald-500">Units</span>
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Total Output</div>
+            <div className="text-base font-black text-emerald-500 tracking-tight mt-0.5">
+              {totalLoggedQty.toLocaleString()} <span className="text-xs font-normal text-slate-400">NOS</span>
             </div>
           </div>
 
-          {/* Card 3: Active Orders */}
-          <div className={`p-3 sm:p-4 rounded-2xl border transition-all ${
-            isDarkMode 
-              ? 'bg-gradient-to-b from-slate-900/90 to-slate-950/90 border-slate-800/90' 
-              : 'bg-slate-50/80 border-slate-200/80'
-          }`}>
-            <div className="flex items-center justify-between">
-              <span className={`text-[11px] sm:text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                Active POs
-              </span>
-              <div className={`p-1.5 sm:p-2 rounded-xl ${isDarkMode ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-100 text-purple-700'}`}>
-                <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              </div>
-            </div>
-            <div className="mt-1 sm:mt-2 flex items-baseline justify-between font-mono">
-              <span className={`text-xl sm:text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                {orders.length}
-              </span>
-              <span className="text-[10px] sm:text-[11px] font-semibold text-purple-400">Tracked</span>
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Active Orders</div>
+            <div className="text-base font-black text-purple-500 tracking-tight mt-0.5">
+              {orders.length} <span className="text-xs font-normal text-slate-400">POs</span>
             </div>
           </div>
 
-          {/* Card 4: Compliance */}
-          <div className={`p-3 sm:p-4 rounded-2xl border transition-all ${
-            isDarkMode 
-              ? 'bg-gradient-to-b from-slate-900/90 to-slate-950/90 border-slate-800/90' 
-              : 'bg-slate-50/80 border-slate-200/80'
-          }`}>
-            <div className="flex items-center justify-between">
-              <span className={`text-[11px] sm:text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                Compliance
-              </span>
-              <div className={`p-1.5 sm:p-2 rounded-xl ${isDarkMode ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-100 text-amber-700'}`}>
-                <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              </div>
-            </div>
-            <div className="mt-1 sm:mt-2 flex items-baseline justify-between font-mono">
-              <span className={`text-xl sm:text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                100%
-              </span>
-              <span className="text-[10px] sm:text-[11px] font-semibold text-amber-500">Timestamped</span>
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Compliance</div>
+            <div className="text-base font-black text-amber-500 tracking-tight mt-0.5">
+              100% <span className="text-xs font-normal text-slate-400">Audited</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Date Filter & Search Controls */}
-      <div className={`p-3.5 sm:p-4 rounded-3xl border transition-all space-y-3 ${
-        isDarkMode ? 'bg-slate-900/70 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-xs'
-      }`}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          
-          {/* Date Pickers */}
-          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 font-mono text-xs">
-            <div className={`flex items-center justify-between gap-2 px-3 py-2 rounded-2xl border ${
-              isDarkMode ? 'bg-slate-950/60 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-            }`}>
-              <span className="text-slate-400 font-bold uppercase text-[10px]">From:</span>
-              <input
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                className="bg-transparent outline-none font-bold text-xs"
-              />
+      {/* ========================================================================= */}
+      {/* ── DESKTOP HEADER & INTEGRATED KPI ROW (≥ md) ──                          */}
+      {/* ========================================================================= */}
+      <div className="hidden md:block space-y-4">
+        <section className={`overflow-hidden rounded-[24px] border ${isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'}`}>
+          <div className="flex items-center justify-between gap-6 px-6 py-5">
+            <div className="min-w-0">
+              <div className="mb-1.5 flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                Audit Logs & Analytics Engine
+                <span className="text-slate-300 dark:text-slate-700">/</span>
+                <span>{filteredLogs.length} Operation Records</span>
+              </div>
+              <div className="flex items-baseline gap-3">
+                <h1 className="truncate text-[25px] font-extrabold tracking-[-0.04em] text-slate-950 dark:text-white">
+                  Production & Shift Logs
+                </h1>
+                <span className="hidden font-mono text-[10px] font-semibold text-slate-400 xl:inline">
+                  EXECUTIVE ANALYTICS • PRODUCTION AUDIT LOGS • COMPLIANCE TRACKING
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Audit operation steps completed across all shopfloor job cards, analyze machine output, and export compliance reports.
+              </p>
             </div>
 
-            <div className={`flex items-center justify-between gap-2 px-3 py-2 rounded-2xl border ${
-              isDarkMode ? 'bg-slate-950/60 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-            }`}>
-              <span className="text-slate-400 font-bold uppercase text-[10px]">To:</span>
+            <button
+              type="button"
+              onClick={exportCSV}
+              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-5 text-xs font-bold text-white shadow-lg shadow-[var(--accent-shadow)] transition hover:brightness-110 active:scale-95"
+            >
+              <Download className="h-4 w-4" />
+              <span>Export CSV Report</span>
+            </button>
+          </div>
+
+          {/* Integrated 4-Column Metric Strip (border-t) */}
+          <div className={`grid grid-cols-4 border-t ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+            {[
+              { label: 'Shift Steps Logged', value: `${activeLogs.length}`, detail: 'Recorded terminal executions', icon: FileText, tone: 'text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)]', iconBg: 'bg-[var(--accent-soft-light)] dark:bg-[var(--accent-soft-dark)]' },
+              { label: 'Total Output Volume', value: `${totalLoggedQty.toLocaleString()} NOS`, detail: 'Finished component units', icon: TrendingUp, tone: 'text-emerald-600 dark:text-emerald-400', iconBg: 'bg-emerald-500/10' },
+              { label: 'Customer Orders', value: `${orders.length} Tracked`, detail: 'Active manufacturing POs', icon: BarChart3, tone: 'text-purple-600 dark:text-purple-400', iconBg: 'bg-purple-500/10' },
+              { label: 'Audit Compliance', value: '100% Verified', detail: 'Traceable log timestamps', icon: CheckCircle2, tone: 'text-amber-600 dark:text-amber-400', iconBg: 'bg-amber-500/10' },
+            ].map((metric, index) => {
+              const MetricIcon = metric.icon;
+              return (
+                <div key={metric.label} className={`flex items-center gap-3 px-5 py-4 ${index > 0 ? isDarkMode ? 'border-l border-white/[0.07]' : 'border-l border-slate-200' : ''}`}>
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${metric.iconBg} ${metric.tone}`}>
+                    <MetricIcon className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-mono text-[9px] font-bold uppercase tracking-[0.13em] text-slate-400">{metric.label}</div>
+                    <div className={`mt-0.5 truncate text-lg font-extrabold tracking-[-0.03em] ${metric.tone}`}>{metric.value}</div>
+                    <div className="truncate text-[10px] text-slate-400">{metric.detail}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Desktop Date Filter & Search Toolbar */}
+        <div className={`rounded-2xl border p-3 ${isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${isDarkMode ? 'bg-white/[0.05] text-slate-400' : 'bg-slate-100 text-slate-500'}`} title="Modules">
+              <FileText className="h-4 w-4" />
+            </div>
+
+            {/* Date Pickers */}
+            <div className="flex items-center gap-2 font-mono text-xs">
+              <div className={`flex h-10 items-center gap-2 rounded-xl border px-3 ${
+                isDarkMode ? 'border-white/[0.08] bg-black/20 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'
+              }`}>
+                <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                <span className="text-slate-400 font-bold uppercase text-[9px]">From:</span>
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  className="bg-transparent outline-none font-bold text-xs"
+                />
+              </div>
+
+              <div className={`flex h-10 items-center gap-2 rounded-xl border px-3 ${
+                isDarkMode ? 'border-white/[0.08] bg-black/20 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'
+              }`}>
+                <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                <span className="text-slate-400 font-bold uppercase text-[9px]">To:</span>
+                <input
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                  className="bg-transparent outline-none font-bold text-xs"
+                />
+              </div>
+            </div>
+
+            {/* Search Input */}
+            <div className={`flex h-10 min-w-[240px] flex-1 items-center gap-2 rounded-xl border px-3 ml-auto ${isDarkMode ? 'border-white/[0.08] bg-black/20 text-white focus-within:border-[var(--accent-border-dark)]' : 'border-slate-200 bg-slate-50 text-slate-900 focus-within:border-[var(--accent-primary)]'}`}>
+              <Search className="h-4 w-4 shrink-0 text-slate-400" />
               <input
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                className="bg-transparent outline-none font-bold text-xs"
+                type="text"
+                placeholder="Search Job #, Part, Operation..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-full w-full bg-transparent text-xs font-semibold outline-none placeholder:font-normal placeholder:text-slate-400 font-mono"
               />
+              {searchQuery && (
+                <button type="button" onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-700 dark:hover:text-white">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Search Input */}
-          <div className={`relative flex items-center rounded-2xl border px-3.5 py-2 transition-all flex-1 max-w-full sm:max-w-xs ${
-            isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white focus-within:border-[#5B75F8]' : 'bg-slate-50 border-slate-200 text-slate-900 focus-within:border-[#5B75F8]'
-          }`}>
-            <Search className="w-4 h-4 text-slate-400 shrink-0 mr-2" />
-            <input
-              type="text"
-              placeholder="Search Job #, Part, Operation..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-transparent outline-none text-xs w-full font-mono"
-            />
-            {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-white ml-2">
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
+          <div className="mt-2.5 flex items-center justify-between px-1 font-mono text-[9px] font-semibold uppercase tracking-wider text-slate-400">
+            <span>Showing {filteredLogs.length} of {activeLogs.length} logged operations</span>
+            <span className="text-emerald-500 font-bold">Total Produced: {totalLoggedQty.toLocaleString()} NOS</span>
           </div>
-        </div>
-
-        <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 pt-1">
-          <span>Showing <strong>{filteredLogs.length}</strong> of <strong>{activeLogs.length}</strong> logged operations</span>
-          <span className="text-emerald-400 font-bold">Total: {totalLoggedQty} NOS</span>
         </div>
       </div>
 
@@ -255,8 +245,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       {/* ========================================================================= */}
       <div className="block md:hidden space-y-3">
         {filteredLogs.length === 0 ? (
-          <div className={`p-8 text-center rounded-3xl border font-mono text-xs ${
-            isDarkMode ? 'bg-slate-900/60 border-slate-800 text-slate-400' : 'bg-white border-slate-200 text-slate-500'
+          <div className={`p-8 text-center rounded-2xl border font-mono text-xs ${
+            isDarkMode ? 'bg-[#171b24] border-white/[0.08] text-slate-400' : 'bg-white border-slate-200 text-slate-500'
           }`}>
             No production logs found matching your filters.
           </div>
@@ -264,15 +254,15 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           filteredLogs.map((log, idx) => (
             <div
               key={idx}
-              className={`p-4 rounded-3xl border transition-all space-y-3 shadow-sm ${
-                isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'
+              className={`p-4 rounded-2xl border transition-all space-y-3 shadow-sm ${
+                isDarkMode ? 'bg-[#171b24] border-white/[0.08]' : 'bg-white border-slate-200'
               }`}
             >
               {/* Header: Job No + Step Pill */}
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-mono font-bold text-xs text-[#5B75F8] dark:text-[#7B92FF]">
+                    <span className="font-mono font-bold text-xs text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">
                       {log.jobNo}
                     </span>
                     <span className="px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20">
@@ -290,8 +280,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
               </div>
 
               {/* Component Code & Description */}
-              <div className={`p-2.5 rounded-2xl border text-xs ${
-                isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50 border-slate-200'
+              <div className={`p-2.5 rounded-xl border text-xs ${
+                isDarkMode ? 'bg-black/20 border-white/[0.08]' : 'bg-slate-50 border-slate-200'
               }`}>
                 <div className="font-mono font-bold text-slate-200 text-[11px]">{log.itemCode}</div>
                 <div className="text-slate-400 text-[11px] mt-0.5">{log.description}</div>
@@ -313,14 +303,22 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       {/* ========================================================================= */}
       {/* DESKTOP REPORTS TABLE (Viewport >= md) */}
       {/* ========================================================================= */}
-      <div className={`hidden md:block rounded-3xl border overflow-hidden transition-all shadow-xl ${
-        isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200'
+      <div className={`hidden md:block overflow-hidden rounded-[22px] border transition-all ${
+        isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
       }`}>
+        <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+          <div>
+            <div className="text-xs font-extrabold text-slate-900 dark:text-white">Shopfloor Production Log Ledger</div>
+            <div className="mt-0.5 text-[10px] text-slate-400">Step completions, machine outputs, and operator timestamps</div>
+          </div>
+          <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>{filteredLogs.length} logs</span>
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className={`border-b font-mono font-bold uppercase tracking-wider text-[11px] ${
-                isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'
+              <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${
+                isDarkMode ? 'border-white/[0.07] bg-black/20 text-slate-500' : 'border-slate-200 bg-slate-50/80 text-slate-400'
               }`}>
                 <th className="py-4 px-5">Item Code</th>
                 <th className="py-4 px-5">Description</th>
@@ -331,28 +329,50 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                 <th className="py-4 px-5 font-mono">Logged Timestamp</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
+            <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
+              {filteredLogs.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-slate-400 font-mono text-xs">
+                    No production logs found matching the selected range and search criteria.
+                  </td>
+                </tr>
+              ) : null}
               {filteredLogs.map((log, idx) => (
-                <tr key={idx} className={isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}>
-                  <td className="py-4 px-5 font-bold font-mono text-[#5B75F8] dark:text-[#7B92FF]">
-                    {log.itemCode}
+                <tr key={idx} className={`group transition-colors ${isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'}`}>
+                  <td className="py-4 px-5">
+                    <div className="flex items-center gap-2.5">
+                      <div className={`p-2 rounded-xl transition-transform group-hover:scale-105 shrink-0 ${
+                        isDarkMode 
+                          ? 'bg-[var(--accent-primary)]/20 text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/30' 
+                          : 'bg-[var(--accent-primary)]/10 text-[var(--accent-text-light)] border border-[var(--accent-primary)]/20'
+                      }`}>
+                        <Package className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <div className="font-mono font-bold text-xs text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">
+                          {log.itemCode}
+                        </div>
+                      </div>
+                    </div>
                   </td>
                   <td className={`py-4 px-5 font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
                     {log.description}
                   </td>
-                  <td className="py-4 px-5 font-mono text-slate-400">
+                  <td className={`py-4 px-5 font-mono text-xs ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
                     {log.jobNo}
                   </td>
                   <td className="py-4 px-5 text-center font-bold font-mono text-purple-400">
-                    Step {log.stepNo}
+                    <span className="px-2 py-0.5 rounded-md bg-purple-500/10 border border-purple-500/20 text-[10px]">
+                      Step {log.stepNo}
+                    </span>
                   </td>
-                  <td className="py-4 px-5 font-medium text-slate-300">
+                  <td className={`py-4 px-5 font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
                     {log.operationName}
                   </td>
                   <td className="py-4 px-5 text-right font-bold font-mono text-emerald-500">
-                    {log.qtyDone} NOS
+                    {log.qtyDone.toLocaleString()} NOS
                   </td>
-                  <td className="py-4 px-5 font-mono text-slate-400">
+                  <td className="py-4 px-5 font-mono text-slate-400 text-xs">
                     {log.loggedTimestamp}
                   </td>
                 </tr>

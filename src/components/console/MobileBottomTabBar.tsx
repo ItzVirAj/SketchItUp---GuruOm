@@ -66,10 +66,10 @@ export const MobileBottomTabBar: React.FC<MobileBottomTabBarProps> = ({
   return (
     <nav 
       aria-label="Mobile Navigation"
-      className={`fixed bottom-0 left-0 right-0 z-40 lg:hidden transition-colors border-t select-none ${
+      className={`fixed bottom-0 left-0 right-0 z-40 lg:hidden border-t select-none ${
         isDarkMode 
-          ? 'bg-[#16171B]/95 backdrop-blur-md border-[#262832] text-slate-400 shadow-[0_-4px_25px_rgba(0,0,0,0.4)]' 
-          : 'bg-white/95 backdrop-blur-md border-[#d8dde8] text-slate-600 shadow-[0_-4px_20px_rgba(15,23,42,0.06)]'
+          ? 'bg-[#16171B] border-[#262832] text-slate-400 shadow-[0_-4px_25px_rgba(0,0,0,0.4)]' 
+          : 'bg-white border-[#d8dde8] text-slate-600 shadow-[0_-4px_20px_rgba(15,23,42,0.06)]'
       }`}
       style={{
         paddingBottom: 'max(0.4rem, env(safe-area-inset-bottom, 0px))'

@@ -71,3 +71,24 @@ yarn.lock
 pnpm-lock.yaml
 .aider*
 tests/
+
+# ---- Agentation & AI Skills ----
+.agents/
+.agents/skills/
+.agents/skills/agentation/
+.agentation/
+agentation/
+agentation.json
+*.agentation*
+.planning/
+scratch/
+
+# ---- UI Testing & Visual Feedback Artifacts ----
+screenshots/
+ui-screenshots/
+playwright-report/
+test-results/
+blob-report/
+cypress/videos/
+cypress/screenshots/
+storybook-static/

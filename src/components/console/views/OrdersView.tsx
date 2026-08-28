@@ -245,7 +245,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
       rate: firstLine.rate,
       grossAmount: totalCalculatedGross,
       netAmount: totalCalculatedGross * 1.18,
-      status: 'CONFIRMED',
+      status: 'PO_RECEIVED',
       stage: 'PO_RECEIVED',
       progressStep: 1,
       orderDate: newPoDate,
@@ -762,119 +762,76 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
       {/* ========================================================================= */}
       {/* ── DESKTOP HEADER & KPI ROW (≥ md) ──                                      */}
       {/* ========================================================================= */}
-      <div className="hidden md:block space-y-6">
-        {/* Hero Header Banner */}
-        <div className={`p-6 rounded-3xl border transition-all ${isDarkMode
-          ? 'bg-slate-900/80 border-slate-800/80 text-white backdrop-blur-xl shadow-2xl'
-          : 'bg-white border-slate-200 shadow-sm text-slate-900'
-          }`}>
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider ${isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/30' : 'bg-[#5B75F8]/10 text-[#5B75F8] border border-[#5B75F8]/20'
-                  }`}>
-                  Sales & Order Management Hub
-                </span>
-                <span className={`text-xs font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>• 8-Stage Gated Pipeline with QC & PDI Quality Control</span>
+      <div className="hidden md:block space-y-4">
+        <section className={`overflow-hidden rounded-[24px] border ${isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'}`}>
+          <div className="flex items-center justify-between gap-6 px-6 py-5">
+            <div className="min-w-0">
+              <div className="mb-1.5 flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                Live order book
+                <span className="text-slate-300 dark:text-slate-700">/</span>
+                <span>{orders.length} purchase orders</span>
               </div>
-              <h1 className={`text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                Sales Orders & Blanket Call-Offs
-              </h1>
-              <p className={`text-xs mt-1 max-w-xl ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                Enforce BOM Drawing Revision Matching, 90-Day Credit Limits, Material Availability Checks, and Job Card Traceability through Final Invoicing.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <button
-                onClick={openNewOrderModal}
-                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Create Purchase Order</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* 4 Executive KPI Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 font-mono">
-          <div className={`p-5 rounded-3xl border transition-all ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
-            }`}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Active Order Book</span>
-              <div className="p-2 rounded-xl bg-indigo-500/15 text-[#7B92FF]">
-                <FileSpreadsheet className="w-4 h-4" />
+              <div className="flex items-baseline gap-3">
+                <h1 className="truncate text-[25px] font-extrabold tracking-[-0.04em] text-slate-950 dark:text-white">Customer Orders</h1>
+                <span className="hidden font-mono text-[10px] font-semibold text-slate-400 xl:inline">PO → MATERIAL → PRODUCTION → QC → DISPATCH → INVOICE</span>
               </div>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Track commercial value, delivery commitments, and every gated manufacturing handoff.</p>
             </div>
-            <div className="text-xl font-bold text-indigo-600 dark:text-[#7B92FF]">
-              {orders.length} <span className="text-xs font-normal text-slate-400">orders</span>
-            </div>
-            <div className="text-[11px] text-slate-400 mt-1">
-              Total Pipeline Value: <strong className="text-emerald-500 font-bold">₹{totalActiveValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</strong>
-            </div>
+            <button
+              onClick={openNewOrderModal}
+              className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-all hover:bg-[var(--accent-hover)] active:scale-[0.98]"
+            >
+              <Plus className="h-4 w-4" />
+              New purchase order
+            </button>
           </div>
 
-          <div className={`p-5 rounded-3xl border transition-all ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
-            }`}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Shop-Floor In Production</span>
-              <div className="p-2 rounded-xl bg-amber-500/15 text-amber-500">
-                <RefreshCw className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-xl font-bold text-amber-600 dark:text-amber-400">
-              {inProdCount} <span className="text-xs font-normal text-slate-400">active</span>
-            </div>
-            <div className="text-[11px] text-slate-400 mt-1">
-              <span>Machine routing in progress</span>
-            </div>
+          <div className={`grid grid-cols-4 border-t ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+            {[
+              { label: 'Pipeline value', value: `₹${totalActiveValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`, detail: `${orders.length} total orders`, icon: TrendingUp, tone: 'text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)]', iconBg: 'bg-[var(--accent-soft-light)] dark:bg-[var(--accent-soft-dark)]' },
+              { label: 'In production', value: String(inProdCount), detail: 'Active shop-floor jobs', icon: Package, tone: 'text-amber-600 dark:text-amber-400', iconBg: 'bg-amber-500/10' },
+              { label: 'Quality gate', value: String(qcGateCount), detail: 'Inspection or NCR review', icon: ShieldCheck, tone: 'text-violet-600 dark:text-violet-400', iconBg: 'bg-violet-500/10' },
+              { label: 'Dispatch ready', value: String(dispatchReadyCount), detail: 'PDI-cleared orders', icon: Truck, tone: 'text-emerald-600 dark:text-emerald-400', iconBg: 'bg-emerald-500/10' },
+            ].map((metric, index) => {
+              const MetricIcon = metric.icon;
+              return (
+                <div key={metric.label} className={`flex items-center gap-3 px-5 py-4 ${index > 0 ? isDarkMode ? 'border-l border-white/[0.07]' : 'border-l border-slate-200' : ''}`}>
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${metric.iconBg} ${metric.tone}`}><MetricIcon className="h-4 w-4" /></div>
+                  <div className="min-w-0">
+                    <div className="font-mono text-[9px] font-bold uppercase tracking-[0.13em] text-slate-400">{metric.label}</div>
+                    <div className={`mt-0.5 truncate text-lg font-extrabold tracking-[-0.03em] ${metric.tone}`}>{metric.value}</div>
+                    <div className="truncate text-[10px] text-slate-400">{metric.detail}</div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
+        </section>
 
-          <div className={`p-5 rounded-3xl border transition-all ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
-            }`}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">QC & NCR Gates</span>
-              <div className="p-2 rounded-xl bg-purple-500/15 text-purple-500">
-                <ShieldCheck className="w-4 h-4" />
-              </div>
+        <div className={`rounded-2xl border p-3 ${isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
+          <div className="flex items-center gap-2">
+            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${isDarkMode ? 'bg-white/[0.05] text-slate-400' : 'bg-slate-100 text-slate-500'}`} title="Filters">
+              <Filter className="h-4 w-4" />
             </div>
-            <div className="text-xl font-bold text-purple-600 dark:text-purple-400">
-              {qcGateCount} <span className="text-xs font-normal text-slate-400">in inspection</span>
+            <div className={`flex h-10 min-w-[260px] flex-1 items-center gap-2 rounded-xl border px-3 ${isDarkMode ? 'border-white/[0.08] bg-black/20 text-white focus-within:border-[var(--accent-border-dark)]' : 'border-slate-200 bg-slate-50 text-slate-900 focus-within:border-[var(--accent-primary)]'}`}>
+              <Search className="h-4 w-4 shrink-0 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search PO, customer, part, revision or heat lot..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-full w-full bg-transparent text-xs font-semibold outline-none placeholder:font-normal placeholder:text-slate-400"
+              />
+              {searchQuery && <button type="button" onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-700 dark:hover:text-white"><X className="h-3.5 w-3.5" /></button>}
             </div>
-            <div className="text-[11px] text-slate-400 mt-1">
-              <span>QA gating enforced</span>
-            </div>
-          </div>
 
-          <div className={`p-5 rounded-3xl border transition-all ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
-            }`}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Ready to Dispatch</span>
-              <div className="p-2 rounded-xl bg-emerald-500/15 text-emerald-500">
-                <Truck className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
-              {dispatchReadyCount} <span className="text-xs font-normal text-slate-400">orders</span>
-            </div>
-            <div className="text-[11px] text-slate-400 mt-1">
-              <span>PDI cleared & ready</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Global Controls Filter & Search Bar */}
-        <div className={`p-4 rounded-3xl border flex flex-wrap items-center justify-between gap-4 ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
-          }`}>
-          <div className="flex flex-wrap items-center gap-3">
             <select
               value={subTypeFilter}
               onChange={(e) => setSubTypeFilter(e.target.value)}
-              className={`px-3 py-1.5 rounded-2xl border text-xs font-mono font-bold outline-none cursor-pointer ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                }`}
+              className={`h-10 rounded-xl border px-3 text-[11px] font-bold outline-none ${isDarkMode ? 'border-white/[0.08] bg-black/20 text-white' : 'border-slate-200 bg-slate-50 text-slate-700'}`}
             >
-              <option value="ALL">All Order Types ({orders.length})</option>
+              <option value="ALL">All types ({orders.length})</option>
               <option value="FRESH_PO">Fresh POs ({orders.filter(o => (o.subType || 'FRESH_PO') === 'FRESH_PO').length})</option>
               <option value="BLANKET_CALLOFF">Blanket Call-Offs ({orders.filter(o => o.subType === 'BLANKET_CALLOFF').length})</option>
               <option value="AMENDMENT">Amendments ({orders.filter(o => o.subType === 'AMENDMENT').length})</option>
@@ -883,10 +840,9 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className={`px-3 py-1.5 rounded-2xl border text-xs font-mono font-bold outline-none cursor-pointer ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                }`}
+              className={`h-10 rounded-xl border px-3 text-[11px] font-bold outline-none ${isDarkMode ? 'border-white/[0.08] bg-black/20 text-white' : 'border-slate-200 bg-slate-50 text-slate-700'}`}
             >
-              <option value="ALL">All Stages ({orders.length})</option>
+              <option value="ALL">All stages ({orders.length})</option>
               <option value="PO_RECEIVED">1. PO Confirmed</option>
               <option value="MATERIAL_CHECKED">2. Material Verified</option>
               <option value="IN_PRODUCTION">3. In Production</option>
@@ -904,10 +860,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                 setSortField(field as any);
                 setSortDirection(dir as any);
               }}
-              className={`px-3 py-1.5 rounded-2xl border text-xs font-mono font-bold outline-none cursor-pointer ${sortField === 'RECENCY' && sortDirection === 'DESC'
-                ? isDarkMode ? 'bg-[#5B75F8]/20 border-[#5B75F8]/40 text-[#7B92FF]' : 'bg-blue-50 border-blue-200 text-[#5B75F8]'
-                : isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                }`}
+              className={`hidden h-10 rounded-xl border px-3 text-[11px] font-bold outline-none xl:block ${isDarkMode ? 'border-white/[0.08] bg-black/20 text-white' : 'border-slate-200 bg-slate-50 text-slate-700'}`}
             >
               <option value="RECENCY_DESC">Sort: Recent Orders (Newest First)</option>
               <option value="RECENCY_ASC">Sort: Oldest Orders First</option>
@@ -918,6 +871,29 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
               <option value="AMOUNT_ASC">Sort: Amount (Low → High)</option>
             </select>
 
+            <div className={`flex h-10 items-center rounded-xl border p-1 ${isDarkMode ? 'border-white/[0.08] bg-black/20' : 'border-slate-200 bg-slate-100'}`}>
+              <button
+                onClick={() => setViewMode('table')}
+                className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all ${viewMode === 'table'
+                  ? isDarkMode ? 'bg-white/[0.09] text-[var(--accent-text-dark)]' : 'bg-white text-[var(--accent-text-light)] shadow-xs'
+                  : isDarkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                title="Table View"
+              >
+                <List className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all ${viewMode === 'grid'
+                  ? isDarkMode ? 'bg-white/[0.09] text-[var(--accent-text-dark)]' : 'bg-white text-[var(--accent-text-light)] shadow-xs'
+                  : isDarkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                title="Grid View"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+            </div>
+
             {(statusFilter !== 'ALL' || subTypeFilter !== 'ALL' || searchQuery.trim() !== '' || sortField !== 'RECENCY' || sortDirection !== 'DESC') && (
               <button
                 onClick={() => {
@@ -927,49 +903,16 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                   setSortField('RECENCY');
                   setSortDirection('DESC');
                 }}
-                className="px-3 py-1.5 rounded-2xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-mono font-bold transition-all cursor-pointer text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                className="h-10 rounded-xl px-3 text-[11px] font-bold text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-white/[0.06] dark:hover:text-white"
               >
-                Reset Filters
+                Clear
               </button>
             )}
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-2xl border text-xs w-64 ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white focus-within:border-[#5B75F8]/50' : 'bg-slate-50 border-slate-200 text-slate-900 focus-within:border-[#5B75F8]'
-              }`}>
-              <Search className="w-3.5 h-3.5 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search PO#, Customer, Rev..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-transparent outline-none w-full font-mono text-xs"
-              />
-            </div>
-
-            <div className={`flex items-center p-1 rounded-2xl border ${isDarkMode ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-slate-100'
-              }`}>
-              <button
-                onClick={() => setViewMode('table')}
-                className={`p-1.5 rounded-xl transition-all cursor-pointer ${viewMode === 'table'
-                  ? isDarkMode ? 'bg-slate-800 text-[#7B92FF]' : 'bg-white text-[#5B75F8] shadow-xs'
-                  : isDarkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-900'
-                  }`}
-                title="Table View"
-              >
-                <List className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-1.5 rounded-xl transition-all cursor-pointer ${viewMode === 'grid'
-                  ? isDarkMode ? 'bg-slate-800 text-[#7B92FF]' : 'bg-white text-[#5B75F8] shadow-xs'
-                  : isDarkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-900'
-                  }`}
-                title="Grid View"
-              >
-                <LayoutGrid className="w-4 h-4" />
-              </button>
-            </div>
+          <div className="mt-2.5 flex items-center justify-between px-1 font-mono text-[9px] font-semibold uppercase tracking-wider text-slate-400">
+            <span>Showing {sortedOrders.length} of {orders.length} orders</span>
+            <span>Click an order to inspect its lifecycle</span>
           </div>
         </div>
       </div>
@@ -1113,12 +1056,19 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
       {/* ========================================================================= */}
       <div className="hidden md:block">
         {viewMode === 'table' ? (
-          <div className={`rounded-3xl border overflow-hidden transition-all shadow-xl ${isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200'
+          <div className={`overflow-hidden rounded-[22px] border transition-all ${isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
             }`}>
+            <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+              <div>
+                <div className="text-xs font-extrabold text-slate-900 dark:text-white">Order lifecycle queue</div>
+                <div className="mt-0.5 text-[10px] text-slate-400">Commercial and manufacturing status in one view</div>
+              </div>
+              <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>{sortedOrders.length} records</span>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse font-sans">
                 <thead>
-                  <tr className={`border-b font-mono font-bold uppercase tracking-wider text-[11px] ${isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'
+                  <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${isDarkMode ? 'border-white/[0.07] bg-black/20 text-slate-500' : 'border-slate-200 bg-slate-50/80 text-slate-400'
                     }`}>
                     <th
                       onClick={() => {
@@ -1224,7 +1174,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                         <tr
                           key={ord.id}
                           onClick={() => onSelectOrder(ord)}
-                          className={`group transition-all cursor-pointer ${isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'
+                          className={`group cursor-pointer transition-colors ${isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'
                             }`}
                         >
                           <td className="py-4 px-5 font-bold font-mono">
@@ -1280,9 +1230,9 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                           </td>
 
                           <td className="py-4 px-5 text-center">
-                            <button className={`px-3 py-1.5 rounded-xl border text-xs font-bold font-mono transition-all flex items-center justify-center gap-1 mx-auto cursor-pointer ${isDarkMode
-                              ? 'bg-[#5B75F8]/10 text-[#7B92FF] border-[#5B75F8]/30 hover:bg-[#5B75F8]/20'
-                              : 'bg-[#5B75F8]/10 text-[#5B75F8] border-[#5B75F8]/20 hover:bg-[#5B75F8]/20'
+                            <button className={`mx-auto flex h-8 items-center justify-center gap-1 rounded-lg border px-2.5 font-mono text-[10px] font-bold transition-all ${isDarkMode
+                              ? 'border-white/[0.08] bg-white/[0.04] text-slate-300 hover:border-[var(--accent-border-dark)] hover:text-[var(--accent-text-dark)]'
+                              : 'border-slate-200 bg-white text-slate-600 shadow-xs hover:border-[var(--accent-border-light)] hover:text-[var(--accent-text-light)]'
                               }`}>
                               <span>Inspect</span>
                               <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -1297,13 +1247,13 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
             {sortedOrders.map((ord) => {
               return (
                 <div
                   key={ord.id}
                   onClick={() => onSelectOrder(ord)}
-                  className={`p-5 rounded-3xl border transition-all cursor-pointer hover:scale-[1.01] shadow-lg space-y-3 ${isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'
+                  className={`group cursor-pointer space-y-3 rounded-[20px] border p-5 transition-all ${isDarkMode ? 'border-white/[0.08] bg-[#171b24] hover:border-white/[0.14]' : 'border-slate-200 bg-white shadow-[0_8px_24px_rgba(15,23,42,0.05)] hover:-translate-y-0.5 hover:border-[var(--accent-border-light)] hover:shadow-[0_14px_34px_rgba(15,23,42,0.08)]'
                     }`}
                 >
                   <div className="flex items-center justify-between">

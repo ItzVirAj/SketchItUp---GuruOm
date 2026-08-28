@@ -1,21 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { 
-  LayoutGrid, 
-  LogOut, 
-  Lock, 
-  ChevronDown, 
-  PanelLeftClose, 
-  PanelLeftOpen, 
-  ShieldCheck 
+import React, { useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
+import {
+  ChevronDown,
+  ChevronRight,
+  Command,
+  LayoutGrid,
+  LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
+  ShieldCheck,
 } from 'lucide-react';
-import { ConsoleView, UserRole, ConsoleUser } from '../../types/console';
-import { isViewAllowedForRole } from '../../utils/permissions';
+import { ConsoleUser, ConsoleView, UserRole } from '../../types/console';
 import { useSmoothScroll } from '../../hooks/useSmoothScroll';
-import { 
-  NAVIGATION_SECTIONS, 
-  findParentSectionId 
-} from '../../utils/navigationConfig';
+import { isViewAllowedForRole } from '../../utils/permissions';
+import { findParentSectionId, NAVIGATION_SECTIONS } from '../../utils/navigationConfig';
 
 interface ConsoleSidebarProps {
   currentView: ConsoleView;
@@ -39,448 +37,290 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
   userName = 'Sachin Gharbude',
   onSignOut,
   onOpenSecurityModal,
-  isOpenMobile,
-  setIsOpenMobile
+  setIsOpenMobile,
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
-
-  // Desktop shrink/expand state (persisted in localStorage)
   const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
     try {
-      const saved = localStorage.getItem('guruom_sidebar_collapsed');
-      return saved ? JSON.parse(saved) : false;
+      return JSON.parse(localStorage.getItem('guruom_sidebar_collapsed') || 'false');
     } catch {
       return false;
     }
   });
-
-  const toggleCollapse = () => {
-    setIsCollapsed(prev => {
-      const next = !prev;
-      localStorage.setItem('guruom_sidebar_collapsed', JSON.stringify(next));
-      return next;
-    });
-  };
-
-  // Expanded/Collapsed state for accordion sections
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
-    const parent = findParentSectionId(currentView);
-    return {
-      'operations-reports': parent === 'operations-reports' || true,
-      'quality-dispatch': parent === 'quality-dispatch' || false,
-      'finance': parent === 'finance' || false,
-      'admin': parent === 'admin' || false,
-    };
+    const activeParent = findParentSectionId(currentView);
+    return Object.fromEntries(
+      NAVIGATION_SECTIONS.map(section => [
+        section.id,
+        section.id === activeParent || section.id === 'operations-reports',
+      ]),
+    );
   });
+  const [hoveredSection, setHoveredSection] = useState<string | null>(null);
 
-  // Attach Butter-Smooth Container Inertial Scrolling
   useSmoothScroll(scrollContainerRef, [openSections, isCollapsed], {
     duration: 1.1,
     wheelMultiplier: 0.95,
-    touchMultiplier: 1.25
+    touchMultiplier: 1.25,
   });
 
-  // Automatically keep parent section open when active view changes
   useEffect(() => {
     const parent = findParentSectionId(currentView);
-    if (parent) {
-      setOpenSections(prev => ({
-        ...prev,
-        [parent]: true
-      }));
-    }
+    if (parent) setOpenSections(previous => ({ ...previous, [parent]: true }));
   }, [currentView]);
 
-  const ensureSectionVisible = (sectionId: string) => {
-    const el = sectionRefs.current[sectionId];
-    const container = scrollContainerRef.current;
-    if (!el || !container) return;
-
-    const elRect = el.getBoundingClientRect();
-    const containerRect = container.getBoundingClientRect();
-
-    if (elRect.bottom > containerRect.bottom) {
-      const overflowDistance = elRect.bottom - containerRect.bottom + 16;
-      container.scrollBy({
-        top: overflowDistance,
-        behavior: 'smooth'
-      });
-    } else if (elRect.top < containerRect.top) {
-      const underflowDistance = elRect.top - containerRect.top - 8;
-      container.scrollBy({
-        top: underflowDistance,
-        behavior: 'smooth'
-      });
-    }
-  };
-
-  const toggleSection = (sectionId: string) => {
-    setOpenSections(prev => {
-      const isOpening = !prev[sectionId];
-      const nextState = { ...prev, [sectionId]: isOpening };
-
-      if (isOpening) {
-        setTimeout(() => ensureSectionVisible(sectionId), 150);
-        setTimeout(() => ensureSectionVisible(sectionId), 320);
-      }
-
-      return nextState;
+  const toggleCollapse = () => {
+    setIsCollapsed(previous => {
+      const next = !previous;
+      localStorage.setItem('guruom_sidebar_collapsed', JSON.stringify(next));
+      return next;
     });
-  };
-
-  const [hoveredSection, setHoveredSection] = useState<string | null>(null);
-
-  const handleSelectView = (view: ConsoleView) => {
-    setCurrentView(view);
-    if (setIsOpenMobile) setIsOpenMobile(false);
     setHoveredSection(null);
   };
 
-  const displayName = currentUser ? currentUser.name : userName;
-  const displayEmail = currentUser ? currentUser.email : 'owner@guruom.in';
+  const handleSelectView = (view: ConsoleView) => {
+    setCurrentView(view);
+    setIsOpenMobile?.(false);
+    setHoveredSection(null);
+  };
+
+  const displayName = currentUser?.name || userName;
+  const displayEmail = currentUser?.email || 'owner@guruom.in';
+  const displayRole = currentUser?.role || currentRole;
   const initials = displayName
     .split(' ')
-    .map(n => n[0])
+    .map(part => part[0])
     .join('')
     .slice(0, 2)
-    .toUpperCase() || 'GA';
+    .toUpperCase() || 'GO';
+
+  const navButtonClass = (active: boolean) => `sidebar-module-btn group relative flex w-full items-center rounded-xl border transition-all ${
+    isCollapsed ? 'h-11 justify-center px-2' : 'min-h-11 gap-3 px-3'
+  } ${
+    active
+      ? isDarkMode
+        ? 'is-active border-white/10 bg-white/[0.09] text-white shadow-none'
+        : 'is-active border-[var(--accent-border-light)] bg-[var(--accent-soft-light)] text-[var(--accent-text-light)] shadow-none'
+      : isDarkMode
+        ? 'border-transparent text-slate-400 hover:border-white/[0.06] hover:bg-white/[0.06] hover:text-white'
+        : 'border-transparent text-slate-600 hover:border-slate-200 hover:bg-slate-100 hover:text-slate-950'
+  }`;
 
   return (
-    <aside className={`
-      hidden lg:flex shrink-0 select-none font-sans transition-all duration-300 ease-in-out h-full max-h-screen overflow-hidden
-      ${isCollapsed ? 'w-[92px]' : 'w-[304px]'}
-    `}>
-      {/* Outer Floating Pill Sidebar Shell */}
-      <div className="h-full w-full p-2.5 sm:p-3">
-        <div className={`h-full w-full flex flex-col justify-between overflow-hidden font-sans rounded-3xl border transition-all duration-300 ease-in-out ${
-          isCollapsed
-            ? ''
-            : isDarkMode
-              ? 'shadow-[0_8px_40px_rgba(0,0,0,0.45)]'
-              : 'shadow-[0_8px_32px_rgba(15,23,42,0.06)]'
-        } ${
-          isDarkMode
-            ? 'bg-[#1A1B1F]/95 border-[#262832] text-slate-300'
-            : 'bg-[#F8FAFC]/95 backdrop-blur-md border-[#E2E8F0] text-slate-800'
+    <aside className={`hidden h-full shrink-0 overflow-visible p-3 pr-0 font-sans transition-[width] duration-300 lg:flex ${
+      isCollapsed ? 'w-[88px]' : 'w-[272px]'
+    }`}>
+      <div className={`console-sidebar ${isDarkMode ? 'console-sidebar-dark border-white/[0.07] bg-[#11151d] text-slate-300 shadow-[0_20px_55px_rgba(15,23,42,0.18)]' : 'console-sidebar-light border-slate-200 bg-white text-slate-700 shadow-[0_16px_42px_rgba(15,23,42,0.08)]'} relative flex h-full w-full flex-col overflow-visible rounded-[24px] border`}>
+        <div className={`flex h-[76px] shrink-0 items-center border-b ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'} ${
+          isCollapsed ? 'justify-center px-3' : 'justify-between px-4'
         }`}>
+          {!isCollapsed && (
+            <div className="flex min-w-0 items-center gap-3">
+              <div className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-sm ${isDarkMode ? 'bg-white text-[#11151d]' : 'bg-slate-950 text-white'}`}>
+                <Command className="h-5 w-5" strokeWidth={2.4} />
+                <span className={`absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 bg-emerald-400 ${isDarkMode ? 'border-[#11151d]' : 'border-white'}`} />
+              </div>
+              <div className="min-w-0">
+                <div className={`truncate text-[15px] font-extrabold tracking-[-0.03em] ${isDarkMode ? 'text-white' : 'text-slate-950'}`}>GuruOm OS</div>
+                <div className={`mt-0.5 truncate font-mono text-[9px] font-semibold uppercase tracking-[0.16em] ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>Operations system</div>
+              </div>
+            </div>
+          )}
 
-          {/* Top Header & Scrollable Nav Section */}
-          <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-            {/* Brand Logo & Collapse Toggle */}
-            <div className={`px-4 py-3.5 border-b border-[#d8dde8] dark:border-[#262832] flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} gap-2 shrink-0`}>
-              {!isCollapsed ? (
-                <>
-                  <div className="flex items-center gap-2.5 overflow-hidden">
-                    <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] flex items-center justify-center text-white text-xs font-black shadow-sm shrink-0">
-                      G
-                    </div>
-                    <div className="flex flex-col leading-tight overflow-hidden">
-                      <span className="text-[15px] font-extrabold text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] tracking-tight truncate leading-none">
-                        GuruOm OS
-                      </span>
-                      <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono mt-0.5 tracking-wide">
-                        Industrial Suite
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* Shrink / Collapse Button */}
+          <button
+            type="button"
+            onClick={toggleCollapse}
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-colors ${
+              isDarkMode
+                ? isCollapsed
+                  ? 'border-white/10 bg-white/[0.07] text-white hover:bg-white/[0.12]'
+                  : 'border-white/[0.07] text-slate-500 hover:bg-white/[0.07] hover:text-white'
+                : 'border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-950'
+            }`}
+            title={isCollapsed ? 'Expand navigation' : 'Collapse navigation'}
+          >
+            {isCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+          </button>
+        </div>
+
+        <div ref={scrollContainerRef} data-lenis-prevent="true" className="no-scrollbar flex-1 overflow-y-auto px-3 py-4">
+          {!isCollapsed && (
+            <div className={`mb-2 px-2 font-mono text-[9px] font-bold uppercase tracking-[0.18em] ${isDarkMode ? 'text-slate-600' : 'text-slate-400'}`}>Workspace</div>
+          )}
+
+          <button type="button" onClick={() => handleSelectView('command-centre')} className={navButtonClass(currentView === 'command-centre')} title="Command Centre">
+            {currentView === 'command-centre' && <span className={`absolute left-0 h-5 w-[3px] rounded-r-full ${isDarkMode ? 'bg-white' : 'bg-[var(--accent-primary)]'}`} />}
+            <LayoutGrid className="sidebar-icon h-[18px] w-[18px] shrink-0" />
+            {!isCollapsed && (
+              <>
+                <span className="flex-1 text-left text-[13px] font-bold">Command Centre</span>
+                <span className="flex items-center gap-1.5 font-mono text-[8px] font-bold uppercase tracking-wider text-emerald-400">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Live
+                </span>
+              </>
+            )}
+          </button>
+
+          {!isCollapsed && (
+            <div className="mb-2 mt-6 flex items-center justify-between px-2">
+              <span className={`font-mono text-[9px] font-bold uppercase tracking-[0.18em] ${isDarkMode ? 'text-slate-600' : 'text-slate-400'}`}>Departments</span>
+              <span className={`rounded-md px-1.5 py-0.5 font-mono text-[8px] ${isDarkMode ? 'bg-white/[0.05] text-slate-500' : 'bg-slate-100 text-slate-500'}`}>{NAVIGATION_SECTIONS.length}</span>
+            </div>
+          )}
+
+          <div className="space-y-1">
+            {NAVIGATION_SECTIONS.map(section => {
+              const SectionIcon = section.icon;
+              const allowedItems = section.items.filter(item => isViewAllowedForRole(displayRole, item.id));
+              if (allowedItems.length === 0) return null;
+
+              const isOpen = openSections[section.id] ?? false;
+              const hasActiveChild = allowedItems.some(item => item.id === currentView || (currentView === 'order-detail' && item.id === 'orders'));
+
+              return (
+                <div
+                  key={section.id}
+                  className="relative"
+                  onMouseEnter={() => isCollapsed && setHoveredSection(section.id)}
+                  onMouseLeave={() => isCollapsed && setHoveredSection(null)}
+                >
                   <button
                     type="button"
-                    onClick={toggleCollapse}
-                    className="p-1.5 rounded-xl hover:bg-[var(--accent-soft-light)] dark:hover:bg-[var(--accent-soft-dark)] text-slate-400 hover:text-[var(--accent-text-light)] dark:hover:text-[var(--accent-text-dark)] transition-all cursor-pointer"
-                    title="Shrink Sidebar"
+                    onClick={() => {
+                      if (isCollapsed) {
+                        setIsCollapsed(false);
+                        localStorage.setItem('guruom_sidebar_collapsed', 'false');
+                        setOpenSections(previous => ({ ...previous, [section.id]: true }));
+                      } else {
+                        setOpenSections(previous => ({ ...previous, [section.id]: !isOpen }));
+                      }
+                    }}
+                    className={navButtonClass(hasActiveChild)}
+                    title={isCollapsed ? section.label : undefined}
                   >
-                    <PanelLeftClose className="w-4 h-4" />
+                    {hasActiveChild && <span className="absolute left-0 h-5 w-[3px] rounded-r-full bg-[var(--accent-primary)]" />}
+                    <SectionIcon className={`sidebar-icon h-[18px] w-[18px] shrink-0 ${hasActiveChild ? 'text-[var(--accent-text-dark)]' : ''}`} />
+                    {!isCollapsed && (
+                      <>
+                        <span className="min-w-0 flex-1 truncate text-left text-[13px] font-bold">{section.label}</span>
+                        <ChevronDown className={`sidebar-chevron h-3.5 w-3.5 transition-transform ${isDarkMode ? 'text-slate-600' : 'text-slate-400'} ${isOpen ? `rotate-180 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}` : ''}`} />
+                      </>
+                    )}
                   </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  onClick={toggleCollapse}
-                  className="relative w-10 h-10 rounded-xl bg-gradient-to-tr from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] flex items-center justify-center text-white text-sm font-black shadow-xs transition-all hover:scale-105 hover:shadow-md cursor-pointer group overflow-hidden"
-                  title="Expand Sidebar"
-                >
-                  <span className="transition-opacity duration-200 group-hover:opacity-0">G</span>
-                  <div className="absolute inset-0 bg-black/40 backdrop-blur-2xs opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
-                    <PanelLeftOpen className="w-4 h-4 text-white" />
-                  </div>
-                </button>
-              )}
-            </div>
 
-            {/* Navigation Items List */}
-            <div 
-              ref={scrollContainerRef}
-              data-lenis-prevent="true"
-              className="p-3 space-y-1.5 overflow-y-auto overscroll-contain no-scrollbar scroll-smooth flex-1 min-h-0 select-none"
-            >
-              {/* 1. Command Centre (Direct Link) */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => handleSelectView('command-centre')}
-                  className={`sidebar-module-btn w-full flex items-center ${isCollapsed ? 'justify-center px-2 py-2.5' : 'justify-between px-3.5 py-2.5'} rounded-xl text-sm font-semibold border transition-all duration-200 cursor-pointer group hover:translate-x-0.5 ${
-                    currentView === 'command-centre'
-                      ? 'is-active bg-[var(--accent-primary)] text-white font-bold shadow-md shadow-[var(--accent-shadow)] border-transparent'
-                      : isDarkMode
-                        ? 'hover:bg-[var(--accent-soft-dark)] hover:text-white text-slate-400 border-transparent hover:border-[var(--accent-border-dark)]'
-                        : 'hover:bg-[var(--accent-soft-light)] hover:text-[var(--accent-text-light)] text-slate-600 border-transparent hover:border-[var(--accent-border-light)]'
-                  }`}
-                  title="Command Centre"
-                >
-                  <div className="flex items-center gap-3">
-                    <LayoutGrid className={`sidebar-icon w-5 h-5 transition-transform duration-200 group-hover:scale-110 shrink-0 ${
-                      currentView === 'command-centre'
-                        ? 'text-white' 
-                        : isDarkMode ? 'text-slate-400 group-hover:text-[var(--accent-text-dark)]' : 'text-slate-500 group-hover:text-[var(--accent-text-light)]'
-                    }`} />
-                    {!isCollapsed && <span className="tracking-tight font-bold">Command Centre</span>}
-                  </div>
-                  {!isCollapsed && (
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-xs" title="Live Overview" />
-                  )}
-                </button>
-              </div>
-
-              {/* Separator */}
-              {!isCollapsed && (
-                <div className="pt-2 px-1 text-[11px] font-mono font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center justify-between">
-                  <span>Modules</span>
-                  <span className="text-[10px] text-slate-400 font-normal">4 Groups</span>
-                </div>
-              )}
-
-              {/* 2. Grouped Modules */}
-              {NAVIGATION_SECTIONS.map((section) => {
-                const SectionIcon = section.icon;
-                const isOpen = openSections[section.id] ?? false;
-                const hasActiveChild = section.items.some(
-                  item => item.id === currentView || (currentView === 'order-detail' && item.id === 'orders')
-                );
-
-                // Filter items visible for role
-                const allowedItems = section.items.filter(item => 
-                  isViewAllowedForRole(currentUser?.role || currentRole, item.id)
-                );
-
-                if (allowedItems.length === 0) return null;
-
-                return (
-                  <div 
-                    key={section.id} 
-                    ref={el => { sectionRefs.current[section.id] = el; }}
-                    className="space-y-0.5 relative"
-                    onMouseEnter={() => isCollapsed && setHoveredSection(section.id)}
-                    onMouseLeave={() => isCollapsed && setHoveredSection(null)}
-                  >
-                    {/* Group Header Button */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (isCollapsed) {
-                          setIsCollapsed(false);
-                          setOpenSections(prev => ({ ...prev, [section.id]: true }));
-                          setTimeout(() => ensureSectionVisible(section.id), 150);
-                        } else {
-                          toggleSection(section.id);
-                        }
-                      }}
-                      className={`sidebar-module-btn w-full flex items-center ${isCollapsed ? 'justify-center px-2 py-2.5' : 'justify-between px-3.5 py-2.5'} rounded-xl text-sm font-semibold border transition-all duration-200 cursor-pointer group hover:translate-x-0.5 ${
-                        hasActiveChild && !isOpen
-                          ? isDarkMode
-                            ? 'bg-[var(--accent-soft-dark)] text-[var(--accent-text-dark)] border-[var(--accent-border-dark)]'
-                            : 'bg-white text-[var(--accent-text-light)] border-[var(--accent-border-light)] shadow-2xs font-bold'
-                          : isDarkMode
-                            ? 'hover:bg-[var(--accent-soft-dark)] hover:text-white text-slate-400 border-transparent hover:border-[var(--accent-border-dark)]'
-                            : 'hover:bg-[var(--accent-soft-light)] hover:text-[var(--accent-text-light)] text-slate-600 border-transparent hover:border-[var(--accent-border-light)]'
-                      }`}
-                      title={isCollapsed ? section.label : undefined}
-                    >
-                      <div className="flex items-center gap-3 overflow-hidden">
-                        <SectionIcon className={`sidebar-icon w-5 h-5 transition-transform duration-200 group-hover:scale-110 shrink-0 ${
-                          hasActiveChild 
-                            ? 'text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)]' 
-                            : isDarkMode ? 'text-slate-400 group-hover:text-[var(--accent-text-dark)]' : 'text-slate-500 group-hover:text-[var(--accent-text-light)]'
-                        }`} />
-                        
-                        {!isCollapsed && (
-                          <span className={`tracking-tight font-bold truncate text-sm ${hasActiveChild ? 'text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)]' : ''}`}>
-                            {section.label}
-                          </span>
-                        )}
-                      </div>
-
-                      {!isCollapsed && (
-                        <div className="flex items-center gap-2 shrink-0">
-                          {hasActiveChild && !isOpen && (
-                            <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] shadow-xs" />
-                          )}
-                          <ChevronDown className={`sidebar-chevron w-4 h-4 text-slate-400 group-hover:text-[var(--accent-text-light)] dark:group-hover:text-[var(--accent-text-dark)] transition-transform duration-300 ${
-                            isOpen ? 'rotate-180 text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)]' : ''
-                          }`} />
-                        </div>
-                      )}
-                    </button>
-
-                    {/* Sub-items List */}
-                    <AnimatePresence initial={false}>
-                      {!isCollapsed && isOpen && (
-                        <motion.div
-                          key={`dropdown-${section.id}`}
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-                          onAnimationComplete={() => {
-                            if (openSections[section.id]) {
-                              ensureSectionVisible(section.id);
-                            }
-                          }}
-                          className="overflow-hidden"
-                        >
-                          <div className="pl-2 pr-0.5 py-1 space-y-1 border-l-2 border-[var(--accent-border-light)] dark:border-[var(--accent-border-dark)] ml-2.5 my-1">
-                            {allowedItems.map((item) => {
-                              const ItemIcon = item.icon;
-                              const isActive = currentView === item.id || (currentView === 'order-detail' && item.id === 'orders');
-
-                              return (
-                                <button
-                                  key={item.id}
-                                  type="button"
-                                  onClick={() => handleSelectView(item.id)}
-                                  className={`sidebar-module-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold border transition-all duration-150 cursor-pointer group hover:translate-x-0.5 ${
-                                    isActive
-                                      ? 'is-active bg-[var(--accent-primary)] text-white font-bold shadow-md shadow-[var(--accent-shadow)] border-transparent'
-                                      : isDarkMode
-                                        ? 'hover:bg-[var(--accent-soft-dark)] hover:text-white text-slate-300 border-transparent hover:border-[var(--accent-border-dark)]'
-                                        : 'hover:bg-[var(--accent-soft-light)] hover:text-[var(--accent-text-light)] text-slate-600 border-transparent hover:border-[var(--accent-border-light)]'
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-3 truncate">
-                                    <ItemIcon className={`sidebar-icon w-4 h-4 shrink-0 transition-transform duration-200 group-hover:scale-110 ${
-                                      isActive ? 'text-white' : isDarkMode ? 'text-slate-400 group-hover:text-[var(--accent-text-dark)]' : 'text-slate-500 group-hover:text-[var(--accent-text-light)]'
-                                    }`} />
-                                    <span className="truncate">{item.label}</span>
-                                  </div>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-
-                    {/* Collapsed Mode Popover Hover Flyout */}
-                    {isCollapsed && hoveredSection === section.id && (
-                      <div className={`absolute left-full top-0 ml-2 w-56 p-2 rounded-2xl border shadow-xl z-50 space-y-1 font-sans animate-fade-in ${
-                        isDarkMode ? 'bg-[#1A1B1F]/95 border-[#262832] text-slate-100' : 'bg-white/95 backdrop-blur-md border-[#E2EAE5] text-slate-900'
-                      }`}>
-                        <div className="px-2.5 py-1.5 border-b border-slate-100 dark:border-slate-800 font-bold text-xs flex items-center gap-2 text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)]">
-                          <SectionIcon className="w-4 h-4" />
-                          <span>{section.label}</span>
-                        </div>
-                        <div className="pt-1 space-y-0.5 max-h-60 overflow-y-auto no-scrollbar">
-                          {allowedItems.map((item) => {
+                  <AnimatePresence initial={false}>
+                    {!isCollapsed && isOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                        className="overflow-hidden"
+                      >
+                        <div className={`relative ml-[21px] space-y-0.5 py-1 pl-4 before:absolute before:bottom-2 before:left-0 before:top-1 before:w-px ${isDarkMode ? 'before:bg-white/[0.08]' : 'before:bg-slate-200'}`}>
+                          {allowedItems.map(item => {
                             const ItemIcon = item.icon;
                             const isActive = currentView === item.id || (currentView === 'order-detail' && item.id === 'orders');
-
                             return (
                               <button
                                 key={item.id}
                                 type="button"
                                 onClick={() => handleSelectView(item.id)}
-                                className={`sidebar-module-btn w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-semibold text-left border transition-all cursor-pointer ${
+                                className={`sidebar-module-btn group flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-colors ${
                                   isActive
-                                    ? 'is-active bg-[var(--accent-primary)] text-white font-bold border-transparent'
+                                    ? isDarkMode
+                                      ? 'is-active border-[var(--accent-border-dark)] bg-[var(--accent-soft-dark)] text-white shadow-none'
+                                      : 'is-active border-[var(--accent-border-light)] bg-[var(--accent-soft-light)] text-[var(--accent-text-light)] shadow-none'
                                     : isDarkMode
-                                      ? 'hover:bg-[var(--accent-soft-dark)] hover:text-white text-slate-300 border-transparent hover:border-[var(--accent-border-dark)]'
-                                      : 'hover:bg-[var(--accent-soft-light)] hover:text-[var(--accent-text-light)] text-slate-700 border-transparent hover:border-[var(--accent-border-light)]'
+                                      ? 'border-transparent text-slate-500 hover:border-white/[0.05] hover:bg-white/[0.05] hover:text-slate-200'
+                                      : 'border-transparent text-slate-500 hover:border-slate-200 hover:bg-slate-100 hover:text-slate-900'
                                 }`}
                               >
-                                <ItemIcon className={`sidebar-icon w-3.5 h-3.5 shrink-0 transition-colors ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                                <span className="truncate">{item.label}</span>
+                                <ItemIcon className={`sidebar-icon h-3.5 w-3.5 shrink-0 ${isActive ? 'text-[var(--accent-text-dark)]' : ''}`} />
+                                <span className="min-w-0 flex-1 truncate text-[12px] font-semibold">{item.label}</span>
+                                {isActive && <ChevronRight className="h-3 w-3 shrink-0 text-[var(--accent-text-dark)]" />}
                               </button>
                             );
                           })}
                         </div>
-                      </div>
+                      </motion.div>
                     )}
-                  </div>
-                );
-              })}
-            </div>
+                  </AnimatePresence>
+
+                  {isCollapsed && hoveredSection === section.id && (
+                    <div className="absolute left-full top-0 z-50 ml-3 w-60 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 text-slate-900 shadow-[0_20px_60px_rgba(15,23,42,0.22)] dark:border-white/10 dark:bg-[#181d27] dark:text-white">
+                      <div className="flex items-center gap-2 border-b border-slate-100 px-2.5 py-2 text-xs font-extrabold dark:border-white/[0.07]">
+                        <SectionIcon className="h-4 w-4 text-[var(--accent-primary)]" />
+                        {section.label}
+                      </div>
+                      <div className="space-y-0.5 pt-1.5">
+                        {allowedItems.map(item => {
+                          const ItemIcon = item.icon;
+                          const isActive = currentView === item.id || (currentView === 'order-detail' && item.id === 'orders');
+                          return (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() => handleSelectView(item.id)}
+                              className={`sidebar-module-btn flex w-full items-center gap-2.5 rounded-xl border px-2.5 py-2 text-left text-xs font-semibold ${
+                                isActive ? 'is-active border-transparent bg-[var(--accent-primary)] text-white' : 'border-transparent text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/[0.06]'
+                              }`}
+                            >
+                              <ItemIcon className="sidebar-icon h-3.5 w-3.5" />
+                              <span className="truncate">{item.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
+        </div>
 
-          {/* Footer: User Profile + Sign Out */}
-          <div className="p-3 border-t border-[#d8dde8] dark:border-[#262832] space-y-2 shrink-0">
-            {!isCollapsed ? (
-              <div className="p-3 rounded-2xl bg-[#F6F8FA] dark:bg-white/5 border border-[#E8EEE9] dark:border-[#262832] space-y-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] flex items-center justify-center text-white font-black text-xs shadow-xs shrink-0">
-                    {initials}
-                  </div>
-                  <div className="flex-1 overflow-hidden">
-                    <div className="text-xs font-bold text-slate-900 dark:text-white truncate leading-tight">
-                      {displayName}
-                    </div>
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono truncate mt-0.5">
-                      {displayEmail}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Role & Status Pill */}
-                <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
-                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-[var(--accent-soft-light)] dark:bg-[var(--accent-soft-dark)] text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-border-light)] dark:border-[var(--accent-border-dark)] text-[10px] font-mono font-bold tracking-wider uppercase truncate max-w-[175px]">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)] shrink-0" />
-                    <span className="truncate">{currentUser?.role || currentRole}</span>
-                  </div>
-                  <span className="text-[10px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    Active
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <div 
-                className="flex justify-center relative group"
-                title={`${displayName} • ${currentUser?.role || currentRole} (${displayEmail})`}
-              >
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] flex items-center justify-center text-white font-black text-xs shadow-xs shrink-0 cursor-default">
+        <div className={`shrink-0 border-t p-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+          {!isCollapsed ? (
+            <div className={`rounded-2xl border p-2.5 ${isDarkMode ? 'border-white/[0.08] bg-white/[0.045]' : 'border-slate-200 bg-slate-50'}`}>
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] text-[11px] font-black text-white">
                   {initials}
                 </div>
+                <div className="min-w-0 flex-1">
+                  <div className={`truncate text-[12px] font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-950'}`}>{displayName}</div>
+                  <div className={`mt-0.5 truncate font-mono text-[9px] ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>{displayEmail}</div>
+                </div>
+                <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_0_3px_rgba(52,211,153,0.12)]" title="Online" />
               </div>
-            )}
-
-            {/* Security & Sessions Trigger */}
-            {onOpenSecurityModal && (
-              <button
-                type="button"
-                onClick={onOpenSecurityModal}
-                className={`sidebar-module-btn w-full flex items-center ${isCollapsed ? 'justify-center px-2 py-2' : 'justify-start gap-3 px-3.5 py-2'} rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-[var(--accent-soft-light)] dark:hover:bg-[var(--accent-soft-dark)] hover:text-[var(--accent-text-light)] dark:hover:text-[var(--accent-text-dark)] border border-transparent hover:border-[var(--accent-border-light)] dark:hover:border-[var(--accent-border-dark)] transition-all cursor-pointer group mb-1.5`}
-                title="Security & Active Sessions"
-              >
-                <ShieldCheck className="w-4 h-4 text-emerald-500 group-hover:text-[var(--accent-primary)] transition-colors shrink-0" />
-                {!isCollapsed && <span>Security & Sessions</span>}
-              </button>
-            )}
-
-            {/* Log Out Button */}
-            {onSignOut && (
-              <button
-                type="button"
-                onClick={onSignOut}
-                className={`w-full flex items-center ${isCollapsed ? 'justify-center px-2 py-2.5' : 'justify-start gap-3 px-3.5 py-2.5'} rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-[#FEE4E2] dark:hover:bg-slate-800 hover:text-rose-600 dark:hover:text-rose-400 border border-transparent hover:border-[#FED7D0] dark:hover:border-slate-800 transition-all cursor-pointer group`}
-                title="Log Out"
-              >
-                <LogOut className="w-4 h-4 text-slate-500 group-hover:text-rose-500 transition-colors shrink-0" />
-                {!isCollapsed && <span>Log Out</span>}
-              </button>
-            )}
-          </div>
-
+              <div className={`mt-2.5 flex items-center justify-between border-t pt-2 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+                <span className="max-w-[135px] truncate font-mono text-[8px] font-bold uppercase tracking-wider text-slate-500">{displayRole}</span>
+                <div className="flex items-center gap-1">
+                  {onOpenSecurityModal && (
+                    <button type="button" onClick={onOpenSecurityModal} className={`flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors ${isDarkMode ? 'hover:bg-white/[0.08] hover:text-white' : 'hover:bg-slate-200 hover:text-slate-950'}`} title="Security and sessions">
+                      <ShieldCheck className="h-4 w-4" />
+                    </button>
+                  )}
+                  {onSignOut && (
+                    <button type="button" onClick={onSignOut} className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-rose-500/10 hover:text-rose-400" title="Log out">
+                      <LogOut className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] text-[11px] font-black text-white" title={`${displayName} - ${displayRole}`}>
+                {initials}
+              </div>
+              {onSignOut && (
+                <button type="button" onClick={onSignOut} className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-rose-500/10 hover:text-rose-400" title="Log out">
+                  <LogOut className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </aside>

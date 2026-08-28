@@ -558,15 +558,20 @@ export class OrdersService {
       throw err;
     }
 
+    const requestedStage = String(validated.stage || validated.status || 'PO_RECEIVED').toUpperCase();
+    const initialStage = ['CONFIRMED', 'APPROVED', 'RELEASED'].includes(requestedStage)
+      ? 'PO_RECEIVED'
+      : requestedStage;
+
     const newOrder = {
       id: orderId,
       poNo: validated.poNo,
       customerName: validated.customerName,
       poDate: validated.poDate,
       deliveryDate: validated.deliveryDate,
-      status: validated.status || 'DRAFT',
-      stage: (validated.status as OrderStage) || 'DRAFT',
-      progressStep: 0,
+      status: initialStage,
+      stage: initialStage as OrderStage,
+      progressStep: 1,
       grossAmount: validated.grossAmount,
       taxCategory: validated.taxCategory || 'GST 18%',
       remark: validated.remark || '',
@@ -602,8 +607,8 @@ export class OrdersService {
       customer_name: validated.customerName,
       po_date: validated.poDate,
       delivery_date: validated.deliveryDate,
-      status: validated.status || 'PO_RECEIVED',
-      stage: validated.status || 'PO_RECEIVED',
+      status: initialStage,
+      stage: initialStage,
       progress_step: 1,
       gross_amount: validated.grossAmount,
       tax_category: validated.taxCategory || 'GST 18%',

@@ -459,7 +459,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
         />
 
         {/* Dynamic View Canvas with safe bottom padding for mobile tab bar */}
-        <main ref={mainScrollRef} className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 lg:p-8 pb-24 lg:pb-8 bg-[#F8FAFC] dark:bg-[#121316]">
+        <main ref={mainScrollRef} className={`flex-1 overflow-y-auto overscroll-y-contain overscroll-x-hidden p-3 sm:p-4 md:p-6 lg:p-8 pb-24 lg:pb-8 dark:bg-[#121316] ${currentView === 'command-centre' ? 'bg-[#EEF2F7]' : 'bg-[#F8FAFC]'}`}>
           <div key={currentView} className="space-y-6">
             {!isViewAllowedForRole(currentRole, currentView) ? (
               <AccessRestrictedGate

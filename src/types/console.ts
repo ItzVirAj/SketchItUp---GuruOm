@@ -138,6 +138,13 @@ export interface CustomerOrder {
   changeOrderNotes?: string;
   revisionComments?: string;
   orderDate?: string;
+  partCode?: string;
+  partDescription?: string;
+  orderedQty?: number;
+  rate?: number;
+  netAmount?: number;
+  blanketBalanceQty?: number;
+  invoiceNumber?: string;
   createdAt?: string;
   updatedAt?: string;
   lines: OrderLineItem[];

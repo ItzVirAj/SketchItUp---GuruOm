@@ -1,43 +1,48 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  BarChart3, 
-  Hash, 
-  AlertTriangle, 
-  Check, 
-  Clock, 
-  DollarSign, 
-  ShoppingCart, 
-  Factory, 
-  ShieldCheck, 
-  Truck, 
-  SlidersHorizontal, 
-  ChevronRight, 
-  RefreshCw, 
-  X, 
-  Eye, 
-  EyeOff, 
-  RotateCcw, 
-  Activity, 
-  ArrowRight, 
-  Search, 
-  TrendingUp, 
-  TrendingDown, 
-  Box, 
-  Package, 
-  Layers3, 
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import {
+  BarChart3,
+  Hash,
+  AlertTriangle,
+  Check,
+  Clock,
+  DollarSign,
+  ShoppingCart,
+  Factory,
+  ShieldCheck,
+  Truck,
+  SlidersHorizontal,
+  ChevronRight,
+  RefreshCw,
+  X,
+  Eye,
+  EyeOff,
+  RotateCcw,
+  Activity,
+  ArrowRight,
+  Search,
+  TrendingUp,
+  Package,
   Download,
   CheckSquare,
   Sparkles,
   Zap,
   Gauge,
+  Plus,
+  Radio,
+  Layers,
   CircleDot,
-  Plus
+  ArrowUpRight,
+  ClipboardList,
+  Boxes,
+  Wallet,
+  Target,
+  Play
 } from 'lucide-react';
-import { 
-  CustomerOrder, 
-  StockItem, 
-  QCInspection, 
-  JobCard, 
+import {
+  CustomerOrder,
+  StockItem,
+  QCInspection,
+  JobCard,
   DispatchChallan,
   CustomerInvoice,
   VendorBill,
@@ -87,9 +92,6 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
   invoices = [],
   payables = [],
   productionLogs = [],
-  pdiQueue = [],
-  machines = [],
-  users = [],
   auditLogs = [],
   approvals = [],
   containerScrollRef,
@@ -106,40 +108,26 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
   setScope: externalSetScope
 }) => {
   const [mode, setMode] = useState<'charts' | 'numbers'>('charts');
-  
-  // Mobile Executive Tab Switcher: 'pulse' | 'orders' | 'shopfloor' | 'finance' | 'swarm'
-  const [mobileSectionTab, setMobileSectionTab] = useState<'pulse' | 'orders' | 'shopfloor' | 'finance' | 'swarm'>('pulse');
-
-  const [tabularSearchQuery, setTabularSearchQuery] = useState<string>('');
-  const [tabularCategoryFilter, setTabularCategoryFilter] = useState<string>('ALL');
-  const [tabularDensity, setTabularDensity] = useState<'compact' | 'comfortable'>('comfortable');
-  const [localScope, setLocalScope] = useState<string>('FY 26-27');
+  const [tabularSearchQuery, setTabularSearchQuery] = useState('');
+  const [tabularCategoryFilter, setTabularCategoryFilter] = useState('ALL');
+  const [activitySearchQuery, setActivitySearchQuery] = useState('');
+  const [activityCategoryFilter, setActivityCategoryFilter] = useState('ALL');
+  const [localScope, setLocalScope] = useState('FY 26-27');
   const scope = externalScope ?? localScope;
   const setScope = externalSetScope ?? setLocalScope;
 
   const localContainerRef = useRef<HTMLDivElement>(null);
   const activeScrollRef = containerScrollRef || localContainerRef;
 
-  // Mobile Native Pull-to-Refresh
   const { isRefreshing, pullDistance, isTriggered } = usePullToRefresh(activeScrollRef, {
     onRefresh: async () => {
-      if (onResetAllData) {
-        await onResetAllData();
-      }
+      if (onResetAllData) await onResetAllData();
     }
   });
 
-  const [localShowCustomizeModal, setLocalShowCustomizeModal] = useState<boolean>(false);
+  const [localShowCustomizeModal, setLocalShowCustomizeModal] = useState(false);
   const showCustomizeModal = externalShowCustomizeModal ?? localShowCustomizeModal;
   const setShowCustomizeModal = externalSetShowCustomizeModal ?? setLocalShowCustomizeModal;
-
-  // Timeframe selector for charts
-  const [topProductsTimeframe, setTopProductsTimeframe] = useState<string>('June');
-  const [salesAnalyticsTimeframe, setSalesAnalyticsTimeframe] = useState<string>('June');
-
-  // Search & Filter state for Recent Activities Table
-  const [activitySearchQuery, setActivitySearchQuery] = useState<string>('');
-  const [activityCategoryFilter, setActivityCategoryFilter] = useState<string>('ALL');
 
   const defaultVisibility = {
     showAlertsBar: true,
@@ -149,30 +137,22 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
     showAnalyticsGrid: true,
     showRecentActivities: true,
     showThroughputChart: true,
+    showOrderPipelineCard: true,
     showQcCard: true,
-    showMachineRuntimeCard: true,
-    showOrderPipelineCard: true
+    showMachineRuntimeCard: true
   };
 
   const [widgetVisibility, setWidgetVisibility] = useState(() => {
     try {
       const saved = localStorage.getItem('stratum_cmd_widgets');
       if (!saved) return defaultVisibility;
-      const parsed = JSON.parse(saved);
-      return {
-        ...defaultVisibility,
-        ...parsed,
-        showAgentBentoGrid: parsed.showAgentBentoGrid ?? true,
-        showTopMetricsRow: parsed.showTopMetricsRow ?? true,
-        showAnalyticsGrid: parsed.showAnalyticsGrid ?? true,
-        showRecentActivities: parsed.showRecentActivities ?? true
-      };
+      return { ...defaultVisibility, ...JSON.parse(saved) };
     } catch {
       return defaultVisibility;
     }
   });
 
-  const [currencySymbol, setCurrencySymbol] = useState<string>(() => {
+  const [currencySymbol] = useState(() => {
     try {
       return localStorage.getItem('stratum_currency') || '₹';
     } catch {
@@ -183,1490 +163,896 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
   useEffect(() => {
     try {
       localStorage.setItem('stratum_cmd_widgets', JSON.stringify(widgetVisibility));
-    } catch (e) {
+    } catch {
       // ignore
     }
   }, [widgetVisibility]);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem('stratum_currency', currencySymbol);
-    } catch (e) {
-      // ignore
-    }
-  }, [currencySymbol]);
-
   const handleNavigate = (view: any) => {
-    if (onNavigate) onNavigate(view);
-    if (onNavigateView) onNavigateView(view);
+    onNavigate?.(view);
+    onNavigateView?.(view);
   };
 
   const toggleWidget = (key: keyof typeof widgetVisibility) => {
     setWidgetVisibility(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-  // =========================================================================
-  // REALTIME SCOPED CALCULATIONS
-  // =========================================================================
   const getScopeFilter = (dateString?: string) => {
     if (!dateString || scope === 'All-Time') return true;
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return true;
-    
-    if (scope === 'FY 26-27') {
-      return date >= new Date('2026-04-01T00:00:00') && date <= new Date('2027-03-31T23:59:59');
-    }
-    if (scope === 'FY 25-26') {
-      return date >= new Date('2025-04-01T00:00:00') && date <= new Date('2026-03-31T23:59:59');
-    }
-    if (scope === 'Q3 2026') {
-      return date >= new Date('2026-10-01T00:00:00') && date <= new Date('2026-12-31T23:59:59');
-    }
+    if (scope === 'FY 26-27') return date >= new Date('2026-04-01') && date <= new Date('2027-03-31T23:59:59');
+    if (scope === 'FY 25-26') return date >= new Date('2025-04-01') && date <= new Date('2026-03-31T23:59:59');
+    if (scope === 'Q3 2026') return date >= new Date('2026-10-01') && date <= new Date('2026-12-31T23:59:59');
     return true;
   };
 
-  const scopedOrders = orders.filter(o => getScopeFilter(o.orderDate || o.createdAt));
-  const scopedInvoices = invoices.filter(i => getScopeFilter(i.invoiceDate || i.createdAt));
-  const scopedJobCards = jobCards.filter(j => getScopeFilter(j.createdAt || j.targetDate));
-  const scopedDispatches = dispatches.filter(d => getScopeFilter(d.dispatchDate || d.createdAt));
+  const metrics = useMemo(() => {
+    const scopedOrders = orders.filter(o => getScopeFilter(o.orderDate || o.createdAt));
+    const scopedInvoices = invoices.filter(i => getScopeFilter(i.invoiceDate || i.createdAt));
+    const scopedDispatches = dispatches.filter(d => getScopeFilter(d.dispatchDate || d.createdAt));
 
-  // Pending Approvals count
-  const pendingApprovalsList = approvals.filter(a => a.status === 'PENDING');
-  const pendingApprovalsCount = pendingApprovalsList.length;
+    const pendingApprovalsCount = approvals.filter(a => a.status === 'PENDING').length;
+    const qcHoldCount = qcItems.filter(q => q.qcStatus === 'QC_HOLD' || q.jobStatus === 'QC_HOLD').length;
+    const itemsShortCount = stock.filter(s => s.status === 'SHORTAGE' || s.status === 'CRITICAL' || s.available < 0).length;
+    const overdueDeliveriesCount = scopedOrders.filter(o => {
+      if (o.status === 'CLOSED' || o.status === 'CANCELLED') return false;
+      if (o.status === 'OVERDUE') return true;
+      return o.dueDate ? new Date(o.dueDate) < new Date() : false;
+    }).length;
+    const overdueInvoicesList = scopedInvoices.filter(i => i.status === 'OVERDUE');
+    const overdueReceivablesSum = overdueInvoicesList.reduce((acc, i) => acc + (i.amount || 0), 0);
+    const pendingDispatchesCount = scopedDispatches.filter(d => d.status === 'PENDING' || d.status === 'IN_TRANSIT').length;
+    const openOrders = scopedOrders.filter(o => o.status !== 'CLOSED' && o.status !== 'CANCELLED');
+    const openOrderBookValue = openOrders.reduce((acc, o) => acc + (o.grossAmount || 0), 0);
+    const totalRevenue = scopedOrders.reduce((acc, o) => acc + (o.grossAmount || 0), 0);
+    const activeJobCards = jobCards.filter(j => j.status === 'IN_PROGRESS');
+    const passQcCount = qcItems.filter(q => q.qcStatus === 'PASS').length;
+    const qcPassRate = qcItems.length > 0 ? ((passQcCount / qcItems.length) * 100).toFixed(1) : '98.5';
+    const outstandingPayablesSum = payables.filter(p => p.status === 'UNPAID' || p.status === 'OVERDUE').reduce((acc, p) => acc + (p.amount || 0), 0);
+    const totalOutput = productionLogs.reduce((acc, p) => acc + (p.qtyDone || 0), 0);
 
-  const qcHoldCount = qcItems.filter(q => q.qcStatus === 'QC_HOLD' || q.jobStatus === 'QC_HOLD').length;
-  
-  const shortItemsList = stock.filter(s => s.status === 'SHORTAGE' || s.status === 'CRITICAL' || s.available < 0);
-  const itemsShortCount = shortItemsList.length;
+    const pipeline = {
+      draft: scopedOrders.filter(o => ['DRAFT', 'SUBMITTED', 'PO_RECEIVED'].includes((o.status || '').toUpperCase())).length,
+      confirmed: scopedOrders.filter(o => ['CONFIRMED', 'APPROVED', 'RELEASED'].includes((o.status || '').toUpperCase())).length,
+      production: scopedOrders.filter(o => ['IN_PRODUCTION', 'JOB_RELEASED', 'MATERIAL_CHECK', 'MATERIAL_READY'].includes((o.status || o.stage || '').toUpperCase())).length,
+      qc: scopedOrders.filter(o => ['QC', 'QC_INSPECTION', 'QC_HOLD', 'READY_FOR_QC'].includes((o.status || o.stage || '').toUpperCase())).length,
+      dispatch: scopedOrders.filter(o => ['READY_TO_DISPATCH', 'READY_FOR_DISPATCH', 'DISPATCHED', 'IN_TRANSIT'].includes((o.status || o.stage || '').toUpperCase())).length,
+      closed: scopedOrders.filter(o => ['CLOSED', 'COMPLETED', 'DELIVERED', 'PAID'].includes((o.status || '').toUpperCase())).length
+    };
 
-  const overdueDeliveriesCount = scopedOrders.filter(o => {
-    if (o.status === 'CLOSED' || o.status === 'CANCELLED') return false;
-    if (o.status === 'OVERDUE') return true;
-    if (o.dueDate) {
-      return new Date(o.dueDate) < new Date();
-    }
-    return false;
-  }).length;
+    const criticalCount = pendingApprovalsCount + qcHoldCount + itemsShortCount + overdueDeliveriesCount;
 
-  const overdueInvoicesList = scopedInvoices.filter(i => i.status === 'OVERDUE');
-  const overdueReceivablesSum = overdueInvoicesList.reduce((acc, i) => acc + (i.amount || 0), 0);
+    return {
+      scopedOrders,
+      pendingApprovalsCount,
+      qcHoldCount,
+      itemsShortCount,
+      overdueDeliveriesCount,
+      overdueInvoicesList,
+      overdueReceivablesSum,
+      pendingDispatchesCount,
+      openOrders,
+      openOrderBookValue,
+      totalRevenue,
+      activeJobCards,
+      qcPassRate,
+      outstandingPayablesSum,
+      totalOutput,
+      pipeline,
+      criticalCount
+    };
+  }, [orders, invoices, dispatches, stock, qcItems, jobCards, payables, productionLogs, approvals, scope]);
 
-  const pendingDispatchesCount = scopedDispatches.filter(d => d.status === 'PENDING' || d.status === 'IN_TRANSIT').length;
+  const fmt = (num: number) =>
+    `${currencySymbol}${num.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
-  // Realtime Live Order & Revenue Metrics
-  const openOrders = scopedOrders.filter(o => o.status !== 'CLOSED' && o.status !== 'CANCELLED');
-  const totalOrdersNum = scopedOrders.length > 0 ? scopedOrders.length : (scope === 'FY 25-26' ? 940 : scope === 'Q3 2026' ? 380 : 1305);
-  const activeOrdersNum = openOrders.length > 0 ? openOrders.length : (scope === 'FY 25-26' ? 760 : scope === 'Q3 2026' ? 310 : 1230);
-
-  const realTotalRevenueSum = scopedOrders.reduce((acc, o) => acc + (o.grossAmount || 0), 0);
-  const openOrderBookValue = openOrders.reduce((acc, o) => acc + (o.grossAmount || 0), 0);
-  const totalSalesRevenueVal = realTotalRevenueSum > 0 ? realTotalRevenueSum : (openOrderBookValue > 0 ? openOrderBookValue : (scope === 'FY 25-26' ? 98000 : scope === 'Q3 2026' ? 42000 : 125000));
-
-  // Order Status Breakdown
-  const completedOrdersNum = scopedOrders.length > 0 ? scopedOrders.filter(o => o.status === 'CLOSED' || o.status === 'DISPATCHED').length : Math.round(totalOrdersNum * 0.78);
-  const processingOrdersNum = scopedOrders.length > 0 ? scopedOrders.filter(o => o.status === 'IN_PRODUCTION' || o.status === 'CONFIRMED' || o.status === 'PARTIALLY_DISPATCHED').length : Math.round(totalOrdersNum * 0.15);
-  const cancelledOrdersNum = scopedOrders.length > 0 ? scopedOrders.filter(o => o.status === 'CANCELLED').length : Math.round(totalOrdersNum * 0.05);
-  const returnedOrdersNum = qcHoldCount > 0 ? qcHoldCount : Math.round(totalOrdersNum * 0.02);
-
-  const completedPct = totalOrdersNum > 0 ? Math.round((completedOrdersNum / totalOrdersNum) * 100) : 78;
-  const processingPct = totalOrdersNum > 0 ? Math.round((processingOrdersNum / totalOrdersNum) * 100) : 15;
-  const cancelledPct = totalOrdersNum > 0 ? Math.round((cancelledOrdersNum / totalOrdersNum) * 100) : 5;
-  const returnedPct = totalOrdersNum > 0 ? Math.round((returnedOrdersNum / totalOrdersNum) * 100) : 2;
-
-  const inProdOrdersVal = scopedOrders.filter(o => o.status === 'IN_PRODUCTION' || o.status === 'CONFIRMED' || o.status === 'PARTIALLY_DISPATCHED').reduce((acc, o) => acc + (o.grossAmount || 0), 0);
-  const processingRevenueVal = inProdOrdersVal > 0 ? inProdOrdersVal : 6900;
-
-  const totalMonthlyPartsOutput = productionLogs.reduce((acc, p) => acc + (p.qtyDone || 0), 0);
-
-  const passQcCount = qcItems.filter(q => q.qcStatus === 'PASS').length;
-  const totalQcInspected = qcItems.length;
-  const qcPassRate = totalQcInspected > 0 ? ((passQcCount / totalQcInspected) * 100).toFixed(1) : '98.5';
-
-  const outstandingPayablesSum = payables.filter(p => p.status === 'UNPAID' || p.status === 'OVERDUE').reduce((acc, p) => acc + (p.amount || 0), 0);
-
-  // Currency Formatter
-  const fmt = (num: number) => {
-    return `${currencySymbol}${num.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-  };
-
-  // Top Selling Products
-  const productSalesMap: Record<string, number> = {};
-  orders.forEach(o => {
-    if (o.partDescription) {
-      productSalesMap[o.partDescription] = (productSalesMap[o.partDescription] || 0) + (o.orderedQty || 1);
-    }
-  });
-  stock.forEach(s => {
-    if (s.description && !productSalesMap[s.description]) {
-      productSalesMap[s.description] = Math.round(s.onHand * 2.5);
-    }
-  });
-
-  const dynamicTopProducts = Object.entries(productSalesMap).slice(0, 5).map(([name, sales], idx) => ({
-    name,
-    sales: Math.min(1000, Math.max(200, sales * 15)),
-    active: idx === 0
-  }));
-
-  // Activity stream
   const formattedActivities = auditLogs.map(log => ({
     time: log.when || 'Just now',
     activity: log.details || `${log.entity} status updated`,
     category: log.entity || 'System',
     user: log.user || 'Admin',
-    status: log.details?.toLowerCase().includes('completed') || log.details?.toLowerCase().includes('pass') 
-      ? 'Completed' 
-      : log.details?.toLowerCase().includes('process') || log.details?.toLowerCase().includes('created') 
-      ? 'Processing' 
-      : log.details?.toLowerCase().includes('cancel') || log.details?.toLowerCase().includes('hold') 
-      ? 'Cancelled' 
+    status: log.details?.toLowerCase().includes('cancel') || log.details?.toLowerCase().includes('hold')
+      ? 'Alert'
+      : log.details?.toLowerCase().includes('process') || log.details?.toLowerCase().includes('created')
+      ? 'Processing'
       : 'Completed'
   }));
 
   const filteredActivities = formattedActivities.filter(act => {
-    const matchesSearch = act.activity.toLowerCase().includes(activitySearchQuery.toLowerCase()) ||
-                          act.user.toLowerCase().includes(activitySearchQuery.toLowerCase()) ||
-                          act.category.toLowerCase().includes(activitySearchQuery.toLowerCase());
+    const q = activitySearchQuery.toLowerCase();
+    const matchesSearch = act.activity.toLowerCase().includes(q) || act.user.toLowerCase().includes(q);
     const matchesCategory = activityCategoryFilter === 'ALL' || act.category.toUpperCase() === activityCategoryFilter.toUpperCase();
     return matchesSearch && matchesCategory;
   });
 
   const allTabularMetrics = [
-    {
-      code: 'MTR-FIN-01',
-      name: 'Open Order Book Value',
-      category: 'FINANCIAL',
-      valueStr: fmt(openOrderBookValue),
-      status: openOrderBookValue > 0 ? 'HEALTHY' : 'NEUTRAL',
-      statusBadge: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
-      target: 'Target ₹5.0M',
-      delta: '+14.2% MoM',
-      deltaType: 'up',
-      viewKey: 'orders',
-      actionLabel: 'Open Orders'
-    },
-    {
-      code: 'MTR-ORD-02',
-      name: 'Active Customer Purchase Orders',
-      category: 'PRODUCTION',
-      valueStr: `${openOrders.length} POs`,
-      status: openOrders.length > 0 ? 'ACTIVE' : 'IDLE',
-      statusBadge: 'bg-teal-500/15 text-teal-600 dark:text-teal-400 border-teal-500/30',
-      target: 'Scope: ' + scope,
-      delta: `${openOrders.filter(o => o.status === 'IN_PRODUCTION').length} In Prod`,
-      deltaType: 'neutral',
-      viewKey: 'orders',
-      actionLabel: 'View Orders'
-    },
-    {
-      code: 'MTR-INV-06',
-      name: 'Inventory Items in Shortage',
-      category: 'INVENTORY',
-      valueStr: `${itemsShortCount} SKUs`,
-      status: itemsShortCount > 0 ? 'CRITICAL' : 'OPTIMAL',
-      statusBadge: itemsShortCount > 0 ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30' : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
-      target: 'Threshold: 0 Short',
-      delta: itemsShortCount > 0 ? 'Reorder Needed' : 'Stock Healthy',
-      deltaType: itemsShortCount > 0 ? 'down' : 'up',
-      viewKey: 'inventory',
-      actionLabel: 'View Stock'
-    },
-    {
-      code: 'MTR-FIN-12',
-      name: 'Outstanding Accounts Receivable',
-      category: 'FINANCIAL',
-      valueStr: fmt(overdueReceivablesSum),
-      status: overdueReceivablesSum > 0 ? 'DUE' : 'CLEAR',
-      statusBadge: overdueReceivablesSum > 0 ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30' : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
-      target: 'Target: ₹0 Due',
-      delta: `${overdueInvoicesList.length} Overdue`,
-      deltaType: overdueReceivablesSum > 0 ? 'down' : 'up',
-      viewKey: 'invoices',
-      actionLabel: 'Receivables'
-    },
-    {
-      code: 'MTR-FIN-13',
-      name: 'Accounts Payable (Vendor Bills)',
-      category: 'FINANCIAL',
-      valueStr: fmt(payables.reduce((a, b) => a + (b.balanceAmount || 0), 0)),
-      status: payables.some(p => p.status === 'OVERDUE') ? 'OVERDUE' : 'OK',
-      statusBadge: payables.some(p => p.status === 'OVERDUE') ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30' : 'bg-teal-500/15 text-teal-600 dark:text-teal-400 border-teal-500/30',
-      target: 'Credit Net 30',
-      delta: `${payables.length} Bills`,
-      deltaType: 'neutral',
-      viewKey: 'payables',
-      actionLabel: 'Payables'
-    },
-    {
-      code: 'MTR-QLT-04',
-      name: 'QC Quality Pass Rate Index',
-      category: 'QUALITY',
-      valueStr: `${qcPassRate}%`,
-      status: Number(qcPassRate) >= 95 ? 'OPTIMAL' : 'ATTENTION',
-      statusBadge: Number(qcPassRate) >= 95 ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30',
-      target: 'Benchmark: 98.0%',
-      delta: '+2.1% MoM',
-      deltaType: 'up',
-      viewKey: 'qc',
-      actionLabel: 'View QC'
-    },
-    {
-      code: 'MTR-PRD-03',
-      name: 'In-Progress Shopfloor Job Cards',
-      category: 'PRODUCTION',
-      valueStr: `${jobCards.filter(j => j.status === 'IN_PROGRESS').length} Active`,
-      status: 'RUNNING',
-      statusBadge: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30',
-      target: 'Capacity Target: 10',
-      delta: `${jobCards.length} Total JC`,
-      deltaType: 'neutral',
-      viewKey: 'production',
-      actionLabel: 'Job Cards'
-    }
+    { code: 'MTR-FIN-01', name: 'Open Order Book Value', category: 'FINANCIAL', valueStr: fmt(metrics.openOrderBookValue), status: 'HEALTHY', viewKey: 'orders' },
+    { code: 'MTR-ORD-02', name: 'Active Customer POs', category: 'PRODUCTION', valueStr: `${metrics.openOrders.length} POs`, status: 'ACTIVE', viewKey: 'orders' },
+    { code: 'MTR-INV-06', name: 'Inventory Shortages', category: 'INVENTORY', valueStr: `${metrics.itemsShortCount} SKUs`, status: metrics.itemsShortCount > 0 ? 'CRITICAL' : 'OPTIMAL', viewKey: 'inventory' },
+    { code: 'MTR-FIN-12', name: 'Overdue Receivables', category: 'FINANCIAL', valueStr: fmt(metrics.overdueReceivablesSum), status: 'DUE', viewKey: 'invoices' },
+    { code: 'MTR-FIN-13', name: 'Vendor Payables', category: 'FINANCIAL', valueStr: fmt(metrics.outstandingPayablesSum), status: 'OK', viewKey: 'payables' },
+    { code: 'MTR-QLT-04', name: 'QC Pass Rate', category: 'QUALITY', valueStr: `${metrics.qcPassRate}%`, status: 'OPTIMAL', viewKey: 'qc' },
+    { code: 'MTR-PRD-03', name: 'Active Job Cards', category: 'PRODUCTION', valueStr: `${metrics.activeJobCards.length} Active`, status: 'RUNNING', viewKey: 'production' }
   ];
 
   const filteredTabularMetrics = allTabularMetrics.filter(m => {
     const q = tabularSearchQuery.toLowerCase();
-    const matchesQuery = m.code.toLowerCase().includes(q) ||
-                          m.name.toLowerCase().includes(q) ||
-                          m.status.toLowerCase().includes(q) ||
-                          m.target.toLowerCase().includes(q);
+    const matchesQuery = m.code.toLowerCase().includes(q) || m.name.toLowerCase().includes(q);
     const matchesCat = tabularCategoryFilter === 'ALL' || m.category === tabularCategoryFilter;
     return matchesQuery && matchesCat;
   });
 
   const handleExportTabularCSV = () => {
-    const headers = ['Metric Code', 'Metric Name', 'Category', 'Current Telemetry Value', 'Status', 'Target/Benchmark', 'Period Delta'];
-    const rows = filteredTabularMetrics.map(m => [
-      m.code,
-      `"${m.name.replace(/"/g, '""')}"`,
-      m.category,
-      `"${m.valueStr.replace(/"/g, '""')}"`,
-      m.status,
-      `"${m.target.replace(/"/g, '""')}"`,
-      `"${m.delta.replace(/"/g, '""')}"`
-    ]);
-    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const headers = ['Metric Code', 'Metric Name', 'Category', 'Value', 'Status'];
+    const rows = filteredTabularMetrics.map(m => [m.code, `"${m.name}"`, m.category, `"${m.valueStr}"`, m.status]);
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `Command_Centre_Tabular_Metrics_${new Date().toISOString().split('T')[0]}.csv`);
+    link.download = `Command_Centre_Metrics_${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
+  const recentOrders = metrics.scopedOrders.slice(0, 6);
+  const pipelineTotal = (Object.values(metrics.pipeline) as number[]).reduce((a, b) => a + b, 0) || 1;
+
+  const cardBase = isDarkMode
+    ? 'bg-[#16181D]/95 border-white/[0.07]'
+    : 'bg-white border-slate-200 shadow-md shadow-slate-300/40';
+
+  const AlertPill = ({
+    count,
+    label,
+    sub,
+    icon: Icon,
+    tone,
+    onClick
+  }: {
+    count: number | string;
+    label: string;
+    sub: string;
+    icon: React.ElementType;
+    tone: 'rose' | 'amber' | 'emerald' | 'sky' | 'violet';
+    onClick: () => void;
+  }) => {
+    const tones = {
+      rose: 'from-rose-500/15 to-rose-600/5 border-rose-500/25 text-rose-600 dark:text-rose-300',
+      amber: 'from-amber-500/15 to-amber-600/5 border-amber-500/25 text-amber-600 dark:text-amber-300',
+      emerald: 'from-emerald-500/15 to-emerald-600/5 border-emerald-500/25 text-emerald-600 dark:text-emerald-300',
+      sky: 'from-sky-500/15 to-sky-600/5 border-sky-500/25 text-sky-600 dark:text-sky-300',
+      violet: 'from-violet-500/15 to-violet-600/5 border-violet-500/25 text-violet-600 dark:text-violet-300'
+    };
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={`group min-w-[168px] shrink-0 rounded-2xl border bg-gradient-to-br p-3.5 text-left transition-all hover:scale-[1.02] active:scale-[0.98] ${tones[tone]}`}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <div className="text-lg font-black tabular-nums leading-none">{count}</div>
+            <div className="mt-1 text-[11px] font-bold uppercase tracking-wide truncate">{label}</div>
+            <div className="mt-0.5 text-[10px] opacity-70 truncate">{sub}</div>
+          </div>
+          <div className="rounded-xl bg-black/5 dark:bg-white/10 p-2">
+            <Icon className="w-4 h-4" />
+          </div>
+        </div>
+      </button>
+    );
+  };
+
+  const KpiCard = ({
+    label,
+    value,
+    hint,
+    delta,
+    icon: Icon,
+    accent,
+    onClick
+  }: {
+    label: string;
+    value: string;
+    hint: string;
+    delta?: string;
+    icon: React.ElementType;
+    accent: string;
+    onClick: () => void;
+  }) => (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`group relative min-h-[148px] overflow-hidden rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99] ${cardBase}`}
+    >
+      <div className={`absolute -right-6 -top-6 h-24 w-24 rounded-full opacity-20 blur-2xl ${accent}`} />
+      <div className="relative flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className={`text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{label}</p>
+          <p className={`mt-2 text-2xl font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{value}</p>
+          <p className={`mt-1 text-xs leading-snug ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{hint}</p>
+        </div>
+        <div className={`rounded-xl p-2.5 ${accent} bg-opacity-15`}>
+          <Icon className="w-5 h-5" />
+        </div>
+      </div>
+      {delta && (
+        <div className="relative mt-4 flex items-center gap-1.5 text-[11px] font-bold text-emerald-500">
+          <TrendingUp className="w-3.5 h-3.5" />
+          <span>{delta}</span>
+          <ArrowUpRight className="ml-auto w-4 h-4 opacity-0 transition-opacity group-hover:opacity-100" />
+        </div>
+      )}
+    </button>
+  );
+
   return (
-    <div ref={localContainerRef} className="space-y-3.5 sm:space-y-5 font-sans select-none pb-4">
-      
-      {/* ── MOBILE PULL-TO-REFRESH INDICATOR ── */}
+    <div ref={localContainerRef} className="relative space-y-4 pb-6 font-sans">
+
+      {/* Pull-to-refresh */}
       {(pullDistance > 0 || isRefreshing) && (
-        <div 
+        <div
           style={{ height: `${Math.max(pullDistance, isRefreshing ? 48 : 0)}px` }}
-          className="flex md:hidden items-center justify-center transition-all duration-150 overflow-hidden"
+          className="flex items-center justify-center overflow-hidden transition-all md:hidden"
         >
-          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--accent-soft-light)] dark:bg-[var(--accent-soft-dark)] text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-border-light)] text-xs font-semibold shadow-xs">
-            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : isTriggered ? 'rotate-180 transition-transform' : ''}`} />
-            <span>{isRefreshing ? 'Updating dashboard...' : isTriggered ? 'Release to refresh' : 'Pull down to refresh'}</span>
+          <div className="flex items-center gap-2 rounded-full border border-[var(--accent-border-light)] bg-[var(--accent-soft-light)] px-3.5 py-1.5 text-xs font-semibold dark:bg-[var(--accent-soft-dark)]">
+            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Refreshing…' : isTriggered ? 'Release to refresh' : 'Pull to refresh'}
           </div>
         </div>
       )}
 
-      {/* ── TOP MOBILE CONTROL BAR & SEGMENTED TABS (VISIBLE ON MOBILE < md) ── */}
-      <div className="block md:hidden space-y-2.5">
-        {/* Compact Header Badge with Mode & Scope */}
-        <div className="flex items-center justify-between gap-2 px-1">
-          <div className="flex items-center gap-2">
-            <span className="flex h-2.5 w-2.5 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
-            </span>
-            <span className="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider font-mono">
-              Live Command
-            </span>
-          </div>
+      {/* ── HERO HEADER ── */}
+      <section className="relative overflow-hidden rounded-[28px] border border-white/10">
+        <div className={`absolute inset-0 ${isDarkMode ? 'bg-gradient-to-br from-[#0B0D12] via-[#12151C] to-[#0F1420]' : 'bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900'}`} />
+        <div className="absolute inset-0 opacity-40" style={{ backgroundImage: 'radial-gradient(circle at 20% 20%, #5B75F8 0%, transparent 45%), radial-gradient(circle at 80% 60%, #22D3EE 0%, transparent 40%)' }} />
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMwIDYuNjI3LTUuMzczIDEyLTEyIDEycy0xMi01LjM3My0xMi0xMiA1LjM3My0xMiAxMi0xMiAxMiA1LjM3MyAxMiAxMnoiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLW9wYWNpdHk9Ii4wMyIvPjwvZz48L3N2Zz4=')] opacity-30" />
 
-          <div className="flex items-center gap-1.5">
-            <select
-              value={scope}
-              onChange={(e) => setScope(e.target.value)}
-              className="h-8 px-2.5 rounded-xl text-[11px] font-bold border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 outline-none cursor-pointer"
-            >
-              <option value="FY 26-27">FY 26-27</option>
-              <option value="FY 25-26">FY 25-26</option>
-              <option value="Q3 2026">Q3 2026</option>
-              <option value="All-Time">All Time</option>
-            </select>
-
-            <button
-              onClick={() => setShowCustomizeModal(true)}
-              className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
-              title="Customize Widgets"
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-
-        {/* Swipeable / Scrollable Segmented Filter Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto py-1 px-0.5 no-scrollbar scroll-smooth">
-          {[
-            { id: 'pulse', label: 'Pulse', icon: Zap },
-            { id: 'orders', label: 'Orders', icon: ShoppingCart },
-            { id: 'shopfloor', label: 'Plant & QC', icon: Factory },
-            { id: 'finance', label: 'Finance', icon: DollarSign },
-            { id: 'swarm', label: 'AI Swarm', icon: Sparkles }
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const isActive = mobileSectionTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setMobileSectionTab(tab.id as any)}
-                className={`min-h-[38px] px-3.5 py-1.5 rounded-xl text-xs font-bold shrink-0 flex items-center gap-1.5 transition-all cursor-pointer ${
-                  isActive
-                    ? 'bg-gradient-to-r from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] text-white shadow-sm shadow-[var(--accent-shadow)]'
-                    : 'bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ── PINNED TOP APPROVALS QUEUE BANNER (OWNER HIGH-PRIORITY ACTION) ── */}
-      {pendingApprovalsCount > 0 && (
-        <div 
-          onClick={() => handleNavigate('approvals')}
-          className="relative overflow-hidden rounded-2xl border border-rose-300 dark:border-rose-800/80 bg-gradient-to-r from-rose-500/10 via-amber-500/10 to-rose-500/10 p-3 sm:p-3.5 shadow-xs hover:shadow-md transition-all cursor-pointer group active:scale-[0.99]"
-        >
-          <div className="flex items-center justify-between gap-2.5">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="relative w-9 h-9 rounded-xl bg-gradient-to-tr from-rose-600 to-amber-600 flex items-center justify-center text-white font-black shrink-0 shadow-xs">
-                <CheckSquare className="w-4 h-4" />
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-600 border-2 border-white dark:border-slate-900 flex items-center justify-center text-[9px] font-bold">
-                  {pendingApprovalsCount}
+        <div className="relative p-5 sm:p-7 lg:p-8">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="grid gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-emerald-300">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+                  </span>
+                  {isRealtimeStreaming ? 'Live Operations' : 'Paused'}
                 </span>
+                {metrics.criticalCount > 0 && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-400/30 bg-rose-500/15 px-3 py-1 text-[11px] font-bold text-rose-200">
+                    <AlertTriangle className="h-3 w-3" />
+                    {metrics.criticalCount} items need attention
+                  </span>
+                )}
               </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-extrabold text-rose-700 dark:text-rose-400 tracking-tight truncate">
-                    {pendingApprovalsCount} Approvals Pending
-                  </span>
-                  <span className="px-1.5 py-0.2 text-[8px] font-mono font-bold uppercase bg-rose-500 text-white rounded-md shrink-0">
-                    Urgent
-                  </span>
-                </div>
-                <p className="text-[10px] text-slate-600 dark:text-slate-400 truncate">
-                  High-value POs & credit dispatches waiting for sign-off
+
+              <div>
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white">
+                  Executive Command Centre
+                </h1>
+                <p className="mt-1.5 max-w-2xl text-sm text-slate-300">
+                  Real-time visibility across orders, shopfloor, quality gates, and finance — scoped to <span className="font-semibold text-white">{scope}</span>.
                 </p>
               </div>
             </div>
 
-            <button
-              type="button"
-              className="min-h-[40px] px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shrink-0 flex items-center gap-1 shadow-xs transition-all cursor-pointer"
-            >
-              <span>Action</span>
-              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={scope}
+                onChange={e => setScope(e.target.value)}
+                className="h-10 rounded-xl border border-white/15 bg-white/10 px-3 text-xs font-bold text-white outline-none backdrop-blur-sm cursor-pointer"
+              >
+                <option value="FY 26-27" className="text-slate-900">FY 26-27</option>
+                <option value="FY 25-26" className="text-slate-900">FY 25-26</option>
+                <option value="Q3 2026" className="text-slate-900">Q3 2026</option>
+                <option value="All-Time" className="text-slate-900">All Time</option>
+              </select>
+
+              <button
+                type="button"
+                onClick={() => setMode(m => (m === 'charts' ? 'numbers' : 'charts'))}
+                className="h-10 rounded-xl border border-white/15 bg-white/10 px-3.5 text-xs font-bold text-white backdrop-blur-sm transition hover:bg-white/15 cursor-pointer flex items-center gap-1.5"
+              >
+                {mode === 'charts' ? <BarChart3 className="h-3.5 w-3.5" /> : <Hash className="h-3.5 w-3.5" />}
+                {mode === 'charts' ? 'Visual' : 'Tabular'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowCustomizeModal(true)}
+                className="h-10 w-10 rounded-xl border border-white/15 bg-white/10 flex items-center justify-center text-white backdrop-blur-sm transition hover:bg-white/15 cursor-pointer"
+                title="Customize"
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleNavigate('orders')}
+                className="h-10 rounded-xl bg-white px-4 text-xs font-bold text-slate-900 shadow-lg transition hover:bg-slate-100 cursor-pointer flex items-center gap-1.5"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                New Order
+              </button>
+            </div>
           </div>
+
+          {/* Quick stats strip inside hero */}
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              { label: 'Open POs', value: metrics.openOrders.length, icon: ShoppingCart },
+              { label: 'Active JCs', value: metrics.activeJobCards.length, icon: Factory },
+              { label: 'QC Pass', value: `${metrics.qcPassRate}%`, icon: ShieldCheck },
+              { label: 'Parts Output', value: metrics.totalOutput.toLocaleString('en-IN'), icon: Gauge }
+            ].map(item => {
+              const Icon = item.icon;
+              return (
+                <div key={item.label} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-sm">
+                  <div className="flex items-center gap-2 text-slate-300">
+                    <Icon className="h-3.5 w-3.5" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider">{item.label}</span>
+                  </div>
+                  <div className="mt-1 text-xl font-black text-white tabular-nums">{item.value}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ── APPROVALS BANNER ── */}
+      {metrics.pendingApprovalsCount > 0 && (
+        <button
+          type="button"
+          onClick={() => handleNavigate('approvals')}
+          className="group w-full rounded-2xl border border-rose-500/30 bg-gradient-to-r from-rose-500/10 via-amber-500/10 to-rose-500/10 p-4 text-left transition hover:shadow-md cursor-pointer"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="relative flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-600 to-amber-600 text-white shadow-lg">
+                <CheckSquare className="h-5 w-5" />
+                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-[9px] font-bold text-white ring-2 ring-white dark:ring-slate-900">
+                  {metrics.pendingApprovalsCount}
+                </span>
+              </div>
+              <div>
+                <p className="text-sm font-extrabold text-rose-700 dark:text-rose-300">
+                  {metrics.pendingApprovalsCount} approval{metrics.pendingApprovalsCount > 1 ? 's' : ''} awaiting sign-off
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">High-value POs and credit dispatches need your action</p>
+              </div>
+            </div>
+            <ArrowRight className="h-5 w-5 text-rose-500 transition group-hover:translate-x-1" />
+          </div>
+        </button>
+      )}
+
+      {/* ── ALERT RAIL ── */}
+      {widgetVisibility.showAlertsBar && (
+        <div className="flex gap-2.5 overflow-x-auto pb-1 no-scrollbar">
+          <AlertPill count={metrics.qcHoldCount} label="QC Holds" sub="Inspection blocked" icon={ShieldCheck} tone="amber" onClick={() => handleNavigate('qc')} />
+          <AlertPill count={metrics.itemsShortCount} label="Stock Short" sub="Raw material gaps" icon={Package} tone="rose" onClick={() => handleNavigate('inventory')} />
+          <AlertPill count={metrics.overdueDeliveriesCount} label="Overdue" sub="Past delivery date" icon={Clock} tone="amber" onClick={() => handleNavigate('orders')} />
+          <AlertPill count={fmt(metrics.overdueReceivablesSum)} label="Receivables" sub="Customer overdue" icon={Wallet} tone="emerald" onClick={() => handleNavigate('invoices')} />
+          <AlertPill count={metrics.pendingDispatchesCount} label="Dispatch" sub="Ready at dock" icon={Truck} tone="sky" onClick={() => handleNavigate('dispatch')} />
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* ── MOBILE VIEWPORT SECTION SWITCHER (< md) ──                             */}
-      {/* ========================================================================= */}
-      <div className="block md:hidden space-y-3.5">
-        
-        {/* TAB 1: PULSE (DEFAULT HIGH-IMPACT DASHBOARD) */}
-        {mobileSectionTab === 'pulse' && (
-          <div className="space-y-3.5 animate-fade-in">
-            
-            {/* Horizontal Operational Alert Strip */}
-            <div className="flex items-center gap-2 overflow-x-auto py-0.5 no-scrollbar">
-              <button 
-                onClick={() => handleNavigate('qc')}
-                className="min-h-[38px] px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-xs font-bold flex items-center gap-1.5 shrink-0 active:scale-95 transition-all"
+      {/* ── TABULAR MODE ── */}
+      {mode === 'numbers' && (
+        <section className={`rounded-2xl border p-4 space-y-4 sm:p-5 ${cardBase}`}>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className={`text-base font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Telemetry Registry</h2>
+              <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>All operational KPIs in tabular form</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <div className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-xs ${isDarkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-slate-50'}`}>
+                <Search className="h-3.5 w-3.5 text-slate-400" />
+                <input
+                  value={tabularSearchQuery}
+                  onChange={e => setTabularSearchQuery(e.target.value)}
+                  placeholder="Search metrics…"
+                  className="w-40 bg-transparent outline-none"
+                />
+              </div>
+              <select
+                value={tabularCategoryFilter}
+                onChange={e => setTabularCategoryFilter(e.target.value)}
+                className={`rounded-xl border px-3 py-2 text-xs font-semibold cursor-pointer outline-none ${isDarkMode ? 'border-slate-700 bg-slate-900 text-slate-200' : 'border-slate-200 bg-slate-50'}`}
               >
-                <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                <span>{qcHoldCount} QC Holds</span>
-              </button>
-
-              <button 
-                onClick={() => handleNavigate('inventory')}
-                className="min-h-[38px] px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-400 text-xs font-bold flex items-center gap-1.5 shrink-0 active:scale-95 transition-all"
+                <option value="ALL">All Categories</option>
+                <option value="FINANCIAL">Financial</option>
+                <option value="PRODUCTION">Production</option>
+                <option value="INVENTORY">Inventory</option>
+                <option value="QUALITY">Quality</option>
+              </select>
+              <button
+                type="button"
+                onClick={handleExportTabularCSV}
+                className="flex items-center gap-1.5 rounded-xl bg-[var(--accent-primary)] px-3 py-2 text-xs font-bold text-white cursor-pointer"
               >
-                <AlertTriangle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
-                <span>{itemsShortCount} Short SKUs</span>
-              </button>
-
-              <button 
-                onClick={() => handleNavigate('orders')}
-                className="min-h-[38px] px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-xs font-bold flex items-center gap-1.5 shrink-0 active:scale-95 transition-all"
-              >
-                <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                <span>{overdueDeliveriesCount} Overdue</span>
-              </button>
-
-              <button 
-                onClick={() => handleNavigate('invoices')}
-                className="min-h-[38px] px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold flex items-center gap-1.5 shrink-0 active:scale-95 transition-all"
-              >
-                <DollarSign className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                <span>{fmt(overdueReceivablesSum)} Overdue</span>
-              </button>
-
-              <button 
-                onClick={() => handleNavigate('dispatch')}
-                className="min-h-[38px] px-3 py-1.5 rounded-xl bg-teal-500/10 border border-teal-500/30 text-teal-700 dark:text-teal-400 text-xs font-bold flex items-center gap-1.5 shrink-0 active:scale-95 transition-all"
-              >
-                <Truck className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-                <span>{pendingDispatchesCount} Ready Dock</span>
+                <Download className="h-3.5 w-3.5" />
+                Export CSV
               </button>
             </div>
+          </div>
+          <div className={`overflow-x-auto rounded-2xl border ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className={`border-b text-[11px] uppercase tracking-wider ${isDarkMode ? 'border-slate-800 text-slate-500' : 'border-slate-100 text-slate-400'}`}>
+                  <th className="py-3 pr-4">Code</th>
+                  <th className="py-3 pr-4">Metric</th>
+                  <th className="py-3 pr-4">Category</th>
+                  <th className="py-3 pr-4">Value</th>
+                  <th className="py-3 pr-4">Status</th>
+                  <th className="py-3" />
+                </tr>
+              </thead>
+              <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800' : 'divide-slate-100'}`}>
+                {filteredTabularMetrics.map(m => (
+                  <tr key={m.code} className={isDarkMode ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}>
+                    <td className="py-3 pr-4 font-mono text-slate-400">{m.code}</td>
+                    <td className={`py-3 pr-4 font-semibold ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>{m.name}</td>
+                    <td className="py-3 pr-4 text-slate-500">{m.category}</td>
+                    <td className={`py-3 pr-4 font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{m.valueStr}</td>
+                    <td className="py-3 pr-4">
+                      <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-500">{m.status}</span>
+                    </td>
+                    <td className="py-3">
+                      <button type="button" onClick={() => handleNavigate(m.viewKey)} className="text-[var(--accent-primary)] font-bold cursor-pointer hover:underline">
+                        Open →
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
-            {/* Executive 2x2 Matrix KPI Grid */}
-            <div className="grid grid-cols-2 gap-2.5">
-              
-              {/* Metric 1: Order Book */}
-              <div 
+      {mode === 'charts' && (
+        <>
+          {/* ── KPI GRID ── */}
+          {widgetVisibility.showTopMetricsRow && (
+            <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <KpiCard
+                label="Order Book"
+                value={fmt(metrics.totalRevenue || metrics.openOrderBookValue)}
+                hint={`${metrics.openOrders.length} active purchase orders`}
+                delta="+12% vs last period"
+                icon={Target}
+                accent="bg-blue-500 text-blue-500"
                 onClick={() => handleNavigate('orders')}
-                className={`p-3.5 rounded-2xl border transition-all cursor-pointer active:scale-95 shadow-2xs ${
-                  isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Order Book</span>
-                  <div className="w-6 h-6 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center">
-                    <DollarSign className="w-3.5 h-3.5" />
-                  </div>
-                </div>
-                <div className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
-                  {fmt(totalSalesRevenueVal)}
-                </div>
-                <div className="flex items-center justify-between mt-1 text-[10px] text-slate-500">
-                  <span>{activeOrdersNum} Active POs</span>
-                  <span className="text-emerald-500 font-bold">+12%</span>
-                </div>
-              </div>
-
-              {/* Metric 2: Shortages */}
-              <div 
+              />
+              <KpiCard
+                label="Material Shortages"
+                value={`${metrics.itemsShortCount} SKUs`}
+                hint={`${stock.length} items tracked in stores`}
+                icon={Boxes}
+                accent={metrics.itemsShortCount > 0 ? 'bg-rose-500 text-rose-500' : 'bg-emerald-500 text-emerald-500'}
                 onClick={() => handleNavigate('inventory')}
-                className={`p-3.5 rounded-2xl border transition-all cursor-pointer active:scale-95 shadow-2xs ${
-                  isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Shortages</span>
-                  <div className="w-6 h-6 rounded-lg bg-rose-500/10 text-rose-500 flex items-center justify-center">
-                    <AlertTriangle className="w-3.5 h-3.5" />
-                  </div>
-                </div>
-                <div className={`text-xl font-black tracking-tight ${
-                  itemsShortCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-white'
-                }`}>
-                  {itemsShortCount} SKUs
-                </div>
-                <div className="flex items-center justify-between mt-1 text-[10px] text-slate-500">
-                  <span>{stock.length} Tracked</span>
-                  <span className={itemsShortCount > 0 ? 'text-rose-500 font-bold' : 'text-emerald-500 font-bold'}>
-                    {itemsShortCount > 0 ? 'Reorder' : 'Healthy'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Metric 3: Overdue Receivables */}
-              <div 
+              />
+              <KpiCard
+                label="Overdue Receivables"
+                value={fmt(metrics.overdueReceivablesSum)}
+                hint={`${metrics.overdueInvoicesList.length} invoices past due`}
+                icon={Wallet}
+                accent="bg-emerald-500 text-emerald-500"
                 onClick={() => handleNavigate('invoices')}
-                className={`p-3.5 rounded-2xl border transition-all cursor-pointer active:scale-95 shadow-2xs ${
-                  isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Receivables</span>
-                  <div className="w-6 h-6 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
-                    <DollarSign className="w-3.5 h-3.5" />
-                  </div>
-                </div>
-                <div className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
-                  {fmt(overdueReceivablesSum)}
-                </div>
-                <div className="flex items-center justify-between mt-1 text-[10px] text-slate-500">
-                  <span>{overdueInvoicesList.length} Invoices</span>
-                  <span className="text-amber-500 font-bold">Overdue</span>
-                </div>
-              </div>
-
-              {/* Metric 4: Vendor Payables */}
-              <div 
+              />
+              <KpiCard
+                label="Vendor Payables"
+                value={fmt(metrics.outstandingPayablesSum)}
+                hint={`${payables.length} supplier bills outstanding`}
+                icon={DollarSign}
+                accent="bg-violet-500 text-violet-500"
                 onClick={() => handleNavigate('payables')}
-                className={`p-3.5 rounded-2xl border transition-all cursor-pointer active:scale-95 shadow-2xs ${
-                  isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Payables</span>
-                  <div className="w-6 h-6 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
-                    <Factory className="w-3.5 h-3.5" />
+              />
+            </section>
+          )}
+
+          {/* ── MAIN BENTO ── */}
+          <section className="grid grid-cols-1 items-stretch gap-3 lg:grid-cols-12">
+            {/* Order Pipeline Funnel */}
+            {widgetVisibility.showAnalyticsGrid && widgetVisibility.showOrderPipelineCard && (
+              <div className={`lg:col-span-8 rounded-2xl border p-4 sm:p-5 ${cardBase}`}>
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className={`text-base font-bold flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                      <Layers className="h-4 w-4 text-[var(--accent-primary)]" />
+                      Order Lifecycle Pipeline
+                    </h2>
+                    <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                      {metrics.scopedOrders.length} orders in {scope}
+                    </p>
                   </div>
+                  <button type="button" onClick={() => handleNavigate('orders')} className="text-xs font-bold text-[var(--accent-primary)] cursor-pointer flex items-center gap-1">
+                    View all <ChevronRight className="h-3.5 w-3.5" />
+                  </button>
                 </div>
-                <div className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
-                  {fmt(outstandingPayablesSum)}
+
+                <div className="grid gap-2">
+                  {[
+                    { key: 'draft', label: 'PO Received', color: 'bg-slate-400', view: 'orders' },
+                    { key: 'confirmed', label: 'Confirmed', color: 'bg-indigo-500', view: 'orders' },
+                    { key: 'production', label: 'In Production', color: 'bg-blue-600', view: 'production' },
+                    { key: 'qc', label: 'QC / Inspection', color: 'bg-amber-500', view: 'qc' },
+                    { key: 'dispatch', label: 'Dispatch Ready', color: 'bg-teal-500', view: 'dispatch' },
+                    { key: 'closed', label: 'Closed', color: 'bg-emerald-500', view: 'orders' }
+                  ].map(stage => {
+                    const count = metrics.pipeline[stage.key as keyof typeof metrics.pipeline] as number;
+                    const pct = Math.round((count / pipelineTotal) * 100);
+                    return (
+                      <button
+                        key={stage.key}
+                        type="button"
+                        onClick={() => handleNavigate(stage.view)}
+                        className={`group grid w-full grid-cols-[minmax(104px,0.8fr)_minmax(0,1.6fr)_auto] items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition cursor-pointer ${isDarkMode ? 'border-slate-800 bg-slate-900/40 hover:bg-slate-800/70' : 'border-slate-100 bg-slate-50/70 hover:bg-white'}`}
+                      >
+                        <span className={`truncate text-xs font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>{stage.label}</span>
+                        <div className={`h-2 overflow-hidden rounded-full ${isDarkMode ? 'bg-slate-800' : 'bg-slate-200/70'}`}>
+                          <div className={`h-full rounded-full transition-all duration-700 ${stage.color}`} style={{ width: `${Math.max(pct, count > 0 ? 4 : 0)}%` }} />
+                        </div>
+                        <span className="font-mono text-xs font-bold text-slate-400">{count} <span className="text-[10px]">({pct}%)</span></span>
+                      </button>
+                    );
+                  })}
                 </div>
-                <div className="flex items-center justify-between mt-1 text-[10px] text-slate-500">
-                  <span>{payables.length} Bills</span>
-                  <span className="text-indigo-500 font-bold">Net 30</span>
+              </div>
+            )}
+
+            {/* Plant Health Ring */}
+            <div className={`lg:col-span-4 rounded-2xl border p-4 sm:p-5 flex flex-col ${cardBase}`}>
+              <h2 className={`text-base font-bold flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                <Radio className="h-4 w-4 text-emerald-500" />
+                Plant Health
+              </h2>
+              <p className={`text-xs mt-0.5 mb-4 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Live shopfloor telemetry</p>
+
+              <div className="flex flex-1 flex-col items-center justify-center py-2">
+                <div className="relative">
+                  <svg className="h-36 w-36 -rotate-90" viewBox="0 0 120 120">
+                    <circle cx="60" cy="60" r="52" fill="none" stroke={isDarkMode ? '#1e293b' : '#e2e8f0'} strokeWidth="10" />
+                    <circle
+                      cx="60" cy="60" r="52" fill="none"
+                      stroke="url(#healthGrad)"
+                      strokeWidth="10"
+                      strokeLinecap="round"
+                      strokeDasharray={`${Number(metrics.qcPassRate) * 3.27} 327`}
+                    />
+                    <defs>
+                      <linearGradient id="healthGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#10b981" />
+                        <stop offset="100%" stopColor="#5B75F8" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className={`text-3xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{metrics.qcPassRate}%</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">QC Pass</span>
+                  </div>
                 </div>
               </div>
 
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                {[
+                  { label: 'Active JCs', value: metrics.activeJobCards.length },
+                  { label: 'QC Items', value: qcItems.length },
+                  { label: 'Output', value: metrics.totalOutput }
+                ].map(s => (
+                  <div key={s.label} className={`rounded-xl p-2.5 text-center ${isDarkMode ? 'bg-slate-800/60' : 'bg-slate-50'}`}>
+                    <div className="text-[9px] font-bold uppercase text-slate-400">{s.label}</div>
+                    <div className={`text-sm font-black mt-0.5 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{s.value}</div>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleNavigate('production')}
+                className="mt-4 w-full rounded-xl bg-[var(--accent-primary)]/10 py-2.5 text-xs font-bold text-[var(--accent-primary)] transition hover:bg-[var(--accent-primary)]/20 cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <Play className="h-3.5 w-3.5" />
+                Open Shopfloor
+              </button>
             </div>
 
-            {/* Quick Actions Strip */}
-            <div className="grid grid-cols-4 gap-2">
-              <button 
-                onClick={() => handleNavigate('orders')}
-                className={`min-h-[46px] p-2 rounded-xl border flex flex-col items-center justify-center gap-1 text-center active:scale-95 transition-all shadow-2xs ${
-                  isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-white border-slate-200 text-slate-700'
-                }`}
-              >
-                <Plus className="w-4 h-4 text-blue-500" />
-                <span className="text-[9px] font-bold truncate w-full">+ Order</span>
-              </button>
-
-              <button 
-                onClick={() => handleNavigate('approvals')}
-                className={`min-h-[46px] p-2 rounded-xl border flex flex-col items-center justify-center gap-1 text-center active:scale-95 transition-all shadow-2xs ${
-                  isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-white border-slate-200 text-slate-700'
-                }`}
-              >
-                <CheckSquare className="w-4 h-4 text-rose-500" />
-                <span className="text-[9px] font-bold truncate w-full">Approvals</span>
-              </button>
-
-              <button 
-                onClick={() => handleNavigate('inventory')}
-                className={`min-h-[46px] p-2 rounded-xl border flex flex-col items-center justify-center gap-1 text-center active:scale-95 transition-all shadow-2xs ${
-                  isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-white border-slate-200 text-slate-700'
-                }`}
-              >
-                <AlertTriangle className="w-4 h-4 text-amber-500" />
-                <span className="text-[9px] font-bold truncate w-full">Shortages</span>
-              </button>
-
-              <button 
-                onClick={() => handleNavigate('dispatch')}
-                className={`min-h-[46px] p-2 rounded-xl border flex flex-col items-center justify-center gap-1 text-center active:scale-95 transition-all shadow-2xs ${
-                  isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-white border-slate-200 text-slate-700'
-                }`}
-              >
-                <Truck className="w-4 h-4 text-teal-500" />
-                <span className="text-[9px] font-bold truncate w-full">Dock</span>
-              </button>
-            </div>
-
-            {/* Live Plant Health Summary Card */}
-            <div className={`p-4 rounded-2xl border space-y-3 shadow-2xs ${
-              isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
-            }`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Gauge className="w-4 h-4 text-emerald-500" />
-                  <span className="text-xs font-extrabold text-slate-900 dark:text-white">Live Plant Health</span>
-                </div>
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                  {qcPassRate}% QC PASS
-                </span>
+            {/* Recent Orders */}
+            <div className={`lg:col-span-6 rounded-2xl border p-4 sm:p-5 ${cardBase}`}>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className={`text-base font-bold flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                  <ClipboardList className="h-4 w-4 text-[var(--accent-primary)]" />
+                  Recent Orders
+                </h2>
+                <button type="button" onClick={() => handleNavigate('orders')} className="text-xs font-bold text-[var(--accent-primary)] cursor-pointer">View all →</button>
               </div>
-
-              <div className="grid grid-cols-3 gap-2 text-center pt-1 border-t border-slate-100 dark:border-slate-800">
-                <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60">
-                  <div className="text-[9px] text-slate-400 uppercase font-semibold">Active JCs</div>
-                  <div className="text-sm font-black text-slate-900 dark:text-white mt-0.5">
-                    {jobCards.filter(j => j.status === 'IN_PROGRESS').length}
-                  </div>
-                </div>
-                <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60">
-                  <div className="text-[9px] text-slate-400 uppercase font-semibold">QC Inspected</div>
-                  <div className="text-sm font-black text-slate-900 dark:text-white mt-0.5">
-                    {qcItems.length}
-                  </div>
-                </div>
-                <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60">
-                  <div className="text-[9px] text-slate-400 uppercase font-semibold">Output Done</div>
-                  <div className="text-sm font-black text-slate-900 dark:text-white mt-0.5">
-                    {totalMonthlyPartsOutput}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Recent Factory Events */}
-            <div className={`p-4 rounded-2xl border space-y-2.5 shadow-2xs ${
-              isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
-            }`}>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-extrabold text-slate-900 dark:text-white">Recent Activities</span>
-                <span className="text-[10px] font-mono text-slate-400">Live Feed</span>
-              </div>
-
               <div className="space-y-2">
-                {filteredActivities.slice(0, 3).map((act, idx) => (
-                  <div key={idx} className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 flex items-center justify-between gap-2 text-xs">
-                    <div className="min-w-0 flex-1">
-                      <div className="font-semibold text-slate-900 dark:text-white truncate text-[11px]">{act.activity}</div>
-                      <div className="text-[10px] text-slate-400 font-mono">{act.time} • {act.user}</div>
-                    </div>
-                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
-                      act.status === 'Completed'
-                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                        : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                    }`}>
-                      {act.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-          </div>
-        )}
-
-        {/* TAB 2: ORDERS & SALES */}
-        {mobileSectionTab === 'orders' && (
-          <div className="space-y-3.5 animate-fade-in">
-            {/* Pipeline Status */}
-            <div className={`p-4 rounded-2xl border space-y-3 shadow-2xs ${
-              isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
-            }`}>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-900 dark:text-white">Order Pipeline Breakdown</span>
-                <span className="text-[11px] font-mono text-slate-400">{totalOrdersNum} Total POs</span>
-              </div>
-
-              <div className="space-y-2.5 pt-1">
-                <div className="space-y-1">
-                  <div className="flex justify-between text-xs font-semibold">
-                    <span className="text-slate-600 dark:text-slate-400">Completed ({completedOrdersNum})</span>
-                    <span className="font-mono">{completedPct}%</span>
-                  </div>
-                  <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                    <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${completedPct}%` }} />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <div className="flex justify-between text-xs font-semibold">
-                    <span className="text-slate-900 dark:text-white font-bold">In Shopfloor ({processingOrdersNum})</span>
-                    <span className="font-mono">{processingPct}%</span>
-                  </div>
-                  <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-600 rounded-full" style={{ width: `${processingPct}%` }} />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <div className="flex justify-between text-xs font-semibold">
-                    <span className="text-slate-600 dark:text-slate-400">QC Holds ({returnedOrdersNum})</span>
-                    <span className="font-mono">{returnedPct}%</span>
-                  </div>
-                  <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                    <div className="h-full bg-amber-500 rounded-full" style={{ width: `${returnedPct}%` }} />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Top Selling Products */}
-            <div className={`p-4 rounded-2xl border space-y-3 shadow-2xs ${
-              isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
-            }`}>
-              <span className="text-xs font-bold text-slate-900 dark:text-white">Top Products Volume</span>
-              <div className="space-y-2.5">
-                {dynamicTopProducts.map((item, index) => (
-                  <div key={index} className="space-y-1">
-                    <div className="flex items-center justify-between text-xs font-semibold">
-                      <span className="text-slate-800 dark:text-slate-200 truncate">{item.name}</span>
-                      <span className="text-slate-500 font-mono text-[11px]">{item.sales} Units</span>
-                    </div>
-                    <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                      <div 
-                        className={`h-full rounded-full ${item.active ? 'bg-blue-600' : 'bg-blue-300 dark:bg-slate-600'}`}
-                        style={{ width: `${(item.sales / 1000) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 3: PLANT & QC */}
-        {mobileSectionTab === 'shopfloor' && (
-          <div className="space-y-3.5 animate-fade-in">
-            {/* Throughput Chart */}
-            <div className={`p-4 rounded-2xl border space-y-3 shadow-2xs ${
-              isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
-            }`}>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-900 dark:text-white">Monthly Parts Output</span>
-                <span className="text-[11px] font-mono text-teal-600 font-bold">{totalMonthlyPartsOutput} Done</span>
-              </div>
-              <div className="h-36 w-full">
-                <svg className="w-full h-full" viewBox="0 0 500 160">
-                  <path
-                    d="M 60,110 C 100,105 130,95 150,90 C 180,85 210,80 240,75 C 270,80 300,80 330,75 C 370,70 410,60 450,45"
-                    fill="none"
-                    stroke="#0D9488"
-                    strokeWidth="4"
-                    strokeLinecap="round"
-                  />
-                  <circle cx="450" cy="45" r="6" fill="#0D9488" stroke="#ffffff" strokeWidth="2" />
-                </svg>
+                {recentOrders.length === 0 ? (
+                  <p className={`text-xs py-8 text-center ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>No orders in this scope yet</p>
+                ) : (
+                  recentOrders.map(order => (
+                    <button
+                      key={order.id}
+                      type="button"
+                      onClick={() => onSelectOrder?.(order.id || order.poNo)}
+                      className={`group w-full flex items-center justify-between gap-3 rounded-xl border p-3 text-left transition hover:border-[var(--accent-primary)]/40 cursor-pointer ${isDarkMode ? 'border-slate-800 bg-slate-900/40 hover:bg-slate-800/60' : 'border-slate-100 bg-slate-50/50 hover:bg-white'}`}
+                    >
+                      <div className="min-w-0">
+                        <div className={`text-sm font-bold truncate ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{order.poNo}</div>
+                        <div className="text-[11px] text-slate-400 truncate">{order.customerName}</div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className={`text-sm font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{fmt(order.grossAmount || 0)}</div>
+                        <span className="text-[10px] font-bold uppercase text-slate-400">{(order.status || order.stage || 'DRAFT').replace(/_/g, ' ')}</span>
+                      </div>
+                    </button>
+                  ))
+                )}
               </div>
             </div>
 
             {/* Active Job Cards */}
-            <div className={`p-4 rounded-2xl border space-y-2.5 shadow-2xs ${
-              isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
-            }`}>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-900 dark:text-white">Active Shopfloor Job Cards</span>
-                <button onClick={() => handleNavigate('production')} className="text-xs text-blue-500 font-bold">
-                  View All →
-                </button>
+            <div className={`lg:col-span-6 rounded-2xl border p-4 sm:p-5 ${cardBase}`}>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className={`text-base font-bold flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                  <Factory className="h-4 w-4 text-blue-500" />
+                  Active Job Cards
+                </h2>
+                <button type="button" onClick={() => handleNavigate('production')} className="text-xs font-bold text-blue-500 cursor-pointer">Shopfloor →</button>
               </div>
               <div className="space-y-2">
-                {jobCards.slice(0, 3).map((jc, i) => (
-                  <div key={i} className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 flex items-center justify-between text-xs">
-                    <div>
-                      <div className="font-bold text-slate-900 dark:text-white">{jc.jobCardNo || `JC-2026-${i+1}`}</div>
-                      <div className="text-[10px] text-slate-400 font-mono">{jc.partDescription || 'Precision Component'}</div>
+                {(metrics.activeJobCards.length > 0 ? metrics.activeJobCards : jobCards).slice(0, 5).map((jc, i) => (
+                  <div
+                    key={jc.id || i}
+                    className={`flex items-center justify-between gap-3 rounded-xl border p-3 ${isDarkMode ? 'border-slate-800 bg-slate-900/40' : 'border-slate-100 bg-slate-50/50'}`}
+                  >
+                    <div className="min-w-0">
+                      <div className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{jc.jobCardNo || `JC-${i + 1}`}</div>
+                      <div className="text-[11px] text-slate-400 truncate">{jc.partDescription || jc.partCode || 'Precision component'}</div>
                     </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                      {jc.status}
+                    <span className="shrink-0 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-[10px] font-bold text-blue-500">{jc.status || 'IN_PROGRESS'}</span>
+                  </div>
+                ))}
+                {jobCards.length === 0 && (
+                  <p className={`text-xs py-8 text-center ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>No job cards scheduled</p>
+                )}
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className={`lg:col-span-12 rounded-2xl border p-3.5 sm:p-4 ${cardBase}`}>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Quick Actions</h2>
+                <span className={`text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>Module shortcuts</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
+                {[
+                  { label: 'Orders', icon: ShoppingCart, view: 'orders', color: 'text-blue-500' },
+                  { label: 'Production', icon: Factory, view: 'production', color: 'text-indigo-500' },
+                  { label: 'Inventory', icon: Package, view: 'inventory', color: 'text-rose-500' },
+                  { label: 'QC Gate', icon: ShieldCheck, view: 'qc', color: 'text-amber-500' },
+                  { label: 'Dispatch', icon: Truck, view: 'dispatch', color: 'text-teal-500' },
+                  { label: 'Invoices', icon: DollarSign, view: 'invoices', color: 'text-emerald-500' },
+                  { label: 'Approvals', icon: CheckSquare, view: 'approvals', color: 'text-rose-500' },
+                  { label: 'AI Swarm', icon: Sparkles, view: 'command-centre', color: 'text-violet-500' }
+                ].map(action => {
+                  const Icon = action.icon;
+                  return (
+                    <button
+                      key={action.label}
+                      type="button"
+                      onClick={() => handleNavigate(action.view)}
+                      className={`flex min-h-[74px] flex-col items-center justify-center gap-1.5 rounded-xl border p-3 transition hover:-translate-y-0.5 cursor-pointer ${isDarkMode ? 'border-slate-800 bg-slate-900/50 hover:bg-slate-800' : 'border-slate-100 bg-slate-50 hover:bg-white hover:shadow-sm'}`}
+                    >
+                      <Icon className={`h-5 w-5 ${action.color}`} />
+                      <span className={`text-[10px] font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>{action.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+
+          {/* ── AI AGENT GRID ── */}
+          {widgetVisibility.showAgentBentoGrid && (
+            <section className="space-y-2.5">
+              <div className={`flex flex-wrap items-center justify-between gap-2 rounded-2xl border px-3.5 py-3 ${isDarkMode ? 'border-white/[0.07] bg-[#16181D]/95' : 'border-slate-200/80 bg-white shadow-sm'}`}>
+                <div className="flex min-w-0 items-center gap-2">
+                  <Sparkles className="h-4 w-4 shrink-0 text-violet-500" />
+                  <h2 className={`truncate text-base font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Autonomous AI Agents</h2>
+                </div>
+                <span className="rounded-full bg-violet-500/10 px-2 py-0.5 text-[10px] font-bold text-violet-500">LIVE</span>
+              </div>
+              <AgentBentoGrid
+                orders={orders}
+                stock={stock}
+                qcItems={qcItems}
+                jobCards={jobCards}
+                dispatches={dispatches}
+                invoices={invoices}
+                payables={payables}
+                productionLogs={productionLogs}
+                auditLogs={auditLogs}
+                isRealtimeStreaming={isRealtimeStreaming}
+                currencySymbol={currencySymbol}
+                isDarkMode={isDarkMode}
+                onNavigateView={handleNavigate}
+              />
+            </section>
+          )}
+
+          {/* ── ACTIVITY FEED ── */}
+          {widgetVisibility.showRecentActivities && (
+            <section className={`rounded-2xl border p-4 sm:p-5 space-y-4 ${cardBase}`}>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className={`text-base font-bold flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    <Activity className="h-4 w-4 text-[var(--accent-primary)]" />
+                    Factory Activity Stream
+                  </h2>
+                  <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Real-time audit trail across all modules</p>
+                </div>
+                <div className="flex gap-2">
+                  <div className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-xs ${isDarkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-slate-50'}`}>
+                    <Search className="h-3.5 w-3.5 text-slate-400" />
+                    <input
+                      value={activitySearchQuery}
+                      onChange={e => setActivitySearchQuery(e.target.value)}
+                      placeholder="Search…"
+                      className="w-32 sm:w-48 bg-transparent outline-none"
+                    />
+                  </div>
+                  <select
+                    value={activityCategoryFilter}
+                    onChange={e => setActivityCategoryFilter(e.target.value)}
+                    className={`rounded-xl border px-3 py-2 text-xs font-semibold cursor-pointer outline-none ${isDarkMode ? 'border-slate-700 bg-slate-900 text-slate-200' : 'border-slate-200 bg-slate-50'}`}
+                  >
+                    <option value="ALL">All</option>
+                    <option value="ORDER">Order</option>
+                    <option value="INVENTORY">Inventory</option>
+                    <option value="SYSTEM">System</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-0">
+                {filteredActivities.slice(0, 10).map((act, idx) => (
+                  <div
+                    key={idx}
+                    className={`flex items-start gap-4 py-3.5 ${idx > 0 ? `border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}` : ''}`}
+                  >
+                    <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${act.status === 'Alert' ? 'bg-rose-500/10 text-rose-500' : act.status === 'Processing' ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                      <CircleDot className="h-3.5 w-3.5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>{act.activity}</p>
+                      <p className="mt-0.5 text-[11px] text-slate-400 font-mono">{act.time} · {act.user} · {act.category}</p>
+                    </div>
+                    <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${act.status === 'Alert' ? 'bg-rose-500/10 text-rose-500' : act.status === 'Processing' ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                      {act.status}
                     </span>
                   </div>
                 ))}
+                {filteredActivities.length === 0 && (
+                  <p className={`py-8 text-center text-xs ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>No activities match your filter</p>
+                )}
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 4: FINANCE & P&L */}
-        {mobileSectionTab === 'finance' && (
-          <div className="space-y-3.5 animate-fade-in">
-            {/* Overdue Receivables Ageing */}
-            <div className={`p-4 rounded-2xl border space-y-3 shadow-2xs ${
-              isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
-            }`}>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-900 dark:text-white">Overdue Receivables</span>
-                <span className="text-xs font-black text-amber-500 font-mono">{fmt(overdueReceivablesSum)}</span>
-              </div>
-              <div className="space-y-2">
-                {overdueInvoicesList.slice(0, 3).map((inv, idx) => (
-                  <div key={idx} className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 flex items-center justify-between text-xs">
-                    <div>
-                      <div className="font-bold text-slate-900 dark:text-white">{inv.customerName || 'OEM Client'}</div>
-                      <div className="text-[10px] text-slate-400 font-mono">{inv.invoiceNo}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-black text-slate-900 dark:text-white font-mono">{fmt(inv.amount || 0)}</div>
-                      <div className="text-[9px] text-rose-500 font-bold">OVERDUE</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Vendor Bills */}
-            <div className={`p-4 rounded-2xl border space-y-3 shadow-2xs ${
-              isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
-            }`}>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-900 dark:text-white">Vendor Payables</span>
-                <span className="text-xs font-black text-indigo-500 font-mono">{fmt(outstandingPayablesSum)}</span>
-              </div>
-              <p className="text-[11px] text-slate-500">
-                {payables.length} total supplier bills logged for raw material & external plating.
-              </p>
-              <button 
-                onClick={() => handleNavigate('payables')}
-                className="w-full min-h-[44px] rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-bold text-xs flex items-center justify-center gap-1 cursor-pointer"
-              >
-                <span>Open Disbursements Queue</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 5: AI SWARM */}
-        {mobileSectionTab === 'swarm' && (
-          <div className="space-y-3.5 animate-fade-in">
-            <AgentBentoGrid
-              orders={orders}
-              stock={stock}
-              qcItems={qcItems}
-              jobCards={jobCards}
-              dispatches={dispatches}
-              invoices={invoices}
-              payables={payables}
-              productionLogs={productionLogs}
-              auditLogs={auditLogs}
-              isRealtimeStreaming={isRealtimeStreaming}
-              currencySymbol={currencySymbol}
-              isDarkMode={isDarkMode}
-              onNavigateView={handleNavigate}
-            />
-          </div>
-        )}
-
-      </div>
-
-      {/* ========================================================================= */}
-      {/* ── DESKTOP UNIFIED GRID (≥ md) ──                                         */}
-      {/* ========================================================================= */}
-      <div className="hidden md:block space-y-5">
-        
-        {/* ── SECTION 1: OPERATIONAL ALERTS BAR ── */}
-        {widgetVisibility.showAlertsBar && (
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-              
-              {/* 1. QC Holds */}
-              <div 
-                onClick={() => handleNavigate('qc')}
-                className="min-h-[48px] bg-[#FFF8E7] dark:bg-[#38260B] border border-[#FCD34D] dark:border-[#B45309] p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:border-amber-500 hover:shadow-xs transition-all active:scale-[0.99]"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="bg-[#FDE68A] dark:bg-[#78350F] text-[#78350F] dark:text-[#FEF3C7] font-black px-2 py-1 rounded-lg text-xs font-mono shrink-0">
-                    {qcHoldCount}
-                  </span>
-                  <div className="flex flex-col min-w-0 leading-tight">
-                    <span className="text-xs font-bold text-[#78350F] dark:text-[#FDE68A] truncate">QC HOLDS</span>
-                    <span className="text-[10px] text-amber-700/80 dark:text-amber-300/80 truncate">Stage inspection hold</span>
-                  </div>
-                </div>
-                <AlertTriangle className="w-4 h-4 text-[#D97706] dark:text-[#FBBF24] shrink-0" />
-              </div>
-
-              {/* 2. Items Short */}
-              <div 
-                onClick={() => handleNavigate('inventory')}
-                className="min-h-[48px] bg-[#FFF1F2] dark:bg-[#45101C] border border-[#FDA4AF] dark:border-[#BE123C] p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:border-rose-500 hover:shadow-xs transition-all active:scale-[0.99]"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="bg-[#FECDD3] dark:bg-[#881337] text-[#881337] dark:text-[#FFE4E6] font-black px-2 py-1 rounded-lg text-xs font-mono shrink-0">
-                    {itemsShortCount}
-                  </span>
-                  <div className="flex flex-col min-w-0 leading-tight">
-                    <span className="text-xs font-bold text-[#881337] dark:text-[#FECDD3] truncate">ITEMS SHORT</span>
-                    <span className="text-[10px] text-rose-700/80 dark:text-rose-300/80 truncate">Raw materials needed</span>
-                  </div>
-                </div>
-                <AlertTriangle className="w-4 h-4 text-[#E11D48] dark:text-[#FB7185] shrink-0" />
-              </div>
-
-              {/* 3. Overdue Deliveries */}
-              <div 
-                onClick={() => handleNavigate('orders')}
-                className="min-h-[48px] bg-[#FFF8E7] dark:bg-[#38260B] border border-[#FCD34D] dark:border-[#B45309] p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:border-amber-500 hover:shadow-xs transition-all active:scale-[0.99]"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="bg-[#FDE68A] dark:bg-[#78350F] text-[#78350F] dark:text-[#FEF3C7] font-black px-2 py-1 rounded-lg text-xs font-mono shrink-0">
-                    {overdueDeliveriesCount}
-                  </span>
-                  <div className="flex flex-col min-w-0 leading-tight">
-                    <span className="text-xs font-bold text-[#78350F] dark:text-[#FDE68A] truncate">OVERDUE DELIVERIES</span>
-                    <span className="text-[10px] text-amber-700/80 dark:text-amber-300/80 truncate">Past customer target date</span>
-                  </div>
-                </div>
-                <Clock className="w-4 h-4 text-[#D97706] dark:text-[#FBBF24] shrink-0" />
-              </div>
-
-              {/* 4. Overdue Receivables */}
-              <div 
-                onClick={() => handleNavigate('invoices')}
-                className="min-h-[48px] bg-[#ECFDF5] dark:bg-[#0C3327] border border-[#6EE7B7] dark:border-[#059669] p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:border-emerald-500 hover:shadow-xs transition-all active:scale-[0.99]"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="bg-[#A7F3D0] dark:bg-[#064E3B] text-[#064E3B] dark:text-[#D1FAE5] font-black px-2 py-1 rounded-lg text-[11px] font-mono shrink-0">
-                    {fmt(overdueReceivablesSum)}
-                  </span>
-                  <div className="flex flex-col min-w-0 leading-tight">
-                    <span className="text-xs font-bold text-[#064E3B] dark:text-[#A7F3D0] truncate">OVERDUE REC.</span>
-                    <span className="text-[10px] text-emerald-700/80 dark:text-emerald-300/80 truncate">Customer credit overdue</span>
-                  </div>
-                </div>
-                <DollarSign className="w-4 h-4 text-[#059669] dark:text-[#34D399] shrink-0" />
-              </div>
-
-              {/* 5. Pending Dispatches */}
-              <div 
-                onClick={() => handleNavigate('dispatch')}
-                className="min-h-[48px] bg-[#F0FDFA] dark:bg-[#0F3634] border border-[#5EEAD4] dark:border-[#0D9488] p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:border-teal-500 hover:shadow-xs transition-all active:scale-[0.99]"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="bg-[#99F6E4] dark:bg-[#134E4A] text-[#134E4A] dark:text-[#CCFBF1] font-black px-2 py-1 rounded-lg text-xs font-mono shrink-0">
-                    {pendingDispatchesCount}
-                  </span>
-                  <div className="flex flex-col min-w-0 leading-tight">
-                    <span className="text-xs font-bold text-[#134E4A] dark:text-[#99F6E4] truncate">PENDING DISPATCHES</span>
-                    <span className="text-[10px] text-teal-700/80 dark:text-teal-300/80 truncate">Challans ready for dock</span>
-                  </div>
-                </div>
-                <Truck className="w-4 h-4 text-[#0D9488] dark:text-[#2DD4BF] shrink-0" />
-              </div>
-
-            </div>
-          </div>
-        )}
-
-        {/* ── SECTION 2: TOP KPI CARDS ROW (4-COL GRID ON DESKTOP) ── */}
-        {widgetVisibility.showTopMetricsRow && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            
-            {/* Priority 1: Active Orders */}
-            <div 
-              onClick={() => handleNavigate('orders')}
-              className={`p-5 rounded-2xl border transition-all cursor-pointer shadow-2xs hover:shadow-md active:scale-[0.99] group ${
-                isDarkMode ? 'bg-slate-900 border-slate-800 hover:border-slate-700' : 'bg-white border-slate-200/90 hover:border-slate-300'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-[var(--accent-primary)]">
-                    <DollarSign className="w-4 h-4" />
-                  </div>
-                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Open Order Book</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[var(--accent-primary)] group-hover:translate-x-0.5 transition-all" />
-              </div>
-
-              <div className="flex items-baseline justify-between gap-2 mb-2">
-                <span className={`text-3xl font-black tracking-tight font-sans ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                  {fmt(totalSalesRevenueVal)}
-                </span>
-                <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[11px] font-bold text-emerald-700 bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-400">
-                  12% <TrendingUp className="w-3 h-3" />
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                <span>{activeOrdersNum} Active POs in pipe</span>
-                <span className="font-semibold text-slate-700 dark:text-slate-300">Tap to view POs →</span>
-              </div>
-            </div>
-
-            {/* Priority 2: Raw Material Shortages */}
-            <div 
-              onClick={() => handleNavigate('inventory')}
-              className={`p-5 rounded-2xl border transition-all cursor-pointer shadow-2xs hover:shadow-md active:scale-[0.99] group ${
-                isDarkMode ? 'bg-slate-900 border-slate-800 hover:border-slate-700' : 'bg-white border-slate-200/90 hover:border-slate-300'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/40 flex items-center justify-center text-rose-500">
-                    <AlertTriangle className="w-4 h-4" />
-                  </div>
-                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Material Shortages</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-rose-500 group-hover:translate-x-0.5 transition-all" />
-              </div>
-
-              <div className="flex items-baseline justify-between gap-2 mb-2">
-                <span className={`text-3xl font-black tracking-tight font-sans ${
-                  itemsShortCount > 0 ? 'text-rose-600 dark:text-rose-400' : isDarkMode ? 'text-white' : 'text-slate-900'
-                }`}>
-                  {itemsShortCount > 0 ? itemsShortCount : 0} SKUs
-                </span>
-                <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                  itemsShortCount > 0 
-                    ? 'text-rose-700 bg-rose-100 dark:bg-rose-950/60 dark:text-rose-400' 
-                    : 'text-emerald-700 bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-400'
-                }`}>
-                  {itemsShortCount > 0 ? 'Action Needed' : 'Stock Optimal'}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                <span>{stock.length} Total tracked parts</span>
-                <span className="font-semibold text-rose-600 dark:text-rose-400">Reorder list →</span>
-              </div>
-            </div>
-
-            {/* Priority 3: Receivables Ageing */}
-            <div 
-              onClick={() => handleNavigate('invoices')}
-              className={`p-5 rounded-2xl border transition-all cursor-pointer shadow-2xs hover:shadow-md active:scale-[0.99] group ${
-                isDarkMode ? 'bg-slate-900 border-slate-800 hover:border-slate-700' : 'bg-white border-slate-200/90 hover:border-slate-300'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                    <DollarSign className="w-4 h-4" />
-                  </div>
-                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Overdue Receivables</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-500 group-hover:translate-x-0.5 transition-all" />
-              </div>
-
-              <div className="flex items-baseline justify-between gap-2 mb-2">
-                <span className={`text-3xl font-black tracking-tight font-sans ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                  {fmt(overdueReceivablesSum)}
-                </span>
-                <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[11px] font-bold text-amber-700 bg-amber-100 dark:bg-amber-950/60 dark:text-amber-400">
-                  {overdueInvoicesList.length} Due
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                <span>Customer payment queue</span>
-                <span className="font-semibold text-emerald-600 dark:text-emerald-400">Collections →</span>
-              </div>
-            </div>
-
-            {/* Priority 4: Outstanding Payables */}
-            <div 
-              onClick={() => handleNavigate('payables')}
-              className={`p-5 rounded-2xl border transition-all cursor-pointer shadow-2xs hover:shadow-md active:scale-[0.99] group ${
-                isDarkMode ? 'bg-slate-900 border-slate-800 hover:border-slate-700' : 'bg-white border-slate-200/90 hover:border-slate-300'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl border border-indigo-200 dark:border-indigo-900/50 bg-indigo-50 dark:bg-indigo-950/40 flex items-center justify-center text-indigo-500">
-                    <Factory className="w-4 h-4" />
-                  </div>
-                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Vendor Payables</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-500 group-hover:translate-x-0.5 transition-all" />
-              </div>
-
-              <div className="flex items-baseline justify-between gap-2 mb-2">
-                <span className={`text-3xl font-black tracking-tight font-sans ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                  {fmt(outstandingPayablesSum)}
-                </span>
-                <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[11px] font-bold text-indigo-700 bg-indigo-100 dark:bg-indigo-950/60 dark:text-indigo-400">
-                  {payables.length} Bills
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                <span>Raw material bills</span>
-                <span className="font-semibold text-indigo-600 dark:text-indigo-400">Disbursements →</span>
-              </div>
-            </div>
-
-          </div>
-        )}
-
-        {/* ── SECTION 3: ANALYTICS & CHARTS GRID ── */}
-        {widgetVisibility.showAnalyticsGrid && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-            
-            {/* Card 1: Top Selling Products */}
-            <div className={`p-5 rounded-2xl border flex flex-col justify-between shadow-2xs ${
-              isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/90'
-            }`}>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className={`font-bold text-sm ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                  Top Selling Products
-                </h3>
-                <select
-                  value={topProductsTimeframe}
-                  onChange={(e) => setTopProductsTimeframe(e.target.value)}
-                  className={`px-3 py-1.5 rounded-xl text-xs border outline-none font-semibold cursor-pointer ${
-                    isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-700'
-                  }`}
-                >
-                  <option value="June">June</option>
-                  <option value="May">May</option>
-                  <option value="Q3 2026">Q3 2026</option>
-                </select>
-              </div>
-
-              <div className="pt-4 pb-2">
-                <div className="flex items-end justify-between gap-3 h-44 px-2 border-b border-slate-100 dark:border-slate-800 pb-2">
-                  {dynamicTopProducts.map((item, index) => (
-                    <div key={index} className="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
-                      <div className="w-full bg-slate-100 dark:bg-slate-800/60 rounded-t-xl overflow-hidden flex flex-col justify-end h-full relative">
-                        <div 
-                          className={`w-full transition-all duration-500 rounded-t-xl ${
-                            item.active 
-                              ? 'bg-blue-600 dark:bg-blue-500 shadow-md shadow-blue-500/20' 
-                              : 'bg-blue-100 dark:bg-slate-700 group-hover:bg-blue-300 dark:group-hover:bg-slate-600'
-                          }`}
-                          style={{ height: `${(item.sales / 1000) * 100}%` }}
-                        />
-                      </div>
-                      <span className="text-[10px] font-semibold text-slate-400 truncate max-w-full text-center">
-                        {item.name.split(' ')[0]}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex justify-between px-2 pt-2 text-[10px] font-mono text-slate-400">
-                  <span>1K</span>
-                  <span>500</span>
-                  <span>0</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 2: Order Pipeline */}
-            <div className={`p-5 rounded-2xl border flex flex-col justify-between shadow-2xs relative ${
-              isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/90'
-            }`}>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className={`font-bold text-sm ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                  Order Pipeline Status
-                </h3>
-                <span className="text-xs text-slate-400 font-mono">{totalOrdersNum} Scoped</span>
-              </div>
-
-              <div className="space-y-3 pt-1">
-                <div className="flex items-center justify-between text-xs gap-3">
-                  <span className="w-20 text-slate-500 font-medium">Completed</span>
-                  <div className="flex-1 h-6 bg-blue-50 dark:bg-slate-800 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-200 dark:bg-slate-700 rounded-full" style={{ width: `${completedPct}%` }} />
-                  </div>
-                  <span className="w-10 text-right font-bold text-slate-400 text-[11px]">{completedOrdersNum}</span>
-                </div>
-
-                <div className="flex items-center justify-between text-xs gap-3">
-                  <span className="w-20 text-slate-900 dark:text-slate-100 font-bold">In Shopfloor</span>
-                  <div className="flex-1 h-6 bg-blue-50 dark:bg-slate-800 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-600 rounded-full" style={{ width: `${processingPct}%` }} />
-                  </div>
-                  <span className="w-10 text-right font-bold text-slate-900 dark:text-white text-[11px]">{processingOrdersNum}</span>
-                </div>
-
-                <div className="flex items-center justify-between text-xs gap-3">
-                  <span className="w-20 text-slate-500 font-medium">QC Hold</span>
-                  <div className="flex-1 h-6 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                    <div className="h-full bg-amber-400 dark:bg-amber-600 rounded-full" style={{ width: `${returnedPct}%` }} />
-                  </div>
-                  <span className="w-10 text-right font-bold text-slate-400 text-[11px]">{returnedOrdersNum}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 3: Channel Performance */}
-            <div className={`p-5 rounded-2xl border flex flex-col justify-between shadow-2xs ${
-              isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/90'
-            }`}>
-              <div>
-                <h3 className={`font-bold text-sm mb-1 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                  Channel Performance
-                </h3>
-                <div className={`text-2xl font-extrabold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                  {fmt(totalSalesRevenueVal)}
-                </div>
-              </div>
-
-              <div className="relative flex flex-col items-center justify-center my-2">
-                <svg className="w-52 h-32" viewBox="0 0 200 110">
-                  <path
-                    d="M 20 100 A 80 80 0 0 1 180 100"
-                    fill="none"
-                    stroke="#e2e8f0"
-                    strokeWidth="20"
-                    strokeLinecap="round"
-                    className="dark:stroke-slate-800"
-                  />
-                  <path
-                    d="M 20 100 A 80 80 0 0 1 100 20"
-                    fill="none"
-                    stroke="#93c5fd"
-                    strokeWidth="20"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M 105 20 A 80 80 0 0 1 178 95"
-                    fill="none"
-                    stroke="#2563eb"
-                    strokeWidth="20"
-                    strokeLinecap="round"
-                  />
-                </svg>
-                
-                <div className="absolute top-[58px] flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-[9px] text-slate-400 uppercase font-semibold tracking-wider">TOTAL ORDERS:</span>
-                  <span className={`text-xl font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                    {totalOrdersNum.toLocaleString('en-IN')}
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 pt-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
-                  <span>OEM Clients</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-blue-400" />
-                  <span>Export Market</span>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        )}
-
-        {/* ── AUTONOMOUS AI AGENT WORKSPACE (BENTO GRID) ── */}
-        {widgetVisibility.showAgentBentoGrid && (
-          <AgentBentoGrid
-            orders={orders}
-            stock={stock}
-            qcItems={qcItems}
-            jobCards={jobCards}
-            dispatches={dispatches}
-            invoices={invoices}
-            payables={payables}
-            productionLogs={productionLogs}
-            auditLogs={auditLogs}
-            isRealtimeStreaming={isRealtimeStreaming}
-            currencySymbol={currencySymbol}
-            isDarkMode={isDarkMode}
-            onNavigateView={handleNavigate}
-          />
-        )}
-
-        {/* ── RECENT ACTIVITIES DATA TABLE ── */}
-        {widgetVisibility.showRecentActivities && (
-          <div className={`rounded-2xl border p-5 space-y-4 shadow-2xs ${
-            isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/90'
-          }`}>
-            <div className="flex items-center justify-between">
-              <h3 className={`font-bold text-base ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                Recent Activities
-              </h3>
-
-              <div className="flex items-center gap-2.5">
-                <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs w-64 ${
-                  isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                }`}>
-                  <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                  <input
-                    type="text"
-                    placeholder="Search activities..."
-                    value={activitySearchQuery}
-                    onChange={(e) => setActivitySearchQuery(e.target.value)}
-                    className="bg-transparent outline-none w-full"
-                  />
-                </div>
-
-                <select
-                  value={activityCategoryFilter}
-                  onChange={(e) => setActivityCategoryFilter(e.target.value)}
-                  className={`px-3 py-2 rounded-xl border text-xs font-semibold cursor-pointer outline-none ${
-                    isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-700'
-                  }`}
-                >
-                  <option value="ALL">All Categories</option>
-                  <option value="ORDER">Order</option>
-                  <option value="INVENTORY">Inventory</option>
-                  <option value="SYSTEM">System</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse font-sans">
-                <thead>
-                  <tr className={`border-b font-semibold text-[11px] text-slate-400 uppercase tracking-wider ${
-                    isDarkMode ? 'bg-slate-950/40 border-slate-800' : 'bg-slate-50/70 border-slate-100'
-                  }`}>
-                    <th className="py-3 px-4">Time ↕</th>
-                    <th className="py-3 px-4">Activities</th>
-                    <th className="py-3 px-4">Category ↕</th>
-                    <th className="py-3 px-4">User ↕</th>
-                    <th className="py-3 px-4 text-center">Status ↕</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
-                  {filteredActivities.slice(0, 8).map((act, index) => (
-                    <tr key={index} className={isDarkMode ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50/80'}>
-                      <td className="py-3.5 px-4 text-slate-400 font-mono text-[11px]">{act.time}</td>
-                      <td className={`py-3.5 px-4 font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>{act.activity}</td>
-                      <td className="py-3.5 px-4 font-medium text-slate-500">{act.category}</td>
-                      <td className="py-3.5 px-4 font-medium text-slate-500">{act.user}</td>
-                      <td className="py-3.5 px-4 text-center">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold ${
-                          act.status === 'Completed'
-                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                            : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-                        }`}>
-                          <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                          <span>{act.status}</span>
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-      </div>
+            </section>
+          )}
+        </>
+      )}
 
       {/* ── CUSTOMIZE MODAL ── */}
       {showCustomizeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 font-sans">
-          <div 
-            onClick={() => setShowCustomizeModal(false)}
-            className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs"
-          />
-          <div className={`relative w-full max-w-md rounded-2xl border p-5 sm:p-6 space-y-4 font-sans z-10 shadow-2xl ${
-            isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-          }`}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div onClick={() => setShowCustomizeModal(false)} className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm" />
+          <div className={`relative z-10 w-full max-w-md rounded-3xl border p-6 space-y-4 shadow-2xl ${isDarkMode ? 'bg-[#16181D] border-slate-800 text-white' : 'bg-white border-slate-200'}`}>
             <div className="flex items-center justify-between border-b pb-3">
               <div className="flex items-center gap-2">
-                <SlidersHorizontal className="w-5 h-5 text-[var(--accent-primary)]" />
-                <h3 className="font-bold text-base">Customize Command Centre</h3>
+                <SlidersHorizontal className="h-5 w-5 text-[var(--accent-primary)]" />
+                <h3 className="font-bold">Customize Dashboard</h3>
               </div>
-              <button 
-                onClick={() => setShowCustomizeModal(false)} 
-                className="min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-400 hover:text-slate-600 font-bold cursor-pointer"
-              >
-                <X className="w-5 h-5" />
+              <button type="button" onClick={() => setShowCustomizeModal(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+                <X className="h-5 w-5" />
               </button>
             </div>
 
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
-              
-              {/* Accent Color Customization */}
-              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700">
+              <div className={`rounded-2xl border p-3.5 ${isDarkMode ? 'border-slate-700 bg-slate-900/50' : 'border-slate-200 bg-slate-50'}`}>
                 <AccentColorSelector isDarkMode={isDarkMode} />
               </div>
 
-              {/* Display Mode Selection */}
-              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 space-y-2">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Command Centre Display Mode
-                </label>
+              <div className={`rounded-2xl border p-3.5 space-y-2 ${isDarkMode ? 'border-slate-700 bg-slate-900/50' : 'border-slate-200 bg-slate-50'}`}>
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Display Mode</label>
                 <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => setMode('charts')}
-                    className={`min-h-[44px] px-3 py-2 rounded-xl text-xs font-bold border cursor-pointer transition-all flex items-center justify-center gap-2 ${
-                      mode === 'charts'
-                        ? 'bg-[var(--accent-primary)] text-white border-transparent shadow-xs'
-                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
-                    }`}
-                  >
-                    <BarChart3 className="w-4 h-4" />
-                    <span>Visual Charts</span>
-                  </button>
-                  <button
-                    onClick={() => setMode('numbers')}
-                    className={`min-h-[44px] px-3 py-2 rounded-xl text-xs font-bold border cursor-pointer transition-all flex items-center justify-center gap-2 ${
-                      mode === 'numbers'
-                        ? 'bg-[var(--accent-primary)] text-white border-transparent shadow-xs'
-                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
-                    }`}
-                  >
-                    <Hash className="w-4 h-4" />
-                    <span>Tabular Numbers</span>
-                  </button>
+                  {(['charts', 'numbers'] as const).map(m => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setMode(m)}
+                      className={`min-h-[44px] rounded-xl text-xs font-bold border cursor-pointer flex items-center justify-center gap-2 transition ${
+                        mode === m
+                          ? 'bg-[var(--accent-primary)] text-white border-transparent'
+                          : isDarkMode ? 'border-slate-700 bg-slate-900 text-slate-300' : 'border-slate-200 bg-white text-slate-700'
+                      }`}
+                    >
+                      {m === 'charts' ? <BarChart3 className="h-4 w-4" /> : <Hash className="h-4 w-4" />}
+                      {m === 'charts' ? 'Visual' : 'Tabular'}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* Realtime Stream Switch */}
-              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+              <div className={`flex items-center justify-between rounded-xl border p-3 ${isDarkMode ? 'border-slate-700 bg-slate-900/50' : 'border-slate-200 bg-slate-50'}`}>
                 <div>
-                  <div className="font-bold text-xs">Realtime Telemetry Feed</div>
-                  <div className="text-[11px] text-slate-500">Auto-updates shopfloor sensors every 5s</div>
+                  <div className="text-xs font-bold">Realtime Feed</div>
+                  <div className="text-[11px] text-slate-500">Auto-update every 5s</div>
                 </div>
-                <button
-                  onClick={onToggleRealtimeStreaming}
-                  className="w-11 h-6 rounded-full transition-colors p-0.5 cursor-pointer min-h-[44px] flex items-center"
-                >
-                  <div className={`w-11 h-6 rounded-full transition-colors p-0.5 ${
-                    isRealtimeStreaming ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'
-                  }`}>
-                    <div className={`w-5 h-5 rounded-full bg-white transition-transform ${
-                      isRealtimeStreaming ? 'translate-x-5' : 'translate-x-0'
-                    }`} />
+                <button type="button" onClick={onToggleRealtimeStreaming} className="cursor-pointer">
+                  <div className={`w-11 h-6 rounded-full p-0.5 transition ${isRealtimeStreaming ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'}`}>
+                    <div className={`h-5 w-5 rounded-full bg-white transition-transform ${isRealtimeStreaming ? 'translate-x-5' : ''}`} />
                   </div>
                 </button>
               </div>
 
-              {/* Toggle Widget Visibilities */}
-              <div className="space-y-2">
-                <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Visible Dashboard Widgets</label>
-                
+              <div className="space-y-1">
+                <label className="text-xs font-bold uppercase text-slate-500">Visible Widgets</label>
                 {[
-                  { key: 'showAlertsBar', label: 'Operational Alerts Bar' },
-                  { key: 'showShortagesBanner', label: 'Material Shortages Warning Banner' },
-                  { key: 'showAgentBentoGrid', label: 'Autonomous AI Agent Command Grid' },
-                  { key: 'showTopMetricsRow', label: 'Top Telemetry Metric Cards' },
-                  { key: 'showAnalyticsGrid', label: 'Middle Analytics & Pipeline Grid' },
-                  { key: 'showRecentActivities', label: 'Recent Activities' },
-                  { key: 'showThroughputChart', label: 'Production Throughput Trend Line Chart' }
-                ].map((item) => {
+                  { key: 'showAlertsBar', label: 'Alert Rail' },
+                  { key: 'showTopMetricsRow', label: 'KPI Cards' },
+                  { key: 'showAnalyticsGrid', label: 'Analytics Grid' },
+                  { key: 'showOrderPipelineCard', label: 'Order Pipeline' },
+                  { key: 'showAgentBentoGrid', label: 'AI Agent Grid' },
+                  { key: 'showRecentActivities', label: 'Activity Stream' }
+                ].map(item => {
                   const key = item.key as keyof typeof widgetVisibility;
-                  const isVis = widgetVisibility[key];
                   return (
-                    <div 
-                      key={key} 
+                    <button
+                      key={key}
+                      type="button"
                       onClick={() => toggleWidget(key)}
-                      className="min-h-[44px] flex items-center justify-between p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer text-xs font-medium"
+                      className={`w-full flex items-center justify-between rounded-xl border p-2.5 text-xs font-medium cursor-pointer ${isDarkMode ? 'border-slate-800 hover:bg-slate-800/50' : 'border-slate-100 hover:bg-slate-50'}`}
                     >
                       <span>{item.label}</span>
-                      {isVis ? (
-                        <Eye className="w-4 h-4 text-[var(--accent-primary)]" />
-                      ) : (
-                        <EyeOff className="w-4 h-4 text-slate-400" />
-                      )}
-                    </div>
+                      {widgetVisibility[key] ? <Eye className="h-4 w-4 text-[var(--accent-primary)]" /> : <EyeOff className="h-4 w-4 text-slate-400" />}
+                    </button>
                   );
                 })}
               </div>
 
-              {/* Reset Factory Seed Data */}
               {onResetAllData && (
-                <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
-                  <button
-                    onClick={() => {
-                      if (window.confirm('Reset all stored data to factory defaults?')) {
-                        onResetAllData();
-                        setShowCustomizeModal(false);
-                      }
-                    }}
-                    className="min-h-[44px] w-full flex items-center justify-center gap-2 p-2.5 rounded-xl border border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-bold cursor-pointer transition-all"
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                    <span>Reset All Data to Factory Defaults</span>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm('Reset all data to factory defaults?')) {
+                      onResetAllData();
+                      setShowCustomizeModal(false);
+                    }
+                  }}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-rose-500/30 p-2.5 text-xs font-bold text-rose-500 hover:bg-rose-500/10 cursor-pointer"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Reset Factory Data
+                </button>
               )}
-
             </div>
 
-            <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex justify-end">
-              <button
-                onClick={() => setShowCustomizeModal(false)}
-                className="min-h-[44px] px-5 py-2.5 rounded-xl bg-[var(--accent-primary)] hover:opacity-90 text-white font-bold text-xs cursor-pointer shadow-sm transition-colors"
-              >
-                Save & Apply Settings
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setShowCustomizeModal(false)}
+              className="w-full rounded-xl bg-[var(--accent-primary)] py-2.5 text-xs font-bold text-white cursor-pointer"
+            >
+              Save & Apply
+            </button>
           </div>
         </div>
       )}
-
     </div>
   );
 };

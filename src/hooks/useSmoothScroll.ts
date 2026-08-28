@@ -8,9 +8,22 @@ interface SmoothScrollOptions {
 }
 
 /**
- * Custom hook to initialize butter-smooth, eased inertial scrolling with Lenis.
- * Supports both window-level and container-level smooth scrolling.
- * Automatically locks background scrolling when any modal/dialog is open.
+ * Checks if the current client environment is a touch device or mobile viewport.
+ * On mobile/touch devices, native hardware-accelerated momentum scrolling is optimal.
+ */
+function isTouchOrMobileDevice(): boolean {
+  if (typeof window === 'undefined') return false;
+  return (
+    'ontouchstart' in window ||
+    navigator.maxTouchPoints > 0 ||
+    window.matchMedia('(pointer: coarse)').matches ||
+    window.innerWidth < 1024
+  );
+}
+
+/**
+ * Custom hook to initialize butter-smooth, eased inertial scrolling with Lenis on desktop.
+ * On mobile / touch screens, gracefully falls back to native 120Hz compositor momentum scrolling.
  */
 export function useSmoothScroll(
   containerRef?: React.RefObject<HTMLElement | null>,
@@ -20,17 +33,23 @@ export function useSmoothScroll(
   const lenisRef = useRef<Lenis | null>(null);
 
   useEffect(() => {
+    // If running on a touch device or mobile screen, do NOT hijack touch events with JS loops.
+    // Native touch scrolling runs at 120Hz on the GPU compositor thread without JS overhead.
+    if (isTouchOrMobileDevice()) {
+      return;
+    }
+
     const isCustomContainer = !!containerRef?.current;
     const targetElement = isCustomContainer ? containerRef.current : undefined;
 
     const lenis = new Lenis({
       wrapper: targetElement || undefined,
       content: targetElement ? (targetElement.firstElementChild as HTMLElement) || undefined : undefined,
-      duration: options.duration ?? 1.25,
+      duration: options.duration ?? 1.1,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       smoothWheel: true,
-      wheelMultiplier: options.wheelMultiplier ?? 0.85,
-      touchMultiplier: options.touchMultiplier ?? 1.2,
+      wheelMultiplier: options.wheelMultiplier ?? 0.9,
+      touchMultiplier: 0,
       infinite: false,
       prevent: (node: HTMLElement) => {
         if (!node) return false;
@@ -54,46 +73,24 @@ export function useSmoothScroll(
     }
     rafId = requestAnimationFrame(raf);
 
+    let resizeTimer: any = null;
     const handleResize = () => {
-      lenis.resize();
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        if (isTouchOrMobileDevice()) {
+          lenis.destroy();
+          lenisRef.current = null;
+        } else {
+          lenis.resize();
+        }
+      }, 150);
     };
 
-    window.addEventListener('resize', handleResize);
-
-    // Modal scroll locking observer
-    const checkModalState = () => {
-      const modalElements = document.querySelectorAll(
-        '.fixed.inset-0.z-50, [role="dialog"], [aria-modal="true"], .modal-overlay, .modal-container'
-      );
-      const isModalOpen = modalElements.length > 0;
-      if (isModalOpen) {
-        modalElements.forEach(el => {
-          if (!el.hasAttribute('data-lenis-prevent')) {
-            el.setAttribute('data-lenis-prevent', 'true');
-          }
-        });
-        document.body.style.overflow = 'hidden';
-        document.documentElement.style.overflow = 'hidden';
-        lenis.stop();
-      } else {
-        document.body.style.overflow = '';
-        document.documentElement.style.overflow = '';
-        lenis.start();
-      }
-    };
-
-    const observer = new MutationObserver(() => {
-      checkModalState();
-    });
-
-    observer.observe(document.body, { childList: true, subtree: true });
-    checkModalState();
+    window.addEventListener('resize', handleResize, { passive: true });
 
     return () => {
-      observer.disconnect();
-      document.body.style.overflow = '';
-      document.documentElement.style.overflow = '';
       window.removeEventListener('resize', handleResize);
+      clearTimeout(resizeTimer);
       cancelAnimationFrame(rafId);
       lenis.destroy();
       lenisRef.current = null;
@@ -102,10 +99,23 @@ export function useSmoothScroll(
 
   // Provide method to manually scrollTo
   const scrollTo = (target: number | string | HTMLElement, opts?: any) => {
-    lenisRef.current?.scrollTo(target, opts);
+    if (lenisRef.current) {
+      lenisRef.current.scrollTo(target, opts);
+    } else if (containerRef?.current) {
+      if (typeof target === 'number') {
+        containerRef.current.scrollTo({ top: target, behavior: 'smooth' });
+      } else if (typeof target === 'object' && target !== null && 'offsetTop' in target) {
+        containerRef.current.scrollTo({ top: (target as HTMLElement).offsetTop, behavior: 'smooth' });
+      }
+    } else if (typeof window !== 'undefined') {
+      if (typeof target === 'number') {
+        window.scrollTo({ top: target, behavior: 'smooth' });
+      }
+    }
   };
 
   return { lenis: lenisRef.current, scrollTo };
 }
 
 export default useSmoothScroll;
+

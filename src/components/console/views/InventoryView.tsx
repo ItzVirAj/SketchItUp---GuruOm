@@ -350,195 +350,313 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   const reorderCount = stockMasterRows.filter(s => (s.available || 0) <= (s.reorderLevel || 0) && (s.onHand || 0) > 0).length;
 
   return (
-    <div className="space-y-6 font-sans">
-      
-      {/* Top Banner Header */}
-      <div className={`p-6 rounded-3xl border transition-all ${
-        isDarkMode 
-          ? 'bg-slate-900/80 border-slate-800/80 text-white backdrop-blur-xl shadow-2xl' 
-          : 'bg-white border-slate-200 shadow-sm text-slate-900'
-      }`}>
-        <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="space-y-4 sm:space-y-6 font-sans select-none pb-4">
+
+      {/* ========================================================================= */}
+      {/* ── MOBILE-FIRST TOP HEADER & QUICK ACTION BAR (< md) ──                   */}
+      {/* ========================================================================= */}
+      <div className="block md:hidden space-y-3">
+        <div className="flex items-center justify-between gap-2">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider ${
-                isDarkMode ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30' : 'bg-teal-50 text-teal-800 border border-teal-200'
-              }`}>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
                 Store & Material Telemetry
               </span>
-              <span className="text-xs text-slate-400 font-mono">• Physical Stock, GRN, Movements & Purchasing</span>
             </div>
-            <h1 className={`text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-              Inventory, Procurement & Store Ledger
+            <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+              Inventory & Stores ({stockMasterRows.length})
             </h1>
-            <p className={`text-xs mt-1 max-w-xl ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-              Monitor physical store inventory, execute Goods Receipt (GRN), audit real-time stock movements, and govern Purchase Orders.
-            </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {subTab === 'stock' && (
               <button
                 onClick={() => {
                   if (stockMasterRows.length > 0) setSelectedStockForAdjust(stockMasterRows[0]);
                 }}
-                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="min-h-[40px] px-3.5 py-2 rounded-xl bg-gradient-to-r from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer shrink-0 active:scale-95 transition-transform font-mono"
               >
-                <SlidersHorizontal className="w-4 h-4" />
-                <span>Adjust Stock</span>
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                <span>Adjust</span>
               </button>
             )}
             {subTab === 'purchases' && (
               <button
                 onClick={() => setIsCreatePoOpen(true)}
-                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="min-h-[40px] px-3.5 py-2 rounded-xl bg-gradient-to-r from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer shrink-0 active:scale-95 transition-transform font-mono"
               >
-                <Plus className="w-4 h-4" />
-                <span>Create Purchase Order</span>
+                <Plus className="w-3.5 h-3.5" />
+                <span>New PO</span>
               </button>
             )}
             {subTab === 'grn' && (
               <button
                 onClick={() => setIsCreateGrnOpen(true)}
-                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="min-h-[40px] px-3.5 py-2 rounded-xl bg-gradient-to-r from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer shrink-0 active:scale-95 transition-transform font-mono"
               >
-                <Truck className="w-4 h-4" />
-                <span>Receive Material (GRN)</span>
+                <Truck className="w-3.5 h-3.5" />
+                <span>GRN</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* Feedback Banners */}
-        {actionSuccess && (
-          <div className="mt-4 p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center justify-between">
-            <span>{actionSuccess}</span>
-            <button onClick={() => setActionSuccess(null)} className="cursor-pointer"><X className="w-4 h-4" /></button>
-          </div>
-        )}
-        {actionError && (
-          <div className="mt-4 p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center justify-between">
-            <span>{actionError}</span>
-            <button onClick={() => setActionError(null)} className="cursor-pointer"><X className="w-4 h-4" /></button>
-          </div>
-        )}
-
-        {/* Telemetry Stat Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-          <div className={`p-4 rounded-2xl border transition-all ${
-            isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/80 border-slate-200/80'
-          }`}>
-            <div className="flex items-center justify-between">
-              <span className={`text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Total SKUs</span>
-              <div className={`p-2 rounded-xl ${isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF]' : 'bg-[#5B75F8]/10 text-[#5B75F8]'}`}>
-                <Package className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="mt-2 flex items-baseline justify-between">
-              <span className={`text-2xl font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{stockMasterRows.length}</span>
-              <span className="text-[11px] font-mono font-semibold text-[#5B75F8]">Active Parts</span>
+        {/* Mobile 2x2 Executive KPI Strip */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Total SKUs</div>
+            <div className="text-base font-black text-slate-900 dark:text-white tracking-tight mt-0.5">
+              {stockMasterRows.length} Active Parts
             </div>
           </div>
 
-          <div className={`p-4 rounded-2xl border transition-all ${
-            isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/80 border-slate-200/80'
-          }`}>
-            <div className="flex items-center justify-between">
-              <span className={`text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Total On-Hand Qty</span>
-              <div className={`p-2 rounded-xl ${isDarkMode ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-700'}`}>
-                <Box className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="mt-2 flex items-baseline justify-between">
-              <span className={`text-2xl font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{totalOnHand.toLocaleString()}</span>
-              <span className="text-[11px] font-mono font-semibold text-emerald-500">Units</span>
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">On-Hand Qty</div>
+            <div className="text-base font-black text-emerald-500 tracking-tight mt-0.5">
+              {totalOnHand.toLocaleString()} Units
             </div>
           </div>
 
-          <div className={`p-4 rounded-2xl border transition-all ${
-            isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/80 border-slate-200/80'
-          }`}>
-            <div className="flex items-center justify-between">
-              <span className={`text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Shortage Items</span>
-              <div className={`p-2 rounded-xl ${isDarkMode ? 'bg-rose-500/20 text-rose-400' : 'bg-rose-100 text-rose-700'}`}>
-                <AlertTriangle className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="mt-2 flex items-baseline justify-between">
-              <span className={`text-2xl font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{shortageCount}</span>
-              <span className="text-[11px] font-mono font-semibold text-rose-500">Deficit Alert</span>
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Shortage Items</div>
+            <div className="text-base font-black text-rose-500 tracking-tight mt-0.5">
+              {shortageCount} Deficit Alerts
             </div>
           </div>
 
-          <div className={`p-4 rounded-2xl border transition-all ${
-            isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/80 border-slate-200/80'
-          }`}>
-            <div className="flex items-center justify-between">
-              <span className={`text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Below Reorder Point</span>
-              <div className={`p-2 rounded-xl ${isDarkMode ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-100 text-amber-700'}`}>
-                <TrendingDown className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="mt-2 flex items-baseline justify-between">
-              <span className={`text-2xl font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{reorderCount}</span>
-              <span className="text-[11px] font-mono font-semibold text-amber-500">Reorder Req</span>
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Below Reorder</div>
+            <div className="text-base font-black text-amber-500 tracking-tight mt-0.5">
+              {reorderCount} Reorder Req
             </div>
           </div>
+        </div>
+
+        {/* Mobile Full-Width Search Input */}
+        <div className={`flex items-center gap-2 px-3.5 py-2.5 rounded-2xl border text-xs min-h-[44px] ${
+          isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+        }`}>
+          <Search className="w-4 h-4 text-slate-400 shrink-0" />
+          <input
+            type="text"
+            placeholder="Search Part Code, Description..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="bg-transparent outline-none w-full font-mono text-xs"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className="text-slate-400 p-1">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        {/* Mobile Horizontal Sub-Tabs Filter Chips */}
+        <div className="flex items-center gap-1.5 overflow-x-auto py-1 no-scrollbar">
+          {[
+            { id: 'stock', label: `Stock (${stockMasterRows.length})` },
+            { id: 'movements', label: 'Movements' },
+            { id: 'reconciliation', label: 'Reconciliation' },
+            { id: 'shortages', label: `Shortages (${shortageCount})` },
+            { id: 'purchases', label: `POs (${purchaseOrders.length})` },
+            { id: 'grn', label: `GRNs (${grnList.length})` },
+          ].map((tab) => {
+            const isSelected = subTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setSubTab(tab.id as any)}
+                className={`min-h-[36px] px-3 py-1 rounded-xl text-xs font-bold font-mono shrink-0 transition-all border cursor-pointer ${
+                  isSelected
+                    ? 'bg-[var(--accent-primary)] text-white shadow-xs border-transparent scale-105'
+                    : isDarkMode
+                      ? 'bg-slate-800/60 text-slate-400 border-slate-700/60'
+                      : 'bg-slate-100 text-slate-600 border-slate-200'
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Navigation Sub-Tabs Bar */}
-      <div className={`p-4 rounded-3xl border transition-all flex flex-wrap items-center justify-between gap-4 ${
-        isDarkMode ? 'bg-slate-900/70 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-xs'
-      }`}>
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-          {[
-            { id: 'stock', label: 'Stock Master' },
-            { id: 'movements', label: 'Movement Ledger' },
-            { id: 'reconciliation', label: 'Stock Reconciliation' },
-            { id: 'shortages', label: 'Material Shortages' },
-            { id: 'purchases', label: 'Purchase Orders' },
-            { id: 'grn', label: 'Goods-in (GRN)' },
-          ].map(t => (
-            <button
-              key={t.id}
-              onClick={() => setSubTab(t.id as any)}
-              className={`px-4 py-2 rounded-2xl text-xs font-mono font-bold transition-all cursor-pointer whitespace-nowrap ${
-                subTab === t.id
-                  ? isDarkMode 
-                    ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' 
-                    : 'bg-[#5B75F8] text-white shadow-xs'
-                  : isDarkMode
-                    ? 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
+      {/* Feedback Banners */}
+      {actionSuccess && (
+        <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center justify-between">
+          <span>{actionSuccess}</span>
+          <button onClick={() => setActionSuccess(null)} className="cursor-pointer"><X className="w-4 h-4" /></button>
         </div>
+      )}
+      {actionError && (
+        <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center justify-between">
+          <span>{actionError}</span>
+          <button onClick={() => setActionError(null)} className="cursor-pointer"><X className="w-4 h-4" /></button>
+        </div>
+      )}
 
-        <div className={`relative flex items-center rounded-2xl border px-3.5 py-1.5 transition-all ${
-          isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white focus-within:border-[#5B75F8]/50' : 'bg-slate-50 border-slate-200 text-slate-900 focus-within:border-[#5B75F8]'
-        }`}>
-          <Search className="w-4 h-4 text-slate-400 shrink-0 mr-2" />
-          <input
-            type="text"
-            placeholder="Search Code / Description..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-transparent outline-none text-xs w-48 sm:w-64 font-mono"
-          />
+      {/* ========================================================================= */}
+      {/* ── DESKTOP HEADER & KPI ROW (≥ md) ──                                      */}
+      {/* ========================================================================= */}
+      <div className="hidden md:block space-y-4">
+        <section className={`overflow-hidden rounded-[24px] border ${isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'}`}>
+          <div className="flex items-center justify-between gap-6 px-6 py-5">
+            <div className="min-w-0">
+              <div className="mb-1.5 flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                Store & Material Telemetry
+                <span className="text-slate-300 dark:text-slate-700">/</span>
+                <span>{stockMasterRows.length} active SKUs</span>
+              </div>
+              <div className="flex items-baseline gap-3">
+                <h1 className="truncate text-[25px] font-extrabold tracking-[-0.04em] text-slate-950 dark:text-white">
+                  Inventory & Store Ledger
+                </h1>
+                <span className="hidden font-mono text-[10px] font-semibold text-slate-400 xl:inline">
+                  STOCK • MOVEMENTS • RECONCILIATION • SHORTAGES • PO • GRN
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Monitor physical store inventory, execute Goods Receipt (GRN), audit real-time stock movements, and govern Purchase Orders.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              {subTab === 'stock' && (
+                <button
+                  onClick={() => {
+                    if (stockMasterRows.length > 0) setSelectedStockForAdjust(stockMasterRows[0]);
+                  }}
+                  className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-all hover:bg-[var(--accent-hover)] active:scale-[0.98]"
+                >
+                  <SlidersHorizontal className="h-4 w-4" />
+                  Adjust Stock
+                </button>
+              )}
+              {subTab === 'purchases' && (
+                <button
+                  onClick={() => setIsCreatePoOpen(true)}
+                  className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-all hover:bg-[var(--accent-hover)] active:scale-[0.98]"
+                >
+                  <Plus className="h-4 w-4" />
+                  Create Purchase Order
+                </button>
+              )}
+              {subTab === 'grn' && (
+                <button
+                  onClick={() => setIsCreateGrnOpen(true)}
+                  className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-all hover:bg-[var(--accent-hover)] active:scale-[0.98]"
+                >
+                  <Truck className="h-4 w-4" />
+                  Receive Material (GRN)
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Integrated 4-Column Metric Strip (border-t) */}
+          <div className={`grid grid-cols-4 border-t ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+            {[
+              { label: 'Total SKUs', value: String(stockMasterRows.length), detail: 'Active catalog parts', icon: Package, tone: 'text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)]', iconBg: 'bg-[var(--accent-soft-light)] dark:bg-[var(--accent-soft-dark)]' },
+              { label: 'Total On-Hand Qty', value: totalOnHand.toLocaleString(), detail: 'Physical warehouse units', icon: Box, tone: 'text-emerald-600 dark:text-emerald-400', iconBg: 'bg-emerald-500/10' },
+              { label: 'Shortage Items', value: String(shortageCount), detail: 'Production deficit alerts', icon: AlertTriangle, tone: 'text-rose-600 dark:text-rose-400', iconBg: 'bg-rose-500/10' },
+              { label: 'Below Reorder Point', value: String(reorderCount), detail: 'Procurement action req', icon: TrendingDown, tone: 'text-amber-600 dark:text-amber-400', iconBg: 'bg-amber-500/10' },
+            ].map((metric, index) => {
+              const MetricIcon = metric.icon;
+              return (
+                <div key={metric.label} className={`flex items-center gap-3 px-5 py-4 ${index > 0 ? isDarkMode ? 'border-l border-white/[0.07]' : 'border-l border-slate-200' : ''}`}>
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${metric.iconBg} ${metric.tone}`}>
+                    <MetricIcon className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-mono text-[9px] font-bold uppercase tracking-[0.13em] text-slate-400">{metric.label}</div>
+                    <div className={`mt-0.5 truncate text-lg font-extrabold tracking-[-0.03em] ${metric.tone}`}>{metric.value}</div>
+                    <div className="truncate text-[10px] text-slate-400">{metric.detail}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Desktop Sub-Tabs Navigation & Search Toolbar */}
+        <div className={`rounded-2xl border p-3 ${isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
+          <div className="flex items-center gap-2">
+            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${isDarkMode ? 'bg-white/[0.05] text-slate-400' : 'bg-slate-100 text-slate-500'}`} title="Modules">
+              <Layers className="h-4 w-4" />
+            </div>
+
+            <div className="flex items-center gap-1.5 overflow-x-auto">
+              {[
+                { id: 'stock', label: 'Stock Master', count: stockMasterRows.length },
+                { id: 'movements', label: 'Movement Ledger', count: movements.length },
+                { id: 'reconciliation', label: 'Stock Reconciliation', count: reconciliationReport.length },
+                { id: 'shortages', label: 'Shortages', count: shortageCount },
+                { id: 'purchases', label: 'Purchase Orders', count: purchaseOrders.length },
+                { id: 'grn', label: 'Goods-in (GRN)', count: grnList.length },
+              ].map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => setSubTab(t.id as any)}
+                  className={`flex items-center gap-1.5 h-10 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap border ${
+                    subTab === t.id
+                      ? isDarkMode
+                        ? 'bg-[var(--accent-primary)]/20 text-[var(--accent-text-dark)] border-[var(--accent-primary)]/40 shadow-xs'
+                        : 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)] shadow-sm shadow-[var(--accent-shadow)]'
+                      : isDarkMode
+                        ? 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/[0.06]'
+                        : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
+                  <span>{t.label}</span>
+                  {t.count !== undefined && (
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${
+                      subTab === t.id
+                        ? isDarkMode ? 'bg-[var(--accent-primary)]/30 text-white' : 'bg-white/25 text-white'
+                        : isDarkMode ? 'bg-white/[0.06] text-slate-400' : 'bg-slate-200 text-slate-600'
+                    }`}>
+                      {t.count}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            <div className={`flex h-10 min-w-[240px] flex-1 items-center gap-2 rounded-xl border px-3 ml-auto ${isDarkMode ? 'border-white/[0.08] bg-black/20 text-white focus-within:border-[var(--accent-border-dark)]' : 'border-slate-200 bg-slate-50 text-slate-900 focus-within:border-[var(--accent-primary)]'}`}>
+              <Search className="h-4 w-4 shrink-0 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search Part Code, Description, Catalog ID..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-full w-full bg-transparent text-xs font-semibold outline-none placeholder:font-normal placeholder:text-slate-400 font-mono"
+              />
+              {searchQuery && (
+                <button type="button" onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-700 dark:hover:text-white">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-2.5 flex items-center justify-between px-1 font-mono text-[9px] font-semibold uppercase tracking-wider text-slate-400">
+            <span>Showing {subTab === 'stock' ? filteredStock.length : (subTab === 'shortages' ? shortages.length : (subTab === 'purchases' ? purchaseOrders.length : (subTab === 'grn' ? grnList.length : (subTab === 'movements' ? movements.length : reconciliationReport.length))))} records</span>
+            <span>Physical Store & Append-Only Ledger Control</span>
+          </div>
         </div>
       </div>
 
       {/* 1. Main Stock Table */}
       {subTab === 'stock' && (
         <div className="space-y-4">
-          {/* Category Filter Tabs Bar: All | Raw Materials | Finished Goods | Consumables | Tools | Spare Parts | Other */}
-          <div className={`p-3 rounded-2xl border flex items-center gap-2 overflow-x-auto scrollbar-none transition-all ${
-            isDarkMode ? 'bg-slate-900/80 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
+          {/* Category Filter Tabs Bar */}
+          <div className={`p-2.5 rounded-2xl border flex items-center gap-1.5 overflow-x-auto scrollbar-none transition-all ${
+            isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'
           }`}>
+            <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 px-2 shrink-0">
+              Category:
+            </div>
             {INVENTORY_CATEGORIES.map(cat => {
               const isActive = selectedCategory === cat.key;
               const count = categoryCounts[cat.key] || 0;
@@ -546,21 +664,21 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 <button
                   key={cat.key}
                   onClick={() => setSelectedCategory(cat.key)}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer whitespace-nowrap border ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer whitespace-nowrap border ${
                     isActive
                       ? isDarkMode 
-                        ? 'bg-[#5B75F8]/20 text-[#7B92FF] border-[#5B75F8]/50 shadow-xs'
-                        : 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-xs'
+                        ? 'bg-[var(--accent-soft-dark)] text-[var(--accent-text-dark)] border-[var(--accent-border-dark)] shadow-xs'
+                        : 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)] shadow-xs'
                       : isDarkMode
-                        ? 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-slate-200 hover:bg-slate-800/70'
+                        ? 'bg-white/[0.04] text-slate-400 border-white/[0.06] hover:text-slate-200 hover:bg-white/[0.08]'
                         : 'bg-slate-50 text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-100'
                   }`}
                 >
                   <span>{cat.label}</span>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
                     isActive
-                      ? isDarkMode ? 'bg-[#5B75F8]/35 text-white' : 'bg-white/25 text-white'
-                      : isDarkMode ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-700'
+                      ? isDarkMode ? 'bg-white/20 text-white' : 'bg-white/25 text-white'
+                      : isDarkMode ? 'bg-white/[0.06] text-slate-400' : 'bg-slate-200 text-slate-700'
                   }`}>
                     {count}
                   </span>
@@ -570,14 +688,21 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
           </div>
 
           {/* Desktop Stock Master Table */}
-          <div className={`hidden md:block rounded-3xl border overflow-hidden transition-all shadow-xl ${
-            isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200'
+          <div className={`hidden md:block overflow-hidden rounded-[22px] border transition-all ${
+            isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
           }`}>
+            <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+              <div>
+                <div className="text-xs font-extrabold text-slate-900 dark:text-white">Store Inventory Master</div>
+                <div className="mt-0.5 text-[10px] text-slate-400">Real-time on-hand, reserved, and available material balance</div>
+              </div>
+              <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>{filteredStock.length} items</span>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className={`border-b font-mono font-bold uppercase tracking-wider text-[11px] ${
-                    isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'
+                  <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${
+                    isDarkMode ? 'border-white/[0.07] bg-black/20 text-slate-500' : 'border-slate-200 bg-slate-50/80 text-slate-400'
                   }`}>
                     <th className="py-4 px-5">Part Code</th>
                     <th className="py-4 px-5">Category</th>
@@ -591,24 +716,47 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     <th className="py-4 px-5 text-center">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
+                <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
                   {filteredStock.map((stk) => {
                     const isShort = stk.status === 'SHORTAGE' || (stk.shortage || 0) > 0;
                     return (
                       <tr 
                         key={stk.code}
-                        className={isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}
+                        className={`group transition-colors ${isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'}`}
                       >
                         <td className="py-4 px-5">
-                          <div className="flex items-center gap-2 font-mono">
-                            <span className="font-bold text-sm text-[#5B75F8] dark:text-[#7B92FF]">
-                              {stk.code}
-                            </span>
-                            {stk.rawCode && stk.rawCode !== stk.code && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800/80 text-slate-400 border border-slate-700/60 font-mono" title={`Catalog ID: ${stk.rawCode}`}>
-                                {stk.rawCode}
-                              </span>
-                            )}
+                          <div className="flex items-center gap-2.5">
+                            <div className={`p-2 rounded-xl transition-transform group-hover:scale-105 shrink-0 ${
+                              isDarkMode 
+                                ? 'bg-[var(--accent-primary)]/20 text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/30' 
+                                : 'bg-[var(--accent-primary)]/10 text-[var(--accent-text-light)] border border-[var(--accent-primary)]/20'
+                            }`}>
+                              <Package className="w-3.5 h-3.5" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className={`font-mono font-bold text-xs ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                                  {stk.code}
+                                </span>
+                                {stk.rawCode && stk.rawCode !== stk.code && (
+                                  <span 
+                                    className={`px-1.5 py-0.5 rounded-md text-[9px] font-mono font-bold uppercase tracking-wider border ${
+                                      isDarkMode 
+                                        ? 'bg-white/[0.06] text-slate-400 border-white/[0.08]' 
+                                        : 'bg-slate-100 text-slate-600 border-slate-200'
+                                    }`} 
+                                    title={`Catalog Master Code: ${stk.rawCode}`}
+                                  >
+                                    {stk.rawCode}
+                                  </span>
+                                )}
+                              </div>
+                              {stk.partNo && stk.partNo !== stk.code && (
+                                <div className={`text-[10px] font-mono truncate mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                                  Part #{stk.partNo}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </td>
                         <td className="py-4 px-5">
@@ -650,7 +798,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                             <button
                               onClick={() => setSelectedStockForAdjust(stk)}
                               className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer ${
-                                isDarkMode ? 'bg-[#5B75F8]/10 text-[#7B92FF] hover:bg-[#5B75F8]/20 border border-[#5B75F8]/30' : 'bg-[#5B75F8]/10 text-[#5B75F8] hover:bg-[#5B75F8]/20 border border-[#5B75F8]/20'
+                                isDarkMode ? 'bg-[var(--accent-soft-dark)] text-[var(--accent-text-dark)] hover:brightness-125 border border-[var(--accent-border-dark)]' : 'bg-[var(--accent-soft-light)] text-[var(--accent-text-light)] hover:brightness-95 border border-[var(--accent-border-light)]'
                               }`}
                             >
                               Adjust
@@ -689,17 +837,19 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 <div
                   key={stk.code}
                   className={`p-4 rounded-2xl border transition-all space-y-3 shadow-sm ${
-                    isDarkMode ? 'bg-slate-900/90 border-slate-800/80 text-white' : 'bg-white border-slate-200 text-slate-900'
+                    isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono font-bold text-sm text-[#5B75F8] dark:text-[#7B92FF]">
+                      <span className="font-mono font-bold text-sm text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">
                         {stk.code}
                       </span>
                       {renderCategoryBadge(stk.category, stk.categoryLabel)}
                       {stk.rawCode && stk.rawCode !== stk.code && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700 font-mono">
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded-md border font-mono font-bold uppercase tracking-wider ${
+                          isDarkMode ? 'bg-white/[0.06] text-slate-400 border-white/[0.08]' : 'bg-slate-100 text-slate-600 border-slate-200'
+                        }`}>
                           {stk.rawCode}
                         </span>
                       )}
@@ -743,7 +893,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   <div className="flex items-center justify-between gap-2 pt-1">
                     <button
                       onClick={() => setSelectedStockForAdjust(stk)}
-                      className="flex-1 py-2 rounded-xl bg-[#5B75F8]/15 hover:bg-[#5B75F8]/25 text-[#7B92FF] border border-[#5B75F8]/30 text-xs font-mono font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="flex-1 py-2 rounded-xl bg-[var(--accent-primary)]/15 hover:bg-[var(--accent-primary)]/25 text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/30 text-xs font-mono font-bold flex items-center justify-center gap-1.5 cursor-pointer"
                     >
                       <SlidersHorizontal className="w-3.5 h-3.5" />
                       <span>Adjust Stock</span>
@@ -774,27 +924,34 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
       {/* 2. Material Shortages Sub-View */}
       {subTab === 'shortages' && (
-        <div className={`rounded-3xl border overflow-hidden transition-all shadow-xl ${
-          isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200'
+        <div className={`overflow-hidden rounded-[22px] border transition-all ${
+          isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
         }`}>
+          <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+            <div>
+              <div className="text-xs font-extrabold text-slate-900 dark:text-white">Material Shortages & Deficit Queue</div>
+              <div className="mt-0.5 text-[10px] text-slate-400">Components with active BOM deficit required for releasing jobs</div>
+            </div>
+            <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>{shortages.length} shortages</span>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className={`border-b font-mono font-bold uppercase tracking-wider text-[11px] ${
-                  isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'
+                <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${
+                  isDarkMode ? 'border-white/[0.07] bg-black/20 text-slate-500' : 'border-slate-200 bg-slate-50/80 text-slate-400'
                 }`}>
                   <th className="py-4 px-5">Material SKU</th>
                   <th className="py-4 px-5">Description</th>
                   <th className="py-4 px-5 text-right">Required Qty</th>
                   <th className="py-4 px-5 text-right">Available Qty</th>
-                  <th className="py-4 px-5 text-right">Deficit / Deficit Alert</th>
+                  <th className="py-4 px-5 text-right">Deficit / Alert</th>
                   <th className="py-4 px-5 text-center">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
+              <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
                 {shortages.map(sh => (
-                  <tr key={sh.code} className={isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}>
-                    <td className="py-4 px-5 font-bold font-mono text-[#5B75F8] dark:text-[#7B92FF]">{sh.code}</td>
+                  <tr key={sh.code} className={`transition-colors ${isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'}`}>
+                    <td className="py-4 px-5 font-bold font-mono text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{sh.code}</td>
                     <td className={`py-4 px-5 font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>{sh.description}</td>
                     <td className="py-4 px-5 text-right font-mono font-bold text-amber-500">{sh.requiredQty} {sh.unit}</td>
                     <td className="py-4 px-5 text-right font-mono text-slate-400">{sh.availableQty} {sh.unit}</td>
@@ -805,13 +962,20 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                           setSubTab('purchases');
                           setIsCreatePoOpen(true);
                         }}
-                        className="px-3 py-1.5 rounded-xl bg-[#5B75F8]/10 hover:bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/30 text-xs font-mono font-bold cursor-pointer transition-all"
+                        className="px-3 py-1.5 rounded-xl bg-[var(--accent-primary)]/10 hover:bg-[var(--accent-primary)]/20 text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/30 text-xs font-mono font-bold cursor-pointer transition-all"
                       >
                         Raise PO
                       </button>
                     </td>
                   </tr>
                 ))}
+                {shortages.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-slate-400 font-mono text-xs">
+                      No material shortages detected. All production jobs have sufficient store buffer.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -820,14 +984,21 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
       {/* 3. Purchase Orders Sub-View */}
       {subTab === 'purchases' && (
-        <div className={`rounded-3xl border overflow-hidden transition-all shadow-xl ${
-          isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200'
+        <div className={`overflow-hidden rounded-[22px] border transition-all ${
+          isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
         }`}>
+          <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+            <div>
+              <div className="text-xs font-extrabold text-slate-900 dark:text-white">Procurement & Purchase Orders</div>
+              <div className="mt-0.5 text-[10px] text-slate-400">Supplier purchase orders, delivery milestones, and management approvals</div>
+            </div>
+            <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>{purchaseOrders.length} orders</span>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className={`border-b font-mono font-bold uppercase tracking-wider text-[11px] ${
-                  isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'
+                <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${
+                  isDarkMode ? 'border-white/[0.07] bg-black/20 text-slate-500' : 'border-slate-200 bg-slate-50/80 text-slate-400'
                 }`}>
                   <th className="py-4 px-5">PO Number</th>
                   <th className="py-4 px-5">Supplier Name</th>
@@ -839,10 +1010,10 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   <th className="py-4 px-5 text-center">Governance Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
+              <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
                 {purchaseOrders.map(po => (
-                  <tr key={po.id || po.poNo} className={isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}>
-                    <td className="py-4 px-5 font-bold font-mono text-[#5B75F8] dark:text-[#7B92FF]">{po.poNo}</td>
+                  <tr key={po.id || po.poNo} className={`transition-colors ${isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'}`}>
+                    <td className="py-4 px-5 font-bold font-mono text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{po.poNo}</td>
                     <td className={`py-4 px-5 font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
                       <div>{po.supplierName}</div>
                       <div className="text-[10px] text-slate-500 font-mono">{po.supplierCode}</div>
@@ -892,6 +1063,13 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     </td>
                   </tr>
                 ))}
+                {purchaseOrders.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="py-12 text-center text-slate-400 font-mono text-xs">
+                      No purchase orders recorded yet. Create one to replenish material.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -900,14 +1078,21 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
       {/* 4. Goods Receipt Notes (GRN) Sub-View */}
       {subTab === 'grn' && (
-        <div className={`rounded-3xl border overflow-hidden transition-all shadow-xl ${
-          isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200'
+        <div className={`overflow-hidden rounded-[22px] border transition-all ${
+          isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
         }`}>
+          <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+            <div>
+              <div className="text-xs font-extrabold text-slate-900 dark:text-white">Goods Receipt Notes (GRN)</div>
+              <div className="mt-0.5 text-[10px] text-slate-400">Inward gate logs, vehicle manifests, and QC verification check-ins</div>
+            </div>
+            <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>{grnList.length} receipts</span>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className={`border-b font-mono font-bold uppercase tracking-wider text-[11px] ${
-                  isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'
+                <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${
+                  isDarkMode ? 'border-white/[0.07] bg-black/20 text-slate-500' : 'border-slate-200 bg-slate-50/80 text-slate-400'
                 }`}>
                   <th className="py-4 px-5">GRN Number</th>
                   <th className="py-4 px-5">PO Reference</th>
@@ -918,10 +1103,10 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   <th className="py-4 px-5 text-center">Gate Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
+              <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
                 {grnList.map(g => (
-                  <tr key={g.id || g.grnNo} className={isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}>
-                    <td className="py-4 px-5 font-bold font-mono text-[#5B75F8] dark:text-[#7B92FF]">{g.grnNo}</td>
+                  <tr key={g.id || g.grnNo} className={`transition-colors ${isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'}`}>
+                    <td className="py-4 px-5 font-bold font-mono text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{g.grnNo}</td>
                     <td className="py-4 px-5 font-mono text-slate-300">{g.poNo}</td>
                     <td className={`py-4 px-5 font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>{g.vendorName}</td>
                     <td className="py-4 px-5 font-mono text-slate-400">
@@ -944,7 +1129,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                       {g.status === 'RECEIVED' ? (
                         <button
                           onClick={() => handleGrnStatusChange(g.id || g.grnNo, 'QC_VERIFIED')}
-                          className="px-3 py-1.5 rounded-xl bg-[#5B75F8]/20 hover:bg-[#5B75F8]/30 text-[#7B92FF] border border-[#5B75F8]/40 text-xs font-mono font-bold cursor-pointer transition-all"
+                          className="px-3 py-1.5 rounded-xl bg-[var(--accent-primary)]/20 hover:bg-[var(--accent-primary)]/30 text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/40 text-xs font-mono font-bold cursor-pointer transition-all"
                         >
                           QC Verify
                         </button>
@@ -954,6 +1139,13 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     </td>
                   </tr>
                 ))}
+                {grnList.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center text-slate-400 font-mono text-xs">
+                      No Goods Receipt Notes logged yet. Receive inbound vendor shipments to create one.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -964,8 +1156,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       {subTab === 'movements' && (
         <div className="space-y-4">
           {/* Security & Immutability Badge Banner */}
-          <div className={`p-4 rounded-3xl border flex items-center justify-between gap-4 ${
-            isDarkMode ? 'bg-slate-900/80 border-slate-800/80 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+          <div className={`p-4 rounded-2xl border flex items-center justify-between gap-4 ${
+            isDarkMode ? 'border-white/[0.08] bg-[#171b24] text-white' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)] text-slate-900'
           }`}>
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-2xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
@@ -987,8 +1179,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   onClick={() => setMovementTypeFilter(t)}
                   className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold transition-all cursor-pointer whitespace-nowrap ${
                     movementTypeFilter === t
-                      ? 'bg-[#5B75F8] text-white shadow-xs'
-                      : isDarkMode ? 'bg-slate-800/80 text-slate-400 hover:text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                      ? 'bg-[var(--accent-primary)] text-white shadow-xs'
+                      : isDarkMode ? 'bg-white/[0.06] text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                   }`}
                 >
                   {t.replace('_', ' ')}
@@ -997,14 +1189,21 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             </div>
           </div>
 
-          <div className={`rounded-3xl border overflow-hidden transition-all shadow-xl ${
-            isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200'
+          <div className={`overflow-hidden rounded-[22px] border transition-all ${
+            isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
           }`}>
+            <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+              <div>
+                <div className="text-xs font-extrabold text-slate-900 dark:text-white">Immutable Movement Ledger</div>
+                <div className="mt-0.5 text-[10px] text-slate-400">Cryptographically verifiable sequence of store additions and subtractions</div>
+              </div>
+              <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>{movements.length} ledger events</span>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse font-mono">
                 <thead>
-                  <tr className={`border-b font-bold uppercase tracking-wider text-[10px] ${
-                    isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'
+                  <tr className={`border-b font-bold uppercase tracking-[0.12em] text-[9px] ${
+                    isDarkMode ? 'border-white/[0.07] bg-black/20 text-slate-500' : 'border-slate-200 bg-slate-50/80 text-slate-400'
                   }`}>
                     <th className="py-3.5 px-4">Timestamp</th>
                     <th className="py-3.5 px-4">Part Code</th>
@@ -1017,7 +1216,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     <th className="py-3.5 px-4 text-center">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
+                <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
                   {(Array.isArray(movements) ? movements : [])
                     .filter(m => movementTypeFilter === 'ALL' || m.movementType === movementTypeFilter)
                     .filter(m => !searchQuery || m.itemCode.toLowerCase().includes(searchQuery.toLowerCase()) || m.referenceId?.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -1027,11 +1226,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                       const isAdjustment = mov.movementType === 'ADJUSTMENT';
 
                       return (
-                        <tr key={mov.id} className={isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}>
+                        <tr key={mov.id} className={`transition-colors ${isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'}`}>
                           <td className="py-3 px-4 text-slate-400 text-[11px]">
                             {new Date(mov.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
                           </td>
-                          <td className="py-3 px-4 font-bold text-[#5B75F8] dark:text-[#7B92FF]">
+                          <td className="py-3 px-4 font-bold text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">
                             {mov.itemCode}
                           </td>
                           <td className="py-3 px-4">
@@ -1091,7 +1290,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     })}
                   {(movements?.length ?? 0) === 0 && (
                     <tr>
-                      <td colSpan={9} className="py-8 text-center text-slate-500">
+                      <td colSpan={9} className="py-8 text-center text-slate-500 font-sans text-xs">
                         No ledger movements recorded yet. Movements automatically generate from GRNs, Job Cards, and Dispatches.
                       </td>
                     </tr>
@@ -1106,33 +1305,40 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       {/* 6. Stock Reconciliation & Discrepancy Audit Sub-View */}
       {subTab === 'reconciliation' && (
         <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className={`p-4 rounded-3xl border ${isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'}`}>
-              <div className="text-xs text-slate-400 font-mono">Audited Items</div>
-              <div className="text-2xl font-bold font-mono mt-1 text-[#5B75F8]">{(reconciliationReport || []).length}</div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className={`p-4 rounded-2xl border ${isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">Audited Items</div>
+              <div className="text-2xl font-extrabold font-mono mt-1 text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{(reconciliationReport || []).length}</div>
             </div>
-            <div className={`p-4 rounded-3xl border ${isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'}`}>
-              <div className="text-xs text-slate-400 font-mono">100% Ledger Matched</div>
-              <div className="text-2xl font-bold font-mono mt-1 text-emerald-400">
+            <div className={`p-4 rounded-2xl border ${isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">100% Ledger Matched</div>
+              <div className="text-2xl font-extrabold font-mono mt-1 text-emerald-400">
                 {(reconciliationReport || []).filter(r => r.status === 'MATCHED').length}
               </div>
             </div>
-            <div className={`p-4 rounded-3xl border ${isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'}`}>
-              <div className="text-xs text-slate-400 font-mono">Discrepancies Flagged</div>
-              <div className="text-2xl font-bold font-mono mt-1 text-rose-400">
+            <div className={`p-4 rounded-2xl border ${isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">Discrepancies Flagged</div>
+              <div className="text-2xl font-extrabold font-mono mt-1 text-rose-400">
                 {(reconciliationReport || []).filter(r => r.status === 'DISCREPANCY').length}
               </div>
             </div>
           </div>
 
-          <div className={`rounded-3xl border overflow-hidden transition-all shadow-xl ${
-            isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200'
+          <div className={`overflow-hidden rounded-[22px] border transition-all ${
+            isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
           }`}>
+            <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+              <div>
+                <div className="text-xs font-extrabold text-slate-900 dark:text-white">Physical vs. Derived Ledger Reconciliation</div>
+                <div className="mt-0.5 text-[10px] text-slate-400">Audit report comparing fast cache count against immutable ledger transaction sum</div>
+              </div>
+              <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>{reconciliationReport.length} items</span>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse font-mono">
                 <thead>
-                  <tr className={`border-b font-bold uppercase tracking-wider text-[10px] ${
-                    isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'
+                  <tr className={`border-b font-bold uppercase tracking-[0.12em] text-[9px] ${
+                    isDarkMode ? 'border-white/[0.07] bg-black/20 text-slate-500' : 'border-slate-200 bg-slate-50/80 text-slate-400'
                   }`}>
                     <th className="py-3.5 px-5">Part Code</th>
                     <th className="py-3.5 px-5">Description</th>
@@ -1143,12 +1349,12 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     <th className="py-3.5 px-5 text-center">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
+                <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
                   {(reconciliationReport || []).map((rec) => {
                     const isDiscrepancy = rec.status === 'DISCREPANCY';
                     return (
-                      <tr key={rec.itemCode} className={isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}>
-                        <td className="py-4 px-5 font-bold text-[#5B75F8] dark:text-[#7B92FF]">{rec.itemCode}</td>
+                      <tr key={rec.itemCode} className={`transition-colors ${isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'}`}>
+                        <td className="py-4 px-5 font-bold text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{rec.itemCode}</td>
                         <td className="py-4 px-5 text-slate-200 font-sans font-medium">{rec.description}</td>
                         <td className="py-4 px-5 text-right font-bold text-emerald-400">{rec.ledgerBalance}</td>
                         <td className={`py-4 px-5 text-right font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{rec.cachedOnHand}</td>
@@ -1171,7 +1377,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                               onAdjustStock(rec.itemCode, rec.discrepancy, 'Reconciliation Correction');
                             }}
                             className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer ${
-                              isDarkMode ? 'bg-[#5B75F8]/10 text-[#7B92FF] hover:bg-[#5B75F8]/20 border border-[#5B75F8]/30' : 'bg-[#5B75F8]/10 text-[#5B75F8] hover:bg-[#5B75F8]/20 border border-[#5B75F8]/20'
+                              isDarkMode ? 'bg-[var(--accent-soft-dark)] text-[var(--accent-text-dark)] hover:brightness-125 border border-[var(--accent-border-dark)]' : 'bg-[var(--accent-soft-light)] text-[var(--accent-text-light)] hover:brightness-95 border border-[var(--accent-border-light)]'
                             }`}
                           >
                             Reconcile

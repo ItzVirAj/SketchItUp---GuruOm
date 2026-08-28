@@ -1287,65 +1287,90 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
       </div>
       
       {/* ========================================================================= */}
-      {/* ── DESKTOP TOP HERO BANNER (≥ md) ──                                      */}
+      {/* ── DESKTOP HEADER & INTEGRATED KPI ROW (≥ md) ──                          */}
       {/* ========================================================================= */}
-      <div className={`hidden md:block p-6 rounded-3xl border transition-all ${
-        isDarkMode 
-          ? 'bg-slate-900/80 border-slate-800/80 text-white backdrop-blur-xl shadow-2xl' 
-          : 'bg-white border-slate-200 shadow-sm text-slate-900'
-      }`}>
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider ${
-                isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/30' : 'bg-[#5B75F8]/10 text-[#5B75F8] border border-[#5B75F8]/20'
-              }`}>
-                Manufacturing Control System
-              </span>
-              <span className="text-xs text-slate-400 font-mono">• BOM, Route Cards & Shopfloor Execution</span>
+      <div className="hidden md:block space-y-4">
+        <section className={`overflow-hidden rounded-[24px] border ${isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'}`}>
+          <div className="flex items-center justify-between gap-6 px-6 py-5">
+            <div className="min-w-0">
+              <div className="mb-1.5 flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                Shopfloor & Engineering Telemetry
+                <span className="text-slate-300 dark:text-slate-700">/</span>
+                <span>{activeJobsCount} Active Jobs</span>
+              </div>
+              <div className="flex items-baseline gap-3">
+                <h1 className="truncate text-[25px] font-extrabold tracking-[-0.04em] text-slate-950 dark:text-white">
+                  Production & Manufacturing Engineering
+                </h1>
+                <span className="hidden font-mono text-[10px] font-semibold text-slate-400 xl:inline">
+                  JOB CARDS • ROUTE CARDS • BOM RECIPES • CAPACITY MATRIX
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Manage Bill of Materials (BOM recipes), configure multi-operation Route Cards, simulate batch requirements, and release shopfloor Job Cards.
+              </p>
             </div>
-            <h1 className={`text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-              Production & Manufacturing Engineering
-            </h1>
-            <p className={`text-xs mt-1 max-w-xl ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-              Manage Bill of Materials (BOM recipes), configure multi-operation Route Cards, simulate batch requirements, and release shopfloor Job Cards.
-            </p>
+
+            <div className="flex items-center gap-2 shrink-0">
+              {activeSection === 'job-cards' && (
+                <button
+                  onClick={openNewJobModal}
+                  className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-all hover:bg-[var(--accent-hover)] active:scale-[0.98]"
+                >
+                  <Plus className="h-4 w-4" />
+                  Create Job Card
+                </button>
+              )}
+              {activeSection === 'route-cards' && (
+                <button
+                  onClick={handleOpenCreateRoute}
+                  className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-all hover:bg-[var(--accent-hover)] active:scale-[0.98]"
+                >
+                  <Route className="h-4 w-4" />
+                  Create Route Card
+                </button>
+              )}
+              {activeSection === 'bom' && (
+                <button
+                  onClick={handleOpenCreateBom}
+                  className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-all hover:bg-[var(--accent-hover)] active:scale-[0.98]"
+                >
+                  <Layers className="h-4 w-4" />
+                  Create BOM Formula
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {activeSection === 'job-cards' && (
-              <button
-                onClick={openNewJobModal}
-                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] via-indigo-600 to-[#4F46E5] hover:from-indigo-500 hover:to-[#5B75F8] text-white font-mono font-bold text-xs flex items-center gap-2 cursor-pointer border border-[#7B92FF]/40 shadow-[0_4px_20px_rgba(91,117,248,0.35)] hover:shadow-[0_6px_24px_rgba(91,117,248,0.55)] transition-all hover:scale-[1.03] active:scale-[0.97]"
-              >
-                <Plus className="w-4 h-4 text-white" />
-                <span>Create Job Card</span>
-              </button>
-            )}
-            {activeSection === 'route-cards' && (
-              <button
-                onClick={handleOpenCreateRoute}
-                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-teal-500 hover:to-emerald-600 text-white font-mono font-bold text-xs flex items-center gap-2 cursor-pointer border border-emerald-400/40 shadow-[0_4px_20px_rgba(16,185,129,0.35)] hover:shadow-[0_6px_24px_rgba(16,185,129,0.55)] transition-all hover:scale-[1.03] active:scale-[0.97]"
-              >
-                <Route className="w-4 h-4 text-white" />
-                <span>Create Route Card</span>
-              </button>
-            )}
-            {activeSection === 'bom' && (
-              <button
-                onClick={handleOpenCreateBom}
-                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] via-indigo-600 to-[#4F46E5] hover:from-indigo-500 hover:to-[#5B75F8] text-white font-mono font-bold text-xs flex items-center gap-2 cursor-pointer border border-[#7B92FF]/40 shadow-[0_4px_20px_rgba(91,117,248,0.35)] hover:shadow-[0_6px_24px_rgba(91,117,248,0.55)] transition-all hover:scale-[1.03] active:scale-[0.97]"
-              >
-                <Layers className="w-4 h-4 text-white" />
-                <span>Create BOM Formula</span>
-              </button>
-            )}
+          {/* Integrated 4-Column Metric Strip (border-t) */}
+          <div className={`grid grid-cols-4 border-t ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+            {[
+              { label: 'Active Job Cards', value: String(activeJobsCount), detail: 'Shopfloor execution', icon: Factory, tone: 'text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)]', iconBg: 'bg-[var(--accent-soft-light)] dark:bg-[var(--accent-soft-dark)]' },
+              { label: 'Configured BOMs', value: String(boms.length), detail: 'WHAT formulas', icon: Layers, tone: 'text-indigo-600 dark:text-indigo-400', iconBg: 'bg-indigo-500/10' },
+              { label: 'Route Cards', value: String(routeCards.length), detail: 'HOW sequences', icon: Route, tone: 'text-emerald-600 dark:text-emerald-400', iconBg: 'bg-emerald-500/10' },
+              { label: 'OEE Efficiency', value: '94.2%', detail: 'Nominal shopfloor rate', icon: Activity, tone: 'text-amber-600 dark:text-amber-400', iconBg: 'bg-amber-500/10' },
+            ].map((metric, index) => {
+              const MetricIcon = metric.icon;
+              return (
+                <div key={metric.label} className={`flex items-center gap-3 px-5 py-4 ${index > 0 ? isDarkMode ? 'border-l border-white/[0.07]' : 'border-l border-slate-200' : ''}`}>
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${metric.iconBg} ${metric.tone}`}>
+                    <MetricIcon className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-mono text-[9px] font-bold uppercase tracking-[0.13em] text-slate-400">{metric.label}</div>
+                    <div className={`mt-0.5 truncate text-lg font-extrabold tracking-[-0.03em] ${metric.tone}`}>{metric.value}</div>
+                    <div className="truncate text-[10px] text-slate-400">{metric.detail}</div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </div>
+        </section>
 
         {/* Global Toast Feedback Banners */}
         {actionSuccess && (
-          <div className="mt-4 p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center justify-between font-mono">
+          <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center justify-between font-mono">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
               <span>{actionSuccess}</span>
@@ -1354,7 +1379,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
           </div>
         )}
         {actionError && (
-          <div className="mt-4 p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center justify-between font-mono">
+          <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center justify-between font-mono">
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-rose-400" />
               <span>{actionError}</span>
@@ -1363,120 +1388,77 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
           </div>
         )}
 
-        {/* Telemetry Stat Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-          <div className={`p-4 rounded-2xl border transition-all ${
-            isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/80 border-slate-200/80'
-          }`}>
-            <div className="flex items-center justify-between">
-              <span className={`text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Active Job Cards</span>
-              <div className={`p-2 rounded-xl ${isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF]' : 'bg-[#5B75F8]/10 text-[#5B75F8]'}`}>
-                <Factory className="w-4 h-4" />
-              </div>
+        {/* Desktop Primary Section Navigation & Search Toolbar */}
+        <div className={`rounded-2xl border p-3 ${isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
+          <div className="flex items-center gap-2">
+            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${isDarkMode ? 'bg-white/[0.05] text-slate-400' : 'bg-slate-100 text-slate-500'}`} title="Modules">
+              <Factory className="h-4 w-4" />
             </div>
-            <div className="mt-2 flex items-baseline justify-between">
-              <span className={`text-2xl font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{activeJobsCount}</span>
-              <span className="text-[11px] font-mono font-semibold text-[#5B75F8]">Shopfloor</span>
+
+            <div className="flex items-center gap-1.5 overflow-x-auto">
+              {[
+                { id: 'job-cards', label: 'Job Cards (Shopfloor)', count: jobCards.length, icon: Factory },
+                { id: 'route-cards', label: 'Route Cards (HOW)', count: routeCards.length, icon: Route },
+                { id: 'bom', label: 'Bill of Materials (WHAT)', count: boms.length, icon: Layers },
+                { id: 'matrix', label: 'Engineering Hub & Matrix', icon: GitFork },
+              ].map(section => {
+                const Icon = section.icon;
+                const isActive = activeSection === section.id;
+                return (
+                  <button
+                    key={section.id}
+                    onClick={() => setActiveSection(section.id as ProductionSection)}
+                    className={`flex items-center gap-1.5 h-10 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap border ${
+                      isActive
+                        ? isDarkMode
+                          ? 'bg-[var(--accent-primary)]/20 text-[var(--accent-text-dark)] border-[var(--accent-primary)]/40 shadow-xs'
+                          : 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)] shadow-sm shadow-[var(--accent-shadow)]'
+                        : isDarkMode
+                          ? 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/[0.06]'
+                          : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    <span>{section.label}</span>
+                    {section.count !== undefined && (
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${
+                        isActive
+                          ? isDarkMode ? 'bg-[var(--accent-primary)]/30 text-white' : 'bg-white/25 text-white'
+                          : isDarkMode ? 'bg-white/[0.06] text-slate-400' : 'bg-slate-200 text-slate-600'
+                      }`}>
+                        {section.count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className={`flex h-10 min-w-[240px] flex-1 items-center gap-2 rounded-xl border px-3 ml-auto ${isDarkMode ? 'border-white/[0.08] bg-black/20 text-white focus-within:border-[var(--accent-border-dark)]' : 'border-slate-200 bg-slate-50 text-slate-900 focus-within:border-[var(--accent-primary)]'}`}>
+              <Search className="h-4 w-4 shrink-0 text-slate-400" />
+              <input
+                type="text"
+                placeholder={
+                  activeSection === 'job-cards' ? "Search Job #, Machine, Part..." :
+                  activeSection === 'route-cards' ? "Search Part Code, Route..." :
+                  activeSection === 'bom' ? "Search BOM Code, SKU..." : "Search Finished Good SKU..."
+                }
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-full w-full bg-transparent text-xs font-semibold outline-none placeholder:font-normal placeholder:text-slate-400 font-mono"
+              />
+              {searchQuery && (
+                <button type="button" onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-700 dark:hover:text-white">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
           </div>
 
-          <div className={`p-4 rounded-2xl border transition-all ${
-            isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/80 border-slate-200/80'
-          }`}>
-            <div className="flex items-center justify-between">
-              <span className={`text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Configured BOMs</span>
-              <div className={`p-2 rounded-xl ${isDarkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-100 text-indigo-700'}`}>
-                <Layers className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="mt-2 flex items-baseline justify-between">
-              <span className={`text-2xl font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{boms.length}</span>
-              <span className="text-[11px] font-mono font-semibold text-indigo-400">WHAT Formulas</span>
-            </div>
+          <div className="mt-2.5 flex items-center justify-between px-1 font-mono text-[9px] font-semibold uppercase tracking-wider text-slate-400">
+            <span>Showing {activeSection === 'job-cards' ? filteredCards.length : activeSection === 'route-cards' ? routeCards.length : activeSection === 'bom' ? boms.length : 1} records</span>
+            <span>Discrete Manufacturing & Shopfloor Execution Control</span>
           </div>
-
-          <div className={`p-4 rounded-2xl border transition-all ${
-            isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/80 border-slate-200/80'
-          }`}>
-            <div className="flex items-center justify-between">
-              <span className={`text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Route Cards</span>
-              <div className={`p-2 rounded-xl ${isDarkMode ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-700'}`}>
-                <Route className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="mt-2 flex items-baseline justify-between">
-              <span className={`text-2xl font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{routeCards.length}</span>
-              <span className="text-[11px] font-mono font-semibold text-emerald-500">HOW Sequences</span>
-            </div>
-          </div>
-
-          <div className={`p-4 rounded-2xl border transition-all ${
-            isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/80 border-slate-200/80'
-          }`}>
-            <div className="flex items-center justify-between">
-              <span className={`text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>OEE Efficiency</span>
-              <div className={`p-2 rounded-xl ${isDarkMode ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-100 text-amber-700'}`}>
-                <Activity className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="mt-2 flex items-baseline justify-between">
-              <span className={`text-2xl font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>94.2%</span>
-              <span className="text-[11px] font-mono font-semibold text-amber-500">Nominal</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Primary Section Switcher Navigation Tabs */}
-      <div className={`p-3 rounded-3xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-        isDarkMode ? 'bg-slate-900/70 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-xs'
-      }`}>
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 no-scrollbar max-w-full">
-          {[
-            { id: 'job-cards', label: 'Job Cards (Shopfloor)', icon: Factory },
-            { id: 'route-cards', label: 'Route Cards (HOW)', icon: Route },
-            { id: 'bom', label: 'Bill of Materials (WHAT)', icon: Layers },
-            { id: 'matrix', label: 'Engineering Hub & Matrix', icon: GitFork },
-          ].map(section => {
-            const Icon = section.icon;
-            const isActive = activeSection === section.id;
-            return (
-              <button
-                key={section.id}
-                onClick={() => setActiveSection(section.id as ProductionSection)}
-                className={`min-h-[40px] px-3.5 py-2 rounded-2xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap shrink-0 ${
-                  isActive
-                    ? isDarkMode 
-                      ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' 
-                      : 'bg-[#5B75F8] text-white shadow-xs'
-                    : isDarkMode
-                      ? 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                <span>{section.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Search Input */}
-        <div className={`relative flex items-center rounded-2xl border px-3.5 py-2 transition-all min-h-[40px] ${
-          isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white focus-within:border-[#5B75F8]/50' : 'bg-slate-50 border-slate-200 text-slate-900 focus-within:border-[#5B75F8]'
-        }`}>
-          <Search className="w-4 h-4 text-slate-400 shrink-0 mr-2" />
-          <input
-            type="text"
-            placeholder={
-              activeSection === 'job-cards' ? "Search Job #, Machine, Part..." :
-              activeSection === 'route-cards' ? "Search Part Code, Route..." :
-              activeSection === 'bom' ? "Search BOM Code, SKU..." : "Search Finished Good SKU..."
-            }
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-transparent outline-none text-xs w-full sm:w-56 font-mono"
-          />
         </div>
       </div>
 
@@ -1484,42 +1466,57 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
       {/* SECTION 1: JOB CARDS & SHOPFLOOR EXECUTION */}
       {/* ========================================================================================= */}
       {activeSection === 'job-cards' && (
-        <div className="space-y-4 sm:space-y-6">
-          {/* View Filter Pill Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 no-scrollbar max-w-full">
+        <div className="space-y-4">
+          {/* Status Filter Tabs & View Switcher Bar */}
+          <div className={`p-2.5 rounded-2xl border flex items-center justify-between gap-3 ${
+            isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'
+          }`}>
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+              <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 px-2 shrink-0">
+                Status:
+              </div>
               {[
-                { id: 'ALL', label: 'All Jobs' },
-                { id: 'SCHEDULED', label: 'Scheduled' },
-                { id: 'RUNNING', label: 'Running' },
-                { id: 'IN_PROGRESS', label: 'In Progress' },
-                { id: 'COMPLETED', label: 'Completed' },
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setStatusFilter(tab.id)}
-                  className={`min-h-[36px] px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-                    statusFilter === tab.id
-                      ? isDarkMode 
-                        ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' 
-                        : 'bg-[#5B75F8] text-white shadow-xs'
-                      : isDarkMode
-                        ? 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+                { id: 'ALL', label: 'All Jobs', count: jobCards.length },
+                { id: 'SCHEDULED', label: 'Scheduled', count: jobCards.filter(j => j.status === 'SCHEDULED').length },
+                { id: 'RUNNING', label: 'Running', count: jobCards.filter(j => j.status === 'RUNNING').length },
+                { id: 'IN_PROGRESS', label: 'In Progress', count: jobCards.filter(j => j.status === 'IN_PROGRESS').length },
+                { id: 'COMPLETED', label: 'Completed', count: jobCards.filter(j => j.status === 'COMPLETED').length },
+              ].map(tab => {
+                const isActive = statusFilter === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setStatusFilter(tab.id)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer whitespace-nowrap border ${
+                      isActive
+                        ? isDarkMode 
+                          ? 'bg-[var(--accent-soft-dark)] text-[var(--accent-text-dark)] border-[var(--accent-border-dark)] shadow-xs'
+                          : 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)] shadow-xs'
+                        : isDarkMode
+                          ? 'bg-white/[0.04] text-slate-400 border-white/[0.06] hover:text-slate-200 hover:bg-white/[0.08]'
+                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-100'
+                    }`}
+                  >
+                    <span>{tab.label}</span>
+                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                      isActive
+                        ? isDarkMode ? 'bg-white/20 text-white' : 'bg-white/25 text-white'
+                        : isDarkMode ? 'bg-white/[0.06] text-slate-400' : 'bg-slate-200 text-slate-700'
+                    }`}>
+                      {tab.count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
-            <div className={`flex items-center p-1 rounded-2xl border ${
-              isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
+            <div className={`flex items-center p-1 rounded-xl border shrink-0 ${
+              isDarkMode ? 'bg-white/[0.04] border-white/[0.08]' : 'bg-slate-100 border-slate-200'
             }`}>
               <button
                 onClick={() => setViewMode('list')}
-                className={`p-1.5 rounded-xl transition-all cursor-pointer ${
-                  viewMode === 'list' ? (isDarkMode ? 'bg-slate-800 text-[#7B92FF]' : 'bg-white text-[#5B75F8] shadow-xs') : 'text-slate-400'
+                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                  viewMode === 'list' ? (isDarkMode ? 'bg-white/[0.1] text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs') : 'text-slate-400 hover:text-slate-700 dark:hover:text-white'
                 }`}
                 title="List View"
               >
@@ -1527,8 +1524,8 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
               </button>
               <button
                 onClick={() => setViewMode('board')}
-                className={`p-1.5 rounded-xl transition-all cursor-pointer ${
-                  viewMode === 'board' ? (isDarkMode ? 'bg-slate-800 text-[#7B92FF]' : 'bg-white text-[#5B75F8] shadow-xs') : 'text-slate-400'
+                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                  viewMode === 'board' ? (isDarkMode ? 'bg-white/[0.1] text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs') : 'text-slate-400 hover:text-slate-700 dark:hover:text-white'
                 }`}
                 title="Kanban Board"
               >
@@ -1651,14 +1648,21 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
           {/* Main Desktop Jobs Table / Kanban (≥ md) */}
           <div className="hidden md:block">
             {viewMode === 'list' ? (
-              <div className={`rounded-3xl border overflow-hidden transition-all shadow-xl ${
-                isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200'
+              <div className={`overflow-hidden rounded-[22px] border transition-all ${
+                isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
               }`}>
+                <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+                  <div>
+                    <div className="text-xs font-extrabold text-slate-900 dark:text-white">Active Shopfloor Job Cards</div>
+                    <div className="mt-0.5 text-[10px] text-slate-400">Live operational execution, machine assignment, and routing traveler status</div>
+                  </div>
+                  <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>{filteredCards.length} job cards</span>
+                </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse font-mono">
                     <thead>
-                      <tr className={`border-b font-bold uppercase tracking-wider text-[11px] ${
-                        isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'
+                      <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${
+                        isDarkMode ? 'border-white/[0.07] bg-black/20 text-slate-500' : 'border-slate-200 bg-slate-50/80 text-slate-400'
                       }`}>
                         <th className="py-4 px-5">Job Card #</th>
                         <th className="py-4 px-5">Customer Order PO</th>
@@ -1670,10 +1674,10 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                         <th className="py-4 px-5 text-center">Action</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
+                    <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
                       {filteredCards.length === 0 ? (
                         <tr>
-                          <td colSpan={8} className="py-8 text-center text-slate-400">
+                          <td colSpan={8} className="py-12 text-center text-slate-400 font-mono text-xs">
                             No job cards found matching criteria.
                           </td>
                         </tr>
@@ -1682,26 +1686,40 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                         <tr 
                           key={jc.jobNo} 
                           onClick={() => setSelectedJobForDetail(jc)}
-                          className={`cursor-pointer transition-colors ${isDarkMode ? 'hover:bg-slate-800/60' : 'hover:bg-indigo-50/40'}`}
+                          className={`group transition-colors ${isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'}`}
                         >
-                          <td className="py-4 px-5 font-bold font-mono text-[#5B75F8] dark:text-[#7B92FF]">
-                            <div className="hover:underline flex items-center gap-1.5">
-                              <span>{jc.jobNo}</span>
-                              <ArrowRight className="w-3 h-3 opacity-60" />
+                          <td className="py-4 px-5">
+                            <div className="flex items-center gap-2.5">
+                              <div className={`p-2 rounded-xl transition-transform group-hover:scale-105 shrink-0 ${
+                                isDarkMode 
+                                  ? 'bg-[var(--accent-primary)]/20 text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/30' 
+                                  : 'bg-[var(--accent-primary)]/10 text-[var(--accent-text-light)] border border-[var(--accent-primary)]/20'
+                              }`}>
+                                <Factory className="w-3.5 h-3.5" />
+                              </div>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="font-bold text-xs font-mono text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">
+                                    {jc.jobNo}
+                                  </span>
+                                  {jc.drawingRevision && (
+                                    <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-mono font-bold uppercase tracking-wider border ${
+                                      isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                    }`}>
+                                      Rev: {jc.drawingRevision}
+                                    </span>
+                                  )}
+                                </div>
+                                {jc.materialIssuedLot && (
+                                  <div className={`text-[10px] font-mono truncate mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                                    Heat: {jc.materialIssuedLot}
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                            {jc.drawingRevision && (
-                              <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[9px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                                Rev: {jc.drawingRevision}
-                              </span>
-                            )}
                           </td>
                           <td className="py-4 px-5 font-mono text-slate-400">
-                            <div>{jc.orderPo}</div>
-                            {jc.materialIssuedLot && (
-                              <div className="text-[10px] text-slate-500">
-                                Heat: {jc.materialIssuedLot}
-                              </div>
-                            )}
+                            <div className="font-bold text-slate-800 dark:text-slate-200">{jc.orderPo}</div>
                           </td>
                           <td className={`py-4 px-5 font-semibold font-sans ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
                             <div>{jc.partCode} — {jc.partDescription}</div>
@@ -1744,11 +1762,12 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                           <td className="py-3 px-5 text-center" onClick={(e) => e.stopPropagation()}>
                             <button
                               onClick={() => setSelectedJobForDetail(jc)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-mono text-[11px] font-bold tracking-wide transition-all cursor-pointer bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-500 hover:to-[#5B75F8] text-white border border-[#7B92FF]/30 shadow-xs hover:shadow-[0_2px_12px_rgba(91,117,248,0.35)] hover:scale-[1.02] active:scale-[0.98]"
+                              className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer ${
+                                isDarkMode ? 'bg-[var(--accent-soft-dark)] text-[var(--accent-text-dark)] hover:brightness-125 border border-[var(--accent-border-dark)]' : 'bg-[var(--accent-soft-light)] text-[var(--accent-text-light)] hover:brightness-95 border border-[var(--accent-border-light)]'
+                              }`}
                               title="Open Full Job Card Detail View"
                             >
-                              <Route className="w-3.5 h-3.5 shrink-0" />
-                              <span>View Card</span>
+                              View Card
                             </button>
                           </td>
                         </tr>
@@ -1820,8 +1839,8 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
       {activeSection === 'route-cards' && (
         <div className="space-y-4">
           {routeCards.length === 0 ? (
-            <div className={`p-10 rounded-3xl border text-center ${
-              isDarkMode ? 'bg-slate-900/80 border-slate-800/80' : 'bg-white border-slate-200 shadow-sm'
+            <div className={`p-10 rounded-[22px] border text-center ${
+              isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
             }`}>
               <div className="inline-flex p-3 rounded-2xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 mb-3">
                 <Route className="w-7 h-7" />
@@ -1832,7 +1851,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
               </p>
               <button
                 onClick={handleOpenCreateRoute}
-                className="mt-4 px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs font-mono inline-flex items-center gap-2 cursor-pointer shadow-lg shadow-emerald-500/20"
+                className="mt-4 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs font-mono inline-flex items-center gap-2 cursor-pointer shadow-md shadow-emerald-500/20"
               >
                 <Plus className="w-4 h-4" />
                 <span>Create Master Route Card</span>
@@ -1848,27 +1867,27 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
             return (
               <div
                 key={route.partCode}
-                className={`rounded-3xl border transition-all overflow-hidden ${
-                  isDarkMode ? 'bg-slate-900/80 border-slate-800/80' : 'bg-white border-slate-200 shadow-sm'
+                className={`rounded-[22px] border transition-all overflow-hidden ${
+                  isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'
                 }`}
               >
                 <div
                   className={`p-5 flex flex-wrap items-center justify-between gap-4 transition-all ${
-                    isDarkMode ? 'hover:bg-slate-800/30' : 'hover:bg-slate-50'
+                    isDarkMode ? 'hover:bg-white/[0.02]' : 'hover:bg-slate-50'
                   }`}
                 >
                   <div 
                     onClick={() => setExpandedRoutePart(isExpanded ? null : route.partCode)}
                     className="flex items-center gap-3.5 cursor-pointer flex-1 min-w-[280px]"
                   >
-                    <div className="p-2.5 rounded-2xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                    <div className="p-2.5 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
                       <Route className="w-5 h-5" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-bold font-mono text-sm text-emerald-500 dark:text-emerald-400">{route.partCode}</span>
                         <span className={`px-2 py-0.5 rounded-md text-[10px] font-mono ${
-                          isDarkMode ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-600'
+                          isDarkMode ? 'bg-white/[0.06] text-slate-300' : 'bg-slate-100 text-slate-600'
                         }`}>{route.revision || 'REV-A'}</span>
                         <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
                           {route.status || 'ACTIVE'}
@@ -1895,27 +1914,33 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                       <button
                         onClick={() => handleOpenEditRoute(route)}
                         title="Edit Route Card Sequences"
-                        className="p-2 rounded-xl border border-slate-700/80 bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white hover:border-[#5B75F8]/50 shadow-xs hover:shadow-[0_0_10px_rgba(91,117,248,0.2)] text-xs font-mono font-bold cursor-pointer transition-all hover:scale-105 active:scale-95"
+                        className={`p-2 rounded-xl border text-xs font-mono font-bold cursor-pointer transition-all hover:scale-105 active:scale-95 ${
+                          isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-300 hover:text-white' : 'border-slate-200 bg-slate-50 text-slate-600 hover:text-slate-900'
+                        }`}
                       >
                         <Edit className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => setDuplicatingRoute(route)}
                         title="Duplicate Route Card"
-                        className="p-2 rounded-xl border border-slate-700/80 bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white hover:border-[#5B75F8]/50 shadow-xs hover:shadow-[0_0_10px_rgba(91,117,248,0.2)] text-xs font-mono font-bold cursor-pointer transition-all hover:scale-105 active:scale-95"
+                        className={`p-2 rounded-xl border text-xs font-mono font-bold cursor-pointer transition-all hover:scale-105 active:scale-95 ${
+                          isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-300 hover:text-white' : 'border-slate-200 bg-slate-50 text-slate-600 hover:text-slate-900'
+                        }`}
                       >
                         <Copy className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => setDeleteConfirmRoute(route)}
                         title="Delete Route Card"
-                        className="p-2 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 hover:border-rose-400/60 shadow-xs hover:shadow-[0_0_10px_rgba(244,63,94,0.2)] text-xs font-mono font-bold cursor-pointer transition-all hover:scale-105 active:scale-95"
+                        className="p-2 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 shadow-xs text-xs font-mono font-bold cursor-pointer transition-all hover:scale-105 active:scale-95"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => setExpandedRoutePart(isExpanded ? null : route.partCode)}
-                        className="p-2 rounded-xl border border-slate-700/80 bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-white cursor-pointer transition-all hover:scale-105 active:scale-95"
+                        className={`p-2 rounded-xl border text-slate-400 hover:text-white cursor-pointer transition-all hover:scale-105 active:scale-95 ${
+                          isDarkMode ? 'border-white/[0.08] bg-white/[0.04]' : 'border-slate-200 bg-slate-50'
+                        }`}
                       >
                         {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                       </button>
@@ -1926,7 +1951,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                 {/* Collapsible Sequenced Operations Flow */}
                 {isExpanded && (
                   <div className={`p-5 border-t ${
-                    isDarkMode ? 'border-slate-800/80 bg-slate-950/40' : 'border-slate-200 bg-slate-50/60'
+                    isDarkMode ? 'border-white/[0.07] bg-black/20' : 'border-slate-200 bg-slate-50/60'
                   }`}>
                     <div className="flex items-center justify-between mb-3">
                       <h5 className={`text-[11px] font-mono uppercase font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
@@ -1938,13 +1963,13 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                     </div>
 
                     <div className={`rounded-2xl border overflow-hidden ${
-                      isDarkMode ? 'border-slate-800/80' : 'border-slate-200'
+                      isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'
                     }`}>
                       <div className="overflow-x-auto">
                         <table className="w-full text-left text-xs border-collapse font-mono">
                           <thead>
                             <tr className={`border-b font-bold uppercase tracking-wider text-[10px] ${
-                              isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-100/80 border-slate-200 text-slate-500'
+                              isDarkMode ? 'bg-black/20 border-white/[0.07] text-slate-400' : 'bg-slate-100/80 border-slate-200 text-slate-500'
                             }`}>
                               <th className="py-3 px-4 text-center">Seq #</th>
                               <th className="py-3 px-4">Operation Name</th>
@@ -1956,7 +1981,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                           </thead>
                           <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/50' : 'divide-slate-200'}`}>
                             {route.operations?.map((op, idx) => (
-                              <tr key={op.id || idx} className={isDarkMode ? 'hover:bg-slate-900/60' : 'bg-white hover:bg-slate-50'}>
+                              <tr key={op.id || idx} className={isDarkMode ? 'hover:bg-white/[0.02]' : 'bg-white hover:bg-slate-50'}>
                                 <td className="py-3 px-4 text-center font-bold text-emerald-400">
                                   {op.sequenceNo}
                                 </td>
@@ -2001,10 +2026,10 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
       {activeSection === 'bom' && (
         <div className="space-y-4">
           {boms.length === 0 ? (
-            <div className={`p-10 rounded-3xl border text-center ${
-              isDarkMode ? 'bg-slate-900/80 border-slate-800/80' : 'bg-white border-slate-200 shadow-sm'
+            <div className={`p-10 rounded-[22px] border text-center ${
+              isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
             }`}>
-              <div className="inline-flex p-3 rounded-2xl bg-[#5B75F8]/15 text-[#5B75F8] dark:text-[#7B92FF] border border-[#5B75F8]/30 mb-3">
+              <div className="inline-flex p-3 rounded-2xl bg-[var(--accent-primary)]/15 text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/30 mb-3">
                 <Layers className="w-7 h-7" />
               </div>
               <h4 className={`text-base font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>No BOM Formulas Configured</h4>
@@ -2013,7 +2038,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
               </p>
               <button
                 onClick={handleOpenCreateBom}
-                className="mt-4 px-5 py-2.5 rounded-2xl bg-[#5B75F8] hover:bg-[#4A64E7] text-white font-bold text-xs font-mono inline-flex items-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20"
+                className="mt-4 px-5 py-2.5 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-white font-bold text-xs font-mono inline-flex items-center gap-2 cursor-pointer shadow-md shadow-[var(--accent-shadow)]"
               >
                 <Plus className="w-4 h-4" />
                 <span>Create BOM Formula</span>
@@ -2026,34 +2051,34 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
             return (
               <div
                 key={bom.id || bom.bomCode}
-                className={`rounded-3xl border transition-all overflow-hidden ${
-                  isDarkMode ? 'bg-slate-900/80 border-slate-800/80' : 'bg-white border-slate-200 shadow-sm'
+                className={`rounded-[22px] border transition-all overflow-hidden ${
+                  isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'
                 }`}
               >
                 <div
                   className={`p-5 flex flex-wrap items-center justify-between gap-4 transition-all ${
-                    isDarkMode ? 'hover:bg-slate-800/30' : 'hover:bg-slate-50'
+                    isDarkMode ? 'hover:bg-white/[0.02]' : 'hover:bg-slate-50'
                   }`}
                 >
                   <div 
                     onClick={() => setExpandedBomCode(isExpanded ? null : bom.bomCode)}
                     className="flex items-center gap-3.5 cursor-pointer flex-1 min-w-[280px]"
                   >
-                    <div className="p-2.5 rounded-2xl bg-[#5B75F8]/15 text-[#5B75F8] dark:text-[#7B92FF] border border-[#5B75F8]/30">
+                    <div className="p-2.5 rounded-xl bg-[var(--accent-primary)]/15 text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/30">
                       <Layers className="w-5 h-5" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-bold font-mono text-sm text-[#5B75F8] dark:text-[#7B92FF]">{bom.bomCode}</span>
+                        <span className="font-bold font-mono text-sm text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{bom.bomCode}</span>
                         <span className={`px-2 py-0.5 rounded-md text-[10px] font-mono ${
-                          isDarkMode ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-600'
+                          isDarkMode ? 'bg-white/[0.06] text-slate-300' : 'bg-slate-100 text-slate-600'
                         }`}>{bom.revision}</span>
                         <span className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-bold border ${
                           bom.status === 'ACTIVE' 
                             ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
                             : bom.status === 'DRAFT'
                             ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                            : 'bg-slate-800 text-slate-400 border-slate-700'
+                            : 'bg-white/[0.06] text-slate-400 border-white/[0.08]'
                         }`}>
                           {bom.status}
                         </span>
@@ -2077,21 +2102,25 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                       <button
                         onClick={() => handleOpenEditBom(bom)}
                         title="Edit BOM Formula & Components"
-                        className="p-2 rounded-xl border border-slate-700/80 bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white hover:border-[#5B75F8]/50 shadow-xs hover:shadow-[0_0_10px_rgba(91,117,248,0.2)] text-xs font-mono font-bold cursor-pointer transition-all hover:scale-105 active:scale-95"
+                        className={`p-2 rounded-xl border text-xs font-mono font-bold cursor-pointer transition-all hover:scale-105 active:scale-95 ${
+                          isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-300 hover:text-white' : 'border-slate-200 bg-slate-50 text-slate-600 hover:text-slate-900'
+                        }`}
                       >
                         <Edit className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => setDuplicatingBom(bom)}
                         title="Duplicate BOM Formula"
-                        className="p-2 rounded-xl border border-slate-700/80 bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white hover:border-[#5B75F8]/50 shadow-xs hover:shadow-[0_0_10px_rgba(91,117,248,0.2)] text-xs font-mono font-bold cursor-pointer transition-all hover:scale-105 active:scale-95"
+                        className={`p-2 rounded-xl border text-xs font-mono font-bold cursor-pointer transition-all hover:scale-105 active:scale-95 ${
+                          isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-300 hover:text-white' : 'border-slate-200 bg-slate-50 text-slate-600 hover:text-slate-900'
+                        }`}
                       >
                         <Copy className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => setRevisionBom(bom)}
                         title="Create New Revision (e.g. REV-B)"
-                        className="p-2 rounded-xl border border-indigo-500/30 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 hover:border-indigo-400/60 shadow-xs hover:shadow-[0_0_10px_rgba(99,102,241,0.2)] text-xs font-mono font-bold cursor-pointer transition-all hover:scale-105 active:scale-95"
+                        className="p-2 rounded-xl border border-indigo-500/30 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 text-xs font-mono font-bold cursor-pointer transition-all hover:scale-105 active:scale-95"
                       >
                         <FolderPlus className="w-3.5 h-3.5" />
                       </button>
@@ -2100,8 +2129,8 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                         title={bom.status === 'ACTIVE' ? 'Set as Draft' : 'Set as Active'}
                         className={`p-2 rounded-xl border text-xs font-mono font-bold cursor-pointer transition-all hover:scale-105 active:scale-95 ${
                           bom.status === 'ACTIVE'
-                            ? 'border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:border-amber-400/60 shadow-xs'
-                            : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-400/60 shadow-xs'
+                            ? 'border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20'
+                            : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
                         }`}
                       >
                         <RefreshCw className="w-3.5 h-3.5" />
@@ -2109,13 +2138,15 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                       <button
                         onClick={() => setDeleteConfirmBom(bom)}
                         title="Delete BOM"
-                        className="p-2 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 hover:border-rose-400/60 shadow-xs hover:shadow-[0_0_10px_rgba(244,63,94,0.2)] text-xs font-mono font-bold cursor-pointer transition-all hover:scale-105 active:scale-95"
+                        className="p-2 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 text-xs font-mono font-bold cursor-pointer transition-all hover:scale-105 active:scale-95"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => setExpandedBomCode(isExpanded ? null : bom.bomCode)}
-                        className="p-2 rounded-xl border border-slate-700/80 bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-white cursor-pointer transition-all hover:scale-105 active:scale-95"
+                        className={`p-2 rounded-xl border text-slate-400 hover:text-white cursor-pointer transition-all hover:scale-105 active:scale-95 ${
+                          isDarkMode ? 'border-white/[0.08] bg-white/[0.04]' : 'border-slate-200 bg-slate-50'
+                        }`}
                       >
                         {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                       </button>
@@ -2126,17 +2157,17 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                 {/* Collapsible Component Tree */}
                 {isExpanded && (
                   <div className={`p-5 border-t ${
-                    isDarkMode ? 'border-slate-800/80 bg-slate-950/40' : 'border-slate-200 bg-slate-50/60'
+                    isDarkMode ? 'border-white/[0.07] bg-black/20' : 'border-slate-200 bg-slate-50/60'
                   }`}>
                     <h5 className={`text-[11px] font-mono uppercase font-bold mb-3 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Components & Scrap Ratios</h5>
                     <div className={`rounded-2xl border overflow-hidden ${
-                      isDarkMode ? 'border-slate-800/80' : 'border-slate-200'
+                      isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'
                     }`}>
                       <div className="overflow-x-auto">
                         <table className="w-full text-left text-xs border-collapse font-mono">
                           <thead>
                             <tr className={`border-b font-bold uppercase tracking-wider text-[10px] ${
-                              isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-100/80 border-slate-200 text-slate-500'
+                              isDarkMode ? 'bg-black/20 border-white/[0.07] text-slate-400' : 'bg-slate-100/80 border-slate-200 text-slate-500'
                             }`}>
                               <th className="py-3 px-4">Component SKU</th>
                               <th className="py-3 px-4">Component Name</th>
@@ -2150,7 +2181,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                           <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/50' : 'divide-slate-200'}`}>
                             {bom.components?.map((comp, idx) => (
                               <tr key={comp.id || idx} className={isDarkMode ? '' : 'bg-white'}>
-                                <td className="py-3 px-4 font-bold text-[#5B75F8] dark:text-[#7B92FF]">{comp.componentCode}</td>
+                                <td className="py-3 px-4 font-bold text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{comp.componentCode}</td>
                                 <td className={`py-3 px-4 ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{comp.componentName}</td>
                                 <td className={`py-3 px-4 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{comp.componentType}</td>
                                 <td className="py-3 px-4 text-right font-bold text-emerald-600 dark:text-emerald-400">{comp.qtyPerUnit} {comp.unit}</td>
@@ -2177,12 +2208,12 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
       {activeSection === 'matrix' && (
         <div className="space-y-6">
           {/* Top Explainer Header */}
-          <div className={`p-6 rounded-3xl border ${
-            isDarkMode ? 'bg-slate-900/80 border-slate-800/80' : 'bg-white border-slate-200 shadow-sm'
+          <div className={`p-6 rounded-[22px] border ${
+            isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
           }`}>
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="p-3 rounded-2xl bg-[#5B75F8]/15 text-[#5B75F8] dark:text-[#7B92FF] border border-[#5B75F8]/30">
+                <div className="p-3 rounded-xl bg-[var(--accent-primary)]/15 text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/30">
                   <GitFork className="w-6 h-6" />
                 </div>
                 <div>
@@ -2202,8 +2233,8 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                   <select
                     value={matrixSelectedPart}
                     onChange={(e) => setMatrixSelectedPart(e.target.value)}
-                    className={`rounded-2xl border px-3 py-2 font-bold outline-none cursor-pointer ${
-                      isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                    className={`rounded-xl border px-3 py-2 font-bold outline-none cursor-pointer ${
+                      isDarkMode ? 'border-white/[0.08] bg-black/20 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'
                     }`}
                   >
                     {masters.filter(m => m.category === 'FINISHED_GOODS' || m.type === 'FG' || !m.category).map(m => (
@@ -2226,8 +2257,8 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                     type="number"
                     value={matrixBatchQty}
                     onChange={(e) => setMatrixBatchQty(Math.max(1, Number(e.target.value)))}
-                    className={`w-28 rounded-2xl border px-3 py-2 font-bold outline-none ${
-                      isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                    className={`w-28 rounded-xl border px-3 py-2 font-bold outline-none ${
+                      isDarkMode ? 'border-white/[0.08] bg-black/20 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'
                     }`}
                   />
                 </div>
@@ -2238,12 +2269,12 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
           {/* Matrix Linked View: WHAT vs HOW Side-by-Side */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Left: Active BOM Formula (WHAT) */}
-            <div className={`p-6 rounded-3xl border ${
-              isDarkMode ? 'bg-slate-900/80 border-slate-800/80' : 'bg-white border-slate-200 shadow-sm'
+            <div className={`p-6 rounded-[22px] border ${
+              isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
             }`}>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-xl bg-[#5B75F8]/15 text-[#5B75F8]">
+                  <div className="p-2 rounded-xl bg-[var(--accent-primary)]/15 text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/30">
                     <Layers className="w-4 h-4" />
                   </div>
                   <div>
@@ -2265,12 +2296,12 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
 
               {selectedMatrixBOM ? (
                 <div className="space-y-3 font-mono text-xs">
-                  <div className={`p-3 rounded-2xl border ${
-                    isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+                  <div className={`p-3 rounded-xl border ${
+                    isDarkMode ? 'border-white/[0.08] bg-black/20' : 'bg-slate-50 border-slate-200'
                   }`}>
                     <div className="flex justify-between mb-1">
                       <span className="text-slate-400">Parent Finished Good:</span>
-                      <span className="font-bold text-[#5B75F8]">{selectedMatrixBOM.parentPartCode}</span>
+                      <span className="font-bold text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{selectedMatrixBOM.parentPartCode}</span>
                     </div>
                     <div className="flex justify-between mb-1">
                       <span className="text-slate-400">Standard Yield:</span>
@@ -2278,17 +2309,17 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-400">Batch Explosion Qty:</span>
-                      <span className="font-bold text-white">{matrixBatchQty} Units</span>
+                      <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{matrixBatchQty} Units</span>
                     </div>
                   </div>
 
-                  <div className={`rounded-2xl border overflow-hidden ${
-                    isDarkMode ? 'border-slate-800' : 'border-slate-200'
+                  <div className={`rounded-xl border overflow-hidden ${
+                    isDarkMode ? 'border-white/[0.08]' : 'border-slate-200'
                   }`}>
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
-                        <tr className={`border-b text-[10px] uppercase ${
-                          isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'
+                        <tr className={`border-b text-[10px] uppercase font-mono font-bold ${
+                          isDarkMode ? 'bg-black/20 border-white/[0.08] text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'
                         }`}>
                           <th className="py-2.5 px-3">Component</th>
                           <th className="py-2.5 px-3 text-right">Qty/Unit</th>
@@ -2332,12 +2363,12 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
             </div>
 
             {/* Right: Active Route Card (HOW) */}
-            <div className={`p-6 rounded-3xl border ${
-              isDarkMode ? 'bg-slate-900/80 border-slate-800/80' : 'bg-white border-slate-200 shadow-sm'
+            <div className={`p-6 rounded-[22px] border ${
+              isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
             }`}>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-xl bg-emerald-500/15 text-emerald-400">
+                  <div className="p-2 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
                     <Route className="w-4 h-4" />
                   </div>
                   <div>
@@ -2359,8 +2390,8 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
 
               {selectedMatrixRoute ? (
                 <div className="space-y-3 font-mono text-xs">
-                  <div className={`p-3 rounded-2xl border ${
-                    isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+                  <div className={`p-3 rounded-xl border ${
+                    isDarkMode ? 'border-white/[0.08] bg-black/20' : 'bg-slate-50 border-slate-200'
                   }`}>
                     <div className="flex justify-between mb-1">
                       <span className="text-slate-400">Total Route Stages:</span>
@@ -2378,13 +2409,13 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                     </div>
                   </div>
 
-                  <div className={`rounded-2xl border overflow-hidden ${
-                    isDarkMode ? 'border-slate-800' : 'border-slate-200'
+                  <div className={`rounded-xl border overflow-hidden ${
+                    isDarkMode ? 'border-white/[0.08]' : 'border-slate-200'
                   }`}>
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
-                        <tr className={`border-b text-[10px] uppercase ${
-                          isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'
+                        <tr className={`border-b text-[10px] uppercase font-mono font-bold ${
+                          isDarkMode ? 'bg-black/20 border-white/[0.08] text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'
                         }`}>
                           <th className="py-2.5 px-3 text-center">Seq</th>
                           <th className="py-2.5 px-3">Operation</th>
@@ -2395,12 +2426,12 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                       </thead>
                       <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
                         {explodedCapacityReqs.map((op, idx) => (
-                          <tr key={idx} className={isDarkMode ? 'hover:bg-slate-900/60' : 'bg-white hover:bg-slate-50'}>
+                          <tr key={idx} className={isDarkMode ? 'hover:bg-white/[0.02]' : 'bg-white hover:bg-slate-50'}>
                             <td className="py-2.5 px-3 text-center font-bold text-emerald-400">{op.sequenceNo}</td>
-                            <td className="py-2.5 px-3 font-semibold text-slate-200">{op.operationName}</td>
+                            <td className={`py-2.5 px-3 font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{op.operationName}</td>
                             <td className="py-2.5 px-3 text-purple-400">{op.workCenter}</td>
                             <td className="py-2.5 px-3 text-right text-slate-400">{op.standardTimeMinutes}m</td>
-                            <td className="py-2.5 px-3 text-right font-bold text-purple-400">{op.totalHours} hrs</td>
+                            <td className="py-2.5 px-3 text-right font-bold text-amber-500">{op.totalHours} hrs</td>
                           </tr>
                         ))}
                       </tbody>
@@ -2409,7 +2440,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                 </div>
               ) : (
                 <div className="p-8 text-center text-slate-400 font-mono text-xs">
-                  Please configure a Route Card for SKU {matrixSelectedPart} to simulate shopfloor capacity.
+                  Please configure a Route Card for SKU {matrixSelectedPart} to view operational capacity requirements.
                 </div>
               )}
             </div>

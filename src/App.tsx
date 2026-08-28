@@ -77,7 +77,7 @@ export default function App() {
       <AccentThemeProvider>
         <ToastProvider>
           <MainApp />
-          <Agentation />
+          {import.meta.env.DEV && <Agentation />}
         </ToastProvider>
       </AccentThemeProvider>
     </AuthProvider>

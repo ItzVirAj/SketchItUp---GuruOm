@@ -200,7 +200,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
         : 'border-slate-200/80 bg-white/95 text-slate-900'
     }`}>
       <div className="flex h-[76px] items-center gap-4">
-        <div className="flex min-w-0 items-center gap-3 lg:w-[245px] lg:shrink-0">
+        <div className="flex min-w-0 items-center gap-3 lg:shrink-0">
           {onToggleMobileMenu && (
             <button
               type="button"
@@ -233,13 +233,31 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
             </div>
           </button>
 
-          <div className="hidden min-w-0 lg:block">
-            <div className="mb-1 flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">
-              <span>Workspace</span>
-              <ChevronDown className="h-3 w-3 -rotate-90" />
-              <span className="text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)]">Live operations</span>
+          <div className="hidden min-w-0 lg:flex items-center gap-3.5">
+            {/* Primary SketchItUp / - OwnerOS branding (Bigger) */}
+            <div className="flex flex-col justify-center leading-tight shrink-0">
+              <span className="text-[17px] font-black tracking-[-0.03em] text-slate-950 dark:text-white">
+                SketchItUp
+              </span>
+              <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)]">
+                - OwnerOS
+              </span>
             </div>
-            <div className="truncate text-[19px] font-extrabold tracking-[-0.03em] text-slate-950 dark:text-white">{activeTitle}</div>
+
+            {/* Straight vertical line divider */}
+            <div className="h-8 w-px bg-slate-200 dark:bg-white/[0.12] shrink-0" />
+
+            {/* Workspace & Page context (Smaller) */}
+            <div className="min-w-0 flex flex-col justify-center leading-tight">
+              <div className="flex items-center gap-1.5 font-mono text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
+                <span>Workspace</span>
+                <span className="text-[10px] text-slate-300 dark:text-slate-600">/</span>
+                <span className="text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)]">Live</span>
+              </div>
+              <div className="truncate text-[13px] font-bold tracking-tight text-slate-700 dark:text-slate-300 mt-0.5">
+                {activeTitle}
+              </div>
+            </div>
           </div>
 
           <div className="min-w-0 border-l border-slate-200 pl-3 dark:border-slate-800 lg:hidden">

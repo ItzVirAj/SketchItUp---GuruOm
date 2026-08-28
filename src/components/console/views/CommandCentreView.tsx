@@ -36,7 +36,11 @@ import {
   Boxes,
   Wallet,
   Target,
-  Play
+  Play,
+  ShoppingBag,
+  CreditCard,
+  Building2,
+  Receipt
 } from 'lucide-react';
 import {
   CustomerOrder,
@@ -352,7 +356,8 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
     hint,
     delta,
     icon: Icon,
-    accent,
+    badge,
+    tone = 'blue',
     onClick
   }: {
     label: string;
@@ -360,34 +365,81 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
     hint: string;
     delta?: string;
     icon: React.ElementType;
-    accent: string;
+    badge?: string;
+    tone?: 'blue' | 'rose' | 'amber' | 'emerald' | 'purple';
     onClick: () => void;
-  }) => (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`group relative min-h-[148px] overflow-hidden rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99] ${cardBase}`}
-    >
-      <div className={`absolute -right-6 -top-6 h-24 w-24 rounded-full opacity-20 blur-2xl ${accent}`} />
-      <div className="relative flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className={`text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{label}</p>
-          <p className={`mt-2 text-2xl font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{value}</p>
-          <p className={`mt-1 text-xs leading-snug ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{hint}</p>
+  }) => {
+    const toneStyles = {
+      blue: {
+        iconBg: isDarkMode ? 'bg-[var(--accent-primary)]/20 text-[var(--accent-text-dark)] border-[var(--accent-primary)]/30' : 'bg-[var(--accent-primary)]/10 text-[var(--accent-text-light)] border-[var(--accent-primary)]/20',
+        glow: 'from-[var(--accent-primary)]/15',
+        deltaTone: 'text-emerald-500'
+      },
+      rose: {
+        iconBg: isDarkMode ? 'bg-rose-500/20 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-600 border-rose-200',
+        glow: 'from-rose-500/15',
+        deltaTone: 'text-rose-500'
+      },
+      amber: {
+        iconBg: isDarkMode ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-600 border-amber-200',
+        glow: 'from-amber-500/15',
+        deltaTone: 'text-amber-500'
+      },
+      emerald: {
+        iconBg: isDarkMode ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-600 border-emerald-200',
+        glow: 'from-emerald-500/15',
+        deltaTone: 'text-emerald-500'
+      },
+      purple: {
+        iconBg: isDarkMode ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' : 'bg-purple-50 text-purple-600 border-purple-200',
+        glow: 'from-purple-500/15',
+        deltaTone: 'text-purple-500'
+      }
+    };
+
+    const currentTone = toneStyles[tone] || toneStyles.blue;
+
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={`group relative flex flex-col justify-between min-h-[148px] overflow-hidden rounded-[22px] border p-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.99] cursor-pointer ${cardBase}`}
+      >
+        <div className={`absolute -right-6 -top-6 h-28 w-28 rounded-full bg-gradient-to-br ${currentTone.glow} to-transparent opacity-60 blur-xl pointer-events-none transition-opacity group-hover:opacity-100`} />
+        
+        <div className="relative flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className={`text-[10px] font-mono font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{label}</span>
+              {badge && (
+                <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-mono font-bold uppercase ${
+                  isDarkMode ? 'bg-white/10 text-slate-300' : 'bg-slate-100 text-slate-600'
+                }`}>
+                  {badge}
+                </span>
+              )}
+            </div>
+            <p className={`mt-2 text-2xl font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{value}</p>
+            <p className={`mt-1 text-xs leading-snug ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{hint}</p>
+          </div>
+
+          <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition-transform duration-200 group-hover:scale-110 shadow-xs ${currentTone.iconBg}`}>
+            <Icon className="w-5 h-5 stroke-[2.25]" />
+          </div>
         </div>
-        <div className={`rounded-xl p-2.5 ${accent} bg-opacity-15`}>
-          <Icon className="w-5 h-5" />
-        </div>
-      </div>
-      {delta && (
-        <div className="relative mt-4 flex items-center gap-1.5 text-[11px] font-bold text-emerald-500">
-          <TrendingUp className="w-3.5 h-3.5" />
-          <span>{delta}</span>
-          <ArrowUpRight className="ml-auto w-4 h-4 opacity-0 transition-opacity group-hover:opacity-100" />
-        </div>
-      )}
-    </button>
-  );
+
+        {delta && (
+          <div className={`relative mt-3 flex items-center gap-1.5 text-[11px] font-mono font-bold ${currentTone.deltaTone} pt-2 border-t ${
+            isDarkMode ? 'border-white/[0.06]' : 'border-slate-100'
+          }`}>
+            <TrendingUp className="w-3.5 h-3.5" />
+            <span>{delta}</span>
+            <ArrowUpRight className="ml-auto w-4 h-4 text-slate-400 opacity-0 transition-opacity group-hover:opacity-100" />
+          </div>
+        )}
+      </button>
+    );
+  };
 
   return (
     <div ref={localContainerRef} className="relative space-y-4 pb-6 font-sans">
@@ -626,32 +678,36 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                 value={fmt(metrics.totalRevenue || metrics.openOrderBookValue)}
                 hint={`${metrics.openOrders.length} active purchase orders`}
                 delta="+12% vs last period"
-                icon={Target}
-                accent="bg-blue-500 text-blue-500"
+                badge="Revenue"
+                icon={ShoppingBag}
+                tone="blue"
                 onClick={() => handleNavigate('orders')}
               />
               <KpiCard
                 label="Material Shortages"
                 value={`${metrics.itemsShortCount} SKUs`}
                 hint={`${stock.length} items tracked in stores`}
-                icon={Boxes}
-                accent={metrics.itemsShortCount > 0 ? 'bg-rose-500 text-rose-500' : 'bg-emerald-500 text-emerald-500'}
+                badge={metrics.itemsShortCount > 0 ? 'Action Req' : 'Optimal'}
+                icon={metrics.itemsShortCount > 0 ? AlertTriangle : Boxes}
+                tone={metrics.itemsShortCount > 0 ? 'rose' : 'emerald'}
                 onClick={() => handleNavigate('inventory')}
               />
               <KpiCard
                 label="Overdue Receivables"
                 value={fmt(metrics.overdueReceivablesSum)}
                 hint={`${metrics.overdueInvoicesList.length} invoices past due`}
-                icon={Wallet}
-                accent="bg-emerald-500 text-emerald-500"
+                badge="Receivables"
+                icon={Clock}
+                tone={metrics.overdueReceivablesSum > 0 ? 'amber' : 'emerald'}
                 onClick={() => handleNavigate('invoices')}
               />
               <KpiCard
                 label="Vendor Payables"
                 value={fmt(metrics.outstandingPayablesSum)}
                 hint={`${payables.length} supplier bills outstanding`}
-                icon={DollarSign}
-                accent="bg-violet-500 text-violet-500"
+                badge="Payables"
+                icon={Building2}
+                tone="purple"
                 onClick={() => handleNavigate('payables')}
               />
             </section>

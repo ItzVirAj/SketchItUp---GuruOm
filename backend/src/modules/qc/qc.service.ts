@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { QCInspectionSchema, ReviewQCSchema, PDIInspectionSchema } from './qc.schema';
 import { notificationsService } from '../notifications/notifications.service';
 import { logAudit } from '../../services/auditLog';
+import { inventoryMovementsService } from '../inventory/inventory_movements.service';
 
 const SEED_QC_QUEUE: any[] = [];
 const SEED_PDI_QUEUE: any[] = [];
@@ -327,6 +328,17 @@ export class QcService {
           dispatched_qty: 0,
           variance: 0,
           created_at: new Date().toISOString()
+        });
+
+        // AUTOMATED: Record PRODUCTION_OUTPUT movement — finished goods enter inventory ledger
+        await inventoryMovementsService.recordMovement({
+          itemCode: pdi.part_code,
+          quantityChange: Number(pdi.qty || 0),
+          movementType: 'PRODUCTION_OUTPUT',
+          referenceId: pdi.order_po,
+          referenceType: 'job_card',
+          actorEmail: 'pdi@guruom.in',
+          notes: `PDI passed for PO ${pdi.order_po} — ${pdi.qty} × ${pdi.part_description} added to Finished Goods stock`
         });
 
         // Advance parent order status to READY_TO_DISPATCH (Stage 7)

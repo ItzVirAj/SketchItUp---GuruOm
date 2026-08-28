@@ -241,7 +241,14 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       eventSource.addEventListener('order_created', (event: MessageEvent) => {
         try {
           const newOrder = JSON.parse(event.data);
-          setOrders(prev => [newOrder, ...prev.filter(o => o.id !== newOrder.id && o.poNo !== newOrder.poNo)]);
+          setOrders(prev => {
+            // Replace any optimistic entry matching by poNo, otherwise prepend
+            const hasExisting = prev.some(o => o.poNo === newOrder.poNo);
+            if (hasExisting) {
+              return prev.map(o => o.poNo === newOrder.poNo ? { ...o, ...newOrder } : o);
+            }
+            return [newOrder, ...prev.filter(o => o.id !== newOrder.id)];
+          });
         } catch (_) {}
       });
 
@@ -501,13 +508,16 @@ export function useOwnerOSData(currentUser?: SystemUser) {
 
   const handleCreateOrder = async (order: CustomerOrder) => {
     try {
-      // Immediately prepend to local state so newest order appears at the top of the table
+      // Immediately prepend to local state so newest order appears at the top
       setOrders(prev => [order, ...prev.filter(o => o.id !== order.id && o.poNo !== order.poNo)]);
       await insertOrder(order);
       await addAuditLog('order', 'create', `Created order #${order.poNo} for ${order.customerName}`);
       toast.success(`Created order #${order.poNo} for ${order.customerName}`, 'Order Created');
-      await loadAllData();
+      // Do NOT call loadAllData() here — the backend SSE 'order_created' event will
+      // update the list in real-time without overwriting the optimistic state.
     } catch (err: any) {
+      // Remove the optimistic entry on failure
+      setOrders(prev => prev.filter(o => o.poNo !== order.poNo));
       toast.error(err?.message || 'Failed to create order', 'Creation Failed');
       throw err;
     }

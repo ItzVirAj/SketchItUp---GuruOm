@@ -260,8 +260,9 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
       lines: lines.map((l, idx) => ({
         id: `line_${Date.now()}_${idx}`,
         itemCode: l.itemCode,
-        partCode: l.itemCode,
+        itemDescription: l.itemDescription,
         description: l.itemDescription,
+        partCode: l.itemCode,
         orderQty: Number(l.orderQty),
         unit: l.unit,
         unitRate: Number(l.rate),

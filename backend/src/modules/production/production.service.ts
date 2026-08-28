@@ -10,6 +10,7 @@ import {
 } from './production.schema';
 import { auditService } from '../audit/audit.service';
 import { inventoryService } from '../inventory/inventory.service';
+import { inventoryMovementsService } from '../inventory/inventory_movements.service';
 import { ordersService } from '../orders/orders.service';
 import { 
   generateJobCardFromRouteCard,
@@ -609,12 +610,13 @@ export class ProductionService {
 
     // If rejections occurred, transfer rejected parts to Scrap / Rejection Yard ledger
     if (result.scrapMovementTriggered) {
-      await inventoryService.recordMovement({
+      await inventoryMovementsService.recordMovement({
         itemCode: result.scrapMovementTriggered.itemCode,
+        quantityChange: -result.scrapMovementTriggered.qty,
         movementType: 'SCRAP',
-        qty: result.scrapMovementTriggered.qty,
-        referenceDoc: `${jobNo}-OP${validated.sequenceNo}`,
-        actor: operatorName,
+        referenceId: `${jobNo}-OP${validated.sequenceNo}`,
+        referenceType: 'job_card',
+        actorEmail: `${operatorName.toLowerCase().replace(/\s+/g, '.')}@guruom.in`,
         notes: `Production rejection on Op ${validated.sequenceNo}. Transferred to ${result.scrapMovementTriggered.location}.`
       });
     }
@@ -839,12 +841,13 @@ export class ProductionService {
     );
 
     if (result.scrapMovementTriggered) {
-      await inventoryService.recordMovement({
+      await inventoryMovementsService.recordMovement({
         itemCode: result.scrapMovementTriggered.itemCode,
+        quantityChange: -result.scrapMovementTriggered.qty,
         movementType: 'SCRAP',
-        qty: result.scrapMovementTriggered.qty,
-        referenceDoc: validated.ncrNumber,
-        actor: approverName,
+        referenceId: result.scrapMovementTriggered.referenceDoc || jobNo,
+        referenceType: 'job_card',
+        actorEmail: 'production@guruom.in',
         notes: `NCR ${validated.ncrNumber} disposition scrap write-off.`
       });
     }

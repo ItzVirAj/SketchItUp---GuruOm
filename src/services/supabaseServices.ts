@@ -410,11 +410,8 @@ export async function insertOrder(order: CustomerOrder): Promise<void> {
   } else {
     ordersCache.unshift(order);
   }
-  try {
-    await apiClient.post('/orders', order);
-  } catch (err) {
-    console.warn('Backend insertOrder fallback:', err);
-  }
+  // Propagate backend errors — caller handles optimistic rollback
+  await apiClient.post('/orders', order);
 }
 
 export async function confirmOrder(orderId: string): Promise<CustomerOrder> {

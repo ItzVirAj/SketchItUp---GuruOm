@@ -15,6 +15,7 @@ import {
 import { notificationsService } from '../notifications/notifications.service';
 import { bomService } from '../bom/bom.service';
 import { inventoryService } from '../inventory/inventory.service';
+import { inventoryMovementsService } from '../inventory/inventory_movements.service';
 import { LockService } from '../../lib/lock';
 import { logAudit } from '../../services/auditLog';
 
@@ -426,6 +427,53 @@ export class OrdersService {
   }
 
   /**
+   * Consumes raw materials from inventory ledger when an order reaches MATERIAL_ISSUED.
+   * Performs BOM explosion and writes PRODUCTION_CONSUMPTION movements.
+   * BLOCKS transition (throws 400) if no BOM is found for any line item.
+   */
+  async consumeMaterialsForOrder(order: any, actorName = 'Stores'): Promise<void> {
+    const lines = order.lines && order.lines.length > 0
+      ? order.lines
+      : [{ itemCode: order.partCode || 'PART-001', orderQty: 1 }];
+
+    const missingBom: string[] = [];
+
+    for (const line of lines) {
+      const itemCode = line.itemCode || line.code || 'PART-001';
+      const orderQty = Number(line.orderQty || 1);
+      const bom = await bomService.getBOMByCode(itemCode);
+
+      if (!bom || !bom.components || bom.components.length === 0) {
+        missingBom.push(itemCode);
+        continue;
+      }
+
+      for (const comp of bom.components) {
+        const requiredQty = Number(comp.qtyPerUnit || 1) * orderQty;
+        await inventoryMovementsService.recordMovement({
+          itemCode: comp.componentCode,
+          quantityChange: -requiredQty,
+          movementType: 'PRODUCTION_CONSUMPTION',
+          referenceId: order.poNo,
+          referenceType: 'order',
+          actorEmail: `${actorName.toLowerCase().replace(/\s+/g, '.')}@guruom.in`,
+          notes: `Material issued for PO ${order.poNo} — ${comp.componentName} × ${requiredQty} (BOM of ${itemCode})`
+        });
+      }
+    }
+
+    if (missingBom.length > 0) {
+      const err: any = new Error(
+        `BOM not found for part(s): ${missingBom.join(', ')}. ` +
+        `Please define a Bill of Materials before issuing material for PO ${order.poNo}.`
+      );
+      err.statusCode = 400;
+      err.errorCode = 'ERR_BOM_NOT_FOUND';
+      throw err;
+    }
+  }
+
+  /**
    * Re-evaluates material availability across all waiting orders (e.g. after a GRN is saved).
    * Automatically flips eligible orders from MATERIAL_SHORT / PROCUREMENT_PENDING to MATERIAL_READY.
    */
@@ -491,7 +539,7 @@ export class OrdersService {
       actorRole: actorContext?.role || 'Sales/Order Desk',
       actorName: actorContext?.name || 'Sales Desk User',
       orderDrawingRevision: primaryDrawingRev,
-      masterDrawingRevision: validated.masterDrawingRevision || '',
+      masterDrawingRevision: validated.masterDrawingRevision || primaryDrawingRev,
       partCode: primaryPartCode,
       customerName: validated.customerName,
       isCustomerOverdue90Days: undefined as any,
@@ -554,9 +602,9 @@ export class OrdersService {
       customer_name: validated.customerName,
       po_date: validated.poDate,
       delivery_date: validated.deliveryDate,
-      status: validated.status || 'DRAFT',
-      stage: validated.status || 'DRAFT',
-      progress_step: 0,
+      status: validated.status || 'PO_RECEIVED',
+      stage: validated.status || 'PO_RECEIVED',
+      progress_step: 1,
       gross_amount: validated.grossAmount,
       tax_category: validated.taxCategory || 'GST 18%',
       remark: validated.remark || ''
@@ -566,6 +614,7 @@ export class OrdersService {
       const { error: insertErr } = await this.db.from('customer_orders').insert(insertPayload);
       if (insertErr) {
         console.error('Database createOrder error:', insertErr);
+        throw new Error(`Failed to save order to database: ${insertErr.message}`);
       }
 
       if (validated.lines && validated.lines.length > 0) {
@@ -584,10 +633,12 @@ export class OrdersService {
         const { error: linesErr } = await this.db.from('order_line_items').insert(linePayloads);
         if (linesErr) {
           console.error('Database order_line_items insert error:', linesErr);
+          // Lines failure is non-fatal — order header was saved
         }
       }
-    } catch (dbErr) {
+    } catch (dbErr: any) {
       console.warn('Database createOrder exception:', dbErr);
+      throw dbErr;
     }
 
     // Real-Time Push: Broadcast order creation to all dashboards
@@ -697,6 +748,17 @@ export class OrdersService {
         } else {
           notificationsService.broadcastEvent('shortage_updated', { orderPo: order.poNo, shortages: matCheck.shortages });
         }
+      }
+
+      // AUTOMATED SYSTEM TRIGGER: MATERIAL_ISSUED -> Consume raw materials from inventory ledger (BOM explosion)
+      if (resolvedTargetStage === 'MATERIAL_ISSUED') {
+        // consumeMaterialsForOrder throws a 400 if BOM is missing — this BLOCKS the transition
+        await this.consumeMaterialsForOrder(order, actorContext?.name || 'Stores');
+        notificationsService.broadcastEvent('stock_updated', {
+          orderPo: order.poNo,
+          status: 'CONSUMED',
+          trigger: 'MATERIAL_ISSUED'
+        });
       }
 
       const updatedAt = new Date().toISOString();

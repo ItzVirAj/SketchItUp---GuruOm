@@ -1,17 +1,24 @@
 import { z } from 'zod';
 
-export const OrderLineItemSchema = z.object({
-  id: z.string().optional(),
-  itemCode: z.string().min(1, 'Item code is required'),
-  itemDescription: z.string().min(1, 'Description is required'),
-  custPartNo: z.string().optional().default(''),
-  orderQty: z.number().positive('Order quantity must be positive'),
-  unit: z.string().default('NOS'),
-  dispatchedQty: z.number().nonnegative().default(0),
-  pendingQty: z.number().nonnegative().optional(),
-  rate: z.number().nonnegative().default(0),
-  drawingRevision: z.string().optional().default('REV-A')
-});
+export const OrderLineItemSchema = z.preprocess(
+  (raw: any) => ({
+    ...raw,
+    // Accept 'description' as fallback for 'itemDescription'
+    itemDescription: raw?.itemDescription || raw?.description || ''
+  }),
+  z.object({
+    id: z.string().optional(),
+    itemCode: z.string().min(1, 'Item code is required'),
+    itemDescription: z.string().min(1, 'Description is required'),
+    custPartNo: z.string().optional().default(''),
+    orderQty: z.number().positive('Order quantity must be positive'),
+    unit: z.string().default('NOS'),
+    dispatchedQty: z.number().nonnegative().default(0),
+    pendingQty: z.number().nonnegative().optional(),
+    rate: z.number().nonnegative().default(0),
+    drawingRevision: z.string().optional().default('REV-A')
+  })
+);
 
 export const CustomerOrderSchema = z.object({
   id: z.string().optional(),

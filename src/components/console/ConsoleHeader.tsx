@@ -17,11 +17,14 @@ import {
   Palette,
   CalendarRange,
   CircleCheck,
-  UserRound
+  UserRound,
+  Bell
 } from 'lucide-react';
 import { AccentColorSelector } from './AccentColorSelector';
 import { CustomerOrder, StockItem, CustomerInvoice, JobCard, UserRole, ConsoleView, SystemUser } from '../../types/console';
 import { getViewTitle } from '../../utils/navigationConfig';
+import { NotificationDrawer } from '../NotificationDrawer';
+import { useInAppNotifications } from '../../hooks/useInAppNotifications';
 
 interface ConsoleHeaderProps {
   fiscalYear: string;
@@ -84,6 +87,17 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
   const [showScopeDropdown, setShowScopeDropdown] = useState(false);
   const [showCustomizeMenu, setShowCustomizeMenu] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+
+  // In-app real-time notifications hook
+  const {
+    notifications,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+    isSoundEnabled,
+    toggleSound
+  } = useInAppNotifications();
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const mobileSearchInputRef = useRef<HTMLInputElement>(null);
@@ -478,6 +492,23 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
             <span className="font-mono text-[9px] font-semibold text-slate-400">{lastSynced}</span>
           </div>
 
+          {/* Real-time Notifications Bell */}
+          <button
+            type="button"
+            onClick={() => setIsNotificationOpen(true)}
+            className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-colors cursor-pointer ${
+              isDarkMode ? 'border-white/[0.08] bg-white/[0.045] text-slate-300 hover:bg-white/[0.08]' : 'border-slate-200 bg-slate-50/80 text-slate-700 hover:bg-slate-100'
+            }`}
+            title={`Operations Alerts (${unreadCount} unread)`}
+          >
+            <Bell className="h-4 w-4" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-rose-500 px-1 font-mono text-[9px] font-extrabold text-white shadow-xs animate-pulse">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+          </button>
+
           <button
             type="button"
             onClick={() => setIsDarkMode(!isDarkMode)}
@@ -551,6 +582,19 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
           )}
         </div>
       )}
+
+      {/* Slide-over Notifications Center Drawer */}
+      <NotificationDrawer
+        isOpen={isNotificationOpen}
+        onClose={() => setIsNotificationOpen(false)}
+        notifications={notifications}
+        unreadCount={unreadCount}
+        onMarkAsRead={markAsRead}
+        onMarkAllAsRead={markAllAsRead}
+        isSoundEnabled={isSoundEnabled}
+        onToggleSound={toggleSound}
+        isDarkMode={isDarkMode}
+      />
     </header>
   );
 };

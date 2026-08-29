@@ -53,6 +53,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useOwnerOSData } from '../../hooks/useOwnerOSData';
 import { useSmoothScroll } from '../../hooks/useSmoothScroll';
 import { fetchOrderById } from '../../services/supabaseServices';
+import { triggerOrderDelayed } from '../../services/notificationService';
 
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -266,6 +267,49 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, []);
+
+  // 24-Hour Delivery Deadline & Schedule Delay Watcher
+  const alertedDelayOrdersRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!orders || orders.length === 0) return;
+
+    const checkOrderDeadlines = () => {
+      const now = Date.now();
+      const next24h = now + 24 * 60 * 60 * 1000;
+
+      orders.forEach((order) => {
+        if (!order.deliveryDate) return;
+        const status = (order.status || order.stage || '').toUpperCase();
+        const isDispatchedOrDone = [
+          'PARTIALLY_DISPATCHED',
+          'DISPATCHED',
+          'IN_TRANSIT',
+          'DELIVERED',
+          'CLOSED',
+          'CANCELLED',
+          'PAID'
+        ].includes(status);
+
+        if (isDispatchedOrDone) return;
+
+        const targetTime = new Date(order.deliveryDate).getTime();
+        // If target delivery date is within the next 24 hours or already overdue
+        if (targetTime <= next24h && !alertedDelayOrdersRef.current.has(order.id || order.poNo)) {
+          alertedDelayOrdersRef.current.add(order.id || order.poNo);
+          triggerOrderDelayed(
+            order.id || order.poNo,
+            order.poNo,
+            order.customerName
+          ).catch(() => {});
+        }
+      });
+    };
+
+    checkOrderDeadlines();
+    const interval = setInterval(checkOrderDeadlines, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [orders]);
 
   // URL History Sync Effect
   useEffect(() => {

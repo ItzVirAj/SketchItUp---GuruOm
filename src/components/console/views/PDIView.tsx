@@ -14,6 +14,7 @@ import {
   Package
 } from 'lucide-react';
 import { PDIInspection } from '../../../types/console';
+import { triggerPDIFailure } from '../../../services/notificationService';
 
 interface PDIViewProps {
   pdiItems?: PDIInspection[];
@@ -146,6 +147,12 @@ export const PDIView: React.FC<PDIViewProps> = ({
         if (onFailPDI) {
           await onFailPDI(inspectingItem.id, updatedItem);
         }
+        // Fire live in-app push notification for PDI rejection
+        triggerPDIFailure(
+          inspectingItem.partDescription || inspectingItem.partCode || `Job ${inspectingItem.jobNo}`,
+          remarks || `Pre-Delivery Inspection non-conformance (Rejected Qty: ${rejectedQty})`,
+          'QC Lead'
+        ).catch(() => {});
       }
 
       setInspectingItem(null);

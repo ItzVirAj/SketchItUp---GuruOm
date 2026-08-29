@@ -117,6 +117,29 @@ export async function triggerPDIFailure(partName: string, defect: string, inspec
   });
 }
 
+export async function triggerQCFailure(partName: string, defect: string, stage?: string, inspector?: string) {
+  return triggerNotification({
+    eventType: 'qc_failure',
+    severity: 'HIGH',
+    entityType: 'QC_INSPECTION',
+    title: `QC Inspection Rejection: ${partName}`,
+    message: `Quality non-conformance rejected at stage [${stage || 'Production'}]. Reason: ${defect}`,
+    data: { partName, defect, stage, inspector: inspector || 'QC Inspector' }
+  });
+}
+
+export async function triggerMachineDowntime(machineName: string, reason: string, reportedBy?: string) {
+  return triggerNotification({
+    eventType: 'machine_downtime',
+    severity: 'CRITICAL',
+    entityType: 'MACHINE',
+    entityId: machineName,
+    title: `Shopfloor Machine Breakdown: ${machineName}`,
+    message: `Machine [${machineName}] reported down on shopfloor. Reason: ${reason} (Reported by: ${reportedBy || 'Operator'}).`,
+    data: { machineName, reason, reportedBy: reportedBy || 'Shopfloor Lead' }
+  });
+}
+
 export async function triggerOrderDelayed(orderId: string, poNumber: string, customer?: string) {
   return triggerNotification({
     eventType: 'order_delayed',

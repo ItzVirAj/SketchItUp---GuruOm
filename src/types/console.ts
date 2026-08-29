@@ -874,3 +874,15 @@ export interface SecurityEvent {
   metadata?: any;
   created_at: string;
 }
+
+export interface MachineDowntimeLog {
+  id: string;
+  machineId?: string;
+  machineName: string;
+  reason: string;
+  reportedBy: string;
+  startedAt: string;
+  resolvedAt?: string;
+  status: 'OPEN' | 'RESOLVED';
+  notes?: string;
+}

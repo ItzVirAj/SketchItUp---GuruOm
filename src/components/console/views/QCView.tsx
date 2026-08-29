@@ -15,6 +15,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { QCInspection } from '../../../types/console';
+import { triggerQCFailure } from '../../../services/notificationService';
 
 interface QCViewProps {
   qcItems?: QCInspection[];
@@ -89,6 +90,17 @@ export const QCView: React.FC<QCViewProps> = ({
 
     if (onInspectSubmit) onInspectSubmit(inspectingItem.id, qcDecision, qcNotes);
     if (onUpdateQC) onUpdateQC(inspectingItem.id, qcDecision, qcNotes);
+
+    // Fire live in-app push notification on rejection
+    if (qcDecision === 'REJECTED' || qcDecision === 'QC_HOLD') {
+      triggerQCFailure(
+        inspectingItem.partDescription || inspectingItem.partCode || `Job ${inspectingItem.jobNo}`,
+        qcNotes || (qcDecision === 'REJECTED' ? 'Lot rejected in quality inspection' : 'Lot placed on QC Hold'),
+        'Final QC',
+        'QC Inspector'
+      ).catch(() => {});
+    }
+
     setInspectingItem(null);
     setQcNotes('');
   };

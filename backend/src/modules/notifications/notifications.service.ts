@@ -23,9 +23,23 @@ const SEED_RULES = [
     severity: 'CRITICAL'
   },
   {
+    id: 'rule-machine-breakdown',
+    name: 'Shopfloor Machine Breakdown & Downtime',
+    description: 'Triggered when a CNC/VMC machine stops unexpectedly or reports downtime.',
+    enabled: true,
+    severity: 'CRITICAL'
+  },
+  {
     id: 'rule-prod-fail',
     name: 'Production Job Card Breakdown',
     description: 'Triggered when a machine stops unexpectedly or high scrap rate occurs.',
+    enabled: true,
+    severity: 'HIGH'
+  },
+  {
+    id: 'rule-qc-fail',
+    name: 'QC In-Process Inspection Rejection',
+    description: 'Triggered when in-process quality audit detects dimensional non-conformance.',
     enabled: true,
     severity: 'HIGH'
   },

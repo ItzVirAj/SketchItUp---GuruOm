@@ -1,14 +1,24 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiClient, getAccessToken } from '../lib/apiClient';
 import { InAppNotification } from '../services/notificationService';
+import { playAlertSound, isNotificationSoundEnabled, setNotificationSoundEnabled } from '../lib/notificationSound';
 
 export function useInAppNotifications() {
   const [notifications, setNotifications] = useState<InAppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(() => isNotificationSoundEnabled());
   const eventSourceRef = useRef<EventSource | null>(null);
 
-  // Fetch initial notifications via REST API
+  const toggleSound = useCallback(() => {
+    setIsSoundEnabled((prev) => {
+      const next = !prev;
+      setNotificationSoundEnabled(next);
+      return next;
+    });
+  }, []);
+
+  // Fetch initial notifications via REST API (No audio trigger here)
   const loadNotifications = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -41,10 +51,17 @@ export function useInAppNotifications() {
       eventSource.addEventListener('notification', (event: MessageEvent) => {
         try {
           const newNotif = JSON.parse(event.data) as InAppNotification;
-          setNotifications((prev) => [newNotif, ...prev]);
+          setNotifications((prev) => {
+            // Check for duplicate ID
+            if (prev.some((n) => n.id === newNotif.id)) return prev;
+            return [newNotif, ...prev];
+          });
           if (!newNotif.is_read) {
             setUnreadCount((count) => count + 1);
           }
+
+          // Trigger audio alert only on newly delivered live push events
+          playAlertSound(newNotif.severity);
         } catch (parseErr) {
           console.warn('Error parsing incoming SSE notification:', parseErr);
         }
@@ -92,8 +109,12 @@ export function useInAppNotifications() {
     notifications,
     unreadCount,
     isLoading,
+    isSoundEnabled,
+    toggleSound,
     markAsRead,
     markAllAsRead,
     refresh: loadNotifications
   };
 }
+
+export default useInAppNotifications;

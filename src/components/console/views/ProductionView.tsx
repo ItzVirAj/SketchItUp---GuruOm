@@ -71,6 +71,8 @@ import {
 } from '../../../services/supabaseServices';
 import { JobCardDetailModal } from '../modals/JobCardDetailModal';
 import { Modal } from '../../common/Modal';
+import { triggerMachineDowntime } from '../../../services/notificationService';
+import { MachineDowntimeLog } from '../../../types/console';
 
 export const DEFAULT_ROUTE_CARDS: RouteCard[] = [
   {
@@ -245,6 +247,33 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
   const [selectedJobForLog, setSelectedJobForLog] = useState<JobCard | null>(null);
   const [selectedJobForTraveler, setSelectedJobForTraveler] = useState<JobCard | null>(null);
   const [selectedOpSequence, setSelectedOpSequence] = useState<number | null>(null);
+
+  // Machine Breakdown Reporting Modal State
+  const [showBreakdownModal, setShowBreakdownModal] = useState(false);
+  const [breakdownMachine, setBreakdownMachine] = useState('CNC-LATHE-01');
+  const [breakdownReason, setBreakdownReason] = useState('Spindle Overheat & Axis Servo Error');
+  const [breakdownOperator, setBreakdownOperator] = useState('Sachin G. (Lead Machinist)');
+  const [breakdownNotes, setBreakdownNotes] = useState('');
+  const [isSubmittingBreakdown, setIsSubmittingBreakdown] = useState(false);
+
+  const handleReportBreakdown = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmittingBreakdown(true);
+    try {
+      await triggerMachineDowntime(
+        breakdownMachine,
+        breakdownReason + (breakdownNotes ? ` - Notes: ${breakdownNotes}` : ''),
+        breakdownOperator
+      );
+      setShowBreakdownModal(false);
+      setActionSuccess(`Machine breakdown reported for [${breakdownMachine}]. Critical alert broadcasted to shopfloor supervisory cell.`);
+      setBreakdownNotes('');
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to report machine breakdown.');
+    } finally {
+      setIsSubmittingBreakdown(false);
+    }
+  };
 
   // Operation Execution Form State
   const [opMachineId, setOpMachineId] = useState<string>('CNC-01');
@@ -1296,6 +1325,13 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                 <span>New Job</span>
               </button>
             )}
+            <button
+              onClick={() => setShowBreakdownModal(true)}
+              className="min-h-[44px] px-3 py-2 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-500 font-bold text-xs flex items-center gap-1.5 cursor-pointer active:scale-95 transition-transform"
+            >
+              <AlertTriangle className="w-4 h-4" />
+              <span>Breakdown</span>
+            </button>
             {activeSection === 'route-cards' && (
               <button
                 onClick={handleOpenCreateRoute}
@@ -1376,6 +1412,15 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => setShowBreakdownModal(true)}
+                className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 px-3.5 text-xs font-bold text-rose-600 dark:text-rose-400 transition-all cursor-pointer active:scale-[0.98]"
+                title="Report machine downtime or breakdown to shopfloor cell"
+              >
+                <AlertTriangle className="h-4 w-4" />
+                <span>Report Breakdown</span>
+              </button>
+
               {activeSection === 'job-cards' && (
                 <button
                   onClick={openNewJobModal}
@@ -4466,6 +4511,102 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
         onSelectOrder={onSelectOrder}
       />
 
+      {/* ========================================================================= */}
+      {/* MODAL 11: MACHINE BREAKDOWN & DOWNTIME ALERT REPORTING */}
+      {/* ========================================================================= */}
+      <Modal
+        isOpen={showBreakdownModal}
+        onClose={() => setShowBreakdownModal(false)}
+        title="Report Machine Downtime / Breakdown"
+        isDarkMode={isDarkMode}
+      >
+        <form onSubmit={handleReportBreakdown} className="space-y-4">
+          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            <span>Reporting a machine breakdown triggers an immediate CRITICAL alert to the supervisory cell.</span>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Select Work Center / Machine *
+            </label>
+            <select
+              value={breakdownMachine}
+              onChange={(e) => setBreakdownMachine(e.target.value)}
+              className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-rose-500"
+            >
+              <option value="CNC-LATHE-01">CNC-LATHE-01 (Heavy Turning)</option>
+              <option value="VMC-01">VMC-01 (Vertical Machining Center)</option>
+              <option value="HOBBING-01">HOBBING-01 (Gear Hobber)</option>
+              <option value="BANDSAW-01">BANDSAW-01 (Horizontal Bandsaw)</option>
+              <option value="GRIND-01">GRIND-01 (Precision Cylindrical Grinder)</option>
+              <option value="HT-FURNACE-01">HT-FURNACE-01 (Induction Furnace)</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Primary Breakdown Reason *
+            </label>
+            <select
+              value={breakdownReason}
+              onChange={(e) => setBreakdownReason(e.target.value)}
+              className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-rose-500"
+            >
+              <option value="Spindle Overheat & Axis Servo Error">Spindle Overheat & Axis Servo Error</option>
+              <option value="Hydraulic Chuck Clamping Failure">Hydraulic Chuck Clamping Failure</option>
+              <option value="Coolant Pump Jam & Line Blockage">Coolant Pump Jam & Line Blockage</option>
+              <option value="Tool Turret Indexing Jam">Tool Turret Indexing Jam</option>
+              <option value="CNC Controller Software Lock / Crash">CNC Controller Software Lock / Crash</option>
+              <option value="Scheduled Emergency Maintenance">Scheduled Emergency Maintenance</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Reporting Operator / Lead
+            </label>
+            <input
+              type="text"
+              value={breakdownOperator}
+              onChange={(e) => setBreakdownOperator(e.target.value)}
+              className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white outline-none"
+              placeholder="e.g. Sachin G."
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Additional Observations & Notes
+            </label>
+            <textarea
+              rows={3}
+              value={breakdownNotes}
+              onChange={(e) => setBreakdownNotes(e.target.value)}
+              placeholder="Describe alarm codes, noises, or physical damage observed..."
+              className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white outline-none"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setShowBreakdownModal(false)}
+              className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmittingBreakdown}
+              className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              <AlertTriangle className="w-3.5 h-3.5" />
+              <span>{isSubmittingBreakdown ? 'Broadcasting...' : 'Broadcast Breakdown Alert'}</span>
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

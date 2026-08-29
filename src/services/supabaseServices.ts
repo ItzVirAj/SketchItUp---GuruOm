@@ -31,6 +31,7 @@ import {
   PurchaseOrderItem
 } from '../types/console';
 import { getCurrentFinancialYear, formatDocumentNumber } from '../utils/statutoryAccountingEngine';
+import { VendorPerformanceMetric } from '../utils/procurementEngine';
 
 // Runtime in-memory caches (no hardcoded data)
 let ordersCache: CustomerOrder[] = [];
@@ -1092,32 +1093,86 @@ export async function fetchOutworkSendOuts(): Promise<OutworkSendOut[]> {
   return [];
 }
 
-export async function insertOutworkSendOut(outwork: OutworkSendOut): Promise<void> {
+export async function insertOutworkSendOut(outwork: OutworkSendOut | any): Promise<void> {
   try {
-    await apiClient.post('/outwork', {
-      sendOutId: outwork.sendOutId,
-      vendorName: outwork.vendorName,
-      process: outwork.process,
-      sentQty: outwork.sentQty,
-      receivedQty: outwork.receivedQty || 0,
-      rejectedQty: outwork.rejectedQty || 0,
-      expectedDate: outwork.expectedDate || outwork.expectedReturnDate || new Date().toISOString().split('T')[0],
-      sentDate: outwork.sentDate || new Date().toISOString().split('T')[0],
-      status: outwork.status || 'SENT'
+    const processVal = outwork.processType || outwork.process || 'HEAT_TREATMENT';
+    const validProcesses = [
+      'HEAT_TREATMENT',
+      'ELECTROPLATING',
+      'ZINC_PLATING',
+      'NDT_TESTING',
+      'CNC_MACHINING',
+      'BLACK_OXIDE',
+      'OTHER'
+    ];
+    const normalizedProcess = validProcesses.includes(processVal) ? processVal : 'OTHER';
+
+    await apiClient.post('/outwork/gate-out', {
+      id: outwork.id || outwork.sendOutId,
+      gatePassNo: outwork.gatePassNo || outwork.sendOutId,
+      jobNo: outwork.jobNo || 'JC/0001/26-27',
+      itemCode: outwork.itemCode || 'PART-001',
+      itemDescription: outwork.itemDescription || outwork.process || 'Outwork Component',
+      subcontractorName: outwork.subcontractorName || outwork.vendorName || 'Subcontractor',
+      processType: normalizedProcess,
+      dispatchedQty: Number(outwork.dispatchedQty || outwork.sentQty || 0),
+      unit: outwork.unit || 'NOS',
+      dispatchDate: outwork.dispatchDate || outwork.sentDate || new Date().toISOString().split('T')[0],
+      expectedReturnDate: outwork.expectedReturnDate || outwork.expectedDate || new Date().toISOString().split('T')[0],
+      vehicleDetails: outwork.vehicleDetails,
+      transporter: outwork.transporter || 'Direct Transporter',
+      unitRate: Number(outwork.unitRate || outwork.unitCost || 0),
+      notes: outwork.notes
     });
   } catch (err) {
     console.warn('insertOutworkSendOut REST API error:', err);
+    throw err;
   }
 }
 
-export async function receiveOutworkReturn(id: string, receivedQty: number, rejectedQty = 0): Promise<void> {
+export async function receiveOutworkReturn(
+  gatePassNoOrPayload: string | {
+    gatePassNo: string;
+    gateInPassNo?: string;
+    receivedQty: number;
+    rejectedQty?: number;
+    actualReturnDate?: string;
+    qcStatus?: 'INSPECTED_ACCEPTED' | 'INSPECTED_REJECTED';
+    qcInspector?: string;
+    inspectionNotes?: string;
+    notes?: string;
+  },
+  receivedQty = 0,
+  rejectedQty = 0,
+  notes?: string
+): Promise<void> {
   try {
-    await apiClient.post(`/outwork/${id}/receive`, {
-      receivedQty,
-      rejectedQty
-    });
+    const payload = typeof gatePassNoOrPayload === 'string'
+      ? {
+          gatePassNo: gatePassNoOrPayload,
+          receivedQty: Number(receivedQty),
+          rejectedQty: Number(rejectedQty || 0),
+          actualReturnDate: new Date().toISOString().split('T')[0],
+          qcStatus: (Number(rejectedQty) > 0 && Number(receivedQty) === 0 ? 'INSPECTED_REJECTED' : 'INSPECTED_ACCEPTED') as any,
+          qcInspector: 'Quality Inspector',
+          notes
+        }
+      : {
+          gatePassNo: gatePassNoOrPayload.gatePassNo,
+          gateInPassNo: gatePassNoOrPayload.gateInPassNo,
+          receivedQty: Number(gatePassNoOrPayload.receivedQty),
+          rejectedQty: Number(gatePassNoOrPayload.rejectedQty || 0),
+          actualReturnDate: gatePassNoOrPayload.actualReturnDate || new Date().toISOString().split('T')[0],
+          qcStatus: gatePassNoOrPayload.qcStatus || 'INSPECTED_ACCEPTED',
+          qcInspector: gatePassNoOrPayload.qcInspector || 'Quality Inspector',
+          inspectionNotes: gatePassNoOrPayload.inspectionNotes,
+          notes: gatePassNoOrPayload.notes
+        };
+
+    await apiClient.post('/outwork/gate-in', payload);
   } catch (err) {
-    console.warn(`receiveOutworkReturn(${id}) REST API error:`, err);
+    console.warn('receiveOutworkReturn REST API error:', err);
+    throw err;
   }
 }
 
@@ -1982,6 +2037,33 @@ export async function recordOrderPaymentAndClose(
     paidAmount: newTotalPaid,
     isClosed: false,
     isFullyPaid: isFullyPaid
+  };
+}
+
+export async function fetchVendorScorecard(vendorCode: string): Promise<VendorPerformanceMetric> {
+  try {
+    const res = await apiClient.get<{ data: VendorPerformanceMetric }>(`/masters/vendors/${encodeURIComponent(vendorCode)}/scorecard`);
+    if (res?.data) {
+      return res.data;
+    }
+  } catch (err) {
+    console.warn(`fetchVendorScorecard error for ${vendorCode}:`, err);
+  }
+  return {
+    supplierCode: vendorCode,
+    supplierName: vendorCode,
+    evaluationPeriod: 'Current FY',
+    totalOrders: 0,
+    totalDeliveries: 0,
+    onTimeDeliveries: 0,
+    otdPercentage: 100,
+    totalReceivedQty: 0,
+    acceptedQty: 0,
+    rejectedQty: 0,
+    qualityAcceptancePercentage: 100,
+    overallScore: 100,
+    vendorRatingTier: 'TIER_1_EXCELLENT',
+    summaryBadge: 'Tier 1 - Excellent (100%)'
   };
 }
 

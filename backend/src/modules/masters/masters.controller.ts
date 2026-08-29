@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { mastersService } from './masters.service';
+import { vendorScorecardService } from '../vendors/vendor-scorecard.service';
 import { CacheService, extractTenantId } from '../../lib/cache';
 
 const MASTER_CACHE_TTL_SEC = 600; // 10 minutes for slow-changing reference masters
@@ -165,6 +166,16 @@ export class MastersController {
       return res.json({ message: 'Vendor deleted successfully', data: result });
     } catch (err: any) {
       return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
+
+  async getVendorScorecard(req: Request, res: Response) {
+    const { code } = req.params;
+    try {
+      const data = await vendorScorecardService.getVendorScorecard(code);
+      return res.json({ data });
+    } catch (err: any) {
+      return res.status(500).json({ error: 'InternalServerError', message: err.message });
     }
   }
 

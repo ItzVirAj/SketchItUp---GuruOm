@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Truck, 
   Plus, 
@@ -24,6 +24,7 @@ import { DispatchChallan, CustomerOrder, VendorMaster } from '../../../types/con
 import { getCurrentFinancialYear, formatDocumentNumber } from '../../../utils/statutoryAccountingEngine';
 import { ChallanDetailModal } from '../modals/ChallanDetailModal';
 import { Modal } from '../../common/Modal';
+import { useUrlModal } from '../../../hooks/useUrlModal';
 
 interface DispatchViewProps {
   dispatches?: DispatchChallan[];
@@ -56,21 +57,60 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
   preselectedOrderPo,
   onDispatchModalOpened
 }) => {
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  // URL-driven modal hooks
+  const createChallanModal = useUrlModal('issue-delivery-challan');
+  const challanDetailModal = useUrlModal('challan-detail');
+  const deliveryModal = useUrlModal('record-delivery');
+
   const [selectedChallan, setSelectedChallan] = useState<DispatchChallan | null>(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusTab, setStatusTab] = useState<'ALL' | 'DRAFT' | 'IN_TRANSIT' | 'DELIVERED'>('ALL');
   const [orderPo, setOrderPo] = useState(orders[0]?.poNo || '');
   
   const [deliveryTargetChallan, setDeliveryTargetChallan] = useState<DispatchChallan | null>(null);
-  const [showDeliveryModal, setShowDeliveryModal] = useState(false);
   const [deliveryDate, setDeliveryDate] = useState(new Date().toISOString().split('T')[0]);
   const [receivedBy, setReceivedBy] = useState('Customer Receiving Incharge / Plant Stores');
   const [podRemarks, setPodRemarks] = useState('Material verified and received in good condition with signed delivery stamp');
   const [podDocumentUrl, setPodDocumentUrl] = useState('https://storage.oracle.com/pod-signed-copy.pdf');
   const [isDelivering, setIsDelivering] = useState(false);
   const [deliveryError, setDeliveryError] = useState<string | null>(null);
+
+  // Sync modal states from URL
+  useEffect(() => {
+    if (challanDetailModal.isOpen && challanDetailModal.params.challanNo) {
+      const found = dispatches.find(d => d.challanNo === challanDetailModal.params.challanNo || d.id === challanDetailModal.params.challanNo);
+      if (found && (!selectedChallan || selectedChallan.challanNo !== found.challanNo)) {
+        setSelectedChallan(found);
+      }
+    }
+  }, [challanDetailModal.isOpen, challanDetailModal.params.challanNo, dispatches, selectedChallan]);
+
+  useEffect(() => {
+    if (deliveryModal.isOpen && deliveryModal.params.challanNo) {
+      const found = dispatches.find(d => d.challanNo === deliveryModal.params.challanNo || d.id === deliveryModal.params.challanNo);
+      if (found && (!deliveryTargetChallan || deliveryTargetChallan.challanNo !== found.challanNo)) {
+        setDeliveryTargetChallan(found);
+        setDeliveryDate(new Date().toISOString().split('T')[0]);
+        setDeliveryError(null);
+      }
+    }
+  }, [deliveryModal.isOpen, deliveryModal.params.challanNo, dispatches, deliveryTargetChallan]);
+
+  useEffect(() => {
+    if (createChallanModal.isOpen && (createChallanModal.params.orderPo || createChallanModal.params.orderId)) {
+      const po = createChallanModal.params.orderPo || createChallanModal.params.orderId;
+      if (po) setOrderPo(po as string);
+    }
+  }, [createChallanModal.isOpen, createChallanModal.params.orderPo, createChallanModal.params.orderId]);
+
+  const preselectHandled = useRef<string | null>(null);
+  useEffect(() => {
+    if (!preselectedOrderPo || preselectHandled.current === preselectedOrderPo) return;
+    preselectHandled.current = preselectedOrderPo;
+    setOrderPo(preselectedOrderPo);
+    createChallanModal.open({ orderPo: preselectedOrderPo });
+    onDispatchModalOpened?.();
+  }, [preselectedOrderPo]);
 
   const allTransporterOptions = [
     'VRL Logistics Ltd', 
@@ -126,7 +166,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
 
   const handleRowClick = (challan: DispatchChallan) => {
     setSelectedChallan(challan);
-    setShowDetailModal(true);
+    challanDetailModal.open({ challanNo: challan.challanNo });
   };
 
   const handleOpenDeliveryModal = (disp: DispatchChallan, e: React.MouseEvent) => {
@@ -134,7 +174,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
     setDeliveryTargetChallan(disp);
     setDeliveryDate(new Date().toISOString().split('T')[0]);
     setDeliveryError(null);
-    setShowDeliveryModal(true);
+    deliveryModal.open({ challanNo: disp.challanNo });
   };
 
   const handleConfirmDeliverySubmit = async (e: React.FormEvent) => {
@@ -153,7 +193,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
           podDocumentUrl
         });
       }
-      setShowDeliveryModal(false);
+      deliveryModal.close();
     } catch (err: any) {
       setDeliveryError(err?.message || 'Failed to mark consignment delivered.');
     } finally {
@@ -163,13 +203,14 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
 
   const handleOpenCreateModal = () => {
     setSubmitError(null);
-    setOrderPo(pendingChallanOrders[0]?.poNo || orders[0]?.poNo || '');
+    const targetPo = pendingChallanOrders[0]?.poNo || orders[0]?.poNo || '';
+    setOrderPo(targetPo);
     setVehicleNo('');
     setLrNo('');
     setEWayBillNo('');
     setRemarks('');
     setDriverContact('');
-    setShowCreateModal(true);
+    createChallanModal.open(targetPo ? { orderPo: targetPo } : {});
     onDispatchModalOpened?.();
   };
 
@@ -218,7 +259,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
         await onCreateChallan(payload);
       }
 
-      setShowCreateModal(false);
+      createChallanModal.close();
     } catch (err: any) {
       setSubmitError(err?.message || 'Failed to issue delivery challan.');
     } finally {
@@ -667,8 +708,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
       {/* ── DELIVERY CONFIRMATION (POD) MODAL ──                                   */}
       {/* ========================================================================= */}
       <Modal
-        isOpen={Boolean(showDeliveryModal && deliveryTargetChallan)}
-        onClose={() => !isDelivering && setShowDeliveryModal(false)}
+        isOpen={Boolean(deliveryModal.isOpen && deliveryTargetChallan)}
+        onClose={() => !isDelivering && deliveryModal.close()}
         maxWidth="lg"
         isDarkMode={isDarkMode}
         icon={<CheckCircle2 className="w-5 h-5 text-emerald-500" />}
@@ -786,7 +827,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
             <div className={`pt-4 border-t flex items-center justify-end gap-3 font-sans ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <button
                 type="button"
-                onClick={() => setShowDeliveryModal(false)}
+                onClick={() => deliveryModal.close()}
                 className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                   isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
                 }`}
@@ -819,8 +860,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
       {/* ── ISSUE DELIVERY CHALLAN MODAL ──                                        */}
       {/* ========================================================================= */}
       <Modal
-        isOpen={showCreateModal}
-        onClose={() => !isSubmitting && setShowCreateModal(false)}
+        isOpen={createChallanModal.isOpen}
+        onClose={() => !isSubmitting && createChallanModal.close()}
         maxWidth="2xl"
         isDarkMode={isDarkMode}
         icon={<Truck className="w-5 h-5 text-[var(--accent-primary)]" />}
@@ -1054,7 +1095,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
             <button 
               type="button" 
               disabled={isSubmitting}
-              onClick={() => setShowCreateModal(false)} 
+              onClick={() => createChallanModal.close()} 
               className={`px-4 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
                 isDarkMode 
                   ? 'border-slate-700 text-slate-300 hover:bg-slate-800' 
@@ -1086,8 +1127,11 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
 
       {/* Challan Detail View Modal (View, Edit while Draft, Print, PDF) */}
       <ChallanDetailModal
-        isOpen={showDetailModal}
-        onClose={() => setShowDetailModal(false)}
+        isOpen={challanDetailModal.isOpen && Boolean(selectedChallan)}
+        onClose={() => {
+          setSelectedChallan(null);
+          challanDetailModal.close();
+        }}
         challan={selectedChallan}
         order={selectedOrderForModal}
         isDarkMode={isDarkMode}

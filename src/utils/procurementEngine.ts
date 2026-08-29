@@ -323,3 +323,69 @@ export function evaluateSubcontractOverdueStatus(
     status: 'OUT_FOR_JOBWORK'
   };
 }
+
+export interface PoAgingResult {
+  isOverdue: boolean;
+  daysOverdue: number;
+  agingBucket: 'ON_TRACK' | 'DUE_SOON' | 'OVERDUE' | 'SEVERELY_OVERDUE';
+}
+
+/**
+ * 5. Evaluates Purchase Orders for Aging and Overdue Delivery Status
+ */
+export function evaluatePoAging(
+  po: { status?: string; expectedDeliveryDate?: string },
+  currentDateStr?: string
+): PoAgingResult {
+  if (po.status === 'RECEIVED' || po.status === 'CANCELLED') {
+    return {
+      isOverdue: false,
+      daysOverdue: 0,
+      agingBucket: 'ON_TRACK'
+    };
+  }
+
+  if (!po.expectedDeliveryDate) {
+    return {
+      isOverdue: false,
+      daysOverdue: 0,
+      agingBucket: 'ON_TRACK'
+    };
+  }
+
+  const now = currentDateStr ? new Date(currentDateStr) : new Date();
+  const expectedDate = new Date(po.expectedDeliveryDate);
+
+  const nowDate = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const expDate = new Date(expectedDate.getFullYear(), expectedDate.getMonth(), expectedDate.getDate()).getTime();
+
+  const diffTime = nowDate - expDate;
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays > 7) {
+    return {
+      isOverdue: true,
+      daysOverdue: diffDays,
+      agingBucket: 'SEVERELY_OVERDUE'
+    };
+  } else if (diffDays > 0) {
+    return {
+      isOverdue: true,
+      daysOverdue: diffDays,
+      agingBucket: 'OVERDUE'
+    };
+  } else if (diffDays >= -2) {
+    // Due today or within the next 2 days
+    return {
+      isOverdue: false,
+      daysOverdue: 0,
+      agingBucket: 'DUE_SOON'
+    };
+  }
+
+  return {
+    isOverdue: false,
+    daysOverdue: 0,
+    agingBucket: 'ON_TRACK'
+  };
+}

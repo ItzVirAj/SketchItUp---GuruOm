@@ -66,6 +66,7 @@ import {
 } from '../../../types/console';
 import { Modal } from '../../common/Modal';
 import { exportAuditLogsApi } from '../../../services/supabaseServices';
+import { useUrlModal } from '../../../hooks/useUrlModal';
 
 import { getRoleColor } from '../../../utils/permissions';
 import { 
@@ -173,9 +174,14 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [isExporting, setIsExporting] = useState<boolean>(false);
-  const [showAddUserModal, setShowAddUserModal] = useState(false);
-  const [showPurgeModal, setShowPurgeModal] = useState(false);
   const [copiedExport, setCopiedExport] = useState(false);
+
+  // URL-Driven Modal Hooks
+  const addUserModal = useUrlModal('add-user');
+  const editUserModal = useUrlModal('edit-user');
+  const editRoleModal = useUrlModal('edit-role');
+  const deleteUserModal = useUrlModal('delete-user');
+  const purgeModal = useUrlModal('purge-data');
 
   // Role Gate Evaluation
   const normalizedUserRole = normalizeRole(currentRole || '');
@@ -191,12 +197,10 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
   ].includes(normalizedUserRole) || (currentRole || '').toLowerCase().includes('admin') || (currentRole || '').toLowerCase().includes('owner');
 
   // Edit Role State
-  const [showEditRoleModal, setShowEditRoleModal] = useState(false);
   const [userToEditRole, setUserToEditRole] = useState<SystemUser | null>(null);
   const [newSelectedRole, setNewSelectedRole] = useState<string>('Shop Floor Supervisor');
 
   // Edit User Master State
-  const [showEditUserModal, setShowEditUserModal] = useState(false);
   const [userToEdit, setUserToEdit] = useState<SystemUser | null>(null);
   const [editFullName, setEditFullName] = useState('');
   const [editEmail, setEditEmail] = useState('');
@@ -208,7 +212,6 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
   const [editUserErrors, setEditUserErrors] = useState<Record<string, string>>({});
 
   // Delete User State
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState<SystemUser | null>(null);
 
   // Download Suite State
@@ -294,8 +297,53 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
     setUReportingManager(users[0]?.name || '');
     setUShift('General-Day');
     setUStatus('Active');
-    setShowAddUserModal(true);
+    addUserModal.open();
   };
+
+  // Synchronize URL modals
+  React.useEffect(() => {
+    if (editUserModal.isOpen) {
+      const { userId } = editUserModal.params;
+      if (userId) {
+        const found = users.find(u => u.id === userId || u.userId === userId || u.code === userId);
+        if (found) {
+          handleOpenEditUser(found);
+        }
+      }
+    } else {
+      setUserToEdit(null);
+    }
+  }, [editUserModal.isOpen, editUserModal.params.userId, users]);
+
+  React.useEffect(() => {
+    if (editRoleModal.isOpen) {
+      const { userId } = editRoleModal.params;
+      if (userId) {
+        const found = users.find(u => u.id === userId || u.userId === userId || u.code === userId);
+        if (found) {
+          setUserToEditRole(found);
+          const normRole = normalizeRole(found.userRole || found.role);
+          setNewSelectedRole(normRole);
+        }
+      }
+    } else {
+      setUserToEditRole(null);
+    }
+  }, [editRoleModal.isOpen, editRoleModal.params.userId, users]);
+
+  React.useEffect(() => {
+    if (deleteUserModal.isOpen) {
+      const { userId } = deleteUserModal.params;
+      if (userId) {
+        const found = users.find(u => u.id === userId || u.userId === userId || u.code === userId);
+        if (found) {
+          setUserToDelete(found);
+        }
+      }
+    } else {
+      setUserToDelete(null);
+    }
+  }, [deleteUserModal.isOpen, deleteUserModal.params.userId, users]);
 
   const handleRoleSelect = (role: string) => {
     setUUserRole(role);
@@ -686,7 +734,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
       } as any);
     }
 
-    setShowAddUserModal(false);
+    addUserModal.close();
   };
 
   const handleOpenEditUser = (usr: SystemUser) => {
@@ -699,7 +747,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
     setEditStatus(usr.status === 'REVOKED' || usr.status === 'Inactive' ? 'Inactive' : 'Active');
     setEditReportingManager(usr.reportingManager || '');
     setEditUserErrors({});
-    setShowEditUserModal(true);
+    editUserModal.open({ userId: usr.id });
   };
 
   const handleSaveEditUser = (e: React.FormEvent) => {
@@ -734,7 +782,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
       } as any);
     }
 
-    setShowEditUserModal(false);
+    editUserModal.close();
   };
 
   return (
@@ -1458,7 +1506,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                         onClick={() => {
                           setUserToEditRole(usr);
                           setNewSelectedRole(normRole);
-                          setShowEditRoleModal(true);
+                          editRoleModal.open({ userId: usr.id });
                         }}
                         className={`flex-1 py-2 rounded-xl border font-mono text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-all ${
                           isDarkMode 
@@ -1500,7 +1548,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                         <button
                           onClick={() => {
                             setUserToDelete(usr);
-                            setShowDeleteModal(true);
+                            deleteUserModal.open({ userId: usr.id });
                           }}
                           className={`p-2 rounded-xl border cursor-pointer transition-all ${
                             isDarkMode 
@@ -1611,43 +1659,43 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                               onClick={() => {
                                 setUserToEditRole(usr);
                                 setNewSelectedRole(normRole);
-                                setShowEditRoleModal(true);
+                                editRoleModal.open({ userId: usr.id });
                               }}
                               className={`p-1.5 px-2.5 rounded-xl border text-[11px] font-bold font-mono transition-all cursor-pointer flex items-center gap-1 ${
                                 isDarkMode 
-                                  ? 'border-slate-800 bg-slate-950/70 text-slate-300 hover:text-white hover:bg-slate-800' 
-                                  : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                                  ? 'bg-blue-500/10 text-blue-300 border-blue-500/30 hover:bg-blue-500/20' 
+                                  : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
                               }`}
-                              title="Edit Role Matrix"
+                              title="Modify Role"
                             >
-                              <Shield className="w-3 h-3 text-blue-400" />
+                              <Shield className="w-3.5 h-3.5" />
                               <span>Role</span>
                             </button>
 
                             {!isRevoked ? (
                               <button
                                 onClick={() => onRevokeUser && onRevokeUser(usr.id)}
-                                className={`p-1.5 px-2.5 rounded-xl border text-[11px] font-bold font-mono transition-all cursor-pointer flex items-center gap-1 ${
+                                className={`p-1.5 px-2 rounded-xl border text-[11px] font-bold font-mono transition-all cursor-pointer flex items-center gap-1 ${
                                   isDarkMode 
-                                    ? 'border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20' 
-                                    : 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'
+                                    ? 'bg-amber-500/10 text-amber-300 border-amber-500/30 hover:bg-amber-500/20' 
+                                    : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
                                 }`}
-                                title="Revoke access"
+                                title="Revoke Access"
                               >
-                                <Ban className="w-3 h-3" />
+                                <Ban className="w-3.5 h-3.5" />
                                 <span>Revoke</span>
                               </button>
                             ) : (
                               <button
                                 onClick={() => onRestoreUser && onRestoreUser(usr.id)}
-                                className={`p-1.5 px-2.5 rounded-xl border text-[11px] font-bold font-mono transition-all cursor-pointer flex items-center gap-1 ${
+                                className={`p-1.5 px-2 rounded-xl border text-[11px] font-bold font-mono transition-all cursor-pointer flex items-center gap-1 ${
                                   isDarkMode 
-                                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20' 
-                                    : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                                    ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20' 
+                                    : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
                                 }`}
-                                title="Restore access"
+                                title="Restore Access"
                               >
-                                <UserCheck className="w-3 h-3" />
+                                <UserCheck className="w-3.5 h-3.5" />
                                 <span>Restore</span>
                               </button>
                             )}
@@ -1656,12 +1704,16 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                               <button
                                 onClick={() => {
                                   setUserToDelete(usr);
-                                  setShowDeleteModal(true);
+                                  deleteUserModal.open({ userId: usr.id });
                                 }}
-                                className="p-1.5 px-2 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 cursor-pointer"
-                                title="Delete user"
+                                className={`p-1.5 px-2 rounded-xl border text-[11px] font-bold font-mono transition-all cursor-pointer flex items-center gap-1 ${
+                                  isDarkMode 
+                                    ? 'bg-rose-500/10 text-rose-300 border-rose-500/30 hover:bg-rose-500/20' 
+                                    : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
+                                }`}
+                                title="Delete User Permanently"
                               >
-                                <Trash2 className="w-3 h-3 text-rose-400" />
+                                <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             )}
                           </div>
@@ -1904,7 +1956,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
 
             {onClearOperationalData && (
               <button
-                onClick={() => setShowPurgeModal(true)}
+                onClick={() => purgeModal.open()}
                 className="w-full p-3 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 text-xs font-bold font-mono transition-all text-left flex items-center gap-2"
               >
                 <Trash2 className="w-4 h-4 text-rose-400" />
@@ -1919,8 +1971,8 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
       {/* MODAL 1: PROVISION NEW USER (LIGHT THEME & PASSWORD WORKFLOW) */}
       {/* ========================================================================= */}
       <Modal
-        isOpen={showAddUserModal}
-        onClose={() => setShowAddUserModal(false)}
+        isOpen={addUserModal.isOpen}
+        onClose={() => addUserModal.close()}
         maxWidth="4xl"
         isDarkMode={isDarkMode}
         icon={<Users className="w-5 h-5" />}
@@ -1930,7 +1982,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
           <div className="flex items-center justify-end gap-3 w-full">
             <button
               type="button"
-              onClick={() => setShowAddUserModal(false)}
+              onClick={() => addUserModal.close()}
               className={`px-4 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
                 isDarkMode 
                   ? 'text-slate-400 hover:text-white hover:bg-slate-800' 
@@ -2317,8 +2369,11 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
       {/* MODAL 1B: EDIT USER MASTER RECORD */}
       {/* ========================================================================= */}
       <Modal
-        isOpen={showEditUserModal && !!userToEdit}
-        onClose={() => setShowEditUserModal(false)}
+        isOpen={editUserModal.isOpen && !!userToEdit}
+        onClose={() => {
+          editUserModal.close();
+          setUserToEdit(null);
+        }}
         maxWidth="2xl"
         isDarkMode={isDarkMode}
         icon={<Edit className="w-5 h-5 text-indigo-400" />}
@@ -2328,7 +2383,10 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
           <div className="flex items-center justify-end gap-3 w-full">
             <button 
               type="button" 
-              onClick={() => setShowEditUserModal(false)} 
+              onClick={() => {
+                editUserModal.close();
+                setUserToEdit(null);
+              }} 
               className={`px-5 py-2.5 rounded-2xl border text-xs font-mono font-bold transition-all cursor-pointer ${
                 isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
               }`}
@@ -2493,8 +2551,11 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
       {/* MODAL 2: EDIT USER ROLE */}
       {/* ========================================================================= */}
       <Modal
-        isOpen={showEditRoleModal && !!userToEditRole}
-        onClose={() => setShowEditRoleModal(false)}
+        isOpen={editRoleModal.isOpen && !!userToEditRole}
+        onClose={() => {
+          editRoleModal.close();
+          setUserToEditRole(null);
+        }}
         maxWidth="lg"
         isDarkMode={isDarkMode}
         icon={<Shield className="w-5 h-5" />}
@@ -2504,7 +2565,10 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
           <div className="flex items-center justify-end gap-3 w-full">
             <button 
               type="button" 
-              onClick={() => setShowEditRoleModal(false)} 
+              onClick={() => {
+                editRoleModal.close();
+                setUserToEditRole(null);
+              }} 
               className={`px-5 py-2.5 rounded-2xl border text-xs font-mono font-bold transition-all cursor-pointer ${
                 isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
               }`}
@@ -2517,7 +2581,8 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                 if (onUpdateUserRole && userToEditRole) {
                   onUpdateUserRole(userToEditRole.id, newSelectedRole);
                 }
-                setShowEditRoleModal(false);
+                editRoleModal.close();
+                setUserToEditRole(null);
               }}
               className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-600 text-white font-bold text-xs font-mono shadow-lg shadow-blue-500/25 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
@@ -2575,8 +2640,11 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
       {/* MODAL 3: DELETE CONFIRMATION */}
       {/* ========================================================================= */}
       <Modal
-        isOpen={showDeleteModal && !!userToDelete}
-        onClose={() => setShowDeleteModal(false)}
+        isOpen={deleteUserModal.isOpen && !!userToDelete}
+        onClose={() => {
+          deleteUserModal.close();
+          setUserToDelete(null);
+        }}
         maxWidth="md"
         isDarkMode={isDarkMode}
         icon={<Trash2 className="w-5 h-5" />}
@@ -2585,7 +2653,10 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
         footer={
           <div className="flex justify-end gap-3 w-full">
             <button
-              onClick={() => setShowDeleteModal(false)}
+              onClick={() => {
+                deleteUserModal.close();
+                setUserToDelete(null);
+              }}
               className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                 isDarkMode ? 'border-slate-800 text-slate-300 hover:bg-slate-800' : 'border-slate-200 text-slate-700 hover:bg-slate-100'
               }`}
@@ -2597,7 +2668,8 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                 if (onDeleteUser && userToDelete) {
                   onDeleteUser(userToDelete.id);
                 }
-                setShowDeleteModal(false);
+                deleteUserModal.close();
+                setUserToDelete(null);
               }}
               className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md shadow-rose-500/20 cursor-pointer"
             >
@@ -2615,8 +2687,8 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
       {/* MODAL 4: PURGE OPERATIONAL DATA CONFIRMATION */}
       {/* ========================================================================= */}
       <Modal
-        isOpen={showPurgeModal}
-        onClose={() => setShowPurgeModal(false)}
+        isOpen={purgeModal.isOpen}
+        onClose={() => purgeModal.close()}
         maxWidth="md"
         isDarkMode={isDarkMode}
         icon={<AlertTriangle className="w-5 h-5" />}
@@ -2625,7 +2697,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
         footer={
           <div className="flex justify-end gap-3 w-full">
             <button
-              onClick={() => setShowPurgeModal(false)}
+              onClick={() => purgeModal.close()}
               className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                 isDarkMode ? 'border-slate-800 text-slate-300 hover:bg-slate-800' : 'border-slate-200 text-slate-700 hover:bg-slate-100'
               }`}
@@ -2635,7 +2707,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
             <button
               onClick={() => {
                 if (onClearOperationalData) onClearOperationalData();
-                setShowPurgeModal(false);
+                purgeModal.close();
               }}
               className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md shadow-rose-500/20 cursor-pointer"
             >

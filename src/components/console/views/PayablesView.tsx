@@ -16,18 +16,23 @@ import {
   ExternalLink,
   ChevronRight
 } from 'lucide-react';
-import { VendorBill } from '../../../types/console';
+import { VendorBill, VendorMaster } from '../../../types/console';
+import { Modal } from '../../common/Modal';
+import { useUrlModal } from '../../../hooks/useUrlModal';
+import { insertVendorBill } from '../../../services/supabaseServices';
 
 interface PayablesViewProps {
   payables: VendorBill[];
+  vendors?: VendorMaster[];
   isDarkMode?: boolean;
-  onAddBill?: () => void;
+  onAddBill?: (bill: VendorBill) => void | Promise<void>;
   onRecordPayment?: (billNo: string) => void;
   onRecordDisbursement?: (billNo: string) => void;
 }
 
 export const PayablesView: React.FC<PayablesViewProps> = ({
   payables,
+  vendors = [],
   isDarkMode = true,
   onAddBill,
   onRecordPayment,
@@ -35,6 +40,83 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+
+  // URL-driven modal for Vendor Bill Creation
+  const createBillModal = useUrlModal('create-bill');
+
+  // Controlled Bill Form States
+  const [formVendorName, setFormVendorName] = useState('Mahalaxmi Steel Traders');
+  const [formVendorType, setFormVendorType] = useState('Supplier');
+  const [formVendorPan, setFormVendorPan] = useState('AAACM1234F');
+  const [formBillNo, setFormBillNo] = useState(`BILL-26-${Date.now().toString().slice(-4)}`);
+  const [formPoNo, setFormPoNo] = useState('PO-PUR-2026-001');
+  const [formGrnNo, setFormGrnNo] = useState('GRN-26-001');
+  const [formGrossAmount, setFormGrossAmount] = useState<number | string>(150000);
+  const [formDate, setFormDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [formDueDate, setFormDueDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 30);
+    return d.toISOString().split('T')[0];
+  });
+  const [formIsPurchaseOfGoods, setFormIsPurchaseOfGoods] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const handleVendorNameChange = (nameVal: string) => {
+    setFormVendorName(nameVal);
+    const matchedVendor = vendors?.find(v => v.name.toLowerCase().trim() === nameVal.toLowerCase().trim());
+    if (matchedVendor) {
+      if (matchedVendor.vendorType) setFormVendorType(matchedVendor.vendorType);
+      if (matchedVendor.pan) setFormVendorPan(matchedVendor.pan);
+    }
+  };
+
+  const handleBillSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setFormError(null);
+
+    const gross = Number(formGrossAmount || 0);
+    if (!gross || gross <= 0) {
+      setFormError('Gross amount must be greater than 0');
+      setIsSubmitting(false);
+      return;
+    }
+
+    const newBill: VendorBill = {
+      billNo: formBillNo,
+      vendorName: formVendorName,
+      poNo: formPoNo,
+      grnNo: formGrnNo || undefined,
+      status: 'OPEN',
+      date: formDate,
+      dueDate: formDueDate,
+      amount: gross,
+      paidAmount: 0,
+      balanceAmount: gross,
+      matchStatus: 'MATCHED',
+      isThreeWayMatched: true
+    };
+    (newBill as any).vendorType = formVendorType;
+    (newBill as any).vendorPan = formVendorPan || undefined;
+    (newBill as any).grossAmount = gross;
+    (newBill as any).isPurchaseOfGoods = formIsPurchaseOfGoods;
+
+    try {
+      if (onAddBill) {
+        await onAddBill(newBill);
+      } else {
+        await insertVendorBill(newBill);
+      }
+      createBillModal.close();
+      // Reset bill number for next creation
+      setFormBillNo(`BILL-26-${Date.now().toString().slice(-4)}`);
+    } catch (err: any) {
+      setFormError(err.message || 'Failed to record vendor bill');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleDisbursementClick = (billNo: string) => {
     if (onRecordDisbursement) {
@@ -79,16 +161,14 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
             </h1>
           </div>
 
-          {onAddBill && (
-            <button
-              type="button"
-              onClick={onAddBill}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold shadow-md active:scale-95 transition-all"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Bill</span>
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => createBillModal.open()}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold shadow-md active:scale-95 transition-all cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>New Bill</span>
+          </button>
         </div>
 
         {/* Mobile 2x2 Telemetry Matrix */}
@@ -149,16 +229,14 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
               </p>
             </div>
 
-            {onAddBill && (
-              <button
-                type="button"
-                onClick={onAddBill}
-                className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-5 text-xs font-bold text-white shadow-lg shadow-[var(--accent-shadow)] transition hover:brightness-110 active:scale-95"
-              >
-                <Plus className="h-4 w-4" />
-                <span>Record Vendor Bill</span>
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => createBillModal.open()}
+              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-5 text-xs font-bold text-white shadow-lg shadow-[var(--accent-shadow)] transition hover:brightness-110 active:scale-95 cursor-pointer"
+            >
+              <Plus className="h-4 w-4" />
+              <span>New Bill</span>
+            </button>
           </div>
 
           {/* Integrated 4-Column Metric Strip (border-t) */}
@@ -475,6 +553,228 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
           </table>
         </div>
       </div>
+
+      {/* Record Vendor Bill Entry Modal */}
+      <Modal
+        isOpen={createBillModal.isOpen}
+        onClose={() => createBillModal.close()}
+        maxWidth="xl"
+        isDarkMode={isDarkMode}
+        icon={<Receipt className="w-5 h-5" />}
+        title="Record Vendor Bill"
+        subtitle="Enter supplier invoice and accounts payable liability"
+      >
+        <form onSubmit={handleBillSubmit} className="space-y-4 text-xs font-sans">
+          {formError && (
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center justify-between">
+              <span>{formError}</span>
+              <button type="button" onClick={() => setFormError(null)} className="cursor-pointer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Vendor / Supplier *
+              </label>
+              <input
+                name="vendorName"
+                required
+                value={formVendorName}
+                onChange={(e) => handleVendorNameChange(e.target.value)}
+                list="vendors-datalist"
+                placeholder="e.g. Mahalaxmi Steel Traders"
+                className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                }`}
+              />
+              {vendors && vendors.length > 0 && (
+                <datalist id="vendors-datalist">
+                  {vendors.map(v => (
+                    <option key={v.id || v.code} value={v.name}>
+                      {v.code} • {v.vendorType || 'Supplier'}
+                    </option>
+                  ))}
+                </datalist>
+              )}
+            </div>
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Vendor Type *
+              </label>
+              <select
+                name="vendorType"
+                value={formVendorType}
+                onChange={(e) => setFormVendorType(e.target.value)}
+                className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                }`}
+              >
+                <option value="Supplier">Supplier (Goods / Raw Material)</option>
+                <option value="Subcontractor / Job Worker">Subcontractor / Job Worker</option>
+                <option value="Transporter">Transporter / Logistics</option>
+                <option value="Manpower Provider">Manpower Provider</option>
+                <option value="Other">Other Service Provider</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Bill / Invoice Number *
+              </label>
+              <input
+                name="billNo"
+                required
+                value={formBillNo}
+                onChange={(e) => setFormBillNo(e.target.value)}
+                placeholder="e.g. INV-MST-2026-089"
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Vendor PAN (for Statutory TDS)
+              </label>
+              <input
+                name="vendorPan"
+                value={formVendorPan}
+                onChange={(e) => setFormVendorPan(e.target.value.toUpperCase())}
+                placeholder="e.g. AAACM1234F"
+                maxLength={10}
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all uppercase ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                }`}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Linked Purchase Order (PO #) *
+              </label>
+              <input
+                name="poNo"
+                required
+                value={formPoNo}
+                onChange={(e) => setFormPoNo(e.target.value)}
+                placeholder="e.g. PO-PUR-2026-001"
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Linked Goods Receipt Note (GRN #)
+              </label>
+              <input
+                name="grnNo"
+                value={formGrnNo}
+                onChange={(e) => setFormGrnNo(e.target.value)}
+                placeholder="e.g. GRN-26-001"
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                }`}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Gross Amount (₹) *
+              </label>
+              <input
+                name="grossAmount"
+                type="number"
+                min="1"
+                step="any"
+                required
+                value={formGrossAmount}
+                onChange={(e) => setFormGrossAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                placeholder="150000"
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Bill Date *
+              </label>
+              <input
+                name="date"
+                type="date"
+                required
+                value={formDate}
+                onChange={(e) => setFormDate(e.target.value)}
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Due Date *
+              </label>
+              <input
+                name="dueDate"
+                type="date"
+                required
+                value={formDueDate}
+                onChange={(e) => setFormDueDate(e.target.value)}
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                }`}
+              />
+            </div>
+          </div>
+
+          <div className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 ${
+            isDarkMode ? 'bg-[#0d1017] border-slate-800' : 'bg-slate-50 border-slate-200'
+          }`}>
+            <div>
+              <div className="font-bold text-xs">Statutory TDS Section 194Q Applicability</div>
+              <div className="text-[11px] text-slate-400">Mark if this bill is for purchase of goods exceeding statutory thresholds</div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formIsPurchaseOfGoods}
+                onChange={(e) => setFormIsPurchaseOfGoods(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--accent-primary)]"></div>
+            </label>
+          </div>
+
+          <div className={`pt-4 border-t flex justify-end gap-3 font-sans ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+            <button
+              type="button"
+              onClick={() => createBillModal.close()}
+              className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="px-5 py-2 rounded-xl bg-[var(--accent-primary)] hover:brightness-110 text-white font-bold text-xs cursor-pointer shadow-lg shadow-[var(--accent-shadow)] transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+            >
+              {isSubmitting ? 'Recording...' : 'Record Vendor Bill'}
+            </button>
+          </div>
+        </form>
+      </Modal>
 
     </div>
   );

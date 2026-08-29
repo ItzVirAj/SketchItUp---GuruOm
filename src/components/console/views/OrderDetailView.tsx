@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   ArrowLeft, 
   Upload, 
@@ -47,6 +47,7 @@ import { executeOrderStageTransition, validatePodRequired, validateOrderClosure,
 import { runMaterialCheckForOrder, overrideMaterialCheckForOrder } from '../../../services/supabaseServices';
 import { getCurrentFinancialYear, formatDocumentNumber } from '../../../utils/statutoryAccountingEngine';
 import { ChallanDetailModal } from '../modals/ChallanDetailModal';
+import { useUrlModal } from '../../../hooks/useUrlModal';
 
 interface OrderDetailViewProps {
   order: CustomerOrder;
@@ -107,20 +108,29 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   onMarkDelayed,
   onRecordPayment
 }) => {
-  const [showUploadModal, setShowUploadModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showPodModal, setShowPodModal] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  // URL-driven modal hooks
+  const uploadPoModal = useUrlModal('upload-po');
+  const editOrderModal = useUrlModal('edit-order');
+  const podModal = useUrlModal('upload-pod');
+  const paymentModal = useUrlModal('record-payment');
+  const pdiModal = useUrlModal('pdi-inspection');
+  const invoiceModal = useUrlModal('generate-invoice');
+  const challanModal = useUrlModal('generate-challan');
+  const dispatchModal = useUrlModal('mark-dispatched');
+  const deliveryModal = useUrlModal('mark-delivered');
+  const delayedModal = useUrlModal('mark-delayed');
+  const challanDetailModal = useUrlModal('challan-detail');
+  const overrideModal = useUrlModal('material-override');
 
-  // Dedicated Progression Modals
-  const [showPdiModal, setShowPdiModal] = useState(false);
-  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
-  const [showChallanModal, setShowChallanModal] = useState(false);
-  const [showDispatchModal, setShowDispatchModal] = useState(false);
-  const [showDeliveryModal, setShowDeliveryModal] = useState(false);
-  const [showDelayedModal, setShowDelayedModal] = useState(false);
-  const [showChallanDetailModal, setShowChallanDetailModal] = useState(false);
   const [selectedChallanDetail, setSelectedChallanDetail] = useState<DispatchChallan | null>(null);
+
+  // Sync Challan Detail from URL
+  useEffect(() => {
+    if (challanDetailModal.isOpen && challanDetailModal.params.challanNo) {
+      const found = dispatches.find(d => d.challanNo === challanDetailModal.params.challanNo || d.id === challanDetailModal.params.challanNo);
+      if (found) setSelectedChallanDetail(found);
+    }
+  }, [challanDetailModal.isOpen, challanDetailModal.params.challanNo, dispatches]);
 
   const [poFileName, setPoFileName] = useState<string | null>(order.clientPoFile || null);
   const [isConfirming, setIsConfirming] = useState(false);
@@ -250,7 +260,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
     setEditChangeReason('');
     setEditLines(order.lines ? [...order.lines.map(l => ({ ...l }))] : []);
     setEditError(null);
-    setShowEditModal(true);
+    editOrderModal.open();
   };
 
   // 8-Stage Order Lifecycle: Confirmed -> Production -> QC/PDI -> Invoice & Challan -> Dispatched -> Delivered -> Receivable -> Closed
@@ -268,7 +278,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setPoFileName(e.target.files[0].name);
-      setShowUploadModal(false);
+      uploadPoModal.close();
     }
   };
 
@@ -339,7 +349,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       items: order.lines || []
     } : null);
     setSelectedChallanDetail(matched as any);
-    setShowChallanDetailModal(true);
+    challanDetailModal.open(matched?.challanNo ? { challanNo: matched.challanNo } : {});
   };
 
   // ----------------------------------------------------
@@ -375,7 +385,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         });
       }
 
-      setShowPdiModal(false);
+      pdiModal.close();
     } catch (err: any) {
       setPdiError(err?.message || 'Failed to complete PDI inspection.');
     } finally {
@@ -414,7 +424,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         });
       }
 
-      setShowInvoiceModal(false);
+      invoiceModal.close();
     } catch (err: any) {
       // Duplicate/in-flight guard surfaced clearly (Part 2): keep the modal open so the
       // user sees the "already exists: INV-XXXX" message instead of a silent false success.
@@ -455,7 +465,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         });
       }
 
-      setShowChallanModal(false);
+      challanModal.close();
     } catch (err: any) {
       setConfirmError(err?.message || 'Failed to generate delivery challan.');
     } finally {
@@ -493,7 +503,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         });
       }
 
-      setShowDispatchModal(false);
+      dispatchModal.close();
     } catch (err: any) {
       setConfirmError(err?.message || 'Failed to record dispatch.');
     } finally {
@@ -597,7 +607,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       }))
     });
 
-    setShowEditModal(false);
+    editOrderModal.close();
   };
 
   const handleEditSubmit = (e: React.FormEvent) => {
@@ -645,7 +655,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
     } else if (onNavigate) {
       onNavigate('invoices');
     } else {
-      setShowInvoiceModal(true);
+      invoiceModal.open();
     }
   };
 
@@ -655,7 +665,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
     } else if (onNavigate) {
       onNavigate('dispatch');
     } else {
-      setShowChallanModal(true);
+      challanModal.open();
     }
   };
 
@@ -695,7 +705,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       setIsRunningMaterialCheck(true);
       setOverrideError(null);
       const res = await overrideMaterialCheckForOrder(order.id || order.poNo, overrideReason);
-      setShowOverrideModal(false);
+      overrideModal.close();
       setMaterialCheckFeedback({
         ready: true,
         message: `Owner Override Applied: ${overrideReason}`
@@ -886,7 +896,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         });
       }
 
-      setShowDeliveryModal(false);
+      deliveryModal.close();
     } catch (err: any) {
       setConfirmError(err?.message || 'Failed to mark delivery.');
     } finally {
@@ -919,7 +929,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           progressStep: 9
         });
       }
-      setShowDelayedModal(false);
+      delayedModal.close();
     } catch (err: any) {
       setDelayedError(err?.message || 'Failed to mark delivery delayed.');
     } finally {
@@ -991,7 +1001,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         });
       }
 
-      setShowPaymentModal(false);
+      paymentModal.close();
     } catch (err: any) {
       setPaymentError(err?.message || 'Failed to record payment.');
     } finally {
@@ -1096,7 +1106,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
     }
 
     // Stage 2: CONFIRMED -> go to Production to create / start job cards
-    if (['CONFIRMED', 'APPROVED', 'RELEASED', 'MATERIAL_CHECKED', 'MATERIAL_CHECK', 'MATERIAL_READY', 'MATERIAL_VERIFIED', 'JOB_RELEASED', 'MATERIAL_ISSUED'].includes(st)) {
+    if (['CONFIRMED', 'APPROVED', 'RELEASED', 'MATERIAL_CHECKED', 'MATERIAL_CHECK', 'MATERIAL_READY', 'MATERIAL_VERIFIED'].includes(st)) {
       const allowed = isRoleAuthorizedForCta(currentRole, 'CREATE_JOB_CARD');
       const lineCount = (order.lines || []).length;
       return {
@@ -1121,13 +1131,13 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       };
     }
 
-    // Stage 3 (Production Floor): IN_PRODUCTION / WITH_SUBCONTRACTOR / REWORK -> Start PDI / QC
-    if (['IN_PRODUCTION', 'WITH_SUBCONTRACTOR', 'REWORK'].includes(st)) {
+    // Stage 3 (Production Floor): JOB_RELEASED / MATERIAL_ISSUED / IN_PRODUCTION / WITH_SUBCONTRACTOR / REWORK -> Start PDI / QC
+    if (['JOB_RELEASED', 'MATERIAL_ISSUED', 'IN_PRODUCTION', 'WITH_SUBCONTRACTOR', 'REWORK'].includes(st)) {
       return {
         label: 'Start PDI / QC Inspection',
         icon: ShieldCheck,
         buttonClass: 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-indigo-600 hover:to-purple-600 text-white shadow-purple-500/25',
-        handler: () => setShowPdiModal(true),
+        handler: () => pdiModal.open(),
         disabled: isConfirming,
         ownerRole: 'Quality & Pre-Dispatch'
       };
@@ -1143,7 +1153,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           handler: () => {
             if (onNavigateToPDI) onNavigateToPDI(order.poNo || order.id, order.jobCards?.[0]?.jobNo);
             else if (onNavigate) onNavigate('pdi');
-            else setShowPdiModal(true);
+            else pdiModal.open();
           },
           disabled: isConfirming || hasNcr,
           disabledReason: hasNcr ? 'Open NCR / QC Hold must be resolved before PDI' : undefined,
@@ -1156,7 +1166,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         buttonClass: 'bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white shadow-indigo-500/25',
         handler: () => {
           if (onNavigate) onNavigate('qc');
-          else setShowPdiModal(true);
+          else pdiModal.open();
         },
         disabled: isConfirming,
         ownerRole: 'QC Manager / Inspector'
@@ -1185,7 +1195,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           buttonClass: isDelayed
             ? 'bg-gradient-to-r from-amber-600 to-emerald-600 hover:from-emerald-600 hover:to-amber-600 text-white shadow-amber-500/25'
             : 'bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-emerald-600 hover:to-blue-600 text-white shadow-blue-500/25',
-          handler: () => setShowDeliveryModal(true),
+          handler: () => deliveryModal.open(),
           disabled: !allowed,
           disabledReason: !allowed ? 'Only Dispatch Clerk or Owner can mark delivered' : undefined,
           ownerRole: 'Dispatch Logistics'
@@ -1242,7 +1252,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           label: 'Mark Delivered (Stage 10a)',
           icon: CheckCircle2,
           buttonClass: 'bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-emerald-600 hover:to-blue-600 text-white shadow-blue-500/25',
-          handler: () => setShowDeliveryModal(true),
+          handler: () => deliveryModal.open(),
           disabled: !allowed,
           disabledReason: !allowed ? 'Only Dispatch Clerk or Owner can mark delivered' : undefined,
           ownerRole: 'Dispatch & Transport Desk'
@@ -1259,7 +1269,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             : `Record Payment (Stage 11 — Total: ₹${gross.toLocaleString('en-IN')})`,
           icon: CreditCard,
           buttonClass: 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white shadow-emerald-500/25',
-          handler: () => setShowPaymentModal(true),
+          handler: () => paymentModal.open(),
           disabled: !allowed,
           disabledReason: !allowed ? 'Only Finance / Accounts or Owner can record payments' : undefined,
           ownerRole: 'Accounts & Finance Controller'
@@ -1337,7 +1347,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           endpoint: 'POST /api/v1/dispatch',
           role: 'DISPATCH_STORE / OPS_ADMIN',
           testActionLabel: effectiveChallanNo ? '⚡ View / Dispatch Challan' : '⚡ Issue Delivery Challan',
-          onTest: () => effectiveChallanNo ? handleOpenChallanDetailModal() : setShowChallanModal(true)
+          onTest: () => effectiveChallanNo ? handleOpenChallanDetailModal() : challanModal.open()
         };
       case 4:
         return {
@@ -1359,7 +1369,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           endpoint: 'POST /api/v1/dispatch/:id/deliver',
           role: 'DISPATCH_STORE / OPS_ADMIN',
           testActionLabel: effectiveInvoiceNo ? '⚡ Mark Delivered (POD)' : '⚡ Generate GST Invoice',
-          onTest: () => effectiveInvoiceNo ? setShowDeliveryModal(true) : handleGoToCreateInvoice()
+          onTest: () => effectiveInvoiceNo ? deliveryModal.open() : handleGoToCreateInvoice()
         };
       case 6:
         return {
@@ -1370,7 +1380,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           endpoint: 'POST /api/v1/invoices/:invoiceNo/pay',
           role: 'ACCOUNTS_ADMIN / FINANCE',
           testActionLabel: remainingOutstanding > 0 ? '⚡ Record Payment Received' : '⚡ Mark Order Closed',
-          onTest: remainingOutstanding > 0 ? () => setShowPaymentModal(true) : handleCloseOrderAction
+          onTest: remainingOutstanding > 0 ? () => paymentModal.open() : handleCloseOrderAction
         };
       case 7:
       default:
@@ -1472,7 +1482,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           {/* Clean Header Info Strip */}
           <div className="flex items-center gap-2.5 w-full sm:w-auto">
             <button
-              onClick={() => setShowUploadModal(true)}
+              onClick={() => uploadPoModal.open()}
               className={`w-full sm:w-auto px-3.5 py-2 rounded-2xl border text-xs font-mono font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                 isDarkMode 
                   ? 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800 hover:text-white' 
@@ -1801,8 +1811,19 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               role: 'Production Planner (PPC)',
               description: 'BOM raw materials issued from stores. Route card operations scheduled for machine allocation.',
               icon: FileCheck,
-              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
-                ['MATERIAL_READY', 'JOB_RELEASED'].includes(n) || ['MATERIAL_READY', 'READY_FOR_PRODUCTION', 'PLANNING', 'MATERIAL_ISSUED', 'MATERIAL_CHECKED', 'MATERIAL_VERIFIED'].includes((o.status || '').toUpperCase()),
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => {
+                const st = (o.status || o.stage || '').toUpperCase();
+                // Never show "Create Job Card" if the order is already past job card creation
+                const pastJobCard = ['IN_PRODUCTION', 'WITH_SUBCONTRACTOR', 'REWORK', 'MANUFACTURING_COMPLETED',
+                  'READY_FOR_QC', 'QC', 'QC_INSPECTION', 'QC_IN_PROGRESS', 'INSPECTION_PENDING', 'QC_HOLD',
+                  'QC_REPORT_UPLOADED', 'PDI', 'PDI_HOLD', 'PDI_PENDING', 'AWAITING_PDI', 'PDI_COMPLETE',
+                  'READY_FOR_DISPATCH', 'READY_TO_DISPATCH', 'DISPATCH_READY', 'INVOICE_GENERATED',
+                  'DISPATCHED', 'PARTIALLY_DISPATCHED', 'IN_TRANSIT', 'DELIVERY_DELAYED', 'DELIVERED',
+                  'INVOICED', 'PAYMENT_PENDING', 'COMPLETED', 'CLOSED'].includes(st);
+                if (pastJobCard || isPdiPassed || allQcPassed) return false;
+                return ['MATERIAL_READY', 'JOB_RELEASED'].includes(n) ||
+                  ['MATERIAL_READY', 'READY_FOR_PRODUCTION', 'PLANNING', 'MATERIAL_ISSUED', 'MATERIAL_CHECKED', 'MATERIAL_VERIFIED'].includes(st);
+              },
               renderActions: () => {
                 const allowed = isRoleAuthorizedForCta(currentRole, 'CREATE_JOB_CARD');
                 const lineCount = (order.lines || []).length;
@@ -1899,7 +1920,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                       onClick={() => {
                         if (onNavigateToPDI) onNavigateToPDI(order.poNo || order.id, order.jobCards?.[0]?.jobNo);
                         else if (onNavigate) onNavigate('pdi');
-                        else setShowPdiModal(true);
+                        else pdiModal.open();
                       }}
                       title={`Inspect PDI for ${order.jobCards?.[0]?.jobNo || 'JC'} (${order.poNo || order.id})`}
                       className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
@@ -1934,7 +1955,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     onClick={() => {
                       if (onNavigateToPDI) onNavigateToPDI(order.poNo || order.id, order.jobCards?.[0]?.jobNo);
                       else if (onNavigate) onNavigate('pdi');
-                      else setShowPdiModal(true);
+                      else pdiModal.open();
                     }}
                     title={`Inspect PDI for ${order.jobCards?.[0]?.jobNo || 'JC'} (${order.poNo || order.id})`}
                     className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold shadow-md shadow-[#5B75F8]/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
@@ -1957,14 +1978,14 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               renderActions: () => (
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
                   <button
-                    onClick={() => setShowPdiModal(true)}
+                    onClick={() => pdiModal.open()}
                     className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
                   >
                     <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
                     <span>Mark Ready to Dispatch</span>
                   </button>
                   <button
-                    onClick={() => setShowPdiModal(true)}
+                    onClick={() => pdiModal.open()}
                     className="px-3.5 py-2 rounded-xl bg-rose-500/10 text-rose-500 dark:text-rose-400 border border-rose-500/30 text-xs font-bold cursor-pointer hover:bg-rose-500/20 flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
                   >
                     <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
@@ -2079,7 +2100,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     )}
                     <button
                       disabled={isConfirming || !allowedDelivered}
-                      onClick={() => setShowDeliveryModal(true)}
+                      onClick={() => deliveryModal.open()}
                       title={!allowedDelivered ? 'Only Dispatch Clerk or Owner can confirm delivery' : undefined}
                       className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-emerald-600 hover:to-blue-600 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
                     >
@@ -2089,7 +2110,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     {!isDelayed && (
                       <button
                         disabled={isConfirming || !allowedDelayed}
-                        onClick={() => setShowDelayedModal(true)}
+                        onClick={() => delayedModal.open()}
                         title={!allowedDelayed ? 'Only Dispatch Clerk or Owner can mark delayed' : undefined}
                         className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-bold shadow-md shadow-amber-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
                       >
@@ -2126,7 +2147,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     )}
                     <button
                       disabled={isConfirming || !allowed}
-                      onClick={() => setShowPaymentModal(true)}
+                      onClick={() => paymentModal.open()}
                       title={!allowed ? 'Only Finance / Accounts or Owner can record payment' : undefined}
                       className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
                     >
@@ -2382,7 +2403,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             </div>
           </div>
           <button
-            onClick={() => setShowUploadModal(true)}
+            onClick={() => uploadPoModal.open()}
             className="px-3 py-1.5 sm:px-3.5 sm:py-1.5 rounded-xl border border-[#5B75F8]/30 bg-[#5B75F8]/10 text-[#5B75F8] dark:text-[#7B92FF] font-bold hover:bg-[#5B75F8]/20 cursor-pointer text-[11px] sm:text-xs flex items-center gap-1.5 transition-all shrink-0"
           >
             <Upload className="w-3.5 h-3.5" />
@@ -2510,7 +2531,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       </div>
 
       {/* Upload Modal */}
-      {showUploadModal && (
+      {uploadPoModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
           <div className={`relative w-full max-w-md rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${
             isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
@@ -2518,7 +2539,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             <div className={`flex items-center justify-between border-b pb-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <h3 className="font-bold text-sm uppercase text-[#5B75F8] dark:text-[#7B92FF]">Upload Client PO Document</h3>
               <button 
-                onClick={() => setShowUploadModal(false)} 
+                onClick={() => uploadPoModal.close()} 
                 className={`p-1 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
               >
                 <X className="w-5 h-5" />
@@ -2538,7 +2559,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             </div>
             <div className={`pt-3 flex justify-end border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <button 
-                onClick={() => setShowUploadModal(false)} 
+                onClick={() => uploadPoModal.close()} 
                 className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                   isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
@@ -2551,7 +2572,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       )}
 
       {/* Edit Order Modal */}
-      {showEditModal && (
+      {editOrderModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md font-sans">
           <div className={`relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border shadow-2xl p-6 transition-all ${
             isDarkMode ? 'bg-slate-900/95 border-slate-800 text-white backdrop-blur-2xl' : 'bg-white border-slate-200 text-slate-900 shadow-2xl'
@@ -2573,7 +2594,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 </div>
               </div>
               <button 
-                onClick={() => setShowEditModal(false)}
+                onClick={() => editOrderModal.close()}
                 className={`p-2 rounded-2xl border transition-all cursor-pointer ${
                   isDarkMode 
                     ? 'border-slate-800 bg-slate-950/60 text-slate-400 hover:text-white hover:bg-slate-800' 
@@ -2801,7 +2822,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               <div className={`flex justify-end gap-3 pt-3 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
                 <button
                   type="button"
-                  onClick={() => setShowEditModal(false)}
+                  onClick={() => editOrderModal.close()}
                   className={`px-4 py-2 rounded-xl text-xs font-mono font-bold cursor-pointer transition-all ${
                     isDarkMode ? 'text-slate-400 hover:text-white' : 'border border-slate-200 text-slate-600 hover:bg-slate-100 text-slate-700'
                   }`}
@@ -2823,7 +2844,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       )}
 
       {/* 1. PRE-DISPATCH INSPECTION (PDI) MODAL */}
-      {showPdiModal && (
+      {pdiModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
           <div className={`relative w-full max-w-xl rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${
             isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900 shadow-slate-200/50'
@@ -2846,7 +2867,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 </div>
               </div>
               <button 
-                onClick={() => setShowPdiModal(false)} 
+                onClick={() => pdiModal.close()} 
                 className={`p-1.5 rounded-xl transition-all cursor-pointer ${
                   isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
                 }`}
@@ -3027,7 +3048,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowPdiModal(false)}
+                  onClick={() => pdiModal.close()}
                   className={`px-4 py-2.5 rounded-xl border text-xs font-semibold cursor-pointer transition-all ${
                     isDarkMode 
                       ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800' 
@@ -3052,7 +3073,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       )}
 
       {/* 2. GENERATE TAX INVOICE MODAL */}
-      {showInvoiceModal && (
+      {invoiceModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
           <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${
             isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
@@ -3068,7 +3089,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 </div>
               </div>
               <button 
-                onClick={() => setShowInvoiceModal(false)} 
+                onClick={() => invoiceModal.close()} 
                 className={`p-1 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
               >
                 <X className="w-5 h-5" />
@@ -3148,7 +3169,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             <div className={`pt-3 flex justify-end gap-2.5 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <button
                 type="button"
-                onClick={() => setShowInvoiceModal(false)}
+                onClick={() => invoiceModal.close()}
                 className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                   isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
@@ -3170,7 +3191,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       )}
 
       {/* 3. GENERATE DELIVERY CHALLAN MODAL */}
-      {showChallanModal && (
+      {challanModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
           <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${
             isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
@@ -3186,7 +3207,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 </div>
               </div>
               <button 
-                onClick={() => setShowChallanModal(false)} 
+                onClick={() => challanModal.close()} 
                 className={`p-1 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
               >
                 <X className="w-5 h-5" />
@@ -3266,7 +3287,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             <div className={`pt-3 flex justify-end gap-2.5 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <button
                 type="button"
-                onClick={() => setShowChallanModal(false)}
+                onClick={() => challanModal.close()}
                 className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                   isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
@@ -3297,7 +3318,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       )}
 
       {/* 4. DISPATCH OUTWARD CONSIGNMENT MODAL */}
-      {showDispatchModal && (
+      {dispatchModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
           <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${
             isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
@@ -3313,7 +3334,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 </div>
               </div>
               <button 
-                onClick={() => setShowDispatchModal(false)} 
+                onClick={() => dispatchModal.close()} 
                 className={`p-1 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
               >
                 <X className="w-5 h-5" />
@@ -3403,7 +3424,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             <div className={`pt-3 flex justify-end gap-2.5 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <button
                 type="button"
-                onClick={() => setShowDispatchModal(false)}
+                onClick={() => dispatchModal.close()}
                 className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                   isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
@@ -3425,7 +3446,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       )}
 
       {/* 5. CONFIRM DELIVERY MODAL (WITH FILE CHOOSER & CLEAN UI) */}
-      {showDeliveryModal && (
+      {deliveryModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
           <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${
             isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
@@ -3441,7 +3462,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 </div>
               </div>
               <button 
-                onClick={() => setShowDeliveryModal(false)} 
+                onClick={() => deliveryModal.close()} 
                 className={`p-1 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
               >
                 <X className="w-5 h-5" />
@@ -3545,7 +3566,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             <div className={`pt-3 flex justify-end gap-2.5 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <button
                 type="button"
-                onClick={() => setShowDeliveryModal(false)}
+                onClick={() => deliveryModal.close()}
                 className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                   isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
@@ -3568,7 +3589,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       )}
 
       {/* 5b. MARK DELIVERY DELAYED MODAL */}
-      {showDelayedModal && (
+      {delayedModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
           <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${
             isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
@@ -3584,7 +3605,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 </div>
               </div>
               <button 
-                onClick={() => setShowDelayedModal(false)} 
+                onClick={() => delayedModal.close()} 
                 className={`p-1 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
               >
                 <X className="w-5 h-5" />
@@ -3627,7 +3648,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             <div className={`pt-3 flex justify-end gap-2.5 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <button
                 type="button"
-                onClick={() => setShowDelayedModal(false)}
+                onClick={() => delayedModal.close()}
                 className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                   isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
@@ -3649,7 +3670,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       )}
 
       {/* 6. RECORD PAYMENT & SETTLE MODAL */}
-      {showPaymentModal && (
+      {paymentModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
           <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${
             isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
@@ -3667,7 +3688,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 </div>
               </div>
               <button 
-                onClick={() => setShowPaymentModal(false)} 
+                onClick={() => paymentModal.close()} 
                 className={`p-1 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
               >
                 <X className="w-5 h-5" />
@@ -3693,7 +3714,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      setShowPaymentModal(false);
+                      paymentModal.close();
                       onNavigate('invoices');
                     }}
                     className="text-[11px] font-bold text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer"
@@ -3818,7 +3839,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             <div className={`pt-3 flex justify-end gap-2.5 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <button
                 type="button"
-                onClick={() => setShowPaymentModal(false)}
+                onClick={() => paymentModal.close()}
                 className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                   isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
@@ -3840,7 +3861,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       )}
 
       {/* Owner Override Material Check Modal */}
-      {showOverrideModal && (
+      {overrideModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
           <div className={`relative w-full max-w-md rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${
             isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
@@ -3856,7 +3877,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 </div>
               </div>
               <button 
-                onClick={() => setShowOverrideModal(false)} 
+                onClick={() => overrideModal.close()} 
                 className={`p-1 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
               >
                 <X className="w-5 h-5" />
@@ -3893,7 +3914,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               <div className={`pt-3 flex justify-end gap-2.5 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
                 <button 
                   type="button"
-                  onClick={() => setShowOverrideModal(false)} 
+                  onClick={() => overrideModal.close()} 
                   className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                     isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`}
@@ -3915,8 +3936,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
       {/* 6. CHALLAN DETAIL & STATUTORY PRINT MODAL */}
       <ChallanDetailModal
-        isOpen={showChallanDetailModal}
-        onClose={() => setShowChallanDetailModal(false)}
+        isOpen={challanDetailModal.isOpen}
+        onClose={() => challanDetailModal.close()}
         challan={selectedChallanDetail}
         order={order}
         isDarkMode={isDarkMode}

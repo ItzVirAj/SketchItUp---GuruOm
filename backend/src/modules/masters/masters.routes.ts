@@ -22,6 +22,7 @@ router.delete('/customers/:code', requirePermission('masters', 'CREATE_EDIT'), (
 
 // 3. Vendors
 router.get('/vendors', requirePermission('masters', 'VIEW_ONLY'), (req, res) => mastersController.getVendors(req, res));
+router.get('/vendors/:code/scorecard', requirePermission('masters', 'VIEW_ONLY'), (req, res) => mastersController.getVendorScorecard(req, res));
 router.post('/vendors', requirePermission('masters', 'CREATE_EDIT'), (req, res) => mastersController.createVendor(req, res));
 router.put('/vendors/:code', requirePermission('masters', 'CREATE_EDIT'), (req, res) => mastersController.updateVendor(req, res));
 router.delete('/vendors/:code', requirePermission('masters', 'CREATE_EDIT'), (req, res) => mastersController.deleteVendor(req, res));

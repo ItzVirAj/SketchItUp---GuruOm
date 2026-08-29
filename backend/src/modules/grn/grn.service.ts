@@ -4,6 +4,8 @@ import { GoodsReceiptNoteSchema, UpdateGrnStatusSchema } from './grn.schema';
 import { inventoryMovementsService } from '../inventory/inventory_movements.service';
 import { notificationsService } from '../notifications/notifications.service';
 import { ordersService } from '../orders/orders.service';
+import { purchasingService } from '../purchasing/purchasing.service';
+import { evaluateGrnMismatch } from '../../../../src/utils/procurementEngine';
 import { logAudit } from '../../services/auditLog';
 
 const SEED_GRNS: any[] = [];
@@ -34,6 +36,8 @@ export class GrnService {
           status: g.status,
           vehicleNo: g.vehicle_no,
           remarks: g.remarks,
+          isQtyMismatched: Boolean(g.is_qty_mismatched),
+          mismatchNotes: g.mismatch_notes || undefined,
           items: (itemsData || []).filter(i => i.grn_id === g.id).map(i => ({
             id: i.id,
             itemCode: i.item_code,
@@ -78,6 +82,8 @@ export class GrnService {
           status: g.status,
           vehicleNo: g.vehicle_no,
           remarks: g.remarks,
+          isQtyMismatched: Boolean(g.is_qty_mismatched),
+          mismatchNotes: g.mismatch_notes || undefined,
           items: (itemsData || []).map(i => ({
             id: i.id,
             itemCode: i.item_code,
@@ -102,6 +108,39 @@ export class GrnService {
     const validated = GoodsReceiptNoteSchema.parse(data);
     const grnId = validated.id || `grn-${Date.now()}`;
 
+    // 1. Look up originating Purchase Order to compare expected vs received quantities
+    let originatingPo: any = null;
+    try {
+      if (validated.poNo) {
+        originatingPo = await purchasingService.getPurchaseOrderById(validated.poNo);
+      }
+    } catch (poErr) {
+      console.warn('Error fetching PO for GRN mismatch evaluation:', poErr);
+    }
+
+    let isQtyMismatched = false;
+    const mismatchMessages: string[] = [];
+
+    if (validated.items && validated.items.length > 0) {
+      for (const item of validated.items) {
+        const matchedPoItem = originatingPo?.items?.find(
+          (pi: any) => pi.itemCode?.toLowerCase().trim() === item.itemCode?.toLowerCase().trim()
+        );
+        const expectedQty = Number(matchedPoItem?.orderQty ?? item.orderedQty ?? 0);
+        const receivedQty = Number(item.receivedQty || 0);
+
+        if (expectedQty > 0 || receivedQty > 0) {
+          const evalResult = evaluateGrnMismatch(expectedQty, receivedQty);
+          if (evalResult.isMismatched) {
+            isQtyMismatched = true;
+            mismatchMessages.push(evalResult.message);
+          }
+        }
+      }
+    }
+
+    const mismatchNotes = mismatchMessages.length > 0 ? mismatchMessages.join(' | ') : undefined;
+
     try {
       const { error: insertErr } = await this.db.from('goods_receipt_notes').insert({
         id: grnId,
@@ -116,6 +155,8 @@ export class GrnService {
         status: validated.status,
         vehicle_no: validated.vehicleNo,
         remarks: validated.remarks,
+        is_qty_mismatched: isQtyMismatched,
+        mismatch_notes: mismatchNotes || null,
         created_at: new Date().toISOString()
       });
 
@@ -160,7 +201,12 @@ export class GrnService {
       }
     }
 
-    const createdGrn = { id: grnId, ...validated };
+    const createdGrn = {
+      id: grnId,
+      ...validated,
+      isQtyMismatched,
+      mismatchNotes
+    };
     SEED_GRNS.unshift(createdGrn as any);
 
     // AUTOMATED CHAIN TRIGGER: Re-evaluate material availability for all orders waiting on raw materials

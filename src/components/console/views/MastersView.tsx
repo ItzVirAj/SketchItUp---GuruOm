@@ -39,10 +39,15 @@ import {
   FileCheck,
   Truck,
   Pencil,
-  Trash2
+  Trash2,
+  Award,
+  TrendingUp
 } from 'lucide-react';
 import { MasterItem, CustomerMaster, VendorMaster, MachineMaster, SystemUser } from '../../../types/console';
 import { Modal } from '../../common/Modal';
+import { useUrlModal } from '../../../hooks/useUrlModal';
+import { fetchVendorScorecard } from '../../../services/supabaseServices';
+import { VendorPerformanceMetric } from '../../../utils/procurementEngine';
 
 import { 
   INDIAN_STATES,
@@ -147,14 +152,41 @@ export const MastersView: React.FC<MastersViewProps> = ({
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'Active' | 'Inactive'>('ALL');
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
   
-  // Separate Modal states
-  const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
-  const [showAddVendorModal, setShowAddVendorModal] = useState(false);
-  const [showAddMachineModal, setShowAddMachineModal] = useState(false);
-  const [showAddItemModal, setShowAddItemModal] = useState(false);
+  // URL-driven modal hooks
+  const addCustomerModal = useUrlModal('add-customer');
+  const addVendorModal = useUrlModal('add-vendor');
+  const addMachineModal = useUrlModal('add-machine');
+  const addItemModal = useUrlModal('add-item');
+  const deleteMasterModal = useUrlModal('delete-master');
   
   // Unmask Bank Account state
   const [unmaskedBankVendorCode, setUnmaskedBankVendorCode] = useState<string | null>(null);
+
+  // Vendor Performance Scorecard Lazy Evaluation
+  const [scorecardMap, setScorecardMap] = useState<Record<string, VendorPerformanceMetric>>({});
+  const [loadingScorecardCode, setLoadingScorecardCode] = useState<string | null>(null);
+  const [expandedScorecardCode, setExpandedScorecardCode] = useState<string | null>(null);
+
+  const handleToggleScorecard = async (vendorCode: string) => {
+    if (expandedScorecardCode === vendorCode) {
+      setExpandedScorecardCode(null);
+      return;
+    }
+    if (scorecardMap[vendorCode]) {
+      setExpandedScorecardCode(vendorCode);
+      return;
+    }
+    setLoadingScorecardCode(vendorCode);
+    try {
+      const metric = await fetchVendorScorecard(vendorCode);
+      setScorecardMap(prev => ({ ...prev, [vendorCode]: metric }));
+      setExpandedScorecardCode(vendorCode);
+    } catch (err) {
+      console.warn('Failed to fetch vendor scorecard:', err);
+    } finally {
+      setLoadingScorecardCode(null);
+    }
+  };
 
   // Form Validation Errors
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -297,7 +329,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
     setCSalesperson(users.find(u => u.userRole?.includes('Sales'))?.name || '');
     setCStatus('Active');
     setCNotes('');
-    setShowAddCustomerModal(true);
+    addCustomerModal.open();
   };
 
   const openEditCustomer = (c: CustomerMaster) => {
@@ -326,7 +358,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
     setCSalesperson(c.salesperson || '');
     setCStatus(c.status || 'Active');
     setCNotes(c.notes || '');
-    setShowAddCustomerModal(true);
+    addCustomerModal.open({ code: c.code });
   };
 
   const openVendorModal = () => {
@@ -359,7 +391,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
     setVTurnaroundTimeDays(3);
     setVStatus('Active');
     setVNotes('');
-    setShowAddVendorModal(true);
+    addVendorModal.open();
   };
 
   const openEditVendor = (v: VendorMaster) => {
@@ -392,7 +424,15 @@ export const MastersView: React.FC<MastersViewProps> = ({
     setVTurnaroundTimeDays(v.turnaroundTimeDays ?? 3);
     setVStatus(v.status || 'Active');
     setVNotes(v.notes || '');
-    setShowAddVendorModal(true);
+
+    // Lazy load vendor scorecard for modal display
+    if (!scorecardMap[v.code]) {
+      fetchVendorScorecard(v.code).then(metric => {
+        setScorecardMap(prev => ({ ...prev, [v.code]: metric }));
+      }).catch(() => {});
+    }
+
+    addVendorModal.open({ code: v.code });
   };
 
   const openItemModal = () => {
@@ -417,7 +457,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
     setIPreferredVendor(vendors[0]?.name || '');
     setIDefaultWarehouse('Main Raw Material Store');
     setIStatus('Active');
-    setShowAddItemModal(true);
+    addItemModal.open();
   };
 
   const openEditItem = (item: MasterItem) => {
@@ -441,7 +481,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
     setIPreferredVendor(item.preferredVendor || '');
     setIDefaultWarehouse(item.defaultWarehouse || item.storeLocation || 'Main Raw Material Store');
     setIStatus(item.status || 'Active');
-    setShowAddItemModal(true);
+    addItemModal.open({ code: item.code });
   };
 
   const openMachineModal = () => {
@@ -464,7 +504,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
     setMStatus('Active');
     setMResponsiblePerson(users[0]?.name || '');
     setMHourlyCost(600);
-    setShowAddMachineModal(true);
+    addMachineModal.open();
   };
 
   const openEditMachine = (m: MachineMaster) => {
@@ -486,11 +526,12 @@ export const MastersView: React.FC<MastersViewProps> = ({
     setMStatus(m.status || 'Active');
     setMResponsiblePerson(m.responsiblePerson || '');
     setMHourlyCost(m.hourlyCost ?? 600);
-    setShowAddMachineModal(true);
+    addMachineModal.open({ code: m.code });
   };
 
   const handleDeletePrompt = (type: 'CUSTOMER' | 'VENDOR' | 'ITEM' | 'MACHINE', code: string, name: string) => {
     setDeleteConfirm({ isOpen: true, type, code, name });
+    deleteMasterModal.open({ type, code, name });
   };
 
   const handleConfirmDelete = async () => {
@@ -512,8 +553,25 @@ export const MastersView: React.FC<MastersViewProps> = ({
     } finally {
       setIsDeleting(false);
       setDeleteConfirm(null);
+      deleteMasterModal.close();
     }
   };
+
+  useEffect(() => {
+    if (deleteMasterModal.isOpen) {
+      const { type, code, name } = deleteMasterModal.params;
+      if (type && code) {
+        setDeleteConfirm({
+          isOpen: true,
+          type: type as any,
+          code,
+          name: name || code
+        });
+      }
+    } else {
+      setDeleteConfirm(null);
+    }
+  }, [deleteMasterModal.isOpen, deleteMasterModal.params.type, deleteMasterModal.params.code, deleteMasterModal.params.name]);
 
   // Dynamic Item Prefix update on type change
   const handleItemTypeChange = (newType: string) => {
@@ -621,7 +679,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
     }
 
     setEditingCustomer(null);
-    setShowAddCustomerModal(false);
+    addCustomerModal.close();
   };
 
   const handleSaveVendor = (e: React.FormEvent) => {
@@ -708,7 +766,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
     }
 
     setEditingVendor(null);
-    setShowAddVendorModal(false);
+    addVendorModal.close();
   };
 
   const handleSaveItem = (e: React.FormEvent) => {
@@ -774,7 +832,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
     }
 
     setEditingItem(null);
-    setShowAddItemModal(false);
+    addItemModal.close();
   };
 
   const handleSaveMachine = (e: React.FormEvent) => {
@@ -830,7 +888,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
     }
 
     setEditingMachine(null);
-    setShowAddMachineModal(false);
+    addMachineModal.close();
   };
 
   // ----------------------------------------------------
@@ -1393,6 +1451,63 @@ export const MastersView: React.FC<MastersViewProps> = ({
                     </div>
                   </div>
 
+                  {/* Vendor Performance Scorecard (Mobile) */}
+                  <div className="pt-0.5">
+                    {!scorecardMap[vend.code] ? (
+                      <button
+                        type="button"
+                        onClick={() => handleToggleScorecard(vend.code)}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                          isDarkMode 
+                            ? 'bg-slate-950/60 text-slate-400 hover:text-white border-slate-800 hover:border-slate-700' 
+                            : 'bg-slate-50 text-slate-600 hover:text-slate-900 border-slate-200 shadow-xs'
+                        }`}
+                      >
+                        <Award className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>{loadingScorecardCode === vend.code ? 'Evaluating...' : 'Vendor Scorecard'}</span>
+                      </button>
+                    ) : (
+                      (() => {
+                        const sc = scorecardMap[vend.code];
+                        const tierBadge = sc.vendorRatingTier === 'TIER_1_EXCELLENT'
+                          ? isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : sc.vendorRatingTier === 'TIER_2_SATISFACTORY'
+                          ? isDarkMode ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-200'
+                          : isDarkMode ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200';
+                        return (
+                          <div className="space-y-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleScorecard(vend.code)}
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-[10px] font-mono font-bold uppercase cursor-pointer ${tierBadge}`}
+                            >
+                              <Award className="w-3.5 h-3.5" />
+                              <span>{sc.summaryBadge}</span>
+                            </button>
+                            {expandedScorecardCode === vend.code && (
+                              <div className={`p-2.5 rounded-2xl border text-xs font-mono space-y-1 ${
+                                isDarkMode ? 'bg-slate-950/90 border-slate-800 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-800'
+                              }`}>
+                                <div className="flex items-center justify-between text-[11px]">
+                                  <span className="text-slate-400">On-Time Delivery (OTD):</span>
+                                  <span className="font-bold text-indigo-400">{sc.otdPercentage}% ({sc.onTimeDeliveries}/{sc.totalDeliveries})</span>
+                                </div>
+                                <div className="flex items-center justify-between text-[11px]">
+                                  <span className="text-slate-400">Quality Acceptance:</span>
+                                  <span className="font-bold text-emerald-400">{sc.qualityAcceptancePercentage}% ({sc.acceptedQty}/{sc.totalReceivedQty} NOS)</span>
+                                </div>
+                                <div className="flex items-center justify-between text-[11px]">
+                                  <span className="text-slate-400">Overall Score:</span>
+                                  <span className="font-bold text-amber-400">{sc.overallScore} / 100</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()
+                    )}
+                  </div>
+
                   {/* Process Type if Subcontractor */}
                   {vend.vendorType === 'Subcontractor / Job Worker' && vend.processType && (
                     <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-mono">
@@ -1503,11 +1618,68 @@ export const MastersView: React.FC<MastersViewProps> = ({
                         <td className="py-4 px-5 font-mono font-bold text-indigo-600 dark:text-indigo-400">{vend.code}</td>
                         <td className="py-4 px-5">
                           <div className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{vend.name}</div>
-                          <div className="text-[10px] font-mono mt-1">
+                          <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-mono mt-1">
                             <span className={`px-2 py-0.5 rounded-md font-bold border ${
                               isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-300'
                             }`}>{vend.vendorCategory}</span>
+
+                            {/* Vendor Scorecard Indicator */}
+                            {!scorecardMap[vend.code] ? (
+                              <button
+                                type="button"
+                                onClick={() => handleToggleScorecard(vend.code)}
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                                  isDarkMode 
+                                    ? 'bg-slate-800/80 text-slate-400 hover:text-white border-slate-700 hover:border-slate-600' 
+                                    : 'bg-slate-50 text-slate-600 hover:text-slate-900 border-slate-200 hover:border-slate-300 shadow-xs'
+                                }`}
+                                title="Evaluate OTD and Quality Scorecard"
+                              >
+                                <Award className="w-3 h-3 text-indigo-400" />
+                                <span>{loadingScorecardCode === vend.code ? 'Evaluating...' : 'Scorecard'}</span>
+                              </button>
+                            ) : (
+                              (() => {
+                                const sc = scorecardMap[vend.code];
+                                const tierBadge = sc.vendorRatingTier === 'TIER_1_EXCELLENT'
+                                  ? isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : sc.vendorRatingTier === 'TIER_2_SATISFACTORY'
+                                  ? isDarkMode ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-200'
+                                  : isDarkMode ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200';
+                                return (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleScorecard(vend.code)}
+                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[10px] font-mono font-bold uppercase cursor-pointer ${tierBadge}`}
+                                    title={`OTD: ${sc.otdPercentage}% | Quality: ${sc.qualityAcceptancePercentage}% | Overall: ${sc.overallScore}%`}
+                                  >
+                                    <Award className="w-3 h-3" />
+                                    <span>{sc.vendorRatingTier === 'TIER_1_EXCELLENT' ? 'Tier 1' : sc.vendorRatingTier === 'TIER_2_SATISFACTORY' ? 'Tier 2' : 'Tier 3'} ({sc.overallScore}%)</span>
+                                  </button>
+                                );
+                              })()
+                            )}
                           </div>
+
+                          {/* Expanded Scorecard Drawer */}
+                          {expandedScorecardCode === vend.code && scorecardMap[vend.code] && (
+                            <div className={`mt-2 p-2.5 rounded-xl border text-[11px] font-mono space-y-1 ${
+                              isDarkMode ? 'bg-slate-950/90 border-slate-800 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-800'
+                            }`}>
+                              <div className="flex items-center justify-between">
+                                <span className="text-slate-400">OTD Rate:</span>
+                                <span className="font-bold text-indigo-400">{scorecardMap[vend.code].otdPercentage}% ({scorecardMap[vend.code].onTimeDeliveries}/{scorecardMap[vend.code].totalDeliveries} On-time)</span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-slate-400">Quality Acceptance:</span>
+                                <span className="font-bold text-emerald-400">{scorecardMap[vend.code].qualityAcceptancePercentage}% ({scorecardMap[vend.code].acceptedQty}/{scorecardMap[vend.code].totalReceivedQty} NOS)</span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-slate-400">Scorecard Summary:</span>
+                                <span className="font-bold text-amber-400">{scorecardMap[vend.code].summaryBadge}</span>
+                              </div>
+                            </div>
+                          )}
                         </td>
                         <td className="py-4 px-5">
                           <span className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
@@ -2107,9 +2279,9 @@ export const MastersView: React.FC<MastersViewProps> = ({
       {/* MODAL 1: ADD / EDIT CUSTOMER (LIGHT & DARK THEME POLISHED) */}
       {/* ========================================================================= */}
       <Modal
-        isOpen={showAddCustomerModal}
+        isOpen={addCustomerModal.isOpen}
         onClose={() => {
-          setShowAddCustomerModal(false);
+          addCustomerModal.close();
           setEditingCustomer(null);
         }}
         maxWidth="4xl"
@@ -2122,7 +2294,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
             <button
               type="button"
               onClick={() => {
-                setShowAddCustomerModal(false);
+                addCustomerModal.close();
                 setEditingCustomer(null);
               }}
               className={`px-4 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
@@ -2563,9 +2735,9 @@ export const MastersView: React.FC<MastersViewProps> = ({
       {/* MODAL 2: ADD / EDIT VENDOR (LIGHT & DARK THEME POLISHED) */}
       {/* ========================================================================= */}
       <Modal
-        isOpen={showAddVendorModal}
+        isOpen={addVendorModal.isOpen}
         onClose={() => {
-          setShowAddVendorModal(false);
+          addVendorModal.close();
           setEditingVendor(null);
         }}
         maxWidth="4xl"
@@ -2578,7 +2750,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
             <button
               type="button"
               onClick={() => {
-                setShowAddVendorModal(false);
+                addVendorModal.close();
                 setEditingVendor(null);
               }}
               className={`px-4 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
@@ -2602,6 +2774,41 @@ export const MastersView: React.FC<MastersViewProps> = ({
       >
         <form id="save-vendor-form" onSubmit={handleSaveVendor} className="space-y-4 text-xs">
           
+          {/* Vendor Performance Scorecard Banner (When Editing) */}
+          {editingVendor && scorecardMap[vCode] && (
+            <div className={`p-3.5 rounded-2xl border text-xs font-mono space-y-2 ${
+              scorecardMap[vCode].vendorRatingTier === 'TIER_1_EXCELLENT'
+                ? isDarkMode ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' : 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                : scorecardMap[vCode].vendorRatingTier === 'TIER_2_SATISFACTORY'
+                ? isDarkMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-300' : 'bg-amber-50 border-amber-200 text-amber-900'
+                : isDarkMode ? 'bg-rose-500/10 border-rose-500/30 text-rose-300' : 'bg-rose-50 border-rose-200 text-rose-900'
+            }`}>
+              <div className="flex items-center justify-between font-bold">
+                <span className="flex items-center gap-1.5">
+                  <Award className="w-4 h-4" />
+                  <span>Vendor Performance Scorecard ({scorecardMap[vCode].evaluationPeriod})</span>
+                </span>
+                <span className="uppercase text-[10px] px-2 py-0.5 rounded-full border border-current font-bold">
+                  {scorecardMap[vCode].summaryBadge}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-current/20 text-[11px]">
+                <div>
+                  <span className="opacity-75">On-Time Delivery:</span>{' '}
+                  <strong className="text-indigo-400">{scorecardMap[vCode].otdPercentage}%</strong> ({scorecardMap[vCode].onTimeDeliveries}/{scorecardMap[vCode].totalDeliveries})
+                </div>
+                <div>
+                  <span className="opacity-75">Quality Acceptance:</span>{' '}
+                  <strong className="text-emerald-400">{scorecardMap[vCode].qualityAcceptancePercentage}%</strong>
+                </div>
+                <div>
+                  <span className="opacity-75">Overall Score:</span>{' '}
+                  <strong>{scorecardMap[vCode].overallScore}/100</strong>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Row 1: Code, Name, Legal Name */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
@@ -2992,9 +3199,9 @@ export const MastersView: React.FC<MastersViewProps> = ({
       {/* MODAL 3: ADD / EDIT ITEM (LIGHT & DARK THEME POLISHED) */}
       {/* ========================================================================= */}
       <Modal
-        isOpen={showAddItemModal}
+        isOpen={addItemModal.isOpen}
         onClose={() => {
-          setShowAddItemModal(false);
+          addItemModal.close();
           setEditingItem(null);
         }}
         maxWidth="4xl"
@@ -3007,7 +3214,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
             <button
               type="button"
               onClick={() => {
-                setShowAddItemModal(false);
+                addItemModal.close();
                 setEditingItem(null);
               }}
               className={`px-4 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
@@ -3356,9 +3563,9 @@ export const MastersView: React.FC<MastersViewProps> = ({
       {/* MODAL 4: ADD / EDIT MACHINE (LIGHT & DARK THEME POLISHED) */}
       {/* ========================================================================= */}
       <Modal
-        isOpen={showAddMachineModal}
+        isOpen={addMachineModal.isOpen}
         onClose={() => {
-          setShowAddMachineModal(false);
+          addMachineModal.close();
           setEditingMachine(null);
         }}
         maxWidth="4xl"
@@ -3371,7 +3578,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
             <button
               type="button"
               onClick={() => {
-                setShowAddMachineModal(false);
+                addMachineModal.close();
                 setEditingMachine(null);
               }}
               className={`px-4 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
@@ -3667,8 +3874,13 @@ export const MastersView: React.FC<MastersViewProps> = ({
       {/* MODAL 5: DELETE CONFIRMATION MODAL */}
       {/* ========================================================================= */}
       <Modal
-        isOpen={!!deleteConfirm?.isOpen}
-        onClose={() => !isDeleting && setDeleteConfirm(null)}
+        isOpen={deleteMasterModal.isOpen && !!deleteConfirm?.isOpen}
+        onClose={() => {
+          if (!isDeleting) {
+            setDeleteConfirm(null);
+            deleteMasterModal.close();
+          }
+        }}
         maxWidth="md"
         isDarkMode={isDarkMode}
         icon={<AlertTriangle className="w-5 h-5 text-rose-500" />}
@@ -3679,7 +3891,10 @@ export const MastersView: React.FC<MastersViewProps> = ({
             <button
               type="button"
               disabled={isDeleting}
-              onClick={() => setDeleteConfirm(null)}
+              onClick={() => {
+                setDeleteConfirm(null);
+                deleteMasterModal.close();
+              }}
               className={`px-4 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
                 isDarkMode 
                   ? 'text-slate-400 hover:text-white hover:bg-slate-800' 

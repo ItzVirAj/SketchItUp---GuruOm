@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   FileCheck, 
   Search, 
@@ -43,6 +43,8 @@ import {
 } from '../../../utils/statutoryAccountingEngine';
 import { Modal } from '../../common/Modal';
 
+import { useUrlModal } from '../../../hooks/useUrlModal';
+
 interface InvoicesViewProps {
   invoices: CustomerInvoice[];
   dispatches?: DispatchChallan[];
@@ -79,8 +81,10 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
-  // Modal State
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  // URL-driven modals
+  const createInvoiceModal = useUrlModal('create-invoice');
+  const paymentModal = useUrlModal('record-payment');
+
   const [selectedDispatchNo, setSelectedDispatchNo] = useState('');
   const [invoiceDate, setInvoiceDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [dueDate, setDueDate] = useState(() => new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]);
@@ -98,7 +102,6 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
 
   // Dedicated Record Payment Modal State
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<CustomerInvoice | null>(null);
   const [payAmount, setPayAmount] = useState<number>(0);
   const [payMode, setPayMode] = useState<string>('NEFT_RTGS');
@@ -107,6 +110,23 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
   const [payNotes, setPayNotes] = useState<string>('');
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
   const [paymentModalError, setPaymentModalError] = useState<string | null>(null);
+
+  // Sync payment modal from URL params if reloaded or deep linked
+  useEffect(() => {
+    if (paymentModal.isOpen && paymentModal.params.invoiceNo) {
+      const inv = invoices.find(i => i.invoiceNo === paymentModal.params.invoiceNo);
+      if (inv && (!selectedInvoiceForPayment || selectedInvoiceForPayment.invoiceNo !== inv.invoiceNo)) {
+        setSelectedInvoiceForPayment(inv);
+        const balance = Number(inv.balanceAmount !== undefined ? inv.balanceAmount : inv.totalAmount);
+        setPayAmount(balance > 0 ? balance : Number(inv.totalAmount));
+        setPayMode('NEFT_RTGS');
+        setPayRefNo(`UTR-${Math.floor(10000000 + Math.random() * 90000000)}`);
+        setPayDate(new Date().toISOString().split('T')[0]);
+        setPayNotes(`Payment realization against Tax Invoice ${inv.invoiceNo}`);
+        setPaymentModalError(null);
+      }
+    }
+  }, [paymentModal.isOpen, paymentModal.params.invoiceNo, invoices, selectedInvoiceForPayment]);
 
   const handleOpenPaymentModal = (invoice: CustomerInvoice) => {
     setSelectedInvoiceForPayment(invoice);
@@ -117,7 +137,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
     setPayDate(new Date().toISOString().split('T')[0]);
     setPayNotes(`Payment realization against Tax Invoice ${invoice.invoiceNo}`);
     setPaymentModalError(null);
-    setShowPaymentModal(true);
+    paymentModal.open({ invoiceNo: invoice.invoiceNo });
   };
 
   const handlePaymentSubmit = async (e?: React.FormEvent) => {
@@ -145,7 +165,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
           notes: payNotes
         });
       }
-      setShowPaymentModal(false);
+      paymentModal.close();
       setActionSuccessMsg(`Payment of ₹${payAmount.toLocaleString('en-IN')} recorded successfully against ${selectedInvoiceForPayment.invoiceNo}.`);
       setTimeout(() => setActionSuccessMsg(null), 5000);
     } catch (err: any) {
@@ -267,7 +287,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
 
     if (matchedDispatch) {
       handleSelectDispatch(matchedDispatch.challanNo);
-      setShowCreateModal(true);
+      createInvoiceModal.open({ dispatchNo: matchedDispatch.challanNo, orderPo: matchedDispatch.orderPo });
       onInvoiceModalOpened?.();
     } else if (preselectedOrderPo) {
       const linkedOrder = orders.find(o => o.poNo === preselectedOrderPo || o.id === preselectedOrderPo);
@@ -307,11 +327,11 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
             }
           ]);
         }
-        setShowCreateModal(true);
+        createInvoiceModal.open({ orderPo: preselectedOrderPo, dispatchNo: challan });
         onInvoiceModalOpened?.();
       }
     }
-  }, [preselectedDispatchNo, preselectedOrderPo, dispatches, orders, masters, invoices.length, onInvoiceModalOpened]);
+  }, [preselectedDispatchNo, preselectedOrderPo, dispatches, orders, masters, invoices.length, onInvoiceModalOpened, createInvoiceModal]);
 
   // Selected Dispatch Metadata
   const selectedDispatch = useMemo(() => {
@@ -399,7 +419,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
         await onCreateInvoice(invoicePayload);
       }
 
-      setShowCreateModal(false);
+      createInvoiceModal.close();
       setSelectedDispatchNo('');
       setActionSuccessMsg(`Tax Invoice ${invoiceNoInput.trim()} saved as ${status} successfully!`);
       setTimeout(() => setActionSuccessMsg(null), 5000);
@@ -410,21 +430,29 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
     }
   };
 
-  // Filtered Invoices
-  const filteredInvoices = invoices.filter(inv => {
-    const matchesSearch = 
-      inv.invoiceNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      inv.orderPo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      inv.customerName.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    if (statusFilter === 'ALL') return matchesSearch;
-    if (statusFilter === 'DRAFT') return matchesSearch && inv.status === 'DRAFT';
-    if (statusFilter === 'ISSUED') return matchesSearch && (inv.status === 'ISSUED' || inv.status === 'UNPAID');
-    if (statusFilter === 'PAID') return matchesSearch && inv.status === 'PAID';
-    if (statusFilter === 'PARTIAL') return matchesSearch && (inv.status === 'PARTIAL' || inv.status === 'PARTIALLY_PAID');
-    if (statusFilter === 'OVERDUE') return matchesSearch && inv.status === 'OVERDUE';
-    return matchesSearch && inv.status === statusFilter;
-  });
+  // Filtered Invoices — sorted newest first
+  const filteredInvoices = invoices
+    .filter(inv => {
+      const matchesSearch =
+        inv.invoiceNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        inv.orderPo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        inv.customerName.toLowerCase().includes(searchTerm.toLowerCase());
+
+      if (statusFilter === 'ALL') return matchesSearch;
+      if (statusFilter === 'DRAFT') return matchesSearch && inv.status === 'DRAFT';
+      if (statusFilter === 'ISSUED') return matchesSearch && (inv.status === 'ISSUED' || inv.status === 'UNPAID');
+      if (statusFilter === 'PAID') return matchesSearch && inv.status === 'PAID';
+      if (statusFilter === 'PARTIAL') return matchesSearch && (inv.status === 'PARTIAL' || inv.status === 'PARTIALLY_PAID');
+      if (statusFilter === 'OVERDUE') return matchesSearch && inv.status === 'OVERDUE';
+      return matchesSearch && inv.status === statusFilter;
+    })
+    .sort((a, b) => {
+      // Newest invoice first — fallback to invoiceNo string compare
+      const dateA = a.date ? new Date(a.date).getTime() : 0;
+      const dateB = b.date ? new Date(b.date).getTime() : 0;
+      if (dateB !== dateA) return dateB - dateA;
+      return (b.invoiceNo || '').localeCompare(a.invoiceNo || '');
+    });
 
   const totalInvoiced = invoices.reduce((acc, i) => acc + Number(i.totalAmount || 0), 0);
   const totalReceived = invoices.reduce((acc, i) => acc + Number(i.paidAmount || 0), 0);
@@ -471,7 +499,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                 setSelectedDispatchNo('');
                 setInvoiceLines([]);
                 setModalError(null);
-                setShowCreateModal(true);
+                createInvoiceModal.open();
               }}
               className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold shadow-md active:scale-95 transition-all"
             >
@@ -517,25 +545,37 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
       {/* ── DESKTOP HEADER & INTEGRATED KPI ROW (≥ md) ──                          */}
       {/* ========================================================================= */}
       <div className="hidden md:block space-y-4">
-        <section className={`overflow-hidden rounded-[24px] border ${isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'}`}>
-          <div className="flex items-center justify-between gap-6 px-6 py-5">
+        {/* ── HERO HEADER CARD ── */}
+        <section className={`relative overflow-hidden rounded-[26px] border ${
+          isDarkMode
+            ? 'border-white/[0.08] bg-gradient-to-br from-[#13171f] via-[#171b24] to-[#0f1318]'
+            : 'border-slate-200/80 bg-gradient-to-br from-white via-slate-50 to-slate-100/60 shadow-[0_16px_48px_rgba(15,23,42,0.08)]'
+        }`}>
+          {/* Decorative gradient orbs */}
+          <div className="pointer-events-none absolute -top-16 -right-16 h-64 w-64 rounded-full bg-[var(--accent-primary)]/[0.06] blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-10 -left-10 h-48 w-48 rounded-full bg-emerald-500/[0.05] blur-3xl" />
+
+          {/* Title Row */}
+          <div className="relative flex items-center justify-between gap-6 px-7 pt-6 pb-5">
             <div className="min-w-0">
-              <div className="mb-1.5 flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                Customer Invoicing & Statutory Accounts Receivable
-                <span className="text-slate-300 dark:text-slate-700">/</span>
-                <span>{filteredInvoices.length} Tax Invoices</span>
-              </div>
-              <div className="flex items-baseline gap-3">
-                <h1 className="truncate text-[25px] font-extrabold tracking-[-0.04em] text-slate-950 dark:text-white">
-                  Invoices & Billing Hub
-                </h1>
-                <span className="hidden font-mono text-[10px] font-semibold text-slate-400 xl:inline">
-                  GST TAX INVOICING • RECEIVABLES AGING • PAYMENT DISBURSEMENTS
+              <div className="mb-2 flex items-center gap-2">
+                <span className="flex h-5 w-5 items-center justify-center rounded-lg bg-emerald-500/20">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                </span>
+                <span className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                  Customer Invoicing · Statutory AR
+                </span>
+                <span className={`rounded-md border px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider ${
+                  isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-white text-slate-500'
+                }`}>
+                  {invoices.length} Total
                 </span>
               </div>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                Issue GST Tax Invoices against outward dispatch challans, auto-calculate CGST/SGST vs IGST, track receivables, and log payment receipts.
+              <h1 className="text-[26px] font-black tracking-[-0.045em] text-slate-950 dark:text-white leading-none">
+                Invoices &amp; Billing
+              </h1>
+              <p className="mt-1.5 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed max-w-xl">
+                Issue GST Tax Invoices against dispatch challans · Auto-calculate CGST/SGST vs IGST · Track receivables &amp; log payments
               </p>
             </div>
 
@@ -546,34 +586,85 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                   setSelectedDispatchNo('');
                   setInvoiceLines([]);
                   setModalError(null);
-                  setShowCreateModal(true);
+                  createInvoiceModal.open();
                 }}
-                className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-5 text-xs font-bold text-white shadow-lg shadow-[var(--accent-shadow)] transition hover:brightness-110 active:scale-95"
+                className="group relative inline-flex h-11 shrink-0 items-center justify-center gap-2.5 rounded-2xl bg-[var(--accent-primary)] px-6 text-[13px] font-bold text-white shadow-lg shadow-[var(--accent-shadow)] transition-all hover:brightness-110 hover:shadow-xl hover:shadow-[var(--accent-shadow)] active:scale-[0.97]"
               >
-                <Plus className="h-4 w-4" />
-                <span>Create New Invoice</span>
+                <Plus className="h-4 w-4 transition-transform group-hover:rotate-90 duration-200" />
+                <span>New Invoice</span>
               </button>
             )}
           </div>
 
-          {/* Integrated 4-Column Metric Strip (border-t) */}
-          <div className={`grid grid-cols-4 border-t ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+          {/* KPI Strip */}
+          <div className={`relative grid grid-cols-4 border-t ${
+            isDarkMode ? 'border-white/[0.06]' : 'border-slate-200/80'
+          }`}>
             {[
-              { label: 'Total Invoiced (Gross)', value: `₹${totalInvoiced.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`, detail: `${invoices.length} billed invoices`, icon: Receipt, tone: 'text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)]', iconBg: 'bg-[var(--accent-soft-light)] dark:bg-[var(--accent-soft-dark)]' },
-              { label: 'Realized Collections', value: `₹${totalReceived.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`, detail: 'Received into accounts', icon: CreditCard, tone: 'text-emerald-600 dark:text-emerald-400', iconBg: 'bg-emerald-500/10' },
-              { label: 'Outstanding Receivables', value: `₹${totalBalance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`, detail: `${overdueCount > 0 ? `${overdueCount} overdue` : 'Within credit limits'}`, icon: Clock, tone: 'text-amber-600 dark:text-amber-400', iconBg: 'bg-amber-500/10' },
-              { label: 'Awaiting Invoicing', value: `${dispatchesAwaitingInvoicing.length} Challans`, detail: 'Delivered ready to bill', icon: Truck, tone: 'text-purple-600 dark:text-purple-400', iconBg: 'bg-purple-500/10' },
-            ].map((metric, index) => {
-              const MetricIcon = metric.icon;
+              {
+                label: 'Total Invoiced',
+                value: `₹${totalInvoiced.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`,
+                sub: `${invoices.length} invoices raised`,
+                icon: Receipt,
+                bar: 'bg-[var(--accent-primary)]',
+                tone: isDarkMode ? 'text-[var(--accent-text-dark)]' : 'text-[var(--accent-text-light)]',
+                iconBg: isDarkMode ? 'bg-[var(--accent-primary)]/20 text-[var(--accent-text-dark)]' : 'bg-[var(--accent-primary)]/10 text-[var(--accent-text-light)]',
+              },
+              {
+                label: 'Realized Collections',
+                value: `₹${totalReceived.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`,
+                sub: 'Cash received in accounts',
+                icon: CreditCard,
+                bar: 'bg-emerald-500',
+                tone: 'text-emerald-500 dark:text-emerald-400',
+                iconBg: 'bg-emerald-500/15 text-emerald-500 dark:text-emerald-400',
+              },
+              {
+                label: 'Outstanding Dues',
+                value: `₹${totalBalance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`,
+                sub: overdueCount > 0 ? `${overdueCount} overdue invoices` : 'Within credit limits',
+                icon: Clock,
+                bar: overdueCount > 0 ? 'bg-rose-500' : 'bg-amber-500',
+                tone: overdueCount > 0 ? 'text-rose-500 dark:text-rose-400' : 'text-amber-500 dark:text-amber-400',
+                iconBg: overdueCount > 0 ? 'bg-rose-500/15 text-rose-500 dark:text-rose-400' : 'bg-amber-500/15 text-amber-500 dark:text-amber-400',
+              },
+              {
+                label: 'Awaiting Invoicing',
+                value: `${dispatchesAwaitingInvoicing.length}`,
+                sub: 'Challans pending invoice',
+                icon: Truck,
+                bar: 'bg-violet-500',
+                tone: 'text-violet-500 dark:text-violet-400',
+                iconBg: 'bg-violet-500/15 text-violet-500 dark:text-violet-400',
+              },
+            ].map((m, i) => {
+              const Icon = m.icon;
               return (
-                <div key={metric.label} className={`flex items-center gap-3 px-5 py-4 ${index > 0 ? isDarkMode ? 'border-l border-white/[0.07]' : 'border-l border-slate-200' : ''}`}>
-                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${metric.iconBg} ${metric.tone}`}>
-                    <MetricIcon className="h-4 w-4" />
+                <div
+                  key={m.label}
+                  className={`relative flex flex-col gap-3 px-6 py-5 transition-colors ${
+                    isDarkMode ? 'hover:bg-white/[0.025]' : 'hover:bg-slate-50/60'
+                  } ${
+                    i > 0 ? (isDarkMode ? 'border-l border-white/[0.06]' : 'border-l border-slate-200/80') : ''
+                  }`}
+                >
+                  {/* Accent top bar */}
+                  <div className={`absolute inset-x-6 top-0 h-[2px] rounded-full opacity-70 ${m.bar}`} />
+
+                  <div className="flex items-start justify-between">
+                    <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${m.iconBg}`}>
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <span className="font-mono text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400 pt-0.5">
+                      {m.label}
+                    </span>
                   </div>
-                  <div className="min-w-0">
-                    <div className="font-mono text-[9px] font-bold uppercase tracking-[0.13em] text-slate-400">{metric.label}</div>
-                    <div className={`mt-0.5 truncate text-lg font-extrabold tracking-[-0.03em] ${metric.tone}`}>{metric.value}</div>
-                    <div className="truncate text-[10px] text-slate-400">{metric.detail}</div>
+
+                  <div>
+                    <div className={`text-[22px] font-black tracking-[-0.04em] leading-none ${m.tone}`}>
+                      {m.value}
+                    </div>
+                    <div className="mt-1 text-[10px] text-slate-400 font-mono">{m.sub}</div>
                   </div>
                 </div>
               );
@@ -581,22 +672,22 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
           </div>
         </section>
 
-        {/* Desktop Filter & Search Toolbar */}
-        <div className={`rounded-2xl border p-3 ${isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
+        {/* ── FILTER & SEARCH TOOLBAR ── */}
+        <div className={`rounded-2xl border px-4 py-3 ${
+          isDarkMode
+            ? 'border-white/[0.08] bg-[#171b24]'
+            : 'border-slate-200 bg-white shadow-[0_4px_16px_rgba(15,23,42,0.04)]'
+        }`}>
           <div className="flex items-center gap-3 flex-wrap">
-            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${isDarkMode ? 'bg-white/[0.05] text-slate-400' : 'bg-slate-100 text-slate-500'}`} title="Modules">
-              <Receipt className="h-4 w-4" />
-            </div>
-
             {/* Filter Pills */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               {[
-                { id: 'ALL', label: 'All Invoices' },
+                { id: 'ALL', label: 'All' },
                 { id: 'DRAFT', label: 'Drafts' },
-                { id: 'ISSUED', label: 'Issued (Unpaid)' },
-                { id: 'PARTIAL', label: 'Partial Dues' },
+                { id: 'ISSUED', label: 'Issued' },
+                { id: 'PARTIAL', label: 'Partial' },
                 { id: 'PAID', label: 'Paid' },
-                { id: 'OVERDUE', label: 'Overdue' }
+                { id: 'OVERDUE', label: 'Overdue' },
               ].map(tab => {
                 const isActive = statusFilter === tab.id;
                 return (
@@ -604,31 +695,35 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                     key={tab.id}
                     type="button"
                     onClick={() => setStatusFilter(tab.id)}
-                    className={`flex h-9 items-center gap-1.5 rounded-xl border px-3 text-xs font-bold transition-colors ${
+                    className={`flex h-8 items-center gap-1.5 rounded-xl border px-3.5 text-[11px] font-bold transition-all ${
                       isActive
                         ? isDarkMode
-                          ? 'border-[var(--accent-primary)]/40 bg-[var(--accent-primary)]/20 text-[var(--accent-text-dark)] shadow-xs'
+                          ? 'border-[var(--accent-primary)]/50 bg-[var(--accent-primary)]/20 text-[var(--accent-text-dark)] shadow-sm'
                           : 'border-[var(--accent-primary)] bg-[var(--accent-primary)] text-white shadow-sm shadow-[var(--accent-shadow)]'
                         : isDarkMode
-                        ? 'border-white/[0.08] bg-black/20 text-slate-400 hover:bg-white/[0.04] hover:text-white'
-                        : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                        ? 'border-white/[0.07] bg-white/[0.03] text-slate-400 hover:bg-white/[0.06] hover:text-slate-200'
+                        : 'border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-800'
                     }`}
                   >
-                    <span>{tab.label}</span>
+                    {tab.label}
                   </button>
                 );
               })}
             </div>
 
             {/* Search Input */}
-            <div className={`flex h-10 min-w-[240px] flex-1 items-center gap-2 rounded-xl border px-3 ml-auto ${isDarkMode ? 'border-white/[0.08] bg-black/20 text-white focus-within:border-[var(--accent-border-dark)]' : 'border-slate-200 bg-slate-50 text-slate-900 focus-within:border-[var(--accent-primary)]'}`}>
-              <Search className="h-4 w-4 shrink-0 text-slate-400" />
+            <div className={`flex h-9 min-w-[240px] flex-1 items-center gap-2 rounded-xl border px-3 ml-auto ${
+              isDarkMode
+                ? 'border-white/[0.08] bg-black/20 text-white focus-within:border-[var(--accent-primary)]/60'
+                : 'border-slate-200 bg-slate-50 text-slate-900 focus-within:border-[var(--accent-primary)]'
+            }`}>
+              <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search Inv #, PO #, Customer Name..."
+                placeholder="Search invoice #, PO #, customer..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="h-full w-full bg-transparent text-xs font-semibold outline-none placeholder:font-normal placeholder:text-slate-400 font-mono"
+                className="h-full w-full bg-transparent text-xs font-semibold outline-none placeholder:font-normal placeholder:text-slate-400"
               />
               {searchTerm && (
                 <button type="button" onClick={() => setSearchTerm('')} className="text-slate-400 hover:text-slate-700 dark:hover:text-white">
@@ -638,9 +733,9 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
             </div>
           </div>
 
-          <div className="mt-2.5 flex items-center justify-between px-1 font-mono text-[9px] font-semibold uppercase tracking-wider text-slate-400">
-            <span>Showing {filteredInvoices.length} of {invoices.length} customer invoices</span>
-            <span>Statutory GST Billing & Accounts Receivable Ledger</span>
+          <div className="mt-2 flex items-center justify-between px-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-slate-400">
+            <span>Showing {filteredInvoices.length} of {invoices.length} invoices · Newest first</span>
+            <span>GST Billing · Accounts Receivable</span>
           </div>
         </div>
       </div>
@@ -942,8 +1037,8 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
       {/* ── GENERATE GST TAX INVOICE MODAL ──                                      */}
       {/* ========================================================================= */}
       <Modal
-        isOpen={showCreateModal}
-        onClose={() => !isSubmitting && setShowCreateModal(false)}
+        isOpen={createInvoiceModal.isOpen}
+        onClose={() => !isSubmitting && createInvoiceModal.close()}
         maxWidth="3xl"
         isDarkMode={isDarkMode}
         icon={<Receipt className="w-5 h-5 text-emerald-500" />}
@@ -1190,7 +1285,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
           <div className={`pt-4 border-t flex flex-col sm:flex-row items-center justify-end gap-2.5 font-sans ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
             <button
               type="button"
-              onClick={() => setShowCreateModal(false)}
+              onClick={() => createInvoiceModal.close()}
               disabled={isSubmitting}
               className={`w-full sm:w-auto px-4 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
                 isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
@@ -1229,8 +1324,8 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
       {/* ── DEDICATED RECORD PAYMENT MODAL ──                                      */}
       {/* ========================================================================= */}
       <Modal
-        isOpen={Boolean(showPaymentModal && selectedInvoiceForPayment)}
-        onClose={() => !isSubmittingPayment && setShowPaymentModal(false)}
+        isOpen={paymentModal.isOpen && Boolean(selectedInvoiceForPayment)}
+        onClose={() => !isSubmittingPayment && paymentModal.close()}
         maxWidth="xl"
         isDarkMode={isDarkMode}
         icon={<CreditCard className="w-5 h-5 text-emerald-500" />}
@@ -1438,7 +1533,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
               <div className={`pt-4 border-t flex items-center justify-end gap-2.5 font-sans ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
                 <button
                   type="button"
-                  onClick={() => setShowPaymentModal(false)}
+                  onClick={() => paymentModal.close()}
                   disabled={isSubmittingPayment}
                   className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                     isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'

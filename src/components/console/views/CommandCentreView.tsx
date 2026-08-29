@@ -57,6 +57,7 @@ import {
 import { AgentBentoGrid } from '../AgentBentoGrid';
 import { AccentColorSelector } from '../AccentColorSelector';
 import { usePullToRefresh } from '../../../hooks/usePullToRefresh';
+import { useUrlModal } from '../../../hooks/useUrlModal';
 
 interface CommandCentreViewProps {
   orders?: CustomerOrder[];
@@ -129,9 +130,16 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
     }
   });
 
-  const [localShowCustomizeModal, setLocalShowCustomizeModal] = useState(false);
-  const showCustomizeModal = externalShowCustomizeModal ?? localShowCustomizeModal;
-  const setShowCustomizeModal = externalSetShowCustomizeModal ?? setLocalShowCustomizeModal;
+  const customizeModal = useUrlModal('customize-dashboard');
+  const showCustomizeModal = externalShowCustomizeModal !== undefined ? externalShowCustomizeModal : customizeModal.isOpen;
+  const setShowCustomizeModal = (open: boolean) => {
+    if (externalSetShowCustomizeModal) externalSetShowCustomizeModal(open);
+    if (open) {
+      customizeModal.open();
+    } else {
+      customizeModal.close();
+    }
+  };
 
   const defaultVisibility = {
     showAlertsBar: true,

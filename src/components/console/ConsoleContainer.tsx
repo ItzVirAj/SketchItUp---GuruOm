@@ -52,8 +52,9 @@ import { isViewAllowedForRole } from '../../utils/permissions';
 import { useAuth } from '../../context/AuthContext';
 import { useOwnerOSData } from '../../hooks/useOwnerOSData';
 import { useSmoothScroll } from '../../hooks/useSmoothScroll';
-import { fetchOrderById } from '../../services/supabaseServices';
+import { fetchOrderById, receiveOutworkReturn } from '../../services/supabaseServices';
 import { triggerOrderDelayed } from '../../services/notificationService';
+import { toast } from '../../context/ToastContext';
 
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -750,6 +751,20 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
             <PlatingOutworkView
               outworks={outworkSendOuts}
               isDarkMode={isDarkMode}
+              onCreateSendOut={async (outwork) => {
+                await handleCreateOutwork(outwork as any);
+                await handleSync();
+              }}
+              onReceiveReturn={async (payload) => {
+                try {
+                  await receiveOutworkReturn(payload as any);
+                  const passNo = typeof payload === 'string' ? payload : payload.gatePassNo;
+                  toast.success(`Gate-In pass received for ${passNo}`, 'Job-Work Returned');
+                  await handleSync();
+                } catch (err: any) {
+                  toast.error(err?.message || 'Failed to receive outwork return', 'Outwork Error');
+                }
+              }}
             />
           )}
 
@@ -895,7 +910,9 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
           {currentView === 'payables' && (
             <PayablesView
               payables={payables}
+              vendors={vendors}
               isDarkMode={isDarkMode}
+              onAddBill={handleCreateVendorBill}
               onRecordDisbursement={handleRecordPayablePayment}
             />
           )}

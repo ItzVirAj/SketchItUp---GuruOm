@@ -73,6 +73,7 @@ import { JobCardDetailModal } from '../modals/JobCardDetailModal';
 import { Modal } from '../../common/Modal';
 import { triggerMachineDowntime } from '../../../services/notificationService';
 import { MachineDowntimeLog } from '../../../types/console';
+import { useUrlModal } from '../../../hooks/useUrlModal';
 
 export const DEFAULT_ROUTE_CARDS: RouteCard[] = [
   {
@@ -230,6 +231,20 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
     }
   }, [initialSection]);
 
+  // URL-driven modal hooks
+  const createJobModal = useUrlModal('create-job-card');
+  const jobDetailModal = useUrlModal('job-card-detail');
+  const logProdModal = useUrlModal('log-production');
+  const travelerModal = useUrlModal('route-traveler');
+  const breakdownModal = useUrlModal('report-breakdown');
+  const createBomModal = useUrlModal('create-bom');
+  const duplicateBomModal = useUrlModal('duplicate-bom');
+  const revisionBomModal = useUrlModal('revision-bom');
+  const deleteBomModal = useUrlModal('delete-bom');
+  const createRouteModal = useUrlModal('create-route');
+  const duplicateRouteModal = useUrlModal('duplicate-route');
+  const deleteRouteModal = useUrlModal('delete-route');
+
   // View mode for Job Cards (list / board)
   const [viewMode, setViewMode] = useState<'list' | 'board'>('list');
   const [searchQuery, setSearchQuery] = useState('');
@@ -265,7 +280,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
         breakdownReason + (breakdownNotes ? ` - Notes: ${breakdownNotes}` : ''),
         breakdownOperator
       );
-      setShowBreakdownModal(false);
+      breakdownModal.close();
       setActionSuccess(`Machine breakdown reported for [${breakdownMachine}]. Critical alert broadcasted to shopfloor supervisory cell.`);
       setBreakdownNotes('');
     } catch (err: any) {
@@ -445,13 +460,14 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
     if (eligibleOrders.length > 0) {
       const first = eligibleOrders[0];
       handleSelectOrder(first.poNo);
+      createJobModal.open({ orderPo: first.poNo });
     } else {
       setNewOrderPo('');
       setNewPartCode('00000001');
       setNewPartDesc('Precision Machined Component');
       setNewHeatLot('');
+      createJobModal.open();
     }
-    setShowNewJobModal(true);
   };
 
   // Redirect from Order Detail "Create Job Card" CTA
@@ -464,10 +480,45 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
     } else {
       setNewOrderPo(preselectedOrderPo);
     }
-    setShowNewJobModal(true);
+    createJobModal.open({ orderPo: preselectedOrderPo });
     onJobCardModalOpened?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preselectedOrderPo]);
+
+  // URL sync effects
+  useEffect(() => {
+    if (jobDetailModal.isOpen && jobDetailModal.params.jobNo) {
+      const found = jobCards.find(j => j.jobNo === jobDetailModal.params.jobNo || j.id === jobDetailModal.params.jobNo);
+      if (found && (!selectedJobForDetail || selectedJobForDetail.jobNo !== found.jobNo)) {
+        setSelectedJobForDetail(found);
+      }
+    }
+  }, [jobDetailModal.isOpen, jobDetailModal.params.jobNo, jobCards, selectedJobForDetail]);
+
+  useEffect(() => {
+    if (logProdModal.isOpen && logProdModal.params.jobNo) {
+      const found = jobCards.find(j => j.jobNo === logProdModal.params.jobNo || j.id === logProdModal.params.jobNo);
+      if (found && (!selectedJobForLog || selectedJobForLog.jobNo !== found.jobNo)) {
+        setSelectedJobForLog(found);
+      }
+    }
+  }, [logProdModal.isOpen, logProdModal.params.jobNo, jobCards, selectedJobForLog]);
+
+  useEffect(() => {
+    if (travelerModal.isOpen && travelerModal.params.jobNo) {
+      const found = jobCards.find(j => j.jobNo === travelerModal.params.jobNo || j.id === travelerModal.params.jobNo);
+      if (found && (!selectedJobForTraveler || selectedJobForTraveler.jobNo !== found.jobNo)) {
+        setSelectedJobForTraveler(found);
+      }
+    }
+  }, [travelerModal.isOpen, travelerModal.params.jobNo, jobCards, selectedJobForTraveler]);
+
+  useEffect(() => {
+    if (createJobModal.isOpen && (createJobModal.params.orderPo || createJobModal.params.orderId)) {
+      const po = createJobModal.params.orderPo || createJobModal.params.orderId;
+      handleSelectOrder(po);
+    }
+  }, [createJobModal.isOpen, createJobModal.params.orderPo, createJobModal.params.orderId]);
 
   // Helper to determine if a Job Card is fully completed or ready for QC
   const isJcCompleted = (jc: JobCard) => {
@@ -548,6 +599,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
         operations: operationsToAttach as any
       });
       setShowNewJobModal(false);
+      createJobModal.close();
       setActionSuccess(`Job Card ${newJobNo} created with ${operationsToAttach?.length || 0} routed operations.`);
     } catch (err: any) {
       setActionError(err.message || 'Failed to release Job Card to shopfloor.');
@@ -569,6 +621,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
       loggedTimestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     });
     setSelectedJobForLog(null);
+    logProdModal.close();
     setActionSuccess(`Production shift logged for ${selectedJobForLog.jobNo}.`);
   };
 
@@ -912,7 +965,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
         unitCost: 95
       }
     ]);
-    setIsCreateBomOpen(true);
+    createBomModal.open();
   };
 
   const handleOpenEditBom = (bom: BillOfMaterials) => {
@@ -940,7 +993,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
             unitCost: 95
           }]
     );
-    setIsCreateBomOpen(true);
+    createBomModal.open({ bomCode: bom.bomCode });
   };
 
   const handleAddBomComponentRow = () => {
@@ -997,7 +1050,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
 
     try {
       await saveBOM(bomPayload);
-      setIsCreateBomOpen(false);
+      createBomModal.close();
       setActionSuccess(`BOM ${bomPayload.bomCode} saved successfully.`);
       await loadManufacturingData();
     } catch (err: any) {
@@ -1017,6 +1070,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
         targetPartName: form.targetPartName.value
       });
       setDuplicatingBom(null);
+      duplicateBomModal.close();
       setActionSuccess(`BOM duplicated to ${form.targetBomCode.value}.`);
       await loadManufacturingData();
     } catch (err: any) {
@@ -1031,6 +1085,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
     try {
       await createBOMRevision(revisionBom.bomCode, form.newRevision.value);
       setRevisionBom(null);
+      revisionBomModal.close();
       setActionSuccess(`Created new revision ${form.newRevision.value} for BOM ${revisionBom.bomCode}.`);
       await loadManufacturingData();
     } catch (err: any) {
@@ -1053,6 +1108,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
     try {
       await deleteBOM(deleteConfirmBom.bomCode);
       setDeleteConfirmBom(null);
+      deleteBomModal.close();
       setActionSuccess(`BOM ${deleteConfirmBom.bomCode} deleted.`);
       await loadManufacturingData();
     } catch (err: any) {
@@ -1099,7 +1155,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
   const handleOpenCreateRoute = () => {
     setEditingRoute(null);
     setRouteFormSteps(standardRoutePreset);
-    setIsCreateRouteOpen(true);
+    createRouteModal.open();
   };
 
   const handleOpenEditRoute = (route: RouteCard) => {
@@ -1117,7 +1173,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
           }))
         : standardRoutePreset
     );
-    setIsCreateRouteOpen(true);
+    createRouteModal.open({ routeCode: route.routeCode || route.partCode });
   };
 
   const handleAddRouteStepRow = () => {
@@ -1184,7 +1240,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
 
     try {
       await saveRouteCard(payload);
-      setIsCreateRouteOpen(false);
+      createRouteModal.close();
       setActionSuccess(`Route Card for ${payload.partCode} saved successfully.`);
       await loadManufacturingData();
     } catch (err: any) {
@@ -1203,6 +1259,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
         form.targetPartDescription.value
       );
       setDuplicatingRoute(null);
+      duplicateRouteModal.close();
       setActionSuccess(`Route Card duplicated for ${form.targetPartCode.value}.`);
       await loadManufacturingData();
     } catch (err: any) {
@@ -1215,12 +1272,62 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
     try {
       await deleteRouteCard(deleteConfirmRoute.partCode);
       setDeleteConfirmRoute(null);
+      deleteRouteModal.close();
       setActionSuccess(`Route Card for ${deleteConfirmRoute.partCode} deleted.`);
       await loadManufacturingData();
     } catch (err: any) {
       setActionError(err.message || 'Failed to delete Route Card.');
     }
   };
+
+  useEffect(() => {
+    if (createBomModal.isOpen && createBomModal.params.bomCode && !editingBom) {
+      const found = boms.find(b => b.bomCode === createBomModal.params.bomCode);
+      if (found) handleOpenEditBom(found);
+    }
+  }, [createBomModal.isOpen, createBomModal.params.bomCode, boms, editingBom]);
+
+  useEffect(() => {
+    if (duplicateBomModal.isOpen && duplicateBomModal.params.bomCode && !duplicatingBom) {
+      const found = boms.find(b => b.bomCode === duplicateBomModal.params.bomCode);
+      if (found) setDuplicatingBom(found);
+    }
+  }, [duplicateBomModal.isOpen, duplicateBomModal.params.bomCode, boms, duplicatingBom]);
+
+  useEffect(() => {
+    if (revisionBomModal.isOpen && revisionBomModal.params.bomCode && !revisionBom) {
+      const found = boms.find(b => b.bomCode === revisionBomModal.params.bomCode);
+      if (found) setRevisionBom(found);
+    }
+  }, [revisionBomModal.isOpen, revisionBomModal.params.bomCode, boms, revisionBom]);
+
+  useEffect(() => {
+    if (deleteBomModal.isOpen && deleteBomModal.params.bomCode && !deleteConfirmBom) {
+      const found = boms.find(b => b.bomCode === deleteBomModal.params.bomCode);
+      if (found) setDeleteConfirmBom(found);
+    }
+  }, [deleteBomModal.isOpen, deleteBomModal.params.bomCode, boms, deleteConfirmBom]);
+
+  useEffect(() => {
+    if (createRouteModal.isOpen && createRouteModal.params.routeCode && !editingRoute) {
+      const found = routeCards.find(r => r.routeCode === createRouteModal.params.routeCode || r.partCode === createRouteModal.params.routeCode);
+      if (found) handleOpenEditRoute(found);
+    }
+  }, [createRouteModal.isOpen, createRouteModal.params.routeCode, routeCards, editingRoute]);
+
+  useEffect(() => {
+    if (duplicateRouteModal.isOpen && duplicateRouteModal.params.routeCode && !duplicatingRoute) {
+      const found = routeCards.find(r => r.routeCode === duplicateRouteModal.params.routeCode || r.partCode === duplicateRouteModal.params.routeCode);
+      if (found) setDuplicatingRoute(found);
+    }
+  }, [duplicateRouteModal.isOpen, duplicateRouteModal.params.routeCode, routeCards, duplicatingRoute]);
+
+  useEffect(() => {
+    if (deleteRouteModal.isOpen && deleteRouteModal.params.routeCode && !deleteConfirmRoute) {
+      const found = routeCards.find(r => r.routeCode === deleteRouteModal.params.routeCode || r.partCode === deleteRouteModal.params.routeCode);
+      if (found) setDeleteConfirmRoute(found);
+    }
+  }, [deleteRouteModal.isOpen, deleteRouteModal.params.routeCode, routeCards, deleteConfirmRoute]);
 
   // ----------------------------------------------------------------
   // MATRIX & EXPLOSION CALCULATOR STATE
@@ -1413,7 +1520,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
 
             <div className="flex items-center gap-2 shrink-0">
               <button
-                onClick={() => setShowBreakdownModal(true)}
+                onClick={() => breakdownModal.open()}
                 className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 px-3.5 text-xs font-bold text-rose-600 dark:text-rose-400 transition-all cursor-pointer active:scale-[0.98]"
                 title="Report machine downtime or breakdown to shopfloor cell"
               >
@@ -1740,7 +1847,10 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                     {/* Touch Action Buttons */}
                     <div className="pt-1" onClick={(e) => e.stopPropagation()}>
                       <button
-                        onClick={() => setSelectedJobForDetail(jc)}
+                        onClick={() => {
+                          setSelectedJobForDetail(jc);
+                          jobDetailModal.open({ jobNo: jc.jobNo });
+                        }}
                         className="w-full py-2 px-3 rounded-xl font-mono text-xs font-bold bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-500 hover:to-[#5B75F8] text-white border border-[#7B92FF]/30 shadow-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-98 transition-all"
                       >
                         <Route className="w-3.5 h-3.5 text-white" />
@@ -1793,7 +1903,10 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                       {filteredCards.map((jc) => (
                         <tr 
                           key={jc.jobNo} 
-                          onClick={() => setSelectedJobForDetail(jc)}
+                          onClick={() => {
+                            setSelectedJobForDetail(jc);
+                            jobDetailModal.open({ jobNo: jc.jobNo });
+                          }}
                           className={`group transition-colors ${isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'}`}
                         >
                           <td className="py-4 px-5">
@@ -1869,7 +1982,10 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                           </td>
                           <td className="py-3 px-5 text-center" onClick={(e) => e.stopPropagation()}>
                             <button
-                              onClick={() => setSelectedJobForDetail(jc)}
+                              onClick={() => {
+                                setSelectedJobForDetail(jc);
+                                jobDetailModal.open({ jobNo: jc.jobNo });
+                              }}
                               className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer ${
                                 isDarkMode ? 'bg-[var(--accent-soft-dark)] text-[var(--accent-text-dark)] hover:brightness-125 border border-[var(--accent-border-dark)]' : 'bg-[var(--accent-soft-light)] text-[var(--accent-text-light)] hover:brightness-95 border border-[var(--accent-border-light)]'
                               }`}
@@ -1906,7 +2022,10 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                       {colJobs.map(jc => (
                         <div 
                           key={jc.jobNo} 
-                          onClick={() => setSelectedJobForDetail(jc)}
+                          onClick={() => {
+                            setSelectedJobForDetail(jc);
+                            jobDetailModal.open({ jobNo: jc.jobNo });
+                          }}
                           className={`p-4 rounded-2xl border transition-all cursor-pointer hover:scale-[1.01] ${
                             isDarkMode ? 'bg-slate-900 border-slate-800 hover:border-[#5B75F8]/50' : 'bg-white border-slate-200 shadow-sm hover:border-[#5B75F8]'
                           }`}
@@ -2562,13 +2681,13 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
       {/* MODAL 1: CREATE / EDIT ROUTE CARD */}
       {/* ========================================================================================= */}
       <Modal
-        isOpen={isCreateRouteOpen}
-        onClose={() => setIsCreateRouteOpen(false)}
+        isOpen={createRouteModal.isOpen}
+        onClose={() => createRouteModal.close()}
         maxWidth="3xl"
         isDarkMode={isDarkMode}
         icon={<Route className="w-5 h-5" />}
-        title={editingRoute ? `Edit Route Card — ${editingRoute.partCode}` : 'Create Master Route Card'}
-        subtitle="Define the multi-stage manufacturing sequence, work centers & cycle times"
+        title={editingRoute ? `Edit Route Card — ${editingRoute.partCode}` : 'Configure Operational Route Card'}
+        subtitle="Sequence manufacturing steps, machine bays, cycle times & QC gates"
       >
         <form onSubmit={handleSaveRouteSubmit} className="space-y-4 text-xs font-sans">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -2795,8 +2914,8 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
       {/* MODAL 2: CREATE / EDIT BILL OF MATERIALS (BOM) */}
       {/* ========================================================================================= */}
       <Modal
-        isOpen={isCreateBomOpen}
-        onClose={() => setIsCreateBomOpen(false)}
+        isOpen={createBomModal.isOpen}
+        onClose={() => createBomModal.close()}
         maxWidth="3xl"
         isDarkMode={isDarkMode}
         icon={<Layers className="w-5 h-5" />}
@@ -3036,8 +3155,11 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
       {/* MODAL 3: DUPLICATE BOM MODAL */}
       {/* ========================================================================================= */}
       <Modal
-        isOpen={Boolean(duplicatingBom)}
-        onClose={() => setDuplicatingBom(null)}
+        isOpen={duplicateBomModal.isOpen && Boolean(duplicatingBom)}
+        onClose={() => {
+          setDuplicatingBom(null);
+          duplicateBomModal.close();
+        }}
         maxWidth="md"
         isDarkMode={isDarkMode}
         icon={<Copy className="w-5 h-5" />}
@@ -3099,8 +3221,11 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
       {/* MODAL 4: CREATE BOM REVISION MODAL */}
       {/* ========================================================================================= */}
       <Modal
-        isOpen={Boolean(revisionBom)}
-        onClose={() => setRevisionBom(null)}
+        isOpen={revisionBomModal.isOpen && Boolean(revisionBom)}
+        onClose={() => {
+          setRevisionBom(null);
+          revisionBomModal.close();
+        }}
         maxWidth="md"
         isDarkMode={isDarkMode}
         icon={<FolderPlus className="w-5 h-5" />}
@@ -3144,8 +3269,11 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
       {/* MODAL 5: DUPLICATE ROUTE CARD MODAL */}
       {/* ========================================================================================= */}
       <Modal
-        isOpen={Boolean(duplicatingRoute)}
-        onClose={() => setDuplicatingRoute(null)}
+        isOpen={duplicateRouteModal.isOpen && Boolean(duplicatingRoute)}
+        onClose={() => {
+          setDuplicatingRoute(null);
+          duplicateRouteModal.close();
+        }}
         maxWidth="md"
         isDarkMode={isDarkMode}
         icon={<Copy className="w-5 h-5" />}
@@ -3195,10 +3323,12 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
       {/* MODAL 6: DELETE CONFIRMATION DIALOG */}
       {/* ========================================================================================= */}
       <Modal
-        isOpen={Boolean(deleteConfirmBom || deleteConfirmRoute)}
+        isOpen={(deleteBomModal.isOpen && Boolean(deleteConfirmBom)) || (deleteRouteModal.isOpen && Boolean(deleteConfirmRoute))}
         onClose={() => {
           setDeleteConfirmBom(null);
           setDeleteConfirmRoute(null);
+          deleteBomModal.close();
+          deleteRouteModal.close();
         }}
         maxWidth="md"
         isDarkMode={isDarkMode}
@@ -3243,8 +3373,8 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
       {/* MODAL 7: CREATE SHOPFLOOR JOB CARD (INTEGRATED WITH ACTIVE BOM & ROUTE CARD) */}
       {/* ========================================================================================= */}
       <Modal
-        isOpen={showNewJobModal}
-        onClose={() => setShowNewJobModal(false)}
+        isOpen={createJobModal.isOpen}
+        onClose={() => createJobModal.close()}
         maxWidth="2xl"
         isDarkMode={isDarkMode}
         icon={<Factory className="w-5 h-5" />}
@@ -3662,8 +3792,11 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
       {/* MODAL 8: LOG PRODUCTION SHIFT OUTPUT */}
       {/* ========================================================================================= */}
       <Modal
-        isOpen={Boolean(selectedJobForLog)}
-        onClose={() => setSelectedJobForLog(null)}
+        isOpen={logProdModal.isOpen && Boolean(selectedJobForLog)}
+        onClose={() => {
+          setSelectedJobForLog(null);
+          logProdModal.close();
+        }}
         maxWidth="md"
         isDarkMode={isDarkMode}
         icon={<Activity className="w-5 h-5" />}
@@ -3741,7 +3874,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
       {/* ========================================================================================= */}
       {/* MODAL 9: JOB CARD ROUTE TRAVELER & LIVE OPERATION EXECUTION */}
       {/* ========================================================================================= */}
-      {activeJobCard && selectedJobForTraveler && (
+      {travelerModal.isOpen && activeJobCard && selectedJobForTraveler && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans overflow-y-auto">
           <div className={`relative w-full max-w-4xl max-h-[90vh] flex flex-col rounded-3xl border shadow-2xl transition-all overflow-hidden ${
             isDarkMode 
@@ -3791,7 +3924,10 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                   </div>
                 )}
                 <button 
-                  onClick={() => setSelectedJobForTraveler(null)} 
+                  onClick={() => {
+                    setSelectedJobForTraveler(null);
+                    travelerModal.close();
+                  }} 
                   className={`p-2.5 rounded-2xl border transition-all cursor-pointer ${
                     isDarkMode 
                       ? 'border-slate-800 bg-slate-950/60 text-slate-400 hover:text-white hover:bg-slate-800' 
@@ -4476,7 +4612,10 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
               </div>
               <button
                 type="button"
-                onClick={() => setSelectedJobForTraveler(null)}
+                onClick={() => {
+                  setSelectedJobForTraveler(null);
+                  travelerModal.close();
+                }}
                 className={`px-5 py-2 rounded-2xl border text-xs font-mono font-bold cursor-pointer transition-all ${
                   isDarkMode 
                     ? 'border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800' 
@@ -4494,8 +4633,11 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
       {/* MODAL 10: FULL JOB CARD DETAIL VIEW (DRILL-DOWN SOURCE OF TRUTH) */}
       {/* ========================================================================= */}
       <JobCardDetailModal
-        isOpen={Boolean(selectedJobForDetail)}
-        onClose={() => setSelectedJobForDetail(null)}
+        isOpen={jobDetailModal.isOpen && Boolean(selectedJobForDetail)}
+        onClose={() => {
+          setSelectedJobForDetail(null);
+          jobDetailModal.close();
+        }}
         jobCard={jobCards.find(j => j.jobNo === selectedJobForDetail?.jobNo || j.id === selectedJobForDetail?.id) || selectedJobForDetail}
         orders={orders}
         boms={boms}
@@ -4515,8 +4657,8 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
       {/* MODAL 11: MACHINE BREAKDOWN & DOWNTIME ALERT REPORTING */}
       {/* ========================================================================= */}
       <Modal
-        isOpen={showBreakdownModal}
-        onClose={() => setShowBreakdownModal(false)}
+        isOpen={breakdownModal.isOpen}
+        onClose={() => breakdownModal.close()}
         title="Report Machine Downtime / Breakdown"
         isDarkMode={isDarkMode}
       >

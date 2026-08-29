@@ -91,6 +91,7 @@ export const Modal: React.FC<ModalProps> = ({
 }) => {
   useBodyScrollLock(isOpen);
   const modalContentRef = useRef<HTMLDivElement>(null);
+  const isMouseDownOnBackdrop = useRef<boolean>(false);
 
   useEffect(() => {
     if (!isOpen || !closeOnEsc) return;
@@ -113,15 +114,21 @@ export const Modal: React.FC<ModalProps> = ({
     <div
       className={`fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-150 font-sans ${containerClassName}`}
       data-lenis-prevent="true"
+      onMouseDown={(e) => {
+        isMouseDownOnBackdrop.current = e.target === e.currentTarget;
+      }}
       onClick={(e) => {
-        if (closeOnBackdropClick && e.target === e.currentTarget) {
+        if (closeOnBackdropClick && e.target === e.currentTarget && isMouseDownOnBackdrop.current) {
           onClose();
         }
+        isMouseDownOnBackdrop.current = false;
       }}
     >
       <div
         ref={modalContentRef}
         data-lenis-prevent="true"
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
         className={`relative w-full ${maxWidthClass} max-h-[92vh] sm:max-h-[88vh] flex flex-col rounded-2xl border shadow-2xl transition-all overflow-hidden overscroll-contain modal-animate-enter ${
           isDarkMode
             ? 'bg-[#11141c] border-slate-800/90 text-white shadow-black/80 ring-1 ring-white/5'

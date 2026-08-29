@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { QCInspection } from '../../../types/console';
 import { triggerQCFailure } from '../../../services/notificationService';
+import { useUrlModal } from '../../../hooks/useUrlModal';
 
 interface QCViewProps {
   qcItems?: QCInspection[];
@@ -36,6 +37,7 @@ export const QCView: React.FC<QCViewProps> = ({
   const [localQc, setLocalQc] = useState<QCInspection[]>(initialItems);
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const inspectModal = useUrlModal('inspect-qc');
   const [inspectingItem, setInspectingItem] = useState<QCInspection | null>(null);
   const [qcDecision, setQcDecision] = useState<'PASS' | 'QC_HOLD' | 'REJECTED'>('PASS');
   const [qcNotes, setQcNotes] = useState('');
@@ -45,6 +47,24 @@ export const QCView: React.FC<QCViewProps> = ({
       setLocalQc(qcItems || qcQueue || []);
     }
   }, [qcItems, qcQueue]);
+
+  // Sync inspection item from URL
+  useEffect(() => {
+    if (inspectModal.isOpen) {
+      const { qcId, jobNo, orderPo } = inspectModal.params;
+      if (qcId || jobNo || orderPo) {
+        const found = localQc.find(q => (qcId && q.id === qcId) || (jobNo && q.jobNo === jobNo) || (orderPo && q.orderPo === orderPo));
+        if (found) {
+          setInspectingItem(found);
+          const current = found.qcStatus === 'PASSED' ? 'PASS' : found.qcStatus === 'REJECTED' ? 'REJECTED' : found.qcStatus === 'QC_HOLD' ? 'QC_HOLD' : 'PASS';
+          setQcDecision(current as any);
+          setQcNotes(found.inspectorNotes || '');
+        }
+      }
+    } else {
+      setInspectingItem(null);
+    }
+  }, [inspectModal.isOpen, inspectModal.params.qcId, inspectModal.params.jobNo, inspectModal.params.orderPo, localQc]);
 
   // Deduplicate items by unique orderPo + jobNo (keep the latest)
   const deduplicatedItems = React.useMemo(() => {
@@ -103,6 +123,7 @@ export const QCView: React.FC<QCViewProps> = ({
 
     setInspectingItem(null);
     setQcNotes('');
+    inspectModal.close();
   };
 
   const pendingCount = deduplicatedItems.filter(q => q.qcStatus === 'PENDING').length;
@@ -398,6 +419,7 @@ export const QCView: React.FC<QCViewProps> = ({
                     const current = qc.qcStatus === 'PASSED' ? 'PASS' : qc.qcStatus === 'REJECTED' ? 'REJECTED' : qc.qcStatus === 'QC_HOLD' ? 'QC_HOLD' : 'PASS';
                     setQcDecision(current as any);
                     setQcNotes(qc.inspectorNotes || '');
+                    inspectModal.open({ qcId: qc.id, jobNo: qc.jobNo, orderPo: qc.orderPo });
                   }}
                   className="w-full py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-mono font-bold flex items-center justify-center gap-1.5 shadow-md shadow-[#5B75F8]/20 cursor-pointer active:scale-[0.98]"
                 >
@@ -472,6 +494,7 @@ export const QCView: React.FC<QCViewProps> = ({
                         const current = qc.qcStatus === 'PASSED' ? 'PASS' : qc.qcStatus === 'REJECTED' ? 'REJECTED' : qc.qcStatus === 'QC_HOLD' ? 'QC_HOLD' : 'PASS';
                         setQcDecision(current as any);
                         setQcNotes(qc.inspectorNotes || '');
+                        inspectModal.open({ qcId: qc.id, jobNo: qc.jobNo, orderPo: qc.orderPo });
                       }}
                       className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer ${
                         isDarkMode ? 'bg-[#5B75F8]/10 text-[#7B92FF] hover:bg-[#5B75F8]/20 border border-[#5B75F8]/30' : 'bg-[#5B75F8]/10 text-[#5B75F8] hover:bg-[#5B75F8]/20 border border-[#5B75F8]/20'
@@ -488,7 +511,7 @@ export const QCView: React.FC<QCViewProps> = ({
       </div>
 
       {/* Ultra-Polished Mobile-First QC Audit Modal */}
-      {inspectingItem && (
+      {inspectModal.isOpen && inspectingItem && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md font-sans overflow-y-auto">
           <div className={`relative w-full max-w-lg max-h-[92vh] sm:max-h-[90vh] flex flex-col rounded-t-3xl sm:rounded-3xl border shadow-2xl transition-all overflow-hidden ${
             isDarkMode 
@@ -522,7 +545,10 @@ export const QCView: React.FC<QCViewProps> = ({
                 </div>
               </div>
               <button 
-                onClick={() => setInspectingItem(null)} 
+                onClick={() => {
+                  setInspectingItem(null);
+                  inspectModal.close();
+                }} 
                 className={`p-2 rounded-2xl border transition-all cursor-pointer ${
                   isDarkMode 
                     ? 'border-slate-800 bg-slate-950/60 text-slate-400 hover:text-white hover:bg-slate-800' 
@@ -664,7 +690,10 @@ export const QCView: React.FC<QCViewProps> = ({
               <div className={`pt-3 border-t flex items-center justify-end gap-2.5 shrink-0 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
                 <button 
                   type="button" 
-                  onClick={() => setInspectingItem(null)} 
+                  onClick={() => {
+                    setInspectingItem(null);
+                    inspectModal.close();
+                  }} 
                   className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-2xl border text-xs font-mono font-bold cursor-pointer transition-all ${
                     isDarkMode 
                       ? 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800' 

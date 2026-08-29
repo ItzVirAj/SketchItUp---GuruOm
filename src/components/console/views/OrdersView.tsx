@@ -34,6 +34,7 @@ import {
 import { CustomerOrder, OrderStatus, OrderLineItem, CustomerMaster, QCInspection, MasterItem } from '../../../types/console';
 import { ORDER_STAGE_LABELS, ORDER_STAGE_STEPS, OrderStage, OrderSubType, normalizeOrderState } from '../../../utils/orderStateMachine';
 import { Modal } from '../../common/Modal';
+import { useUrlModal } from '../../../hooks/useUrlModal';
 
 interface OrdersViewProps {
   orders: CustomerOrder[];
@@ -58,13 +59,13 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
   onNavigateToCustomers,
   onNavigateToMasters
 }) => {
+  const createOrderModal = useUrlModal('create-order');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [subTypeFilter, setSubTypeFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortField, setSortField] = useState<'RECENCY' | 'PO_NO' | 'CUSTOMER' | 'AMOUNT'>('RECENCY');
   const [sortDirection, setSortDirection] = useState<'ASC' | 'DESC'>('DESC');
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
-  const [showNewModal, setShowNewModal] = useState(false);
 
   // Filter masters to only finished goods items for Customer Purchase Orders
   const finishedGoodsMasters = useMemo(() => {
@@ -292,7 +293,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
     };
 
     onCreateOrder(orderPayload);
-    setShowNewModal(false);
+    createOrderModal.close();
   };
 
   // Filter orders
@@ -660,7 +661,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
       setCreditOverrideBy('');
       setCreditOverrideReason('');
     }
-    setShowNewModal(true);
+    createOrderModal.open();
   };
 
   return (
@@ -1294,9 +1295,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
       {/* ── CREATE PURCHASE ORDER MODAL ──                                          */}
       {/* ========================================================================= */}
       <Modal
-        isOpen={showNewModal}
-        onClose={() => setShowNewModal(false)}
-        maxWidth="4xl"
+        isOpen={createOrderModal.isOpen}
+        onClose={() => createOrderModal.close()}
         isDarkMode={isDarkMode}
         icon={<Plus className="w-5 h-5" />}
         title="Create Purchase Order / Blanket Call-Off"
@@ -1315,7 +1315,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={() => setShowNewModal(false)}
+                onClick={() => createOrderModal.close()}
                 className={`min-h-[42px] px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   isDarkMode 
                     ? 'text-slate-300 hover:text-white bg-slate-800/60 hover:bg-slate-800 border border-slate-750' 
@@ -1418,7 +1418,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  setShowNewModal(false);
+                  createOrderModal.close();
                   onNavigateToCustomers?.();
                 }}
                 className="mt-3 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-md transition-all hover:scale-[1.01]"
@@ -1453,7 +1453,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                     <button
                       type="button"
                       onClick={() => {
-                        setShowNewModal(false);
+                        createOrderModal.close();
                         onNavigateToCustomers();
                       }}
                       className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 hover:underline cursor-pointer flex items-center gap-1"

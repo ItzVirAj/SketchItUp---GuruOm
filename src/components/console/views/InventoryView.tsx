@@ -57,6 +57,8 @@ import {
 } from '../../../services/supabaseServices';
 import { useAuth } from '../../../context/AuthContext';
 import { Modal } from '../../common/Modal';
+import { useUrlModal } from '../../../hooks/useUrlModal';
+import { evaluateGrnMismatch, evaluatePoAging } from '../../../utils/procurementEngine';
 
 interface InventoryViewProps {
   stock: StockItem[];
@@ -77,6 +79,14 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   const [subTab, setSubTab] = useState<'stock' | 'shortages' | 'purchases' | 'grn' | 'movements' | 'reconciliation'>('stock');
   const [selectedCategory, setSelectedCategory] = useState<InventoryCategoryKey>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // URL-driven modals
+  const adjustStockModal = useUrlModal('adjust-stock');
+  const createPoModal = useUrlModal('create-po');
+  const createGrnModal = useUrlModal('create-grn');
+  const itemHistoryModal = useUrlModal('item-history');
+  const correctMovementModal = useUrlModal('correct-movement');
+
   const [selectedStockForAdjust, setSelectedStockForAdjust] = useState<StockItem | null>(null);
   const [adjustQty, setAdjustQty] = useState<number>(0);
   const [adjustReason, setAdjustReason] = useState<string>('Physical Audit Adjustment');
@@ -91,12 +101,12 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   const [selectedMovementForCorrection, setSelectedMovementForCorrection] = useState<InventoryMovement | null>(null);
   const [correctionReason, setCorrectionReason] = useState<string>('');
   const [isLoadingModuleData, setIsLoadingModuleData] = useState(false);
-
-  // Modals state
-  const [isCreatePoOpen, setIsCreatePoOpen] = useState(false);
-  const [isCreateGrnOpen, setIsCreateGrnOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+
+  const overduePoCount = useMemo(() => {
+    return purchaseOrders.filter(po => evaluatePoAging(po).isOverdue).length;
+  }, [purchaseOrders]);
 
   const loadModuleData = async () => {
     setIsLoadingModuleData(true);
@@ -135,6 +145,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         description: stk.description,
         history
       });
+      itemHistoryModal.open({ itemId: stk.code });
     } catch (err) {
       console.warn('Failed to load item stock history:', err);
     }
@@ -150,6 +161,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       setActionSuccess(`Reversal movement appended for ${selectedMovementForCorrection.id}`);
       setSelectedMovementForCorrection(null);
       setCorrectionReason('');
+      correctMovementModal.close();
       loadModuleData();
     } catch (err: any) {
       setActionError(err.message || 'Failed to append correction movement');
@@ -290,6 +302,39 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
     });
   }, [stockMasterRows, selectedCategory, searchQuery]);
 
+  // Sync adjust modal from URL params if reloaded or deep linked
+  useEffect(() => {
+    if (adjustStockModal.isOpen && adjustStockModal.params.itemId) {
+      const found = stockMasterRows.find(s => s.code === adjustStockModal.params.itemId || s.rawCode === adjustStockModal.params.itemId);
+      if (found && (!selectedStockForAdjust || selectedStockForAdjust.code !== found.code)) {
+        setSelectedStockForAdjust(found);
+      }
+    } else if (adjustStockModal.isOpen && !selectedStockForAdjust && stockMasterRows.length > 0) {
+      setSelectedStockForAdjust(stockMasterRows[0]);
+    }
+  }, [adjustStockModal.isOpen, adjustStockModal.params.itemId, stockMasterRows, selectedStockForAdjust]);
+
+  // Sync item history modal from URL
+  useEffect(() => {
+    if (itemHistoryModal.isOpen && itemHistoryModal.params.itemId && !selectedItemHistory) {
+      const target = stockMasterRows.find(s => s.code === itemHistoryModal.params.itemId || s.rawCode === itemHistoryModal.params.itemId);
+      if (target) {
+        handleOpenItemHistory(target);
+      }
+    }
+  }, [itemHistoryModal.isOpen, itemHistoryModal.params.itemId, selectedItemHistory, stockMasterRows]);
+
+  // Sync correct movement modal from URL
+  useEffect(() => {
+    if (correctMovementModal.isOpen && correctMovementModal.params.movementId && !selectedMovementForCorrection) {
+      const found = movements.find(m => m.id === correctMovementModal.params.movementId);
+      if (found) {
+        setSelectedMovementForCorrection(found);
+        setCorrectionReason(`Offset error in movement ${found.id}`);
+      }
+    }
+  }, [correctMovementModal.isOpen, correctMovementModal.params.movementId, selectedMovementForCorrection, movements]);
+
   const handleAdjustSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedStockForAdjust) return;
@@ -301,6 +346,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       setActionSuccess(`Stock adjusted for ${selectedStockForAdjust.code} (${selectedStockForAdjust.description}) to ${newOnHand} ${selectedStockForAdjust.unit}`);
       setSelectedStockForAdjust(null);
       setAdjustQty(0);
+      adjustStockModal.close();
     } catch (err: any) {
       setActionError(err?.message || 'Failed to adjust stock. Check your role permissions.');
     }
@@ -374,7 +420,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             {subTab === 'stock' && (
               <button
                 onClick={() => {
-                  if (stockMasterRows.length > 0) setSelectedStockForAdjust(stockMasterRows[0]);
+                  const target = stockMasterRows[0];
+                  if (target) {
+                    setSelectedStockForAdjust(target);
+                    adjustStockModal.open({ itemId: target.code });
+                  }
                 }}
                 className="min-h-[40px] px-3.5 py-2 rounded-xl bg-gradient-to-r from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer shrink-0 active:scale-95 transition-transform font-mono"
               >
@@ -384,7 +434,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             )}
             {subTab === 'purchases' && (
               <button
-                onClick={() => setIsCreatePoOpen(true)}
+                onClick={() => createPoModal.open()}
                 className="min-h-[40px] px-3.5 py-2 rounded-xl bg-gradient-to-r from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer shrink-0 active:scale-95 transition-transform font-mono"
               >
                 <Plus className="w-3.5 h-3.5" />
@@ -393,7 +443,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             )}
             {subTab === 'grn' && (
               <button
-                onClick={() => setIsCreateGrnOpen(true)}
+                onClick={() => createGrnModal.open()}
                 className="min-h-[40px] px-3.5 py-2 rounded-xl bg-gradient-to-r from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer shrink-0 active:scale-95 transition-transform font-mono"
               >
                 <Truck className="w-3.5 h-3.5" />
@@ -527,7 +577,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               {subTab === 'stock' && (
                 <button
                   onClick={() => {
-                    if (stockMasterRows.length > 0) setSelectedStockForAdjust(stockMasterRows[0]);
+                    const target = stockMasterRows[0];
+                    if (target) {
+                      setSelectedStockForAdjust(target);
+                      adjustStockModal.open({ itemId: target.code });
+                    }
                   }}
                   className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-all hover:bg-[var(--accent-hover)] active:scale-[0.98]"
                 >
@@ -537,7 +591,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               )}
               {subTab === 'purchases' && (
                 <button
-                  onClick={() => setIsCreatePoOpen(true)}
+                  onClick={() => createPoModal.open()}
                   className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-all hover:bg-[var(--accent-hover)] active:scale-[0.98]"
                 >
                   <Plus className="h-4 w-4" />
@@ -546,7 +600,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               )}
               {subTab === 'grn' && (
                 <button
-                  onClick={() => setIsCreateGrnOpen(true)}
+                  onClick={() => createGrnModal.open()}
                   className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-all hover:bg-[var(--accent-hover)] active:scale-[0.98]"
                 >
                   <Truck className="h-4 w-4" />
@@ -797,7 +851,10 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                         <td className="py-4 px-5 text-center">
                           <div className="flex items-center justify-center gap-2">
                             <button
-                              onClick={() => setSelectedStockForAdjust(stk)}
+                              onClick={() => {
+                                setSelectedStockForAdjust(stk);
+                                adjustStockModal.open({ itemId: stk.code });
+                              }}
                               className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer ${
                                 isDarkMode ? 'bg-[var(--accent-soft-dark)] text-[var(--accent-text-dark)] hover:brightness-125 border border-[var(--accent-border-dark)]' : 'bg-[var(--accent-soft-light)] text-[var(--accent-text-light)] hover:brightness-95 border border-[var(--accent-border-light)]'
                               }`}
@@ -806,10 +863,10 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                             </button>
                             <button
                               onClick={() => handleOpenItemHistory(stk)}
-                              title="View Append-Only Movement History"
-                              className={`p-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer ${
-                                isDarkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                              className={`p-1.5 rounded-xl border transition-all cursor-pointer ${
+                                isDarkMode ? 'border-slate-800 bg-black/20 text-slate-400 hover:text-white' : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
                               }`}
+                              title="View Running Ledger Movements"
                             >
                               <History className="w-3.5 h-3.5" />
                             </button>
@@ -961,7 +1018,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                       <button
                         onClick={() => {
                           setSubTab('purchases');
-                          setIsCreatePoOpen(true);
+                          createPoModal.open();
                         }}
                         className="px-3 py-1.5 rounded-xl bg-[var(--accent-primary)]/10 hover:bg-[var(--accent-primary)]/20 text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/30 text-xs font-mono font-bold cursor-pointer transition-all"
                       >
@@ -993,7 +1050,14 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               <div className="text-xs font-extrabold text-slate-900 dark:text-white">Procurement & Purchase Orders</div>
               <div className="mt-0.5 text-[10px] text-slate-400">Supplier purchase orders, delivery milestones, and management approvals</div>
             </div>
-            <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>{purchaseOrders.length} orders</span>
+            <div className="flex items-center gap-2">
+              <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>{purchaseOrders.length} orders</span>
+              {overduePoCount > 0 && (
+                <span className="rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider bg-rose-500/10 text-rose-400 border-rose-500/30">
+                  {overduePoCount} overdue
+                </span>
+              )}
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
@@ -1012,18 +1076,48 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 </tr>
               </thead>
               <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
-                {purchaseOrders.map(po => (
-                  <tr key={po.id || po.poNo} className={`transition-colors ${isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'}`}>
-                    <td className="py-4 px-5 font-bold font-mono text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{po.poNo}</td>
-                    <td className={`py-4 px-5 font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
-                      <div>{po.supplierName}</div>
-                      <div className="text-[10px] text-slate-500 font-mono">{po.supplierCode}</div>
-                    </td>
-                    <td className="py-4 px-5 font-mono text-slate-400">{po.orderDate}</td>
-                    <td className="py-4 px-5 font-mono text-slate-300">{po.expectedDeliveryDate}</td>
-                    <td className="py-4 px-5 text-right font-mono font-bold text-emerald-400">
-                      ₹{po.totalAmount.toLocaleString()}
-                    </td>
+                {purchaseOrders.map(po => {
+                  const aging = evaluatePoAging(po);
+                  const isClosed = po.status === 'RECEIVED' || po.status === 'CANCELLED';
+
+                  return (
+                    <tr key={po.id || po.poNo} className={`transition-colors ${isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'}`}>
+                      <td className="py-4 px-5 font-bold font-mono text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{po.poNo}</td>
+                      <td className={`py-4 px-5 font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
+                        <div>{po.supplierName}</div>
+                        <div className="text-[10px] text-slate-500 font-mono">{po.supplierCode}</div>
+                      </td>
+                      <td className="py-4 px-5 font-mono text-slate-400">{po.orderDate}</td>
+                      <td className="py-4 px-5 font-mono">
+                        <div className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>
+                          {po.expectedDeliveryDate || '—'}
+                        </div>
+                        {!isClosed && (
+                          <div className="mt-1">
+                            {aging.agingBucket === 'SEVERELY_OVERDUE' ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-mono font-bold uppercase border bg-rose-500/20 text-rose-400 border-rose-500/40">
+                                <AlertTriangle className="w-3 h-3 text-rose-400" />
+                                <span>Overdue (+{aging.daysOverdue}d)</span>
+                              </span>
+                            ) : aging.agingBucket === 'OVERDUE' ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-mono font-bold uppercase border bg-rose-500/10 text-rose-400 border-rose-500/30">
+                                <span>Overdue (+{aging.daysOverdue}d)</span>
+                              </span>
+                            ) : aging.agingBucket === 'DUE_SOON' ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-mono font-bold uppercase border bg-amber-500/10 text-amber-400 border-amber-500/30">
+                                <span>Due Soon</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-mono font-bold uppercase border bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+                                <span>On Track</span>
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-4 px-5 text-right font-mono font-bold text-emerald-400">
+                        ₹{po.totalAmount.toLocaleString()}
+                      </td>
                     <td className="py-4 px-5 text-center">
                       <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
                         po.approvalStatus === 'APPROVED'
@@ -1063,7 +1157,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                       )}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
                 {purchaseOrders.length === 0 && (
                   <tr>
                     <td colSpan={8} className="py-12 text-center text-slate-400 font-mono text-xs">
@@ -1278,6 +1373,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                                 onClick={() => {
                                   setSelectedMovementForCorrection(mov);
                                   setCorrectionReason(`Offset error in movement ${mov.id}`);
+                                  correctMovementModal.open({ movementId: mov.id });
                                 }}
                                 title="Record Offset Reversal Movement"
                                 className="px-2 py-1 rounded-lg text-[10px] font-bold bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/30 cursor-pointer"
@@ -1396,8 +1492,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
       {/* Modal 1: Physical Stock Audit Adjustment */}
       <Modal
-        isOpen={Boolean(selectedStockForAdjust)}
-        onClose={() => setSelectedStockForAdjust(null)}
+        isOpen={adjustStockModal.isOpen && Boolean(selectedStockForAdjust)}
+        onClose={() => {
+          setSelectedStockForAdjust(null);
+          adjustStockModal.close();
+        }}
         maxWidth="lg"
         isDarkMode={isDarkMode}
         icon={<Boxes className="w-5 h-5" />}
@@ -1494,7 +1593,10 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             <div className={`pt-4 border-t flex items-center justify-end gap-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <button
                 type="button"
-                onClick={() => setSelectedStockForAdjust(null)}
+                onClick={() => {
+                  setSelectedStockForAdjust(null);
+                  adjustStockModal.close();
+                }}
                 className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                   isDarkMode 
                     ? 'border-slate-700 text-slate-300 hover:bg-slate-800' 
@@ -1516,8 +1618,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
       {/* Modal 2: Create Purchase Order */}
       <Modal
-        isOpen={isCreatePoOpen}
-        onClose={() => setIsCreatePoOpen(false)}
+        isOpen={createPoModal.isOpen}
+        onClose={() => createPoModal.close()}
         maxWidth="xl"
         isDarkMode={isDarkMode}
         icon={<ShoppingCart className="w-5 h-5" />}
@@ -1555,7 +1657,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
           try {
             await insertPurchaseOrder(newPo);
-            setIsCreatePoOpen(false);
+            createPoModal.close();
             setActionSuccess('Purchase order created successfully.');
             const updated = await fetchPurchaseOrders();
             setPurchaseOrders(updated);
@@ -1630,7 +1732,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
           </div>
 
           <div className={`pt-4 border-t flex justify-end gap-3 font-sans ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
-            <button type="button" onClick={() => setIsCreatePoOpen(false)} className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+            <button type="button" onClick={() => createPoModal.close()} className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
               isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
             }`}>Cancel</button>
             <button type="submit" className="px-5 py-2 rounded-xl bg-[var(--accent-primary)] hover:brightness-110 text-white font-bold text-xs cursor-pointer shadow-lg shadow-[var(--accent-shadow)] transition-all hover:scale-[1.01]">Issue PO</button>
@@ -1640,137 +1742,36 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
       {/* Modal 3: Inward Goods Receipt (GRN) */}
       <Modal
-        isOpen={isCreateGrnOpen}
-        onClose={() => setIsCreateGrnOpen(false)}
+        isOpen={createGrnModal.isOpen}
+        onClose={() => createGrnModal.close()}
         maxWidth="xl"
         isDarkMode={isDarkMode}
         icon={<Truck className="w-5 h-5" />}
         title="Inward Goods Receipt (GRN)"
         subtitle="Receive supplier material at gate"
       >
-        <form onSubmit={async (e) => {
-          e.preventDefault();
-          const form = e.target as any;
-          const newGrn: GoodsReceiptNote = {
-            grnNo: `GRN-26-${Date.now().toString().slice(-4)}`,
-            poNo: form.poNo.value,
-            vendorCode: form.vendorCode.value,
-            vendorName: form.vendorName.value,
-            challanNo: form.challanNo.value,
-            challanDate: new Date().toISOString().split('T')[0],
-            receivedDate: new Date().toISOString().split('T')[0],
-            receivedBy: user?.name || 'Gate Inward Officer',
-            status: 'RECEIVED',
-            vehicleNo: form.vehicleNo.value,
-            remarks: form.remarks.value,
-            items: [{
-              itemCode: form.itemCode.value,
-              itemDescription: form.itemDesc.value,
-              orderedQty: Number(form.qty.value),
-              receivedQty: Number(form.qty.value),
-              acceptedQty: Number(form.qty.value),
-              rejectedQty: 0,
-              unit: form.unit.value,
-              unitRate: 280
-            }]
-          };
-
-          try {
-            await insertGrn(newGrn);
-            setIsCreateGrnOpen(false);
+        <GrnReceiptForm
+          purchaseOrders={purchaseOrders}
+          user={user}
+          isDarkMode={isDarkMode}
+          onSuccess={async () => {
+            createGrnModal.close();
             setActionSuccess('GRN logged successfully at gate.');
             const updated = await fetchGrnList();
             setGrnList(updated);
-          } catch (err: any) {
-            setActionError(err.message || 'Failed to log GRN.');
-          }
-        }} className="space-y-4 text-xs font-sans">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>PO Reference</label>
-              <input name="poNo" required defaultValue="PO-PUR-2026-001" className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
-                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
-              }`} />
-            </div>
-            <div>
-              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Challan No / Invoice</label>
-              <input name="challanNo" required defaultValue="CH-GATE-4401" className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
-                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
-              }`} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Vendor Code</label>
-              <input name="vendorCode" required defaultValue="VEND-001" className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
-                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
-              }`} />
-            </div>
-            <div>
-              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Vendor Name</label>
-              <input name="vendorName" required defaultValue="Mahalaxmi Steel Traders" className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
-                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
-              }`} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Item SKU</label>
-              <input name="itemCode" required defaultValue="RAW-ALU-6061-ROD" className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
-                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
-              }`} />
-            </div>
-            <div>
-              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Item Desc</label>
-              <input name="itemDesc" required defaultValue="Aluminium 6061 Round Bar" className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
-                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
-              }`} />
-            </div>
-            <div>
-              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Received Qty</label>
-              <input name="qty" type="number" required defaultValue="100" className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
-                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
-              }`} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Vehicle / Transporter</label>
-              <input name="vehicleNo" defaultValue="GJ-03-AX-8910" className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
-                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
-              }`} />
-            </div>
-            <div>
-              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Unit</label>
-              <input name="unit" defaultValue="KG" className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
-                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
-              }`} />
-            </div>
-          </div>
-
-          <div>
-            <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Gate Inspection Remarks</label>
-            <input name="remarks" defaultValue="Material physically verified against MTC." className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
-              isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white placeholder:text-slate-500 focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-[var(--accent-primary)] shadow-xs'
-            }`} />
-          </div>
-
-          <div className={`pt-4 border-t flex justify-end gap-3 font-sans ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
-            <button type="button" onClick={() => setIsCreateGrnOpen(false)} className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-              isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
-            }`}>Cancel</button>
-            <button type="submit" className="px-5 py-2 rounded-xl bg-[var(--accent-primary)] hover:brightness-110 text-white font-bold text-xs cursor-pointer shadow-lg shadow-[var(--accent-shadow)] transition-all hover:scale-[1.01]">Log GRN Inward</button>
-          </div>
-        </form>
+          }}
+          onError={(msg) => setActionError(msg)}
+          onCancel={() => createGrnModal.close()}
+        />
       </Modal>
 
       {/* Modal 4: Item Stock Movement History (Chronological Ledger) */}
       <Modal
-        isOpen={Boolean(selectedItemHistory)}
-        onClose={() => setSelectedItemHistory(null)}
+        isOpen={itemHistoryModal.isOpen && Boolean(selectedItemHistory)}
+        onClose={() => {
+          setSelectedItemHistory(null);
+          itemHistoryModal.close();
+        }}
         maxWidth="3xl"
         isDarkMode={isDarkMode}
         icon={<History className="w-5 h-5" />}
@@ -1779,7 +1780,10 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         footer={
           <div className="w-full flex justify-end">
             <button 
-              onClick={() => setSelectedItemHistory(null)}
+              onClick={() => {
+                setSelectedItemHistory(null);
+                itemHistoryModal.close();
+              }}
               className={`px-5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                 isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
               }`}
@@ -1856,8 +1860,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
       {/* Modal 5: Reverse / Correct Movement */}
       <Modal
-        isOpen={Boolean(selectedMovementForCorrection)}
-        onClose={() => setSelectedMovementForCorrection(null)}
+        isOpen={correctMovementModal.isOpen && Boolean(selectedMovementForCorrection)}
+        onClose={() => {
+          setSelectedMovementForCorrection(null);
+          correctMovementModal.close();
+        }}
         maxWidth="md"
         isDarkMode={isDarkMode}
         icon={<RotateCcw className="w-5 h-5" />}
@@ -1895,7 +1902,10 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             </div>
 
             <div className={`pt-4 border-t flex justify-end gap-3 font-sans ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
-              <button type="button" onClick={() => setSelectedMovementForCorrection(null)} className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+              <button type="button" onClick={() => {
+                setSelectedMovementForCorrection(null);
+                correctMovementModal.close();
+              }} className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                 isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
               }`}>Cancel</button>
               <button type="submit" className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs cursor-pointer shadow-md transition-all hover:scale-[1.01]">
@@ -1907,6 +1917,324 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       </Modal>
 
     </div>
+  );
+};
+
+interface GrnReceiptFormProps {
+  purchaseOrders: PurchaseOrder[];
+  user: any;
+  isDarkMode: boolean;
+  onSuccess: () => void;
+  onError: (msg: string) => void;
+  onCancel: () => void;
+}
+
+const GrnReceiptForm: React.FC<GrnReceiptFormProps> = ({
+  purchaseOrders,
+  user,
+  isDarkMode,
+  onSuccess,
+  onError,
+  onCancel
+}) => {
+  const defaultPo = purchaseOrders[0];
+  const [poNo, setPoNo] = useState(defaultPo?.poNo || 'PO-PUR-2026-001');
+  const [challanNo, setChallanNo] = useState('CH-GATE-4401');
+  const [vendorCode, setVendorCode] = useState(defaultPo?.supplierCode || 'VEND-001');
+  const [vendorName, setVendorName] = useState(defaultPo?.supplierName || 'Mahalaxmi Steel Traders');
+  const [itemCode, setItemCode] = useState(defaultPo?.items?.[0]?.itemCode || 'RAW-ALU-6061-ROD');
+  const [itemDesc, setItemDesc] = useState(defaultPo?.items?.[0]?.itemDescription || 'Aluminium 6061 Round Bar');
+  const [receivedQty, setReceivedQty] = useState<number | string>(defaultPo?.items?.[0]?.orderQty ?? 100);
+  const [vehicleNo, setVehicleNo] = useState('GJ-03-AX-8910');
+  const [unit, setUnit] = useState(defaultPo?.items?.[0]?.unit || 'KG');
+  const [remarks, setRemarks] = useState('Material physically verified against MTC.');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Look up matching PO from loaded purchase orders
+  const matchedPo = useMemo(() => {
+    if (!poNo) return null;
+    return purchaseOrders.find(
+      p => p.poNo.toLowerCase().trim() === poNo.toLowerCase().trim() || p.id?.toLowerCase().trim() === poNo.toLowerCase().trim()
+    ) || null;
+  }, [purchaseOrders, poNo]);
+
+  // Look up matching item from PO
+  const matchedPoItem = useMemo(() => {
+    if (!matchedPo || !matchedPo.items || matchedPo.items.length === 0) return null;
+    return matchedPo.items.find(i => i.itemCode?.toLowerCase().trim() === itemCode?.toLowerCase().trim()) || matchedPo.items[0];
+  }, [matchedPo, itemCode]);
+
+  // Expected PO Quantity
+  const expectedPoQty = useMemo(() => {
+    if (matchedPoItem && typeof matchedPoItem.orderQty === 'number') {
+      return matchedPoItem.orderQty;
+    }
+    return 100;
+  }, [matchedPoItem]);
+
+  // Evaluate Mismatch using procurement engine
+  const mismatchResult = useMemo(() => {
+    return evaluateGrnMismatch(expectedPoQty, Number(receivedQty || 0));
+  }, [expectedPoQty, receivedQty]);
+
+  const handlePoChange = (selectedPoNo: string) => {
+    setPoNo(selectedPoNo);
+    const found = purchaseOrders.find(
+      p => p.poNo.toLowerCase().trim() === selectedPoNo.toLowerCase().trim() || p.id?.toLowerCase().trim() === selectedPoNo.toLowerCase().trim()
+    );
+    if (found) {
+      if (found.supplierCode) setVendorCode(found.supplierCode);
+      if (found.supplierName) setVendorName(found.supplierName);
+      if (found.items && found.items.length > 0) {
+        setItemCode(found.items[0].itemCode);
+        setItemDesc(found.items[0].itemDescription);
+        setUnit(found.items[0].unit || 'KG');
+        setReceivedQty(found.items[0].orderQty);
+      }
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    const newGrn: GoodsReceiptNote = {
+      grnNo: `GRN-26-${Date.now().toString().slice(-4)}`,
+      poNo,
+      vendorCode,
+      vendorName,
+      challanNo,
+      challanDate: new Date().toISOString().split('T')[0],
+      receivedDate: new Date().toISOString().split('T')[0],
+      receivedBy: user?.name || 'Gate Inward Officer',
+      status: 'RECEIVED',
+      vehicleNo,
+      remarks,
+      poExpectedQty: expectedPoQty,
+      receivedQty: Number(receivedQty || 0),
+      isQtyMismatched: mismatchResult.isMismatched,
+      mismatchNotes: mismatchResult.isMismatched ? mismatchResult.message : undefined,
+      items: [{
+        itemCode,
+        itemDescription: itemDesc,
+        orderedQty: expectedPoQty,
+        receivedQty: Number(receivedQty || 0),
+        acceptedQty: Number(receivedQty || 0),
+        rejectedQty: 0,
+        unit,
+        unitRate: matchedPoItem?.unitPrice || 280
+      }]
+    };
+
+    try {
+      await insertGrn(newGrn);
+      onSuccess();
+    } catch (err: any) {
+      onError(err.message || 'Failed to log GRN.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4 text-xs font-sans">
+      {/* Real-Time GRN vs PO Quantity Mismatch Warning Banner */}
+      {mismatchResult.isMismatched && (
+        <div className={`p-3.5 rounded-2xl border flex items-start gap-3 text-xs ${
+          mismatchResult.alertSeverity === 'MAJOR_SHORTAGE'
+            ? isDarkMode ? 'bg-rose-950/30 border-rose-500/40 text-rose-300' : 'bg-rose-50 border-rose-300 text-rose-800'
+            : isDarkMode ? 'bg-amber-950/30 border-amber-500/40 text-amber-300' : 'bg-amber-50 border-amber-300 text-amber-800'
+        }`}>
+          <AlertTriangle className={`w-4 h-4 mt-0.5 shrink-0 ${
+            mismatchResult.alertSeverity === 'MAJOR_SHORTAGE' ? 'text-rose-500' : 'text-amber-500'
+          }`} />
+          <div className="space-y-1 flex-1">
+            <div className="flex items-center justify-between">
+              <span className="font-bold uppercase tracking-wider text-[10px]">
+                {mismatchResult.alertSeverity === 'MAJOR_SHORTAGE' && 'Major Quantity Shortage Detected'}
+                {mismatchResult.alertSeverity === 'MINOR_SHORTAGE' && 'Minor Quantity Shortage Detected'}
+                {mismatchResult.alertSeverity === 'EXCESS_DELIVERY' && 'Excess Delivery Detected'}
+              </span>
+              <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
+                mismatchResult.alertSeverity === 'MAJOR_SHORTAGE'
+                  ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                  : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+              }`}>
+                {mismatchResult.discrepancyQty > 0 ? `+${mismatchResult.discrepancyQty}` : mismatchResult.discrepancyQty} {unit} ({mismatchResult.variancePercentage}%)
+              </span>
+            </div>
+            <p className="text-xs leading-relaxed opacity-90">{mismatchResult.message}</p>
+            <div className="text-[11px] font-mono opacity-75">
+              PO Expected: <strong className="font-bold">{mismatchResult.poExpectedQty} {unit}</strong> • Delivered: <strong className="font-bold">{mismatchResult.receivedQty} {unit}</strong>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>PO Reference</label>
+          <input
+            name="poNo"
+            required
+            value={poNo}
+            onChange={(e) => handlePoChange(e.target.value)}
+            list="grn-po-options"
+            className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+              isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+            }`}
+          />
+          {purchaseOrders.length > 0 && (
+            <datalist id="grn-po-options">
+              {purchaseOrders.map(p => (
+                <option key={p.id || p.poNo} value={p.poNo}>
+                  {p.supplierName} ({p.items?.[0]?.itemCode || ''})
+                </option>
+              ))}
+            </datalist>
+          )}
+        </div>
+        <div>
+          <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Challan No / Invoice</label>
+          <input
+            name="challanNo"
+            required
+            value={challanNo}
+            onChange={(e) => setChallanNo(e.target.value)}
+            className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+              isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+            }`}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Vendor Code</label>
+          <input
+            name="vendorCode"
+            required
+            value={vendorCode}
+            onChange={(e) => setVendorCode(e.target.value)}
+            className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+              isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+            }`}
+          />
+        </div>
+        <div>
+          <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Vendor Name</label>
+          <input
+            name="vendorName"
+            required
+            value={vendorName}
+            onChange={(e) => setVendorName(e.target.value)}
+            className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
+              isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+            }`}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        <div>
+          <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Item SKU</label>
+          <input
+            name="itemCode"
+            required
+            value={itemCode}
+            onChange={(e) => setItemCode(e.target.value)}
+            className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+              isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+            }`}
+          />
+        </div>
+        <div>
+          <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Item Desc</label>
+          <input
+            name="itemDesc"
+            required
+            value={itemDesc}
+            onChange={(e) => setItemDesc(e.target.value)}
+            className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
+              isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+            }`}
+          />
+        </div>
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className={`block text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Received Qty</label>
+            <span className="text-[10px] font-mono text-slate-400">PO: {expectedPoQty}</span>
+          </div>
+          <input
+            name="qty"
+            type="number"
+            required
+            value={receivedQty}
+            onChange={(e) => setReceivedQty(e.target.value === '' ? '' : Number(e.target.value))}
+            className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+              isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+            }`}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Vehicle / Transporter</label>
+          <input
+            name="vehicleNo"
+            value={vehicleNo}
+            onChange={(e) => setVehicleNo(e.target.value)}
+            className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+              isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+            }`}
+          />
+        </div>
+        <div>
+          <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Unit</label>
+          <input
+            name="unit"
+            value={unit}
+            onChange={(e) => setUnit(e.target.value)}
+            className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+              isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+            }`}
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Gate Inspection Remarks</label>
+        <input
+          name="remarks"
+          value={remarks}
+          onChange={(e) => setRemarks(e.target.value)}
+          placeholder="Material physically verified against MTC."
+          className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
+            isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white placeholder:text-slate-500 focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-[var(--accent-primary)] shadow-xs'
+          }`}
+        />
+      </div>
+
+      <div className={`pt-4 border-t flex justify-end gap-3 font-sans ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+        <button
+          type="button"
+          onClick={onCancel}
+          className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+            isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+          }`}
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="px-5 py-2 rounded-xl bg-[var(--accent-primary)] hover:brightness-110 text-white font-bold text-xs cursor-pointer shadow-lg shadow-[var(--accent-shadow)] transition-all hover:scale-[1.01] disabled:opacity-50"
+        >
+          {isSubmitting ? 'Logging...' : 'Log GRN Inward'}
+        </button>
+      </div>
+    </form>
   );
 };
 

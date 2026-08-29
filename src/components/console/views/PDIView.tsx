@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { PDIInspection } from '../../../types/console';
 import { triggerPDIFailure } from '../../../services/notificationService';
+import { useUrlModal } from '../../../hooks/useUrlModal';
 
 interface PDIViewProps {
   pdiItems?: PDIInspection[];
@@ -62,6 +63,8 @@ export const PDIView: React.FC<PDIViewProps> = ({
     return Array.from(map.values());
   }, [localPdiList]);
 
+  const inspectModal = useUrlModal('inspect-pdi');
+  const certModal = useUrlModal('view-pdi-certificate');
   const [selectedReport, setSelectedReport] = useState<PDIInspection | null>(null);
   const [inspectingItem, setInspectingItem] = useState<PDIInspection | null>(null);
   const [searchQuery, setSearchQuery] = useState(preselectedOrderPo || preselectedJobNo || '');
@@ -81,11 +84,42 @@ export const PDIView: React.FC<PDIViewProps> = ({
 
     if (matched) {
       handleOpenInspect(matched);
+      inspectModal.open({ pdiNo: matched.id, jobNo: matched.jobNo, orderPo: matched.orderPo });
       onPdiModalOpened?.();
     } else if (preselectedOrderPo) {
       setSearchQuery(preselectedOrderPo);
     }
   }, [preselectedOrderPo, preselectedJobNo, activePdiItems, onPdiModalOpened]);
+
+  // Sync inspectModal from URL
+  React.useEffect(() => {
+    if (inspectModal.isOpen) {
+      const { pdiNo, jobNo, orderPo } = inspectModal.params;
+      if (pdiNo || jobNo || orderPo) {
+        const found = activePdiItems.find(p => (pdiNo && p.id === pdiNo) || (jobNo && p.jobNo === jobNo) || (orderPo && p.orderPo === orderPo));
+        if (found) {
+          handleOpenInspect(found);
+        }
+      }
+    } else {
+      setInspectingItem(null);
+    }
+  }, [inspectModal.isOpen, inspectModal.params.pdiNo, inspectModal.params.jobNo, inspectModal.params.orderPo, activePdiItems]);
+
+  // Sync certModal from URL
+  React.useEffect(() => {
+    if (certModal.isOpen) {
+      const { pdiNo, jobNo, orderPo } = certModal.params;
+      if (pdiNo || jobNo || orderPo) {
+        const found = activePdiItems.find(p => (pdiNo && p.id === pdiNo) || (jobNo && p.jobNo === jobNo) || (orderPo && p.orderPo === orderPo));
+        if (found) {
+          setSelectedReport(found);
+        }
+      }
+    } else {
+      setSelectedReport(null);
+    }
+  }, [certModal.isOpen, certModal.params.pdiNo, certModal.params.jobNo, certModal.params.orderPo, activePdiItems]);
 
   // Inspection form states
   const [acceptedQty, setAcceptedQty] = useState<number>(0);
@@ -154,8 +188,10 @@ export const PDIView: React.FC<PDIViewProps> = ({
           'QC Lead'
         ).catch(() => {});
       }
-
       setInspectingItem(null);
+      inspectModal.close();
+    } catch (err) {
+      console.error("Failed to submit PDI Inspection:", err);
     } finally {
       setIsSubmitting(false);
     }
@@ -449,7 +485,10 @@ export const PDIView: React.FC<PDIViewProps> = ({
                 <div className="flex items-center gap-2 pt-1">
                   <button
                     type="button"
-                    onClick={() => handleOpenInspect(pdi)}
+                    onClick={() => {
+                      handleOpenInspect(pdi);
+                      inspectModal.open({ pdiNo: pdi.id, jobNo: pdi.jobNo, orderPo: pdi.orderPo });
+                    }}
                     className="flex-1 py-2.5 rounded-xl text-xs font-mono font-bold flex items-center justify-center gap-1.5 shadow-md cursor-pointer transition-all active:scale-[0.98] bg-[var(--accent-primary)] text-white shadow-[var(--accent-shadow)]"
                   >
                     <ClipboardCheck className="w-3.5 h-3.5" />
@@ -459,7 +498,10 @@ export const PDIView: React.FC<PDIViewProps> = ({
                   {(pdi.certificateNo || isPassed) && (
                     <button
                       type="button"
-                      onClick={() => setSelectedReport(pdi)}
+                      onClick={() => {
+                        setSelectedReport(pdi);
+                        certModal.open({ pdiNo: pdi.id, jobNo: pdi.jobNo, orderPo: pdi.orderPo });
+                      }}
                       className={`p-2.5 rounded-xl border flex items-center justify-center cursor-pointer transition-all ${
                         isDarkMode 
                           ? 'bg-[#171b24] border-white/[0.08] text-slate-300 hover:bg-white/[0.05]' 
@@ -569,7 +611,10 @@ export const PDIView: React.FC<PDIViewProps> = ({
                         <div className="flex items-center justify-center gap-2">
                           <button
                             type="button"
-                            onClick={() => handleOpenInspect(pdi)}
+                            onClick={() => {
+                              handleOpenInspect(pdi);
+                              inspectModal.open({ pdiNo: pdi.id, jobNo: pdi.jobNo, orderPo: pdi.orderPo });
+                            }}
                             className={`px-3.5 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-xs hover:scale-[1.02] active:scale-[0.98] ${
                               isPassed
                                 ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
@@ -584,7 +629,10 @@ export const PDIView: React.FC<PDIViewProps> = ({
                           {(pdi.certificateNo || isPassed) && (
                             <button
                               type="button"
-                              onClick={() => setSelectedReport(pdi)}
+                              onClick={() => {
+                                setSelectedReport(pdi);
+                                certModal.open({ pdiNo: pdi.id, jobNo: pdi.jobNo, orderPo: pdi.orderPo });
+                              }}
                               className={`p-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 ${
                                 isDarkMode 
                                   ? 'border border-white/[0.08] bg-black/20 text-slate-300 hover:bg-white/[0.05]' 
@@ -608,7 +656,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
       </div>
 
       {/* 1. INTERACTIVE PDI INSPECTION MODAL */}
-      {inspectingItem && (
+      {inspectModal.isOpen && inspectingItem && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md font-sans overflow-y-auto">
           <div className={`relative w-full max-w-xl max-h-[92vh] sm:max-h-[90vh] flex flex-col rounded-t-3xl sm:rounded-[24px] border shadow-2xl transition-all overflow-hidden ${
             isDarkMode ? 'border-white/[0.08] bg-[#171b24] text-white' : 'border-slate-200 bg-white text-slate-900'
@@ -637,7 +685,10 @@ export const PDIView: React.FC<PDIViewProps> = ({
               </div>
               <button 
                 type="button"
-                onClick={() => setInspectingItem(null)} 
+                onClick={() => {
+                  setInspectingItem(null);
+                  inspectModal.close();
+                }} 
                 className={`p-2 rounded-xl border transition-all cursor-pointer ${
                   isDarkMode 
                     ? 'border-white/[0.08] bg-black/20 text-slate-400 hover:text-white hover:bg-white/[0.05]' 
@@ -819,7 +870,10 @@ export const PDIView: React.FC<PDIViewProps> = ({
               <div className="flex items-center gap-2 w-full sm:w-auto">
                 <button
                   type="button"
-                  onClick={() => setInspectingItem(null)}
+                  onClick={() => {
+                    setInspectingItem(null);
+                    inspectModal.close();
+                  }}
                   className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-xl border font-mono text-xs font-bold cursor-pointer transition-all ${
                     isDarkMode ? 'border-white/[0.08] text-slate-400 hover:text-white hover:bg-white/[0.05]' : 'border-slate-200 text-slate-600 hover:bg-slate-100'
                   }`}
@@ -842,7 +896,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
       )}
 
       {/* 2. PDI CERTIFICATE MODAL */}
-      {selectedReport && (
+      {certModal.isOpen && selectedReport && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md font-sans overflow-y-auto">
           <div className={`relative w-full max-w-lg max-h-[92vh] sm:max-h-[90vh] flex flex-col rounded-t-3xl sm:rounded-[24px] border p-4 sm:p-6 space-y-4 font-mono text-xs shadow-2xl z-10 overflow-hidden ${
             isDarkMode ? 'border-white/[0.08] bg-[#171b24] text-white' : 'border-slate-200 bg-white text-slate-900'
@@ -862,7 +916,13 @@ export const PDIView: React.FC<PDIViewProps> = ({
                   <p className="text-[11px] text-slate-400">Pre-Dispatch Inspection Report</p>
                 </div>
               </div>
-              <button onClick={() => setSelectedReport(null)} className="text-slate-400 hover:text-slate-700 dark:hover:text-white font-bold cursor-pointer p-1 rounded-lg">
+              <button 
+                onClick={() => {
+                  setSelectedReport(null);
+                  certModal.close();
+                }} 
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white font-bold cursor-pointer p-1 rounded-lg"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -897,9 +957,15 @@ export const PDIView: React.FC<PDIViewProps> = ({
             </div>
 
             <div className="pt-2 flex justify-end">
-              <button onClick={() => setSelectedReport(null)} className={`w-full sm:w-auto px-5 py-2.5 rounded-xl border font-bold cursor-pointer ${
-                isDarkMode ? 'border-white/[0.08] bg-black/20 text-slate-300 hover:bg-white/[0.05]' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-              }`}>
+              <button 
+                onClick={() => {
+                  setSelectedReport(null);
+                  certModal.close();
+                }} 
+                className={`w-full sm:w-auto px-5 py-2.5 rounded-xl border font-bold cursor-pointer ${
+                  isDarkMode ? 'border-white/[0.08] bg-black/20 text-slate-300 hover:bg-white/[0.05]' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
                 Close Certificate
               </button>
             </div>

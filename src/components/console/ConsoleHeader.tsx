@@ -48,6 +48,7 @@ interface ConsoleHeaderProps {
   onSelectOrder?: (orderId: string) => void;
   onSignOut?: () => void;
   currentView?: ConsoleView;
+  onOpenCommandPalette?: () => void;
 }
 
 export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
@@ -74,7 +75,8 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
   onNavigate,
   onSelectOrder,
   onSignOut,
-  currentView = 'command-centre'
+  currentView = 'command-centre',
+  onOpenCommandPalette
 }) => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -266,34 +268,35 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
         </div>
 
         <div className="relative hidden flex-1 items-center justify-center lg:flex" ref={searchDropdownRef}>
-          <div className={`relative flex h-11 w-full max-w-[640px] items-center rounded-xl border px-3 transition-all ${
-            isSearchFocused
-              ? 'border-[var(--accent-primary)] bg-white ring-2 ring-[var(--accent-ring)] dark:bg-[#181d27]'
-              : isDarkMode ? 'border-white/[0.08] bg-white/[0.045]' : 'border-slate-200 bg-slate-50/80'
-          }`}>
-            <Search className="h-4 w-4 shrink-0 text-slate-400" />
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onFocus={() => setIsSearchFocused(true)}
-              placeholder="Search across operations..."
-              className="h-full min-w-0 flex-1 bg-transparent px-3 text-sm font-medium text-slate-800 outline-none placeholder:text-slate-400 dark:text-slate-100"
-            />
-            {searchQuery ? (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-200/70 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
-                title="Clear search"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            ) : (
-              <span className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 font-mono text-[9px] font-bold text-slate-400 shadow-xs dark:border-white/10 dark:bg-white/[0.04]">CTRL K</span>
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (onOpenCommandPalette) {
+                onOpenCommandPalette();
+              } else {
+                setIsSearchFocused(true);
+                searchInputRef.current?.focus();
+              }
+            }}
+            className={`group relative flex h-11 w-full max-w-[640px] items-center justify-between rounded-xl border px-3.5 transition-all cursor-pointer ${
+              isDarkMode 
+                ? 'border-white/[0.08] bg-white/[0.045] hover:border-white/[0.15] hover:bg-white/[0.07] text-slate-300' 
+                : 'border-slate-200 bg-slate-50/80 hover:border-slate-300 hover:bg-slate-100 text-slate-700'
+            }`}
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <Search className="h-4 w-4 shrink-0 text-slate-400 group-hover:text-[var(--accent-primary)] transition-colors" />
+              <span className="text-sm font-medium text-slate-400 dark:text-slate-500 truncate">
+                Search PO #, Job Cards, Part Codes, Invoices, Customers...
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="rounded-md border border-slate-200 bg-white px-2 py-0.5 font-mono text-[10px] font-bold text-slate-500 shadow-xs dark:border-white/10 dark:bg-white/[0.06] dark:text-slate-400 flex items-center gap-1">
+                <span>CTRL</span>
+                <span>K</span>
+              </span>
+            </div>
+          </button>
 
           {isSearchFocused && searchQuery.trim() !== '' && (
             <div className={`absolute left-1/2 top-full mt-2 w-full max-w-[640px] -translate-x-1/2 overflow-hidden rounded-2xl border shadow-2xl ${

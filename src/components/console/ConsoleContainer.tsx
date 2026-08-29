@@ -47,6 +47,7 @@ import { WorkflowTestingView } from './views/WorkflowTestingView';
 import { AccessRestrictedGate } from '../common/AccessRestrictedGate';
 import { SwitchUserModal } from '../common/SwitchUserModal';
 import { SecuritySessionsModal } from './modals/SecuritySessionsModal';
+import { CommandPaletteModal } from './modals/CommandPaletteModal';
 import { isViewAllowedForRole } from '../../utils/permissions';
 import { useAuth } from '../../context/AuthContext';
 import { useOwnerOSData } from '../../hooks/useOwnerOSData';
@@ -252,6 +253,19 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
   const currentRole: UserRole = currentUser?.role || authProfile?.role || 'SUPER ADMIN';
 
   const [dynamicFetchedOrder, setDynamicFetchedOrder] = useState<CustomerOrder | null>(null);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+
+  // Global Command Palette Shortcut (Ctrl + K / Cmd + K)
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
 
   // URL History Sync Effect
   useEffect(() => {
@@ -424,6 +438,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
         onSelectOrder={handleSelectOrder}
         onSignOut={onSignOut}
         currentView={currentView}
+        onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
       />
 
       {/* Main Workspace Body */}
@@ -942,6 +957,21 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
         onClose={() => setIsSecurityModalOpen(false)}
         isDarkMode={isDarkMode}
         currentUser={currentUser}
+      />
+
+      {/* Global Spotlight Command Palette (Ctrl + K / Cmd + K) */}
+      <CommandPaletteModal
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        orders={orders}
+        jobCards={jobCards}
+        stock={stock}
+        masters={masters}
+        invoices={invoices}
+        dispatches={dispatches}
+        onNavigate={handleNavigateView}
+        onSelectOrder={handleSelectOrder}
+        isDarkMode={isDarkMode}
       />
     </div>
   );

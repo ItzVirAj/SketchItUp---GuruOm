@@ -111,7 +111,7 @@ export const Modal: React.FC<ModalProps> = ({
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-150 font-sans ${containerClassName}`}
+      className={`fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-150 font-sans ${containerClassName}`}
       data-lenis-prevent="true"
       onClick={(e) => {
         if (closeOnBackdropClick && e.target === e.currentTarget) {
@@ -122,28 +122,28 @@ export const Modal: React.FC<ModalProps> = ({
       <div
         ref={modalContentRef}
         data-lenis-prevent="true"
-        className={`relative w-full ${maxWidthClass} max-h-[90vh] sm:max-h-[88vh] flex flex-col rounded-3xl border shadow-2xl transition-all overflow-hidden overscroll-contain ${
+        className={`relative w-full ${maxWidthClass} max-h-[92vh] sm:max-h-[88vh] flex flex-col rounded-2xl border shadow-2xl transition-all overflow-hidden overscroll-contain modal-animate-enter ${
           isDarkMode
-            ? 'bg-slate-900/95 border-slate-800 text-white backdrop-blur-2xl'
-            : 'bg-white border-slate-200 text-slate-900 shadow-2xl'
+            ? 'bg-[#11141c] border-slate-800/90 text-white shadow-black/80 ring-1 ring-white/5'
+            : 'bg-white border-slate-200 text-slate-900 shadow-2xl ring-1 ring-black/5'
         } ${className}`}
       >
         {/* Region 1: Fixed Header */}
         {(title || icon || !hideCloseButton || headerRight) && (
           <div
-            className={`shrink-0 px-6 py-4 border-b flex items-center justify-between gap-4 select-none ${
+            className={`shrink-0 px-6 py-4.5 border-b flex items-center justify-between gap-4 select-none ${
               isDarkMode
-                ? 'border-slate-800 bg-slate-900/95 text-white'
-                : 'border-slate-200 bg-slate-50/80 text-slate-900'
+                ? 'border-slate-800/80 bg-[#141822]/90 text-white'
+                : 'border-slate-200 bg-slate-50/90 text-slate-900'
             } ${headerClassName}`}
           >
-            <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center gap-3.5 min-w-0">
               {icon && (
                 <div
-                  className={`p-2.5 rounded-2xl border shrink-0 ${
+                  className={`p-2.5 rounded-xl border shrink-0 shadow-sm ${
                     isDarkMode
-                      ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30'
-                      : 'bg-indigo-50 text-indigo-600 border-indigo-200'
+                      ? 'bg-[var(--accent-primary)]/15 text-[var(--accent-text-dark)] border-[var(--accent-primary)]/30'
+                      : 'bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] border-[var(--accent-primary)]/20'
                   }`}
                 >
                   {icon}
@@ -152,7 +152,7 @@ export const Modal: React.FC<ModalProps> = ({
               <div className="min-w-0">
                 {title && (
                   <h3
-                    className={`font-bold text-base truncate ${
+                    className={`font-black text-base tracking-tight truncate ${
                       isDarkMode ? 'text-white' : 'text-slate-900'
                     }`}
                   >
@@ -161,7 +161,7 @@ export const Modal: React.FC<ModalProps> = ({
                 )}
                 {subtitle && (
                   <p
-                    className={`text-xs truncate ${
+                    className={`text-xs font-medium truncate mt-0.5 ${
                       isDarkMode ? 'text-slate-400' : 'text-slate-500'
                     }`}
                   >
@@ -177,9 +177,9 @@ export const Modal: React.FC<ModalProps> = ({
                 <button
                   type="button"
                   onClick={onClose}
-                  className={`p-2 rounded-2xl border transition-all cursor-pointer ${
+                  className={`p-2 rounded-xl border transition-all cursor-pointer ${
                     isDarkMode
-                      ? 'border-slate-800 bg-slate-950/60 text-slate-400 hover:text-white hover:bg-slate-800'
+                      ? 'border-slate-750 bg-slate-800/60 text-slate-400 hover:text-white hover:bg-slate-750'
                       : 'border-slate-200 bg-white text-slate-500 hover:text-slate-900 hover:bg-slate-100 shadow-xs'
                   }`}
                   aria-label="Close modal"
@@ -194,7 +194,7 @@ export const Modal: React.FC<ModalProps> = ({
         {/* Region 2: Scrollable Body */}
         <div
           data-lenis-prevent="true"
-          className={`flex-1 overflow-y-auto p-6 overscroll-contain space-y-4 text-xs font-sans ${bodyClassName}`}
+          className={`flex-1 overflow-y-auto p-5 sm:p-6 overscroll-contain space-y-4 text-xs font-sans ${bodyClassName}`}
         >
           {children}
         </div>
@@ -204,8 +204,8 @@ export const Modal: React.FC<ModalProps> = ({
           <div
             className={`shrink-0 px-6 py-4 border-t flex flex-wrap items-center justify-between gap-3 select-none ${
               isDarkMode
-                ? 'border-slate-800 bg-slate-900/95 text-slate-300'
-                : 'border-slate-200 bg-slate-50/80 text-slate-700'
+                ? 'border-slate-800/80 bg-[#141822]/90 text-slate-300'
+                : 'border-slate-200 bg-slate-50/90 text-slate-700'
             } ${footerClassName}`}
           >
             {footer}

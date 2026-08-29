@@ -22,7 +22,12 @@ import {
   Layers,
   ChevronRight,
   ExternalLink,
-  Sparkles
+  Sparkles,
+  ArrowRight,
+  PackageCheck,
+  Hash,
+  Landmark,
+  BadgePercent
 } from 'lucide-react';
 import { 
   CustomerInvoice, 
@@ -36,6 +41,7 @@ import {
   getCurrentFinancialYear, 
   formatDocumentNumber 
 } from '../../../utils/statutoryAccountingEngine';
+import { Modal } from '../../common/Modal';
 
 interface InvoicesViewProps {
   invoices: CustomerInvoice[];
@@ -932,493 +938,510 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
         </div>
       </div>
 
-      {/* Unified Standalone Invoice Creation Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in font-sans overflow-y-auto">
-          <div className={`relative w-full max-w-3xl max-h-[92vh] sm:max-h-[90vh] flex flex-col rounded-t-3xl sm:rounded-3xl border shadow-2xl transition-all overflow-hidden ${
-            isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-          }`}>
-            {/* Mobile Grab Handle */}
-            <div className="pt-2.5 pb-0 block sm:hidden">
-              <div className="w-12 h-1.5 bg-slate-700/80 rounded-full mx-auto" />
+      {/* ========================================================================= */}
+      {/* ── GENERATE GST TAX INVOICE MODAL ──                                      */}
+      {/* ========================================================================= */}
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => !isSubmitting && setShowCreateModal(false)}
+        maxWidth="3xl"
+        isDarkMode={isDarkMode}
+        icon={<Receipt className="w-5 h-5 text-emerald-500" />}
+        title="Generate GST Tax Invoice"
+        subtitle="Pre-populated from outward dispatch challan with statutory intra/inter-state tax split"
+      >
+        <div className="space-y-4 text-xs font-sans">
+          {modalError && (
+            <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-500 dark:text-rose-400 text-xs font-mono flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{modalError}</span>
+            </div>
+          )}
+
+          {/* Step 1: Select Source Dispatch */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className={`text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                1. Select Source Dispatch Challan (DISPATCHED / DELIVERED) *
+              </label>
+              <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
+                isDarkMode ? 'text-slate-400 border-slate-700 bg-slate-800' : 'text-slate-500 border-slate-200 bg-white'
+              }`}>
+                {dispatchesAwaitingInvoicing.length} Awaiting Invoicing
+              </span>
             </div>
 
-            {/* Modal Header */}
-            <div className={`flex items-center justify-between p-4 sm:p-6 border-b shrink-0 ${isDarkMode ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-slate-50/80'}`}>
-              <div>
-                <div className="flex items-center gap-2">
-                  <Receipt className="w-5 h-5 text-emerald-400 shrink-0" />
-                  <h2 className="text-base sm:text-lg font-bold">Generate GST Tax Invoice</h2>
-                </div>
-                <p className="text-[11px] text-slate-400 font-mono mt-0.5">
-                  Pre-populated from outward dispatch challan with intra/inter-state tax split
+            {dispatchesAwaitingInvoicing.length === 0 && !selectedDispatch ? (
+              <div className={`p-4 rounded-2xl border text-center space-y-1.5 ${
+                isDarkMode ? 'bg-amber-500/10 border-amber-500/20 text-amber-300' : 'bg-amber-50 border-amber-200 text-amber-800'
+              }`}>
+                <AlertCircle className="w-5 h-5 text-amber-500 mx-auto" />
+                <p className="font-bold font-mono text-xs">No dispatches currently awaiting invoicing</p>
+                <p className="text-[11px] text-slate-400 max-w-md mx-auto">
+                  Orders must complete Quality/PDI inspection and have an outward Delivery Challan issued before a statutory tax invoice can be generated.
                 </p>
               </div>
-              <button 
-                onClick={() => setShowCreateModal(false)}
-                className={`p-2 rounded-2xl border transition-all cursor-pointer ${
+            ) : (
+              <select
+                value={selectedDispatchNo}
+                onChange={(e) => handleSelectDispatch(e.target.value)}
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono font-bold outline-none cursor-pointer transition-all ${
                   isDarkMode 
-                    ? 'border-slate-800 bg-slate-950/60 text-slate-400 hover:text-white hover:bg-slate-800' 
-                    : 'border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                    ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
+                    : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
                 }`}
               >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {modalError && (
-              <div className="mx-4 sm:mx-6 mt-4 p-3 rounded-2xl bg-rose-500/20 border border-rose-500/40 text-rose-400 text-xs font-mono flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{modalError}</span>
-              </div>
+                <option value="">-- Choose an eligible Dispatch Challan --</option>
+                {dispatchesAwaitingInvoicing.map(d => (
+                  <option key={d.challanNo} value={d.challanNo}>
+                    {d.challanNo} • PO: {d.orderPo} • Transporter: {d.transporter || 'Direct'} • Date: {d.date}
+                  </option>
+                ))}
+              </select>
             )}
+          </div>
 
-            <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
-              {/* Step 1: Select Source Dispatch */}
-              <div>
-                <label className="block text-xs font-bold font-mono text-slate-300 mb-1.5">
-                  1. Select Source Dispatch Challan (DISPATCHED / DELIVERED) *
-                </label>
-                {dispatchesAwaitingInvoicing.length === 0 ? (
-                  <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
-                    <p className="font-bold font-mono flex items-center gap-1.5">
-                      <AlertCircle className="w-4 h-4 text-amber-400" />
-                      No dispatches currently awaiting invoicing
-                    </p>
-                    <p className="mt-1 text-slate-400 text-[11px]">
-                      Orders must complete Quality/PDI inspection and have an outward Delivery Challan issued before a tax invoice can be generated.
-                    </p>
-                  </div>
-                ) : (
-                  <select
-                    value={selectedDispatchNo}
-                    onChange={(e) => handleSelectDispatch(e.target.value)}
-                    className={`w-full p-3 rounded-2xl border text-xs font-mono transition-all outline-none ${
-                      isDarkMode ? 'bg-slate-950 border-slate-700 text-white focus:border-[#5B75F8]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[#5B75F8]'
+          {/* Step 2: Auto-populated Invoice Metadata */}
+          {selectedDispatch && (
+            <div className="space-y-4 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Invoice Number *
+                  </label>
+                  <input
+                    type="text"
+                    value={invoiceNoInput}
+                    onChange={(e) => setInvoiceNoInput(e.target.value)}
+                    className={`h-11 w-full rounded-xl border px-3 text-xs font-mono font-bold outline-none transition-all ${
+                      isDarkMode 
+                        ? 'bg-[#0d1017] border-slate-700/80 text-emerald-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
+                        : 'bg-slate-50 border-slate-300 text-emerald-700 focus:border-emerald-500 shadow-xs'
                     }`}
-                  >
-                    <option value="">-- Choose an eligible Dispatch Challan --</option>
-                    {dispatchesAwaitingInvoicing.map(d => (
-                      <option key={d.challanNo} value={d.challanNo}>
-                        {d.challanNo} • Order PO: {d.orderPo} • Transporter: {d.transporter || 'Self/Local'} • Date: {d.date}
-                      </option>
-                    ))}
-                  </select>
-                )}
+                  />
+                </div>
+                <div>
+                  <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Invoice Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={invoiceDate}
+                    onChange={(e) => setInvoiceDate(e.target.value)}
+                    className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                      isDarkMode 
+                        ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
+                        : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
+                    }`}
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className={`text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                      Due Date *
+                    </label>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const base = new Date(invoiceDate || Date.now());
+                          base.setDate(base.getDate() + 30);
+                          setDueDate(base.toISOString().split('T')[0]);
+                        }}
+                        className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white border border-slate-700"
+                      >
+                        Net 30
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const base = new Date(invoiceDate || Date.now());
+                          base.setDate(base.getDate() + 45);
+                          setDueDate(base.toISOString().split('T')[0]);
+                        }}
+                        className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white border border-slate-700"
+                      >
+                        Net 45
+                      </button>
+                    </div>
+                  </div>
+                  <input
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                      isDarkMode 
+                        ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
+                        : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
+                    }`}
+                  />
+                </div>
               </div>
 
-              {/* Step 2: Auto-populated Invoice Metadata */}
-              {selectedDispatch && (
-                <div className="space-y-4 animate-in fade-in">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-mono text-slate-400 mb-1">Invoice Number</label>
-                      <input
-                        type="text"
-                        value={invoiceNoInput}
-                        onChange={(e) => setInvoiceNoInput(e.target.value)}
-                        className={`w-full p-2.5 rounded-xl border text-xs font-mono font-bold ${
-                          isDarkMode ? 'bg-slate-950 border-slate-700 text-emerald-400' : 'bg-slate-50 border-slate-300 text-emerald-700'
-                        }`}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-mono text-slate-400 mb-1">Invoice Date</label>
-                      <input
-                        type="date"
-                        value={invoiceDate}
-                        onChange={(e) => setInvoiceDate(e.target.value)}
-                        className={`w-full p-2.5 rounded-xl border text-xs font-mono ${
-                          isDarkMode ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
-                        }`}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-mono text-slate-400 mb-1">Due Date (Net 30)</label>
-                      <input
-                        type="date"
-                        value={dueDate}
-                        onChange={(e) => setDueDate(e.target.value)}
-                        className={`w-full p-2.5 rounded-xl border text-xs font-mono ${
-                          isDarkMode ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
-                        }`}
-                      />
-                    </div>
+              {/* Customer and GSTIN Info Card */}
+              <div className={`p-4 rounded-2xl border ${
+                isDarkMode ? 'bg-[#0d1017] border-slate-800' : 'bg-slate-50/80 border-slate-200'
+              }`}>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] font-mono uppercase text-slate-400 flex items-center gap-1.5">
+                      <Building2 className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
+                      <span>Bill To Customer</span>
+                    </span>
+                    <div className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{customerName}</div>
+                    <div className="text-xs font-mono text-slate-400">GSTIN: <span className="font-bold text-emerald-500">{customerGstin}</span></div>
                   </div>
 
-                  {/* Customer and GSTIN Info */}
-                  <div className={`p-3.5 rounded-2xl border ${
-                    isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
-                  }`}>
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <span className="text-[10px] font-mono uppercase text-slate-400">Bill To Customer</span>
-                        <div className="text-sm font-bold">{customerName}</div>
-                        <div className="text-xs font-mono text-slate-400">GSTIN: {customerGstin}</div>
-                      </div>
-
-                      {/* Tax Classification Badge */}
-                      <div className="text-right">
-                        <span className="text-[10px] font-mono uppercase text-slate-400">Tax Regime (State: {calculation.buyerStateCode})</span>
-                        <div className="mt-0.5">
-                          {calculation.isIntraState ? (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono font-bold bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
-                              <Lock className="w-3 h-3" />
-                              Intra-State (CGST 9% + SGST 9%)
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                              <Lock className="w-3 h-3" />
-                              Inter-State (IGST 18%)
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Line Items Table */}
-                  <div>
-                    <label className="block text-xs font-bold font-mono text-slate-300 mb-1.5">
-                      Invoice Line Items & HSN Allocation
-                    </label>
-                    <div className="border border-slate-800 rounded-2xl overflow-hidden overflow-x-auto">
-                      <table className="w-full text-left text-xs">
-                        <thead className="bg-slate-950 text-slate-400 font-mono text-[10px] uppercase">
-                          <tr>
-                            <th className="py-2.5 px-3">Item Code</th>
-                            <th className="py-2.5 px-3">Description</th>
-                            <th className="py-2.5 px-3">HSN</th>
-                            <th className="py-2.5 px-3 text-right">Qty</th>
-                            <th className="py-2.5 px-3 text-right">Rate</th>
-                            <th className="py-2.5 px-3 text-right">Taxable</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-800">
-                          {invoiceLines.map((line, idx) => (
-                            <tr key={idx}>
-                              <td className="py-2.5 px-3 font-mono font-bold text-emerald-400">{line.itemCode}</td>
-                              <td className="py-2.5 px-3">{line.itemDescription}</td>
-                              <td className="py-2.5 px-3 font-mono text-slate-400">{line.hsnCode}</td>
-                              <td className="py-2.5 px-3 text-right font-mono font-bold">{line.qty}</td>
-                              <td className="py-2.5 px-3 text-right font-mono">₹{line.unitPrice.toFixed(2)}</td>
-                              <td className="py-2.5 px-3 text-right font-mono font-bold">
-                                ₹{(line.qty * line.unitPrice).toFixed(2)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  {/* Summary Totals */}
-                  <div className={`p-4 rounded-2xl border ${
-                    isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'
-                  }`}>
-                    <div className="space-y-1.5 font-mono text-xs">
-                      <div className="flex justify-between text-slate-400">
-                        <span>Total Taxable Value:</span>
-                        <span>₹{calculation.taxable.toFixed(2)}</span>
-                      </div>
+                  {/* Tax Classification Badge */}
+                  <div className="text-right">
+                    <span className="text-[10px] font-mono uppercase text-slate-400 block mb-1">
+                      Tax Regime (State: {calculation.buyerStateCode || '27'})
+                    </span>
+                    <div>
                       {calculation.isIntraState ? (
-                        <>
-                          <div className="flex justify-between text-indigo-400">
-                            <span>CGST (9.0%):</span>
-                            <span>₹{calculation.cgstAmount.toFixed(2)}</span>
-                          </div>
-                          <div className="flex justify-between text-indigo-400">
-                            <span>SGST (9.0%):</span>
-                            <span>₹{calculation.sgstAmount.toFixed(2)}</span>
-                          </div>
-                        </>
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/30">
+                          <Lock className="w-3 h-3" />
+                          Intra-State (CGST 9% + SGST 9%)
+                        </span>
                       ) : (
-                        <div className="flex justify-between text-amber-400">
-                          <span>IGST (18.0%):</span>
-                          <span>₹{calculation.igstAmount.toFixed(2)}</span>
-                        </div>
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                          <Lock className="w-3 h-3" />
+                          Inter-State (IGST 18%)
+                        </span>
                       )}
-                      <div className="pt-2 border-t border-slate-800 flex justify-between text-sm font-bold text-white">
-                        <span>Grand Invoice Total:</span>
-                        <span className="text-emerald-400 font-mono">₹{calculation.totalAmount.toFixed(2)}</span>
-                      </div>
                     </div>
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
 
-            {/* Modal Actions */}
-            <div className={`p-4 sm:p-6 border-t shrink-0 flex flex-col sm:flex-row items-center justify-end gap-2.5 ${isDarkMode ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-slate-50/80'}`}>
+              {/* Line Items Table */}
+              <div className="space-y-2">
+                <label className={`block text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Invoice Line Items & HSN Allocation
+                </label>
+                <div className={`border rounded-2xl overflow-hidden overflow-x-auto ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+                  <table className="w-full text-left text-xs">
+                    <thead className={`font-mono text-[10px] uppercase ${isDarkMode ? 'bg-[#0d1017] text-slate-400' : 'bg-slate-100 text-slate-600'}`}>
+                      <tr>
+                        <th className="py-2.5 px-3.5">Item Code</th>
+                        <th className="py-2.5 px-3">Description</th>
+                        <th className="py-2.5 px-3">HSN</th>
+                        <th className="py-2.5 px-3 text-right">Qty</th>
+                        <th className="py-2.5 px-3 text-right">Rate</th>
+                        <th className="py-2.5 px-3.5 text-right">Taxable</th>
+                      </tr>
+                    </thead>
+                    <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800 bg-slate-900/40' : 'divide-slate-200 bg-white'}`}>
+                      {invoiceLines.map((line, idx) => (
+                        <tr key={idx} className={isDarkMode ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}>
+                          <td className="py-2.5 px-3.5 font-mono font-bold text-emerald-400">{line.itemCode}</td>
+                          <td className={`py-2.5 px-3 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{line.itemDescription}</td>
+                          <td className="py-2.5 px-3 font-mono text-slate-400">{line.hsnCode}</td>
+                          <td className="py-2.5 px-3 text-right font-mono font-bold">{line.qty}</td>
+                          <td className="py-2.5 px-3 text-right font-mono">₹{line.unitPrice.toFixed(2)}</td>
+                          <td className="py-2.5 px-3.5 text-right font-mono font-bold text-emerald-400">
+                            ₹{(line.qty * line.unitPrice).toFixed(2)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Summary Totals */}
+              <div className={`p-4 rounded-2xl border ${
+                isDarkMode ? 'bg-[#0d1017] border-slate-800' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <div className="space-y-2 font-mono text-xs">
+                  <div className={`flex justify-between ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                    <span>Total Taxable Value:</span>
+                    <span className="font-bold">₹{calculation.taxable.toFixed(2)}</span>
+                  </div>
+                  {calculation.isIntraState ? (
+                    <>
+                      <div className="flex justify-between text-indigo-400">
+                        <span>CGST (9.0%):</span>
+                        <span>₹{calculation.cgstAmount.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-indigo-400">
+                        <span>SGST (9.0%):</span>
+                        <span>₹{calculation.sgstAmount.toFixed(2)}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex justify-between text-amber-400">
+                      <span>IGST (18.0%):</span>
+                      <span>₹{calculation.igstAmount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className={`pt-2.5 border-t flex justify-between text-sm font-bold ${
+                    isDarkMode ? 'border-slate-800 text-white' : 'border-slate-200 text-slate-900'
+                  }`}>
+                    <span>Grand Invoice Total:</span>
+                    <span className="text-emerald-500 font-mono text-base">₹{calculation.totalAmount.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Modal Actions */}
+          <div className={`pt-4 border-t flex flex-col sm:flex-row items-center justify-end gap-2.5 font-sans ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+            <button
+              type="button"
+              onClick={() => setShowCreateModal(false)}
+              disabled={isSubmitting}
+              className={`w-full sm:w-auto px-4 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
+                isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              Cancel
+            </button>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               <button
                 type="button"
-                onClick={() => setShowCreateModal(false)}
-                disabled={isSubmitting}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-2xl border border-slate-700 text-xs font-mono text-slate-400 hover:text-white cursor-pointer"
+                onClick={() => handleSaveInvoice('DRAFT')}
+                disabled={isSubmitting || !selectedDispatch}
+                className={`flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs font-mono font-bold border cursor-pointer disabled:opacity-50 transition-all ${
+                  isDarkMode 
+                    ? 'border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200' 
+                    : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-700 shadow-xs'
+                }`}
               >
-                Cancel
+                Save Draft
               </button>
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <button
-                  type="button"
-                  onClick={() => handleSaveInvoice('DRAFT')}
-                  disabled={isSubmitting || !selectedDispatch}
-                  className="flex-1 sm:flex-initial px-4 py-2.5 rounded-2xl text-xs font-mono font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 cursor-pointer disabled:opacity-50 transition-all"
-                >
-                  Save Draft
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSaveInvoice('ISSUED')}
-                  disabled={isSubmitting || !selectedDispatch}
-                  className="flex-1 sm:flex-initial px-5 py-2.5 rounded-2xl text-xs font-mono font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-500/20 cursor-pointer disabled:opacity-50 transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Issue Invoice</span>
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => handleSaveInvoice('ISSUED')}
+                disabled={isSubmitting || !selectedDispatch}
+                className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl text-xs font-mono font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-500/20 cursor-pointer disabled:opacity-50 transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>Issue Invoice</span>
+              </button>
             </div>
           </div>
         </div>
-      )}
+      </Modal>
 
-      {/* Dedicated Record Payment Modal Dialog */}
-      {showPaymentModal && selectedInvoiceForPayment && (() => {
-        const total = Number(selectedInvoiceForPayment.totalAmount || 0);
-        const alreadyPaid = Number(selectedInvoiceForPayment.paidAmount || 0);
-        const balance = Number(selectedInvoiceForPayment.balanceAmount !== undefined ? selectedInvoiceForPayment.balanceAmount : total);
-        const newBalance = Math.max(0, balance - payAmount);
-        const willBeFullyPaid = newBalance <= 0;
+      {/* ========================================================================= */}
+      {/* ── DEDICATED RECORD PAYMENT MODAL ──                                      */}
+      {/* ========================================================================= */}
+      <Modal
+        isOpen={Boolean(showPaymentModal && selectedInvoiceForPayment)}
+        onClose={() => !isSubmittingPayment && setShowPaymentModal(false)}
+        maxWidth="xl"
+        isDarkMode={isDarkMode}
+        icon={<CreditCard className="w-5 h-5 text-emerald-500" />}
+        title="Record Payment Collection"
+        subtitle={
+          selectedInvoiceForPayment ? (
+            <span className="font-mono text-xs">
+              {selectedInvoiceForPayment.invoiceNo} • {selectedInvoiceForPayment.customerName}
+            </span>
+          ) : undefined
+        }
+      >
+        {selectedInvoiceForPayment && (() => {
+          const total = Number(selectedInvoiceForPayment.totalAmount || 0);
+          const alreadyPaid = Number(selectedInvoiceForPayment.paidAmount || 0);
+          const balance = Number(selectedInvoiceForPayment.balanceAmount !== undefined ? selectedInvoiceForPayment.balanceAmount : total);
+          const newBalance = Math.max(0, balance - payAmount);
+          const willBeFullyPaid = newBalance <= 0;
 
-        return (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in font-sans overflow-y-auto">
-            <div className={`relative w-full max-w-xl max-h-[92vh] sm:max-h-[90vh] flex flex-col rounded-t-3xl sm:rounded-3xl border shadow-2xl transition-all overflow-hidden ${
-              isDarkMode ? 'bg-slate-900/95 border-slate-800 text-white backdrop-blur-2xl' : 'bg-white border-slate-200 text-slate-900 shadow-2xl'
-            }`}>
-              {/* Mobile Grab Handle */}
-              <div className="pt-2.5 pb-0 block sm:hidden">
-                <div className="w-12 h-1.5 bg-slate-700/80 rounded-full mx-auto" />
-              </div>
-
-              {/* Header */}
-              <div className={`flex items-center justify-between p-4 sm:p-6 pb-3.5 border-b shrink-0 ${isDarkMode ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-slate-50/80'}`}>
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 text-emerald-500 dark:text-emerald-400 border border-emerald-500/30 shrink-0">
-                    <CreditCard className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-sm uppercase tracking-tight text-emerald-500 dark:text-emerald-400">
-                      Record Payment Collection
-                    </h3>
-                    <p className={`text-[11px] font-mono mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                      {selectedInvoiceForPayment.invoiceNo} • {selectedInvoiceForPayment.customerName}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowPaymentModal(false)}
-                  className={`p-2 rounded-2xl border transition-all cursor-pointer ${
-                    isDarkMode ? 'border-slate-800 bg-slate-950/60 text-slate-400 hover:text-white hover:bg-slate-800' : 'border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
+          return (
+            <div className="space-y-4 text-xs font-sans">
               {paymentModalError && (
-                <div className="mx-4 sm:mx-6 mt-4 p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-500 dark:text-rose-400 text-xs flex items-center gap-2">
+                <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-500 dark:text-rose-400 text-xs font-mono flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{paymentModalError}</span>
                 </div>
               )}
 
-              {/* Form Body */}
-              <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 font-sans text-xs">
-                
-                {/* Commercial Summary Box */}
-                <div className={`p-4 rounded-2xl border space-y-3 ${
-                  isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
-                }`}>
-                  <div className="grid grid-cols-3 gap-2.5 text-center font-mono">
-                    <div className={`p-2 rounded-xl border ${isDarkMode ? 'bg-slate-900/80 border-slate-800/80' : 'bg-white border-slate-200'}`}>
-                      <span className={`text-[10px] uppercase font-bold block ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Total</span>
-                      <span className="text-xs font-bold mt-0.5 block truncate">₹{total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                    </div>
-                    <div className={`p-2 rounded-xl border ${isDarkMode ? 'bg-slate-900/80 border-slate-800/80' : 'bg-white border-slate-200'}`}>
-                      <span className={`text-[10px] uppercase font-bold block ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Paid</span>
-                      <span className="text-xs font-bold text-emerald-500 mt-0.5 block truncate">₹{alreadyPaid.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                    </div>
-                    <div className={`p-2 rounded-xl border ${isDarkMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>
-                      <span className="text-[10px] uppercase font-bold block">Balance</span>
-                      <span className="text-xs font-bold mt-0.5 block truncate">₹{balance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                    </div>
+              {/* Commercial Summary Box */}
+              <div className={`p-4 rounded-2xl border space-y-3 ${
+                isDarkMode ? 'bg-[#0d1017] border-slate-800' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <div className="grid grid-cols-3 gap-2.5 text-center font-mono">
+                  <div className={`p-2.5 rounded-xl border ${isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-xs'}`}>
+                    <span className={`text-[10px] uppercase font-bold block ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Total Invoice</span>
+                    <span className="text-xs font-bold mt-0.5 block truncate">₹{total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                   </div>
-
-                  {/* References */}
-                  <div className={`pt-2 border-t flex flex-wrap items-center justify-between text-[11px] font-mono ${isDarkMode ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-600'}`}>
-                    <span>PO: <strong className={isDarkMode ? 'text-slate-200' : 'text-slate-800'}>{selectedInvoiceForPayment.orderPo || 'Direct'}</strong></span>
-                    {selectedInvoiceForPayment.challanNo && (
-                      <span>Challan: <strong className={isDarkMode ? 'text-cyan-400' : 'text-cyan-700'}>{selectedInvoiceForPayment.challanNo}</strong></span>
-                    )}
+                  <div className={`p-2.5 rounded-xl border ${isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-xs'}`}>
+                    <span className={`text-[10px] uppercase font-bold block ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Realized</span>
+                    <span className="text-xs font-bold text-emerald-500 mt-0.5 block truncate">₹{alreadyPaid.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                  </div>
+                  <div className={`p-2.5 rounded-xl border ${isDarkMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-800 shadow-xs'}`}>
+                    <span className="text-[10px] uppercase font-bold block">Pending Due</span>
+                    <span className="text-xs font-bold mt-0.5 block truncate">₹{balance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                   </div>
                 </div>
 
-                {/* Form Controls */}
-                <form id="payment-form" onSubmit={handlePaymentSubmit} className="space-y-3.5">
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className={`block text-[11px] font-bold uppercase ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                        Payment Amount (₹) *
-                      </label>
-                      <div className="flex items-center gap-1.5">
+                {/* References */}
+                <div className={`pt-2.5 border-t flex flex-wrap items-center justify-between text-[11px] font-mono ${isDarkMode ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-600'}`}>
+                  <span>PO: <strong className={isDarkMode ? 'text-slate-200' : 'text-slate-800'}>{selectedInvoiceForPayment.orderPo || 'Direct'}</strong></span>
+                  {selectedInvoiceForPayment.challanNo && (
+                    <span>Challan: <strong className={isDarkMode ? 'text-cyan-400' : 'text-cyan-700'}>{selectedInvoiceForPayment.challanNo}</strong></span>
+                  )}
+                </div>
+              </div>
+
+              {/* Form Controls */}
+              <form id="payment-form" onSubmit={handlePaymentSubmit} className="space-y-3.5">
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className={`block text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                      Payment Amount (₹) *
+                    </label>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setPayAmount(balance)}
+                        className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${
+                          payAmount === balance 
+                            ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
+                            : isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
+                        }`}
+                      >
+                        ⚡ Full (₹{balance.toLocaleString('en-IN')})
+                      </button>
+                      {balance > 100 && (
                         <button
                           type="button"
-                          onClick={() => setPayAmount(balance)}
+                          onClick={() => setPayAmount(Math.round(balance / 2))}
                           className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${
-                            payAmount === balance 
+                            payAmount === Math.round(balance / 2)
                               ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
                               : isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
                           }`}
                         >
-                          ⚡ Full (₹{balance.toLocaleString('en-IN')})
+                          50% Partial
                         </button>
-                        {balance > 100 && (
-                          <button
-                            type="button"
-                            onClick={() => setPayAmount(Math.round(balance / 2))}
-                            className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${
-                              payAmount === Math.round(balance / 2)
-                                ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
-                                : isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
-                            }`}
-                          >
-                            50% Partial
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    <div className="relative">
-                      <span className="absolute left-3.5 top-2.5 font-mono font-bold text-slate-400">₹</span>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={payAmount}
-                        onChange={(e) => setPayAmount(Number(e.target.value))}
-                        className={`w-full pl-8 pr-3.5 py-2.5 rounded-xl border font-mono font-bold text-sm outline-none transition-all ${
-                          isDarkMode 
-                            ? 'border-slate-800 bg-slate-950 text-white focus:border-emerald-500' 
-                            : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
-                        }`}
-                        required
-                      />
+                      )}
                     </div>
                   </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                        Payment Mode *
-                      </label>
-                      <select
-                        value={payMode}
-                        onChange={(e) => setPayMode(e.target.value)}
-                        className={`w-full p-2.5 rounded-xl border text-xs outline-none cursor-pointer transition-all ${
-                          isDarkMode 
-                            ? 'border-slate-800 bg-slate-950 text-white focus:border-emerald-500' 
-                            : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
-                        }`}
-                      >
-                        <option value="NEFT_RTGS">Bank NEFT / RTGS</option>
-                        <option value="UPI">UPI Payment</option>
-                        <option value="CHEQUE">Bank Cheque / DD</option>
-                        <option value="IMPS">IMPS Instant Transfer</option>
-                        <option value="BANK_TRANSFER">Direct Account Transfer</option>
-                        <option value="CASH">Cash Deposit</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                        Realization Date *
-                      </label>
-                      <input
-                        type="date"
-                        value={payDate}
-                        onChange={(e) => setPayDate(e.target.value)}
-                        className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none transition-all ${
-                          isDarkMode 
-                            ? 'border-slate-800 bg-slate-950 text-white focus:border-emerald-500' 
-                            : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
-                        }`}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                      UTR / Transaction Ref # *
-                    </label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-2.5 font-mono font-bold text-slate-400">₹</span>
                     <input
-                      type="text"
-                      placeholder="e.g. UTR-HDFC98234723 or CHQ-004521"
-                      value={payRefNo}
-                      onChange={(e) => setPayRefNo(e.target.value)}
-                      className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none transition-all ${
+                      type="number"
+                      step="0.01"
+                      value={payAmount}
+                      onChange={(e) => setPayAmount(Number(e.target.value))}
+                      className={`h-11 w-full pl-8 pr-3.5 rounded-xl border font-mono font-bold text-sm outline-none transition-all ${
                         isDarkMode 
-                          ? 'border-slate-800 bg-slate-950 text-white focus:border-emerald-500' 
-                          : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
+                          ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
+                          : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
                       }`}
                       required
                     />
                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                      Payment Mode *
+                    </label>
+                    <select
+                      value={payMode}
+                      onChange={(e) => setPayMode(e.target.value)}
+                      className={`h-11 w-full px-3 rounded-xl border text-xs outline-none cursor-pointer transition-all ${
+                        isDarkMode 
+                          ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
+                          : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
+                      }`}
+                    >
+                      <option value="NEFT_RTGS">Bank NEFT / RTGS</option>
+                      <option value="UPI">UPI Payment</option>
+                      <option value="CHEQUE">Bank Cheque / DD</option>
+                      <option value="IMPS">IMPS Instant Transfer</option>
+                      <option value="BANK_TRANSFER">Direct Account Transfer</option>
+                      <option value="CASH">Cash Deposit</option>
+                    </select>
+                  </div>
 
                   <div>
-                    <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                      Settlement Remarks
+                    <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                      Realization Date *
                     </label>
                     <input
-                      type="text"
-                      placeholder="e.g. HDFC Current A/c • Verified with Bank Statement"
-                      value={payNotes}
-                      onChange={(e) => setPayNotes(e.target.value)}
-                      className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${
+                      type="date"
+                      value={payDate}
+                      onChange={(e) => setPayDate(e.target.value)}
+                      className={`h-11 w-full px-3 rounded-xl border font-mono text-xs outline-none transition-all ${
                         isDarkMode 
-                          ? 'border-slate-800 bg-slate-950 text-white focus:border-emerald-500' 
-                          : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
+                          ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
+                          : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
                       }`}
+                      required
                     />
                   </div>
+                </div>
 
-                  {/* Live Settlement Outcome Preview */}
-                  <div className={`p-3 rounded-xl border flex items-center justify-between font-mono text-xs ${
-                    willBeFullyPaid 
-                      ? isDarkMode ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                      : isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
-                  }`}>
-                    <div className="flex items-center gap-2">
-                      {willBeFullyPaid ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <Clock className="w-4 h-4 text-amber-500" />}
-                      <span>Remaining: <strong>₹{newBalance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</strong></span>
-                    </div>
-                    <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] uppercase border ${
-                      willBeFullyPaid 
-                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
-                        : 'bg-amber-500/20 text-amber-400 border-amber-500/40'
-                    }`}>
-                      {willBeFullyPaid ? 'Fully Paid' : 'Partial'}
-                    </span>
+                <div>
+                  <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                    UTR / Transaction Ref # *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. UTR-HDFC98234723 or CHQ-004521"
+                    value={payRefNo}
+                    onChange={(e) => setPayRefNo(e.target.value)}
+                    className={`h-11 w-full px-3 rounded-xl border font-mono text-xs outline-none transition-all ${
+                      isDarkMode 
+                        ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
+                        : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
+                    }`}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Settlement Remarks
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. HDFC Current A/c • Verified with Bank Statement"
+                    value={payNotes}
+                    onChange={(e) => setPayNotes(e.target.value)}
+                    className={`h-11 w-full px-3 rounded-xl border text-xs outline-none transition-all ${
+                      isDarkMode 
+                        ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
+                        : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
+                    }`}
+                  />
+                </div>
+
+                {/* Live Settlement Outcome Preview */}
+                <div className={`p-3.5 rounded-xl border flex items-center justify-between font-mono text-xs ${
+                  willBeFullyPaid 
+                    ? isDarkMode ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                    : isDarkMode ? 'bg-slate-900/60 border-slate-800 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    {willBeFullyPaid ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <Clock className="w-4 h-4 text-amber-500" />}
+                    <span>Remaining Due: <strong>₹{newBalance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</strong></span>
                   </div>
-                </form>
-              </div>
+                  <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] uppercase border ${
+                    willBeFullyPaid 
+                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                      : 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                  }`}>
+                    {willBeFullyPaid ? 'Fully Paid' : 'Partial Realization'}
+                  </span>
+                </div>
+              </form>
 
               {/* Actions */}
-              <div className={`p-4 sm:p-6 pt-3 flex items-center justify-end gap-2.5 border-t shrink-0 ${isDarkMode ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-slate-50/80'}`}>
+              <div className={`pt-4 border-t flex items-center justify-end gap-2.5 font-sans ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
                 <button
                   type="button"
                   onClick={() => setShowPaymentModal(false)}
                   disabled={isSubmittingPayment}
-                  className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-2xl border text-xs font-bold transition-all cursor-pointer ${
-                    isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                    isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
                   }`}
                 >
                   Cancel
@@ -1427,16 +1450,16 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                   type="submit"
                   form="payment-form"
                   disabled={isSubmittingPayment || payAmount <= 0 || payAmount > balance}
-                  className="flex-1 sm:flex-initial px-5 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-500/25 disabled:opacity-50 transition-all active:scale-[0.98]"
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-500/25 disabled:opacity-50 transition-all active:scale-[0.98]"
                 >
                   <CreditCard className="w-4 h-4" />
                   <span>{isSubmittingPayment ? 'Recording...' : `Settle ₹${payAmount.toLocaleString('en-IN')}`}</span>
                 </button>
               </div>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
+      </Modal>
 
     </div>
   );

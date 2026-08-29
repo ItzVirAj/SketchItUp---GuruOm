@@ -223,7 +223,7 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
     approvalLimitDisplay: 'No Financial Authorization',
     scopeDescription: 'Full control over job cards, shifts, and raising NCRs',
     permissions: {
-      orders: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
+      orders: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
       inventory: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
       production: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'ALL' },
       procurement: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
@@ -247,7 +247,7 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
     approvalLimitDisplay: 'No Financial Authorization',
     scopeDescription: 'Conduct inspections; place and clear QC holds exclusively',
     permissions: {
-      orders: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
+      orders: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
       inventory: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
       production: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'QC_HOLDS_ONLY' },
       procurement: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
@@ -273,7 +273,7 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
     approvalLimitDisplay: 'No Financial Authorization',
     scopeDescription: 'PDI Report upload; final Ready-to-Dispatch or NCR-Rework decision',
     permissions: {
-      orders: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
+      orders: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
       inventory: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
       production: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
       procurement: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
@@ -297,7 +297,7 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
     approvalLimitDisplay: 'No Direct PO Financial Limit',
     scopeDescription: 'Create GRN, post material issue slips, record physical counts',
     permissions: {
-      orders: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
+      orders: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
       inventory: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'ALL' },
       production: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       procurement: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
@@ -393,7 +393,7 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
     approvalLimitDisplay: 'No Financial Authorization',
     scopeDescription: 'Scoped ONLY to Employee/User Master; blocked from Customers, Vendors, Items, Machines',
     permissions: {
-      orders: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
+      orders: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
       inventory: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       production: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       procurement: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
@@ -417,7 +417,7 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
     approvalLimitDisplay: 'No Financial Authorization',
     scopeDescription: 'Scoped to only their own assigned job/route cards and shift logs',
     permissions: {
-      orders: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
+      orders: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
       inventory: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       production: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
       procurement: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },

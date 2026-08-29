@@ -70,6 +70,7 @@ import {
   deleteRouteCard
 } from '../../../services/supabaseServices';
 import { JobCardDetailModal } from '../modals/JobCardDetailModal';
+import { Modal } from '../../common/Modal';
 
 export const DEFAULT_ROUTE_CARDS: RouteCard[] = [
   {
@@ -236,6 +237,10 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
 
   // Job Cards Modal States
   const [showNewJobModal, setShowNewJobModal] = useState(false);
+  const [orderSearchQuery, setOrderSearchQuery] = useState('');
+  const [orderDropdownOpen, setOrderDropdownOpen] = useState(false);
+  const [fgSearchQuery, setFgSearchQuery] = useState('');
+  const [fgDropdownOpen, setFgDropdownOpen] = useState(false);
   const [selectedJobForDetail, setSelectedJobForDetail] = useState<JobCard | null>(null);
   const [selectedJobForLog, setSelectedJobForLog] = useState<JobCard | null>(null);
   const [selectedJobForTraveler, setSelectedJobForTraveler] = useState<JobCard | null>(null);
@@ -302,6 +307,64 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
     const timeA = new Date(a.createdAt || a.poDate || 0).getTime();
     return timeB - timeA;
   });
+
+  // Orders with at least one line item that still needs a job card released
+  // A line item is considered "pending" if no job card exists for this PO + item code
+  const ordersWithPendingJobCards = useMemo(() => {
+    return eligibleOrders.filter(o => {
+      if (!o.lines || o.lines.length === 0) return true; // No line items, still show (manual entry)
+      return o.lines.some(line => {
+        // Check if a job card already exists for this order + item
+        const existingJC = jobCards.find(jc =>
+          (jc.orderPo === o.poNo || jc.orderPo === o.id) &&
+          (jc.partCode?.toLowerCase().trim() === line.itemCode?.toLowerCase().trim())
+        );
+        return !existingJC; // Pending if no job card exists for this line
+      });
+    });
+  }, [eligibleOrders, jobCards]);
+
+  // Filtered by search query (PO number or customer name)
+  const filteredOrdersForJobCard = useMemo(() => {
+    const q = orderSearchQuery.trim().toLowerCase();
+    if (!q) return ordersWithPendingJobCards;
+    return ordersWithPendingJobCards.filter(o =>
+      o.poNo?.toLowerCase().includes(q) ||
+      o.customerName?.toLowerCase().includes(q) ||
+      o.lines?.some(l => l.itemCode?.toLowerCase().includes(q) || l.itemDescription?.toLowerCase().includes(q))
+    );
+  }, [ordersWithPendingJobCards, orderSearchQuery]);
+
+  // ----------------------------------------------------------------
+  // Finished Goods Master Index (for Part Code picker site-wide)
+  // ----------------------------------------------------------------
+  const finishedGoodsMasters = useMemo(() => {
+    return (masters || []).filter(m =>
+      m.itemType === 'Finished Good' ||
+      m.isFinishedGoods === true ||
+      m.code?.toUpperCase().startsWith('FG-')
+    ).sort((a, b) => a.code.localeCompare(b.code));
+  }, [masters]);
+
+  const filteredFGMasters = useMemo(() => {
+    const q = fgSearchQuery.trim().toLowerCase();
+    if (!q) return finishedGoodsMasters;
+    return finishedGoodsMasters.filter(m =>
+      m.code?.toLowerCase().includes(q) ||
+      m.name?.toLowerCase().includes(q) ||
+      m.description?.toLowerCase().includes(q) ||
+      m.partNo?.toLowerCase().includes(q)
+    );
+  }, [finishedGoodsMasters, fgSearchQuery]);
+
+  const handleSelectFG = (m: MasterItem) => {
+    setNewPartCode(m.code);
+    setNewPartDesc(m.description || m.name || m.code);
+    // Use partNo as drawing revision hint if available
+    if (m.partNo) setNewDrawingRev(m.partNo);
+    setFgSearchQuery('');
+    setFgDropdownOpen(false);
+  };
 
   // ----------------------------------------------------------------
   // New Job Form State (Integrated with BOM + Route Card)
@@ -1786,8 +1849,10 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                     isDarkMode ? 'bg-slate-900/60 border-slate-800/80' : 'bg-slate-50 border-slate-200'
                   }`}>
                     <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-200 dark:border-slate-800">
-                      <span className="font-bold text-xs font-mono tracking-wider">{colStatus}</span>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-slate-800 text-slate-300">
+                      <span className={`font-bold text-xs font-mono tracking-wider ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{colStatus}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                        isDarkMode ? 'bg-slate-800 text-slate-300' : 'bg-slate-200 text-slate-700'
+                      }`}>
                         {colJobs.length}
                       </span>
                     </div>
@@ -1803,21 +1868,21 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                         >
                           <div className="flex items-center justify-between text-xs font-mono font-bold text-[#5B75F8]">
                             <span>{jc.jobNo}</span>
-                            <span className="text-slate-400">{jc.targetQty || jc.qty} NOS</span>
+                            <span className={isDarkMode ? 'text-slate-400' : 'text-slate-500'}>{jc.targetQty || jc.qty} NOS</span>
                           </div>
-                          <div className="mt-1 font-semibold text-xs text-slate-200 font-sans">
+                          <div className={`mt-1 font-semibold text-xs font-sans ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
                             {jc.partDescription}
                           </div>
-                          <div className="mt-2 flex items-center justify-between text-[11px] font-mono text-slate-400">
+                          <div className={`mt-2 flex items-center justify-between text-[11px] font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                             <span>{jc.machine}</span>
-                            <span className="text-amber-500">{jc.targetDate}</span>
+                            <span className={isDarkMode ? 'text-amber-400' : 'text-amber-600'}>{jc.targetDate}</span>
                           </div>
                           <div className="mt-3 pt-2 border-t border-slate-200 dark:border-slate-800/60 flex items-center justify-between">
-                            <span className="text-[10px] font-mono text-indigo-400 flex items-center gap-1">
+                            <span className="text-[10px] font-mono text-indigo-500 dark:text-indigo-400 flex items-center gap-1 font-medium">
                               <Route className="w-3 h-3" />
                               <span>Job Card Details</span>
                             </span>
-                            <span className="text-[10px] font-mono font-bold text-slate-400">
+                            <span className={`text-[10px] font-mono font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                               {(jc.operations?.filter((o: any) => o.opStatus === 'COMPLETED').length || 0)} / {(jc.operations?.length || 2)} Ops Done
                             </span>
                           </div>
@@ -2331,20 +2396,20 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                       <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
                         {explodedMaterialReqs.map((comp, idx) => (
                           <tr key={idx} className={comp.isShortage ? (isDarkMode ? 'bg-rose-950/20' : 'bg-rose-50/60') : ''}>
-                            <td className="py-2.5 px-3 font-bold text-slate-200">
+                            <td className={`py-2.5 px-3 font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>
                               <div>{comp.componentCode}</div>
-                              <div className="text-[10px] text-slate-500 font-normal">{comp.componentName}</div>
+                              <div className={`text-[10px] font-normal ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{comp.componentName}</div>
                             </td>
-                            <td className="py-2.5 px-3 text-right text-slate-400">{comp.qtyPerUnit} {comp.unit}</td>
-                            <td className="py-2.5 px-3 text-right font-bold text-emerald-400">{comp.totalRawNeeded} {comp.unit}</td>
-                            <td className="py-2.5 px-3 text-right font-mono text-slate-300">{comp.onHand} {comp.unit}</td>
+                            <td className={`py-2.5 px-3 text-right ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{comp.qtyPerUnit} {comp.unit}</td>
+                            <td className={`py-2.5 px-3 text-right font-bold ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>{comp.totalRawNeeded} {comp.unit}</td>
+                            <td className={`py-2.5 px-3 text-right font-mono font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{comp.onHand} {comp.unit}</td>
                             <td className="py-2.5 px-3 text-center">
                               {comp.isShortage ? (
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-500/20 text-rose-500 dark:text-rose-400 border border-rose-500/30">
                                   Short -{comp.deficit}
                                 </span>
                               ) : (
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                                   Covered
                                 </span>
                               )}
@@ -2368,7 +2433,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
             }`}>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                  <div className="p-2 rounded-xl bg-emerald-500/15 text-emerald-500 dark:text-emerald-400 border border-emerald-500/30">
                     <Route className="w-4 h-4" />
                   </div>
                   <div>
@@ -2378,11 +2443,11 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                 </div>
 
                 {selectedMatrixRoute ? (
-                  <span className="px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                  <span className="px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                     {selectedMatrixRoute.operations?.length} Steps ({selectedMatrixRoute.revision || 'REV-A'})
                   </span>
                 ) : (
-                  <span className="px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold bg-rose-500/10 text-rose-400 border border-rose-500/30">
+                  <span className="px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold bg-rose-500/10 text-rose-500 dark:text-rose-400 border border-rose-500/30">
                     No Route Card Linked
                   </span>
                 )}
@@ -2394,16 +2459,16 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                     isDarkMode ? 'border-white/[0.08] bg-black/20' : 'bg-slate-50 border-slate-200'
                   }`}>
                     <div className="flex justify-between mb-1">
-                      <span className="text-slate-400">Total Route Stages:</span>
-                      <span className="font-bold text-emerald-400">{selectedMatrixRoute.operations?.length} Operations</span>
+                      <span className={isDarkMode ? 'text-slate-400' : 'text-slate-500'}>Total Route Stages:</span>
+                      <span className="font-bold text-emerald-500 dark:text-emerald-400">{selectedMatrixRoute.operations?.length} Operations</span>
                     </div>
                     <div className="flex justify-between mb-1">
-                      <span className="text-slate-400">Unit Cycle Time:</span>
+                      <span className={isDarkMode ? 'text-slate-400' : 'text-slate-500'}>Unit Cycle Time:</span>
                       <span className="font-bold text-amber-500">{selectedMatrixRoute.totalStandardTimeMinutes || 45} mins/unit</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-400">Total Machine Hours for {matrixBatchQty} Units:</span>
-                      <span className="font-bold text-purple-400">
+                      <span className={isDarkMode ? 'text-slate-400' : 'text-slate-500'}>Total Machine Hours for {matrixBatchQty} Units:</span>
+                      <span className="font-bold text-purple-600 dark:text-purple-400">
                         {((selectedMatrixRoute.totalStandardTimeMinutes || 45) * matrixBatchQty / 60).toFixed(1)} Hours
                       </span>
                     </div>
@@ -2427,10 +2492,10 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                       <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
                         {explodedCapacityReqs.map((op, idx) => (
                           <tr key={idx} className={isDarkMode ? 'hover:bg-white/[0.02]' : 'bg-white hover:bg-slate-50'}>
-                            <td className="py-2.5 px-3 text-center font-bold text-emerald-400">{op.sequenceNo}</td>
+                            <td className="py-2.5 px-3 text-center font-bold text-emerald-500 dark:text-emerald-400">{op.sequenceNo}</td>
                             <td className={`py-2.5 px-3 font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{op.operationName}</td>
-                            <td className="py-2.5 px-3 text-purple-400">{op.workCenter}</td>
-                            <td className="py-2.5 px-3 text-right text-slate-400">{op.standardTimeMinutes}m</td>
+                            <td className="py-2.5 px-3 text-purple-600 dark:text-purple-400 font-medium">{op.workCenter}</td>
+                            <td className={`py-2.5 px-3 text-right ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{op.standardTimeMinutes}m</td>
                             <td className="py-2.5 px-3 text-right font-bold text-amber-500">{op.totalHours} hrs</td>
                           </tr>
                         ))}
@@ -2451,1109 +2516,1182 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
       {/* ========================================================================================= */}
       {/* MODAL 1: CREATE / EDIT ROUTE CARD */}
       {/* ========================================================================================= */}
-      {isCreateRouteOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-3xl rounded-3xl border p-7 space-y-6 shadow-2xl transition-all max-h-[90vh] overflow-y-auto ${
-            isDarkMode 
-              ? 'bg-slate-900/95 border-slate-800/80 text-white backdrop-blur-2xl' 
-              : 'bg-white border-slate-200 text-slate-900 shadow-2xl'
-          }`}>
-            <div className={`flex items-center justify-between border-b pb-4 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                  <Route className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-base font-mono">
-                    {editingRoute ? `Edit Route Card — ${editingRoute.partCode}` : 'Create Master Route Card'}
-                  </h3>
-                  <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Define the multi-stage manufacturing sequence, work centers & cycle times
-                  </p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setIsCreateRouteOpen(false)} 
-                className={`p-2 rounded-2xl border transition-all cursor-pointer ${
-                  isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800' : 'border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+      <Modal
+        isOpen={isCreateRouteOpen}
+        onClose={() => setIsCreateRouteOpen(false)}
+        maxWidth="3xl"
+        isDarkMode={isDarkMode}
+        icon={<Route className="w-5 h-5" />}
+        title={editingRoute ? `Edit Route Card — ${editingRoute.partCode}` : 'Create Master Route Card'}
+        subtitle="Define the multi-stage manufacturing sequence, work centers & cycle times"
+      >
+        <form onSubmit={handleSaveRouteSubmit} className="space-y-4 text-xs font-sans">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Part Code *
+              </label>
+              <input
+                name="partCode"
+                required
+                defaultValue={editingRoute?.partCode || '00000001'}
+                placeholder="e.g. 00000001"
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
+                }`}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Part Description *
+              </label>
+              <input
+                name="partDescription"
+                required
+                defaultValue={editingRoute?.partDescription || 'MAIN SPINDLE HOUSING 120MM'}
+                placeholder="e.g. Precision Shaft"
+                className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
+                }`}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Revision
+              </label>
+              <input
+                name="revision"
+                defaultValue={editingRoute?.revision || 'REV-A'}
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Route Status
+              </label>
+              <select
+                name="status"
+                defaultValue={editingRoute?.status || 'ACTIVE'}
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all cursor-pointer ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
                 }`}
               >
-                <X className="w-4 h-4" />
+                <option value="ACTIVE">ACTIVE</option>
+                <option value="DRAFT">DRAFT</option>
+                <option value="OBSOLETE">OBSOLETE</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Sequenced Operations Builder */}
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between">
+              <div className="text-[11px] font-bold uppercase text-emerald-500 dark:text-emerald-400 font-mono">
+                Operation Steps & Sequence Builder ({routeFormSteps.length} Stages)
+              </div>
+              <button
+                type="button"
+                onClick={handleAddRouteStepRow}
+                className="px-3 py-1.5 rounded-xl bg-emerald-600/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600/30 border border-emerald-500/30 text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all hover:scale-[1.02]"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Operation Step</span>
               </button>
             </div>
 
-            <form onSubmit={handleSaveRouteSubmit} className="space-y-4 text-xs font-mono">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className={`block text-[10px] uppercase font-bold mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Part Code *
-                  </label>
-                  <input
-                    name="partCode"
-                    required
-                    defaultValue={editingRoute?.partCode || '00000001'}
-                    placeholder="e.g. 00000001"
-                    className={`w-full rounded-xl border p-2.5 outline-none transition-all focus:border-emerald-500 ${
-                      isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'
-                    }`}
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className={`block text-[10px] uppercase font-bold mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Part Description *
-                  </label>
-                  <input
-                    name="partDescription"
-                    required
-                    defaultValue={editingRoute?.partDescription || 'MAIN SPINDLE HOUSING 120MM'}
-                    placeholder="e.g. Precision Shaft"
-                    className={`w-full rounded-xl border p-2.5 outline-none transition-all focus:border-emerald-500 ${
-                      isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={`block text-[10px] uppercase font-bold mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Revision
-                  </label>
-                  <input
-                    name="revision"
-                    defaultValue={editingRoute?.revision || 'REV-A'}
-                    className={`w-full rounded-xl border p-2.5 outline-none transition-all focus:border-emerald-500 ${
-                      isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'
-                    }`}
-                  />
-                </div>
-                <div>
-                  <label className={`block text-[10px] uppercase font-bold mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Route Status
-                  </label>
-                  <select
-                    name="status"
-                    defaultValue={editingRoute?.status || 'ACTIVE'}
-                    className={`w-full rounded-xl border p-2.5 outline-none transition-all focus:border-emerald-500 ${
-                      isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'
-                    }`}
-                  >
-                    <option value="ACTIVE">ACTIVE</option>
-                    <option value="DRAFT">DRAFT</option>
-                    <option value="OBSOLETE">OBSOLETE</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Sequenced Operations Builder */}
-              <div className="space-y-3 pt-2">
-                <div className="flex items-center justify-between">
-                  <div className="text-[11px] font-bold uppercase text-emerald-400">
-                    Operation Steps & Sequence Builder ({routeFormSteps.length} Stages)
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleAddRouteStepRow}
-                    className="px-3 py-1.5 rounded-xl bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 border border-emerald-500/30 text-[10px] font-bold flex items-center gap-1 cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add Operation Step</span>
-                  </button>
-                </div>
-
-                <div className={`space-y-2.5 max-h-[320px] overflow-y-auto pr-1`}>
-                  {routeFormSteps.map((step, idx) => (
-                    <div
-                      key={idx}
-                      className={`p-3 rounded-2xl border flex flex-wrap items-center gap-3 ${
-                        isDarkMode ? 'bg-slate-950/70 border-slate-800' : 'bg-slate-50 border-slate-200'
-                      }`}
-                    >
-                      {/* Sequence and Reorder buttons */}
-                      <div className="flex items-center gap-1">
-                        <span className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 font-bold flex items-center justify-center text-xs">
-                          {step.sequenceNo}
-                        </span>
-                        <div className="flex flex-col gap-0.5">
-                          <button
-                            type="button"
-                            onClick={() => handleMoveRouteStep(idx, 'up')}
-                            disabled={idx === 0}
-                            className="p-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 cursor-pointer"
-                          >
-                            <ArrowUp className="w-2.5 h-2.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleMoveRouteStep(idx, 'down')}
-                            disabled={idx === routeFormSteps.length - 1}
-                            className="p-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 cursor-pointer"
-                          >
-                            <ArrowDown className="w-2.5 h-2.5" />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Operation Name */}
-                      <div className="flex-1 min-w-[160px]">
-                        <input
-                          value={step.operationName}
-                          onChange={(e) => handleRouteStepChange(idx, 'operationName', e.target.value)}
-                          placeholder="Operation Name (e.g. CNC Turning)"
-                          required
-                          className={`w-full rounded-xl border p-2 text-xs outline-none focus:border-emerald-500 ${
-                            isDarkMode ? 'border-slate-800 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-900'
-                          }`}
-                        />
-                      </div>
-
-                      {/* Work Center */}
-                      <div className="w-32">
-                        <input
-                          value={step.workCenter}
-                          onChange={(e) => handleRouteStepChange(idx, 'workCenter', e.target.value)}
-                          placeholder="Work Center (e.g. VMC-01)"
-                          required
-                          className={`w-full rounded-xl border p-2 text-xs outline-none focus:border-emerald-500 ${
-                            isDarkMode ? 'border-slate-800 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-900'
-                          }`}
-                        />
-                      </div>
-
-                      {/* Standard Time Mins */}
-                      <div className="w-24">
-                        <input
-                          type="number"
-                          value={step.standardTimeMinutes}
-                          onChange={(e) => handleRouteStepChange(idx, 'standardTimeMinutes', Number(e.target.value))}
-                          placeholder="Std Mins"
-                          required
-                          className={`w-full rounded-xl border p-2 text-xs outline-none focus:border-emerald-500 text-right ${
-                            isDarkMode ? 'border-slate-800 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-900'
-                          }`}
-                        />
-                      </div>
-
-                      {/* Inspection Required Checkbox */}
-                      <label className="flex items-center gap-1.5 cursor-pointer text-[10px] text-slate-300">
-                        <input
-                          type="checkbox"
-                          checked={step.inspectionRequired}
-                          onChange={(e) => handleRouteStepChange(idx, 'inspectionRequired', e.target.checked)}
-                          className="accent-emerald-500"
-                        />
-                        <span>QC Gate</span>
-                      </label>
-
-                      {/* Certification */}
-                      <div className="w-32">
-                        <input
-                          value={step.requiredCertification}
-                          onChange={(e) => handleRouteStepChange(idx, 'requiredCertification', e.target.value)}
-                          placeholder="Cert/Skill"
-                          className={`w-full rounded-xl border p-2 text-xs outline-none focus:border-emerald-500 ${
-                            isDarkMode ? 'border-slate-800 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-900'
-                          }`}
-                        />
-                      </div>
-
-                      {/* Remove Row Button */}
+            <div className="space-y-2.5 max-h-[320px] overflow-y-auto pr-1">
+              {routeFormSteps.map((step, idx) => (
+                <div
+                  key={idx}
+                  className={`p-3 rounded-2xl border flex flex-wrap items-center gap-3 ${
+                    isDarkMode ? 'bg-[#0d1017] border-slate-800' : 'bg-slate-50 border-slate-200'
+                  }`}
+                >
+                  {/* Sequence and Reorder buttons */}
+                  <div className="flex items-center gap-1">
+                    <span className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-500 dark:text-emerald-400 font-mono font-bold flex items-center justify-center text-xs">
+                      {step.sequenceNo}
+                    </span>
+                    <div className="flex flex-col gap-0.5">
                       <button
                         type="button"
-                        onClick={() => handleRemoveRouteStepRow(idx)}
-                        className="p-2 rounded-xl text-rose-400 hover:bg-rose-500/20 cursor-pointer"
+                        onClick={() => handleMoveRouteStep(idx, 'up')}
+                        disabled={idx === 0}
+                        className={`p-1 rounded cursor-pointer disabled:opacity-30 ${isDarkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`}
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <ArrowUp className="w-2.5 h-2.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleMoveRouteStep(idx, 'down')}
+                        disabled={idx === routeFormSteps.length - 1}
+                        className={`p-1 rounded cursor-pointer disabled:opacity-30 ${isDarkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`}
+                      >
+                        <ArrowDown className="w-2.5 h-2.5" />
                       </button>
                     </div>
-                  ))}
+                  </div>
+
+                  {/* Operation Name */}
+                  <div className="flex-1 min-w-[160px]">
+                    <input
+                      value={step.operationName}
+                      onChange={(e) => handleRouteStepChange(idx, 'operationName', e.target.value)}
+                      placeholder="Operation Name (e.g. CNC Turning)"
+                      required
+                      className={`w-full rounded-xl border p-2 text-xs outline-none focus:border-emerald-500 ${
+                        isDarkMode ? 'border-slate-700/80 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-900 shadow-2xs'
+                      }`}
+                    />
+                  </div>
+
+                  {/* Work Center */}
+                  <div className="w-32">
+                    <input
+                      value={step.workCenter}
+                      onChange={(e) => handleRouteStepChange(idx, 'workCenter', e.target.value)}
+                      placeholder="Work Center (e.g. VMC-01)"
+                      required
+                      className={`w-full rounded-xl border p-2 text-xs font-mono outline-none focus:border-emerald-500 ${
+                        isDarkMode ? 'border-slate-700/80 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-900 shadow-2xs'
+                      }`}
+                    />
+                  </div>
+
+                  {/* Standard Time Mins */}
+                  <div className="w-24">
+                    <input
+                      type="number"
+                      value={step.standardTimeMinutes}
+                      onChange={(e) => handleRouteStepChange(idx, 'standardTimeMinutes', Number(e.target.value))}
+                      placeholder="Std Mins"
+                      required
+                      className={`w-full rounded-xl border p-2 text-xs font-mono outline-none focus:border-emerald-500 text-right font-bold ${
+                        isDarkMode ? 'border-slate-700/80 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-900 shadow-2xs'
+                      }`}
+                    />
+                  </div>
+
+                  {/* Inspection Required Checkbox */}
+                  <label className={`flex items-center gap-1.5 cursor-pointer text-[10px] font-mono font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                    <input
+                      type="checkbox"
+                      checked={step.inspectionRequired}
+                      onChange={(e) => handleRouteStepChange(idx, 'inspectionRequired', e.target.checked)}
+                      className="accent-emerald-500"
+                    />
+                    <span>QC Gate</span>
+                  </label>
+
+                  {/* Certification */}
+                  <div className="w-32">
+                    <input
+                      value={step.requiredCertification}
+                      onChange={(e) => handleRouteStepChange(idx, 'requiredCertification', e.target.value)}
+                      placeholder="Cert/Skill"
+                      className={`w-full rounded-xl border p-2 text-xs outline-none focus:border-emerald-500 ${
+                        isDarkMode ? 'border-slate-700/80 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-900 shadow-2xs'
+                      }`}
+                    />
+                  </div>
+
+                  {/* Remove Row Button */}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveRouteStepRow(idx)}
+                    className="p-2 rounded-xl text-rose-500 dark:text-rose-400 hover:bg-rose-500/20 cursor-pointer transition-all"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-              </div>
-
-              <div>
-                <label className={`block text-[10px] uppercase font-bold mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                  Engineering Notes
-                </label>
-                <input
-                  name="notes"
-                  defaultValue={editingRoute?.notes || 'Standard manufacturing process traveler'}
-                  className={`w-full rounded-xl border p-2.5 outline-none transition-all focus:border-emerald-500 ${
-                    isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'
-                  }`}
-                />
-              </div>
-
-              <div className={`pt-4 border-t flex justify-end gap-3 font-sans ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
-                <button
-                  type="button"
-                  onClick={() => setIsCreateRouteOpen(false)}
-                  className={`px-5 py-2.5 rounded-xl border font-bold cursor-pointer transition-all ${
-                    isDarkMode ? 'border-slate-800 text-slate-300 hover:bg-slate-800' : 'border-slate-200 text-slate-700 hover:bg-slate-100'
-                  }`}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer transition-all shadow-lg shadow-emerald-500/20"
-                >
-                  Save Route Card
-                </button>
-              </div>
-            </form>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+
+          <div>
+            <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+              Engineering Notes
+            </label>
+            <input
+              name="notes"
+              defaultValue={editingRoute?.notes || 'Standard manufacturing process traveler'}
+              className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
+                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
+              }`}
+            />
+          </div>
+
+          <div className={`pt-4 border-t flex justify-end gap-3 font-sans ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+            <button
+              type="button"
+              onClick={() => setIsCreateRouteOpen(false)}
+              className={`px-4 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
+                isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs cursor-pointer transition-all shadow-md shadow-emerald-500/20 hover:scale-[1.01]"
+            >
+              Save Route Card
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       {/* ========================================================================================= */}
       {/* MODAL 2: CREATE / EDIT BILL OF MATERIALS (BOM) */}
       {/* ========================================================================================= */}
-      {isCreateBomOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-3xl rounded-3xl border p-7 space-y-6 shadow-2xl transition-all max-h-[90vh] overflow-y-auto ${
-            isDarkMode 
-              ? 'bg-slate-900/95 border-slate-800/80 text-white backdrop-blur-2xl' 
-              : 'bg-white border-slate-200 text-slate-900 shadow-2xl'
-          }`}>
-            <div className={`flex items-center justify-between border-b pb-4 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-[#5B75F8]/15 text-[#5B75F8] dark:text-[#7B92FF] border border-[#5B75F8]/30">
-                  <Layers className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-base font-mono">
-                    {editingBom ? `Edit BOM Formula — ${editingBom.bomCode}` : 'Configure Bill of Materials (BOM)'}
-                  </h3>
-                  <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Define raw material formulas, scrap allowances & component costs
-                  </p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setIsCreateBomOpen(false)} 
-                className={`p-2 rounded-2xl border transition-all cursor-pointer ${
-                  isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800' : 'border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+      <Modal
+        isOpen={isCreateBomOpen}
+        onClose={() => setIsCreateBomOpen(false)}
+        maxWidth="3xl"
+        isDarkMode={isDarkMode}
+        icon={<Layers className="w-5 h-5" />}
+        title={editingBom ? `Edit BOM Formula — ${editingBom.bomCode}` : 'Configure Bill of Materials (BOM)'}
+        subtitle="Define raw material formulas, scrap allowances & component costs"
+      >
+        <form onSubmit={handleSaveBOMSubmit} className="space-y-4 text-xs font-sans">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                BOM Code *
+              </label>
+              <input
+                name="bomCode"
+                required
+                defaultValue={editingBom?.bomCode || `BOM-00000001-A`}
+                placeholder="e.g. BOM-00000001-A"
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
                 }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Parent Part Code *
+              </label>
+              <input
+                name="parentCode"
+                required
+                defaultValue={editingBom?.parentPartCode || '00000001'}
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Parent Part Name *
+              </label>
+              <input
+                name="parentName"
+                required
+                defaultValue={editingBom?.parentPartName || 'MAIN SPINDLE HOUSING 120MM'}
+                className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                }`}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Revision
+              </label>
+              <input
+                name="revision"
+                defaultValue={editingBom?.revision || 'v1.0'}
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Batch Size
+              </label>
+              <input
+                name="batchSize"
+                type="number"
+                defaultValue={editingBom?.batchSize || 100}
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono font-bold outline-none transition-all ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Expected Yield (%)
+              </label>
+              <input
+                name="yield"
+                type="number"
+                step="0.1"
+                defaultValue={editingBom?.yieldPercentage || 98.5}
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono font-bold outline-none transition-all ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                }`}
+              />
+            </div>
+          </div>
+
+          {/* Dynamic Components Multi-Row Table */}
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between">
+              <div className="text-[11px] font-bold uppercase text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] font-mono">
+                Raw Materials & Components ({bomFormComponents.length} Items)
+              </div>
+              <button
+                type="button"
+                onClick={handleAddBomComponentRow}
+                className="px-3 py-1.5 rounded-xl bg-[var(--accent-primary)]/20 text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] hover:bg-[var(--accent-primary)]/30 border border-[var(--accent-primary)]/30 text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-all hover:scale-[1.02]"
               >
-                <X className="w-4 h-4" />
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Component</span>
               </button>
             </div>
 
-            <form onSubmit={handleSaveBOMSubmit} className="space-y-4 text-xs font-mono">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className={`block text-[10px] uppercase font-bold mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    BOM Code *
-                  </label>
-                  <input
-                    name="bomCode"
-                    required
-                    defaultValue={editingBom?.bomCode || `BOM-00000001-A`}
-                    placeholder="e.g. BOM-00000001-A"
-                    className={`w-full rounded-xl border p-2.5 outline-none transition-all focus:border-[#5B75F8] ${
-                      isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'
-                    }`}
-                  />
-                </div>
-                <div>
-                  <label className={`block text-[10px] uppercase font-bold mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Parent Part Code *
-                  </label>
-                  <input
-                    name="parentCode"
-                    required
-                    defaultValue={editingBom?.parentPartCode || '00000001'}
-                    className={`w-full rounded-xl border p-2.5 outline-none transition-all focus:border-[#5B75F8] ${
-                      isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'
-                    }`}
-                  />
-                </div>
-                <div>
-                  <label className={`block text-[10px] uppercase font-bold mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Parent Part Name *
-                  </label>
-                  <input
-                    name="parentName"
-                    required
-                    defaultValue={editingBom?.parentPartName || 'MAIN SPINDLE HOUSING 120MM'}
-                    className={`w-full rounded-xl border p-2.5 outline-none transition-all focus:border-[#5B75F8] ${
-                      isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className={`block text-[10px] uppercase font-bold mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Revision
-                  </label>
-                  <input
-                    name="revision"
-                    defaultValue={editingBom?.revision || 'v1.0'}
-                    className={`w-full rounded-xl border p-2.5 outline-none transition-all focus:border-[#5B75F8] ${
-                      isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'
-                    }`}
-                  />
-                </div>
-                <div>
-                  <label className={`block text-[10px] uppercase font-bold mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Batch Size
-                  </label>
-                  <input
-                    name="batchSize"
-                    type="number"
-                    defaultValue={editingBom?.batchSize || 100}
-                    className={`w-full rounded-xl border p-2.5 outline-none transition-all focus:border-[#5B75F8] ${
-                      isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'
-                    }`}
-                  />
-                </div>
-                <div>
-                  <label className={`block text-[10px] uppercase font-bold mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Expected Yield (%)
-                  </label>
-                  <input
-                    name="yield"
-                    type="number"
-                    step="0.1"
-                    defaultValue={editingBom?.yieldPercentage || 98.5}
-                    className={`w-full rounded-xl border p-2.5 outline-none transition-all focus:border-[#5B75F8] ${
-                      isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              {/* Dynamic Components Multi-Row Table */}
-              <div className="space-y-3 pt-2">
-                <div className="flex items-center justify-between">
-                  <div className="text-[11px] font-bold uppercase text-[#5B75F8] dark:text-[#7B92FF]">
-                    Raw Materials & Components ({bomFormComponents.length} Items)
+            <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
+              {bomFormComponents.map((comp, idx) => (
+                <div
+                  key={idx}
+                  className={`p-3 rounded-2xl border flex flex-wrap items-center gap-2.5 ${
+                    isDarkMode ? 'bg-[#0d1017] border-slate-800' : 'bg-slate-50 border-slate-200'
+                  }`}
+                >
+                  <div className="w-40">
+                    <input
+                      value={comp.componentCode}
+                      onChange={(e) => handleBomComponentChange(idx, 'componentCode', e.target.value)}
+                      placeholder="SKU (e.g. RAW-EN8)"
+                      required
+                      className={`w-full rounded-xl border p-2 text-xs font-mono outline-none focus:border-[var(--accent-primary)] ${
+                        isDarkMode ? 'border-slate-700/80 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-900 shadow-2xs'
+                      }`}
+                    />
                   </div>
+
+                  <div className="flex-1 min-w-[140px]">
+                    <input
+                      value={comp.componentName}
+                      onChange={(e) => handleBomComponentChange(idx, 'componentName', e.target.value)}
+                      placeholder="Component Name"
+                      required
+                      className={`w-full rounded-xl border p-2 text-xs outline-none focus:border-[var(--accent-primary)] ${
+                        isDarkMode ? 'border-slate-700/80 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-900 shadow-2xs'
+                      }`}
+                    />
+                  </div>
+
+                  <div className="w-20">
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={comp.qtyPerUnit}
+                      onChange={(e) => handleBomComponentChange(idx, 'qtyPerUnit', Number(e.target.value))}
+                      placeholder="Qty/Unit"
+                      required
+                      className={`w-full rounded-xl border p-2 text-xs font-mono outline-none focus:border-[var(--accent-primary)] text-right font-bold ${
+                        isDarkMode ? 'border-slate-700/80 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-900 shadow-2xs'
+                      }`}
+                    />
+                  </div>
+
+                  <div className="w-16">
+                    <input
+                      value={comp.unit}
+                      onChange={(e) => handleBomComponentChange(idx, 'unit', e.target.value)}
+                      placeholder="UOM"
+                      className={`w-full rounded-xl border p-2 text-xs font-mono outline-none focus:border-[var(--accent-primary)] ${
+                        isDarkMode ? 'border-slate-700/80 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-900 shadow-2xs'
+                      }`}
+                    />
+                  </div>
+
+                  <div className="w-16">
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={comp.scrapAllowancePct}
+                      onChange={(e) => handleBomComponentChange(idx, 'scrapAllowancePct', Number(e.target.value))}
+                      placeholder="Scrap%"
+                      className={`w-full rounded-xl border p-2 text-xs font-mono outline-none focus:border-[var(--accent-primary)] text-right ${
+                        isDarkMode ? 'border-slate-700/80 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-900 shadow-2xs'
+                      }`}
+                    />
+                  </div>
+
+                  <div className="w-20">
+                    <input
+                      type="number"
+                      value={comp.unitCost}
+                      onChange={(e) => handleBomComponentChange(idx, 'unitCost', Number(e.target.value))}
+                      placeholder="Cost (₹)"
+                      className={`w-full rounded-xl border p-2 text-xs font-mono outline-none focus:border-[var(--accent-primary)] text-right ${
+                        isDarkMode ? 'border-slate-700/80 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-900 shadow-2xs'
+                      }`}
+                    />
+                  </div>
+
                   <button
                     type="button"
-                    onClick={handleAddBomComponentRow}
-                    className="px-3 py-1.5 rounded-xl bg-[#5B75F8]/20 text-[#7B92FF] hover:bg-[#5B75F8]/30 border border-[#5B75F8]/30 text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                    onClick={() => handleRemoveBomComponentRow(idx)}
+                    className="p-2 rounded-xl text-rose-500 dark:text-rose-400 hover:bg-rose-500/20 cursor-pointer transition-all"
                   >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add Component</span>
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
-
-                <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
-                  {bomFormComponents.map((comp, idx) => (
-                    <div
-                      key={idx}
-                      className={`p-3 rounded-2xl border flex flex-wrap items-center gap-2.5 ${
-                        isDarkMode ? 'bg-slate-950/70 border-slate-800' : 'bg-slate-50 border-slate-200'
-                      }`}
-                    >
-                      <div className="w-40">
-                        <input
-                          value={comp.componentCode}
-                          onChange={(e) => handleBomComponentChange(idx, 'componentCode', e.target.value)}
-                          placeholder="SKU (e.g. RAW-EN8)"
-                          required
-                          className={`w-full rounded-xl border p-2 text-xs outline-none focus:border-[#5B75F8] ${
-                            isDarkMode ? 'border-slate-800 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-900'
-                          }`}
-                        />
-                      </div>
-
-                      <div className="flex-1 min-w-[140px]">
-                        <input
-                          value={comp.componentName}
-                          onChange={(e) => handleBomComponentChange(idx, 'componentName', e.target.value)}
-                          placeholder="Component Name"
-                          required
-                          className={`w-full rounded-xl border p-2 text-xs outline-none focus:border-[#5B75F8] ${
-                            isDarkMode ? 'border-slate-800 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-900'
-                          }`}
-                        />
-                      </div>
-
-                      <div className="w-20">
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={comp.qtyPerUnit}
-                          onChange={(e) => handleBomComponentChange(idx, 'qtyPerUnit', Number(e.target.value))}
-                          placeholder="Qty/Unit"
-                          required
-                          className={`w-full rounded-xl border p-2 text-xs outline-none focus:border-[#5B75F8] text-right font-bold ${
-                            isDarkMode ? 'border-slate-800 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-900'
-                          }`}
-                        />
-                      </div>
-
-                      <div className="w-16">
-                        <input
-                          value={comp.unit}
-                          onChange={(e) => handleBomComponentChange(idx, 'unit', e.target.value)}
-                          placeholder="UOM"
-                          className={`w-full rounded-xl border p-2 text-xs outline-none focus:border-[#5B75F8] ${
-                            isDarkMode ? 'border-slate-800 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-900'
-                          }`}
-                        />
-                      </div>
-
-                      <div className="w-16">
-                        <input
-                          type="number"
-                          step="0.1"
-                          value={comp.scrapAllowancePct}
-                          onChange={(e) => handleBomComponentChange(idx, 'scrapAllowancePct', Number(e.target.value))}
-                          placeholder="Scrap%"
-                          className={`w-full rounded-xl border p-2 text-xs outline-none focus:border-[#5B75F8] text-right ${
-                            isDarkMode ? 'border-slate-800 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-900'
-                          }`}
-                        />
-                      </div>
-
-                      <div className="w-20">
-                        <input
-                          type="number"
-                          value={comp.unitCost}
-                          onChange={(e) => handleBomComponentChange(idx, 'unitCost', Number(e.target.value))}
-                          placeholder="Cost (₹)"
-                          className={`w-full rounded-xl border p-2 text-xs outline-none focus:border-[#5B75F8] text-right ${
-                            isDarkMode ? 'border-slate-800 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-900'
-                          }`}
-                        />
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveBomComponentRow(idx)}
-                        className="p-2 rounded-xl text-rose-400 hover:bg-rose-500/20 cursor-pointer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className={`block text-[10px] uppercase font-bold mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                  Engineering Notes
-                </label>
-                <input
-                  name="notes"
-                  defaultValue={editingBom?.notes || 'Engineering release BOM formula'}
-                  className={`w-full rounded-xl border p-2.5 outline-none transition-all focus:border-[#5B75F8] ${
-                    isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'
-                  }`}
-                />
-              </div>
-
-              <div className={`pt-4 border-t flex justify-end gap-3 font-sans ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
-                <button
-                  type="button"
-                  onClick={() => setIsCreateBomOpen(false)}
-                  className={`px-5 py-2.5 rounded-xl border font-bold cursor-pointer transition-all ${
-                    isDarkMode ? 'border-slate-800 text-slate-300 hover:bg-slate-800' : 'border-slate-200 text-slate-700 hover:bg-slate-100'
-                  }`}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-[#5B75F8] hover:bg-[#4A64E7] text-white font-bold cursor-pointer transition-all shadow-lg shadow-[#5B75F8]/20"
-                >
-                  Save BOM Formula
-                </button>
-              </div>
-            </form>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+
+          <div>
+            <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+              Engineering Notes
+            </label>
+            <input
+              name="notes"
+              defaultValue={editingBom?.notes || 'Engineering release BOM formula'}
+              className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
+                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+              }`}
+            />
+          </div>
+
+          <div className={`pt-4 border-t flex justify-end gap-3 font-sans ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+            <button
+              type="button"
+              onClick={() => setIsCreateBomOpen(false)}
+              className={`px-4 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
+                isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-5 py-2 rounded-xl bg-[var(--accent-primary)] hover:brightness-110 text-white font-bold text-xs cursor-pointer transition-all shadow-md shadow-[var(--accent-shadow)] hover:scale-[1.01]"
+            >
+              Save BOM Formula
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       {/* ========================================================================================= */}
       {/* MODAL 3: DUPLICATE BOM MODAL */}
       {/* ========================================================================================= */}
-      {duplicatingBom && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-md rounded-3xl border p-7 space-y-6 shadow-2xl transition-all ${
-            isDarkMode ? 'bg-slate-900/95 border-slate-800/80 text-white' : 'bg-white border-slate-200 text-slate-900'
-          }`}>
-            <div className="flex items-center justify-between border-b pb-4 border-slate-800">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-[#5B75F8]/15 text-[#7B92FF]">
-                  <Copy className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-base font-mono">Duplicate BOM Formula</h3>
-                  <p className="text-xs text-slate-400">Clone components from {duplicatingBom.bomCode}</p>
-                </div>
-              </div>
-              <button onClick={() => setDuplicatingBom(null)} className="p-2 rounded-2xl border border-slate-800 text-slate-400 hover:text-white cursor-pointer">
-                <X className="w-4 h-4" />
-              </button>
+      <Modal
+        isOpen={Boolean(duplicatingBom)}
+        onClose={() => setDuplicatingBom(null)}
+        maxWidth="md"
+        isDarkMode={isDarkMode}
+        icon={<Copy className="w-5 h-5" />}
+        title="Duplicate BOM Formula"
+        subtitle={`Clone components from ${duplicatingBom?.bomCode || ''}`}
+      >
+        {duplicatingBom && (
+          <form onSubmit={handleDuplicateBOMSubmit} className="space-y-4 text-xs font-sans">
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>New BOM Code *</label>
+              <input
+                name="targetBomCode"
+                required
+                defaultValue={`${duplicatingBom.bomCode}-COPY`}
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                }`}
+              />
             </div>
 
-            <form onSubmit={handleDuplicateBOMSubmit} className="space-y-4 text-xs font-mono">
-              <div>
-                <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">New BOM Code *</label>
-                <input
-                  name="targetBomCode"
-                  required
-                  defaultValue={`${duplicatingBom.bomCode}-COPY`}
-                  className={`w-full rounded-xl border p-2.5 outline-none ${
-                    isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'
-                  }`}
-                />
-              </div>
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Target Part Code *</label>
+              <input
+                name="targetPartCode"
+                required
+                defaultValue={`${duplicatingBom.parentPartCode}-V2`}
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                }`}
+              />
+            </div>
 
-              <div>
-                <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Target Part Code *</label>
-                <input
-                  name="targetPartCode"
-                  required
-                  defaultValue={`${duplicatingBom.parentPartCode}-V2`}
-                  className={`w-full rounded-xl border p-2.5 outline-none ${
-                    isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'
-                  }`}
-                />
-              </div>
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Target Part Name</label>
+              <input
+                name="targetPartName"
+                defaultValue={duplicatingBom.parentPartName}
+                className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                }`}
+              />
+            </div>
 
-              <div>
-                <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Target Part Name</label>
-                <input
-                  name="targetPartName"
-                  defaultValue={duplicatingBom.parentPartName}
-                  className={`w-full rounded-xl border p-2.5 outline-none ${
-                    isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'
-                  }`}
-                />
-              </div>
-
-              <div className="pt-4 border-t border-slate-800 flex justify-end gap-3 font-sans">
-                <button type="button" onClick={() => setDuplicatingBom(null)} className="px-5 py-2.5 rounded-xl border border-slate-800 text-slate-300 hover:bg-slate-800">
-                  Cancel
-                </button>
-                <button type="submit" className="px-6 py-2.5 rounded-xl bg-[#5B75F8] text-white font-bold">
-                  Duplicate BOM
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            <div className={`pt-4 border-t flex justify-end gap-3 font-sans ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+              <button type="button" onClick={() => setDuplicatingBom(null)} className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+              }`}>
+                Cancel
+              </button>
+              <button type="submit" className="px-5 py-2 rounded-xl bg-[var(--accent-primary)] hover:brightness-110 text-white font-bold text-xs cursor-pointer shadow-md shadow-[var(--accent-shadow)] transition-all hover:scale-[1.01]">
+                Duplicate BOM
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
 
       {/* ========================================================================================= */}
       {/* MODAL 4: CREATE BOM REVISION MODAL */}
       {/* ========================================================================================= */}
-      {revisionBom && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-md rounded-3xl border p-7 space-y-6 shadow-2xl transition-all ${
-            isDarkMode ? 'bg-slate-900/95 border-slate-800/80 text-white' : 'bg-white border-slate-200 text-slate-900'
-          }`}>
-            <div className="flex items-center justify-between border-b pb-4 border-slate-800">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-indigo-500/15 text-indigo-400">
-                  <FolderPlus className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-base font-mono">Create BOM Revision</h3>
-                  <p className="text-xs text-slate-400">Increment version for {revisionBom.bomCode}</p>
-                </div>
-              </div>
-              <button onClick={() => setRevisionBom(null)} className="p-2 rounded-2xl border border-slate-800 text-slate-400 hover:text-white cursor-pointer">
-                <X className="w-4 h-4" />
-              </button>
+      <Modal
+        isOpen={Boolean(revisionBom)}
+        onClose={() => setRevisionBom(null)}
+        maxWidth="md"
+        isDarkMode={isDarkMode}
+        icon={<FolderPlus className="w-5 h-5" />}
+        title="Create BOM Revision"
+        subtitle={`Increment version for ${revisionBom?.bomCode || ''}`}
+      >
+        {revisionBom && (
+          <form onSubmit={handleRevisionBOMSubmit} className="space-y-4 text-xs font-sans">
+            <div className={`p-3.5 rounded-2xl border ${isDarkMode ? 'bg-[#0d1017] border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+              <div className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>Current Revision: <span className="font-bold text-emerald-500 dark:text-emerald-400">{revisionBom.revision}</span></div>
+              <div className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>Parent Part: <span className="font-bold text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{revisionBom.parentPartCode}</span></div>
             </div>
 
-            <form onSubmit={handleRevisionBOMSubmit} className="space-y-4 text-xs font-mono">
-              <div className="p-3 rounded-2xl bg-slate-950/60 border border-slate-800">
-                <div className="text-slate-400">Current Revision: <span className="text-white font-bold">{revisionBom.revision}</span></div>
-                <div className="text-slate-400">Parent Part: <span className="text-[#7B92FF]">{revisionBom.parentPartCode}</span></div>
-              </div>
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>New Revision Identifier *</label>
+              <input
+                name="newRevision"
+                required
+                defaultValue={revisionBom.revision.includes('v') ? `v${(parseFloat(revisionBom.revision.replace('v', '')) + 0.1).toFixed(1)}` : 'REV-B'}
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                }`}
+              />
+            </div>
 
-              <div>
-                <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">New Revision Identifier *</label>
-                <input
-                  name="newRevision"
-                  required
-                  defaultValue={revisionBom.revision.includes('v') ? `v${(parseFloat(revisionBom.revision.replace('v', '')) + 0.1).toFixed(1)}` : 'REV-B'}
-                  className={`w-full rounded-xl border p-2.5 outline-none ${
-                    isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'
-                  }`}
-                />
-              </div>
-
-              <div className="pt-4 border-t border-slate-800 flex justify-end gap-3 font-sans">
-                <button type="button" onClick={() => setRevisionBom(null)} className="px-5 py-2.5 rounded-xl border border-slate-800 text-slate-300 hover:bg-slate-800">
-                  Cancel
-                </button>
-                <button type="submit" className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold">
-                  Release Revision
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            <div className={`pt-4 border-t flex justify-end gap-3 font-sans ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+              <button type="button" onClick={() => setRevisionBom(null)} className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+              }`}>
+                Cancel
+              </button>
+              <button type="submit" className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs cursor-pointer shadow-md shadow-indigo-500/25 transition-all hover:scale-[1.01]">
+                Release Revision
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
 
       {/* ========================================================================================= */}
       {/* MODAL 5: DUPLICATE ROUTE CARD MODAL */}
       {/* ========================================================================================= */}
-      {duplicatingRoute && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-md rounded-3xl border p-7 space-y-6 shadow-2xl transition-all ${
-            isDarkMode ? 'bg-slate-900/95 border-slate-800/80 text-white' : 'bg-white border-slate-200 text-slate-900'
-          }`}>
-            <div className="flex items-center justify-between border-b pb-4 border-slate-800">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-emerald-500/15 text-emerald-400">
-                  <Copy className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-base font-mono">Duplicate Route Card</h3>
-                  <p className="text-xs text-slate-400">Copy operation steps from {duplicatingRoute.partCode}</p>
-                </div>
-              </div>
-              <button onClick={() => setDuplicatingRoute(null)} className="p-2 rounded-2xl border border-slate-800 text-slate-400 hover:text-white cursor-pointer">
-                <X className="w-4 h-4" />
-              </button>
+      <Modal
+        isOpen={Boolean(duplicatingRoute)}
+        onClose={() => setDuplicatingRoute(null)}
+        maxWidth="md"
+        isDarkMode={isDarkMode}
+        icon={<Copy className="w-5 h-5" />}
+        title="Duplicate Route Card"
+        subtitle={`Copy operation steps from ${duplicatingRoute?.partCode || ''}`}
+      >
+        {duplicatingRoute && (
+          <form onSubmit={handleDuplicateRouteSubmit} className="space-y-4 text-xs font-sans">
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Target Part Code *</label>
+              <input
+                name="targetPartCode"
+                required
+                defaultValue={`${duplicatingRoute.partCode}-V2`}
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
+                }`}
+              />
             </div>
 
-            <form onSubmit={handleDuplicateRouteSubmit} className="space-y-4 text-xs font-mono">
-              <div>
-                <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Target Part Code *</label>
-                <input
-                  name="targetPartCode"
-                  required
-                  defaultValue={`${duplicatingRoute.partCode}-V2`}
-                  className={`w-full rounded-xl border p-2.5 outline-none ${
-                    isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'
-                  }`}
-                />
-              </div>
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Target Part Description</label>
+              <input
+                name="targetPartDescription"
+                defaultValue={duplicatingRoute.partDescription}
+                className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
+                }`}
+              />
+            </div>
 
-              <div>
-                <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Target Part Description</label>
-                <input
-                  name="targetPartDescription"
-                  defaultValue={duplicatingRoute.partDescription}
-                  className={`w-full rounded-xl border p-2.5 outline-none ${
-                    isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'
-                  }`}
-                />
-              </div>
-
-              <div className="pt-4 border-t border-slate-800 flex justify-end gap-3 font-sans">
-                <button type="button" onClick={() => setDuplicatingRoute(null)} className="px-5 py-2.5 rounded-xl border border-slate-800 text-slate-300 hover:bg-slate-800">
-                  Cancel
-                </button>
-                <button type="submit" className="px-6 py-2.5 rounded-xl bg-emerald-600 text-white font-bold">
-                  Duplicate Route
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            <div className={`pt-4 border-t flex justify-end gap-3 font-sans ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+              <button type="button" onClick={() => setDuplicatingRoute(null)} className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+              }`}>
+                Cancel
+              </button>
+              <button type="submit" className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs cursor-pointer shadow-md shadow-emerald-500/25 transition-all hover:scale-[1.01]">
+                Duplicate Route
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
 
       {/* ========================================================================================= */}
       {/* MODAL 6: DELETE CONFIRMATION DIALOG */}
       {/* ========================================================================================= */}
-      {(deleteConfirmBom || deleteConfirmRoute) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-md rounded-3xl border p-7 space-y-5 shadow-2xl transition-all ${
-            isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-          }`}>
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-2xl bg-rose-500/15 text-rose-400 border border-rose-500/30">
-                <AlertTriangle className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="font-bold text-base">
-                  Confirm Deletion
-                </h3>
-                <p className="text-xs text-slate-400">This action cannot be undone.</p>
-              </div>
-            </div>
+      <Modal
+        isOpen={Boolean(deleteConfirmBom || deleteConfirmRoute)}
+        onClose={() => {
+          setDeleteConfirmBom(null);
+          setDeleteConfirmRoute(null);
+        }}
+        maxWidth="md"
+        isDarkMode={isDarkMode}
+        icon={<AlertTriangle className="w-5 h-5 text-rose-500" />}
+        title="Confirm Deletion"
+        subtitle="This action cannot be undone."
+      >
+        <div className="space-y-4 font-sans text-xs">
+          <p className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>
+            {deleteConfirmBom && `Are you sure you want to delete BOM formula ${deleteConfirmBom.bomCode}? All component relationships will be removed.`}
+            {deleteConfirmRoute && `Are you sure you want to delete the Route Card template for ${deleteConfirmRoute.partCode}? All ${deleteConfirmRoute.operations?.length} sequenced operations will be removed.`}
+          </p>
 
-            <p className="text-xs font-mono text-slate-300">
-              {deleteConfirmBom && `Are you sure you want to delete BOM formula ${deleteConfirmBom.bomCode}? All component relationships will be removed.`}
-              {deleteConfirmRoute && `Are you sure you want to delete the Route Card template for ${deleteConfirmRoute.partCode}? All ${deleteConfirmRoute.operations?.length} sequenced operations will be removed.`}
-            </p>
-
-            <div className="pt-3 border-t border-slate-800 flex justify-end gap-3 font-sans">
-              <button
-                type="button"
-                onClick={() => {
-                  setDeleteConfirmBom(null);
-                  setDeleteConfirmRoute(null);
-                }}
-                className="px-5 py-2.5 rounded-xl border border-slate-800 text-slate-300 hover:bg-slate-800"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (deleteConfirmBom) handleDeleteBOMConfirmed();
-                  if (deleteConfirmRoute) handleDeleteRouteConfirmed();
-                }}
-                className="px-6 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold shadow-lg shadow-rose-500/25"
-              >
-                Delete Record
-              </button>
-            </div>
+          <div className={`pt-3 border-t flex justify-end gap-3 font-sans ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+            <button
+              type="button"
+              onClick={() => {
+                setDeleteConfirmBom(null);
+                setDeleteConfirmRoute(null);
+              }}
+              className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (deleteConfirmBom) handleDeleteBOMConfirmed();
+                if (deleteConfirmRoute) handleDeleteRouteConfirmed();
+              }}
+              className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs cursor-pointer shadow-md shadow-rose-500/25 transition-all hover:scale-[1.01]"
+            >
+              Delete Record
+            </button>
           </div>
         </div>
-      )}
+      </Modal>
 
       {/* ========================================================================================= */}
       {/* MODAL 7: CREATE SHOPFLOOR JOB CARD (INTEGRATED WITH ACTIVE BOM & ROUTE CARD) */}
       {/* ========================================================================================= */}
-      {showNewJobModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-2xl rounded-3xl border p-7 space-y-6 shadow-2xl transition-all max-h-[90vh] overflow-y-auto ${
-            isDarkMode 
-              ? 'bg-slate-900/95 border-slate-800/80 text-white backdrop-blur-2xl' 
-              : 'bg-white border-slate-200 text-slate-900 shadow-2xl'
-          }`}>
-            <div className={`flex items-center justify-between border-b pb-4 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-[#5B75F8]/15 text-[#5B75F8] border border-[#5B75F8]/30">
-                  <Factory className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className={`font-bold text-base tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                    Create Shopfloor Job Card
-                  </h3>
-                  <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Schedule manufacturing operation traveler from active Order, BOM & Route Card
-                  </p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setShowNewJobModal(false)} 
-                className={`p-2 rounded-2xl border transition-all cursor-pointer ${
-                  isDarkMode 
-                    ? 'border-slate-800 bg-slate-950/60 text-slate-400 hover:text-white hover:bg-slate-800' 
-                    : 'border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                <X className="w-4 h-4" />
-              </button>
+      <Modal
+        isOpen={showNewJobModal}
+        onClose={() => setShowNewJobModal(false)}
+        maxWidth="2xl"
+        isDarkMode={isDarkMode}
+        icon={<Factory className="w-5 h-5" />}
+        title="Create Shopfloor Job Card"
+        subtitle="Schedule manufacturing operation traveler from active Order, BOM & Route Card"
+      >
+        <form onSubmit={handleCreateJobSubmit} className="space-y-4 text-xs font-sans">
+          {actionError && (
+            <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-500 dark:text-rose-400 text-xs font-mono flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>{actionError}</span>
+            </div>
+          )}
+          {/* Order PO Selector — Combobox (hides after selection, click to reopen) */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className={`text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Customer Order PO *
+              </label>
+              <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
+                isDarkMode ? 'text-slate-400 border-slate-700 bg-slate-800' : 'text-slate-500 border-slate-200 bg-white'
+              }`}>
+                {ordersWithPendingJobCards.length} pending
+              </span>
             </div>
 
-            <form onSubmit={handleCreateJobSubmit} className="space-y-4">
-              {actionError && (
-                <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-mono flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 shrink-0" />
-                  <span>{actionError}</span>
-                </div>
-              )}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Customer Order PO *</label>
-                  {eligibleOrders.length > 0 ? (
-                    <select
-                      value={newOrderPo}
-                      onChange={(e) => handleSelectOrder(e.target.value)}
-                      className={`w-full rounded-2xl border px-3.5 py-2.5 text-xs font-mono outline-none transition-all cursor-pointer ${
-                        isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                      }`}
-                    >
-                      {eligibleOrders.map(o => (
-                        <option key={o.id || o.poNo} value={o.poNo}>
-                          {o.poNo} — {o.customerName || 'Customer'} ({o.lines?.[0]?.itemCode || 'Item'})
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input
-                      type="text"
-                      required
-                      value={newOrderPo}
-                      onChange={(e) => setNewOrderPo(e.target.value)}
-                      placeholder="e.g. PO-2026-0891"
-                      className={`w-full rounded-2xl border px-3.5 py-2.5 text-xs font-mono outline-none transition-all ${
-                        isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                      }`}
-                    />
+            {ordersWithPendingJobCards.length > 0 ? (
+              <div className="relative">
+                {/* Search / display input */}
+                <div className="relative">
+                  <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`} />
+                  <input
+                    type="text"
+                    value={orderDropdownOpen ? orderSearchQuery : (newOrderPo || '')}
+                    onFocus={() => { setOrderDropdownOpen(true); setOrderSearchQuery(''); }}
+                    onChange={(e) => { setOrderSearchQuery(e.target.value); setOrderDropdownOpen(true); }}
+                    placeholder="Click to search by PO No., customer, or item..."
+                    className={`h-11 w-full rounded-xl border pl-9 pr-10 text-xs font-mono outline-none transition-all ${
+                      isDarkMode
+                        ? 'bg-[#0d1017] border-slate-700/80 text-white placeholder:text-slate-600 focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]'
+                        : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-[var(--accent-primary)] shadow-xs'
+                    }`}
+                  />
+                  {newOrderPo && !orderDropdownOpen && (
+                    <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                      isDarkMode ? 'bg-emerald-500/10 text-emerald-400' : 'bg-emerald-50 text-emerald-700'
+                    }`}>
+                      ✓ selected
+                    </div>
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Batch Qty (NOS) *</label>
-                  <input
-                    type="number"
-                    required
-                    value={newQty}
-                    onChange={(e) => setNewQty(Number(e.target.value))}
-                    className={`w-full rounded-2xl border px-3.5 py-2.5 text-xs font-mono font-bold outline-none transition-all ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-              </div>
+                {/* Dropdown list — only when open */}
+                {orderDropdownOpen && (
+                  <div className={`absolute z-50 mt-1 w-full rounded-2xl border shadow-xl overflow-hidden ${
+                    isDarkMode ? 'bg-[#0d1017] border-slate-800 shadow-black/50' : 'bg-white border-slate-200 shadow-slate-200'
+                  }`}>
+                    <div className="max-h-52 overflow-y-auto divide-y">
+                      {filteredOrdersForJobCard.length > 0 ? filteredOrdersForJobCard.map(o => {
+                        const pendingLines = (o.lines || []).filter(line =>
+                          !jobCards.find(jc =>
+                            (jc.orderPo === o.poNo || jc.orderPo === o.id) &&
+                            jc.partCode?.toLowerCase().trim() === line.itemCode?.toLowerCase().trim()
+                          )
+                        );
+                        const isSelected = newOrderPo === o.poNo;
+                        return (
+                          <button
+                            key={o.id || o.poNo}
+                            type="button"
+                            onMouseDown={() => {
+                              handleSelectOrder(o.poNo);
+                              setOrderSearchQuery('');
+                              setOrderDropdownOpen(false);
+                            }}
+                            className={`w-full text-left px-3.5 py-2.5 text-xs transition-all ${
+                              isSelected
+                                ? isDarkMode ? 'bg-[var(--accent-primary)]/15 border-l-2 border-[var(--accent-primary)]' : 'bg-indigo-50 border-l-2 border-indigo-500'
+                                : isDarkMode ? 'hover:bg-slate-800/80 border-l-2 border-transparent' : 'hover:bg-slate-50 border-l-2 border-transparent'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span className={`font-mono font-bold ${isSelected ? 'text-[var(--accent-primary)]' : isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>
+                                {o.poNo}
+                              </span>
+                              <span className={`shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded font-mono ${
+                                isDarkMode ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-amber-50 text-amber-700 border border-amber-200'
+                              }`}>
+                                {pendingLines.length} item{pendingLines.length !== 1 ? 's' : ''} pending
+                              </span>
+                            </div>
+                            <div className={`text-[10px] mt-0.5 truncate ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                              {o.customerName || 'Customer'} · {pendingLines.map(l => l.itemCode || l.itemDescription).filter(Boolean).join(', ') || 'Manual Entry'}
+                            </div>
+                          </button>
+                        );
+                      }) : (
+                        <div className={`text-center py-5 text-xs font-mono ${
+                          isDarkMode ? 'text-slate-500' : 'text-slate-400'
+                        }`}>
+                          No orders matching "{orderSearchQuery}"
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Part Code *</label>
-                  <input
-                    type="text"
-                    required
-                    value={newPartCode}
-                    onChange={(e) => setNewPartCode(e.target.value)}
-                    className={`w-full rounded-2xl border px-3.5 py-2.5 text-xs font-mono outline-none transition-all ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Drawing Rev *</label>
-                  <input
-                    type="text"
-                    required
-                    value={newDrawingRev}
-                    onChange={(e) => setNewDrawingRev(e.target.value)}
-                    className={`w-full rounded-2xl border px-3.5 py-2.5 text-xs font-mono outline-none transition-all ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Heat/Lot # (Optional)</label>
-                  <input
-                    type="text"
-                    value={newHeatLot}
-                    onChange={(e) => setNewHeatLot(e.target.value)}
-                    placeholder="Optional"
-                    className={`w-full rounded-2xl border px-3.5 py-2.5 text-xs font-mono outline-none transition-all ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
+                {/* Click-outside overlay */}
+                {orderDropdownOpen && (
+                  <div className="fixed inset-0 z-40" onMouseDown={() => setOrderDropdownOpen(false)} />
+                )}
               </div>
+            ) : (
+              <input
+                type="text"
+                required
+                value={newOrderPo}
+                onChange={(e) => setNewOrderPo(e.target.value)}
+                placeholder="e.g. PO-2026-0891 (no pending orders found)"
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                }`}
+              />
+            )}
 
-              <div>
-                <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Part Description *</label>
+            {/* Selected order confirmation strip */}
+            {newOrderPo && !orderDropdownOpen && (() => {
+              const selOrder = eligibleOrders.find(o => o.poNo === newOrderPo || o.id === newOrderPo);
+              if (!selOrder) return null;
+              return (
+                <div className={`mt-2 flex items-center gap-2 text-[11px] font-mono px-2.5 py-1.5 rounded-lg ${
+                  isDarkMode ? 'bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]' : 'bg-indigo-50 text-indigo-700'
+                }`}>
+                  <Check className="w-3 h-3 shrink-0" />
+                  <span className="font-bold">{selOrder.poNo}</span>
+                  <span className="opacity-70">· {selOrder.customerName}</span>
+                </div>
+              );
+            })()}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Batch Qty (NOS) *</label>
+              <input
+                type="number"
+                required
+                value={newQty}
+                onChange={(e) => setNewQty(Number(e.target.value))}
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono font-bold outline-none transition-all ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                }`}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            {/* FG Number — Inventory-Indexed Picker */}
+            <div className="col-span-3">
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Finished Goods No. *
+                <span className={`ml-2 text-[10px] normal-case font-normal px-1.5 py-0.5 rounded border ${
+                  isDarkMode ? 'border-slate-700 text-slate-400 bg-slate-800' : 'border-slate-200 text-slate-500 bg-white'
+                }`}>
+                  {finishedGoodsMasters.length} items in inventory
+                </span>
+              </label>
+
+              {finishedGoodsMasters.length > 0 ? (
+                <div className="relative">
+                  {/* Selected display / search input */}
+                  <div className="relative">
+                    <Package className={`absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 ${
+                      isDarkMode ? 'text-slate-500' : 'text-slate-400'
+                    }`} />
+                    <input
+                      type="text"
+                      value={fgDropdownOpen ? fgSearchQuery : newPartCode}
+                      onFocus={() => { setFgDropdownOpen(true); setFgSearchQuery(''); }}
+                      onChange={(e) => { setFgSearchQuery(e.target.value); setFgDropdownOpen(true); }}
+                      placeholder="Search FG code, name, or part no..."
+                      className={`h-11 w-full rounded-xl border pl-9 pr-10 text-xs font-mono outline-none transition-all ${
+                        isDarkMode
+                          ? 'bg-[#0d1017] border-slate-700/80 text-white placeholder:text-slate-600 focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]'
+                          : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-[var(--accent-primary)] shadow-xs'
+                      }`}
+                    />
+                    {newPartCode && !fgDropdownOpen && (
+                      <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                        isDarkMode ? 'bg-emerald-500/10 text-emerald-400' : 'bg-emerald-50 text-emerald-700'
+                      }`}>
+                        ✓ linked
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Dropdown list */}
+                  {fgDropdownOpen && (
+                    <div className={`absolute z-50 mt-1 w-full rounded-2xl border shadow-xl overflow-hidden ${
+                      isDarkMode ? 'bg-[#0d1017] border-slate-800 shadow-black/50' : 'bg-white border-slate-200 shadow-slate-200'
+                    }`}>
+                      <div className="max-h-52 overflow-y-auto divide-y">
+                        {filteredFGMasters.length > 0 ? filteredFGMasters.map(m => (
+                          <button
+                            key={m.id || m.code}
+                            type="button"
+                            onMouseDown={() => handleSelectFG(m)}
+                            className={`w-full text-left px-3.5 py-2.5 transition-all ${
+                              newPartCode === m.code
+                                ? isDarkMode ? 'bg-[var(--accent-primary)]/15 border-l-2 border-[var(--accent-primary)]' : 'bg-indigo-50 border-l-2 border-indigo-500'
+                                : isDarkMode ? 'hover:bg-slate-800/80 border-l-2 border-transparent' : 'hover:bg-slate-50 border-l-2 border-transparent'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span className={`text-xs font-mono font-bold ${
+                                newPartCode === m.code ? 'text-[var(--accent-primary)]' : isDarkMode ? 'text-slate-200' : 'text-slate-900'
+                              }`}>{m.code}</span>
+                              {m.unit && (
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono shrink-0 ${
+                                  isDarkMode ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500'
+                                }`}>{m.unit}</span>
+                              )}
+                            </div>
+                            <div className={`text-[11px] mt-0.5 truncate ${
+                              isDarkMode ? 'text-slate-400' : 'text-slate-600'
+                            }`}>{m.name || m.description}</div>
+                            {m.partNo && (
+                              <div className={`text-[10px] font-mono mt-0.5 ${
+                                isDarkMode ? 'text-slate-600' : 'text-slate-400'
+                              }`}>Drwg: {m.partNo}</div>
+                            )}
+                          </button>
+                        )) : (
+                          <div className={`text-center py-5 text-xs font-mono ${
+                            isDarkMode ? 'text-slate-500' : 'text-slate-400'
+                          }`}>
+                            No finished goods matching "{fgSearchQuery}"
+                          </div>
+                        )}
+                      </div>
+                      <div
+                        className={`px-3 py-2 border-t text-[10px] font-mono cursor-pointer transition-colors ${
+                          isDarkMode ? 'border-slate-800 text-slate-500 hover:text-slate-300' : 'border-slate-100 text-slate-400 hover:text-slate-700'
+                        }`}
+                        onMouseDown={() => { setFgDropdownOpen(false); }}
+                      >
+                        ✎ Type manually — or close to enter a custom code above
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Click-outside overlay */}
+                  {fgDropdownOpen && (
+                    <div className="fixed inset-0 z-40" onMouseDown={() => setFgDropdownOpen(false)} />
+                  )}
+                </div>
+              ) : (
+                /* No masters loaded — plain manual input */
                 <input
                   type="text"
                   required
-                  value={newPartDesc}
-                  onChange={(e) => setNewPartDesc(e.target.value)}
-                  placeholder="e.g. MAIN SPINDLE HOUSING 120MM"
-                  className={`w-full rounded-2xl border px-4 py-3 text-xs outline-none transition-all ${
-                    isDarkMode 
-                      ? 'bg-slate-950/80 border-slate-800 text-white focus:border-[#5B75F8]' 
-                      : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#5B75F8]'
+                  value={newPartCode}
+                  onChange={(e) => setNewPartCode(e.target.value)}
+                  placeholder="e.g. FG-0001 (no inventory masters loaded)"
+                  className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                    isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
                   }`}
                 />
-              </div>
+              )}
+            </div>
 
-              {/* Connected Active BOM & Route Card Intel Card */}
-              <div className={`p-4 rounded-2xl border space-y-3 font-mono text-xs ${
-                isDarkMode ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50 border-slate-200'
-              }`}>
-                <div className="flex items-center justify-between text-[11px] font-bold uppercase">
-                  <span className="text-[#7B92FF] flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-[#5B75F8]" />
-                    Linked Manufacturing Configuration
-                  </span>
-                  <span className="text-slate-400">Engineering Check</span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className={`p-2.5 rounded-xl border ${
-                    linkedBOMForNewJob ? (isDarkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white') : 'border-rose-500/30 bg-rose-500/10'
-                  }`}>
-                    <div className="text-[10px] text-slate-400">WHAT Formula (BOM):</div>
-                    {linkedBOMForNewJob ? (
-                      <div className="font-bold text-emerald-400 text-xs mt-0.5">
-                        {linkedBOMForNewJob.bomCode} ({linkedBOMForNewJob.components?.length || 0} Components)
-                      </div>
-                    ) : (
-                      <div className="text-rose-400 text-[11px] font-bold mt-0.5">
-                        No BOM found (Direct manual issue)
-                      </div>
-                    )}
-                  </div>
-
-                  <div className={`p-2.5 rounded-xl border ${
-                    linkedRouteForNewJob ? (isDarkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white') : 'border-amber-500/30 bg-amber-500/10'
-                  }`}>
-                    <div className="text-[10px] text-slate-400">HOW Sequence (Route Card):</div>
-                    {linkedRouteForNewJob ? (
-                      <div className="font-bold text-emerald-400 text-xs mt-0.5">
-                        {linkedRouteForNewJob.operations?.length} Stages ({linkedRouteForNewJob.totalStandardTimeMinutes || 45} mins total)
-                      </div>
-                    ) : (
-                      <div className="text-amber-400 text-[11px] font-bold mt-0.5">
-                        Standard Single-Stage Machining
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Machine Center *</label>
-                  <input
-                    type="text"
-                    required
-                    value={newMachine}
-                    onChange={(e) => setNewMachine(e.target.value)}
-                    placeholder="e.g. VMC-01 (Vertical Milling)"
-                    className={`w-full rounded-2xl border px-4 py-3 text-xs font-mono outline-none transition-all ${
-                      isDarkMode 
-                        ? 'bg-slate-950/80 border-slate-800 text-white focus:border-[#5B75F8]' 
-                        : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#5B75F8]'
-                    }`}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Target Completion Date</label>
-                  <input
-                    type="date"
-                    required
-                    value={newTargetDate}
-                    onChange={(e) => setNewTargetDate(e.target.value)}
-                    className={`w-full rounded-2xl border px-3.5 py-2.5 text-xs font-mono outline-none transition-all ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-end gap-3 font-sans">
-                <button 
-                  type="button" 
-                  onClick={() => setShowNewJobModal(false)} 
-                  className={`px-5 py-2.5 rounded-2xl border text-xs font-mono font-bold cursor-pointer transition-all ${
-                    isDarkMode 
-                      ? 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800' 
-                      : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-                  }`}
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  disabled={isSubmittingJobCard}
-                  className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs font-mono cursor-pointer shadow-lg shadow-[#5B75F8]/25 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 flex items-center gap-2"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isSubmittingJobCard ? 'animate-spin' : ''}`} />
-                  <span>{isSubmittingJobCard ? 'Releasing Job Card...' : 'Release Job Card'}</span>
-                </button>
-              </div>
-            </form>
+            {/* Drawing Rev */}
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Drawing Rev *</label>
+              <input
+                type="text"
+                required
+                value={newDrawingRev}
+                onChange={(e) => setNewDrawingRev(e.target.value)}
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Heat/Lot # (Optional)</label>
+              <input
+                type="text"
+                value={newHeatLot}
+                onChange={(e) => setNewHeatLot(e.target.value)}
+                placeholder="Optional"
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                }`}
+              />
+            </div>
           </div>
-        </div>
-      )}
+
+          <div>
+            <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Part Description *</label>
+            <input
+              type="text"
+              required
+              value={newPartDesc}
+              onChange={(e) => setNewPartDesc(e.target.value)}
+              placeholder="e.g. MAIN SPINDLE HOUSING 120MM"
+              className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
+                isDarkMode 
+                  ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
+                  : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+              }`}
+            />
+          </div>
+
+          {/* Connected Active BOM & Route Card Intel Card */}
+          <div className={`p-4 rounded-2xl border space-y-3 font-mono text-xs ${
+            isDarkMode ? 'bg-[#0d1017] border-slate-800' : 'bg-slate-50 border-slate-200'
+          }`}>
+            <div className="flex items-center justify-between text-[11px] font-bold uppercase">
+              <span className="text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
+                Linked Manufacturing Configuration
+              </span>
+              <span className={isDarkMode ? 'text-slate-400' : 'text-slate-500'}>Engineering Check</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className={`p-2.5 rounded-xl border ${
+                linkedBOMForNewJob ? (isDarkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white') : 'border-rose-500/30 bg-rose-500/10'
+              }`}>
+                <div className={`text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>WHAT Formula (BOM):</div>
+                {linkedBOMForNewJob ? (
+                  <div className="font-bold text-emerald-600 dark:text-emerald-400 text-xs mt-0.5">
+                    {linkedBOMForNewJob.bomCode} ({linkedBOMForNewJob.components?.length || 0} Components)
+                  </div>
+                ) : (
+                  <div className="text-rose-500 dark:text-rose-400 text-[11px] font-bold mt-0.5">
+                    No BOM found (Direct manual issue)
+                  </div>
+                )}
+              </div>
+
+              <div className={`p-2.5 rounded-xl border ${
+                linkedRouteForNewJob ? (isDarkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white') : 'border-amber-500/30 bg-amber-500/10'
+              }`}>
+                <div className={`text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>HOW Sequence (Route Card):</div>
+                {linkedRouteForNewJob ? (
+                  <div className="font-bold text-emerald-600 dark:text-emerald-400 text-xs mt-0.5">
+                    {linkedRouteForNewJob.operations?.length} Stages ({linkedRouteForNewJob.totalStandardTimeMinutes || 45} mins total)
+                  </div>
+                ) : (
+                  <div className="text-amber-600 dark:text-amber-400 text-[11px] font-bold mt-0.5">
+                    Standard Single-Stage Machining
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Machine Center *</label>
+              <input
+                type="text"
+                required
+                value={newMachine}
+                onChange={(e) => setNewMachine(e.target.value)}
+                placeholder="e.g. VMC-01 (Vertical Milling)"
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                  isDarkMode 
+                    ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
+                    : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Target Completion Date</label>
+              <input
+                type="date"
+                required
+                value={newTargetDate}
+                onChange={(e) => setNewTargetDate(e.target.value)}
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                }`}
+              />
+            </div>
+          </div>
+
+          <div className={`pt-4 border-t flex items-center justify-end gap-3 font-sans ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+            <button 
+              type="button" 
+              onClick={() => setShowNewJobModal(false)} 
+              className={`px-4 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
+                isDarkMode 
+                  ? 'border-slate-700 text-slate-300 hover:bg-slate-800' 
+                  : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              disabled={isSubmittingJobCard}
+              className="px-5 py-2 rounded-xl bg-[var(--accent-primary)] hover:brightness-110 text-white font-bold text-xs cursor-pointer shadow-md shadow-[var(--accent-shadow)] transition-all hover:scale-[1.01] active:scale-[0.98] disabled:opacity-50 flex items-center gap-2"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSubmittingJobCard ? 'animate-spin' : ''}`} />
+              <span>{isSubmittingJobCard ? 'Releasing Job Card...' : 'Release Job Card'}</span>
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       {/* ========================================================================================= */}
       {/* MODAL 8: LOG PRODUCTION SHIFT OUTPUT */}
       {/* ========================================================================================= */}
-      {selectedJobForLog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-md rounded-3xl border p-7 space-y-6 shadow-2xl transition-all ${
-            isDarkMode 
-              ? 'bg-slate-900/95 border-slate-800/80 text-white backdrop-blur-2xl shadow-[#5B75F8]/5' 
-              : 'bg-white border-slate-200 text-slate-900 shadow-2xl'
-          }`}>
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-[#5B75F8]/15 text-[#5B75F8] border border-[#5B75F8]/30">
-                  <Activity className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className={`font-bold text-base tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                    Log Shift Output
-                  </h3>
-                  <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Record operational production output
-                  </p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setSelectedJobForLog(null)} 
-                className={`p-2 rounded-2xl border transition-all cursor-pointer ${
-                  isDarkMode 
-                    ? 'border-slate-800 bg-slate-950/60 text-slate-400 hover:text-white hover:bg-slate-800' 
-                    : 'border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                <X className="w-4 h-4" />
-              </button>
+      <Modal
+        isOpen={Boolean(selectedJobForLog)}
+        onClose={() => setSelectedJobForLog(null)}
+        maxWidth="md"
+        isDarkMode={isDarkMode}
+        icon={<Activity className="w-5 h-5" />}
+        title="Log Shift Output"
+        subtitle="Record operational production output"
+      >
+        {selectedJobForLog && (
+          <form onSubmit={handleLogSubmit} className="space-y-4 text-xs font-sans">
+            <div className={`p-3.5 rounded-2xl border font-mono font-bold text-xs ${
+              isDarkMode ? 'bg-[#0d1017] border-slate-800 text-[var(--accent-text-dark)]' : 'bg-slate-50 border-slate-200 text-[var(--accent-text-light)]'
+            }`}>
+              {selectedJobForLog.jobNo} — {selectedJobForLog.partDescription}
             </div>
 
-            <form onSubmit={handleLogSubmit} className="space-y-4">
-              <div className={`p-3.5 rounded-2xl border font-mono font-bold text-xs ${
-                isDarkMode ? 'bg-slate-950/80 border-slate-800 text-[#7B92FF]' : 'bg-slate-50 border-slate-200 text-[#5B75F8]'
-              }`}>
-                {selectedJobForLog.jobNo} — {selectedJobForLog.partDescription}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Step #</label>
-                  <input
-                    type="number"
-                    value={logStepNo}
-                    onChange={(e) => setLogStepNo(Number(e.target.value))}
-                    className={`w-full rounded-2xl border px-4 py-3 text-xs font-mono outline-none ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Qty Produced</label>
-                  <input
-                    type="number"
-                    value={logDoneQty}
-                    onChange={(e) => setLogDoneQty(Number(e.target.value))}
-                    className={`w-full rounded-2xl border px-4 py-3 text-xs font-mono font-bold outline-none ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-              </div>
-
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Operation Name</label>
+                <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Step #</label>
                 <input
-                  type="text"
-                  value={logOperation}
-                  onChange={(e) => setLogOperation(e.target.value)}
-                  className={`w-full rounded-2xl border px-4 py-3 text-xs outline-none ${
-                    isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                  type="number"
+                  value={logStepNo}
+                  onChange={(e) => setLogStepNo(Number(e.target.value))}
+                  className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none ${
+                    isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)]'
                   }`}
                 />
               </div>
-
-              <div className="pt-4 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-end gap-3 font-sans">
-                <button 
-                  type="button" 
-                  onClick={() => setSelectedJobForLog(null)} 
-                  className={`px-5 py-2.5 rounded-2xl border text-xs font-mono font-bold cursor-pointer transition-all ${
-                    isDarkMode 
-                      ? 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800' 
-                      : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+              <div>
+                <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Qty Produced</label>
+                <input
+                  type="number"
+                  value={logDoneQty}
+                  onChange={(e) => setLogDoneQty(Number(e.target.value))}
+                  className={`h-11 w-full rounded-xl border px-3 text-xs font-mono font-bold outline-none ${
+                    isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)]'
                   }`}
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs font-mono cursor-pointer shadow-lg shadow-[#5B75F8]/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  Log Production Shift
-                </button>
+                />
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+            </div>
+
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Operation Name</label>
+              <input
+                type="text"
+                value={logOperation}
+                onChange={(e) => setLogOperation(e.target.value)}
+                className={`h-11 w-full rounded-xl border px-3 text-xs outline-none ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)]'
+                }`}
+              />
+            </div>
+
+            <div className={`pt-4 border-t flex items-center justify-end gap-3 font-sans ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+              <button 
+                type="button" 
+                onClick={() => setSelectedJobForLog(null)} 
+                className={`px-4 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
+                  isDarkMode 
+                    ? 'border-slate-700 text-slate-300 hover:bg-slate-800' 
+                    : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                Cancel
+              </button>
+              <button 
+                type="submit" 
+                className="px-5 py-2 rounded-xl bg-[var(--accent-primary)] hover:brightness-110 text-white font-bold text-xs cursor-pointer shadow-md shadow-[var(--accent-shadow)] transition-all hover:scale-[1.01] active:scale-[0.98]"
+              >
+                Log Production Shift
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
 
       {/* ========================================================================================= */}
       {/* MODAL 9: JOB CARD ROUTE TRAVELER & LIVE OPERATION EXECUTION */}
@@ -3909,32 +4047,32 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                         isDarkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-200'
                       }`}>
                         <div>
-                          <div className="text-[10px] text-slate-400 uppercase font-bold">Assigned Machine / Bay</div>
-                          <div className="mt-1 font-bold text-slate-200 flex items-center gap-1.5">
-                            <Cpu className="w-3.5 h-3.5 text-indigo-400" />
+                          <div className={`text-[10px] uppercase font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Assigned Machine / Bay</div>
+                          <div className={`mt-1 font-bold flex items-center gap-1.5 ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>
+                            <Cpu className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
                             <span>{selectedOp.machineId || activeJobCard.machine || 'CNC-01 Vertical Milling'}</span>
                           </div>
                         </div>
 
                         <div>
-                          <div className="text-[10px] text-slate-400 uppercase font-bold">Technician / Operator</div>
-                          <div className="mt-1 font-bold text-slate-200 flex items-center gap-1.5">
-                            <User className="w-3.5 h-3.5 text-indigo-400" />
+                          <div className={`text-[10px] uppercase font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Technician / Operator</div>
+                          <div className={`mt-1 font-bold flex items-center gap-1.5 ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>
+                            <User className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
                             <span>{selectedOp.operatorName || 'Sachin G. (Lead Machinist)'}</span>
                           </div>
-                          <div className="text-[10px] text-emerald-400 mt-0.5 flex items-center gap-1">
+                          <div className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-0.5 flex items-center gap-1 font-medium">
                             <ShieldCheck className="w-3 h-3" />
                             <span>Skill Certified: {selectedOp.requiredCertification || 'Level-2 Machinist'}</span>
                           </div>
                         </div>
 
                         <div>
-                          <div className="text-[10px] text-slate-400 uppercase font-bold">QC Inspection Gate</div>
-                          <div className="mt-1 font-bold text-emerald-400 flex items-center gap-1.5">
-                            <CheckCheck className="w-4 h-4 text-emerald-400" />
+                          <div className={`text-[10px] uppercase font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>QC Inspection Gate</div>
+                          <div className="mt-1 font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                            <CheckCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                             <span>Passed & Signed Off</span>
                           </div>
-                          <div className="text-[10px] text-slate-400 mt-0.5">
+                          <div className={`text-[10px] mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                             Heat Lot: {activeJobCard.materialIssuedLot || 'HEAT-LOT-VERIFIED'}
                           </div>
                         </div>
@@ -3942,10 +4080,10 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
 
                       {/* Remarks & Readings */}
                       <div className={`p-4 rounded-2xl border text-xs ${isDarkMode ? 'bg-slate-900/60 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-700'}`}>
-                        <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">
+                        <div className={`text-[10px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                           Activity Logs, Parameter Readings & Operator Remarks:
                         </div>
-                        <p className="font-sans text-slate-300">
+                        <p className={`font-sans ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                           {selectedOp.notes || 'Dimensions verified within 0.02mm tolerance; spindle speed 1200 RPM; coolant checked. All critical parameters inspected OK.'}
                         </p>
                       </div>
@@ -3955,22 +4093,22 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                     <form onSubmit={handleCompleteOpSubmit} className="space-y-4">
                       {/* Active timer banner */}
                       <div className={`p-4 rounded-2xl border flex items-center justify-between ${
-                        isDarkMode ? 'bg-purple-950/20 border-purple-500/30 text-purple-300' : 'bg-purple-50 border-purple-200 text-purple-800'
+                        isDarkMode ? 'bg-purple-950/20 border-purple-500/30 text-purple-300' : 'bg-purple-50 border-purple-200 text-purple-900'
                       }`}>
                         <div className="flex items-center gap-2.5 text-xs font-mono">
-                          <Play className="w-4 h-4 text-purple-400 fill-current animate-pulse" />
+                          <Play className="w-4 h-4 text-purple-500 dark:text-purple-400 fill-current animate-pulse" />
                           <span>
-                            Operation in progress on <strong className="text-white">{selectedOp.machineId || opMachineId || 'Bay'}</strong> by <strong className="text-white">{selectedOp.operatorName || opOperatorName || 'Operator'}</strong>
+                            Operation in progress on <strong className={isDarkMode ? 'text-white' : 'text-purple-950'}>{selectedOp.machineId || opMachineId || 'Bay'}</strong> by <strong className={isDarkMode ? 'text-white' : 'text-purple-950'}>{selectedOp.operatorName || opOperatorName || 'Operator'}</strong>
                           </span>
                         </div>
                         <div className="text-xs font-mono">
-                          Started at: <span className="font-bold text-purple-300">{formatStepDateTime(selectedOp.actualStartTime || new Date().toISOString())}</span>
+                          Started at: <span className="font-bold text-purple-600 dark:text-purple-300">{formatStepDateTime(selectedOp.actualStartTime || new Date().toISOString())}</span>
                         </div>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
-                          <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">
+                          <label className={`block text-[11px] font-bold uppercase mb-1.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-700'}`}>
                             Good Processed Output (NOS) *
                           </label>
                           <input
@@ -3979,14 +4117,14 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                             required
                             value={opQtyProcessed}
                             onChange={(e) => setOpQtyProcessed(Number(e.target.value))}
-                            className={`w-full rounded-2xl border px-4 py-3 text-xs font-mono font-bold outline-none transition-all ${
-                              isDarkMode ? 'bg-slate-900 border-slate-800 text-white focus:border-[#5B75F8]' : 'bg-white border-slate-200 text-slate-900 focus:border-[#5B75F8]'
+                            className={`h-11 w-full rounded-xl border px-3 text-xs font-mono font-bold outline-none transition-all ${
+                              isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
                             }`}
                           />
                         </div>
 
                         <div>
-                          <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">
+                          <label className={`block text-[11px] font-bold uppercase mb-1.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-700'}`}>
                             Rejection / Scrap Qty (NOS)
                           </label>
                           <input
@@ -3994,14 +4132,14 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                             min="0"
                             value={opQtyRejected}
                             onChange={(e) => setOpQtyRejected(Number(e.target.value))}
-                            className={`w-full rounded-2xl border px-4 py-3 text-xs font-mono font-bold outline-none transition-all ${
-                              isDarkMode ? 'bg-slate-900 border-slate-800 text-rose-400 focus:border-rose-500' : 'bg-white border-slate-200 text-rose-600 focus:border-rose-500'
+                            className={`h-11 w-full rounded-xl border px-3 text-xs font-mono font-bold outline-none transition-all ${
+                              isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-rose-400 focus:border-rose-500' : 'bg-slate-50 border-slate-300 text-rose-600 focus:border-rose-500 shadow-xs'
                             }`}
                           />
                         </div>
 
                         <div>
-                          <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">
+                          <label className={`block text-[11px] font-bold uppercase mb-1.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-700'}`}>
                             Actual Time Spent (Minutes) *
                           </label>
                           <input
@@ -4010,15 +4148,15 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                             required
                             value={opActualMinutes}
                             onChange={(e) => setOpActualMinutes(Number(e.target.value))}
-                            className={`w-full rounded-2xl border px-4 py-3 text-xs font-mono font-bold outline-none transition-all ${
-                              isDarkMode ? 'bg-slate-900 border-slate-800 text-indigo-400 focus:border-[#5B75F8]' : 'bg-white border-slate-200 text-indigo-600 focus:border-[#5B75F8]'
+                            className={`h-11 w-full rounded-xl border px-3 text-xs font-mono font-bold outline-none transition-all ${
+                              isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-indigo-400 focus:border-[var(--accent-primary)]' : 'bg-slate-50 border-slate-300 text-indigo-700 focus:border-[var(--accent-primary)] shadow-xs'
                             }`}
                           />
                         </div>
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">
+                        <label className={`block text-[11px] font-bold uppercase mb-1.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-700'}`}>
                           Activity Logs, Parameter Readings & Operator Remarks
                         </label>
                         <textarea
@@ -4026,8 +4164,8 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                           value={opNotes}
                           onChange={(e) => setOpNotes(e.target.value)}
                           placeholder="e.g. Dimensions verified within 0.02mm tolerance; spindle speed 1200 RPM; coolant checked."
-                          className={`w-full rounded-2xl border px-4 py-3 text-xs outline-none transition-all ${
-                            isDarkMode ? 'bg-slate-900 border-slate-800 text-white focus:border-[#5B75F8]' : 'bg-white border-slate-200 text-slate-900 focus:border-[#5B75F8]'
+                          className={`w-full rounded-xl border p-3 text-xs outline-none transition-all ${
+                            isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
                           }`}
                         />
                       </div>

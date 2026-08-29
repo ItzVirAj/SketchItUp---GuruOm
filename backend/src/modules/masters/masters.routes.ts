@@ -41,6 +41,6 @@ router.get('/dropdowns', requirePermission('masters', 'VIEW_ONLY'), (req, res) =
 
 // 7. Company Profile
 router.get('/company-profile', requirePermission('settings', 'VIEW_ONLY'), (req, res) => mastersController.getCompanyProfile(req, res));
-router.put('/company-profile', requirePermission('settings', 'FULL_APPROVE'), (req, res) => mastersController.updateCompanyProfile(req, res));
+router.put('/company-profile', requirePermission('settings', 'CREATE_EDIT'), (req, res) => mastersController.updateCompanyProfile(req, res));
 
 export default router;

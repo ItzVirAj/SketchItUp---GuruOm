@@ -108,7 +108,7 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
 
   return (
     <aside className={`hidden h-full shrink-0 overflow-visible p-3 pr-0 font-sans transition-[width] duration-300 lg:flex ${
-      isCollapsed ? 'w-[88px]' : 'w-[272px]'
+      isCollapsed ? 'w-[88px]' : 'w-[280px]'
     }`}>
       <div className={`console-sidebar ${isDarkMode ? 'console-sidebar-dark border-white/[0.07] bg-[#11151d] text-slate-300 shadow-[0_20px_55px_rgba(15,23,42,0.18)]' : 'console-sidebar-light border-slate-200 bg-white text-slate-700 shadow-[0_16px_42px_rgba(15,23,42,0.08)]'} relative flex h-full w-full flex-col overflow-visible rounded-[24px] border`}>
         <div className={`flex h-[76px] shrink-0 items-center border-b ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'} ${
@@ -145,16 +145,16 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
 
         <div ref={scrollContainerRef} data-lenis-prevent="true" className="no-scrollbar flex-1 overflow-y-auto px-3 py-4">
           {!isCollapsed && (
-            <div className={`mb-2 px-2 font-mono text-[9px] font-bold uppercase tracking-[0.18em] ${isDarkMode ? 'text-slate-600' : 'text-slate-400'}`}>Workspace</div>
+            <div className={`mb-2 px-2 font-mono text-[10px] font-bold uppercase tracking-[0.18em] ${isDarkMode ? 'text-slate-600' : 'text-slate-400'}`}>Workspace</div>
           )}
 
           <button type="button" onClick={() => handleSelectView('command-centre')} className={navButtonClass(currentView === 'command-centre')} title="Command Centre">
             {currentView === 'command-centre' && <span className={`absolute left-0 h-5 w-[3px] rounded-r-full ${isDarkMode ? 'bg-white' : 'bg-[var(--accent-primary)]'}`} />}
-            <LayoutGrid className="sidebar-icon h-[18px] w-[18px] shrink-0" />
+            <LayoutGrid className="sidebar-icon h-[19px] w-[19px] shrink-0" />
             {!isCollapsed && (
               <>
-                <span className="flex-1 text-left text-[13px] font-bold">Command Centre</span>
-                <span className="flex items-center gap-1.5 font-mono text-[8px] font-bold uppercase tracking-wider text-emerald-400">
+                <span className="flex-1 text-left text-[14.3px] font-bold">Command Centre</span>
+                <span className="flex items-center gap-1.5 font-mono text-[8.5px] font-bold uppercase tracking-wider text-emerald-400">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Live
                 </span>
               </>
@@ -163,8 +163,8 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
 
           {!isCollapsed && (
             <div className="mb-2 mt-6 flex items-center justify-between px-2">
-              <span className={`font-mono text-[9px] font-bold uppercase tracking-[0.18em] ${isDarkMode ? 'text-slate-600' : 'text-slate-400'}`}>Departments</span>
-              <span className={`rounded-md px-1.5 py-0.5 font-mono text-[8px] ${isDarkMode ? 'bg-white/[0.05] text-slate-500' : 'bg-slate-100 text-slate-500'}`}>{NAVIGATION_SECTIONS.length}</span>
+              <span className={`font-mono text-[10px] font-bold uppercase tracking-[0.18em] ${isDarkMode ? 'text-slate-600' : 'text-slate-400'}`}>Departments</span>
+              <span className={`rounded-md px-1.5 py-0.5 font-mono text-[8.5px] ${isDarkMode ? 'bg-white/[0.05] text-slate-500' : 'bg-slate-100 text-slate-500'}`}>{NAVIGATION_SECTIONS.length}</span>
             </div>
           )}
 
@@ -199,11 +199,11 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
                     title={isCollapsed ? section.label : undefined}
                   >
                     {hasActiveChild && <span className="absolute left-0 h-5 w-[3px] rounded-r-full bg-[var(--accent-primary)]" />}
-                    <SectionIcon className={`sidebar-icon h-[18px] w-[18px] shrink-0 ${hasActiveChild ? 'text-[var(--accent-text-dark)]' : ''}`} />
+                    <SectionIcon className={`sidebar-icon h-[19px] w-[19px] shrink-0 ${hasActiveChild ? 'text-[var(--accent-text-dark)]' : ''}`} />
                     {!isCollapsed && (
                       <>
-                        <span className="min-w-0 flex-1 truncate text-left text-[13px] font-bold">{section.label}</span>
-                        <ChevronDown className={`sidebar-chevron h-3.5 w-3.5 transition-transform ${isDarkMode ? 'text-slate-600' : 'text-slate-400'} ${isOpen ? `rotate-180 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}` : ''}`} />
+                        <span className="min-w-0 flex-1 truncate text-left text-[14.3px] font-bold">{section.label}</span>
+                        <ChevronDown className={`sidebar-chevron h-4 w-4 transition-transform ${isDarkMode ? 'text-slate-600' : 'text-slate-400'} ${isOpen ? `rotate-180 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}` : ''}`} />
                       </>
                     )}
                   </button>
@@ -236,9 +236,9 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
                                       : 'border-transparent text-slate-500 hover:border-slate-200 hover:bg-slate-100 hover:text-slate-900'
                                 }`}
                               >
-                                <ItemIcon className={`sidebar-icon h-3.5 w-3.5 shrink-0 ${isActive ? 'text-[var(--accent-text-dark)]' : ''}`} />
-                                <span className="min-w-0 flex-1 truncate text-[12px] font-semibold">{item.label}</span>
-                                {isActive && <ChevronRight className="h-3 w-3 shrink-0 text-[var(--accent-text-dark)]" />}
+                                <ItemIcon className={`sidebar-icon h-4 w-4 shrink-0 ${isActive ? 'text-[var(--accent-text-dark)]' : ''}`} />
+                                <span className="min-w-0 flex-1 truncate text-[14.4px] font-semibold">{item.label}</span>
+                                {isActive && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[var(--accent-text-dark)]" />}
                               </button>
                             );
                           })}
@@ -248,8 +248,8 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
                   </AnimatePresence>
 
                   {isCollapsed && hoveredSection === section.id && (
-                    <div className="absolute left-full top-0 z-50 ml-3 w-60 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 text-slate-900 shadow-[0_20px_60px_rgba(15,23,42,0.22)] dark:border-white/10 dark:bg-[#181d27] dark:text-white">
-                      <div className="flex items-center gap-2 border-b border-slate-100 px-2.5 py-2 text-xs font-extrabold dark:border-white/[0.07]">
+                    <div className="absolute left-full top-0 z-50 ml-3 w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 text-slate-900 shadow-[0_20px_60px_rgba(15,23,42,0.22)] dark:border-white/10 dark:bg-[#181d27] dark:text-white">
+                      <div className="flex items-center gap-2 border-b border-slate-100 px-2.5 py-2 text-[14px] font-extrabold dark:border-white/[0.07]">
                         <SectionIcon className="h-4 w-4 text-[var(--accent-primary)]" />
                         {section.label}
                       </div>
@@ -262,11 +262,11 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
                               key={item.id}
                               type="button"
                               onClick={() => handleSelectView(item.id)}
-                              className={`sidebar-module-btn flex w-full items-center gap-2.5 rounded-xl border px-2.5 py-2 text-left text-xs font-semibold ${
+                              className={`sidebar-module-btn flex w-full items-center gap-2.5 rounded-xl border px-2.5 py-2 text-left text-[14.4px] font-semibold ${
                                 isActive ? 'is-active border-transparent bg-[var(--accent-primary)] text-white' : 'border-transparent text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/[0.06]'
                               }`}
                             >
-                              <ItemIcon className="sidebar-icon h-3.5 w-3.5" />
+                              <ItemIcon className="sidebar-icon h-4 w-4" />
                               <span className="truncate">{item.label}</span>
                             </button>
                           );

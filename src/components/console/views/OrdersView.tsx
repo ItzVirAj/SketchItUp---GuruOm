@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Plus,
   Download,
@@ -40,9 +40,9 @@ interface OrdersViewProps {
   qcQueue?: QCInspection[];
   customers?: CustomerMaster[];
   masters?: MasterItem[];
-  isDarkMode: boolean;
-  onSelectOrder: (order: CustomerOrder) => void;
-  onCreateOrder: (newOrder: Partial<CustomerOrder>) => void;
+  isDarkMode?: boolean;
+  onSelectOrder?: (order: CustomerOrder) => void;
+  onCreateOrder?: (orderData: Partial<CustomerOrder>) => Promise<boolean | void> | boolean | void;
   onNavigateToCustomers?: () => void;
   onNavigateToMasters?: () => void;
 }
@@ -65,6 +65,19 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
   const [sortDirection, setSortDirection] = useState<'ASC' | 'DESC'>('DESC');
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [showNewModal, setShowNewModal] = useState(false);
+
+  // Filter masters to only finished goods items for Customer Purchase Orders
+  const finishedGoodsMasters = useMemo(() => {
+    const fg = masters.filter(m => 
+      m.isFinishedGoods === true || 
+      m.itemType === 'Finished Good' || 
+      m.itemType === 'Finished Goods' ||
+      m.category === 'FINISHED_GOODS' ||
+      (m.category && m.category.toLowerCase().includes('finished')) ||
+      (m.code && m.code.toUpperCase().startsWith('FG-'))
+    );
+    return fg.length > 0 ? fg : masters;
+  }, [masters]);
 
   // New order form state
   const [newSubType, setNewSubType] = useState<OrderSubType>('FRESH_PO');
@@ -142,7 +155,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
   };
 
   const addLineItem = () => {
-    const availableMaster = masters[lines.length % Math.max(1, masters.length)];
+    const pool = finishedGoodsMasters.length > 0 ? finishedGoodsMasters : masters;
+    const availableMaster = pool[lines.length % Math.max(1, pool.length)];
     if (availableMaster) {
       const defaultRate = Number(availableMaster.sellingPrice || availableMaster.saleRate || (availableMaster.standardCost ? availableMaster.standardCost : 100));
       setLines(prev => [
@@ -1282,17 +1296,18 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
       <Modal
         isOpen={showNewModal}
         onClose={() => setShowNewModal(false)}
-        maxWidth="3xl"
+        maxWidth="4xl"
         isDarkMode={isDarkMode}
         icon={<Plus className="w-5 h-5" />}
         title="Create Purchase Order / Blanket Call-Off"
         subtitle="Stage 1 Precondition: Customer Master Indexing & Credit Check"
         footer={
           <>
-            <div className={`flex items-center justify-between p-2.5 px-4 rounded-xl font-mono border ${isDarkMode ? 'bg-slate-950/80 border-slate-800' : 'bg-white border-slate-200 shadow-xs'
-              }`}>
-              <span className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Total Gross:</span>
-              <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm ml-2">
+            <div className={`flex items-center justify-between px-4 py-2.5 rounded-xl font-mono border shadow-xs ${
+              isDarkMode ? 'bg-[#0d1017] border-slate-800' : 'bg-slate-50 border-slate-200'
+            }`}>
+              <span className={`text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Total Gross:</span>
+              <span className="font-black text-emerald-500 dark:text-emerald-400 text-sm ml-3">
                 ₹{totalCalculatedGross.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </span>
             </div>
@@ -1301,15 +1316,18 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
               <button
                 type="button"
                 onClick={() => setShowNewModal(false)}
-                className={`min-h-[44px] px-4 py-2.5 rounded-xl text-xs font-mono font-bold cursor-pointer transition-all ${isDarkMode ? 'text-slate-400 hover:text-white bg-slate-800/50 hover:bg-slate-800' : 'border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                  }`}
+                className={`min-h-[42px] px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  isDarkMode 
+                    ? 'text-slate-300 hover:text-white bg-slate-800/60 hover:bg-slate-800 border border-slate-750' 
+                    : 'border border-slate-300 text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                }`}
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 form="create-po-form"
-                className="min-h-[44px] px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white font-bold text-xs font-mono shadow-lg cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="min-h-[42px] px-6 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-bold text-xs shadow-lg shadow-indigo-500/25 cursor-pointer transition-all hover:scale-[1.01] active:scale-[0.99]"
               >
                 Validate & Confirm Order
               </button>
@@ -1319,29 +1337,31 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
       >
         {/* Validation Error Banner */}
         {validationError && (
-          <div className="p-3.5 rounded-2xl bg-rose-500/15 border border-rose-500/40 text-rose-400 text-xs flex items-start gap-2.5">
+          <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-start gap-3 shadow-xs">
             <AlertTriangle className="w-4 h-4 text-rose-400 mt-0.5 shrink-0" />
             <div>
-              <div className="font-bold font-mono uppercase text-[11px]">Precondition Gate Blocked</div>
-              <div className="text-[11px] mt-0.5 leading-relaxed">{validationError}</div>
+              <div className="font-bold uppercase tracking-wider text-[11px] text-rose-400">Precondition Gate Blocked</div>
+              <div className="text-xs mt-1 leading-relaxed text-rose-200">{validationError}</div>
             </div>
           </div>
         )}
 
-        <form id="create-po-form" onSubmit={handleCreateSubmit} className="space-y-4 text-xs font-sans">
+        <form id="create-po-form" onSubmit={handleCreateSubmit} className="space-y-5 text-xs font-sans">
 
           {/* Sub-Type Selection - Fresh PO or Blanket Call-Off */}
-          <div className={`grid grid-cols-2 gap-2 p-1.5 rounded-2xl border ${isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-100 border-slate-200'
-            }`}>
+          <div className={`p-1.5 rounded-xl border grid grid-cols-2 gap-1.5 ${
+            isDarkMode ? 'bg-[#0d1017] border-slate-800' : 'bg-slate-100 border-slate-200'
+          }`}>
             {(['FRESH_PO', 'BLANKET_CALLOFF'] as OrderSubType[]).map(type => (
               <button
                 key={type}
                 type="button"
                 onClick={() => setNewSubType(type)}
-                className={`py-2 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${newSubType === type
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : (isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')
-                  }`}
+                className={`py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  newSubType === type
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-black'
+                    : (isDarkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50' : 'text-slate-600 hover:text-slate-900 hover:bg-white')
+                }`}
               >
                 {type === 'FRESH_PO' ? 'Fresh Customer PO' : 'Blanket Call-Off'}
               </button>
@@ -1350,10 +1370,11 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
 
           {/* Blanket PO Specific Inputs */}
           {newSubType === 'BLANKET_CALLOFF' && (
-            <div className={`p-3.5 rounded-2xl border grid grid-cols-2 gap-3 ${isDarkMode ? 'bg-purple-950/20 border-purple-500/30' : 'bg-purple-50 border-purple-200'
-              }`}>
+            <div className={`p-4 rounded-xl border grid grid-cols-1 sm:grid-cols-2 gap-3.5 ${
+              isDarkMode ? 'bg-purple-950/20 border-purple-500/30 text-purple-200' : 'bg-purple-50/80 border-purple-200 text-purple-900'
+            }`}>
               <div>
-                <label className={`block text-[10px] font-mono uppercase font-bold mb-1 ${isDarkMode ? 'text-purple-300' : 'text-purple-800'}`}>
+                <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-purple-300' : 'text-purple-800'}`}>
                   Standing Blanket PO #
                 </label>
                 <input
@@ -1361,20 +1382,22 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                   placeholder="e.g. BPO-2026-TATA-01"
                   value={newBlanketPoId}
                   onChange={(e) => setNewBlanketPoId(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none transition-all ${isDarkMode ? 'bg-slate-900 border-purple-500/40 text-white' : 'bg-white border-purple-300 text-slate-900'
-                    }`}
+                  className={`w-full p-2.5 rounded-xl border text-xs font-medium outline-none transition-all ${
+                    isDarkMode ? 'bg-[#0d1017] border-purple-500/40 text-white focus:border-purple-400' : 'bg-white border-purple-300 text-slate-900 focus:border-purple-600'
+                  }`}
                 />
               </div>
               <div>
-                <label className={`block text-[10px] font-mono uppercase font-bold mb-1 ${isDarkMode ? 'text-purple-300' : 'text-purple-800'}`}>
+                <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-purple-300' : 'text-purple-800'}`}>
                   Standing Balance Qty
                 </label>
                 <input
                   type="number"
                   value={newBlanketBalance}
                   onChange={(e) => setNewBlanketBalance(Number(e.target.value))}
-                  className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none transition-all ${isDarkMode ? 'bg-slate-900 border-purple-500/40 text-white' : 'bg-white border-purple-300 text-slate-900'
-                    }`}
+                  className={`w-full p-2.5 rounded-xl border text-xs font-medium outline-none transition-all ${
+                    isDarkMode ? 'bg-[#0d1017] border-purple-500/40 text-white focus:border-purple-400' : 'bg-white border-purple-300 text-slate-900 focus:border-purple-600'
+                  }`}
                 />
               </div>
             </div>
@@ -1382,13 +1405,14 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
 
           {/* Customer Master Check & Indexing */}
           {customers.length === 0 ? (
-            <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-300' : 'bg-amber-50 border-amber-300 text-amber-900'
-              }`}>
+            <div className={`p-4 rounded-xl border ${
+              isDarkMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-300' : 'bg-amber-50 border-amber-300 text-amber-900'
+            }`}>
               <div className="flex items-center gap-2 font-bold text-xs">
                 <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
                 <span>No Customer Master Found</span>
               </div>
-              <p className={`text-[11px] mt-1.5 leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+              <p className={`text-xs mt-1.5 leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
                 No customers are registered in Customer Master. You must create a Customer in Masters &gt; Customers first before proceeding to raise an order.
               </p>
               <button
@@ -1397,16 +1421,16 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                   setShowNewModal(false);
                   onNavigateToCustomers?.();
                 }}
-                className="mt-3 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-md transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="mt-3 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-md transition-all hover:scale-[1.01]"
               >
                 <span>Create Customer in Master First</span>
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className={`block text-[11px] font-mono font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                   PO Number *
                 </label>
                 <input
@@ -1415,13 +1439,14 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                   value={newPoNo}
                   onChange={(e) => setNewPoNo(e.target.value)}
                   placeholder="e.g. PO-2026-901"
-                  className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none transition-all ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white focus:border-indigo-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500 focus:bg-white'
-                    }`}
+                  className={`h-11 w-full rounded-xl border px-3 text-xs font-medium outline-none transition-all ${
+                    isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white shadow-xs'
+                  }`}
                 />
               </div>
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className={`block text-[11px] font-mono font-bold uppercase ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className={`block text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                     Customer * (Master Indexed)
                   </label>
                   {onNavigateToCustomers && (
@@ -1431,7 +1456,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                         setShowNewModal(false);
                         onNavigateToCustomers();
                       }}
-                      className="text-[10px] font-mono font-bold text-indigo-500 hover:underline cursor-pointer flex items-center gap-0.5"
+                      className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 hover:underline cursor-pointer flex items-center gap-1"
                     >
                       <span>+ New Master Customer</span>
                       <ArrowUpRight className="w-3 h-3" />
@@ -1442,8 +1467,9 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                   required
                   value={selectedCustomerCode}
                   onChange={(e) => handleSelectCustomer(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none transition-all ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white focus:border-indigo-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500 focus:bg-white'
-                    }`}
+                  className={`h-11 w-full rounded-xl border px-3 text-xs font-medium outline-none transition-all ${
+                    isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white shadow-xs'
+                  }`}
                 >
                   <option value="">Select registered customer from Master...</option>
                   {customers.map(c => (
@@ -1458,19 +1484,20 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
 
           {/* Hard Precondition Alert: 90-Day Customer Credit Hold */}
           {isCustomerCreditHeld && (
-            <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-rose-950/30 border-rose-500/40 text-rose-300' : 'bg-rose-50 border-rose-300 text-rose-900'
-              }`}>
-              <div className="flex items-center gap-2 font-bold text-xs">
-                <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+            <div className={`p-4 rounded-xl border shadow-sm ${
+              isDarkMode ? 'bg-rose-950/25 border-rose-500/40 text-rose-200' : 'bg-rose-50 border-rose-300 text-rose-900'
+            }`}>
+              <div className="flex items-center gap-2 font-bold text-xs text-rose-400">
+                <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>Customer on 90-Day Credit Overdue Hold</span>
               </div>
-              <p className={`text-[11px] mt-1 leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+              <p className={`text-xs mt-1 leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
                 {newCustomer || 'Selected customer'} has overdue payment receivables exceeding approved 90-day credit limits. New order creation is locked.
               </p>
 
               <div className={`mt-3 pt-3 border-t grid grid-cols-1 sm:grid-cols-2 gap-3 ${isDarkMode ? 'border-rose-500/30' : 'border-rose-200'}`}>
                 <div>
-                  <label className="block text-[10px] font-mono uppercase font-bold text-rose-400 mb-1">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-rose-400 mb-1.5">
                     Owner Override Authorizer Username *
                   </label>
                   <input
@@ -1479,12 +1506,13 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                     placeholder="e.g. sachin.owner / superadmin"
                     value={creditOverrideBy}
                     onChange={(e) => setCreditOverrideBy(e.target.value)}
-                    className={`w-full p-2 rounded-xl border text-xs font-mono outline-none ${isDarkMode ? 'bg-slate-950 border-rose-500/50 text-white' : 'bg-white border-rose-300 text-slate-900'
-                      }`}
+                    className={`w-full p-2.5 rounded-xl border text-xs font-medium outline-none ${
+                      isDarkMode ? 'bg-[#0d1017] border-rose-500/50 text-white focus:border-rose-400' : 'bg-white border-rose-300 text-slate-900 focus:border-rose-500'
+                    }`}
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-mono uppercase font-bold text-rose-400 mb-1">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-rose-400 mb-1.5">
                     Override Justification Reason
                   </label>
                   <input
@@ -1492,8 +1520,9 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                     placeholder="e.g. 50% advance received via RTGS"
                     value={creditOverrideReason}
                     onChange={(e) => setCreditOverrideReason(e.target.value)}
-                    className={`w-full p-2 rounded-xl border text-xs outline-none ${isDarkMode ? 'bg-slate-950 border-rose-500/50 text-white' : 'bg-white border-rose-300 text-slate-900'
-                      }`}
+                    className={`w-full p-2.5 rounded-xl border text-xs font-medium outline-none ${
+                      isDarkMode ? 'bg-[#0d1017] border-rose-500/50 text-white focus:border-rose-400' : 'bg-white border-rose-300 text-slate-900 focus:border-rose-500'
+                    }`}
                   />
                 </div>
               </div>
@@ -1501,40 +1530,43 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
           )}
 
           {/* Dates & Tax */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className={`block text-[11px] font-mono font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                 PO Date
               </label>
               <input
                 type="date"
                 value={newPoDate}
                 onChange={(e) => setNewPoDate(e.target.value)}
-                className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none transition-all ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white focus:border-indigo-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500 focus:bg-white'
-                  }`}
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-medium outline-none transition-all ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white shadow-xs'
+                }`}
               />
             </div>
             <div>
-              <label className={`block text-[11px] font-mono font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                 Promised Delivery Date
               </label>
               <input
                 type="date"
                 value={newDeliveryDate}
                 onChange={(e) => setNewDeliveryDate(e.target.value)}
-                className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none transition-all ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white focus:border-indigo-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500 focus:bg-white'
-                  }`}
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-medium outline-none transition-all ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white shadow-xs'
+                }`}
               />
             </div>
             <div>
-              <label className={`block text-[11px] font-mono font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                 Tax Category
               </label>
               <select
                 value={newTaxCategory}
                 onChange={(e) => setNewTaxCategory(e.target.value)}
-                className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none transition-all ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white focus:border-indigo-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500 focus:bg-white'
-                  }`}
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-medium outline-none transition-all ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white shadow-xs'
+                }`}
               >
                 <option value="GST 18%">GST 18% (Standard Engineering)</option>
                 <option value="GST 12%">GST 12% (Machined Castings)</option>
@@ -1545,53 +1577,60 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
           </div>
 
           {/* Line Items Table with Master Part Indexing */}
-          <div className="space-y-2 pt-2">
+          <div className="space-y-3 pt-1">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className={`text-xs font-mono font-bold uppercase ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
-                  Order Line Items ({lines.length})
+                <span className={`text-xs font-black uppercase tracking-wide ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                  Order Line Items
                 </span>
-                <span className={`text-[10px] font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                  • Drawing Revision & Master Matching
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                  isDarkMode ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                }`}>
+                  {lines.length} {lines.length === 1 ? 'part' : 'parts'}
                 </span>
               </div>
               <button
                 type="button"
                 onClick={addLineItem}
-                className="px-3 py-1 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 text-xs font-mono font-bold flex items-center gap-1 cursor-pointer transition-all"
+                className="px-3 py-1.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 hover:text-indigo-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all border border-indigo-500/20"
               >
-                <Plus className="w-3 h-3" />
+                <Plus className="w-3.5 h-3.5" />
                 <span>Add Part Line</span>
               </button>
             </div>
 
-            <div className={`rounded-2xl border overflow-hidden ${isDarkMode ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50/80 border-slate-200'}`}>
+            <div className={`rounded-xl border overflow-hidden shadow-xs ${
+              isDarkMode ? 'bg-[#0d1017] border-slate-800' : 'bg-white border-slate-200'
+            }`}>
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs font-mono">
+                <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className={`border-b text-[10px] uppercase ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'}`}>
-                      <th className="p-2.5 px-3">Master Part Code</th>
-                      <th className="p-2.5 px-3">Description</th>
-                      <th className="p-2.5 px-3">Cust Part No</th>
-                      <th className="p-2.5 px-3">Rev</th>
-                      <th className="p-2.5 px-3 w-20">Qty</th>
-                      <th className="p-2.5 px-3 w-24">Rate (₹)</th>
-                      <th className="p-2.5 px-3 text-right">Gross (₹)</th>
-                      <th className="p-2.5 px-2 text-center"></th>
+                    <tr className={`border-b text-[10px] font-bold uppercase tracking-wider ${
+                      isDarkMode ? 'bg-[#12161f] border-slate-800 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'
+                    }`}>
+                      <th className="p-3">Master Part Code</th>
+                      <th className="p-3">Description</th>
+                      <th className="p-3">Cust Part No</th>
+                      <th className="p-3">Rev</th>
+                      <th className="p-3 w-24">Qty</th>
+                      <th className="p-3 w-28">Rate (₹)</th>
+                      <th className="p-3 text-right">Gross (₹)</th>
+                      <th className="p-3 w-10 text-center"></th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
+                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800/80">
                     {lines.map((line, idx) => (
-                      <tr key={idx} className={isDarkMode ? 'hover:bg-slate-900/40' : 'hover:bg-white'}>
-                        <td className="p-2 px-3">
+                      <tr key={idx} className={isDarkMode ? 'hover:bg-slate-850/50' : 'hover:bg-slate-50'}>
+                        <td className="p-2.5">
                           <select
                             value={line.itemCode}
                             onChange={(e) => handleSelectItemForLine(idx, e.target.value)}
-                            className={`w-36 p-1.5 rounded-lg border text-xs font-mono outline-none ${isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
-                              }`}
+                            className={`w-40 p-2 rounded-lg border text-xs font-mono outline-none ${
+                              isDarkMode ? 'bg-[#141822] border-slate-700 text-white focus:border-indigo-500' : 'bg-white border-slate-300 text-slate-900 focus:border-indigo-500'
+                            }`}
                           >
-                            <option value="">-- Choose Master Part --</option>
-                            {masters.map(m => (
+                            <option value="">-- Choose FG Part --</option>
+                            {finishedGoodsMasters.map(m => (
                               <option key={m.code || m.id} value={m.code}>
                                 {m.code} - {m.name || m.description || m.partNo}
                               </option>
@@ -1599,68 +1638,74 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                             <option value="CUSTOM_ITEM">+ Custom / Ad-hoc Part</option>
                           </select>
                         </td>
-                        <td className="p-2 px-3">
+                        <td className="p-2.5">
                           <input
                             type="text"
                             value={line.itemDescription}
                             onChange={(e) => updateLineItem(idx, 'itemDescription', e.target.value)}
                             placeholder="Part description"
-                            className={`w-36 p-1.5 rounded-lg border text-xs font-sans outline-none ${isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
-                              }`}
+                            className={`w-36 p-2 rounded-lg border text-xs outline-none ${
+                              isDarkMode ? 'bg-[#141822] border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500' : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500'
+                            }`}
                           />
                         </td>
-                        <td className="p-2 px-3">
+                        <td className="p-2.5">
                           <input
                             type="text"
                             value={line.custPartNo}
                             onChange={(e) => updateLineItem(idx, 'custPartNo', e.target.value)}
                             placeholder="Drawing Part #"
-                            className={`w-28 p-1.5 rounded-lg border text-xs font-mono outline-none ${isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
-                              }`}
+                            className={`w-28 p-2 rounded-lg border text-xs font-mono outline-none ${
+                              isDarkMode ? 'bg-[#141822] border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500' : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500'
+                            }`}
                           />
                         </td>
-                        <td className="p-2 px-3">
+                        <td className="p-2.5">
                           <input
                             type="text"
                             value={line.drawingRevision}
                             onChange={(e) => updateLineItem(idx, 'drawingRevision', e.target.value)}
                             placeholder="Rev"
-                            className={`w-16 p-1.5 rounded-lg border text-xs font-mono text-center outline-none ${isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
-                              }`}
+                            className={`w-16 p-2 rounded-lg border text-xs font-mono text-center outline-none ${
+                              isDarkMode ? 'bg-[#141822] border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500' : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500'
+                            }`}
                           />
                         </td>
-                        <td className="p-2 px-3">
+                        <td className="p-2.5">
                           <input
                             type="number"
                             min="1"
                             value={line.orderQty}
                             onChange={(e) => updateLineItem(idx, 'orderQty', Number(e.target.value))}
-                            className={`w-16 p-1.5 rounded-lg border text-xs font-mono text-right outline-none ${isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
-                              }`}
+                            className={`w-20 p-2 rounded-lg border text-xs font-mono text-right outline-none ${
+                              isDarkMode ? 'bg-[#141822] border-slate-700 text-white focus:border-indigo-500' : 'bg-white border-slate-300 text-slate-900 focus:border-indigo-500'
+                            }`}
                           />
                         </td>
-                        <td className="p-2 px-3">
+                        <td className="p-2.5">
                           <input
                             type="number"
                             min="0"
                             step="0.5"
                             value={line.rate}
                             onChange={(e) => updateLineItem(idx, 'rate', Number(e.target.value))}
-                            className={`w-20 p-1.5 rounded-lg border text-xs font-mono text-right outline-none ${isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
-                              }`}
+                            className={`w-24 p-2 rounded-lg border text-xs font-mono text-right outline-none ${
+                              isDarkMode ? 'bg-[#141822] border-slate-700 text-white focus:border-indigo-500' : 'bg-white border-slate-300 text-slate-900 focus:border-indigo-500'
+                            }`}
                           />
                         </td>
-                        <td className="p-2 px-3 text-right font-bold text-slate-900 dark:text-white">
+                        <td className="p-2.5 text-right font-bold text-slate-900 dark:text-white font-mono">
                           ₹{(Number(line.orderQty) * Number(line.rate)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                         </td>
-                        <td className="p-2 px-2 text-center">
+                        <td className="p-2.5 text-center">
                           <button
                             type="button"
                             disabled={lines.length <= 1}
                             onClick={() => removeLineItem(idx)}
-                            className="p-1 rounded-lg text-slate-400 hover:text-rose-500 disabled:opacity-30 cursor-pointer"
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 disabled:opacity-30 cursor-pointer transition-colors"
+                            aria-label="Remove line item"
                           >
-                            <X className="w-3.5 h-3.5" />
+                            <X className="w-4 h-4" />
                           </button>
                         </td>
                       </tr>
@@ -1673,7 +1718,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
 
           {/* Remarks */}
           <div>
-            <label className={`block text-[11px] font-mono font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+            <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
               Special Packing / Quality Instructions
             </label>
             <input
@@ -1681,8 +1726,9 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
               placeholder="e.g. VCI Anti-rust polybag packing with Mill TC inspection report attached"
               value={newRemark}
               onChange={(e) => setNewRemark(e.target.value)}
-              className={`w-full p-2.5 rounded-xl border font-sans text-xs outline-none transition-all ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white focus:border-indigo-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500 focus:bg-white'
-                }`}
+              className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
+                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white shadow-xs'
+              }`}
             />
           </div>
 

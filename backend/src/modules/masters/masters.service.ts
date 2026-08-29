@@ -1,5 +1,7 @@
 import { getDbClient } from '../../config/database';
 import { z } from 'zod';
+import fs from 'fs';
+import path from 'path';
 import {
   MasterItemSchema,
   CustomerMasterSchema,
@@ -988,9 +990,50 @@ export class MastersService {
   }
 
   // ----------------------------------------------------
+  // Company Profile Persistence Helpers
+  // ----------------------------------------------------
+  private inMemoryCompanyProfile: any = null;
+
+  private getProfileFilePath(): string {
+    const dataDir = path.resolve(process.cwd(), 'backend', 'data');
+    if (!fs.existsSync(dataDir)) {
+      try {
+        fs.mkdirSync(dataDir, { recursive: true });
+      } catch (_) {}
+    }
+    return path.join(dataDir, 'company_profile.json');
+  }
+
+  private readProfileFromFile(): any | null {
+    try {
+      const filePath = this.getProfileFilePath();
+      if (fs.existsSync(filePath)) {
+        const raw = fs.readFileSync(filePath, 'utf-8');
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object' && parsed.legalName) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to read company_profile from disk:', e);
+    }
+    return null;
+  }
+
+  private writeProfileToFile(data: any): void {
+    try {
+      const filePath = this.getProfileFilePath();
+      fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+    } catch (e) {
+      console.warn('Failed to write company_profile to disk:', e);
+    }
+  }
+
+  // ----------------------------------------------------
   // Company Profile
   // ----------------------------------------------------
   async getCompanyProfile() {
+    // 1. Try DB first
     try {
       const { data, error } = await this.db
         .from('company_profile')
@@ -999,7 +1042,7 @@ export class MastersService {
         .single();
 
       if (!error && data) {
-        return {
+        const profile = {
           legalName: data.legal_name,
           address: data.address,
           phone: data.phone,
@@ -1009,12 +1052,27 @@ export class MastersService {
           state: data.state,
           stateCode: data.state_code
         };
+        this.inMemoryCompanyProfile = profile;
+        return profile;
       }
     } catch (err) {
       console.warn('Database getCompanyProfile error:', err);
     }
 
-    return {
+    // 2. Try disk storage
+    const diskProfile = this.readProfileFromFile();
+    if (diskProfile) {
+      this.inMemoryCompanyProfile = diskProfile;
+      return diskProfile;
+    }
+
+    // 3. Try in-memory cache
+    if (this.inMemoryCompanyProfile) {
+      return this.inMemoryCompanyProfile;
+    }
+
+    // 4. Default fallback
+    const defaultProfile = {
       legalName: 'GuruOm Industries LLP',
       address: 'Plot 42, GIDC Industrial Estate, Metoda, Rajkot, Gujarat - 360021',
       phone: '+91 98250 12345',
@@ -1024,19 +1082,37 @@ export class MastersService {
       state: 'Gujarat',
       stateCode: '24'
     };
+    this.inMemoryCompanyProfile = defaultProfile;
+    return defaultProfile;
   }
 
   async updateCompanyProfile(data: any) {
+    const formatted = {
+      legalName: data.legalName || 'GuruOm Industries LLP',
+      address: data.address || '',
+      phone: data.phone || '',
+      email: data.email || '',
+      gstin: data.gstin || '',
+      pan: data.pan || '',
+      state: data.state || 'Gujarat',
+      stateCode: data.stateCode || '24'
+    };
+
+    // 1. Write to memory and disk immediately for zero-delay persistence
+    this.inMemoryCompanyProfile = formatted;
+    this.writeProfileToFile(formatted);
+
+    // 2. Write to DB
     const record = {
       id: 'main',
-      legal_name: data.legalName,
-      address: data.address,
-      phone: data.phone,
-      email: data.email,
-      gstin: data.gstin,
-      pan: data.pan,
-      state: data.state,
-      state_code: data.stateCode,
+      legal_name: formatted.legalName,
+      address: formatted.address,
+      phone: formatted.phone,
+      email: formatted.email,
+      gstin: formatted.gstin,
+      pan: formatted.pan,
+      state: formatted.state,
+      state_code: formatted.stateCode,
       updated_at: new Date().toISOString()
     };
 
@@ -1048,7 +1124,20 @@ export class MastersService {
       console.warn('Database updateCompanyProfile error:', err);
     }
 
-    return data;
+    // 3. Broadcast real-time SSE event to all connected clients
+    notificationsService.broadcastEvent('company_profile_updated', formatted);
+
+    // 4. Audit Log
+    await logAudit({
+      actorEmail: 'admin@guruom.in',
+      action: 'COMPANY_PROFILE_UPDATED',
+      entityType: 'settings',
+      entityId: 'company_profile',
+      afterState: formatted,
+      metadata: { details: `Company profile updated: ${formatted.legalName} (${formatted.gstin})` }
+    }).catch(() => {});
+
+    return formatted;
   }
 }
 

@@ -98,6 +98,7 @@ import {
 } from '../services/supabaseServices';
 import { getAccessToken } from '../lib/apiClient';
 import { toast } from '../context/ToastContext';
+import { initialCompanyProfile } from '../data/consoleData';
 
 export function useOwnerOSData(currentUser?: SystemUser) {
   const [loading, setLoading] = useState<boolean>(true);
@@ -119,7 +120,16 @@ export function useOwnerOSData(currentUser?: SystemUser) {
   const [machines, setMachines] = useState<MachineMaster[]>([]);
   const [users, setUsers] = useState<SystemUser[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
-  const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
+  const [companyProfile, setCompanyProfile] = useState<CompanyProfile>(() => {
+    try {
+      const saved = localStorage.getItem('stratum_company_profile');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.legalName) return parsed;
+      }
+    } catch (_) {}
+    return initialCompanyProfile;
+  });
   const [approvals, setApprovals] = useState<PendingApproval[]>([]);
   const [lastSynced, setLastSynced] = useState<string>(() => new Date().toLocaleString('en-IN', { hour12: true }));
 
@@ -234,6 +244,19 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         try {
           const deleted = JSON.parse(event.data);
           setUsers(prev => prev.filter(u => u.id !== deleted.id));
+        } catch (_) {}
+      });
+
+      // Company profile event
+      eventSource.addEventListener('company_profile_updated', (event: MessageEvent) => {
+        try {
+          const updated = JSON.parse(event.data);
+          if (updated && updated.legalName) {
+            setCompanyProfile(updated);
+            try {
+              localStorage.setItem('stratum_company_profile', JSON.stringify(updated));
+            } catch (_) {}
+          }
         } catch (_) {}
       });
 
@@ -501,9 +524,18 @@ export function useOwnerOSData(currentUser?: SystemUser) {
 
   // Actions
   const handleSaveCompanyProfile = async (profile: CompanyProfile) => {
-    await updateCompanyProfile(profile);
-    setCompanyProfile(profile);
-    addAuditLog('company', 'update', 'Updated company profile details.');
+    try {
+      setCompanyProfile(profile);
+      try {
+        localStorage.setItem('stratum_company_profile', JSON.stringify(profile));
+      } catch (_) {}
+      await updateCompanyProfile(profile);
+      await addAuditLog('company', 'update', `Updated company profile details: ${profile.legalName} (${profile.gstin})`);
+      toast.success(`Company Profile updated successfully`, 'Profile Saved');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update company profile', 'Save Error');
+      throw err;
+    }
   };
 
   const handleCreateOrder = async (order: CustomerOrder) => {

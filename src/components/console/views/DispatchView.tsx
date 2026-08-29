@@ -10,11 +10,20 @@ import {
   Eye, 
   Loader2,
   FileText,
-  AlertCircle
+  AlertCircle,
+  Package,
+  Calendar,
+  Phone,
+  Hash,
+  ShieldCheck,
+  Building2,
+  ArrowRight,
+  ClipboardList
 } from 'lucide-react';
 import { DispatchChallan, CustomerOrder, VendorMaster } from '../../../types/console';
 import { getCurrentFinancialYear, formatDocumentNumber } from '../../../utils/statutoryAccountingEngine';
 import { ChallanDetailModal } from '../modals/ChallanDetailModal';
+import { Modal } from '../../common/Modal';
 
 interface DispatchViewProps {
   dispatches?: DispatchChallan[];
@@ -85,6 +94,20 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
   const draftCount = dispatches.filter(d => ['DRAFT', 'GENERATED', 'DISPATCH_READY'].includes(d.status)).length;
   const inTransitCount = dispatches.filter(d => d.status === 'DISPATCHED' || d.status === 'IN_TRANSIT').length;
 
+  // Orders whose challan is still pending to be made:
+  // - Order not in a terminal / already-dispatched status
+  // - No existing active challan (DRAFT/GENERATED/DISPATCH_READY/DISPATCHED/IN_TRANSIT) for that PO
+  const TERMINAL_ORDER_STATUSES = new Set(['DELIVERED', 'PAID', 'CLOSED', 'CANCELLED']);
+  const activeChallanPos = new Set(
+    dispatches
+      .filter(d => !['CANCELLED', 'DELIVERED'].includes(d.status))
+      .map(d => d.orderPo)
+  );
+  const pendingChallanOrders = orders.filter(o =>
+    !TERMINAL_ORDER_STATUSES.has(o.status as string) &&
+    !activeChallanPos.has(o.poNo)
+  );
+
   const filteredDispatches = dispatches.filter(d => {
     const matchesSearch = 
       d.challanNo.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -140,7 +163,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
 
   const handleOpenCreateModal = () => {
     setSubmitError(null);
-    setOrderPo(orders[0]?.poNo || '');
+    setOrderPo(pendingChallanOrders[0]?.poNo || orders[0]?.poNo || '');
     setVehicleNo('');
     setLrNo('');
     setEWayBillNo('');
@@ -640,345 +663,426 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
         </div>
       </div>
 
-      {/* Delivery Confirmation (POD) Modal */}
-      {showDeliveryModal && deliveryTargetChallan && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md font-sans overflow-y-auto">
-          <div className={`relative w-full max-w-md max-h-[92vh] sm:max-h-[90vh] flex flex-col rounded-t-3xl sm:rounded-[24px] border shadow-2xl transition-all overflow-hidden ${
-            isDarkMode ? 'border-white/[0.08] bg-[#171b24] text-white' : 'border-slate-200 bg-white text-slate-900'
-          }`}>
-            {/* Mobile Grab Handle */}
-            <div className="pt-2.5 pb-0 block sm:hidden">
-              <div className="w-12 h-1.5 bg-slate-700/80 rounded-full mx-auto" />
-            </div>
-
-            <div className={`flex items-center justify-between p-4 sm:p-6 border-b shrink-0 ${isDarkMode ? 'border-white/[0.07] bg-black/20' : 'border-slate-200 bg-slate-50/80'}`}>
-              <div className="flex items-center gap-2.5">
-                <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
-                  <CheckCircle2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-sm">Confirm Delivery (POD)</h3>
-                  <p className="text-[11px] text-slate-400 font-mono">
-                    Challan: <strong className="text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{deliveryTargetChallan.challanNo}</strong> • PO: <strong>{deliveryTargetChallan.orderPo}</strong>
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowDeliveryModal(false)}
-                className={`p-2 rounded-xl border transition-all cursor-pointer ${
-                  isDarkMode 
-                    ? 'border-white/[0.08] bg-black/20 text-slate-400 hover:text-white hover:bg-white/[0.05]' 
-                    : 'border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
+      {/* ========================================================================= */}
+      {/* ── DELIVERY CONFIRMATION (POD) MODAL ──                                   */}
+      {/* ========================================================================= */}
+      <Modal
+        isOpen={Boolean(showDeliveryModal && deliveryTargetChallan)}
+        onClose={() => !isDelivering && setShowDeliveryModal(false)}
+        maxWidth="lg"
+        isDarkMode={isDarkMode}
+        icon={<CheckCircle2 className="w-5 h-5 text-emerald-500" />}
+        title="Confirm Delivery (POD)"
+        subtitle={
+          deliveryTargetChallan ? (
+            <span className="font-mono text-xs">
+              Challan: <strong className="text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{deliveryTargetChallan.challanNo}</strong> • PO: <strong>{deliveryTargetChallan.orderPo}</strong>
+            </span>
+          ) : undefined
+        }
+      >
+        {deliveryTargetChallan && (
+          <form onSubmit={handleConfirmDeliverySubmit} className="space-y-4 text-xs font-sans">
             {deliveryError && (
-              <div className="mx-4 sm:mx-6 mt-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
+              <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-mono flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{deliveryError}</span>
               </div>
             )}
 
-            <form onSubmit={handleConfirmDeliverySubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
+            {/* Consignment Quick Badge */}
+            <div className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 ${
+              isDarkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+            }`}>
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+                  <PackageCheck className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className={`font-mono font-bold text-xs ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    {deliveryTargetChallan.challanNo}
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-mono">
+                    Transporter: {deliveryTargetChallan.transporter || 'Direct'} {deliveryTargetChallan.vehicleNo && `(${deliveryTargetChallan.vehicleNo})`}
+                  </div>
+                </div>
+              </div>
+              <span className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+                In Transit
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-[11px] font-mono font-bold text-slate-400 uppercase mb-1.5">
-                  Delivery Receipt Date
+                <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Delivery Receipt Date *
                 </label>
                 <input
                   type="date"
                   value={deliveryDate}
                   onChange={(e) => setDeliveryDate(e.target.value)}
-                  className={`w-full px-3.5 py-2.5 rounded-xl text-xs border font-mono focus:outline-none transition-all ${
+                  className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
                     isDarkMode 
-                      ? 'border-white/[0.08] bg-black/20 text-white focus:border-emerald-500' 
-                      : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-emerald-500'
+                      ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
+                      : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
                   }`}
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-mono font-bold text-slate-400 uppercase mb-1.5">
-                  Received By / Consignee Incharge
+                <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Received By / Store Incharge *
                 </label>
                 <input
                   type="text"
                   value={receivedBy}
                   onChange={(e) => setReceivedBy(e.target.value)}
                   placeholder="e.g. Customer Plant Inward / Store Manager"
-                  className={`w-full px-3.5 py-2.5 rounded-xl text-xs border focus:outline-none transition-all ${
+                  className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
                     isDarkMode 
-                      ? 'border-white/[0.08] bg-black/20 text-white focus:border-emerald-500' 
-                      : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-emerald-500'
+                      ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
+                      : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
                   }`}
                   required
                 />
               </div>
-
-              <div>
-                <label className="block text-[11px] font-mono font-bold text-slate-400 uppercase mb-1.5">
-                  Proof of Delivery (POD) Document
-                </label>
-                <input
-                  type="text"
-                  value={podDocumentUrl}
-                  onChange={(e) => setPodDocumentUrl(e.target.value)}
-                  placeholder="https://.../signed-pod.pdf or Physical Copy"
-                  className={`w-full px-3.5 py-2.5 rounded-xl text-xs border font-mono focus:outline-none transition-all ${
-                    isDarkMode 
-                      ? 'border-white/[0.08] bg-black/20 text-white focus:border-emerald-500' 
-                      : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-emerald-500'
-                  }`}
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-mono font-bold text-slate-400 uppercase mb-1.5">
-                  Receipt Remarks
-                </label>
-                <textarea
-                  rows={2}
-                  value={podRemarks}
-                  onChange={(e) => setPodRemarks(e.target.value)}
-                  placeholder="Verified quantity and outward seal intact..."
-                  className={`w-full px-3.5 py-2 rounded-xl text-xs border focus:outline-none transition-all ${
-                    isDarkMode 
-                      ? 'border-white/[0.08] bg-black/20 text-white focus:border-emerald-500' 
-                      : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-emerald-500'
-                  }`}
-                />
-              </div>
-
-              <div className={`flex items-center justify-end gap-2.5 pt-3 border-t shrink-0 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
-                <button
-                  type="button"
-                  onClick={() => setShowDeliveryModal(false)}
-                  className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-xl border text-xs font-mono font-semibold transition-all ${
-                    isDarkMode ? 'border-white/[0.08] bg-black/20 text-slate-400 hover:text-white hover:bg-white/[0.05]' : 'border-slate-200 text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isDelivering}
-                  className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 active:scale-[0.98]"
-                >
-                  {isDelivering ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Verifying POD...</span>
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>Confirm Delivery</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Issue Delivery Challan Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md font-sans overflow-y-auto">
-          <div className={`relative w-full max-w-lg max-h-[92vh] sm:max-h-[90vh] flex flex-col rounded-t-3xl sm:rounded-[24px] border shadow-2xl transition-all overflow-hidden ${
-            isDarkMode ? 'border-white/[0.08] bg-[#171b24] text-white' : 'border-slate-200 bg-white text-slate-900'
-          }`}>
-            {/* Mobile Grab Handle */}
-            <div className="pt-2.5 pb-0 block sm:hidden">
-              <div className="w-12 h-1.5 bg-slate-700/80 rounded-full mx-auto" />
             </div>
 
-            <div className={`flex items-center justify-between p-4 sm:p-6 border-b shrink-0 ${isDarkMode ? 'border-white/[0.07] bg-black/20' : 'border-slate-200 bg-slate-50/80'}`}>
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-[var(--accent-primary)]/15 text-[var(--accent-primary)] border border-[var(--accent-primary)]/30 shrink-0">
-                  <Truck className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className={`font-bold text-base tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                    Issue Delivery Challan
-                  </h3>
-                  <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Dispatch outward consignment & logistics manifest
-                  </p>
-                </div>
-              </div>
-              <button 
-                onClick={() => !isSubmitting && setShowCreateModal(false)} 
-                className={`p-2 rounded-xl border transition-all cursor-pointer ${
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Proof of Delivery (POD) Document URL
+              </label>
+              <input
+                type="text"
+                value={podDocumentUrl}
+                onChange={(e) => setPodDocumentUrl(e.target.value)}
+                placeholder="https://.../signed-pod.pdf or Physical Copy Serial"
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
                   isDarkMode 
-                    ? 'border-white/[0.08] bg-black/20 text-slate-400 hover:text-white hover:bg-white/[0.05]' 
-                    : 'border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                    ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
+                    : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
+                }`}
+              />
+            </div>
+
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Receipt Verification Remarks
+              </label>
+              <textarea
+                rows={2}
+                value={podRemarks}
+                onChange={(e) => setPodRemarks(e.target.value)}
+                placeholder="Verified quantity and outward seal intact with signed stamp..."
+                className={`w-full p-3 rounded-xl border text-xs outline-none transition-all ${
+                  isDarkMode 
+                    ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
+                    : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
+                }`}
+              />
+            </div>
+
+            <div className={`pt-4 border-t flex items-center justify-end gap-3 font-sans ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+              <button
+                type="button"
+                onClick={() => setShowDeliveryModal(false)}
+                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                  isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
                 }`}
               >
-                <X className="w-4 h-4" />
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isDelivering}
+                className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs font-mono cursor-pointer shadow-lg shadow-emerald-500/25 flex items-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.98] disabled:opacity-50"
+              >
+                {isDelivering ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Confirming POD...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Confirm Delivery</span>
+                  </>
+                )}
               </button>
             </div>
+          </form>
+        )}
+      </Modal>
 
-            {submitError && (
-              <div className="mx-4 sm:mx-6 mt-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{submitError}</span>
+      {/* ========================================================================= */}
+      {/* ── ISSUE DELIVERY CHALLAN MODAL ──                                        */}
+      {/* ========================================================================= */}
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => !isSubmitting && setShowCreateModal(false)}
+        maxWidth="2xl"
+        isDarkMode={isDarkMode}
+        icon={<Truck className="w-5 h-5 text-[var(--accent-primary)]" />}
+        title="Issue Delivery Challan"
+        subtitle="Dispatch outward consignment & statutory logistics manifest"
+      >
+        <form onSubmit={handleSubmit} className="space-y-4 text-xs font-sans">
+          {submitError && (
+            <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-500 dark:text-rose-400 text-xs font-mono flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{submitError}</span>
+            </div>
+          )}
+
+          {/* Section 1: Customer Order Selection & Smart Info Card */}
+          <div className="space-y-3">
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className={`text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Customer Order PO *
+                </label>
+                <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
+                  isDarkMode ? 'text-slate-400 border-slate-700 bg-slate-800' : 'text-slate-500 border-slate-200 bg-white'
+                }`}>
+                  {pendingChallanOrders.length} Pending
+                </span>
               </div>
-            )}
 
-            <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
+              {pendingChallanOrders.length === 0 ? (
+                <div className={`p-4 rounded-2xl border text-center space-y-1 ${
+                  isDarkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+                }`}>
+                  <PackageCheck className="w-6 h-6 text-emerald-500 mx-auto" />
+                  <p className={`text-xs font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>All Challans Issued</p>
+                  <p className="text-[11px] text-slate-400">No orders are pending a delivery challan right now.</p>
+                </div>
+              ) : (
+              <select
+                value={orderPo}
+                onChange={(e) => setOrderPo(e.target.value)}
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono font-bold outline-none transition-all cursor-pointer ${
+                  isDarkMode 
+                    ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
+                    : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                }`}
+              >
+                {pendingChallanOrders.map(o => (
+                  <option key={o.id || o.poNo} value={o.poNo}>
+                    {o.poNo} — {o.customerName || 'Customer'} ({o.lines?.length || 0} items)
+                  </option>
+                ))}
+              </select>
+              )}
+            </div>
+
+            {/* Selected Order Intelligence Card */}
+            {(() => {
+              const selOrder = pendingChallanOrders.find(o => o.poNo === orderPo || o.id === orderPo);
+              if (!selOrder) return null;
+              const totalItems = selOrder.lines?.reduce((sum, l) => sum + Number(l.pendingQty ?? l.orderQty ?? 0), 0) || 0;
+              return (
+                <div className={`p-4 rounded-2xl border space-y-3 font-sans ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-800' : 'bg-slate-50/80 border-slate-200'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-[var(--accent-primary)]" />
+                      <span className={`font-bold text-xs ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                        {selOrder.customerName || 'Customer'}
+                      </span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] border border-[var(--accent-primary)]/20">
+                      PO: {selOrder.poNo}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-[11px] font-mono">
+                    <div className={`p-2 rounded-xl border ${isDarkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white'}`}>
+                      <div className="text-[10px] text-slate-500 uppercase">Items to Dispatch</div>
+                      <div className="font-bold text-emerald-500 mt-0.5">
+                        {totalItems} NOS ({selOrder.lines?.length || 0} lines)
+                      </div>
+                    </div>
+                    <div className={`p-2 rounded-xl border ${isDarkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white'}`}>
+                      <div className="text-[10px] text-slate-500 uppercase">Order Stage</div>
+                      <div className="font-bold text-sky-500 mt-0.5">
+                        {selOrder.status || selOrder.stage || 'CONFIRMED'}
+                      </div>
+                    </div>
+                    <div className={`col-span-2 sm:col-span-1 p-2 rounded-xl border ${isDarkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white'}`}>
+                      <div className="text-[10px] text-slate-500 uppercase">Delivery Location</div>
+                      <div className="font-bold text-slate-300 truncate mt-0.5" title={selOrder.shippingAddress || selOrder.billingAddress || 'Plant Warehouse'}>
+                        {selOrder.shippingAddress || selOrder.billingAddress || 'Plant Warehouse'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {selOrder.lines && selOrder.lines.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {selOrder.lines.map((l, i) => (
+                        <span key={i} className={`text-[10px] font-mono px-2 py-0.5 rounded-md border ${
+                          isDarkMode ? 'bg-slate-900 text-slate-400 border-slate-800' : 'bg-white text-slate-600 border-slate-200'
+                        }`}>
+                          {l.itemCode} • {Number(l.pendingQty ?? l.orderQty)} {l.unit || 'NOS'}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Section 2: Transporter & Vehicle Logistics Grid */}
+          <div className="space-y-3 pt-1">
+            <div className="text-[11px] font-bold uppercase tracking-wider flex items-center gap-2 text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)]">
+              <Truck className="w-3.5 h-3.5" />
+              <span>Logistics & Transporter Carrier</span>
+            </div>
+
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Transporter Partner *
+              </label>
+              <select
+                required
+                value={transporter}
+                onChange={(e) => setTransporter(e.target.value)}
+                className={`h-11 w-full rounded-xl border px-3 text-xs outline-none cursor-pointer transition-all ${
+                  isDarkMode 
+                    ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
+                    : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                }`}
+              >
+                {allTransporterOptions.map((t, idx) => (
+                  <option key={idx} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Customer Order PO *</label>
-                <select
-                  value={orderPo}
-                  onChange={(e) => setOrderPo(e.target.value)}
-                  className={`w-full rounded-xl border px-4 py-2.5 text-xs font-mono font-bold outline-none cursor-pointer transition-all ${
-                    isDarkMode 
-                      ? 'border-white/[0.08] bg-black/20 text-white focus:border-[var(--accent-border-dark)]' 
-                      : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[var(--accent-primary)]'
-                  }`}
-                >
-                  {orders.map(o => (
-                    <option key={o.id} value={o.poNo}>{o.poNo} — {o.customerName}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Transporter Partner *</label>
-                <select
-                  required
-                  value={transporter}
-                  onChange={(e) => setTransporter(e.target.value)}
-                  className={`w-full rounded-xl border px-4 py-2.5 text-xs outline-none cursor-pointer transition-all ${
-                    isDarkMode 
-                      ? 'border-white/[0.08] bg-[#171b24] text-white focus:border-[var(--accent-border-dark)]' 
-                      : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[var(--accent-primary)]'
-                  }`}
-                >
-                  {allTransporterOptions.map((t, idx) => (
-                    <option key={idx} value={t}>{t}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Vehicle Registration # *</label>
-                  <input
-                    type="text"
-                    required
-                    value={vehicleNo}
-                    onChange={(e) => setVehicleNo(e.target.value)}
-                    placeholder="e.g. MH 12 AB 4589"
-                    className={`w-full rounded-xl border px-4 py-2.5 text-xs font-mono outline-none transition-all ${
-                      isDarkMode 
-                        ? 'border-white/[0.08] bg-black/20 text-white focus:border-[var(--accent-border-dark)]' 
-                        : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[var(--accent-primary)]'
-                    }`}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">LR / Docket Number</label>
-                  <input
-                    type="text"
-                    value={lrNo}
-                    onChange={(e) => setLrNo(e.target.value)}
-                    placeholder="e.g. VRL-98762"
-                    className={`w-full rounded-xl border px-4 py-2.5 text-xs font-mono outline-none transition-all ${
-                      isDarkMode 
-                        ? 'border-white/[0.08] bg-black/20 text-white focus:border-[var(--accent-border-dark)]' 
-                        : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[var(--accent-primary)]'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">E-Way Bill Number</label>
-                  <input
-                    type="text"
-                    value={eWayBillNo}
-                    onChange={(e) => setEWayBillNo(e.target.value)}
-                    placeholder="e.g. 2710 9821 4455"
-                    className={`w-full rounded-xl border px-4 py-2.5 text-xs font-mono outline-none transition-all ${
-                      isDarkMode 
-                        ? 'border-white/[0.08] bg-black/20 text-white focus:border-[var(--accent-border-dark)]' 
-                        : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[var(--accent-primary)]'
-                    }`}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Driver Contact Phone</label>
-                  <input
-                    type="text"
-                    value={driverContact}
-                    onChange={(e) => setDriverContact(e.target.value)}
-                    placeholder="e.g. +91 98765 43210"
-                    className={`w-full rounded-xl border px-4 py-2.5 text-xs font-mono outline-none transition-all ${
-                      isDarkMode 
-                        ? 'border-white/[0.08] bg-black/20 text-white focus:border-[var(--accent-border-dark)]' 
-                        : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[var(--accent-primary)]'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Delivery Notes & Remarks</label>
+                <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Vehicle Registration # *
+                </label>
                 <input
                   type="text"
-                  value={remarks}
-                  onChange={(e) => setRemarks(e.target.value)}
-                  placeholder="e.g. Goods packed in sealed crates with rust-proof coating"
-                  className={`w-full rounded-xl border px-4 py-2.5 text-xs outline-none transition-all ${
+                  required
+                  value={vehicleNo}
+                  onChange={(e) => setVehicleNo(e.target.value)}
+                  placeholder="e.g. MH 12 AB 4589"
+                  className={`h-11 w-full rounded-xl border px-3 text-xs font-mono font-bold uppercase outline-none transition-all ${
                     isDarkMode 
-                      ? 'border-white/[0.08] bg-black/20 text-white focus:border-[var(--accent-border-dark)]' 
-                      : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[var(--accent-primary)]'
+                      ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
+                      : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
                   }`}
                 />
               </div>
-
-              <div className={`pt-4 border-t flex items-center justify-end gap-3 shrink-0 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
-                <button 
-                  type="button" 
-                  disabled={isSubmitting}
-                  onClick={() => setShowCreateModal(false)} 
-                  className={`flex-1 sm:flex-initial px-5 py-2.5 rounded-xl border text-xs font-mono font-bold cursor-pointer transition-all ${
+              <div>
+                <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  LR / Docket Number
+                </label>
+                <input
+                  type="text"
+                  value={lrNo}
+                  onChange={(e) => setLrNo(e.target.value)}
+                  placeholder="e.g. VRL-98762"
+                  className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
                     isDarkMode 
-                      ? 'border-white/[0.08] bg-black/20 text-slate-300 hover:bg-white/[0.05]' 
-                      : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                      ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
+                      : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
                   }`}
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  disabled={isSubmitting || !vehicleNo.trim()}
-                  className="flex-1 sm:flex-initial px-6 py-2.5 rounded-xl bg-[var(--accent-primary)] hover:brightness-110 text-white font-bold text-xs font-mono cursor-pointer shadow-lg shadow-[var(--accent-shadow)] transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Issuing Challan...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Truck className="w-4 h-4" />
-                      <span>Issue Challan</span>
-                    </>
-                  )}
-                </button>
+                />
               </div>
-            </form>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  E-Way Bill Number
+                </label>
+                <input
+                  type="text"
+                  value={eWayBillNo}
+                  onChange={(e) => setEWayBillNo(e.target.value)}
+                  placeholder="e.g. 2710 9821 4455"
+                  className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                    isDarkMode 
+                      ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
+                      : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                  }`}
+                />
+              </div>
+              <div>
+                <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Driver Contact Phone
+                </label>
+                <input
+                  type="text"
+                  value={driverContact}
+                  onChange={(e) => setDriverContact(e.target.value)}
+                  placeholder="e.g. +91 98765 43210"
+                  className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                    isDarkMode 
+                      ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
+                      : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                  }`}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Delivery Notes & Packaging Remarks
+              </label>
+              <input
+                type="text"
+                value={remarks}
+                onChange={(e) => setRemarks(e.target.value)}
+                placeholder="e.g. Goods packed in sealed wooden crates with anti-corrosion VCI covers"
+                className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
+                  isDarkMode 
+                    ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
+                    : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                }`}
+              />
+            </div>
           </div>
-        </div>
-      )}
+
+          <div className={`pt-4 border-t flex items-center justify-end gap-3 font-sans ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+            <button 
+              type="button" 
+              disabled={isSubmitting}
+              onClick={() => setShowCreateModal(false)} 
+              className={`px-4 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
+                isDarkMode 
+                  ? 'border-slate-700 text-slate-300 hover:bg-slate-800' 
+                  : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              disabled={isSubmitting || !vehicleNo.trim()}
+              className="px-5 py-2.5 rounded-xl bg-[var(--accent-primary)] hover:brightness-110 text-white font-bold text-xs font-mono cursor-pointer shadow-lg shadow-[var(--accent-shadow)] transition-all hover:scale-[1.01] active:scale-[0.98] disabled:opacity-50 flex items-center gap-2"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Issuing Challan...</span>
+                </>
+              ) : (
+                <>
+                  <Truck className="w-3.5 h-3.5" />
+                  <span>Issue Delivery Challan</span>
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Challan Detail View Modal (View, Edit while Draft, Print, PDF) */}
       <ChallanDetailModal

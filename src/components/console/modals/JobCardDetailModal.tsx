@@ -1002,19 +1002,19 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                               <div className="space-y-1">
                                 {mats.map((m, mIdx) => (
                                   <div key={mIdx} className="flex items-center gap-1.5">
-                                    <span className="font-bold text-slate-300">{m.code}:</span>
-                                    <span className="text-slate-400">{m.req} {m.uom}</span>
-                                    <span className={`font-bold ${m.left > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                                    <span className={`font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{m.code}:</span>
+                                    <span className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>{m.req} {m.uom}</span>
+                                    <span className={`font-bold ${m.left > 0 ? (isDarkMode ? 'text-amber-400' : 'text-amber-600') : (isDarkMode ? 'text-emerald-400' : 'text-emerald-600')}`}>
                                       (left {m.left} {m.uom})
                                     </span>
                                   </div>
                                 ))}
                               </div>
                             ) : (
-                              <span className="text-slate-500">—</span>
+                              <span className={isDarkMode ? 'text-slate-500' : 'text-slate-400'}>—</span>
                             )}
                           </td>
-                          <td className="py-3 px-4 text-right font-mono text-slate-400">
+                          <td className={`py-3 px-4 text-right font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                             {step.standardTimeMinutes || 15} mins
                           </td>
                         </tr>
@@ -1106,11 +1106,11 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                       <div className={`p-2.5 rounded-xl border text-[11px] font-mono space-y-1 ${
                         isDarkMode ? 'bg-slate-900/60 border-slate-800/80' : 'bg-slate-50 border-slate-200'
                       }`}>
-                        <span className="text-slate-400 font-bold block text-[10px] uppercase">Material Requirement:</span>
+                        <span className={`font-bold block text-[10px] uppercase ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Material Requirement:</span>
                         {mats.map((m, idx) => (
-                          <div key={idx} className="flex items-center justify-between text-slate-300">
+                          <div key={idx} className={`flex items-center justify-between ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                             <span className="font-bold">{m.code}</span>
-                            <span className={m.left > 0 ? 'text-amber-400 font-bold' : 'text-emerald-400 font-bold'}>
+                            <span className={m.left > 0 ? (isDarkMode ? 'text-amber-400 font-bold' : 'text-amber-600 font-bold') : (isDarkMode ? 'text-emerald-400 font-bold' : 'text-emerald-600 font-bold')}>
                               Req: {m.req} {m.uom} (Left: {m.left})
                             </span>
                           </div>
@@ -1151,7 +1151,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                     Material Consumption
                   </h3>
                 </div>
-                <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                <p className={`text-[11px] font-mono mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                   Bill of Materials — expected/guide only · book any qty, or add material
                 </p>
               </div>
@@ -1181,7 +1181,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                       isDarkMode ? 'bg-slate-900/80 border-slate-800 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-500'
                     }`}>
                       <th className="py-3 px-4">Component</th>
-                      <th className="py-3 px-4 text-right">Required</th>
+                      <th className="py-3 px-4 text-right">Planned Total</th>
                       <th className="py-3 px-4 text-right">Left</th>
                       <th className="py-3 px-4 text-right">To Book (Qty)</th>
                       <th className="py-3 px-4 text-center">Action</th>
@@ -1195,21 +1195,21 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                       return (
                         <tr key={mat.componentCode} className={isDarkMode ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}>
                           <td className="py-3.5 px-4 font-sans">
-                            <div className="font-bold text-xs text-slate-100 dark:text-white font-mono">
+                            <div className={`font-bold text-xs font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                               {mat.componentCode}
                             </div>
-                            <div className="text-[11px] text-slate-400">
+                            <div className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                               {mat.componentName}
                             </div>
-                            <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded text-[9px] font-mono bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                            <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded text-[9px] font-mono bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/20 font-medium">
                               Op {mat.assignedStepSeq}: {mat.assignedOpName}
                             </span>
                           </td>
-                          <td className="py-3.5 px-4 text-right font-mono text-slate-300">
+                          <td className={`py-3.5 px-4 text-right font-mono ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                             {mat.plannedTotal} {mat.uom}
                           </td>
                           <td className={`py-3.5 px-4 text-right font-mono font-bold ${
-                            mat.remainingLeft > 0 ? 'text-amber-400' : 'text-emerald-400'
+                            mat.remainingLeft > 0 ? (isDarkMode ? 'text-amber-400' : 'text-amber-600') : (isDarkMode ? 'text-emerald-400' : 'text-emerald-600')
                           }`}>
                             {mat.remainingLeft} {mat.uom}
                           </td>
@@ -1228,7 +1228,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                                     : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[#5B75F8]'
                                 }`}
                               />
-                              <span className="text-[11px] text-slate-400 font-mono">{mat.uom}</span>
+                              <span className={`text-[11px] font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{mat.uom}</span>
                             </div>
                           </td>
                           <td className="py-3.5 px-4 text-center">
@@ -1236,13 +1236,9 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                               type="button"
                               disabled={isBooking}
                               onClick={() => handleBookMaterialSubmit(mat)}
-                              className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-mono font-bold shadow-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all"
+                              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-mono font-bold shadow-md shadow-emerald-500/20 disabled:opacity-50 flex items-center justify-center gap-1 mx-auto cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]"
                             >
-                              {isBooking ? (
-                                <RefreshCw className="w-3 h-3 animate-spin" />
-                              ) : (
-                                <CheckSquare className="w-3 h-3" />
-                              )}
+                              <Check className="w-3.5 h-3.5" />
                               <span>{isBooking ? 'Booking...' : 'Book'}</span>
                             </button>
                           </td>
@@ -1253,104 +1249,21 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                 </table>
               </div>
             </div>
-
-            {/* Mobile Material Cards (Viewport < md) */}
-            <div className="block md:hidden space-y-3">
-              {allMaterialRows.map((mat) => {
-                const inputVal = toBookInputs[mat.componentCode]?.qty ?? '';
-                const isBooking = isBookingMaterial === mat.componentCode;
-
-                return (
-                  <div
-                    key={mat.componentCode}
-                    className={`p-4 rounded-2xl border transition-all space-y-3 shadow-xs ${
-                      isDarkMode ? 'bg-slate-950/70 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-                    }`}
-                  >
-                    <div>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-mono font-bold text-xs text-[#5B75F8] dark:text-[#7B92FF]">
-                          {mat.componentCode}
-                        </span>
-                        <span className="px-2 py-0.5 rounded text-[9px] font-mono bg-purple-500/15 text-purple-300 border border-purple-500/25">
-                          Op {mat.assignedStepSeq}
-                        </span>
-                      </div>
-                      <p className={`text-xs font-semibold mt-0.5 ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
-                        {mat.componentName}
-                      </p>
-                    </div>
-
-                    <div className={`grid grid-cols-2 gap-2 text-center font-mono text-[11px] p-2.5 rounded-xl border ${
-                      isDarkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200'
-                    }`}>
-                      <div>
-                        <span className="text-[10px] text-slate-400 uppercase block">Required Total</span>
-                        <span className="font-bold">{mat.plannedTotal} {mat.uom}</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-slate-400 uppercase block">Remaining Left</span>
-                        <span className={`font-bold ${mat.remainingLeft > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                          {mat.remainingLeft} {mat.uom}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          step="any"
-                          min="0"
-                          placeholder={`Qty to Book (${mat.uom})`}
-                          value={inputVal}
-                          onChange={(e) => handleInputChange(mat.componentCode, 'qty', e.target.value)}
-                          className={`flex-1 rounded-xl border px-3 py-2 text-xs font-mono outline-none ${
-                            isDarkMode ? 'bg-slate-900 border-slate-700 text-white focus:border-[#5B75F8]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[#5B75F8]'
-                          }`}
-                        />
-                        {mat.remainingLeft > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => handleInputChange(mat.componentCode, 'qty', String(mat.remainingLeft))}
-                            className={`px-2.5 py-2 rounded-xl border text-[10px] font-mono font-bold cursor-pointer shrink-0 ${
-                              isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
-                            }`}
-                          >
-                            Fill Left ({mat.remainingLeft})
-                          </button>
-                        )}
-                      </div>
-
-                      <button
-                        type="button"
-                        disabled={isBooking}
-                        onClick={() => handleBookMaterialSubmit(mat)}
-                        className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-mono font-bold flex items-center justify-center gap-1.5 shadow-sm cursor-pointer disabled:opacity-50"
-                      >
-                        {isBooking ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckSquare className="w-3.5 h-3.5" />}
-                        <span>{isBooking ? 'Booking Consumption...' : `Book ${mat.componentCode} Issue`}</span>
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
           </div>
 
           {/* ========================================================================= */}
-          {/* 4. PRODUCTION LOGGING SECTION (Desktop Table + Mobile Cards) */}
+          {/* 4. PRODUCTION LOGS / SHIFTS SECTION (Desktop Table + Mobile Cards) */}
           {/* ========================================================================= */}
-          <div className={`space-y-3 ${activeMobileSection === 'logs' ? 'block' : 'hidden md:block'}`}>
+          <div className={`space-y-3 ${activeMobileSection === 'shifts' ? 'block' : 'hidden md:block'}`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Activity className="w-4 h-4 text-[#5B75F8]" />
                 <h3 className={`font-bold text-sm font-mono tracking-tight ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
-                  Production Logging
+                  Shift Execution Logs
                 </h3>
               </div>
-              <span className="text-[11px] font-mono text-slate-400">
-                Append-only activity log ({allJobLogs.length} entries)
+              <span className={`text-[11px] font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                Recorded output batches ({allJobLogs.length})
               </span>
             </div>
 
@@ -1375,25 +1288,25 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                     {allJobLogs.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="py-8 text-center text-slate-400 font-mono">
-                          No production shifts logged yet. Click "+ Log Production" above to record output.
+                          No production shifts logged yet.
                         </td>
                       </tr>
                     ) : (
                       allJobLogs.map((log, idx) => (
                         <tr key={log.id || idx} className={isDarkMode ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}>
-                          <td className="py-3 px-4 text-slate-300 font-mono text-[11px]">
+                          <td className={`py-3 px-4 font-mono text-[11px] ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                             {formatDateTime(log.loggedTimestamp)}
                           </td>
-                          <td className="py-3 px-4 text-center font-bold text-slate-400">
+                          <td className={`py-3 px-4 text-center font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                             {log.stepNo}
                           </td>
-                          <td className={`py-3 px-4 font-sans font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
+                          <td className={`py-3 px-4 font-sans font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>
                             {log.operationName}
                           </td>
-                          <td className="py-3 px-4 text-right font-bold text-emerald-400 font-mono">
+                          <td className="py-3 px-4 text-right font-bold text-emerald-600 dark:text-emerald-400 font-mono">
                             {log.qtyDone} NOS
                           </td>
-                          <td className="py-3 px-4 text-right text-slate-400 font-mono">
+                          <td className={`py-3 px-4 text-right font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                             —
                           </td>
                         </tr>
@@ -1410,7 +1323,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                 <div className={`p-8 text-center rounded-2xl border font-mono text-xs ${
                   isDarkMode ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-500'
                 }`}>
-                  No production output logged yet. Tap "+ Log Production" above to record output.
+                  No production output logged yet.
                 </div>
               ) : (
                 allJobLogs.map((log, idx) => (
@@ -1424,11 +1337,11 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                       <span className={`font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>
                         Op {log.stepNo} — {log.operationName}
                       </span>
-                      <span className="font-bold text-emerald-400 text-sm">
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">
                         +{log.qtyDone} NOS
                       </span>
                     </div>
-                    <div className="text-[10px] text-slate-400 flex items-center justify-between">
+                    <div className={`text-[10px] flex items-center justify-between ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                       <span>{formatDateTime(log.loggedTimestamp)}</span>
                       <span>Verified Shift Log</span>
                     </div>
@@ -1449,7 +1362,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                   Consumption History
                 </h3>
               </div>
-              <span className="text-[11px] font-mono text-slate-400">
+              <span className={`text-[11px] font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                 Historical material booking audit trail ({localConsumptions.length})
               </span>
             </div>
@@ -1483,28 +1396,28 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                     ) : (
                       localConsumptions.map((c) => (
                         <tr key={c.id} className={isDarkMode ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}>
-                          <td className="py-3 px-4 font-mono font-bold text-slate-200">
+                          <td className={`py-3 px-4 font-mono font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>
                             <div>{c.itemCode}</div>
-                            <div className="text-[10px] text-slate-400 font-sans font-normal truncate max-w-xs">
+                            <div className={`text-[10px] font-sans font-normal truncate max-w-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                               {c.itemName}
                             </div>
                           </td>
-                          <td className="py-3 px-4 text-slate-300 font-mono text-[11px]">
+                          <td className={`py-3 px-4 font-mono text-[11px] ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                             {formatDateTime(c.bookedAt)}
                           </td>
-                          <td className="py-3 px-4 text-right text-slate-400">
+                          <td className={`py-3 px-4 text-right ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                             {c.plannedQty}
                           </td>
-                          <td className="py-3 px-4 text-right font-bold text-emerald-400">
+                          <td className="py-3 px-4 text-right font-bold text-emerald-600 dark:text-emerald-400">
                             {c.actualQty}
                           </td>
-                          <td className="py-3 px-4 text-right text-rose-400">
+                          <td className="py-3 px-4 text-right text-rose-500 dark:text-rose-400">
                             {c.scrapQty || 0}
                           </td>
-                          <td className="py-3 px-4 text-center text-slate-300">
+                          <td className={`py-3 px-4 text-center font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                             {c.unit}
                           </td>
-                          <td className="py-3 px-4 text-amber-400 font-bold">
+                          <td className="py-3 px-4 text-amber-600 dark:text-amber-400 font-bold">
                             {c.heatLotNumber || '—'}
                           </td>
                         </tr>

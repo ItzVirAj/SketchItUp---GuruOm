@@ -56,6 +56,7 @@ import {
   reverseInventoryMovement
 } from '../../../services/supabaseServices';
 import { useAuth } from '../../../context/AuthContext';
+import { Modal } from '../../common/Modal';
 
 interface InventoryViewProps {
   stock: StockItem[];
@@ -1393,523 +1394,517 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         </div>
       )}
 
-      {/* Adjust Stock Modal */}
-      {selectedStockForAdjust && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-lg rounded-3xl border p-7 space-y-6 shadow-2xl transition-all ${
-            isDarkMode 
-              ? 'bg-slate-900/95 border-slate-800/80 text-white backdrop-blur-2xl shadow-[#5B75F8]/5' 
-              : 'bg-white border-slate-200 text-slate-900 shadow-2xl'
-          }`}>
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-[#5B75F8]/15 text-[#5B75F8] border border-[#5B75F8]/30">
-                  <Boxes className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className={`font-bold text-base tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                    Physical Stock Audit Adjustment
-                  </h3>
-                  <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Reconcile physical store inventory delta
-                  </p>
-                </div>
+      {/* Modal 1: Physical Stock Audit Adjustment */}
+      <Modal
+        isOpen={Boolean(selectedStockForAdjust)}
+        onClose={() => setSelectedStockForAdjust(null)}
+        maxWidth="lg"
+        isDarkMode={isDarkMode}
+        icon={<Boxes className="w-5 h-5" />}
+        title="Physical Stock Audit Adjustment"
+        subtitle="Reconcile physical store inventory delta"
+      >
+        {selectedStockForAdjust && (
+          <form onSubmit={handleAdjustSubmit} className="space-y-4 font-sans text-xs">
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className={`block text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Target SKU / Material Component *
+                </label>
+                {renderCategoryBadge(selectedStockForAdjust.category, selectedStockForAdjust.categoryLabel)}
               </div>
-              <button 
-                onClick={() => setSelectedStockForAdjust(null)} 
-                className={`p-2 rounded-2xl border transition-all cursor-pointer ${
+              <select
+                value={selectedStockForAdjust.code}
+                onChange={(e) => {
+                  const found = stockMasterRows.find(s => s.code === e.target.value);
+                  if (found) setSelectedStockForAdjust(found);
+                }}
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono font-bold outline-none transition-all cursor-pointer ${
                   isDarkMode 
-                    ? 'border-slate-800 bg-slate-950/60 text-slate-400 hover:text-white hover:bg-slate-800' 
-                    : 'border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                    ? 'bg-[#0d1017] border-slate-700/80 text-[var(--accent-text-dark)] focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
+                    : 'bg-slate-50 border-slate-300 text-[var(--accent-text-light)] focus:border-[var(--accent-primary)] shadow-xs'
                 }`}
               >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleAdjustSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="block text-[11px] font-mono uppercase font-bold text-slate-400">
-                    Target SKU / Material Component *
-                  </label>
-                  {renderCategoryBadge(selectedStockForAdjust.category, selectedStockForAdjust.categoryLabel)}
-                </div>
-                <select
-                  value={selectedStockForAdjust.code}
-                  onChange={(e) => {
-                    const found = stockMasterRows.find(s => s.code === e.target.value);
-                    if (found) setSelectedStockForAdjust(found);
-                  }}
-                  className={`w-full rounded-2xl border px-4 py-3 text-xs font-mono font-bold outline-none transition-all cursor-pointer ${
-                    isDarkMode 
-                      ? 'bg-slate-950/80 border-slate-800 text-[#7B92FF] focus:border-[#5B75F8]' 
-                      : 'bg-slate-50 border-slate-200 text-[#5B75F8] focus:border-[#5B75F8]'
-                  }`}
-                >
-                  {stockMasterRows.map((s) => (
-                    <option key={s.code} value={s.code} className={isDarkMode ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>
-                      [{s.categoryLabel || 'Item'}] {s.code} — {s.description} ({s.onHand} {s.unit || 'units'} on hand)
-                    </option>
-                  ))}
-                </select>
-                {selectedStockForAdjust.rawCode && selectedStockForAdjust.rawCode !== selectedStockForAdjust.code && (
-                  <div className="text-[10px] font-mono text-slate-400 flex items-center gap-1.5">
-                    <span>Catalog Reference:</span>
-                    <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-bold border border-slate-700">
-                      {selectedStockForAdjust.rawCode}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Current On Hand</label>
-                  <div className={`p-3 rounded-2xl border font-mono font-bold text-xs ${
-                    isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                {stockMasterRows.map((s) => (
+                  <option key={s.code} value={s.code} className={isDarkMode ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>
+                    [{s.categoryLabel || 'Item'}] {s.code} — {s.description} ({s.onHand} {s.unit || 'units'} on hand)
+                  </option>
+                ))}
+              </select>
+              {selectedStockForAdjust.rawCode && selectedStockForAdjust.rawCode !== selectedStockForAdjust.code && (
+                <div className="text-[10px] font-mono text-slate-400 flex items-center gap-1.5 pt-0.5">
+                  <span>Catalog Reference:</span>
+                  <span className={`px-2 py-0.5 rounded-md font-bold border ${
+                    isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-200'
                   }`}>
-                    {selectedStockForAdjust.onHand} {selectedStockForAdjust.unit}
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Adjustment Delta (+/-)</label>
-                  <input
-                    type="number"
-                    required
-                    value={adjustQty}
-                    onChange={(e) => setAdjustQty(Number(e.target.value))}
-                    className={`w-full rounded-2xl border px-4 py-3 text-xs font-mono font-bold outline-none transition-all ${
-                      isDarkMode 
-                        ? 'bg-slate-950/80 border-slate-800 text-white focus:border-[#5B75F8]' 
-                        : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#5B75F8]'
-                    }`}
-                    placeholder="e.g. +10 or -5"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">Audit Reason *</label>
-                <input
-                  type="text"
-                  required
-                  value={adjustReason}
-                  onChange={(e) => setAdjustReason(e.target.value)}
-                  className={`w-full rounded-2xl border px-4 py-3 text-xs outline-none transition-all ${
-                    isDarkMode 
-                      ? 'bg-slate-950/80 border-slate-800 text-white focus:border-[#5B75F8]' 
-                      : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#5B75F8]'
-                  }`}
-                  placeholder="e.g. Physical count reconciliation"
-                />
-              </div>
-
-              <div className="pt-4 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setSelectedStockForAdjust(null)}
-                  className={`px-5 py-2.5 rounded-2xl border text-xs font-mono font-bold cursor-pointer transition-all ${
-                    isDarkMode 
-                      ? 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800' 
-                      : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-                  }`}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs font-mono cursor-pointer shadow-lg shadow-[#5B75F8]/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  Confirm Adjustment
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Create Purchase Order */}
-      {isCreatePoOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md font-sans">
-          <div className="relative w-full max-w-xl rounded-3xl border border-slate-800 bg-slate-900/95 p-7 space-y-6 text-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-[#5B75F8]/15 text-[#7B92FF] border border-[#5B75F8]/30">
-                  <ShoppingCart className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-base">Issue Purchase Order</h3>
-                  <p className="text-xs text-slate-400">Raise procurement order to supplier</p>
-                </div>
-              </div>
-              <button onClick={() => setIsCreatePoOpen(false)} className="p-2 rounded-2xl border border-slate-800 text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
-            </div>
-
-            <form onSubmit={async (e) => {
-              e.preventDefault();
-              const form = e.target as any;
-              const newPo: PurchaseOrder = {
-                poNo: `PO-PUR-${Date.now().toString().slice(-6)}`,
-                supplierCode: form.supplierCode.value,
-                supplierName: form.supplierName.value,
-                orderDate: new Date().toISOString().split('T')[0],
-                expectedDeliveryDate: form.deliveryDate.value,
-                paymentTerms: 'Net 30',
-                taxRate: 18.0,
-                grossAmount: Number(form.qty.value) * Number(form.rate.value),
-                taxAmount: (Number(form.qty.value) * Number(form.rate.value)) * 0.18,
-                totalAmount: (Number(form.qty.value) * Number(form.rate.value)) * 1.18,
-                status: 'DRAFT',
-                approvalStatus: (Number(form.qty.value) * Number(form.rate.value)) * 1.18 > 100000 ? 'PENDING' : 'APPROVED',
-                createdBy: user?.name || 'Owner OS Admin',
-                notes: form.notes.value,
-                items: [{
-                  itemCode: form.itemCode.value,
-                  itemDescription: form.itemDesc.value,
-                  orderQty: Number(form.qty.value),
-                  receivedQty: 0,
-                  unit: form.unit.value,
-                  unitPrice: Number(form.rate.value),
-                  lineTotal: Number(form.qty.value) * Number(form.rate.value)
-                }]
-              };
-
-              try {
-                await insertPurchaseOrder(newPo);
-                setIsCreatePoOpen(false);
-                setActionSuccess('Purchase order created successfully.');
-                const updated = await fetchPurchaseOrders();
-                setPurchaseOrders(updated);
-              } catch (err: any) {
-                setActionError(err.message || 'Failed to create PO.');
-              }
-            }} className="space-y-4 text-xs font-mono">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Supplier Code</label>
-                  <input name="supplierCode" required defaultValue="VEND-001" className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-white outline-none" />
-                </div>
-                <div>
-                  <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Supplier Name</label>
-                  <input name="supplierName" required defaultValue="Mahalaxmi Steel Traders" className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-white outline-none" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Item Code / SKU</label>
-                  <input name="itemCode" required defaultValue="RAW-ALU-6061-ROD" className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-white outline-none" />
-                </div>
-                <div>
-                  <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Item Description</label>
-                  <input name="itemDesc" required defaultValue="Aluminium 6061 Round Bar Ø50mm" className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-white outline-none" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Order Qty</label>
-                  <input name="qty" type="number" required defaultValue="100" className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-white outline-none" />
-                </div>
-                <div>
-                  <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Unit</label>
-                  <input name="unit" required defaultValue="KG" className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-white outline-none" />
-                </div>
-                <div>
-                  <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Unit Rate (₹)</label>
-                  <input name="rate" type="number" required defaultValue="280" className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-white outline-none" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Exp Delivery Date</label>
-                  <input name="deliveryDate" type="date" required defaultValue="2026-08-30" className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-white outline-none" />
-                </div>
-                <div>
-                  <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Notes</label>
-                  <input name="notes" defaultValue="Standard factory delivery" className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-white outline-none" />
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-slate-800 flex justify-end gap-3 font-sans">
-                <button type="button" onClick={() => setIsCreatePoOpen(false)} className="px-4 py-2 rounded-xl border border-slate-800 text-slate-300">Cancel</button>
-                <button type="submit" className="px-5 py-2 rounded-xl bg-[#5B75F8] hover:bg-[#4A64E7] text-white font-bold">Issue PO</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Receive Material (GRN) */}
-      {isCreateGrnOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md font-sans">
-          <div className="relative w-full max-w-xl rounded-3xl border border-slate-800 bg-slate-900/95 p-7 space-y-6 text-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-[#5B75F8]/15 text-[#7B92FF] border border-[#5B75F8]/30">
-                  <Truck className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-base">Inward Goods Receipt (GRN)</h3>
-                  <p className="text-xs text-slate-400">Receive supplier material at gate</p>
-                </div>
-              </div>
-              <button onClick={() => setIsCreateGrnOpen(false)} className="p-2 rounded-2xl border border-slate-800 text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
-            </div>
-
-            <form onSubmit={async (e) => {
-              e.preventDefault();
-              const form = e.target as any;
-              const newGrn: GoodsReceiptNote = {
-                grnNo: `GRN-26-${Date.now().toString().slice(-4)}`,
-                poNo: form.poNo.value,
-                vendorCode: form.vendorCode.value,
-                vendorName: form.vendorName.value,
-                challanNo: form.challanNo.value,
-                challanDate: new Date().toISOString().split('T')[0],
-                receivedDate: new Date().toISOString().split('T')[0],
-                receivedBy: user?.name || 'Gate Inward Officer',
-                status: 'RECEIVED',
-                vehicleNo: form.vehicleNo.value,
-                remarks: form.remarks.value,
-                items: [{
-                  itemCode: form.itemCode.value,
-                  itemDescription: form.itemDesc.value,
-                  orderedQty: Number(form.qty.value),
-                  receivedQty: Number(form.qty.value),
-                  acceptedQty: Number(form.qty.value),
-                  rejectedQty: 0,
-                  unit: form.unit.value,
-                  unitRate: 280
-                }]
-              };
-
-              try {
-                await insertGrn(newGrn);
-                setIsCreateGrnOpen(false);
-                setActionSuccess('GRN logged successfully at gate.');
-                const updated = await fetchGrnList();
-                setGrnList(updated);
-              } catch (err: any) {
-                setActionError(err.message || 'Failed to log GRN.');
-              }
-            }} className="space-y-4 text-xs font-mono">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">PO Reference</label>
-                  <input name="poNo" required defaultValue="PO-PUR-2026-001" className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-white outline-none" />
-                </div>
-                <div>
-                  <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Challan No / Invoice</label>
-                  <input name="challanNo" required defaultValue="CH-GATE-4401" className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-white outline-none" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Vendor Code</label>
-                  <input name="vendorCode" required defaultValue="VEND-001" className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-white outline-none" />
-                </div>
-                <div>
-                  <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Vendor Name</label>
-                  <input name="vendorName" required defaultValue="Mahalaxmi Steel Traders" className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-white outline-none" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Item SKU</label>
-                  <input name="itemCode" required defaultValue="RAW-ALU-6061-ROD" className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-white outline-none" />
-                </div>
-                <div>
-                  <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Item Desc</label>
-                  <input name="itemDesc" required defaultValue="Aluminium 6061 Round Bar" className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-white outline-none" />
-                </div>
-                <div>
-                  <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Received Qty</label>
-                  <input name="qty" type="number" required defaultValue="100" className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-white outline-none" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Vehicle / Transporter</label>
-                  <input name="vehicleNo" defaultValue="GJ-03-AX-8910" className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-white outline-none" />
-                </div>
-                <div>
-                  <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Unit</label>
-                  <input name="unit" defaultValue="KG" className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-white outline-none" />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Gate Inspection Remarks</label>
-                <input name="remarks" defaultValue="Material physically verified against MTC." className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-white outline-none" />
-              </div>
-
-              <div className="pt-4 border-t border-slate-800 flex justify-end gap-3 font-sans">
-                <button type="button" onClick={() => setIsCreateGrnOpen(false)} className="px-4 py-2 rounded-xl border border-slate-800 text-slate-300">Cancel</button>
-                <button type="submit" className="px-5 py-2 rounded-xl bg-[#5B75F8] hover:bg-[#4A64E7] text-white font-bold">Log GRN Inward</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Item Stock Movement History (Chronological Ledger) */}
-      {selectedItemHistory && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-3xl rounded-3xl border p-7 space-y-6 shadow-2xl transition-all ${
-            isDarkMode 
-              ? 'bg-slate-900/95 border-slate-800/80 text-white backdrop-blur-2xl' 
-              : 'bg-white border-slate-200 text-slate-900 shadow-2xl'
-          }`}>
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-[#5B75F8]/15 text-[#7B92FF] border border-[#5B75F8]/30">
-                  <History className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-base font-mono">
-                    Stock Movement History — {selectedItemHistory.itemCode}
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    {selectedItemHistory.description || 'Precision Engineered Component'} • Chronological Running Balance
-                  </p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setSelectedItemHistory(null)} 
-                className="p-2 rounded-2xl border border-slate-800 text-slate-400 hover:text-white cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="max-h-[60vh] overflow-y-auto space-y-2 pr-1 font-mono text-xs">
-              {selectedItemHistory.history.map((h) => {
-                const isInbound = h.quantityChange > 0;
-                const isCorrection = h.movementType === 'CORRECTION';
-                const isAdjustment = h.movementType === 'ADJUSTMENT';
-
-                return (
-                  <div 
-                    key={h.id}
-                    className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 ${
-                      isDarkMode ? 'bg-slate-950/70 border-slate-800/80' : 'bg-slate-50 border-slate-200'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-xl border text-[10px] font-bold uppercase ${
-                        isCorrection 
-                          ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                          : isAdjustment
-                            ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
-                            : isInbound
-                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                              : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-                      }`}>
-                        {h.movementType}
-                      </div>
-                      <div>
-                        <div className="font-bold text-slate-200 flex items-center gap-2">
-                          <span className={isInbound ? 'text-emerald-400' : 'text-rose-400'}>
-                            {isInbound ? `+${h.quantityChange}` : h.quantityChange}
-                          </span>
-                          {h.referenceId && (
-                            <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
-                              Ref: {h.referenceId}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[11px] text-slate-400 mt-0.5">
-                          {h.notes || 'Ledger event recorded'} • <span className="text-slate-500">{h.actorEmail}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="text-right">
-                      <div className="text-[10px] text-slate-500 uppercase font-bold">Running Balance</div>
-                      <div className="text-sm font-bold text-white mt-0.5">{h.balanceAfter} Units</div>
-                      <div className="text-[10px] text-slate-500 mt-0.5">
-                        {new Date(h.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {selectedItemHistory.history.length === 0 && (
-                <div className="p-8 text-center text-slate-500">
-                  No historical movements found for this SKU.
+                    {selectedStockForAdjust.rawCode}
+                  </span>
                 </div>
               )}
             </div>
 
-            <div className="pt-4 border-t border-slate-800 flex justify-end">
-              <button 
-                onClick={() => setSelectedItemHistory(null)}
-                className="px-5 py-2 rounded-xl bg-slate-800 text-white font-bold text-xs cursor-pointer hover:bg-slate-700"
-              >
-                Close Ledger
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Reverse / Correct Movement */}
-      {selectedMovementForCorrection && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md font-sans">
-          <div className="relative w-full max-w-md rounded-3xl border border-slate-800 bg-slate-900/95 p-7 space-y-6 text-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-amber-500/15 text-amber-400 border border-amber-500/30">
-                  <RotateCcw className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-base">Append Correction Movement</h3>
-                  <p className="text-xs text-slate-400">Offset target movement without mutating history</p>
-                </div>
-              </div>
-              <button onClick={() => setSelectedMovementForCorrection(null)} className="p-2 rounded-2xl border border-slate-800 text-slate-400 hover:text-white cursor-pointer">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleReverseMovement} className="space-y-4 font-mono text-xs">
-              <div className="p-3 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-1.5">
-                <div className="text-[10px] text-slate-400 uppercase font-bold">Target Movement</div>
-                <div className="text-slate-200 font-bold">{selectedMovementForCorrection.id} ({selectedMovementForCorrection.itemCode})</div>
-                <div className="text-amber-400 text-[11px]">
-                  Original: {selectedMovementForCorrection.quantityChange > 0 ? `+${selectedMovementForCorrection.quantityChange}` : selectedMovementForCorrection.quantityChange} • Offset: {-selectedMovementForCorrection.quantityChange > 0 ? `+${-selectedMovementForCorrection.quantityChange}` : -selectedMovementForCorrection.quantityChange}
-                </div>
-              </div>
-
+            <div className="grid grid-cols-2 gap-3.5">
               <div>
-                <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Reason for Reversal / Correction *</label>
-                <input 
-                  type="text" 
-                  required 
-                  value={correctionReason} 
-                  onChange={(e) => setCorrectionReason(e.target.value)}
-                  placeholder="e.g. Inward counting error or damaged box returned"
-                  className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-white outline-none"
+                <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Current On Hand
+                </label>
+                <div className={`h-11 px-3 flex items-center rounded-xl border font-mono font-bold text-xs ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 shadow-xs'
+                }`}>
+                  {selectedStockForAdjust.onHand} {selectedStockForAdjust.unit}
+                </div>
+              </div>
+              <div>
+                <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Adjustment Delta (+/-) *
+                </label>
+                <input
+                  type="number"
+                  required
+                  value={adjustQty}
+                  onChange={(e) => setAdjustQty(Number(e.target.value))}
+                  className={`h-11 w-full rounded-xl border px-3 text-xs font-mono font-bold outline-none transition-all ${
+                    isDarkMode 
+                      ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
+                      : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                  }`}
+                  placeholder="e.g. +10 or -5"
                 />
               </div>
+            </div>
 
-              <div className="pt-4 border-t border-slate-800 flex justify-end gap-3 font-sans">
-                <button type="button" onClick={() => setSelectedMovementForCorrection(null)} className="px-4 py-2 rounded-xl border border-slate-800 text-slate-300 cursor-pointer">Cancel</button>
-                <button type="submit" className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold cursor-pointer">
-                  Append Correction
-                </button>
-              </div>
-            </form>
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Audit Reason *
+              </label>
+              <input
+                type="text"
+                required
+                value={adjustReason}
+                onChange={(e) => setAdjustReason(e.target.value)}
+                className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
+                  isDarkMode 
+                    ? 'bg-[#0d1017] border-slate-700/80 text-white placeholder:text-slate-500 focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
+                    : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-[var(--accent-primary)] shadow-xs'
+                }`}
+                placeholder="e.g. Physical count reconciliation"
+              />
+            </div>
+
+            <div className={`pt-4 border-t flex items-center justify-end gap-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+              <button
+                type="button"
+                onClick={() => setSelectedStockForAdjust(null)}
+                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                  isDarkMode 
+                    ? 'border-slate-700 text-slate-300 hover:bg-slate-800' 
+                    : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2 rounded-xl bg-[var(--accent-primary)] hover:brightness-110 text-white font-bold text-xs cursor-pointer shadow-lg shadow-[var(--accent-shadow)] transition-all hover:scale-[1.01] active:scale-[0.99]"
+              >
+                Confirm Adjustment
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      {/* Modal 2: Create Purchase Order */}
+      <Modal
+        isOpen={isCreatePoOpen}
+        onClose={() => setIsCreatePoOpen(false)}
+        maxWidth="xl"
+        isDarkMode={isDarkMode}
+        icon={<ShoppingCart className="w-5 h-5" />}
+        title="Issue Purchase Order"
+        subtitle="Raise procurement order to supplier"
+      >
+        <form onSubmit={async (e) => {
+          e.preventDefault();
+          const form = e.target as any;
+          const newPo: PurchaseOrder = {
+            poNo: `PO-PUR-${Date.now().toString().slice(-6)}`,
+            supplierCode: form.supplierCode.value,
+            supplierName: form.supplierName.value,
+            orderDate: new Date().toISOString().split('T')[0],
+            expectedDeliveryDate: form.deliveryDate.value,
+            paymentTerms: 'Net 30',
+            taxRate: 18.0,
+            grossAmount: Number(form.qty.value) * Number(form.rate.value),
+            taxAmount: (Number(form.qty.value) * Number(form.rate.value)) * 0.18,
+            totalAmount: (Number(form.qty.value) * Number(form.rate.value)) * 1.18,
+            status: 'DRAFT',
+            approvalStatus: (Number(form.qty.value) * Number(form.rate.value)) * 1.18 > 100000 ? 'PENDING' : 'APPROVED',
+            createdBy: user?.name || 'Owner OS Admin',
+            notes: form.notes.value,
+            items: [{
+              itemCode: form.itemCode.value,
+              itemDescription: form.itemDesc.value,
+              orderQty: Number(form.qty.value),
+              receivedQty: 0,
+              unit: form.unit.value,
+              unitPrice: Number(form.rate.value),
+              lineTotal: Number(form.qty.value) * Number(form.rate.value)
+            }]
+          };
+
+          try {
+            await insertPurchaseOrder(newPo);
+            setIsCreatePoOpen(false);
+            setActionSuccess('Purchase order created successfully.');
+            const updated = await fetchPurchaseOrders();
+            setPurchaseOrders(updated);
+          } catch (err: any) {
+            setActionError(err.message || 'Failed to create PO.');
+          }
+        }} className="space-y-4 text-xs font-sans">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Supplier Code</label>
+              <input name="supplierCode" required defaultValue="VEND-001" className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+              }`} />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Supplier Name</label>
+              <input name="supplierName" required defaultValue="Mahalaxmi Steel Traders" className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
+                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+              }`} />
+            </div>
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Item Code / SKU</label>
+              <input name="itemCode" required defaultValue="RAW-ALU-6061-ROD" className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+              }`} />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Item Description</label>
+              <input name="itemDesc" required defaultValue="Aluminium 6061 Round Bar Ø50mm" className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
+                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+              }`} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Order Qty</label>
+              <input name="qty" type="number" required defaultValue="100" className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+              }`} />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Unit</label>
+              <input name="unit" required defaultValue="KG" className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+              }`} />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Unit Rate (₹)</label>
+              <input name="rate" type="number" required defaultValue="280" className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+              }`} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Exp Delivery Date</label>
+              <input name="deliveryDate" type="date" required defaultValue="2026-08-30" className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+              }`} />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Notes</label>
+              <input name="notes" defaultValue="Standard factory delivery" className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
+                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white placeholder:text-slate-500 focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-[var(--accent-primary)] shadow-xs'
+              }`} />
+            </div>
+          </div>
+
+          <div className={`pt-4 border-t flex justify-end gap-3 font-sans ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+            <button type="button" onClick={() => setIsCreatePoOpen(false)} className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+              isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+            }`}>Cancel</button>
+            <button type="submit" className="px-5 py-2 rounded-xl bg-[var(--accent-primary)] hover:brightness-110 text-white font-bold text-xs cursor-pointer shadow-lg shadow-[var(--accent-shadow)] transition-all hover:scale-[1.01]">Issue PO</button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal 3: Inward Goods Receipt (GRN) */}
+      <Modal
+        isOpen={isCreateGrnOpen}
+        onClose={() => setIsCreateGrnOpen(false)}
+        maxWidth="xl"
+        isDarkMode={isDarkMode}
+        icon={<Truck className="w-5 h-5" />}
+        title="Inward Goods Receipt (GRN)"
+        subtitle="Receive supplier material at gate"
+      >
+        <form onSubmit={async (e) => {
+          e.preventDefault();
+          const form = e.target as any;
+          const newGrn: GoodsReceiptNote = {
+            grnNo: `GRN-26-${Date.now().toString().slice(-4)}`,
+            poNo: form.poNo.value,
+            vendorCode: form.vendorCode.value,
+            vendorName: form.vendorName.value,
+            challanNo: form.challanNo.value,
+            challanDate: new Date().toISOString().split('T')[0],
+            receivedDate: new Date().toISOString().split('T')[0],
+            receivedBy: user?.name || 'Gate Inward Officer',
+            status: 'RECEIVED',
+            vehicleNo: form.vehicleNo.value,
+            remarks: form.remarks.value,
+            items: [{
+              itemCode: form.itemCode.value,
+              itemDescription: form.itemDesc.value,
+              orderedQty: Number(form.qty.value),
+              receivedQty: Number(form.qty.value),
+              acceptedQty: Number(form.qty.value),
+              rejectedQty: 0,
+              unit: form.unit.value,
+              unitRate: 280
+            }]
+          };
+
+          try {
+            await insertGrn(newGrn);
+            setIsCreateGrnOpen(false);
+            setActionSuccess('GRN logged successfully at gate.');
+            const updated = await fetchGrnList();
+            setGrnList(updated);
+          } catch (err: any) {
+            setActionError(err.message || 'Failed to log GRN.');
+          }
+        }} className="space-y-4 text-xs font-sans">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>PO Reference</label>
+              <input name="poNo" required defaultValue="PO-PUR-2026-001" className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+              }`} />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Challan No / Invoice</label>
+              <input name="challanNo" required defaultValue="CH-GATE-4401" className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+              }`} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Vendor Code</label>
+              <input name="vendorCode" required defaultValue="VEND-001" className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+              }`} />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Vendor Name</label>
+              <input name="vendorName" required defaultValue="Mahalaxmi Steel Traders" className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
+                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+              }`} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Item SKU</label>
+              <input name="itemCode" required defaultValue="RAW-ALU-6061-ROD" className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+              }`} />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Item Desc</label>
+              <input name="itemDesc" required defaultValue="Aluminium 6061 Round Bar" className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
+                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+              }`} />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Received Qty</label>
+              <input name="qty" type="number" required defaultValue="100" className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+              }`} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Vehicle / Transporter</label>
+              <input name="vehicleNo" defaultValue="GJ-03-AX-8910" className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+              }`} />
+            </div>
+            <div>
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Unit</label>
+              <input name="unit" defaultValue="KG" className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+              }`} />
+            </div>
+          </div>
+
+          <div>
+            <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Gate Inspection Remarks</label>
+            <input name="remarks" defaultValue="Material physically verified against MTC." className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
+              isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white placeholder:text-slate-500 focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-[var(--accent-primary)] shadow-xs'
+            }`} />
+          </div>
+
+          <div className={`pt-4 border-t flex justify-end gap-3 font-sans ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+            <button type="button" onClick={() => setIsCreateGrnOpen(false)} className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+              isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+            }`}>Cancel</button>
+            <button type="submit" className="px-5 py-2 rounded-xl bg-[var(--accent-primary)] hover:brightness-110 text-white font-bold text-xs cursor-pointer shadow-lg shadow-[var(--accent-shadow)] transition-all hover:scale-[1.01]">Log GRN Inward</button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal 4: Item Stock Movement History (Chronological Ledger) */}
+      <Modal
+        isOpen={Boolean(selectedItemHistory)}
+        onClose={() => setSelectedItemHistory(null)}
+        maxWidth="3xl"
+        isDarkMode={isDarkMode}
+        icon={<History className="w-5 h-5" />}
+        title={`Stock Movement History — ${selectedItemHistory?.itemCode || ''}`}
+        subtitle={`${selectedItemHistory?.description || 'Precision Component'} • Chronological Running Balance`}
+        footer={
+          <div className="w-full flex justify-end">
+            <button 
+              onClick={() => setSelectedItemHistory(null)}
+              className={`px-5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              Close Ledger
+            </button>
+          </div>
+        }
+      >
+        {selectedItemHistory && (
+          <div className="max-h-[60vh] overflow-y-auto space-y-2.5 pr-1 font-mono text-xs">
+            {selectedItemHistory.history.map((h) => {
+              const isInbound = h.quantityChange > 0;
+              const isCorrection = h.movementType === 'CORRECTION';
+              const isAdjustment = h.movementType === 'ADJUSTMENT';
+
+              return (
+                <div 
+                  key={h.id}
+                  className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 ${
+                    isDarkMode ? 'bg-[#0d1017] border-slate-800/90' : 'bg-slate-50 border-slate-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-xl border text-[10px] font-bold uppercase ${
+                      isCorrection 
+                        ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                        : isAdjustment
+                          ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                          : isInbound
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                            : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                    }`}>
+                      {h.movementType}
+                    </div>
+                    <div>
+                      <div className={`font-bold flex items-center gap-2 ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>
+                        <span className={isInbound ? 'text-emerald-400 font-black' : 'text-rose-400 font-black'}>
+                          {isInbound ? `+${h.quantityChange}` : h.quantityChange}
+                        </span>
+                        {h.referenceId && (
+                          <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold border ${
+                            isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-200'
+                          }`}>
+                            Ref: {h.referenceId}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-slate-400 mt-0.5">
+                        {h.notes || 'Ledger event recorded'} • <span className="text-slate-500">{h.actorEmail}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <div className="text-[10px] text-slate-400 uppercase font-bold">Running Balance</div>
+                    <div className={`text-sm font-black mt-0.5 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{h.balanceAfter} Units</div>
+                    <div className="text-[10px] text-slate-500 mt-0.5">
+                      {new Date(h.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {selectedItemHistory.history.length === 0 && (
+              <div className="p-8 text-center text-slate-400">
+                No historical movements found for this SKU.
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
+
+      {/* Modal 5: Reverse / Correct Movement */}
+      <Modal
+        isOpen={Boolean(selectedMovementForCorrection)}
+        onClose={() => setSelectedMovementForCorrection(null)}
+        maxWidth="md"
+        isDarkMode={isDarkMode}
+        icon={<RotateCcw className="w-5 h-5" />}
+        title="Append Correction Movement"
+        subtitle="Offset target movement without mutating history"
+      >
+        {selectedMovementForCorrection && (
+          <form onSubmit={handleReverseMovement} className="space-y-4 font-mono text-xs">
+            <div className={`p-3.5 rounded-xl border space-y-1.5 ${
+              isDarkMode ? 'bg-[#0d1017] border-slate-800' : 'bg-slate-50 border-slate-200'
+            }`}>
+              <div className="text-[10px] text-slate-400 uppercase font-bold">Target Movement</div>
+              <div className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                {selectedMovementForCorrection.id} ({selectedMovementForCorrection.itemCode})
+              </div>
+              <div className="text-amber-400 text-[11px] font-bold">
+                Original: {selectedMovementForCorrection.quantityChange > 0 ? `+${selectedMovementForCorrection.quantityChange}` : selectedMovementForCorrection.quantityChange} • Offset: {-selectedMovementForCorrection.quantityChange > 0 ? `+${-selectedMovementForCorrection.quantityChange}` : -selectedMovementForCorrection.quantityChange}
+              </div>
+            </div>
+
+            <div>
+              <label className={`block text-[11px] font-sans font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Reason for Reversal / Correction *
+              </label>
+              <input 
+                type="text" 
+                required 
+                value={correctionReason} 
+                onChange={(e) => setCorrectionReason(e.target.value)}
+                placeholder="e.g. Inward counting error or damaged box returned"
+                className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
+                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white placeholder:text-slate-500 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-amber-500 shadow-xs'
+                }`}
+              />
+            </div>
+
+            <div className={`pt-4 border-t flex justify-end gap-3 font-sans ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+              <button type="button" onClick={() => setSelectedMovementForCorrection(null)} className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+              }`}>Cancel</button>
+              <button type="submit" className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs cursor-pointer shadow-md transition-all hover:scale-[1.01]">
+                Append Correction
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
 
     </div>
   );

@@ -680,6 +680,9 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
           {currentView === 'finished-goods' && (
             <FinishedGoodsView
               items={finishedGoods}
+              masters={masters}
+              stock={stock}
+              orders={orders}
               isDarkMode={isDarkMode}
             />
           )}

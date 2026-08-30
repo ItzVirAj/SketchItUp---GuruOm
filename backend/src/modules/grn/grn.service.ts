@@ -7,6 +7,7 @@ import { ordersService } from '../orders/orders.service';
 import { purchasingService } from '../purchasing/purchasing.service';
 import { evaluateGrnMismatch } from '../../../../src/utils/procurementEngine';
 import { logAudit } from '../../services/auditLog';
+import { auditService } from '../audit/audit.service';
 
 const SEED_GRNS: any[] = [];
 
@@ -104,7 +105,7 @@ export class GrnService {
     return SEED_GRNS.find(g => g.id === id || g.grnNo === id) || null;
   }
 
-  async createGrn(data: z.infer<typeof GoodsReceiptNoteSchema>) {
+  async createGrn(data: z.infer<typeof GoodsReceiptNoteSchema>, actorEmail?: string, actorRole?: string) {
     const validated = GoodsReceiptNoteSchema.parse(data);
     const grnId = validated.id || `grn-${Date.now()}`;
 
@@ -183,6 +184,10 @@ export class GrnService {
       console.warn('Database createGrn error:', err);
     }
 
+    const effectiveEmail = (actorEmail && actorEmail.includes('@')) ? actorEmail :
+      (validated.receivedBy && validated.receivedBy.includes('@') ? validated.receivedBy : (actorEmail || 'stores@guruom.in'));
+    const effectiveRole = actorRole || 'Store Keeper';
+
     // Record inbound movements into immutable inventory ledger
     if (validated.items && validated.items.length > 0) {
       for (const item of validated.items) {
@@ -194,7 +199,7 @@ export class GrnService {
             movementType: 'GRN',
             referenceId: validated.grnNo,
             referenceType: 'grn',
-            actorEmail: validated.receivedBy.includes('@') ? validated.receivedBy : 'warehouse@guruom.in',
+            actorEmail: effectiveEmail,
             notes: `Goods receipt from ${validated.vendorName} (Challan #${validated.challanNo})`
           }).catch(() => {});
         }
@@ -214,14 +219,18 @@ export class GrnService {
       console.warn('Background recheckMaterialAvailability error:', err);
     });
 
-    // Real-Time Push: Broadcast GRN creation & stock update
-    await logAudit({
-      actorEmail: 'stores@guruom.in',
-      action: 'GRN_RECORDED',
+    // Structured Audit Log with Mismatch evaluation
+    await auditService.recordAuditLog({
+      actorEmail: effectiveEmail,
+      actorRole: effectiveRole,
+      action: isQtyMismatched ? 'GRN_RECEIVED_WITH_MISMATCH' : 'GRN_RECEIVED_MATCHED',
       entityType: 'goods_receipt_notes',
       entityId: String(createdGrn.grnNo || createdGrn.id || ''),
-      afterState: { poNo: createdGrn.poNo, vendor: createdGrn.vendorName, receivedQty: createdGrn.receivedQty, status: createdGrn.status },
-      metadata: { details: `GRN ${createdGrn.grnNo} recorded for PO ${createdGrn.poNo} from ${createdGrn.vendorName || 'vendor'}` }
+      afterState: { poNo: createdGrn.poNo, vendor: createdGrn.vendorName, receivedQty: createdGrn.receivedQty, status: createdGrn.status, isQtyMismatched },
+      metadata: {
+        details: mismatchNotes ? `GRN ${createdGrn.grnNo} received with mismatch: ${mismatchNotes}` : `GRN ${createdGrn.grnNo} received and matched for PO ${createdGrn.poNo} from ${createdGrn.vendorName || 'vendor'}`,
+        mismatch: isQtyMismatched ? { isMismatched: true, notes: mismatchNotes } : undefined
+      }
     }).catch(() => {});
 
     notificationsService.broadcastEvent('grn_created', createdGrn);

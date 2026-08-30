@@ -6,6 +6,7 @@ import { inventoryMovementsService } from '../inventory/inventory_movements.serv
 import { notificationsService } from '../notifications/notifications.service';
 import { ordersService } from '../orders/orders.service';
 import { logAudit } from '../../services/auditLog';
+import { auditService } from '../audit/audit.service';
 import { getCurrentFinancialYear, formatDocumentNumber } from '../../../../src/utils/statutoryAccountingEngine';
 
 const SEED_DISPATCHES: any[] = [];
@@ -121,7 +122,7 @@ export class DispatchService {
    * Creates a Delivery Challan with full Idempotency protection, Concurrency Locking,
    * Dispatchable Quantity check, and Open-Draft reservation.
    */
-  async createDispatch(data: z.infer<typeof DispatchChallanSchema>, actorEmail = 'dispatch@guruom.in') {
+  async createDispatch(data: z.infer<typeof DispatchChallanSchema>, actorEmail = 'dispatch@guruom.in', actorRole = 'Dispatch Manager') {
     const validated = DispatchChallanSchema.parse(data);
 
     // 1. Check Idempotency Key in Memory Cache (24h validity)
@@ -422,13 +423,14 @@ export class DispatchService {
         ordersService.updateOrderStageDirectly(validated.orderPo, 'READY_TO_DISPATCH', 7);
       }
 
-      await logAudit({
+      await auditService.recordAuditLog({
         actorEmail,
-        action: isDraftOrReady ? 'DISPATCH_DRAFT_CREATED' : 'DISPATCH_CREATED',
+        actorRole,
+        action: 'DISPATCH_CHALLAN_CREATED',
         entityType: 'dispatch_challans',
         entityId: String(challanNo),
         afterState: { orderPo: validated.orderPo, transporter: validated.transporter, vehicleNo: validated.vehicleNo, linesCount: validated.linesCount, challanNo, status: validated.status },
-        metadata: { details: `Challan ${challanNo} (${validated.status}) created for PO ${validated.orderPo} via ${validated.transporter}` }
+        metadata: { details: `Dispatch challan ${challanNo} (${validated.status}) created for PO ${validated.orderPo} via ${validated.transporter}` }
       }).catch(() => {});
 
       notificationsService.broadcastEvent('dispatch_created', created);
@@ -709,19 +711,19 @@ export class DispatchService {
         orderPo,
         eligible: true,
         reasons: [],
-        dispatchableLines: []
+      dispatchableLines: []
       };
     }
   }
 
-  async updateDispatchStatus(challanNo: string, data: z.infer<typeof UpdateDispatchStatusSchema>, actorEmail = 'dispatch@guruom.in') {
+  async updateDispatchStatus(challanNo: string, data: z.infer<typeof UpdateDispatchStatusSchema>, actorEmail = 'dispatch@guruom.in', actorRole = 'Dispatch Manager') {
     const { status, reason } = UpdateDispatchStatusSchema.parse(data);
 
     try {
       await this.db
         .from('dispatch_challans')
         .update({ status })
-        .or(`id.eq.${challanNo},challan_no.eq.${challanNo}`);
+        .eq('challan_no', challanNo);
     } catch (err) {
       console.warn('Database updateDispatchStatus fallback:', err);
     }
@@ -803,29 +805,39 @@ export class DispatchService {
       }
     }
 
-    await logAudit({
+    const auditAction = status === 'DISPATCHED' ? 'CHALLAN_DISPATCHED' :
+      (status === 'DELIVERED' ? 'CHALLAN_DELIVERED' :
+      (status === 'CANCELLED' ? 'CHALLAN_CANCELLED' : 'DISPATCH_STATUS_UPDATED'));
+
+    const auditDetails = status === 'CANCELLED' ? `Dispatch challan ${challanNo} cancelled${reason ? `: ${reason}` : ''}` :
+      (status === 'DISPATCHED' ? `Dispatch challan ${challanNo} authorized and dispatched` :
+      (status === 'DELIVERED' ? `Delivery confirmed for challan ${challanNo}` :
+      `Challan ${challanNo} transitioned to status ${status}${reason ? ` (${reason})` : ''}`));
+
+    await auditService.recordAuditLog({
       actorEmail,
-      action: status === 'CANCELLED' ? 'DISPATCH_CANCELLED' : 'DISPATCH_STATUS_UPDATED',
+      actorRole,
+      action: auditAction,
       entityType: 'dispatch_challans',
       entityId: String(challanNo),
       afterState: { challanNo, status, reason },
-      metadata: { details: `Challan ${challanNo} transitioned to status ${status}${reason ? ` (${reason})` : ''}` }
+      metadata: { details: auditDetails }
     }).catch(() => {});
 
     notificationsService.broadcastEvent('dispatch_updated', { challanNo, status });
     return { challanNo, status };
   }
 
-  async dispatchChallan(challanNo: string, actorEmail = 'dispatch@guruom.in') {
-    return this.updateDispatchStatus(challanNo, { status: 'DISPATCHED' }, actorEmail);
+  async dispatchChallan(challanNo: string, actorEmail = 'dispatch@guruom.in', actorRole = 'Dispatch Manager') {
+    return this.updateDispatchStatus(challanNo, { status: 'DISPATCHED' }, actorEmail, actorRole);
   }
 
-  async deliverChallan(challanNo: string, actorEmail = 'dispatch@guruom.in') {
-    return this.updateDispatchStatus(challanNo, { status: 'DELIVERED' }, actorEmail);
+  async deliverChallan(challanNo: string, actorEmail = 'dispatch@guruom.in', actorRole = 'Dispatch Manager') {
+    return this.updateDispatchStatus(challanNo, { status: 'DELIVERED' }, actorEmail, actorRole);
   }
 
-  async cancelChallan(challanNo: string, reason = 'Cancelled by user', actorEmail = 'dispatch@guruom.in') {
-    return this.updateDispatchStatus(challanNo, { status: 'CANCELLED', reason }, actorEmail);
+  async cancelChallan(challanNo: string, reason = 'Cancelled by user', actorEmail = 'dispatch@guruom.in', actorRole = 'Dispatch Manager') {
+    return this.updateDispatchStatus(challanNo, { status: 'CANCELLED', reason }, actorEmail, actorRole);
   }
 
   /**

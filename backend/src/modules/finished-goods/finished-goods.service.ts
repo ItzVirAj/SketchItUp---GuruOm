@@ -2,6 +2,7 @@ import { getDbClient } from '../../config/database';
 import { z } from 'zod';
 import { FinishedGoodsSchema, ReconcileFgSchema } from './finished-goods.schema';
 import { inventoryService } from '../inventory/inventory.service';
+import { auditService } from '../audit/audit.service';
 
 const SEED_FINISHED_GOODS: any[] = [];
 
@@ -60,7 +61,7 @@ export class FinishedGoodsService {
     return SEED_FINISHED_GOODS.filter(f => f.orderPo === orderPo || f.partCode === orderPo);
   }
 
-  async recordFinishedGoods(data: z.infer<typeof FinishedGoodsSchema>) {
+  async recordFinishedGoods(data: z.infer<typeof FinishedGoodsSchema>, actorEmail?: string, actorRole?: string) {
     const validated = FinishedGoodsSchema.parse(data);
     const fgId = validated.id || `fg-${Date.now()}`;
 
@@ -85,10 +86,24 @@ export class FinishedGoodsService {
 
     const created = { id: fgId, ...validated };
     SEED_FINISHED_GOODS.unshift(created as any);
+
+    const effectiveEmail = (actorEmail && actorEmail.includes('@')) ? actorEmail : (actorEmail || 'production@guruom.in');
+    const effectiveRole = actorRole || 'Shop Floor Supervisor';
+
+    await auditService.recordAuditLog({
+      actorEmail: effectiveEmail,
+      actorRole: effectiveRole,
+      action: 'FINISHED_GOODS_RECORDED',
+      entityType: 'finished_goods',
+      entityId: String(created.id || created.orderPo),
+      afterState: created,
+      metadata: { details: `Finished goods recorded for PO ${created.orderPo} (${created.pdiPassedQty || created.physicallyHeldQty} units of ${created.partCode})` }
+    }).catch(() => {});
+
     return created;
   }
 
-  async reconcileFinishedGoods(id: string, data: z.infer<typeof ReconcileFgSchema>) {
+  async reconcileFinishedGoods(id: string, data: z.infer<typeof ReconcileFgSchema>, actorEmail?: string, actorRole?: string) {
     const { physicallyHeldQty } = ReconcileFgSchema.parse(data);
 
     const fg = SEED_FINISHED_GOODS.find(f => f.id === id || f.orderPo === id);
@@ -114,6 +129,19 @@ export class FinishedGoodsService {
       fg.physicallyHeldQty = physicallyHeldQty;
       fg.variance = variance;
     }
+
+    const effectiveEmail = (actorEmail && actorEmail.includes('@')) ? actorEmail : (actorEmail || 'production@guruom.in');
+    const effectiveRole = actorRole || 'Store Keeper';
+
+    await auditService.recordAuditLog({
+      actorEmail: effectiveEmail,
+      actorRole: effectiveRole,
+      action: 'FINISHED_GOODS_RECONCILED',
+      entityType: 'finished_goods',
+      entityId: String(id),
+      afterState: { id, physicallyHeldQty, variance },
+      metadata: { details: `Finished goods reconciled for ${id}: physically held ${physicallyHeldQty}, variance ${variance}` }
+    }).catch(() => {});
 
     return { id, physicallyHeldQty, variance };
   }

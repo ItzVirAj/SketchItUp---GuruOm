@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  ArrowLeft, 
-  Upload, 
-  XCircle, 
-  CheckCircle2, 
-  Clock, 
-  Truck, 
-  FileText, 
+import {
+  ArrowLeft,
+  Upload,
+  XCircle,
+  CheckCircle2,
+  Clock,
+  Truck,
+  FileText,
   ChevronRight,
   ShieldCheck,
   Package,
@@ -206,7 +206,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   );
   const [delayedError, setDelayedError] = useState<string | null>(null);
 
-  const linkedDispatches = (dispatches || []).filter(d => 
+  const linkedDispatches = (dispatches || []).filter(d =>
     (d.orderPo && ((order.poNo && d.orderPo.trim().toUpperCase() === order.poNo.trim().toUpperCase()) || (order.id && d.orderPo.trim().toUpperCase() === order.id.trim().toUpperCase()))) ||
     (order.deliveryChallanNo && d.challanNo && d.challanNo.trim().toUpperCase() === order.deliveryChallanNo.trim().toUpperCase())
   );
@@ -215,7 +215,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   const effectiveChallanNo = order.deliveryChallanNo || latestDispatch?.challanNo || null;
   const isDispatched = ['DISPATCHED', 'IN_TRANSIT', 'DELIVERED', 'CLOSED', 'PAID'].includes((order.status || order.stage || '').toUpperCase()) || latestDispatch?.status === 'DISPATCHED';
 
-  const linkedInvoices = (invoices || []).filter(inv => 
+  const linkedInvoices = (invoices || []).filter(inv =>
     (inv.orderPo && ((order.poNo && inv.orderPo.trim().toUpperCase() === order.poNo.trim().toUpperCase()) || (order.id && inv.orderPo.trim().toUpperCase() === order.id.trim().toUpperCase()))) ||
     (inv.poNo && ((order.poNo && inv.poNo.trim().toUpperCase() === order.poNo.trim().toUpperCase()) || (order.id && inv.poNo.trim().toUpperCase() === order.id.trim().toUpperCase()))) ||
     (effectiveChallanNo && (inv as any).challanNo && (inv as any).challanNo.trim().toUpperCase() === effectiveChallanNo.trim().toUpperCase()) ||
@@ -282,7 +282,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
     }
   };
 
-  const linkedPdi = (pdiQueue || []).filter(p => 
+  const linkedPdi = (pdiQueue || []).filter(p =>
     (p.orderPo && ((order.poNo && p.orderPo.trim().toUpperCase() === order.poNo.trim().toUpperCase()) || (order.id && p.orderPo.trim().toUpperCase() === order.id.trim().toUpperCase()))) ||
     (order.jobCards && order.jobCards.some(j => j.jobNo && j.jobNo.trim().toUpperCase() === (p.jobNo || '').trim().toUpperCase()))
   );
@@ -291,7 +291,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
     ['PDI_COMPLETE', 'READY_FOR_DISPATCH', 'READY_TO_DISPATCH', 'INVOICE_GENERATED', 'DISPATCH_READY', 'PARTIALLY_DISPATCHED', 'DISPATCHED', 'IN_TRANSIT', 'DELIVERED', 'CLOSED', 'PAID'].includes((order.status || order.stage || '').toUpperCase()) ||
     Boolean(effectiveChallanNo);
 
-  const linkedQc = (qcQueue || []).filter(q => 
+  const linkedQc = (qcQueue || []).filter(q =>
     (q.orderPo && (q.orderPo.trim().toUpperCase() === (order.poNo || '').trim().toUpperCase() || q.orderPo.trim().toUpperCase() === (order.id || '').trim().toUpperCase())) ||
     (order.jobCards && order.jobCards.some(j => j.jobNo && j.jobNo.trim().toUpperCase() === (q.jobNo || '').trim().toUpperCase()))
   );
@@ -355,12 +355,12 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   // ----------------------------------------------------
   // Order Progression Interactive Handlers
   // ----------------------------------------------------
-  
+
   const handlePdiDecisionSubmit = async (pdiDecision: 'PASS' | 'FAIL') => {
     try {
       setIsConfirming(true);
       setPdiError(null);
-      
+
       const payload = {
         orderPo: order.poNo || order.id,
         pdiStatus: pdiDecision,
@@ -677,8 +677,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       setMaterialCheckFeedback({
         ready: res.ready,
         shortages: res.shortages || [],
-        message: res.ready 
-          ? 'Material Check PASSED: All BOM raw materials are in stock and allocated.' 
+        message: res.ready
+          ? 'Material Check PASSED: All BOM raw materials are in stock and allocated.'
           : `Material Check Shortage: ${res.shortages?.length || 0} items are short. Purchase requisitions auto-created.`
       });
       if (onUpdateOrder) {
@@ -1264,8 +1264,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         const allowed = isRoleAuthorizedForCta(currentRole, 'RECORD_PAYMENT');
         const isPartial = currentPaid > 0;
         return {
-          label: isPartial 
-            ? `Record Payment (Stage 11 — Bal: ₹${remainingOutstanding.toLocaleString('en-IN')})` 
+          label: isPartial
+            ? `Record Payment (Stage 11 — Bal: ₹${remainingOutstanding.toLocaleString('en-IN')})`
             : `Record Payment (Stage 11 — Total: ₹${gross.toLocaleString('en-IN')})`,
           icon: CreditCard,
           buttonClass: 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white shadow-emerald-500/25',
@@ -1279,7 +1279,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           label: 'Order Closed & Settled (Completed)',
           icon: Lock,
           buttonClass: 'bg-slate-800 text-emerald-400 border border-emerald-500/30 cursor-default opacity-90',
-          handler: () => {},
+          handler: () => { },
           disabled: true,
           ownerRole: 'Lifecycle Complete'
         };
@@ -1401,23 +1401,21 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
   return (
     <div className="space-y-6 font-sans">
-      
+
       {/* 1. Header Navigation & Action Bar */}
-      <div className={`p-4 sm:p-6 rounded-3xl border transition-all ${
-        isDarkMode 
-          ? 'bg-slate-900/85 border-slate-800/80 text-white backdrop-blur-xl shadow-2xl' 
-          : 'bg-white border-slate-200 shadow-md text-slate-900'
-      }`}>
+      <div className={`p-4 sm:p-6 rounded-3xl border transition-all ${isDarkMode
+        ? 'bg-slate-900/85 border-slate-800/80 text-white backdrop-blur-xl shadow-2xl'
+        : 'bg-white border-slate-200 shadow-md text-slate-900'
+        }`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 sm:gap-4">
-          
+
           <div className="flex items-start sm:items-center gap-3">
             <button
               onClick={onBack}
-              className={`p-2 sm:p-2.5 rounded-2xl border cursor-pointer transition-all hover:scale-105 active:scale-95 shrink-0 ${
-                isDarkMode 
-                  ? 'border-slate-800 bg-slate-950/70 text-slate-300 hover:bg-slate-800 hover:text-white' 
-                  : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-              }`}
+              className={`p-2 sm:p-2.5 rounded-2xl border cursor-pointer transition-all hover:scale-105 active:scale-95 shrink-0 ${isDarkMode
+                ? 'border-slate-800 bg-slate-950/70 text-slate-300 hover:bg-slate-800 hover:text-white'
+                : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                }`}
               title="Back to Orders Hub"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -1428,45 +1426,42 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 <h1 className="text-xl sm:text-2xl font-bold font-mono tracking-tight text-[#5B75F8] dark:text-[#7B92FF] flex items-center gap-2">
                   <span>{order.poNo}</span>
                 </h1>
-                
+
                 {order.subType && (
-                  <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-mono font-bold uppercase border ${
-                    order.subType === 'BLANKET_CALLOFF' 
-                      ? isDarkMode ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' : 'bg-purple-100 text-purple-800 border-purple-200'
-                      : isDarkMode ? 'bg-blue-500/20 text-blue-300 border-blue-500/30' : 'bg-blue-100 text-blue-800 border-blue-200'
-                  }`}>
+                  <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-mono font-bold uppercase border ${order.subType === 'BLANKET_CALLOFF'
+                    ? isDarkMode ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' : 'bg-purple-100 text-purple-800 border-purple-200'
+                    : isDarkMode ? 'bg-blue-500/20 text-blue-300 border-blue-500/30' : 'bg-blue-100 text-blue-800 border-blue-200'
+                    }`}>
                     {order.subType === 'BLANKET_CALLOFF' ? 'Blanket Call-Off' : 'Fresh PO'}
                   </span>
                 )}
 
-                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-xl text-[11px] sm:text-xs font-mono font-bold uppercase border ${
-                  isQcRejected ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/15 dark:text-rose-400 dark:border-rose-500/30' :
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-xl text-[11px] sm:text-xs font-mono font-bold uppercase border ${isQcRejected ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/15 dark:text-rose-400 dark:border-rose-500/30' :
                   isQcHold || hasNcr ? 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/30' :
-                  order.status === 'CANCELLED' ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/15 dark:text-rose-400 dark:border-rose-500/30' :
-                  order.status === 'DRAFT' || order.status === 'PO_RECEIVED' || order.status === 'SUBMITTED' ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30' :
-                  order.status === 'CONFIRMED' || order.status === 'APPROVED' ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-400 dark:border-blue-500/30' :
-                  order.status === 'MATERIAL_CHECKED' || order.status === 'MATERIAL_CHECK' || order.status === 'MATERIAL_READY' ? 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-500/15 dark:text-indigo-400 dark:border-indigo-500/30' :
-                  order.status === 'IN_PRODUCTION' || order.status === 'JOB_RELEASED' ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/30' :
-                  order.status === 'READY_FOR_QC' || order.status === 'MANUFACTURING_COMPLETED' || order.status === 'QC_INSPECTION' || order.status === 'QC' ? 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-500/15 dark:text-purple-400 dark:border-purple-500/30' :
-                  order.status === 'READY_TO_DISPATCH' || order.status === 'READY_FOR_DISPATCH' || order.status === 'PDI_COMPLETE' ? 'bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-500/15 dark:text-cyan-400 dark:border-cyan-500/30' :
-                  order.status === 'PARTIALLY_DISPATCHED' || order.status === 'DISPATCHED' ? 'bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-500/15 dark:text-teal-400 dark:border-teal-500/30' :
-                  order.status === 'CLOSED' || order.status === 'COMPLETED' ? 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700' :
-                  'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30'
-                }`}>
-                  <span className={`w-2 h-2 rounded-full ${
-                    isQcRejected ? 'bg-rose-500 animate-pulse' :
+                    order.status === 'CANCELLED' ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/15 dark:text-rose-400 dark:border-rose-500/30' :
+                      order.status === 'DRAFT' || order.status === 'PO_RECEIVED' || order.status === 'SUBMITTED' ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30' :
+                        order.status === 'CONFIRMED' || order.status === 'APPROVED' ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-400 dark:border-blue-500/30' :
+                          order.status === 'MATERIAL_CHECKED' || order.status === 'MATERIAL_CHECK' || order.status === 'MATERIAL_READY' ? 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-500/15 dark:text-indigo-400 dark:border-indigo-500/30' :
+                            order.status === 'IN_PRODUCTION' || order.status === 'JOB_RELEASED' ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/30' :
+                              order.status === 'READY_FOR_QC' || order.status === 'MANUFACTURING_COMPLETED' || order.status === 'QC_INSPECTION' || order.status === 'QC' ? 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-500/15 dark:text-purple-400 dark:border-purple-500/30' :
+                                order.status === 'READY_TO_DISPATCH' || order.status === 'READY_FOR_DISPATCH' || order.status === 'PDI_COMPLETE' ? 'bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-500/15 dark:text-cyan-400 dark:border-cyan-500/30' :
+                                  order.status === 'PARTIALLY_DISPATCHED' || order.status === 'DISPATCHED' ? 'bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-500/15 dark:text-teal-400 dark:border-teal-500/30' :
+                                    order.status === 'CLOSED' || order.status === 'COMPLETED' ? 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700' :
+                                      'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30'
+                  }`}>
+                  <span className={`w-2 h-2 rounded-full ${isQcRejected ? 'bg-rose-500 animate-pulse' :
                     isQcHold || hasNcr ? 'bg-amber-500 animate-pulse' :
-                    order.status === 'CANCELLED' ? 'bg-rose-500' :
-                    order.status === 'DRAFT' || order.status === 'PO_RECEIVED' || order.status === 'SUBMITTED' ? 'bg-amber-500 animate-pulse' :
-                    order.status === 'CONFIRMED' || order.status === 'APPROVED' ? 'bg-blue-500' :
-                    order.status === 'MATERIAL_CHECKED' || order.status === 'MATERIAL_CHECK' || order.status === 'MATERIAL_READY' ? 'bg-indigo-500' :
-                    order.status === 'IN_PRODUCTION' || order.status === 'JOB_RELEASED' ? 'bg-amber-500 animate-pulse' :
-                    order.status === 'READY_FOR_QC' || order.status === 'MANUFACTURING_COMPLETED' ? 'bg-purple-500 animate-pulse' :
-                    order.status === 'QC_INSPECTION' || order.status === 'QC' ? 'bg-purple-500' :
-                    order.status === 'READY_TO_DISPATCH' || order.status === 'READY_FOR_DISPATCH' || order.status === 'PDI_COMPLETE' ? 'bg-cyan-500' :
-                    order.status === 'PARTIALLY_DISPATCHED' || order.status === 'DISPATCHED' ? 'bg-teal-500' :
-                    order.status === 'CLOSED' || order.status === 'COMPLETED' ? 'bg-slate-400' : 'bg-emerald-500'
-                  }`} />
+                      order.status === 'CANCELLED' ? 'bg-rose-500' :
+                        order.status === 'DRAFT' || order.status === 'PO_RECEIVED' || order.status === 'SUBMITTED' ? 'bg-amber-500 animate-pulse' :
+                          order.status === 'CONFIRMED' || order.status === 'APPROVED' ? 'bg-blue-500' :
+                            order.status === 'MATERIAL_CHECKED' || order.status === 'MATERIAL_CHECK' || order.status === 'MATERIAL_READY' ? 'bg-indigo-500' :
+                              order.status === 'IN_PRODUCTION' || order.status === 'JOB_RELEASED' ? 'bg-amber-500 animate-pulse' :
+                                order.status === 'READY_FOR_QC' || order.status === 'MANUFACTURING_COMPLETED' ? 'bg-purple-500 animate-pulse' :
+                                  order.status === 'QC_INSPECTION' || order.status === 'QC' ? 'bg-purple-500' :
+                                    order.status === 'READY_TO_DISPATCH' || order.status === 'READY_FOR_DISPATCH' || order.status === 'PDI_COMPLETE' ? 'bg-cyan-500' :
+                                      order.status === 'PARTIALLY_DISPATCHED' || order.status === 'DISPATCHED' ? 'bg-teal-500' :
+                                        order.status === 'CLOSED' || order.status === 'COMPLETED' ? 'bg-slate-400' : 'bg-emerald-500'
+                    }`} />
                   <span>{isQcRejected ? 'QC Rejected' : (isQcHold || hasNcr) ? 'QC Hold / NCR' : (order.status || order.stage || 'DRAFT').replace(/_/g, ' ')}</span>
                 </span>
               </div>
@@ -1483,11 +1478,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           <div className="flex items-center gap-2.5 w-full sm:w-auto">
             <button
               onClick={() => uploadPoModal.open()}
-              className={`w-full sm:w-auto px-3.5 py-2 rounded-2xl border text-xs font-mono font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                isDarkMode 
-                  ? 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800 hover:text-white' 
-                  : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-              }`}
+              className={`w-full sm:w-auto px-3.5 py-2 rounded-2xl border text-xs font-mono font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${isDarkMode
+                ? 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800 hover:text-white'
+                : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                }`}
             >
               <Upload className="w-3.5 h-3.5" />
               <span>{poFileName ? 'PO File Attached' : 'Attach PO'}</span>
@@ -1512,15 +1506,14 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       </div>
 
       {/* 2. Redesigned Milestone Progress Pipeline */}
-      <div className={`p-4 sm:p-8 rounded-2xl sm:rounded-3xl border transition-all shadow-xl relative overflow-hidden ${
-        isDarkMode 
-          ? 'bg-slate-900/90 border-slate-800/90 backdrop-blur-xl text-white' 
-          : 'bg-white border-slate-200 text-slate-900 shadow-sm'
-      }`}>
-        
+      <div className={`p-4 sm:p-8 rounded-2xl sm:rounded-3xl border transition-all shadow-xl relative overflow-hidden ${isDarkMode
+        ? 'bg-slate-900/90 border-slate-800/90 backdrop-blur-xl text-white'
+        : 'bg-white border-slate-200 text-slate-900 shadow-sm'
+        }`}>
+
         {/* Subtle Ambient Background Gradient */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-indigo-500/10 via-blue-500/5 to-transparent rounded-full blur-3xl pointer-events-none -z-0" />
-        
+
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6 pb-4 border-b border-slate-100 dark:border-slate-800/80 relative z-10">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-indigo-500/15 text-indigo-500 dark:text-indigo-400 shrink-0">
@@ -1536,9 +1529,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className={`px-2.5 py-1 sm:px-3 rounded-xl text-[11px] sm:text-xs font-mono font-bold border ${
-              isDarkMode ? 'bg-indigo-500/10 border-indigo-500/30 text-[#7B92FF]' : 'bg-indigo-50 border-indigo-200 text-indigo-700'
-            }`}>
+            <span className={`px-2.5 py-1 sm:px-3 rounded-xl text-[11px] sm:text-xs font-mono font-bold border ${isDarkMode ? 'bg-indigo-500/10 border-indigo-500/30 text-[#7B92FF]' : 'bg-indigo-50 border-indigo-200 text-indigo-700'
+              }`}>
               Status: {(order.status || order.stage || 'DRAFT').replace(/_/g, ' ')}
             </span>
           </div>
@@ -1556,19 +1548,18 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 <React.Fragment key={st.name}>
                   {/* Step Node */}
                   <div className="flex flex-col items-center shrink-0 min-w-[100px] max-w-[130px] group text-center">
-                    
+
                     {/* Node Circle */}
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 ${
-                      isCurrent
-                        ? isQcRejected 
-                          ? 'bg-gradient-to-tr from-rose-600 to-rose-500 text-white ring-4 ring-rose-500/30 shadow-lg shadow-rose-500/40 scale-110 border-2 border-rose-400'
-                          : isQcHold || hasNcr
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 ${isCurrent
+                      ? isQcRejected
+                        ? 'bg-gradient-to-tr from-rose-600 to-rose-500 text-white ring-4 ring-rose-500/30 shadow-lg shadow-rose-500/40 scale-110 border-2 border-rose-400'
+                        : isQcHold || hasNcr
                           ? 'bg-gradient-to-tr from-amber-600 to-amber-500 text-white ring-4 ring-amber-500/30 shadow-lg shadow-amber-500/40 scale-110 border-2 border-amber-400'
                           : 'bg-gradient-to-tr from-[#5B75F8] to-indigo-600 text-white ring-4 ring-[#5B75F8]/30 shadow-lg shadow-[#5B75F8]/40 scale-110 border-2 border-indigo-300'
-                        : isCompleted
-                          ? 'bg-emerald-500/15 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-2 border-emerald-500/40 shadow-xs'
-                          : 'bg-slate-100 dark:bg-slate-800/80 text-slate-400 dark:text-slate-500 border-2 border-slate-200 dark:border-slate-700/60'
-                    }`}>
+                      : isCompleted
+                        ? 'bg-emerald-500/15 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-2 border-emerald-500/40 shadow-xs'
+                        : 'bg-slate-100 dark:bg-slate-800/80 text-slate-400 dark:text-slate-500 border-2 border-slate-200 dark:border-slate-700/60'
+                      }`}>
                       {isCompleted ? (
                         <CheckCircle2 className="w-5 h-5 stroke-[2.5]" />
                       ) : (
@@ -1577,18 +1568,16 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     </div>
 
                     {/* Step Title & Subtitle */}
-                    <span className={`mt-3 text-xs font-bold tracking-tight block ${
-                      isCurrent 
-                        ? 'text-[#5B75F8] dark:text-[#7B92FF]' 
-                        : isCompleted 
-                        ? (isDarkMode ? 'text-slate-200' : 'text-slate-800') 
+                    <span className={`mt-3 text-xs font-bold tracking-tight block ${isCurrent
+                      ? 'text-[#5B75F8] dark:text-[#7B92FF]'
+                      : isCompleted
+                        ? (isDarkMode ? 'text-slate-200' : 'text-slate-800')
                         : 'text-slate-400 dark:text-slate-500'
-                    }`}>
+                      }`}>
                       {st.name}
                     </span>
-                    <span className={`text-[10px] font-mono mt-0.5 block ${
-                      isCurrent ? 'text-indigo-400 font-semibold' : 'text-slate-400 dark:text-slate-500'
-                    }`}>
+                    <span className={`text-[10px] font-mono mt-0.5 block ${isCurrent ? 'text-indigo-400 font-semibold' : 'text-slate-400 dark:text-slate-500'
+                      }`}>
                       {st.subtitle}
                     </span>
                   </div>
@@ -1596,11 +1585,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   {/* Connector Line between Steps */}
                   {idx < steps.length - 1 && (
                     <div className="flex-1 self-center px-2 -mt-6">
-                      <div className={`h-1 rounded-full transition-all duration-500 ${
-                        idx < activeStepIndex 
-                          ? 'bg-gradient-to-r from-emerald-500 to-teal-500 shadow-xs shadow-emerald-500/30' 
-                          : 'bg-slate-200 dark:bg-slate-800'
-                      }`} />
+                      <div className={`h-1 rounded-full transition-all duration-500 ${idx < activeStepIndex
+                        ? 'bg-gradient-to-r from-emerald-500 to-teal-500 shadow-xs shadow-emerald-500/30'
+                        : 'bg-slate-200 dark:bg-slate-800'
+                        }`} />
                     </div>
                   )}
                 </React.Fragment>
@@ -1626,7 +1614,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
         {(() => {
           const norm = normalizeOrderState(order.stage || order.status);
-          
+
           const stageDefinitions = [
             {
               id: 'stage-1',
@@ -1635,7 +1623,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               role: 'Sales / Order Desk',
               description: 'Review customer PO terms, delivery schedule, item specifications, and confirm order into production pipeline.',
               icon: FileText,
-              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) =>
                 ['DRAFT', 'SUBMITTED'].includes(n) || ['DRAFT', 'PO_RECEIVED', 'SUBMITTED', 'PENDING_REVIEW'].includes((o.status || '').toUpperCase()),
               renderActions: () => {
                 const allowed = isRoleAuthorizedForCta(currentRole, 'CONFIRM_ORDER');
@@ -1643,11 +1631,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
                     <button
                       onClick={openEditModal}
-                      className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
-                        isDarkMode 
-                          ? 'border-indigo-500/40 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20' 
-                          : 'border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
-                      }`}
+                      className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${isDarkMode
+                        ? 'border-indigo-500/40 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20'
+                        : 'border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
+                        }`}
                     >
                       <Edit3 className="w-3.5 h-3.5 shrink-0" />
                       <span>Request Revision / Edit</span>
@@ -1678,17 +1665,16 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               role: 'Production Planner (PPC)',
               description: 'Commercials confirmed. Verify drawing revisions, plan shop floor release, or raise change order.',
               icon: Layers,
-              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) =>
                 n === 'APPROVED' || ['CONFIRMED', 'APPROVED', 'PO_APPROVED'].includes((o.status || '').toUpperCase()),
               renderActions: () => (
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
                   <button
                     onClick={openEditModal}
-                    className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
-                      isDarkMode 
-                        ? 'border-purple-500/40 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20' 
-                        : 'border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100'
-                    }`}
+                    className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${isDarkMode
+                      ? 'border-purple-500/40 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20'
+                      : 'border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100'
+                      }`}
                   >
                     <Edit3 className="w-3.5 h-3.5 shrink-0" />
                     <span>Raise Change Order</span>
@@ -1711,7 +1697,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               role: 'Stores & Material Control',
               description: 'Live BOM explosion verified against warehouse inventory stock. Determines Job Card release eligibility.',
               icon: Package,
-              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) =>
                 ['RELEASED', 'PENDING_VERIFICATION', 'MATERIAL_CHECK'].includes(n) || ['MATERIAL_CHECK', 'PENDING_VERIFICATION'].includes((o.status || '').toUpperCase()),
               renderActions: () => (
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
@@ -1726,11 +1712,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   {isOwner && (
                     <button
                       onClick={() => setShowOverrideModal(true)}
-                      className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${
-                        isDarkMode 
-                          ? 'border-purple-500/40 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20' 
-                          : 'border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100'
-                      }`}
+                      className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${isDarkMode
+                        ? 'border-purple-500/40 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20'
+                        : 'border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100'
+                        }`}
                     >
                       <Zap className="w-3.5 h-3.5 shrink-0" />
                       <span>Owner Override</span>
@@ -1746,7 +1731,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               role: 'Stores & Material Control',
               description: 'Raw material allocation verified and reserved for job card cutting.',
               icon: CheckCircle2,
-              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) =>
                 n === 'MATERIAL_SHORT' || ['MATERIAL_SHORT', 'MATERIAL_SHORTAGE'].includes((o.status || '').toUpperCase()),
               renderActions: () => (
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
@@ -1768,7 +1753,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               description: 'Shortage identified. Purchase orders issued to raw material vendors.',
               icon: Building,
               isConditional: (o: CustomerOrder) => ['PROCUREMENT_PENDING', 'PO_SENT', 'GRN', 'GRN_PENDING', 'MATERIAL_SHORT'].includes((o.status || o.stage || '').toUpperCase()),
-              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) =>
                 n === 'PROCUREMENT_PENDING' || ['PROCUREMENT_PENDING', 'PO_SENT', 'UNDER_PROCUREMENT'].includes((o.status || '').toUpperCase()),
               renderActions: () => (
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
@@ -1790,7 +1775,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               description: 'Inward shipment inspection and warehouse Goods Receipt Note (GRN) entry.',
               icon: Package,
               isConditional: (o: CustomerOrder) => ['GRN', 'GRN_PENDING', 'AWAITING_GRN', 'PROCUREMENT_PENDING'].includes((o.status || o.stage || '').toUpperCase()),
-              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) =>
                 n === 'GRN' || ['GRN', 'GRN_PENDING', 'AWAITING_GRN'].includes((o.status || '').toUpperCase()),
               renderActions: () => (
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
@@ -1849,7 +1834,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               description: 'External vendor processing for heat treatment, plating, or specialized machining operations.',
               icon: RefreshCw,
               isConditional: (o: CustomerOrder) => ['WITH_SUBCONTRACTOR', 'OUTWORK_DISPATCHED', 'OUTWORK_RECEIVED'].includes((o.status || o.stage || '').toUpperCase()),
-              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) =>
                 ['WITH_SUBCONTRACTOR', 'OUTWORK_DISPATCHED', 'OUTWORK_RECEIVED'].includes((o.status || '').toUpperCase()),
               renderActions: () => (
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
@@ -1870,7 +1855,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               role: 'Shop Floor & Machine Operators',
               description: 'Active CNC turning, milling, grinding, and route card operation execution on shop floor.',
               icon: Flame,
-              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) =>
                 n === 'IN_PRODUCTION' || ['IN_PRODUCTION', 'IN_PROGRESS', 'MANUFACTURING'].includes((o.status || '').toUpperCase()),
               renderActions: () => (
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
@@ -1891,7 +1876,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               role: 'Production Supervisor',
               description: 'All route card machining operations completed and logged on shop floor. Ready for QC clearance.',
               icon: CheckCircle,
-              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) =>
                 !allQcPassed && !isPdiPassed && ['MANUFACTURING_COMPLETED', 'READY_FOR_QC'].includes((o.status || o.stage || '').toUpperCase()),
               renderActions: () => (
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
@@ -1911,7 +1896,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               role: 'QC Inspector',
               description: 'Dimensional audit, surface finish inspection, and tolerance verification against drawing.',
               icon: ShieldCheck,
-              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) =>
                 !allQcPassed && !isPdiPassed && (['QC', 'QC_INSPECTION'].includes(n) || ['QC', 'QC_INSPECTION', 'QC_IN_PROGRESS', 'INSPECTION_PENDING'].includes((o.status || '').toUpperCase())),
               renderActions: () => (
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
@@ -1947,7 +1932,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               role: 'Quality & Pre-Dispatch Inspector',
               description: 'Final compliance inspection, visual check, anti-rust coating, and protective packaging verification.',
               icon: ClipboardCheck,
-              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) =>
                 !isPdiPassed && ((allQcPassed && !hasNcr) || ['PDI', 'PDI_HOLD', 'QC_REPORT_UPLOADED'].includes(n) || ['PDI', 'PDI_PENDING', 'AWAITING_PDI', 'QC_REPORT_UPLOADED'].includes((o.status || '').toUpperCase())),
               renderActions: () => (
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
@@ -1973,7 +1958,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               role: 'Quality Gatekeeper',
               description: 'Quality verification sign-off and Certificate of Compliance (CoC) clearance.',
               icon: ShieldAlert,
-              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) =>
                 !isPdiPassed && (['REWORK', 'QC_HOLD'].includes(n) || ['REWORK', 'QC_HOLD'].includes((o.status || '').toUpperCase()) || isQcHold || hasNcr),
               renderActions: () => (
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
@@ -2001,7 +1986,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               role: 'Dispatch & Shipping Clerk',
               description: 'Pre-Dispatch Quality Inspection cleared. Issue statutory Delivery Challan (CHL-2627-####) and dispatch finished parts.',
               icon: Truck,
-              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) =>
                 !isDispatched && (['READY_FOR_DISPATCH', 'PDI_COMPLETE', 'DISPATCH_READY'].includes(n) || ['READY_TO_DISPATCH', 'READY_FOR_DISPATCH', 'PDI_COMPLETE', 'DISPATCH_READY'].includes((o.status || '').toUpperCase())),
               renderActions: () => {
                 const allowed = isRoleAuthorizedForCta(currentRole, 'GENERATE_DELIVERY_CHALLAN');
@@ -2037,7 +2022,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               role: 'Accounts & Finance Controller',
               description: 'Statutory GST Tax Invoice (INV-2627-####) generation against outward dispatch challan.',
               icon: Receipt,
-              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) =>
                 (isDispatched || ['DISPATCHED', 'PARTIALLY_DISPATCHED', 'INVOICE_GENERATED', 'INVOICED'].includes(n) || ['DISPATCHED', 'PARTIALLY_DISPATCHED'].includes((o.status || '').toUpperCase())) && (!effectiveInvoiceNo || effectiveInvoiceNo === ''),
               renderActions: () => {
                 const allowed = isRoleAuthorizedForCta(currentRole, 'GENERATE_INVOICE');
@@ -2081,8 +2066,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               role: 'Dispatch & Transport Desk',
               description: 'Confirm customer receipt (with mandatory POD) or record in-transit delivery delay.',
               icon: CheckCircle2,
-              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
-                (Boolean(effectiveInvoiceNo) || isDispatched || ['DISPATCHED', 'IN_TRANSIT', 'PARTIALLY_DISPATCHED', 'DELIVERY_DELAYED'].includes((o.status || '').toUpperCase())) && 
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) =>
+                (Boolean(effectiveInvoiceNo) || isDispatched || ['DISPATCHED', 'IN_TRANSIT', 'PARTIALLY_DISPATCHED', 'DELIVERY_DELAYED'].includes((o.status || '').toUpperCase())) &&
                 !['DELIVERED', 'COMPLETED', 'CLOSED'].includes((o.status || '').toUpperCase()) &&
                 !Boolean(o.podDocumentUrl || o.podReceivedDate),
               renderActions: () => {
@@ -2165,8 +2150,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               role: 'Finance Controller / Owner',
               description: 'Finalize and lock this order. Requires delivery confirmation and full payment.',
               icon: Lock,
-              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => 
-                ['COMPLETED', 'CLOSED'].includes((o.status || '').toUpperCase()) || 
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) =>
+                ['COMPLETED', 'CLOSED'].includes((o.status || '').toUpperCase()) ||
                 ((['DELIVERED'].includes((o.status || '').toUpperCase()) || Boolean(o.podReceivedDate)) && (remainingOutstanding <= 0 || o.paymentStatus === 'PAID')),
               renderActions: () => {
                 const isDeliveredState = ['DELIVERED', 'COMPLETED', 'CLOSED'].includes((order.status || '').toUpperCase()) || Boolean(order.podReceivedDate);
@@ -2228,56 +2213,49 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             <div className="space-y-2.5 w-full">
               <div
                 key={currentStageDef.id}
-                className={`p-5 sm:p-6 rounded-2xl sm:rounded-3xl border transition-all w-full ${
-                  isDarkMode
-                    ? 'bg-gradient-to-r from-slate-900/95 via-indigo-950/40 to-slate-900/95 border-[#5B75F8]/50 ring-1 ring-[#5B75F8]/30 shadow-2xl text-white'
-                    : 'bg-gradient-to-r from-indigo-50/90 via-white to-blue-50/90 border-indigo-200 ring-1 ring-indigo-300 shadow-lg text-slate-900'
-                }`}
+                className={`p-5 sm:p-6 rounded-2xl sm:rounded-3xl border transition-all w-full ${isDarkMode
+                  ? 'bg-gradient-to-r from-slate-900/95 via-indigo-950/40 to-slate-900/95 border-[#5B75F8]/50 ring-1 ring-[#5B75F8]/30 shadow-2xl text-white'
+                  : 'bg-gradient-to-r from-indigo-50/90 via-white to-blue-50/90 border-indigo-200 ring-1 ring-indigo-300 shadow-lg text-slate-900'
+                  }`}
               >
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full">
                   <div className="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
-                    <div className={`p-3 rounded-2xl shrink-0 transition-all ${
-                      isDarkMode
-                        ? 'bg-gradient-to-br from-[#5B75F8]/25 to-indigo-500/25 text-[#7B92FF] border border-[#5B75F8]/40 shadow-sm'
-                        : 'bg-indigo-100/80 text-indigo-700 border border-indigo-200 shadow-sm'
-                    }`}>
+                    <div className={`p-3 rounded-2xl shrink-0 transition-all ${isDarkMode
+                      ? 'bg-gradient-to-br from-[#5B75F8]/25 to-indigo-500/25 text-[#7B92FF] border border-[#5B75F8]/40 shadow-sm'
+                      : 'bg-indigo-100/80 text-indigo-700 border border-indigo-200 shadow-sm'
+                      }`}>
                       <StageIcon className="w-6 h-6 shrink-0" />
                     </div>
 
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className={`text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-md font-mono shrink-0 ${
-                          isDarkMode
-                            ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/30'
-                            : 'bg-indigo-100 text-indigo-800 border border-indigo-200'
-                        }`}>
+                        <span className={`text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-md font-mono shrink-0 ${isDarkMode
+                          ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/30'
+                          : 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                          }`}>
                           {currentStageDef.stageNumber}
                         </span>
 
-                        <h3 className={`font-bold text-base tracking-tight ${
-                          isDarkMode ? 'text-white' : 'text-slate-900'
-                        }`}>
+                        <h3 className={`font-bold text-base tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'
+                          }`}>
                           {currentStageDef.name}
                         </h3>
 
-                        <span className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shrink-0 ${
-                          isClosed
-                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                            : 'bg-indigo-500/20 text-[#7B92FF] border border-indigo-500/40 animate-pulse'
-                        }`}>
+                        <span className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shrink-0 ${isClosed
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-indigo-500/20 text-[#7B92FF] border border-indigo-500/40 animate-pulse'
+                          }`}>
                           {isClosed ? '✓ Order Closed' : '● Active Stage'}
                         </span>
 
-                        <span className={`hidden sm:inline text-[10px] font-mono px-2 py-0.5 rounded-md shrink-0 ${
-                          isDarkMode ? 'bg-slate-800/80 text-slate-300 border border-slate-700' : 'bg-slate-100 text-slate-700 border border-slate-200'
-                        }`}>
+                        <span className={`hidden sm:inline text-[10px] font-mono px-2 py-0.5 rounded-md shrink-0 ${isDarkMode ? 'bg-slate-800/80 text-slate-300 border border-slate-700' : 'bg-slate-100 text-slate-700 border border-slate-200'
+                          }`}>
                           {currentStageDef.role}
                         </span>
                       </div>
 
-                      <p className={`text-xs mt-1.5 leading-relaxed ${
-                        isDarkMode ? 'text-slate-300' : 'text-slate-600'
-                      }`}>
+                      <p className={`text-xs mt-1.5 leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-600'
+                        }`}>
                         {currentStageDef.description}
                       </p>
                     </div>
@@ -2296,11 +2274,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
       {/* 3. Executive KPI & Order Metadata Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 font-mono">
-        
+
         {/* Card 1: Gross Commercials */}
-        <div className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border transition-all ${
-          isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
-        }`}>
+        <div className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border transition-all ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
+          }`}>
           <div className="flex items-center justify-between mb-2 sm:mb-3">
             <span className="text-[10px] sm:text-[11px] text-slate-400 uppercase font-bold tracking-wider">Gross Value</span>
             <div className="p-1.5 sm:p-2 rounded-xl bg-emerald-500/15 text-emerald-500">
@@ -2317,9 +2294,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         </div>
 
         {/* Card 2: Delivery & Timeline */}
-        <div className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border transition-all ${
-          isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
-        }`}>
+        <div className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border transition-all ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
+          }`}>
           <div className="flex items-center justify-between mb-2 sm:mb-3">
             <span className="text-[10px] sm:text-[11px] text-slate-400 uppercase font-bold tracking-wider">Target Date</span>
             <div className="p-1.5 sm:p-2 rounded-xl bg-amber-500/15 text-amber-500">
@@ -2336,14 +2312,12 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         </div>
 
         {/* Card 3: Quality & Heat Traceability */}
-        <div className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border transition-all ${
-          isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
-        }`}>
+        <div className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border transition-all ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
+          }`}>
           <div className="flex items-center justify-between mb-2 sm:mb-3">
             <span className="text-[10px] sm:text-[11px] text-slate-400 uppercase font-bold tracking-wider">QA Gate</span>
-            <div className={`p-1.5 sm:p-2 rounded-xl ${
-              isQcRejected ? 'bg-rose-500/15 text-rose-500' : isQcHold || hasNcr ? 'bg-amber-500/15 text-amber-500' : 'bg-blue-500/15 text-blue-500'
-            }`}>
+            <div className={`p-1.5 sm:p-2 rounded-xl ${isQcRejected ? 'bg-rose-500/15 text-rose-500' : isQcHold || hasNcr ? 'bg-amber-500/15 text-amber-500' : 'bg-blue-500/15 text-blue-500'
+              }`}>
               <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
@@ -2363,9 +2337,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         </div>
 
         {/* Card 4: Fulfillment Progress */}
-        <div className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border transition-all ${
-          isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
-        }`}>
+        <div className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border transition-all ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
+          }`}>
           <div className="flex items-center justify-between mb-2 sm:mb-3">
             <span className="text-[10px] sm:text-[11px] text-slate-400 uppercase font-bold tracking-wider">Dispatched</span>
             <div className="p-1.5 sm:p-2 rounded-xl bg-purple-500/15 text-purple-500">
@@ -2377,8 +2350,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           </div>
           <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
             <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-              <div 
-                className="bg-gradient-to-r from-[#5B75F8] to-emerald-500 h-full rounded-full transition-all duration-500" 
+              <div
+                className="bg-gradient-to-r from-[#5B75F8] to-emerald-500 h-full rounded-full transition-all duration-500"
                 style={{ width: `${fulfillmentPercentage}%` }}
               />
             </div>
@@ -2389,10 +2362,9 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
       {/* 4. Client PO Document & Special Instructions Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-4 font-mono text-xs">
-        
-        <div className={`p-4 sm:p-5 rounded-2xl sm:rounded-3xl border flex items-center justify-between gap-3 ${
-          isDarkMode ? 'bg-slate-900/70 border-slate-800/80 text-white' : 'bg-white border-slate-200 text-slate-900 shadow-xs'
-        }`}>
+
+        <div className={`p-4 sm:p-5 rounded-2xl sm:rounded-3xl border flex items-center justify-between gap-3 ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80 text-white' : 'bg-white border-slate-200 text-slate-900 shadow-xs'
+          }`}>
           <div className="flex items-center gap-3 min-w-0">
             <div className="p-2 sm:p-2.5 rounded-2xl bg-[#5B75F8]/20 text-[#7B92FF] shrink-0">
               <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -2411,9 +2383,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           </button>
         </div>
 
-        <div className={`p-4 sm:p-5 rounded-2xl sm:rounded-3xl border flex items-center gap-3 ${
-          isDarkMode ? 'bg-slate-900/70 border-slate-800/80 text-white' : 'bg-white border-slate-200 text-slate-900 shadow-xs'
-        }`}>
+        <div className={`p-4 sm:p-5 rounded-2xl sm:rounded-3xl border flex items-center gap-3 ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80 text-white' : 'bg-white border-slate-200 text-slate-900 shadow-xs'
+          }`}>
           <div className="p-2 sm:p-2.5 rounded-2xl bg-amber-500/20 text-amber-400 shrink-0">
             <Tag className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
@@ -2428,9 +2399,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       </div>
 
       {/* 5. LINE ITEMS SECTION */}
-      <div className={`p-4 sm:p-6 rounded-2xl sm:rounded-3xl border space-y-4 font-mono text-xs transition-all shadow-lg ${
-        isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl text-white' : 'bg-white border-slate-200 text-slate-900 shadow-xs'
-      }`}>
+      <div className={`p-4 sm:p-6 rounded-2xl sm:rounded-3xl border space-y-4 font-mono text-xs transition-all shadow-lg ${isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl text-white' : 'bg-white border-slate-200 text-slate-900 shadow-xs'
+        }`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-4 border-b border-slate-200 dark:border-slate-800 pb-3">
           <h3 className="font-bold uppercase tracking-wider text-[#5B75F8] dark:text-[#7B92FF] text-xs sm:text-sm flex items-center gap-2">
             <Package className="w-4 h-4" />
@@ -2442,9 +2412,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         {/* Mobile Line Items Cards (< md) */}
         <div className="block md:hidden space-y-2.5">
           {order.lines.map((ln, idx) => (
-            <div key={ln.id} className={`p-3.5 rounded-2xl border transition-all space-y-2.5 ${
-              isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
-            }`}>
+            <div key={ln.id} className={`p-3.5 rounded-2xl border transition-all space-y-2.5 ${isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+              }`}>
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
@@ -2496,9 +2465,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className={`border-b text-[10px] font-bold uppercase tracking-wider ${
-                isDarkMode ? 'text-slate-400 border-slate-800' : 'text-slate-500 border-slate-200'
-              }`}>
+              <tr className={`border-b text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400 border-slate-800' : 'text-slate-500 border-slate-200'
+                }`}>
                 <th className="py-3 px-4">#</th>
                 <th className="py-3 px-4">Item Code & Description</th>
                 <th className="py-3 px-4">Customer Part #</th>
@@ -2533,13 +2501,12 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       {/* Upload Modal */}
       {uploadPoModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-md rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${
-            isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-          }`}>
+          <div className={`relative w-full max-w-md rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+            }`}>
             <div className={`flex items-center justify-between border-b pb-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <h3 className="font-bold text-sm uppercase text-[#5B75F8] dark:text-[#7B92FF]">Upload Client PO Document</h3>
-              <button 
-                onClick={() => uploadPoModal.close()} 
+              <button
+                onClick={() => uploadPoModal.close()}
                 className={`p-1 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
               >
                 <X className="w-5 h-5" />
@@ -2549,20 +2516,18 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               <p className={`text-xs mb-3 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                 Upload PDF or image file of the customer purchase order
               </p>
-              <input 
-                type="file" 
+              <input
+                type="file"
                 onChange={handleFileUpload}
-                className={`w-full p-3 border rounded-xl text-xs cursor-pointer ${
-                  isDarkMode ? 'border-slate-800 bg-slate-900 text-white' : 'border-slate-300 bg-slate-50 text-slate-800'
-                }`} 
+                className={`w-full p-3 border rounded-xl text-xs cursor-pointer ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white' : 'border-slate-300 bg-slate-50 text-slate-800'
+                  }`}
               />
             </div>
             <div className={`pt-3 flex justify-end border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
-              <button 
-                onClick={() => uploadPoModal.close()} 
-                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                  isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
+              <button
+                onClick={() => uploadPoModal.close()}
+                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
               >
                 Close
               </button>
@@ -2574,14 +2539,12 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       {/* Edit Order Modal */}
       {editOrderModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border shadow-2xl p-6 transition-all ${
-            isDarkMode ? 'bg-slate-900/95 border-slate-800 text-white backdrop-blur-2xl' : 'bg-white border-slate-200 text-slate-900 shadow-2xl'
-          }`}>
+          <div className={`relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border shadow-2xl p-6 transition-all ${isDarkMode ? 'bg-slate-900/95 border-slate-800 text-white backdrop-blur-2xl' : 'bg-white border-slate-200 text-slate-900 shadow-2xl'
+            }`}>
             <div className={`flex items-center justify-between pb-4 border-b ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <div className="flex items-center gap-3">
-                <div className={`p-2.5 rounded-2xl border ${
-                  isDarkMode ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30' : 'bg-indigo-50 text-indigo-600 border-indigo-200'
-                }`}>
+                <div className={`p-2.5 rounded-2xl border ${isDarkMode ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30' : 'bg-indigo-50 text-indigo-600 border-indigo-200'
+                  }`}>
                   <Edit3 className="w-5 h-5" />
                 </div>
                 <div>
@@ -2593,13 +2556,12 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   </p>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => editOrderModal.close()}
-                className={`p-2 rounded-2xl border transition-all cursor-pointer ${
-                  isDarkMode 
-                    ? 'border-slate-800 bg-slate-950/60 text-slate-400 hover:text-white hover:bg-slate-800' 
-                    : 'border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
-                }`}
+                className={`p-2 rounded-2xl border transition-all cursor-pointer ${isDarkMode
+                  ? 'border-slate-800 bg-slate-950/60 text-slate-400 hover:text-white hover:bg-slate-800'
+                  : 'border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -2617,7 +2579,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             )}
 
             <form onSubmit={handleEditSubmit} className="space-y-4 mt-4 text-xs font-sans">
-              
+
               {/* PO Number & Customer Read-Only */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
@@ -2629,9 +2591,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     required
                     value={editPoNo}
                     onChange={(e) => setEditPoNo(e.target.value)}
-                    className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none transition-all ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white focus:border-indigo-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500 focus:bg-white'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none transition-all ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white focus:border-indigo-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500 focus:bg-white'
+                      }`}
                   />
                 </div>
                 <div>
@@ -2642,9 +2603,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     type="text"
                     disabled
                     value={order.customerName}
-                    className={`w-full p-2.5 rounded-xl border text-xs outline-none opacity-80 cursor-not-allowed ${
-                      isDarkMode ? 'bg-slate-950/40 border-slate-800 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl border text-xs outline-none opacity-80 cursor-not-allowed ${isDarkMode ? 'bg-slate-950/40 border-slate-800 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'
+                      }`}
                   />
                 </div>
               </div>
@@ -2659,9 +2619,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     type="date"
                     value={editDeliveryDate}
                     onChange={(e) => setEditDeliveryDate(e.target.value)}
-                    className={`w-full p-2.5 rounded-xl border text-xs font-mono outline-none ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl border text-xs font-mono outline-none ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white'
+                      }`}
                   />
                 </div>
                 <div>
@@ -2671,9 +2630,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   <select
                     value={editTaxCategory}
                     onChange={(e) => setEditTaxCategory(e.target.value)}
-                    className={`w-full p-2.5 rounded-xl border text-xs font-mono outline-none cursor-pointer ${
-                      isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl border text-xs font-mono outline-none cursor-pointer ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white'
+                      }`}
                   >
                     <option value="GST 18%">GST 18% (Standard Engineering)</option>
                     <option value="GST 12%">GST 12%</option>
@@ -2694,9 +2652,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   placeholder="e.g. Expedited delivery for plant overhaul"
                   value={editRemark}
                   onChange={(e) => setEditRemark(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border text-xs outline-none ${
-                    isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white'
-                  }`}
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white'
+                    }`}
                 />
               </div>
 
@@ -2710,16 +2667,14 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   placeholder="e.g. Customer requested amendment in quantity and delivery timeline"
                   value={editChangeReason}
                   onChange={(e) => setEditChangeReason(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border text-xs outline-none ${
-                    isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white'
-                  }`}
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white'
+                    }`}
                 />
               </div>
 
               {/* Line Items */}
-              <div className={`p-3.5 rounded-2xl border space-y-2 ${
-                isDarkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50 border-slate-200'
-              }`}>
+              <div className={`p-3.5 rounded-2xl border space-y-2 ${isDarkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50 border-slate-200'
+                }`}>
                 <div className="flex items-center justify-between">
                   <span className={`font-bold font-mono text-xs ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Order Line Items</span>
                   <button
@@ -2733,27 +2688,24 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 </div>
 
                 {editLines.map((line, idx) => (
-                  <div key={line.id || idx} className={`p-3 rounded-xl border space-y-2 ${
-                    isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-xs'
-                  }`}>
+                  <div key={line.id || idx} className={`p-3 rounded-xl border space-y-2 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-xs'
+                    }`}>
                     <div className="grid grid-cols-3 gap-2">
                       <input
                         type="text"
                         placeholder="Item Code"
                         value={line.itemCode}
                         onChange={(e) => updateEditLineItem(idx, 'itemCode', e.target.value)}
-                        className={`p-2 rounded-lg border font-mono text-xs outline-none ${
-                          isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white'
-                        }`}
+                        className={`p-2 rounded-lg border font-mono text-xs outline-none ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white'
+                          }`}
                       />
                       <input
                         type="text"
                         placeholder="Description"
                         value={line.itemDescription}
                         onChange={(e) => updateEditLineItem(idx, 'itemDescription', e.target.value)}
-                        className={`col-span-2 p-2 rounded-lg border text-xs outline-none ${
-                          isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white'
-                        }`}
+                        className={`col-span-2 p-2 rounded-lg border text-xs outline-none ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white'
+                          }`}
                       />
                     </div>
                     <div className="grid grid-cols-4 gap-2">
@@ -2763,9 +2715,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                           type="text"
                           value={line.custPartNo || ''}
                           onChange={(e) => updateEditLineItem(idx, 'custPartNo', e.target.value)}
-                          className={`w-full p-1.5 rounded-lg border font-mono text-xs outline-none ${
-                            isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white'
-                          }`}
+                          className={`w-full p-1.5 rounded-lg border font-mono text-xs outline-none ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white'
+                            }`}
                         />
                       </div>
                       <div>
@@ -2774,9 +2725,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                           type="number"
                           value={line.orderQty}
                           onChange={(e) => updateEditLineItem(idx, 'orderQty', Number(e.target.value))}
-                          className={`w-full p-1.5 rounded-lg border font-mono font-bold text-xs outline-none ${
-                            isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white'
-                          }`}
+                          className={`w-full p-1.5 rounded-lg border font-mono font-bold text-xs outline-none ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white'
+                            }`}
                         />
                       </div>
                       <div>
@@ -2785,9 +2735,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                           type="number"
                           value={line.rate}
                           onChange={(e) => updateEditLineItem(idx, 'rate', Number(e.target.value))}
-                          className={`w-full p-1.5 rounded-lg border font-mono text-xs outline-none ${
-                            isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white'
-                          }`}
+                          className={`w-full p-1.5 rounded-lg border font-mono text-xs outline-none ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white'
+                            }`}
                         />
                       </div>
                       <div className="flex items-center justify-between pt-3">
@@ -2810,9 +2759,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               </div>
 
               {/* Total & Submit */}
-              <div className={`flex items-center justify-between p-3 rounded-xl font-mono border ${
-                isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
-              }`}>
+              <div className={`flex items-center justify-between p-3 rounded-xl font-mono border ${isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
+                }`}>
                 <span className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Calculated Total:</span>
                 <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">
                   ₹{editTotalGross.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
@@ -2823,9 +2771,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 <button
                   type="button"
                   onClick={() => editOrderModal.close()}
-                  className={`px-4 py-2 rounded-xl text-xs font-mono font-bold cursor-pointer transition-all ${
-                    isDarkMode ? 'text-slate-400 hover:text-white' : 'border border-slate-200 text-slate-600 hover:bg-slate-100 text-slate-700'
-                  }`}
+                  className={`px-4 py-2 rounded-xl text-xs font-mono font-bold cursor-pointer transition-all ${isDarkMode ? 'text-slate-400 hover:text-white' : 'border border-slate-200 text-slate-600 hover:bg-slate-100 text-slate-700'
+                    }`}
                 >
                   Cancel
                 </button>
@@ -2846,13 +2793,11 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       {/* 1. PRE-DISPATCH INSPECTION (PDI) MODAL */}
       {pdiModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-xl rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${
-            isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900 shadow-slate-200/50'
-          }`}>
-            {/* Header */}
-            <div className={`flex items-center justify-between border-b pb-4 ${
-              isDarkMode ? 'border-slate-800' : 'border-slate-200'
+          <div className={`relative w-full max-w-xl rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900 shadow-slate-200/50'
             }`}>
+            {/* Header */}
+            <div className={`flex items-center justify-between border-b pb-4 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'
+              }`}>
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-2xl bg-gradient-to-br from-[#5B75F8]/20 to-indigo-500/20 text-[#5B75F8] dark:text-[#7B92FF]">
                   <ClipboardCheck className="w-5 h-5" />
@@ -2866,11 +2811,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   </p>
                 </div>
               </div>
-              <button 
-                onClick={() => pdiModal.close()} 
-                className={`p-1.5 rounded-xl transition-all cursor-pointer ${
-                  isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
-                }`}
+              <button
+                onClick={() => pdiModal.close()}
+                className={`p-1.5 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -2885,9 +2829,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
               {/* Order & Part Summary Box */}
-              <div className={`p-3.5 rounded-2xl border space-y-2 ${
-                isDarkMode ? 'bg-slate-900/60 border-slate-800/90' : 'bg-slate-50 border-slate-200'
-              }`}>
+              <div className={`p-3.5 rounded-2xl border space-y-2 ${isDarkMode ? 'bg-slate-900/60 border-slate-800/90' : 'bg-slate-50 border-slate-200'
+                }`}>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
                   <div>
                     <span className={`text-[10px] font-bold uppercase ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Order PO #</span>
@@ -2906,9 +2849,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 {order.lines && order.lines.length > 0 && (
                   <div className={`pt-2 border-t flex flex-wrap gap-1.5 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
                     {order.lines.map((l, i) => (
-                      <span key={l.id || i} className={`px-2 py-0.5 rounded-lg text-[10px] font-mono border ${
-                        isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-700'
-                      }`}>
+                      <span key={l.id || i} className={`px-2 py-0.5 rounded-lg text-[10px] font-mono border ${isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-700'
+                        }`}>
                         {l.itemCode} • {l.orderQty} {l.unit || 'NOS'}
                       </span>
                     ))}
@@ -2933,19 +2875,17 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                       <div
                         key={key}
                         onClick={() => setPdiChecklist(prev => ({ ...prev, [key]: !isChecked }))}
-                        className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-start gap-2.5 select-none ${
-                          isChecked
-                            ? isDarkMode
-                              ? 'bg-emerald-950/20 border-emerald-500/40 text-emerald-300'
-                              : 'bg-emerald-50 border-emerald-300 text-emerald-900'
-                            : isDarkMode
+                        className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-start gap-2.5 select-none ${isChecked
+                          ? isDarkMode
+                            ? 'bg-emerald-950/20 border-emerald-500/40 text-emerald-300'
+                            : 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                          : isDarkMode
                             ? 'bg-slate-900/40 border-slate-800 text-slate-400 hover:border-slate-700'
                             : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
-                        }`}
+                          }`}
                       >
-                        <div className={`mt-0.5 p-0.5 rounded-md ${
-                          isChecked ? 'text-emerald-500 dark:text-emerald-400' : isDarkMode ? 'text-slate-500' : 'text-slate-400'
-                        }`}>
+                        <div className={`mt-0.5 p-0.5 rounded-md ${isChecked ? 'text-emerald-500 dark:text-emerald-400' : isDarkMode ? 'text-slate-500' : 'text-slate-400'
+                          }`}>
                           {isChecked ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
                         </div>
                         <div>
@@ -2969,11 +2909,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     min={0}
                     value={pdiAcceptedQty}
                     onChange={(e) => setPdiAcceptedQty(Number(e.target.value))}
-                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${
-                      isDarkMode 
-                        ? 'bg-slate-900/90 border-slate-800 text-white focus:border-indigo-500' 
-                        : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${isDarkMode
+                      ? 'bg-slate-900/90 border-slate-800 text-white focus:border-indigo-500'
+                      : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500'
+                      }`}
                   />
                 </div>
                 <div>
@@ -2985,11 +2924,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     min={0}
                     value={pdiRejectedQty}
                     onChange={(e) => setPdiRejectedQty(Number(e.target.value))}
-                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${
-                      isDarkMode 
-                        ? 'bg-slate-900/90 border-slate-800 text-white focus:border-rose-500' 
-                        : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${isDarkMode
+                      ? 'bg-slate-900/90 border-slate-800 text-white focus:border-rose-500'
+                      : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
+                      }`}
                   />
                 </div>
               </div>
@@ -3004,11 +2942,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   placeholder="e.g. COC-2026-0816.pdf or https://..."
                   value={pdiReportUrl}
                   onChange={(e) => setPdiReportUrl(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${
-                    isDarkMode 
-                      ? 'bg-slate-900/90 border-slate-800 text-white focus:border-indigo-500 placeholder-slate-600' 
-                      : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500 placeholder-slate-400'
-                  }`}
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${isDarkMode
+                    ? 'bg-slate-900/90 border-slate-800 text-white focus:border-indigo-500 placeholder-slate-600'
+                    : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500 placeholder-slate-400'
+                    }`}
                 />
               </div>
 
@@ -3022,19 +2959,17 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   placeholder="e.g. 100% parts cleared visual, dimensional, and thread tolerance checks without non-conformance."
                   value={pdiRemarks}
                   onChange={(e) => setPdiRemarks(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${
-                    isDarkMode 
-                      ? 'bg-slate-900/90 border-slate-800 text-white focus:border-indigo-500 placeholder-slate-600' 
-                      : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500 placeholder-slate-400'
-                  }`}
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${isDarkMode
+                    ? 'bg-slate-900/90 border-slate-800 text-white focus:border-indigo-500 placeholder-slate-600'
+                    : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500 placeholder-slate-400'
+                    }`}
                 />
               </div>
             </div>
 
             {/* Actions */}
-            <div className={`pt-4 flex flex-wrap items-center justify-between gap-2.5 border-t ${
-              isDarkMode ? 'border-slate-800' : 'border-slate-200'
-            }`}>
+            <div className={`pt-4 flex flex-wrap items-center justify-between gap-2.5 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'
+              }`}>
               <button
                 type="button"
                 onClick={() => handlePdiDecisionSubmit('FAIL')}
@@ -3049,11 +2984,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 <button
                   type="button"
                   onClick={() => pdiModal.close()}
-                  className={`px-4 py-2.5 rounded-xl border text-xs font-semibold cursor-pointer transition-all ${
-                    isDarkMode 
-                      ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800' 
-                      : 'border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
+                  className={`px-4 py-2.5 rounded-xl border text-xs font-semibold cursor-pointer transition-all ${isDarkMode
+                    ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800'
+                    : 'border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    }`}
                 >
                   Cancel
                 </button>
@@ -3075,9 +3009,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       {/* 2. GENERATE TAX INVOICE MODAL */}
       {invoiceModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${
-            isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-          }`}>
+          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+            }`}>
             <div className={`flex items-center justify-between border-b pb-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400">
@@ -3088,8 +3021,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Auto-populated from Order PO #{order.poNo}</p>
                 </div>
               </div>
-              <button 
-                onClick={() => invoiceModal.close()} 
+              <button
+                onClick={() => invoiceModal.close()}
                 className={`p-1 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
               >
                 <X className="w-5 h-5" />
@@ -3104,9 +3037,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     type="text"
                     value={genInvoiceNo}
                     onChange={(e) => setGenInvoiceNo(e.target.value)}
-                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${
-                      isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
+                      }`}
                   />
                 </div>
                 <div>
@@ -3115,16 +3047,14 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     type="date"
                     value={genInvoiceDate}
                     onChange={(e) => setGenInvoiceDate(e.target.value)}
-                    className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${
-                      isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
+                      }`}
                   />
                 </div>
               </div>
 
-              <div className={`p-3 rounded-2xl border space-y-1.5 font-mono text-xs ${
-                isDarkMode ? 'bg-slate-900/70 border-slate-800' : 'bg-slate-50 border-slate-200'
-              }`}>
+              <div className={`p-3 rounded-2xl border space-y-1.5 font-mono text-xs ${isDarkMode ? 'bg-slate-900/70 border-slate-800' : 'bg-slate-50 border-slate-200'
+                }`}>
                 <div className="flex justify-between">
                   <span className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>Customer Name:</span>
                   <span className="font-bold">{order.customerName}</span>
@@ -3150,9 +3080,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               {/* Line Items Summary */}
               <div className="space-y-1">
                 <label className={`block text-[11px] font-bold uppercase ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Invoice Line Items</label>
-                <div className={`divide-y rounded-2xl border p-2 ${
-                  isDarkMode ? 'bg-slate-900/60 border-slate-800 divide-slate-800' : 'bg-slate-50 border-slate-200 divide-slate-200'
-                }`}>
+                <div className={`divide-y rounded-2xl border p-2 ${isDarkMode ? 'bg-slate-900/60 border-slate-800 divide-slate-800' : 'bg-slate-50 border-slate-200 divide-slate-200'
+                  }`}>
                   {(order.lines || []).map((l, i) => (
                     <div key={l.id || i} className="py-1.5 flex items-center justify-between text-[11px]">
                       <div>
@@ -3170,9 +3099,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               <button
                 type="button"
                 onClick={() => invoiceModal.close()}
-                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                  isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
+                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
               >
                 Cancel
               </button>
@@ -3193,9 +3121,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       {/* 3. GENERATE DELIVERY CHALLAN MODAL */}
       {challanModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${
-            isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-          }`}>
+          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+            }`}>
             <div className={`flex items-center justify-between border-b pb-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-xl bg-cyan-500/20 text-cyan-400">
@@ -3206,8 +3133,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Outward Transport Manifest for Order #{order.poNo}</p>
                 </div>
               </div>
-              <button 
-                onClick={() => challanModal.close()} 
+              <button
+                onClick={() => challanModal.close()}
                 className={`p-1 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
               >
                 <X className="w-5 h-5" />
@@ -3222,9 +3149,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     type="text"
                     value={genChallanNo}
                     onChange={(e) => setGenChallanNo(e.target.value)}
-                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${
-                      isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                      }`}
                   />
                 </div>
                 <div>
@@ -3234,9 +3160,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     value={challanVehicleNo}
                     onChange={(e) => setChallanVehicleNo(e.target.value)}
                     placeholder="e.g. MH 12 AB 4589"
-                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${
-                      isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                      }`}
                   />
                 </div>
               </div>
@@ -3249,9 +3174,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 <select
                   value={challanTransporter}
                   onChange={(e) => setChallanTransporter(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border text-xs outline-none cursor-pointer transition-all ${
-                    isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
-                  }`}
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none cursor-pointer transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                    }`}
                 >
                   {allTransporterOptions.map((t, idx) => (
                     <option key={idx} value={t}>{t}</option>
@@ -3265,9 +3189,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   type="text"
                   value={challanDriverContact}
                   onChange={(e) => setChallanDriverContact(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${
-                    isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
-                  }`}
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                    }`}
                 />
               </div>
 
@@ -3277,9 +3200,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   type="text"
                   value={challanRemarks}
                   onChange={(e) => setChallanRemarks(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${
-                    isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
-                  }`}
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                    }`}
                 />
               </div>
             </div>
@@ -3288,9 +3210,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               <button
                 type="button"
                 onClick={() => challanModal.close()}
-                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                  isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
+                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
               >
                 Cancel
               </button>
@@ -3320,9 +3241,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       {/* 4. DISPATCH OUTWARD CONSIGNMENT MODAL */}
       {dispatchModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${
-            isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-          }`}>
+          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+            }`}>
             <div className={`flex items-center justify-between border-b pb-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-xl bg-cyan-500/20 text-cyan-400">
@@ -3333,8 +3253,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Mark shipment as dispatched and in-transit</p>
                 </div>
               </div>
-              <button 
-                onClick={() => dispatchModal.close()} 
+              <button
+                onClick={() => dispatchModal.close()}
                 className={`p-1 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
               >
                 <X className="w-5 h-5" />
@@ -3349,9 +3269,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     type="date"
                     value={dispatchDate}
                     onChange={(e) => setDispatchDate(e.target.value)}
-                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${
-                      isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                      }`}
                   />
                 </div>
                 <div>
@@ -3360,9 +3279,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     type="text"
                     value={dispatchLrNo}
                     onChange={(e) => setDispatchLrNo(e.target.value)}
-                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${
-                      isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                      }`}
                   />
                 </div>
               </div>
@@ -3372,9 +3290,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 <select
                   value={dispatchTransporter}
                   onChange={(e) => setDispatchTransporter(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border text-xs outline-none cursor-pointer transition-all ${
-                    isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
-                  }`}
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none cursor-pointer transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                    }`}
                 >
                   {allTransporterOptions.map((t, idx) => (
                     <option key={idx} value={t}>{t}</option>
@@ -3389,9 +3306,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     type="text"
                     value={dispatchVehicleNo}
                     onChange={(e) => setDispatchVehicleNo(e.target.value)}
-                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${
-                      isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                      }`}
                   />
                 </div>
                 <div>
@@ -3400,9 +3316,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     type="text"
                     value={dispatchDriverContact}
                     onChange={(e) => setDispatchDriverContact(e.target.value)}
-                    className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${
-                      isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                      }`}
                   />
                 </div>
               </div>
@@ -3414,9 +3329,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   placeholder="e.g. Lorry loaded and sealed with GPS tracking active"
                   value={dispatchRemarks}
                   onChange={(e) => setDispatchRemarks(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${
-                    isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
-                  }`}
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                    }`}
                 />
               </div>
             </div>
@@ -3425,9 +3339,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               <button
                 type="button"
                 onClick={() => dispatchModal.close()}
-                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                  isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
+                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
               >
                 Cancel
               </button>
@@ -3448,9 +3361,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       {/* 5. CONFIRM DELIVERY MODAL (WITH FILE CHOOSER & CLEAN UI) */}
       {deliveryModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${
-            isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-          }`}>
+          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+            }`}>
             <div className={`flex items-center justify-between border-b pb-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-xl bg-blue-500/20 text-blue-500 dark:text-blue-400">
@@ -3461,8 +3373,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Record destination arrival and move to Receivable</p>
                 </div>
               </div>
-              <button 
-                onClick={() => deliveryModal.close()} 
+              <button
+                onClick={() => deliveryModal.close()}
                 className={`p-1 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
               >
                 <X className="w-5 h-5" />
@@ -3477,9 +3389,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     type="date"
                     value={deliveryDate}
                     onChange={(e) => setDeliveryDate(e.target.value)}
-                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${
-                      isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-blue-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-600 focus:bg-white'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-blue-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-600 focus:bg-white'
+                      }`}
                   />
                 </div>
                 <div>
@@ -3489,9 +3400,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     value={deliveryReceivedBy}
                     onChange={(e) => setDeliveryReceivedBy(e.target.value)}
                     placeholder="e.g. Ramesh Kumar (Stores)"
-                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${
-                      isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-blue-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-600 focus:bg-white'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-blue-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-600 focus:bg-white'
+                      }`}
                   />
                 </div>
               </div>
@@ -3504,9 +3414,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   <button
                     type="button"
                     onClick={() => podFileInputRef.current?.click()}
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition-all flex items-center gap-1 cursor-pointer ${
-                      isDarkMode ? 'bg-slate-900 border-slate-700 text-blue-400 hover:bg-slate-800' : 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100'
-                    }`}
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition-all flex items-center gap-1 cursor-pointer ${isDarkMode ? 'bg-slate-900 border-slate-700 text-blue-400 hover:bg-slate-800' : 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100'
+                      }`}
                   >
                     <Upload className="w-3 h-3" />
                     <span>Upload POD</span>
@@ -3526,9 +3435,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   placeholder="e.g. signed-pod-challan.pdf or attachment URL"
                   value={deliveryPodUrl}
                   onChange={(e) => setDeliveryPodUrl(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${
-                    isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-blue-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-600 focus:bg-white'
-                  }`}
+                  className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-blue-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-600 focus:bg-white'
+                    }`}
                 />
                 {!deliveryPodUrl.trim() ? (
                   <div className="flex items-center justify-between mt-1.5">
@@ -3556,9 +3464,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   type="text"
                   value={deliveryRemarks}
                   onChange={(e) => setDeliveryRemarks(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${
-                    isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-blue-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-600 focus:bg-white'
-                  }`}
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-blue-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-600 focus:bg-white'
+                    }`}
                 />
               </div>
             </div>
@@ -3567,9 +3474,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               <button
                 type="button"
                 onClick={() => deliveryModal.close()}
-                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                  isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
+                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
               >
                 Cancel
               </button>
@@ -3591,9 +3497,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       {/* 5b. MARK DELIVERY DELAYED MODAL */}
       {delayedModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${
-            isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-          }`}>
+          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+            }`}>
             <div className={`flex items-center justify-between border-b pb-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-xl bg-amber-500/20 text-amber-500 dark:text-amber-400">
@@ -3604,8 +3509,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Record transit delay & reschedule follow-up date</p>
                 </div>
               </div>
-              <button 
-                onClick={() => delayedModal.close()} 
+              <button
+                onClick={() => delayedModal.close()}
                 className={`p-1 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
               >
                 <X className="w-5 h-5" />
@@ -3626,9 +3531,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   placeholder="e.g. Transporter vehicle breakdown near highway checkpoint; rescheduled."
                   value={delayedReason}
                   onChange={(e) => setDelayedReason(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border text-xs outline-none resize-none transition-all ${
-                    isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-amber-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-amber-600 focus:bg-white'
-                  }`}
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none resize-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-amber-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-amber-600 focus:bg-white'
+                    }`}
                 />
               </div>
 
@@ -3638,9 +3542,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   type="date"
                   value={delayedFollowUpDate}
                   onChange={(e) => setDelayedFollowUpDate(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${
-                    isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-amber-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-amber-600 focus:bg-white'
-                  }`}
+                  className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-amber-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-amber-600 focus:bg-white'
+                    }`}
                 />
               </div>
             </div>
@@ -3649,9 +3552,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               <button
                 type="button"
                 onClick={() => delayedModal.close()}
-                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                  isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
+                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
               >
                 Cancel
               </button>
@@ -3672,9 +3574,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       {/* 6. RECORD PAYMENT & SETTLE MODAL */}
       {paymentModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${
-            isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-          }`}>
+          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+            }`}>
             <div className={`flex items-center justify-between border-b pb-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-500 dark:text-emerald-400">
@@ -3687,8 +3588,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   </p>
                 </div>
               </div>
-              <button 
-                onClick={() => paymentModal.close()} 
+              <button
+                onClick={() => paymentModal.close()}
                 className={`p-1 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
               >
                 <X className="w-5 h-5" />
@@ -3703,9 +3604,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
             {/* Linked Invoice Badge */}
             {effectiveInvoiceNo && (
-              <div className={`p-2.5 rounded-xl border flex items-center justify-between font-mono text-xs ${
-                isDarkMode ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300' : 'bg-indigo-50 border-indigo-200 text-indigo-800'
-              }`}>
+              <div className={`p-2.5 rounded-xl border flex items-center justify-between font-mono text-xs ${isDarkMode ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300' : 'bg-indigo-50 border-indigo-200 text-indigo-800'
+                }`}>
                 <div className="flex items-center gap-2">
                   <Receipt className="w-4 h-4 text-indigo-400" />
                   <span>Linked Tax Invoice: <strong>{effectiveInvoiceNo}</strong></span>
@@ -3726,9 +3626,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               </div>
             )}
 
-            <div className={`p-3 rounded-2xl border space-y-1.5 font-mono text-xs ${
-              isDarkMode ? 'bg-slate-900/70 border-slate-800' : 'bg-slate-50 border-slate-200'
-            }`}>
+            <div className={`p-3 rounded-2xl border space-y-1.5 font-mono text-xs ${isDarkMode ? 'bg-slate-900/70 border-slate-800' : 'bg-slate-50 border-slate-200'
+              }`}>
               <div className="flex justify-between">
                 <span className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>Gross Invoice Total:</span>
                 <span className="font-bold">₹{gross.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
@@ -3753,11 +3652,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     <button
                       type="button"
                       onClick={() => setPaymentAmount(remainingOutstanding)}
-                      className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${
-                        paymentAmount === remainingOutstanding 
-                          ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
-                          : isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
-                      }`}
+                      className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${paymentAmount === remainingOutstanding
+                        ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
+                        : isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
+                        }`}
                     >
                       ⚡ Full (₹{remainingOutstanding.toLocaleString('en-IN')})
                     </button>
@@ -3765,11 +3663,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                       <button
                         type="button"
                         onClick={() => setPaymentAmount(Math.round(remainingOutstanding / 2))}
-                        className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${
-                          paymentAmount === Math.round(remainingOutstanding / 2)
-                            ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
-                            : isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
-                        }`}
+                        className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${paymentAmount === Math.round(remainingOutstanding / 2)
+                          ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
+                          : isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
+                          }`}
                       >
                         50% Partial
                       </button>
@@ -3783,11 +3680,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     step="0.01"
                     value={paymentAmount}
                     onChange={(e) => setPaymentAmount(Number(e.target.value))}
-                    className={`w-full pl-8 pr-3.5 py-2.5 rounded-xl border font-mono font-bold text-sm outline-none transition-all ${
-                      isDarkMode 
-                        ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500' 
-                        : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
-                    }`}
+                    className={`w-full pl-8 pr-3.5 py-2.5 rounded-xl border font-mono font-bold text-sm outline-none transition-all ${isDarkMode
+                      ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500'
+                      : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
+                      }`}
                     required
                   />
                 </div>
@@ -3799,9 +3695,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   <select
                     value={paymentMode}
                     onChange={(e) => setPaymentMode(e.target.value as any)}
-                    className={`w-full p-2.5 rounded-xl border text-xs outline-none cursor-pointer transition-all ${
-                      isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl border text-xs outline-none cursor-pointer transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
+                      }`}
                   >
                     <option value="NEFT">Bank NEFT</option>
                     <option value="RTGS">Bank RTGS</option>
@@ -3815,9 +3710,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     type="date"
                     value={paymentDate}
                     onChange={(e) => setPaymentDate(e.target.value)}
-                    className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none transition-all ${
-                      isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
+                      }`}
                   />
                 </div>
               </div>
@@ -3829,9 +3723,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   placeholder="e.g. UTR-HDFC98234723 or CHQ-004521"
                   value={paymentRefNo}
                   onChange={(e) => setPaymentRefNo(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none transition-all ${
-                    isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
-                  }`}
+                  className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
+                    }`}
                 />
               </div>
             </div>
@@ -3840,9 +3733,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               <button
                 type="button"
                 onClick={() => paymentModal.close()}
-                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                  isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
+                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
               >
                 Cancel
               </button>
@@ -3863,9 +3755,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       {/* Owner Override Material Check Modal */}
       {overrideModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-md rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${
-            isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-          }`}>
+          <div className={`relative w-full max-w-md rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+            }`}>
             <div className={`flex items-center justify-between border-b pb-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <div className="flex items-center gap-2">
                 <div className="p-2 rounded-xl bg-purple-500/20 text-purple-400">
@@ -3876,8 +3767,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Force Order to MATERIAL_READY with audit trace</p>
                 </div>
               </div>
-              <button 
-                onClick={() => overrideModal.close()} 
+              <button
+                onClick={() => overrideModal.close()}
                 className={`p-1 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
               >
                 <X className="w-5 h-5" />
@@ -3895,14 +3786,13 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                   Reason for Override (Mandatory) *
                 </label>
-                <textarea 
+                <textarea
                   rows={3}
                   placeholder="e.g. Raw material stock verified physically in bay 3 / Expedited demo order approval"
                   value={overrideReason}
                   onChange={(e) => setOverrideReason(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${
-                    isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-purple-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-purple-600 focus:bg-white'
-                  }`}
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-purple-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-purple-600 focus:bg-white'
+                    }`}
                   required
                 />
               </div>
@@ -3912,16 +3802,15 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               </div>
 
               <div className={`pt-3 flex justify-end gap-2.5 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
-                <button 
+                <button
                   type="button"
-                  onClick={() => overrideModal.close()} 
-                  className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                    isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
+                  onClick={() => overrideModal.close()}
+                  className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    }`}
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   type="submit"
                   disabled={isRunningMaterialCheck || overrideReason.trim().length < 5}
                   className="px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold cursor-pointer hover:from-indigo-600 hover:to-purple-600 shadow-lg shadow-purple-500/25 disabled:opacity-50"

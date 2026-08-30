@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Users, 
   History, 
@@ -96,6 +96,7 @@ const getRoleBadgeClasses = (role: string): string => {
 interface UsersAuditViewProps {
   users: SystemUser[];
   auditLogs: AuditLogEntry[];
+  securityEvents?: any[];
   orders?: CustomerOrder[];
   stock?: StockItem[];
   jobCards?: JobCard[];
@@ -120,6 +121,14 @@ interface UsersAuditViewProps {
   onClearOperationalData?: () => void;
 }
 
+export interface MergedAuditLogEntry extends AuditLogEntry {
+  actorRole?: string;
+  isSecurityEvent?: boolean;
+  severity?: string;
+  riskLevel?: string;
+  isSuspicious?: boolean;
+}
+
 export type SectionCategory = 
   | 'ALL' 
   | 'SECURITY' 
@@ -142,6 +151,7 @@ export const ROLE_DEFINITIONS = Object.values(RBAC_ROLE_MATRIX).map(r => ({
 export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
   users = [],
   auditLogs = [],
+  securityEvents = [],
   orders = [],
   stock = [],
   jobCards = [],
@@ -393,6 +403,8 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
     const cleanEntity = (entity || '').toLowerCase();
     switch (cleanEntity) {
       case 'security':
+      case 'auth':
+      case 'session':
       case 'user_admin':
       case 'user':
       case 'users':
@@ -465,18 +477,79 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
     }
   };
 
+  const mergedAuditLogs: MergedAuditLogEntry[] = useMemo(() => {
+    const mappedSecurityEvents: MergedAuditLogEntry[] = (securityEvents || []).map((sec: any) => {
+      const matchedUser = users.find(u => u.id === sec.user_id || u.userId === sec.user_id || (sec.metadata?.email && u.email?.toLowerCase() === sec.metadata?.email?.toLowerCase()));
+      const userLabel = matchedUser ? `${matchedUser.name || matchedUser.fullName} (${matchedUser.email})` : (sec.metadata?.email || sec.user_id || 'Auth User');
+      const actorEmail = matchedUser ? matchedUser.email : (sec.metadata?.email || sec.user_id || '');
+      const actorRole = matchedUser ? (matchedUser.userRole || matchedUser.role || 'Staff') : 'Auth User';
+
+      const deviceParts = [
+        sec.device_name || sec.device_type,
+        sec.browser,
+        sec.os
+      ].filter(Boolean).join(' • ');
+
+      const locationParts = [sec.city, sec.region, sec.country].filter(Boolean).join(', ');
+      const isSuspicious = sec.event_type === 'SUSPICIOUS_LOGIN' || 
+                           sec.event_type === 'REFRESH_TOKEN_REUSE' || 
+                           sec.severity === 'HIGH' || 
+                           sec.severity === 'CRITICAL' || 
+                           sec.risk_level === 'HIGH' || 
+                           sec.risk_level === 'CRITICAL' || 
+                           (sec.risk_score && sec.risk_score >= 50);
+
+      const riskNote = sec.risk_score ? `[Risk: ${sec.risk_score}/100 - ${sec.risk_level || sec.severity}]` : '';
+      const flagNote = (Array.isArray(sec.flagged_reasons) && sec.flagged_reasons.length > 0) ? `(${sec.flagged_reasons.join(', ')})` : '';
+
+      let details = `${sec.event_type || 'AUTH_EVENT'}: ${deviceParts ? `${deviceParts}` : 'Web Client'}${locationParts ? ` from ${locationParts}` : ''}${sec.ip_address ? ` [IP: ${sec.ip_address}]` : ''}`.trim();
+      if (riskNote || flagNote) {
+        details = `${details} ${riskNote} ${flagNote}`.trim();
+      }
+
+      return {
+        id: sec.id || `sec-${Math.random().toString(36).substring(2, 9)}`,
+        when: sec.created_at ? new Date(sec.created_at).toLocaleString('en-IN', { hour12: true }) : 'Recent',
+        user: userLabel,
+        actorId: sec.user_id,
+        actorEmail: actorEmail,
+        actorRole: actorRole,
+        entity: 'security',
+        entityType: 'security',
+        entityId: sec.session_id || sec.ip_address || sec.id,
+        action: sec.event_type || 'SECURITY_EVENT',
+        details: details,
+        ipAddress: sec.ip_address || undefined,
+        userAgent: sec.user_agent || undefined,
+        metadata: sec.metadata || sec,
+        createdAt: sec.created_at || new Date().toISOString(),
+        isSecurityEvent: true,
+        severity: sec.severity,
+        riskLevel: sec.risk_level,
+        isSuspicious
+      };
+    });
+
+    const all: MergedAuditLogEntry[] = [...(auditLogs as MergedAuditLogEntry[]), ...mappedSecurityEvents];
+    return all.sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : (a.when ? new Date(a.when).getTime() : 0);
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : (b.when ? new Date(b.when).getTime() : 0);
+      return (timeB || 0) - (timeA || 0);
+    });
+  }, [auditLogs, securityEvents, users]);
+
   const availableActionTypes = Array.from(
-    new Set(auditLogs.map(l => l.action).filter(Boolean))
+    new Set(mergedAuditLogs.map(l => l.action).filter(Boolean))
   ).sort();
 
   const availableActors = Array.from(
     new Set([
       ...users.map(u => u.email),
-      ...auditLogs.map(l => l.actorEmail || l.user).filter(Boolean)
+      ...mergedAuditLogs.map(l => l.actorEmail || l.user).filter(Boolean)
     ])
   ).sort();
 
-  const filteredLogs = auditLogs.filter(log => {
+  const filteredLogs = mergedAuditLogs.filter(log => {
     const actor = (log.user || log.actorEmail || '').toLowerCase();
     const act = (log.action || '').toLowerCase();
     const det = (log.details || '').toLowerCase();
@@ -596,7 +669,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
 
     switch (selectedExportSection) {
       case 'AUDIT':
-        exportData = auditLogs;
+        exportData = mergedAuditLogs;
         break;
       case 'ORDERS':
         exportData = orders;
@@ -629,7 +702,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
       default:
         exportData = {
           users,
-          auditLogs,
+          auditLogs: mergedAuditLogs,
           orders,
           stock,
           jobCards,
@@ -860,7 +933,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
           </div>
           <div className={`p-3 sm:p-4 rounded-2xl border transition-all ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
             <div className={`text-[10px] sm:text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Immutable Audit Ledger</div>
-            <div className="text-base sm:text-xl font-bold text-blue-600 dark:text-blue-400 mt-0.5 sm:mt-1">{auditLogs.length} Events</div>
+            <div className="text-base sm:text-xl font-bold text-blue-600 dark:text-blue-400 mt-0.5 sm:mt-1">{mergedAuditLogs.length} Events</div>
             <div className="text-[10px] sm:text-[11px] text-blue-600 dark:text-blue-400 font-mono font-semibold mt-0.5">● Real-time Stream</div>
           </div>
           <div className={`p-3 sm:p-4 rounded-2xl border transition-all ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
@@ -890,7 +963,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
             }`}
           >
             <History className="w-3.5 h-3.5" />
-            <span>Audit Trail ({auditLogs.length})</span>
+            <span>Audit Trail ({mergedAuditLogs.length})</span>
           </button>
           
           <button
@@ -1011,7 +1084,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
 
                 <div className="flex items-center gap-3">
                   <div className={`font-mono text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Showing <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{filteredLogs.length}</span> of <span className="font-bold">{auditLogs.length}</span> recorded events
+                    Showing <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{filteredLogs.length}</span> of <span className="font-bold">{mergedAuditLogs.length}</span> recorded events
                   </div>
 
                   <button
@@ -1170,27 +1243,39 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                   paginatedLogs.map((log) => {
                     const secInfo = getSectionInfo(log.entity || log.entityType || '');
                     const isExpanded = !!expandedLogIds[log.id];
+                    const isSuspicious = !!(log as any).isSuspicious;
 
                     return (
                       <div
                         key={log.id}
                         onClick={() => toggleExpandLog(log.id)}
                         className={`p-3.5 rounded-3xl border transition-all space-y-2.5 cursor-pointer shadow-sm ${
-                          isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'
+                          isSuspicious 
+                            ? isDarkMode ? 'bg-rose-950/20 border-rose-500/40 hover:bg-rose-900/30' : 'bg-rose-50/70 border-rose-200 hover:bg-rose-100/70'
+                            : isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'
                         }`}
                       >
                         {/* Header: Action + Entity Pill */}
                         <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase border ${secInfo.badgeClass}`}>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase border ${
+                              isSuspicious ? 'bg-rose-500/20 text-rose-400 border-rose-500/30' : secInfo.badgeClass
+                            }`}>
                               {log.entity || log.entityType}
                             </span>
-                            <span className="font-mono font-bold text-xs text-[#5B75F8] dark:text-[#7B92FF]">
+                            <span className={`font-mono font-bold text-xs ${
+                              isSuspicious ? 'text-rose-500 dark:text-rose-400' : 'text-[#5B75F8] dark:text-[#7B92FF]'
+                            }`}>
                               {log.action}
                             </span>
+                            {isSuspicious && (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase tracking-wider bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                                Alert
+                              </span>
+                            )}
                           </div>
-                          <span className="text-[10px] font-mono text-slate-400">
-                            {log.when || log.timestamp || (log.createdAt ? new Date(log.createdAt).toLocaleTimeString('en-IN', { hour12: true }) : 'Recent')}
+                          <span className="text-[10px] font-mono text-slate-400 whitespace-nowrap">
+                            {log.when || (log as any).timestamp || (log.createdAt ? new Date(log.createdAt).toLocaleTimeString('en-IN', { hour12: true }) : 'Recent')}
                           </span>
                         </div>
 
@@ -1267,20 +1352,23 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                       {paginatedLogs.map((log) => {
                         const secInfo = getSectionInfo(log.entity || log.entityType || '');
                         const isExpanded = !!expandedLogIds[log.id];
+                        const isSuspicious = !!(log as any).isSuspicious;
 
                         return (
                           <React.Fragment key={log.id}>
                             <tr 
                               onClick={() => toggleExpandLog(log.id)}
                               className={`cursor-pointer transition-colors ${
-                                isDarkMode ? 'hover:bg-slate-800/50 text-slate-300' : 'hover:bg-slate-50 text-slate-700'
+                                isSuspicious
+                                  ? isDarkMode ? 'bg-rose-950/20 hover:bg-rose-900/30 text-rose-200' : 'bg-rose-50/70 hover:bg-rose-100/80 text-rose-900'
+                                  : isDarkMode ? 'hover:bg-slate-800/50 text-slate-300' : 'hover:bg-slate-50 text-slate-700'
                               }`}
                             >
                               <td className="py-3.5 px-4 text-center text-slate-500 font-mono text-[10px]">
                                 {isExpanded ? '▼' : '▶'}
                               </td>
                               <td className="py-3.5 px-4 font-mono text-[11px] text-slate-400 whitespace-nowrap">
-                                {log.when || log.timestamp || (log.createdAt ? new Date(log.createdAt).toLocaleString('en-IN', { hour12: true }) : 'Recent')}
+                                {log.when || (log as any).timestamp || (log.createdAt ? new Date(log.createdAt).toLocaleString('en-IN', { hour12: true }) : 'Recent')}
                               </td>
                               <td className="py-3.5 px-4">
                                 <div className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{log.user || log.actorEmail}</div>
@@ -1293,15 +1381,28 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                                 )}
                               </td>
                               <td className="py-3.5 px-4 font-mono">
-                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${secInfo.badgeClass}`}>
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                                  isSuspicious ? 'bg-rose-500/20 text-rose-400 border-rose-500/30' : secInfo.badgeClass
+                                }`}>
                                   {log.entity || log.entityType}
                                 </span>
                                 {log.entityId && (
                                   <div className="text-[10px] text-slate-400 font-mono mt-0.5">{log.entityId}</div>
                                 )}
                               </td>
-                              <td className={`py-3.5 px-4 font-mono font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>
-                                {log.action}
+                              <td className={`py-3.5 px-4 font-mono font-bold ${
+                                isSuspicious 
+                                  ? 'text-rose-600 dark:text-rose-400' 
+                                  : isDarkMode ? 'text-slate-200' : 'text-slate-900'
+                              }`}>
+                                <div className="flex items-center gap-1.5">
+                                  <span>{log.action}</span>
+                                  {isSuspicious && (
+                                    <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase tracking-wider bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                                      SUSPICIOUS
+                                    </span>
+                                  )}
+                                </div>
                               </td>
                               <td className="py-3.5 px-5">
                                 <div className="line-clamp-1">{log.details}</div>

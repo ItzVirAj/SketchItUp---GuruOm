@@ -19,6 +19,7 @@ router.patch('/requisitions/:id/approve', requirePermission('procurement', 'CREA
 
 // 3. Goods Receipt Notes (GRN) with Qty Mismatch & Heat/Lot Trace
 router.get('/grns', requirePermission('procurement', 'VIEW_ONLY'), (req, res) => purchasingController.getGrns(req, res));
+// @deprecated Superseded by POST /api/v1/grn (not called by frontend)
 router.post('/grns', requirePermission('procurement', 'CREATE_EDIT'), (req, res) => purchasingController.createGrn(req, res));
 router.post('/grns/incoming-qc', requirePermission('production', 'CREATE_EDIT'), (req, res) => purchasingController.recordIncomingQc(req, res));
 

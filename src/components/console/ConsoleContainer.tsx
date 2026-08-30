@@ -188,6 +188,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
     machines,
     users,
     auditLogs,
+    securityEvents,
     companyProfile,
     approvals,
     lastSynced,
@@ -944,6 +945,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
             <UsersAuditView
               users={users}
               auditLogs={auditLogs}
+              securityEvents={securityEvents}
               orders={orders}
               stock={stock}
               jobCards={jobCards}

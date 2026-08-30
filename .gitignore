@@ -93,4 +93,9 @@ test-results/
 blob-report/
 cypress/videos/
 cypress/screenshots/
-storybook-static/
+storybook-static/
+
+# ---- Local Backups & Scratch ----
+src/backupcomponents/
+backup/
+*.backup

@@ -14,9 +14,11 @@ declare global {
  */
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
+  const isDevAuthBypassAllowed = process.env.NODE_ENV !== 'production' && process.env.ALLOW_DEV_AUTH_BYPASS === 'true';
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    if (process.env.NODE_ENV !== 'production') {
+    if (isDevAuthBypassAllowed) {
+      console.warn('⚠️ DEV AUTH BYPASS ACTIVE — do not use in any shared or production environment (missing Authorization header)');
       req.user = {
         userId: 'usr-dev-superadmin',
         email: 'admin@guruom.in',
@@ -38,7 +40,8 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
     req.user = payload;
     return next();
   } catch (err: any) {
-    if (process.env.NODE_ENV !== 'production') {
+    if (isDevAuthBypassAllowed) {
+      console.warn('⚠️ DEV AUTH BYPASS ACTIVE — do not use in any shared or production environment (invalid/expired token)');
       req.user = {
         userId: 'usr-dev-superadmin',
         email: 'admin@guruom.in',

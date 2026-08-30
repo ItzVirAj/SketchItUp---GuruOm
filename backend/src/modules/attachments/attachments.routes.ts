@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { attachmentsController } from './attachments.controller';
 import { requireAuth } from '../../middleware/auth.middleware';
+import { requirePermission } from '../../middleware/rbac.middleware';
 import { handleFileUpload } from '../../middleware/upload.middleware';
 
 const router = Router();
@@ -12,13 +13,13 @@ router.use(requireAuth);
 router.post('/', handleFileUpload, (req, res) => attachmentsController.uploadAttachment(req, res));
 
 // 2. List Attachments (filtered by entity_type, entity_id, current)
-router.get('/', (req, res) => attachmentsController.getAttachments(req, res));
+router.get('/', requirePermission('orders', 'VIEW_ONLY'), (req, res) => attachmentsController.getAttachments(req, res));
 
 // 3. Get Single Attachment Metadata
-router.get('/:id', (req, res) => attachmentsController.getAttachmentById(req, res));
+router.get('/:id', requirePermission('orders', 'VIEW_ONLY'), (req, res) => attachmentsController.getAttachmentById(req, res));
 
 // 4. Generate Short-Lived Signed Download URL (verifies scan_status === 'clean')
-router.get('/:id/download', (req, res) => attachmentsController.getDownloadUrl(req, res));
+router.get('/:id/download', requirePermission('orders', 'VIEW_ONLY'), (req, res) => attachmentsController.getDownloadUrl(req, res));
 
 // 5. Soft Delete Attachment (preserves file in storage for audit history)
 router.delete('/:id', (req, res) => attachmentsController.softDeleteAttachment(req, res));

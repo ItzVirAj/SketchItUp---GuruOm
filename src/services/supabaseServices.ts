@@ -1518,6 +1518,24 @@ export async function fetchAuditLogs(filters?: {
   return [];
 }
 
+export async function fetchSecurityEvents(filters?: {
+  severity?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<any[]> {
+  try {
+    const qs = new URLSearchParams(
+      Object.entries(filters || {}).filter(([, v]) => v !== undefined && v !== null && v !== '').map(([k, v]) => [k, String(v)])
+    ).toString();
+    const res = await apiClient.get<any>(`/auth/security-events/admin${qs ? `?${qs}` : ''}`);
+    const list = res?.events || (Array.isArray(res) ? res : []);
+    return list;
+  } catch (err) {
+    console.warn('fetchSecurityEvents REST API error, falling back:', err);
+    return [];
+  }
+}
+
 export async function exportAuditLogsApi(filters?: {
   actorEmail?: string;
   entityType?: string;

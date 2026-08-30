@@ -62,7 +62,7 @@ async function startServer() {
       if (allowedOrigins.includes(origin) || allowedOrigins.includes('*') || process.env.NODE_ENV !== 'production') {
         return callback(null, true);
       }
-      return callback(null, true); // Permissive fallback to prevent dropping TCP connections with 502
+      return callback(new Error('Not allowed by CORS'), false);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -111,7 +111,9 @@ async function startServer() {
   app.use('/api/v1/attachments', attachmentsRoutes);
 
   // Mount Developer Workflow Testing Dashboard Router
-  app.use('/api/v1/testing', testingRoutes);
+  if (process.env.NODE_ENV !== 'production') {
+    app.use('/api/v1/testing', testingRoutes);
+  }
 
   // Gemini Executive AI Copilot API
   app.post('/api/gemini/analyze', async (req, res) => {

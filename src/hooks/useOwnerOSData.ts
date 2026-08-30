@@ -20,8 +20,10 @@ import {
   AuditLogEntry,
   CompanyProfile,
   PendingApproval,
-  UserRole
+  UserRole,
+  ConsoleView
 } from '../types/console';
+import { ROLE_PERMISSIONS, isViewAllowedForRole } from '../utils/permissions';
 
 import {
   fetchCompanyProfile,
@@ -79,6 +81,7 @@ import {
   approveApproval,
   rejectApproval,
   fetchAuditLogs,
+  fetchSecurityEvents,
   insertAuditLog,
   fetchCustomers,
   insertCustomer,
@@ -120,6 +123,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
   const [machines, setMachines] = useState<MachineMaster[]>([]);
   const [users, setUsers] = useState<SystemUser[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
+  const [securityEvents, setSecurityEvents] = useState<any[]>([]);
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile>(() => {
     try {
       const saved = localStorage.getItem('stratum_company_profile');
@@ -132,6 +136,11 @@ export function useOwnerOSData(currentUser?: SystemUser) {
   });
   const [approvals, setApprovals] = useState<PendingApproval[]>([]);
   const [lastSynced, setLastSynced] = useState<string>(() => new Date().toLocaleString('en-IN', { hour12: true }));
+
+  const isAllowed = useCallback((view: ConsoleView): boolean => {
+    if (!currentUser?.role) return true;
+    return isViewAllowedForRole(currentUser.role, view);
+  }, [currentUser?.role]);
 
   const loadAllData = useCallback(async () => {
     try {
@@ -154,6 +163,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         billList,
         apprList,
         auditList,
+        secEventList,
         custs,
         vends,
         mchs
@@ -161,20 +171,21 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         fetchCompanyProfile(),
         fetchProfiles(),
         fetchMasters(),
-        fetchOrders(),
-        fetchStock(),
-        fetchShortages(),
-        fetchJobCards(),
-        fetchFinishedGoods(),
-        fetchOutworkSendOuts(),
-        fetchProductionLogs(),
-        fetchQCQueue(),
-        fetchPDIQueue(),
-        fetchDispatches(),
-        fetchInvoices(),
-        fetchPayables(),
-        fetchApprovals(),
-        fetchAuditLogs(),
+        isAllowed('orders') ? fetchOrders() : Promise.resolve([]),
+        isAllowed('inventory') ? fetchStock() : Promise.resolve([]),
+        isAllowed('inventory') ? fetchShortages() : Promise.resolve([]),
+        isAllowed('production') ? fetchJobCards() : Promise.resolve([]),
+        isAllowed('finished-goods') ? fetchFinishedGoods() : Promise.resolve([]),
+        isAllowed('plating-outwork') ? fetchOutworkSendOuts() : Promise.resolve([]),
+        isAllowed('production') ? fetchProductionLogs() : Promise.resolve([]),
+        isAllowed('qc') ? fetchQCQueue() : Promise.resolve([]),
+        isAllowed('pdi') ? fetchPDIQueue() : Promise.resolve([]),
+        isAllowed('dispatch') ? fetchDispatches() : Promise.resolve([]),
+        isAllowed('invoices') ? fetchInvoices() : Promise.resolve([]),
+        isAllowed('payables') ? fetchPayables() : Promise.resolve([]),
+        isAllowed('approvals') ? fetchApprovals() : Promise.resolve([]),
+        isAllowed('users-audit') ? fetchAuditLogs() : Promise.resolve([]),
+        isAllowed('users-audit') ? fetchSecurityEvents() : Promise.resolve([]),
         fetchCustomers(),
         fetchVendors(),
         fetchMachines()
@@ -197,6 +208,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       setPayables(billList);
       setApprovals(apprList);
       setAuditLogs(auditList);
+      setSecurityEvents(secEventList || []);
       setCustomers(custs);
       setVendors(vends);
       setMachines(mchs);
@@ -206,7 +218,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isAllowed]);
 
   // Initial Load & Realtime SSE Stream
   useEffect(() => {
@@ -327,21 +339,21 @@ export function useOwnerOSData(currentUser?: SystemUser) {
 
       // Inventory & Shortage events
       eventSource.addEventListener('stock_updated', () => {
-        fetchStock().then(setStock).catch(() => {});
+        if (isAllowed('inventory')) fetchStock().then(setStock).catch(() => {});
       });
 
       eventSource.addEventListener('shortage_updated', () => {
-        fetchShortages().then(setShortages).catch(() => {});
+        if (isAllowed('inventory')) fetchShortages().then(setShortages).catch(() => {});
       });
 
       eventSource.addEventListener('finished_goods_updated', () => {
-        fetchFinishedGoods().then(setFinishedGoods).catch(() => {});
+        if (isAllowed('finished-goods')) fetchFinishedGoods().then(setFinishedGoods).catch(() => {});
       });
 
       // GRN events
       eventSource.addEventListener('grn_created', () => {
-        fetchStock().then(setStock).catch(() => {});
-        fetchOrders().then(setOrders).catch(() => {});
+        if (isAllowed('inventory')) fetchStock().then(setStock).catch(() => {});
+        if (isAllowed('orders')) fetchOrders().then(setOrders).catch(() => {});
       });
 
       // Item Catalog events — Stock Master mirrors the Masters catalog in realtime
@@ -355,6 +367,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
 
       // Audit trail events — every backend-recorded system change streams in realtime
       eventSource.addEventListener('audit_log_created', (event: MessageEvent) => {
+        if (!isAllowed('users-audit')) return;
         try {
           const record = JSON.parse(event.data);
           const entry = {
@@ -380,11 +393,12 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       });
 
       eventSource.addEventListener('grn_updated', () => {
-        fetchStock().then(setStock).catch(() => {});
+        if (isAllowed('inventory')) fetchStock().then(setStock).catch(() => {});
       });
 
       // Production & Job Card events
       eventSource.addEventListener('job_card_created', (event: MessageEvent) => {
+        if (!isAllowed('production')) return;
         try {
           const newJob = JSON.parse(event.data);
           setJobCards(prev => [newJob, ...prev.filter(j => j.id !== newJob.id && j.jobNo !== newJob.jobNo)]);
@@ -392,6 +406,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       });
 
       eventSource.addEventListener('job_card_updated', (event: MessageEvent) => {
+        if (!isAllowed('production')) return;
         try {
           const updatedJob = JSON.parse(event.data);
           setJobCards(prev => prev.map(j => (j.id === updatedJob.id || j.jobNo === updatedJob.jobNo) ? { ...j, ...updatedJob } : j));
@@ -417,13 +432,14 @@ export function useOwnerOSData(currentUser?: SystemUser) {
             }));
           }
         } catch (_) {}
-        fetchJobCards().then(setJobCards).catch(() => {});
-        fetchOrders().then(setOrders).catch(() => {});
-        fetchQCQueue().then(setQcQueue).catch(() => {});
+        if (isAllowed('production')) fetchJobCards().then(setJobCards).catch(() => {});
+        if (isAllowed('orders')) fetchOrders().then(setOrders).catch(() => {});
+        if (isAllowed('qc')) fetchQCQueue().then(setQcQueue).catch(() => {});
       });
 
       // QC & PDI events
       eventSource.addEventListener('qc_created', (event: MessageEvent) => {
+        if (!isAllowed('qc')) return;
         try {
           const newQc = JSON.parse(event.data);
           setQcQueue(prev => [newQc, ...prev.filter(q => q.id !== newQc.id && q.jobNo !== newQc.jobNo)]);
@@ -431,6 +447,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       });
 
       eventSource.addEventListener('qc_updated', (event: MessageEvent) => {
+        if (!isAllowed('qc')) return;
         try {
           const updatedQc = JSON.parse(event.data);
           setQcQueue(prev => prev.map(q => q.id === updatedQc.id ? { ...q, ...updatedQc } : q));
@@ -438,6 +455,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       });
 
       eventSource.addEventListener('pdi_created', (event: MessageEvent) => {
+        if (!isAllowed('pdi')) return;
         try {
           const newPdi = JSON.parse(event.data);
           setPdiQueue(prev => [newPdi, ...prev.filter(p => p.id !== newPdi.id && !(p.orderPo === newPdi.orderPo && p.jobNo === newPdi.jobNo))]);
@@ -445,6 +463,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       });
 
       eventSource.addEventListener('pdi_updated', (event: MessageEvent) => {
+        if (!isAllowed('pdi')) return;
         try {
           const updatedPdi = JSON.parse(event.data);
           setPdiQueue(prev => prev.map(p => p.id === updatedPdi.id ? { ...p, ...updatedPdi } : p));
@@ -453,6 +472,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
 
       // Dispatch events
       eventSource.addEventListener('dispatch_created', (event: MessageEvent) => {
+        if (!isAllowed('dispatch')) return;
         try {
           const newDispatch = JSON.parse(event.data);
           setDispatches(prev => [newDispatch, ...prev.filter(d => d.id !== newDispatch.id && d.challanNo !== newDispatch.challanNo)]);
@@ -461,6 +481,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
 
       // Invoice & Payment events
       eventSource.addEventListener('invoice_created', (event: MessageEvent) => {
+        if (!isAllowed('invoices')) return;
         try {
           const newInvoice = JSON.parse(event.data);
           setInvoices(prev => [newInvoice, ...prev.filter(i => i.id !== newInvoice.id && i.invoiceNo !== newInvoice.invoiceNo)]);
@@ -468,6 +489,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       });
 
       eventSource.addEventListener('invoice_updated', (event: MessageEvent) => {
+        if (!isAllowed('invoices')) return;
         try {
           const updatedInv = JSON.parse(event.data);
           setInvoices(prev => prev.map(i => (i.id === updatedInv.id || i.invoiceNo === updatedInv.invoiceNo) ? { ...i, ...updatedInv } : i));
@@ -475,12 +497,13 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       });
 
       eventSource.addEventListener('payment_recorded', () => {
-        fetchInvoices().then(setInvoices).catch(() => {});
-        fetchOrders().then(setOrders).catch(() => {});
+        if (isAllowed('invoices')) fetchInvoices().then(setInvoices).catch(() => {});
+        if (isAllowed('orders')) fetchOrders().then(setOrders).catch(() => {});
       });
 
       // Vendor Bills
       eventSource.addEventListener('vendor_bill_created', (event: MessageEvent) => {
+        if (!isAllowed('payables')) return;
         try {
           const newBill = JSON.parse(event.data);
           setPayables(prev => [newBill, ...prev.filter(b => b.id !== newBill.id && b.billNo !== newBill.billNo)]);
@@ -488,6 +511,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       });
 
       eventSource.addEventListener('vendor_bill_disbursed', (event: MessageEvent) => {
+        if (!isAllowed('payables')) return;
         try {
           const disbursed = JSON.parse(event.data);
           setPayables(prev => prev.map(b => (b.id === disbursed.billNo || b.billNo === disbursed.billNo) ? { ...b, ...disbursed } : b));
@@ -496,11 +520,11 @@ export function useOwnerOSData(currentUser?: SystemUser) {
 
       // Approvals
       eventSource.addEventListener('approval_created', () => {
-        fetchApprovals().then(setApprovals).catch(() => {});
+        if (isAllowed('approvals')) fetchApprovals().then(setApprovals).catch(() => {});
       });
 
       eventSource.addEventListener('approval_updated', () => {
-        fetchApprovals().then(setApprovals).catch(() => {});
+        if (isAllowed('approvals')) fetchApprovals().then(setApprovals).catch(() => {});
       });
 
       eventSource.onerror = () => {
@@ -512,7 +536,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       clearInterval(reconciliationInterval);
       if (eventSource) eventSource.close();
     };
-  }, [loadAllData]);
+  }, [loadAllData, isAllowed]);
 
   // Helper Audit Logger
   const addAuditLog = async (entity: string, action: string, details: string) => {
@@ -1550,6 +1574,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     machines,
     users,
     auditLogs,
+    securityEvents,
     companyProfile,
     approvals,
     lastSynced,

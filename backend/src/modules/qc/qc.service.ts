@@ -4,6 +4,7 @@ import { QCInspectionSchema, ReviewQCSchema, PDIInspectionSchema } from './qc.sc
 import { notificationsService } from '../notifications/notifications.service';
 import { logAudit } from '../../services/auditLog';
 import { inventoryMovementsService } from '../inventory/inventory_movements.service';
+import { auditService } from '../audit/audit.service';
 
 const SEED_QC_QUEUE: any[] = [];
 const SEED_PDI_QUEUE: any[] = [];
@@ -68,7 +69,7 @@ export class QcService {
     return SEED_QC_QUEUE.find(q => q.id === id) || null;
   }
 
-  async createQCInspection(data: z.infer<typeof QCInspectionSchema>) {
+  async createQCInspection(data: z.infer<typeof QCInspectionSchema>, actorEmail?: string, actorRole?: string) {
     const validated = QCInspectionSchema.parse(data);
     const qcId = validated.id || `qc-${Date.now()}`;
 
@@ -96,9 +97,13 @@ export class QcService {
     const created = { id: qcId, ...validated };
     SEED_QC_QUEUE.unshift(created as any);
 
-    // Real-Time Push: Broadcast new QC inspection in queue
-    await logAudit({
-      actorEmail: 'qc@guruom.in',
+    const effectiveEmail = (actorEmail && actorEmail.includes('@')) ? actorEmail : (actorEmail || 'qc@guruom.in');
+    const effectiveRole = actorRole || 'Quality Inspector';
+
+    // Structured Audit Log for QC inspection creation
+    await auditService.recordAuditLog({
+      actorEmail: effectiveEmail,
+      actorRole: effectiveRole,
       action: 'QC_INSPECTION_CREATED',
       entityType: 'qc_inspections',
       entityId: String(created.id || created.jobNo || ''),
@@ -111,7 +116,7 @@ export class QcService {
     return created;
   }
 
-  async reviewQCInspection(id: string, reviewData: z.infer<typeof ReviewQCSchema>) {
+  async reviewQCInspection(id: string, reviewData: z.infer<typeof ReviewQCSchema>, actorEmail?: string, actorRole?: string) {
     const { qcStatus, inspectorNotes, defectCategory } = ReviewQCSchema.parse(reviewData);
     const inspectedAt = new Date().toISOString();
     const target = (await this.getQCById(id)) || SEED_QC_QUEUE.find(q => q.id === id);
@@ -244,14 +249,18 @@ export class QcService {
 
     const result = { id, qcStatus, inspectorNotes, defectCategory, inspectedAt };
     
-    await logAudit({
-      actorEmail: 'qc@guruom.in',
-      action: qcStatus === 'PASS' ? 'QC_INSPECTION_PASSED' : (qcStatus === 'QC_HOLD' ? 'QC_HOLD_PLACED' : 'QC_INSPECTION_REJECTED'),
+    const effectiveEmail = (actorEmail && actorEmail.includes('@')) ? actorEmail : (actorEmail || 'qc@guruom.in');
+    const effectiveRole = actorRole || 'Quality Manager';
+
+    await auditService.recordAuditLog({
+      actorEmail: effectiveEmail,
+      actorRole: effectiveRole,
+      action: 'QC_INSPECTION_REVIEWED',
       entityType: 'qc_inspections',
       entityId: String(id || target?.jobNo || ''),
       beforeState: target ? { qcStatus: target.qcStatus, defectCategory: target.defectCategory } : null,
       afterState: { qcStatus, inspectorNotes, defectCategory, inspectedAt, orderPo: target?.orderPo, jobNo: target?.jobNo },
-      metadata: { details: `QC inspection ${qcStatus} for job ${target?.jobNo || id} (PO ${target?.orderPo || ''})` }
+      metadata: { details: `QC inspection reviewed with outcome ${qcStatus} for job ${target?.jobNo || id} (PO ${target?.orderPo || ''})` }
     }).catch(() => {});
 
     notificationsService.broadcastEvent('qc_updated', result);
@@ -303,9 +312,12 @@ export class QcService {
     return Array.from(map.values());
   }
 
-  async passPDIInspection(id: string) {
+  async passPDIInspection(id: string, actorEmail?: string, actorRole?: string) {
     const certNo = `PDI-2026-${Math.floor(1000 + Math.random() * 9000)}`;
     const reportDate = new Date().toISOString().split('T')[0];
+    const effectiveEmail = (actorEmail && actorEmail.includes('@')) ? actorEmail : (actorEmail || 'qc@guruom.in');
+    const effectiveRole = actorRole || 'Quality Inspector';
+
     let dbPdi: any = null;
     try {
       await this.db.from('pdi_inspections').update({
@@ -337,7 +349,7 @@ export class QcService {
           movementType: 'PRODUCTION_OUTPUT',
           referenceId: pdi.order_po,
           referenceType: 'job_card',
-          actorEmail: 'pdi@guruom.in',
+          actorEmail: effectiveEmail,
           notes: `PDI passed for PO ${pdi.order_po} — ${pdi.qty} × ${pdi.part_description} added to Finished Goods stock`
         });
 
@@ -391,14 +403,15 @@ export class QcService {
     }
 
     // Record Audit Log for PDI compliance clearance
-    await logAudit({
-      actorEmail: 'pdi@guruom.in',
+    await auditService.recordAuditLog({
+      actorEmail: effectiveEmail,
+      actorRole: effectiveRole,
       action: 'PDI_INSPECTION_PASSED',
       entityType: 'pdi_inspections',
       entityId: String(id || local?.jobNo || orderPo),
       beforeState: local ? { pdiStatus: local.pdiStatus } : null,
       afterState: { pdiStatus: 'PASS', certificateNo: certNo, reportDate, orderPo, partCode, qty },
-      metadata: { details: `PDI clearance granted for PO ${orderPo} with certificate ${certNo}` }
+      metadata: { details: `PDI inspection passed for PO ${orderPo} with certificate ${certNo}` }
     }).catch(() => {});
 
     // Real-Time Push: Broadcast PDI pass, Finished Goods update, and Order progression

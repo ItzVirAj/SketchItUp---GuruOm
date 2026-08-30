@@ -2,6 +2,7 @@ import { getDbClient } from '../../config/database';
 import { z } from 'zod';
 import { BillOfMaterialsSchema } from './bom.schema';
 import { logAudit } from '../../services/auditLog';
+import { auditService } from '../audit/audit.service';
 
 const SEED_BOMS: any[] = [];
 
@@ -87,7 +88,7 @@ export class BomService {
     return SEED_BOMS.find(b => b.id === code || b.bomCode === code || b.parentPartCode === code) || null;
   }
 
-  async createOrUpdateBOM(data: z.infer<typeof BillOfMaterialsSchema>) {
+  async createOrUpdateBOM(data: z.infer<typeof BillOfMaterialsSchema>, actorEmail?: string, actorRole?: string) {
     const validated = BillOfMaterialsSchema.parse(data);
     const bomId = validated.id || `bom-${Date.now()}`;
 
@@ -130,7 +131,18 @@ export class BomService {
       console.warn('Database createOrUpdateBOM error:', err);
     }
 
-    await logAudit({ actorEmail: 'engineering@guruom.in', action: 'BOM_SAVED', entityType: 'bill_of_materials', entityId: String(validated.bomCode), afterState: { parentPartCode: validated.parentPartCode, revision: validated.revision, componentCount: (validated.components || []).length, batchSize: validated.batchSize }, metadata: { details: `BOM ${validated.bomCode} saved for ${validated.parentPartCode} (${(validated.components || []).length} components, rev ${validated.revision})` } }).catch(() => {});
+    const effectiveEmail = (actorEmail && actorEmail.includes('@')) ? actorEmail : (actorEmail || 'engineering@guruom.in');
+    const effectiveRole = actorRole || 'Manufacturing Engineer';
+
+    await auditService.recordAuditLog({
+      actorEmail: effectiveEmail,
+      actorRole: effectiveRole,
+      action: 'BOM_CREATED_OR_UPDATED',
+      entityType: 'bill_of_materials',
+      entityId: String(validated.bomCode),
+      afterState: { parentPartCode: validated.parentPartCode, revision: validated.revision, componentCount: (validated.components || []).length, batchSize: validated.batchSize },
+      metadata: { details: `BOM ${validated.bomCode} created/updated for ${validated.parentPartCode} (${(validated.components || []).length} components, rev ${validated.revision})` }
+    }).catch(() => {});
 
     const createdBOM = { id: bomId, ...validated };
     const existingIdx = SEED_BOMS.findIndex(b => b.bomCode === validated.bomCode);
@@ -189,7 +201,10 @@ export class BomService {
     return this.createOrUpdateBOM(nextRev);
   }
 
-  async setBOMStatus(bomCode: string, status: 'ACTIVE' | 'DRAFT' | 'OBSOLETE') {
+  async setBOMStatus(bomCode: string, status: 'ACTIVE' | 'DRAFT' | 'OBSOLETE', actorEmail?: string, actorRole?: string) {
+    const existing = await this.getBOMByCode(bomCode);
+    const oldStatus = existing?.status || 'UNKNOWN';
+
     try {
       const { error } = await this.db
         .from('bill_of_materials')
@@ -205,10 +220,25 @@ export class BomService {
     if (bom) {
       bom.status = status;
     }
+
+    const effectiveEmail = (actorEmail && actorEmail.includes('@')) ? actorEmail : (actorEmail || 'engineering@guruom.in');
+    const effectiveRole = actorRole || 'Manufacturing Engineer';
+
+    await auditService.recordAuditLog({
+      actorEmail: effectiveEmail,
+      actorRole: effectiveRole,
+      action: 'BOM_STATUS_CHANGED',
+      entityType: 'bill_of_materials',
+      entityId: bomCode,
+      beforeState: { status: oldStatus },
+      afterState: { status },
+      metadata: { details: `BOM ${bomCode} status changed from ${oldStatus} to ${status}` }
+    }).catch(() => {});
+
     return bom;
   }
 
-  async deleteBOM(bomCode: string) {
+  async deleteBOM(bomCode: string, actorEmail?: string, actorRole?: string) {
     // Check if BOM has open customer orders / job cards before deleting
     try {
       const { error: itemErr } = await this.db.from('bom_items').delete().eq('bom_id', bomCode);
@@ -219,8 +249,12 @@ export class BomService {
       throw new Error(`Failed to delete BOM ${bomCode}: ${err.message}`);
     }
 
-    await logAudit({
-      actorEmail: 'engineering@guruom.in',
+    const effectiveEmail = (actorEmail && actorEmail.includes('@')) ? actorEmail : (actorEmail || 'engineering@guruom.in');
+    const effectiveRole = actorRole || 'Manufacturing Engineer';
+
+    await auditService.recordAuditLog({
+      actorEmail: effectiveEmail,
+      actorRole: effectiveRole,
       action: 'BOM_DELETED',
       entityType: 'bill_of_materials',
       entityId: bomCode,

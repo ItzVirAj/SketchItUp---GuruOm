@@ -295,6 +295,7 @@ export class PurchasingService {
     return SEED_GRNS;
   }
 
+  // NOTE: Superseded by POST /api/v1/grn (grn.service.ts createGrn) and not called by frontend — retained for backward compatibility.
   async createGrnWithMismatchCheck(data: z.infer<typeof GrnEntrySchema>, storeKeeperName: string) {
     const validated = GrnEntrySchema.parse(data);
     const grnId = validated.id || `grn-${Date.now()}`;

@@ -11,6 +11,7 @@ import {
 } from './masters.schema';
 import { notificationsService } from '../notifications/notifications.service';
 import { logAudit } from '../../services/auditLog';
+import { auditService } from '../audit/audit.service';
 import crypto from 'crypto';
 
 // Simple symmetric encryption for sensitive bank account numbers
@@ -100,7 +101,7 @@ export class MastersService {
     return [];
   }
 
-  async createMaster(data: any) {
+  async createMaster(data: any, actorEmail?: string, actorRole?: string) {
     // Determine auto-prefix if code not given
     if (!data.code) {
       const type = data.itemType || 'Raw Material';
@@ -188,7 +189,19 @@ export class MastersService {
       console.warn('Database createMaster error:', err);
     }
 
-    await logAudit({ actorEmail: 'masters@guruom.in', action: 'ITEM_MASTER_CREATED', entityType: 'masters', entityId: String(validated.code), afterState: { code: validated.code, name: validated.name, itemType: validated.itemType, unit: validated.unit }, metadata: { details: `Item Master ${validated.code} (${validated.name}) created` } }).catch(() => {});
+    const effectiveEmail = (actorEmail && actorEmail.includes('@')) ? actorEmail : (actorEmail || 'masters@guruom.in');
+    const effectiveRole = actorRole || 'Store Keeper';
+
+    await auditService.recordAuditLog({
+      actorEmail: effectiveEmail,
+      actorRole: effectiveRole,
+      action: 'ITEM_MASTER_CREATED',
+      entityType: 'masters',
+      entityId: String(validated.code),
+      afterState: { code: validated.code, name: validated.name, itemType: validated.itemType, unit: validated.unit },
+      metadata: { details: `Item Master ${validated.code} (${validated.name}) created` }
+    }).catch(() => {});
+
     // Real-Time Push: still announce the item even when the DB write falls back
     notificationsService.broadcastEvent('master_item_created', validated);
     return validated;
@@ -243,13 +256,26 @@ export class MastersService {
     return { code, ...validated };
   }
 
-  async deleteMaster(code: string) {
+  async deleteMaster(code: string, actorEmail?: string, actorRole?: string) {
     try {
       await this.db.from('masters').delete().eq('code', code);
     } catch (err) {
       console.warn('Database deleteMaster error:', err);
     }
-    await logAudit({ actorEmail: 'masters@guruom.in', action: 'ITEM_MASTER_DELETED', entityType: 'masters', entityId: code, metadata: { details: `Item Master ${code} deleted` } }).catch(() => {});
+
+    const effectiveEmail = (actorEmail && actorEmail.includes('@')) ? actorEmail : (actorEmail || 'masters@guruom.in');
+    const effectiveRole = actorRole || 'Store Keeper';
+
+    await auditService.recordAuditLog({
+      actorEmail: effectiveEmail,
+      actorRole: effectiveRole,
+      action: 'ITEM_MASTER_DELETED',
+      entityType: 'masters',
+      entityId: code,
+      afterState: null,
+      metadata: { details: `Item Master ${code} deleted` }
+    }).catch(() => {});
+
     notificationsService.broadcastEvent('master_item_deleted', { code });
     return { success: true, code };
   }
@@ -302,7 +328,7 @@ export class MastersService {
     return [];
   }
 
-  async createCustomer(data: any) {
+  async createCustomer(data: any, actorEmail?: string, actorRole?: string) {
     if (!data.code) {
       const existing = await this.getCustomers();
       const codes = existing.map(e => e.code);
@@ -347,6 +373,9 @@ export class MastersService {
       updated_at: new Date().toISOString()
     };
 
+    const effectiveEmail = (actorEmail && actorEmail.includes('@')) ? actorEmail : (actorEmail || 'sales@guruom.in');
+    const effectiveRole = actorRole || 'Sales Manager';
+
     try {
       const { data: created, error } = await this.db
         .from('customer_masters')
@@ -355,6 +384,16 @@ export class MastersService {
         .single();
 
       if (!error && created) {
+        await auditService.recordAuditLog({
+          actorEmail: effectiveEmail,
+          actorRole: effectiveRole,
+          action: 'CUSTOMER_MASTER_CREATED',
+          entityType: 'customer_masters',
+          entityId: String(validated.code),
+          afterState: { code: validated.code, name: validated.name, city: validated.city, state: validated.state, gstin: validated.gstin },
+          metadata: { details: `Customer Master ${validated.code} (${validated.name}) created` }
+        }).catch(() => {});
+
         return {
           id: created.id,
           code: created.code,
@@ -379,7 +418,16 @@ export class MastersService {
           notes: created.notes
         };
       }
-    await logAudit({ actorEmail: 'sales@guruom.in', action: 'CUSTOMER_MASTER_CREATED', entityType: 'customer_masters', entityId: String(validated.code), afterState: { code: validated.code, name: validated.name, city: validated.city, state: validated.state, gstin: validated.gstin }, metadata: { details: `Customer Master ${validated.code} (${validated.name}) created` } }).catch(() => {});
+
+      await auditService.recordAuditLog({
+        actorEmail: effectiveEmail,
+        actorRole: effectiveRole,
+        action: 'CUSTOMER_MASTER_CREATED',
+        entityType: 'customer_masters',
+        entityId: String(validated.code),
+        afterState: { code: validated.code, name: validated.name, city: validated.city, state: validated.state, gstin: validated.gstin },
+        metadata: { details: `Customer Master ${validated.code} (${validated.name}) created` }
+      }).catch(() => {});
 
     } catch (err) {
       console.warn('Database createCustomer error:', err);
@@ -439,13 +487,26 @@ export class MastersService {
     return { code, ...validated };
   }
 
-  async deleteCustomer(code: string) {
+  async deleteCustomer(code: string, actorEmail?: string, actorRole?: string) {
     try {
       await this.db.from('customer_masters').delete().eq('code', code);
     } catch (err) {
       console.warn('Database deleteCustomer error:', err);
     }
-    await logAudit({ actorEmail: 'sales@guruom.in', action: 'CUSTOMER_MASTER_DELETED', entityType: 'customer_masters', entityId: code, metadata: { details: `Customer Master ${code} deleted` } }).catch(() => {});
+
+    const effectiveEmail = (actorEmail && actorEmail.includes('@')) ? actorEmail : (actorEmail || 'sales@guruom.in');
+    const effectiveRole = actorRole || 'Sales Manager';
+
+    await auditService.recordAuditLog({
+      actorEmail: effectiveEmail,
+      actorRole: effectiveRole,
+      action: 'CUSTOMER_MASTER_DELETED',
+      entityType: 'customer_masters',
+      entityId: code,
+      afterState: null,
+      metadata: { details: `Customer Master ${code} deleted` }
+    }).catch(() => {});
+
     notificationsService.broadcastEvent('customer_deleted', { code });
     return { success: true, code };
   }
@@ -506,7 +567,7 @@ export class MastersService {
     return [];
   }
 
-  async createVendor(data: any) {
+  async createVendor(data: any, actorEmail?: string, actorRole?: string) {
     if (!data.code) {
       const existing = await this.getVendors(false, false);
       const codes = existing.map(e => e.code);
@@ -559,6 +620,9 @@ export class MastersService {
       updated_at: new Date().toISOString()
     };
 
+    const effectiveEmail = (actorEmail && actorEmail.includes('@')) ? actorEmail : (actorEmail || 'purchase@guruom.in');
+    const effectiveRole = actorRole || 'Purchase Manager';
+
     try {
       const { data: created, error } = await this.db
         .from('vendor_masters')
@@ -567,6 +631,16 @@ export class MastersService {
         .single();
 
       if (!error && created) {
+        await auditService.recordAuditLog({
+          actorEmail: effectiveEmail,
+          actorRole: effectiveRole,
+          action: 'VENDOR_MASTER_CREATED',
+          entityType: 'vendor_masters',
+          entityId: String(validated.code),
+          afterState: { code: validated.code, name: validated.name, vendorType: validated.vendorType, vendorCategory: validated.vendorCategory, city: validated.city },
+          metadata: { details: `Vendor Master ${validated.code} (${validated.name}) created` }
+        }).catch(() => {});
+
         return {
           id: created.id,
           code: created.code,
@@ -594,11 +668,20 @@ export class MastersService {
           notes: created.notes
         };
       }
+
+      await auditService.recordAuditLog({
+        actorEmail: effectiveEmail,
+        actorRole: effectiveRole,
+        action: 'VENDOR_MASTER_CREATED',
+        entityType: 'vendor_masters',
+        entityId: String(validated.code),
+        afterState: { code: validated.code, name: validated.name, vendorType: validated.vendorType, vendorCategory: validated.vendorCategory, city: validated.city },
+        metadata: { details: `Vendor Master ${validated.code} (${validated.name}) created` }
+      }).catch(() => {});
+
     } catch (err) {
       console.warn('Database createVendor error:', err);
     }
-
-    await logAudit({ actorEmail: 'purchase@guruom.in', action: 'VENDOR_MASTER_CREATED', entityType: 'vendor_masters', entityId: String(validated.code), afterState: { code: validated.code, name: validated.name, vendorType: validated.vendorType, vendorCategory: validated.vendorCategory, city: validated.city }, metadata: { details: `Vendor Master ${validated.code} (${validated.name}) created` } }).catch(() => {});
 
     return {
       ...validated,
@@ -664,13 +747,26 @@ export class MastersService {
     return { code, ...validated };
   }
 
-  async deleteVendor(code: string) {
+  async deleteVendor(code: string, actorEmail?: string, actorRole?: string) {
     try {
       await this.db.from('vendor_masters').delete().eq('code', code);
     } catch (err) {
       console.warn('Database deleteVendor error:', err);
     }
-    await logAudit({ actorEmail: 'purchase@guruom.in', action: 'VENDOR_MASTER_DELETED', entityType: 'vendor_masters', entityId: code, metadata: { details: `Vendor Master ${code} deleted` } }).catch(() => {});
+
+    const effectiveEmail = (actorEmail && actorEmail.includes('@')) ? actorEmail : (actorEmail || 'purchase@guruom.in');
+    const effectiveRole = actorRole || 'Purchase Manager';
+
+    await auditService.recordAuditLog({
+      actorEmail: effectiveEmail,
+      actorRole: effectiveRole,
+      action: 'VENDOR_MASTER_DELETED',
+      entityType: 'vendor_masters',
+      entityId: code,
+      afterState: null,
+      metadata: { details: `Vendor Master ${code} deleted` }
+    }).catch(() => {});
+
     notificationsService.broadcastEvent('vendor_deleted', { code });
     return { success: true, code };
   }
@@ -719,7 +815,7 @@ export class MastersService {
     return [];
   }
 
-  async createMachine(data: any) {
+  async createMachine(data: any, actorEmail?: string, actorRole?: string) {
     if (!data.code) {
       const existing = await this.getMachines();
       const codes = existing.map(e => e.code);
@@ -759,6 +855,9 @@ export class MastersService {
       updated_at: new Date().toISOString()
     };
 
+    const effectiveEmail = (actorEmail && actorEmail.includes('@')) ? actorEmail : (actorEmail || 'production@guruom.in');
+    const effectiveRole = actorRole || 'Plant Head';
+
     try {
       const { data: created, error } = await this.db
         .from('machine_masters')
@@ -767,6 +866,16 @@ export class MastersService {
         .single();
 
       if (!error && created) {
+        await auditService.recordAuditLog({
+          actorEmail: effectiveEmail,
+          actorRole: effectiveRole,
+          action: 'MACHINE_MASTER_CREATED',
+          entityType: 'machine_masters',
+          entityId: String(validated.code),
+          afterState: { code: validated.code, name: validated.name, type: validated.type, department: validated.department, location: validated.location },
+          metadata: { details: `Machine Master ${validated.code} (${validated.name}) created` }
+        }).catch(() => {});
+
         return {
           id: created.id,
           code: created.code,
@@ -788,7 +897,16 @@ export class MastersService {
           active: created.status === 'Active'
         };
       }
-    await logAudit({ actorEmail: 'production@guruom.in', action: 'MACHINE_MASTER_CREATED', entityType: 'machine_masters', entityId: String(validated.code), afterState: { code: validated.code, name: validated.name, type: validated.type, department: validated.department, location: validated.location }, metadata: { details: `Machine Master ${validated.code} (${validated.name}) created` } }).catch(() => {});
+
+      await auditService.recordAuditLog({
+        actorEmail: effectiveEmail,
+        actorRole: effectiveRole,
+        action: 'MACHINE_MASTER_CREATED',
+        entityType: 'machine_masters',
+        entityId: String(validated.code),
+        afterState: { code: validated.code, name: validated.name, type: validated.type, department: validated.department, location: validated.location },
+        metadata: { details: `Machine Master ${validated.code} (${validated.name}) created` }
+      }).catch(() => {});
 
     } catch (err) {
       console.warn('Database createMachine error:', err);
@@ -840,13 +958,26 @@ export class MastersService {
     return { code, ...validated };
   }
 
-  async deleteMachine(code: string) {
+  async deleteMachine(code: string, actorEmail?: string, actorRole?: string) {
     try {
       await this.db.from('machine_masters').delete().eq('code', code);
     } catch (err) {
       console.warn('Database deleteMachine error:', err);
     }
-    await logAudit({ actorEmail: 'production@guruom.in', action: 'MACHINE_MASTER_DELETED', entityType: 'machine_masters', entityId: code, metadata: { details: `Machine Master ${code} deleted` } }).catch(() => {});
+
+    const effectiveEmail = (actorEmail && actorEmail.includes('@')) ? actorEmail : (actorEmail || 'production@guruom.in');
+    const effectiveRole = actorRole || 'Plant Head';
+
+    await auditService.recordAuditLog({
+      actorEmail: effectiveEmail,
+      actorRole: effectiveRole,
+      action: 'MACHINE_MASTER_DELETED',
+      entityType: 'machine_masters',
+      entityId: code,
+      afterState: null,
+      metadata: { details: `Machine Master ${code} deleted` }
+    }).catch(() => {});
+
     notificationsService.broadcastEvent('machine_deleted', { code });
     return { success: true, code };
   }
@@ -894,7 +1025,7 @@ export class MastersService {
     return [];
   }
 
-  async createUser(data: any) {
+  async createUser(data: any, actorEmail?: string, actorRole?: string) {
     if (!data.userId) {
       const existing = await this.getUsers();
       const codes = existing.map(e => e.userId).filter(Boolean);
@@ -937,6 +1068,9 @@ export class MastersService {
       updated_at: new Date().toISOString()
     };
 
+    const effectiveEmail = (actorEmail && actorEmail.includes('@')) ? actorEmail : (actorEmail || 'admin@guruom.in');
+    const effectiveRole = actorRole || 'Admin (System)';
+
     try {
       const { data: created, error } = await this.db
         .from('users')
@@ -945,6 +1079,16 @@ export class MastersService {
         .single();
 
       if (!error && created) {
+        await auditService.recordAuditLog({
+          actorEmail: effectiveEmail,
+          actorRole: effectiveRole,
+          action: 'USER_CREATED',
+          entityType: 'users',
+          entityId: String(validated.userId || id),
+          afterState: { userId: validated.userId, fullName: validated.fullName, email: validated.email, userRole: validated.userRole, internalRole, department: validated.department },
+          metadata: { details: `User ${validated.fullName} (${validated.email}) created with assigned role '${validated.userRole}' in department ${validated.department}` }
+        }).catch(() => {});
+
         return {
           id: created.id,
           userId: created.user_id,
@@ -963,6 +1107,17 @@ export class MastersService {
           status: created.status === 'ACTIVE' ? 'Active' : 'Inactive'
         };
       }
+
+      await auditService.recordAuditLog({
+        actorEmail: effectiveEmail,
+        actorRole: effectiveRole,
+        action: 'USER_CREATED',
+        entityType: 'users',
+        entityId: String(validated.userId || id),
+        afterState: { userId: validated.userId, fullName: validated.fullName, email: validated.email, userRole: validated.userRole, internalRole, department: validated.department },
+        metadata: { details: `User ${validated.fullName} (${validated.email}) created with assigned role '${validated.userRole}' in department ${validated.department}` }
+      }).catch(() => {});
+
     } catch (err) {
       console.warn('Database createUser error:', err);
     }

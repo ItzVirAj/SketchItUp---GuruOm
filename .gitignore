@@ -98,4 +98,5 @@ storybook-static/
 # ---- Local Backups & Scratch ----
 src/backupcomponents/
 backup/
-*.backup
+*.backup
+

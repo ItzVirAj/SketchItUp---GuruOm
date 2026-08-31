@@ -1298,6 +1298,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
         isOpen={createOrderModal.isOpen}
         onClose={() => createOrderModal.close()}
         isDarkMode={isDarkMode}
+        maxWidth="4xl"
         icon={<Plus className="w-5 h-5" />}
         title="Create Purchase Order / Blanket Call-Off"
         subtitle="Stage 1 Precondition: Customer Master Indexing & Credit Check"
@@ -1576,7 +1577,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
             </div>
           </div>
 
-          {/* Line Items Table with Master Part Indexing */}
+          {/* Line Items Cards with Master Part Indexing - No Horizontal Scroll */}
           <div className="space-y-3 pt-1">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -1599,120 +1600,172 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
               </button>
             </div>
 
-            <div className={`rounded-xl border overflow-hidden shadow-xs ${
-              isDarkMode ? 'bg-[#0d1017] border-slate-800' : 'bg-white border-slate-200'
-            }`}>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className={`border-b text-[10px] font-bold uppercase tracking-wider ${
-                      isDarkMode ? 'bg-[#12161f] border-slate-800 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'
-                    }`}>
-                      <th className="p-3">Master Part Code</th>
-                      <th className="p-3">Description</th>
-                      <th className="p-3">Cust Part No</th>
-                      <th className="p-3">Rev</th>
-                      <th className="p-3 w-24">Qty</th>
-                      <th className="p-3 w-28">Rate (₹)</th>
-                      <th className="p-3 text-right">Gross (₹)</th>
-                      <th className="p-3 w-10 text-center"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800/80">
-                    {lines.map((line, idx) => (
-                      <tr key={idx} className={isDarkMode ? 'hover:bg-slate-850/50' : 'hover:bg-slate-50'}>
-                        <td className="p-2.5">
-                          <select
-                            value={line.itemCode}
-                            onChange={(e) => handleSelectItemForLine(idx, e.target.value)}
-                            className={`w-40 p-2 rounded-lg border text-xs font-mono outline-none ${
-                              isDarkMode ? 'bg-[#141822] border-slate-700 text-white focus:border-indigo-500' : 'bg-white border-slate-300 text-slate-900 focus:border-indigo-500'
-                            }`}
-                          >
-                            <option value="">-- Choose FG Part --</option>
-                            {finishedGoodsMasters.map(m => (
-                              <option key={m.code || m.id} value={m.code}>
-                                {m.code} - {m.name || m.description || m.partNo}
-                              </option>
-                            ))}
-                            <option value="CUSTOM_ITEM">+ Custom / Ad-hoc Part</option>
-                          </select>
-                        </td>
-                        <td className="p-2.5">
-                          <input
-                            type="text"
-                            value={line.itemDescription}
-                            onChange={(e) => updateLineItem(idx, 'itemDescription', e.target.value)}
-                            placeholder="Part description"
-                            className={`w-36 p-2 rounded-lg border text-xs outline-none ${
-                              isDarkMode ? 'bg-[#141822] border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500' : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500'
-                            }`}
-                          />
-                        </td>
-                        <td className="p-2.5">
-                          <input
-                            type="text"
-                            value={line.custPartNo}
-                            onChange={(e) => updateLineItem(idx, 'custPartNo', e.target.value)}
-                            placeholder="Drawing Part #"
-                            className={`w-28 p-2 rounded-lg border text-xs font-mono outline-none ${
-                              isDarkMode ? 'bg-[#141822] border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500' : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500'
-                            }`}
-                          />
-                        </td>
-                        <td className="p-2.5">
-                          <input
-                            type="text"
-                            value={line.drawingRevision}
-                            onChange={(e) => updateLineItem(idx, 'drawingRevision', e.target.value)}
-                            placeholder="Rev"
-                            className={`w-16 p-2 rounded-lg border text-xs font-mono text-center outline-none ${
-                              isDarkMode ? 'bg-[#141822] border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500' : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500'
-                            }`}
-                          />
-                        </td>
-                        <td className="p-2.5">
-                          <input
-                            type="number"
-                            min="1"
-                            value={line.orderQty}
-                            onChange={(e) => updateLineItem(idx, 'orderQty', Number(e.target.value))}
-                            className={`w-20 p-2 rounded-lg border text-xs font-mono text-right outline-none ${
-                              isDarkMode ? 'bg-[#141822] border-slate-700 text-white focus:border-indigo-500' : 'bg-white border-slate-300 text-slate-900 focus:border-indigo-500'
-                            }`}
-                          />
-                        </td>
-                        <td className="p-2.5">
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.5"
-                            value={line.rate}
-                            onChange={(e) => updateLineItem(idx, 'rate', Number(e.target.value))}
-                            className={`w-24 p-2 rounded-lg border text-xs font-mono text-right outline-none ${
-                              isDarkMode ? 'bg-[#141822] border-slate-700 text-white focus:border-indigo-500' : 'bg-white border-slate-300 text-slate-900 focus:border-indigo-500'
-                            }`}
-                          />
-                        </td>
-                        <td className="p-2.5 text-right font-bold text-slate-900 dark:text-white font-mono">
-                          ₹{(Number(line.orderQty) * Number(line.rate)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                        </td>
-                        <td className="p-2.5 text-center">
-                          <button
-                            type="button"
-                            disabled={lines.length <= 1}
-                            onClick={() => removeLineItem(idx)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 disabled:opacity-30 cursor-pointer transition-colors"
-                            aria-label="Remove line item"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+            <div className="space-y-3">
+              {lines.map((line, idx) => {
+                const lineGross = Number(line.orderQty || 0) * Number(line.rate || 0);
+
+                return (
+                  <div
+                    key={idx}
+                    className={`p-3.5 sm:p-4 rounded-2xl border transition-all relative ${
+                      isDarkMode
+                        ? 'bg-[#0d1017] border-slate-800 hover:border-slate-700/80 shadow-xs'
+                        : 'bg-slate-50/80 border-slate-200 hover:border-slate-300 shadow-xs'
+                    }`}
+                  >
+                    {/* Item Header */}
+                    <div className="flex items-center justify-between gap-2 mb-3 pb-2.5 border-b border-slate-200/70 dark:border-slate-800">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-5 h-5 rounded-full text-[10px] font-mono font-bold flex items-center justify-center ${
+                          isDarkMode ? 'bg-indigo-500/20 text-indigo-300' : 'bg-indigo-100 text-indigo-700'
+                        }`}>
+                          {idx + 1}
+                        </span>
+                        <span className="font-bold text-xs text-slate-800 dark:text-slate-200">
+                          {line.itemCode ? line.itemCode : `Part Item #${idx + 1}`}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <div className="text-right font-mono">
+                          <span className="text-[10px] text-slate-400 mr-1.5 uppercase font-medium">Line Total:</span>
+                          <span className="font-black text-xs text-emerald-600 dark:text-emerald-400">
+                            ₹{lineGross.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={lines.length <= 1}
+                          onClick={() => removeLineItem(idx)}
+                          className="p-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 disabled:opacity-20 cursor-pointer transition-colors"
+                          title="Remove line item"
+                          aria-label="Remove line item"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Form Inputs Grid - Responsive Full-Width */}
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+                      {/* Master FG Part Dropdown */}
+                      <div className="sm:col-span-6">
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                          Master FG Part Code
+                        </label>
+                        <select
+                          value={line.itemCode}
+                          onChange={(e) => handleSelectItemForLine(idx, e.target.value)}
+                          className={`w-full h-9 p-2 rounded-xl border text-xs font-mono outline-none transition-all ${
+                            isDarkMode
+                              ? 'bg-[#141822] border-slate-700 text-white focus:border-indigo-500'
+                              : 'bg-white border-slate-300 text-slate-900 focus:border-indigo-500 shadow-xs'
+                          }`}
+                        >
+                          <option value="">-- Choose FG Part from Master --</option>
+                          {finishedGoodsMasters.map(m => (
+                            <option key={m.code || m.id} value={m.code}>
+                              {m.code} - {m.name || m.description || m.partNo}
+                            </option>
+                          ))}
+                          <option value="CUSTOM_ITEM">+ Custom / Ad-hoc Part</option>
+                        </select>
+                      </div>
+
+                      {/* Description */}
+                      <div className="sm:col-span-6">
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                          Part Description
+                        </label>
+                        <input
+                          type="text"
+                          value={line.itemDescription}
+                          onChange={(e) => updateLineItem(idx, 'itemDescription', e.target.value)}
+                          placeholder="e.g. CNC Shaft Bushing"
+                          className={`w-full h-9 px-2.5 rounded-xl border text-xs outline-none transition-all ${
+                            isDarkMode
+                              ? 'bg-[#141822] border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500'
+                              : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 shadow-xs'
+                          }`}
+                        />
+                      </div>
+
+                      {/* Cust Part No */}
+                      <div className="sm:col-span-4">
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                          Drawing / Cust Part #
+                        </label>
+                        <input
+                          type="text"
+                          value={line.custPartNo}
+                          onChange={(e) => updateLineItem(idx, 'custPartNo', e.target.value)}
+                          placeholder="e.g. DWG-8802"
+                          className={`w-full h-9 px-2.5 rounded-xl border text-xs font-mono outline-none transition-all ${
+                            isDarkMode
+                              ? 'bg-[#141822] border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500'
+                              : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 shadow-xs'
+                          }`}
+                        />
+                      </div>
+
+                      {/* Rev */}
+                      <div className="sm:col-span-2">
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                          Rev
+                        </label>
+                        <input
+                          type="text"
+                          value={line.drawingRevision}
+                          onChange={(e) => updateLineItem(idx, 'drawingRevision', e.target.value)}
+                          placeholder="01"
+                          className={`w-full h-9 px-2.5 rounded-xl border text-xs font-mono text-center outline-none transition-all ${
+                            isDarkMode
+                              ? 'bg-[#141822] border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500'
+                              : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 shadow-xs'
+                          }`}
+                        />
+                      </div>
+
+                      {/* Qty */}
+                      <div className="sm:col-span-3">
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                          Order Qty (Pcs)
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={line.orderQty}
+                          onChange={(e) => updateLineItem(idx, 'orderQty', Number(e.target.value))}
+                          className={`w-full h-9 px-2.5 rounded-xl border text-xs font-mono text-right outline-none transition-all ${
+                            isDarkMode
+                              ? 'bg-[#141822] border-slate-700 text-white focus:border-indigo-500'
+                              : 'bg-white border-slate-300 text-slate-900 focus:border-indigo-500 shadow-xs'
+                          }`}
+                        />
+                      </div>
+
+                      {/* Unit Rate */}
+                      <div className="sm:col-span-3">
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                          Unit Rate (₹)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.5"
+                          value={line.rate}
+                          onChange={(e) => updateLineItem(idx, 'rate', Number(e.target.value))}
+                          className={`w-full h-9 px-2.5 rounded-xl border text-xs font-mono text-right outline-none transition-all ${
+                            isDarkMode
+                              ? 'bg-[#141822] border-slate-700 text-white focus:border-indigo-500'
+                              : 'bg-white border-slate-300 text-slate-900 focus:border-indigo-500 shadow-xs'
+                          }`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 

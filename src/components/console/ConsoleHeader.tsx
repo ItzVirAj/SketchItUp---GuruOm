@@ -145,7 +145,10 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
     } catch (err) {
       console.warn('System refresh error:', err);
     } finally {
-      setTimeout(() => setIsSyncing(false), 600);
+      // Reload entire window/session like browser refresh
+      setTimeout(() => {
+        window.location.reload();
+      }, 350);
     }
   };
 

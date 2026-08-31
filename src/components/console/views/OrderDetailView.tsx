@@ -1403,40 +1403,52 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
     <div className="space-y-6 font-sans">
 
       {/* 1. Header Navigation & Action Bar */}
-      <div className={`p-4 sm:p-6 rounded-3xl border transition-all ${isDarkMode
-        ? 'bg-slate-900/85 border-slate-800/80 text-white backdrop-blur-xl shadow-2xl'
-        : 'bg-white border-slate-200 shadow-md text-slate-900'
+      <div className={`p-4 sm:p-6 rounded-3xl border transition-all relative overflow-hidden ${isDarkMode
+        ? 'bg-slate-900/90 border-slate-800/80 text-white backdrop-blur-xl shadow-2xl'
+        : 'bg-white border-slate-200/80 shadow-md text-slate-900'
         }`}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 sm:gap-4">
+        {/* Subtle Ambient Light */}
+        <div className="absolute top-0 right-0 w-80 h-32 bg-gradient-to-bl from-[#5B75F8]/10 to-transparent rounded-full blur-2xl pointer-events-none -z-0" />
 
-          <div className="flex items-start sm:items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+
+          <div className="flex items-start sm:items-center gap-3.5 min-w-0">
             <button
               onClick={onBack}
-              className={`p-2 sm:p-2.5 rounded-2xl border cursor-pointer transition-all hover:scale-105 active:scale-95 shrink-0 ${isDarkMode
-                ? 'border-slate-800 bg-slate-950/70 text-slate-300 hover:bg-slate-800 hover:text-white'
-                : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+              className={`p-2.5 rounded-2xl border cursor-pointer transition-all hover:scale-105 active:scale-95 shrink-0 flex items-center justify-center ${isDarkMode
+                ? 'border-slate-800 bg-slate-950/80 text-slate-300 hover:bg-slate-800 hover:text-white shadow-xs'
+                : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 shadow-xs'
                 }`}
               title="Back to Orders Hub"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
 
-            <div>
+            <div className="min-w-0">
+              {/* Breadcrumb row */}
+              <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-widest text-slate-400 mb-1">
+                <span>Orders</span>
+                <span>/</span>
+                <span>PO Detail</span>
+                <span>/</span>
+                <span className="text-[#5B75F8] dark:text-[#7B92FF] font-bold">{order.poNo}</span>
+              </div>
+
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-bold font-mono tracking-tight text-[#5B75F8] dark:text-[#7B92FF] flex items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-black font-mono tracking-tight text-[#5B75F8] dark:text-[#7B92FF] flex items-center gap-2">
                   <span>{order.poNo}</span>
                 </h1>
 
                 {order.subType && (
                   <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-mono font-bold uppercase border ${order.subType === 'BLANKET_CALLOFF'
-                    ? isDarkMode ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' : 'bg-purple-100 text-purple-800 border-purple-200'
-                    : isDarkMode ? 'bg-blue-500/20 text-blue-300 border-blue-500/30' : 'bg-blue-100 text-blue-800 border-blue-200'
+                    ? isDarkMode ? 'bg-purple-500/15 text-purple-300 border-purple-500/30' : 'bg-purple-50 text-purple-700 border-purple-200'
+                    : isDarkMode ? 'bg-blue-500/15 text-blue-300 border-blue-500/30' : 'bg-blue-50 text-blue-700 border-blue-200'
                     }`}>
                     {order.subType === 'BLANKET_CALLOFF' ? 'Blanket Call-Off' : 'Fresh PO'}
                   </span>
                 )}
 
-                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-xl text-[11px] sm:text-xs font-mono font-bold uppercase border ${isQcRejected ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/15 dark:text-rose-400 dark:border-rose-500/30' :
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono font-bold uppercase border transition-all ${isQcRejected ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/15 dark:text-rose-400 dark:border-rose-500/30' :
                   isQcHold || hasNcr ? 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/30' :
                     order.status === 'CANCELLED' ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/15 dark:text-rose-400 dark:border-rose-500/30' :
                       order.status === 'DRAFT' || order.status === 'PO_RECEIVED' || order.status === 'SUBMITTED' ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30' :
@@ -1465,22 +1477,32 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   <span>{isQcRejected ? 'QC Rejected' : (isQcHold || hasNcr) ? 'QC Hold / NCR' : (order.status || order.stage || 'DRAFT').replace(/_/g, ' ')}</span>
                 </span>
               </div>
-              <p className={`text-xs mt-1 flex flex-wrap items-center gap-1.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                <span>Customer:</span>
-                <strong className="text-[#5B75F8] dark:text-[#7B92FF] font-semibold">{order.customerName}</strong>
-                <span className="text-slate-500">•</span>
+
+              {/* Customer & Date Metadata Strip */}
+              <div className="flex flex-wrap items-center gap-2 text-xs mt-1.5 text-slate-500 dark:text-slate-400">
+                <span className="flex items-center gap-1">
+                  <span>Customer:</span>
+                  <strong className="text-[#5B75F8] dark:text-[#7B92FF] font-semibold">{order.customerName}</strong>
+                </span>
+                <span className="text-slate-400 dark:text-slate-600">•</span>
                 <span>Created {order.poDate}</span>
-              </p>
+                {order.deliveryDate && (
+                  <>
+                    <span className="text-slate-400 dark:text-slate-600">•</span>
+                    <span>Due: <strong className="font-semibold text-slate-700 dark:text-slate-300">{order.deliveryDate}</strong></span>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Clean Header Info Strip */}
-          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+          {/* Action Button Strip */}
+          <div className="flex items-center gap-2.5 w-full sm:w-auto shrink-0">
             <button
               onClick={() => uploadPoModal.open()}
-              className={`w-full sm:w-auto px-3.5 py-2 rounded-2xl border text-xs font-mono font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${isDarkMode
-                ? 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800 hover:text-white'
-                : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+              className={`w-full sm:w-auto px-4 py-2 rounded-2xl border text-xs font-mono font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${isDarkMode
+                ? 'border-slate-800 bg-slate-950/70 text-slate-300 hover:bg-slate-800 hover:text-white shadow-xs'
+                : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 shadow-xs'
                 }`}
             >
               <Upload className="w-3.5 h-3.5" />
@@ -1490,7 +1512,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         </div>
 
         {confirmError && (
-          <div className="mt-4 p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-mono flex items-center justify-between gap-3">
+          <div className="mt-4 p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-mono flex items-center justify-between gap-3 relative z-10 animate-fade-in">
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0" />
               <span>{confirmError}</span>
@@ -1506,17 +1528,17 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       </div>
 
       {/* 2. Redesigned Milestone Progress Pipeline */}
-      <div className={`p-4 sm:p-8 rounded-2xl sm:rounded-3xl border transition-all shadow-xl relative overflow-hidden ${isDarkMode
+      <div className={`p-4 sm:p-7 rounded-3xl border transition-all shadow-xl relative overflow-hidden ${isDarkMode
         ? 'bg-slate-900/90 border-slate-800/90 backdrop-blur-xl text-white'
         : 'bg-white border-slate-200 text-slate-900 shadow-sm'
         }`}>
 
-        {/* Subtle Ambient Background Gradient */}
+        {/* Ambient Glow */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-indigo-500/10 via-blue-500/5 to-transparent rounded-full blur-3xl pointer-events-none -z-0" />
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6 pb-4 border-b border-slate-100 dark:border-slate-800/80 relative z-10">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-indigo-500/15 text-indigo-500 dark:text-indigo-400 shrink-0">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-100 dark:border-slate-800/80 relative z-10">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-2xl bg-[#5B75F8]/15 text-[#5B75F8] dark:text-[#7B92FF] shrink-0">
               <RefreshCw className="w-4 h-4" />
             </div>
             <div>
@@ -1529,7 +1551,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className={`px-2.5 py-1 sm:px-3 rounded-xl text-[11px] sm:text-xs font-mono font-bold border ${isDarkMode ? 'bg-indigo-500/10 border-indigo-500/30 text-[#7B92FF]' : 'bg-indigo-50 border-indigo-200 text-indigo-700'
+            <span className={`px-3 py-1 rounded-xl text-xs font-mono font-bold border ${isDarkMode ? 'bg-indigo-500/10 border-indigo-500/30 text-[#7B92FF]' : 'bg-indigo-50 border-indigo-200 text-indigo-700'
               }`}>
               Status: {(order.status || order.stage || 'DRAFT').replace(/_/g, ' ')}
             </span>
@@ -1538,7 +1560,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
         {/* Milestone Steps Bar */}
         <div className="relative z-10 py-2 overflow-x-auto scrollbar-none">
-          <div className="flex items-start justify-between min-w-[700px]">
+          <div className="flex items-start justify-between min-w-[720px] px-2">
             {steps.map((st, idx) => {
               const isCompleted = idx < activeStepIndex;
               const isCurrent = idx === activeStepIndex;
@@ -1547,10 +1569,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               return (
                 <React.Fragment key={st.name}>
                   {/* Step Node */}
-                  <div className="flex flex-col items-center shrink-0 min-w-[100px] max-w-[130px] group text-center">
+                  <div className="flex flex-col items-center shrink-0 min-w-[105px] max-w-[135px] group text-center">
 
                     {/* Node Circle */}
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 ${isCurrent
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 relative ${isCurrent
                       ? isQcRejected
                         ? 'bg-gradient-to-tr from-rose-600 to-rose-500 text-white ring-4 ring-rose-500/30 shadow-lg shadow-rose-500/40 scale-110 border-2 border-rose-400'
                         : isQcHold || hasNcr
@@ -1565,6 +1587,16 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                       ) : (
                         <StepIcon className="w-5 h-5 stroke-[2]" />
                       )}
+
+                      {/* Step index badge */}
+                      <span className={`absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full text-[9px] font-mono font-bold flex items-center justify-center ${isCurrent
+                        ? 'bg-white text-indigo-700 shadow-xs'
+                        : isCompleted
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-slate-300 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                        }`}>
+                        {idx + 1}
+                      </span>
                     </div>
 
                     {/* Step Title & Subtitle */}
@@ -1584,8 +1616,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
                   {/* Connector Line between Steps */}
                   {idx < steps.length - 1 && (
-                    <div className="flex-1 self-center px-2 -mt-6">
-                      <div className={`h-1 rounded-full transition-all duration-500 ${idx < activeStepIndex
+                    <div className="flex-1 self-center px-2 -mt-7">
+                      <div className={`h-1.5 rounded-full transition-all duration-500 ${idx < activeStepIndex
                         ? 'bg-gradient-to-r from-emerald-500 to-teal-500 shadow-xs shadow-emerald-500/30'
                         : 'bg-slate-200 dark:bg-slate-800'
                         }`} />
@@ -2213,14 +2245,17 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             <div className="space-y-2.5 w-full">
               <div
                 key={currentStageDef.id}
-                className={`p-5 sm:p-6 rounded-2xl sm:rounded-3xl border transition-all w-full ${isDarkMode
+                className={`p-5 sm:p-6 rounded-3xl border transition-all w-full relative overflow-hidden ${isDarkMode
                   ? 'bg-gradient-to-r from-slate-900/95 via-indigo-950/40 to-slate-900/95 border-[#5B75F8]/50 ring-1 ring-[#5B75F8]/30 shadow-2xl text-white'
                   : 'bg-gradient-to-r from-indigo-50/90 via-white to-blue-50/90 border-indigo-200 ring-1 ring-indigo-300 shadow-lg text-slate-900'
                   }`}
               >
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full">
+                {/* Ambient glow in stage gateway */}
+                <div className="absolute top-0 right-0 w-80 h-32 bg-gradient-to-bl from-[#5B75F8]/15 to-transparent rounded-full blur-2xl pointer-events-none -z-0" />
+
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full relative z-10">
                   <div className="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
-                    <div className={`p-3 rounded-2xl shrink-0 transition-all ${isDarkMode
+                    <div className={`p-3.5 rounded-2xl shrink-0 transition-all ${isDarkMode
                       ? 'bg-gradient-to-br from-[#5B75F8]/25 to-indigo-500/25 text-[#7B92FF] border border-[#5B75F8]/40 shadow-sm'
                       : 'bg-indigo-100/80 text-indigo-700 border border-indigo-200 shadow-sm'
                       }`}>
@@ -2229,7 +2264,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className={`text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-md font-mono shrink-0 ${isDarkMode
+                        <span className={`text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-lg font-mono shrink-0 ${isDarkMode
                           ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/30'
                           : 'bg-indigo-100 text-indigo-800 border border-indigo-200'
                           }`}>

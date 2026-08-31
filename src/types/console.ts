@@ -22,7 +22,7 @@ export type ConsoleView =
   | 'bom'
   | 'route-cards';
 
-export type UserRole = 'SUPER ADMIN' | 'OPERATOR' | 'QC_MANAGER' | 'DISPATCH_CLERK' | 'FINANCE_MANAGER';
+export type UserRole = 'ServerAdmin' | 'SUPER ADMIN' | 'OPERATOR' | 'QC_MANAGER' | 'DISPATCH_CLERK' | 'FINANCE_MANAGER';
 
 export type ConsoleUser = SystemUser;
 
@@ -728,6 +728,7 @@ export interface SystemUser {
   phone?: string;
   accessLevel?: 'Full Access' | 'Edit' | 'View Only' | string;
   modulesAccess?: string[]; // per-module access array
+  effectivePermissions?: string[]; // resolved server-side granular capabilities
   reportingManager?: string; // ref: User
   shift?: string;
   status: 'ACTIVE' | 'INACTIVE' | 'Active' | 'Inactive' | 'REVOKED' | string;
@@ -886,3 +887,4 @@ export interface MachineDowntimeLog {
   status: 'OPEN' | 'RESOLVED';
   notes?: string;
 }
+

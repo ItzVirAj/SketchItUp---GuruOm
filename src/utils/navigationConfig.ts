@@ -22,8 +22,8 @@ import {
   FlaskConical,
   LucideIcon
 } from 'lucide-react';
+import { isViewAllowedForRole, isViewAllowedForUser } from './permissions';
 import { ConsoleView, UserRole } from '../types/console';
-import { isViewAllowedForRole } from './permissions';
 
 export interface NavItemConfig {
   id: ConsoleView;
@@ -98,11 +98,23 @@ export const COMMAND_CENTRE_NAV_ITEM: NavItemConfig = {
 
 /**
  * Filter sections and their nested items according to user role RBAC.
+ * When a user-like object is passed it gates through the resolved
+ * `effectivePermissions` (falling back to the role), otherwise it gates by the
+ * role string directly.
  */
-export function getFilteredNavigation(role: UserRole | string): NavSectionConfig[] {
+type NavigationContext =
+  | UserRole
+  | string
+  | { role: UserRole | string; effectivePermissions?: string[] }
+  | null
+  | undefined;
+
+export function getFilteredNavigation(context: NavigationContext): NavSectionConfig[] {
   return NAVIGATION_SECTIONS.map(section => {
     const allowedItems = section.items.filter(item => 
-      isViewAllowedForRole(role, item.id)
+      context != null && typeof context === 'object'
+        ? isViewAllowedForUser(context, item.id)
+        : isViewAllowedForRole(String(context ?? ''), item.id)
     );
     return {
       ...section,
@@ -139,3 +151,4 @@ export function findParentSectionId(view: ConsoleView): string | null {
   }
   return null;
 }
+

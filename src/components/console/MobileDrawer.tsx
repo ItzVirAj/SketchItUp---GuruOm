@@ -46,7 +46,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
   pendingApprovalsCount = 0
 }) => {
   const drawerRef = useRef<HTMLDivElement>(null);
-  const filteredSections = getFilteredNavigation(currentUser?.role || currentRole);
+  const filteredSections = getFilteredNavigation(currentUser || { role: currentRole });
   
   // Accordion state for grouped modules
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
@@ -400,3 +400,4 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
     </AnimatePresence>
   );
 };
+

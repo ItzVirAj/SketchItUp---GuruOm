@@ -66,6 +66,15 @@ export function useInAppNotifications() {
         }
       });
 
+      eventSource.addEventListener('user_security_sync', (event: MessageEvent) => {
+        try {
+          const secEvent = JSON.parse(event.data);
+          window.dispatchEvent(new CustomEvent('guruom:security_sync', { detail: secEvent }));
+        } catch (err) {
+          console.warn('Error processing security sync event:', err);
+        }
+      });
+
       eventSource.onerror = (err) => {
         console.warn('Notifications SSE connection state changed:', err);
       };

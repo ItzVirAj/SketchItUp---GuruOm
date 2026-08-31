@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { ConsoleUser, ConsoleView, UserRole } from '../../types/console';
 import { useSmoothScroll } from '../../hooks/useSmoothScroll';
-import { isViewAllowedForRole } from '../../utils/permissions';
+import { isViewAllowedForUser } from '../../utils/permissions';
 import { findParentSectionId, NAVIGATION_SECTIONS } from '../../utils/navigationConfig';
 
 interface ConsoleSidebarProps {
@@ -171,7 +171,7 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
           <div className="space-y-1">
             {NAVIGATION_SECTIONS.map(section => {
               const SectionIcon = section.icon;
-              const allowedItems = section.items.filter(item => isViewAllowedForRole(displayRole, item.id));
+              const allowedItems = section.items.filter(item => isViewAllowedForUser(currentUser || { role: displayRole }, item.id));
               if (allowedItems.length === 0) return null;
 
               const isOpen = openSections[section.id] ?? false;
@@ -328,3 +328,4 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
 };
 
 export default ConsoleSidebar;
+

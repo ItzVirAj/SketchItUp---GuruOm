@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { ConsoleContainer } from './components/console/ConsoleContainer';
+import { ServerAdminVault } from './components/admin/ServerAdminVault';
 import { LoginPage } from './components/auth/LoginPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AccentThemeProvider } from './context/AccentThemeContext';
@@ -64,6 +65,7 @@ function MainApp() {
       <ScrollToTop />
       <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
         <Routes>
+          <Route path="/admin/*" element={<ServerAdminVault onSignOut={signOut} />} />
           <Route path="*" element={<ConsoleContainer onSignOut={signOut} />} />
         </Routes>
       </div>

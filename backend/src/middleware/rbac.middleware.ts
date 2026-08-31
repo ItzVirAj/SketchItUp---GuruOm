@@ -69,7 +69,7 @@ export function requirePermission(
       isOwnRecordsOnly: perm.scopeRule === 'OWN_RECORDS_ONLY',
       isEmployeeOnly: perm.scopeRule === 'EMPLOYEE_MASTER_ONLY',
       canEditCommercial: perm.scopeRule !== 'NO_COMMERCIAL_EDIT',
-      canPlaceClearQcHold: normRole === 'Owner' || normRole === 'Admin (System)' || normRole === 'Quality Inspector',
+      canPlaceClearQcHold: normRole === 'ServerAdmin' || normRole === 'Owner' || normRole === 'Admin (System)' || normRole === 'Quality Inspector',
       userId: req.user.userId,
       userName: (req.user as any).name || req.user.email
     };
@@ -252,7 +252,7 @@ export function requireRole(allowedRoles: string[]) {
 
     const isMatch = allowedRoles.some(r => normalizeRole(r) === normRole || r === rawRole);
 
-    if (!isMatch && normRole !== 'Owner' && normRole !== 'Admin (System)') {
+    if (!isMatch && normRole !== 'ServerAdmin' && normRole !== 'Owner' && normRole !== 'Admin (System)') {
       return res.status(403).json({
         error: 'Forbidden',
         message: `Access denied. Role "${normRole}" lacks permission for this endpoint. Required: [${allowedRoles.join(', ')}]`

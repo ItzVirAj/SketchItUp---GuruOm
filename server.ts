@@ -24,6 +24,7 @@ import approvalsRoutes from './backend/src/modules/approvals/approvals.routes';
 import notificationsRoutes from './backend/src/modules/notifications/notifications.routes';
 import attachmentsRoutes from './backend/src/modules/attachments/attachments.routes';
 import testingRoutes from './backend/src/modules/testing/testing.routes';
+import adminRoutes from './backend/src/modules/admin/admin.routes';
 import { getRedisClient, closeRedis } from './backend/src/lib/redis';
 
 dotenv.config();
@@ -109,6 +110,10 @@ async function startServer() {
 
   // Mount Eighth Batch File Storage & Attachment Management
   app.use('/api/v1/attachments', attachmentsRoutes);
+
+  // Mount Dedicated ServerAdmin Platform Maker Governance Module
+  app.use('/api/v1/admin', adminRoutes);
+  app.use('/admin', adminRoutes);
 
   // Mount Developer Workflow Testing Dashboard Router
   if (process.env.NODE_ENV !== 'production') {

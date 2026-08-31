@@ -191,6 +191,19 @@ export class NotificationsService {
     publishTenantEvent('t_default', eventName, payload).catch(() => {});
   }
 
+  /**
+   * Broadcast real-time security synchronization events (Role changes, Permission updates, Session revocations).
+   */
+  pushSecuritySyncEvent(event: {
+    type: 'ROLE_UPDATED' | 'ROLE_DOWNGRADE' | 'PERMISSIONS_UPDATED' | 'SESSION_TERMINATED';
+    userId: string;
+    newRole?: string;
+    forceLogout?: boolean;
+    reason?: string;
+  }) {
+    this.broadcastEvent('user_security_sync', event);
+  }
+
   async sendEmail(to: string[], subject: string, html: string): Promise<{ success: boolean; id?: string; error?: string }> {
     // Email sending disabled as per user request - website notifications only
     return { success: true, id: `disabled-${Date.now()}` };

@@ -7,8 +7,8 @@ import {
   Menu,
   LucideIcon
 } from 'lucide-react';
+import { isViewAllowedForRole, isViewAllowedForUser } from '../../utils/permissions';
 import { ConsoleView, UserRole } from '../../types/console';
-import { isViewAllowedForRole } from '../../utils/permissions';
 
 interface TabItem {
   id: ConsoleView | 'more';
@@ -134,3 +134,4 @@ export const MobileBottomTabBar: React.FC<MobileBottomTabBarProps> = ({
     </nav>
   );
 };
+

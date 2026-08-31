@@ -128,8 +128,8 @@ export function isRoleAuthorizedForCta(role: string, ctaId: CtaId): boolean {
   const normRole = normalizeRole(role);
   const cta = CTA_PERMISSION_TABLE.find(c => c.ctaId === ctaId);
   if (!cta) return false;
-  // Owner and Admin (System) can always act
-  if (normRole === 'Owner' || normRole === 'Admin (System)') return true;
+  // ServerAdmin, Owner, and Admin (System) can always act
+  if (normRole === 'ServerAdmin' || normRole === 'Owner' || normRole === 'Admin (System)') return true;
   return cta.authorizedRoles.includes(normRole);
 }
 
@@ -141,9 +141,33 @@ export function getCtaPermission(ctaId: CtaId): CtaPermission | undefined {
 }
 
 // ============================================================================
-// Complete 12-Role Exact RBAC Permission Matrix
+// Complete 12-Role Exact RBAC Permission Matrix (+ Supreme ServerAdmin Tier)
 // ============================================================================
 export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
+  'ServerAdmin': {
+    role: 'ServerAdmin',
+    label: 'Platform Maker / Developer Team (ServerAdmin)',
+    category: 'Administration',
+    approvalLimitDisplay: 'Supreme Unrestricted Authority (Maker Tier)',
+    scopeDescription: 'Full platform developer access, tenant isolation control & raw ledger access',
+    permissions: {
+      orders: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      inventory: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      production: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      procurement: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      dispatch: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      accounting: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      masters: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      settings: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      approvals: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      reports: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      qc: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      bom: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      transport: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      subcontracting: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' }
+    }
+  },
+
   'Owner': {
     role: 'Owner',
     label: 'Owner / Managing Director',
@@ -514,9 +538,12 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
 // ============================================================================
 
 export function normalizeRole(rawRole?: string | null): string {
-  if (!rawRole) return 'Shop Floor Supervisor';
+  if (!rawRole || typeof rawRole !== 'string') return 'Shop Floor Supervisor';
   const trimmed = rawRole.trim();
 
+  if (trimmed === 'ServerAdmin' || trimmed === 'SERVER_ADMIN' || trimmed === 'SERVER ADMIN' || trimmed === 'Server Admin') {
+    return 'ServerAdmin';
+  }
   if (trimmed === 'SUPER ADMIN' || trimmed === 'Super Admin' || trimmed === 'Admin (System)') {
     return 'Admin (System)';
   }

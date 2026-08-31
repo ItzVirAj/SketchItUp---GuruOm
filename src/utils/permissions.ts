@@ -1,4 +1,4 @@
-import { UserRole, ConsoleView } from '../types/console';
+import { UserRole, ConsoleView, SystemUser } from '../types/console';
 import { normalizeRole, getRoleModulePermission, hasMinimumAccess, RBAC_ROLE_MATRIX } from './rbacMatrix';
 
 export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
@@ -213,11 +213,46 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   ]
 };
 
+const VIEW_PERMISSION_KEYS: Partial<Record<ConsoleView, string[]>> = {
+  'orders': ['orders:view'],
+  'order-detail': ['orders:view'],
+  'inventory': ['inventory:view'],
+  'production': ['production:view'],
+  'bom': ['production:view'],
+  'route-cards': ['production:view'],
+  'finished-goods': ['inventory:view'],
+  'plating-outwork': ['production:view'],
+  'reports': ['reports:view', 'orders:view', 'inventory:view', 'production:view', 'finance:view'],
+  'qc': ['qc:view'],
+  'pdi': ['qc:view'],
+  'dispatch': ['dispatch:view'],
+  'approvals': ['approvals:view', 'finance:approve_high_value'],
+  'invoices': ['finance:view'],
+  'payables': ['finance:view'],
+  'masters': ['admin:view_users', 'inventory:view'],
+  'users-audit': ['admin:view_users', 'system:view_immutable_audit'],
+  'company-profile': ['admin:view_users', 'system:manage_permission_overrides'],
+  'workflow-testing': ['system:override_all_rules']
+};
+
 export function isViewAllowedForRole(role: string, view: ConsoleView): boolean {
   const normRole = normalizeRole(role);
   const allowed = ROLE_PERMISSIONS[normRole] || ROLE_PERMISSIONS[role];
   if (!allowed) return true;
   return allowed.includes(view);
+}
+
+export function isViewAllowedForUser(user: Pick<SystemUser, 'role' | 'effectivePermissions'> | null | undefined, view: ConsoleView): boolean {
+  if (view === 'command-centre') return true;
+
+  const permissions = user?.effectivePermissions;
+  if (Array.isArray(permissions)) {
+    if (permissions.includes('*')) return true;
+    const required = VIEW_PERMISSION_KEYS[view];
+    if (required) return required.some(key => permissions.includes(key));
+  }
+
+  return isViewAllowedForRole(String(user?.role || ''), view);
 }
 
 export function getRoleColor(role: string): { bg: string; text: string; border: string } {
@@ -289,3 +324,5 @@ export function getRoleColor(role: string): { bg: string; text: string; border: 
       };
   }
 }
+
+

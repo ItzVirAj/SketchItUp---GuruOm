@@ -48,7 +48,7 @@ import { AccessRestrictedGate } from '../common/AccessRestrictedGate';
 import { SwitchUserModal } from '../common/SwitchUserModal';
 import { SecuritySessionsModal } from './modals/SecuritySessionsModal';
 import { CommandPaletteModal } from './modals/CommandPaletteModal';
-import { isViewAllowedForRole } from '../../utils/permissions';
+import { isViewAllowedForUser } from '../../utils/permissions';
 import { useAuth } from '../../context/AuthContext';
 import { useOwnerOSData } from '../../hooks/useOwnerOSData';
 import { useSmoothScroll } from '../../hooks/useSmoothScroll';
@@ -522,7 +522,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
         {/* Dynamic View Canvas with safe bottom padding for mobile tab bar */}
         <main ref={mainScrollRef} className={`flex-1 overflow-y-auto overscroll-y-contain overscroll-x-hidden p-3 sm:p-4 md:p-6 lg:p-8 pb-24 lg:pb-8 dark:bg-[#121316] ${currentView === 'command-centre' ? 'bg-[#EEF2F7]' : 'bg-[#F8FAFC]'}`}>
           <div key={currentView} className="space-y-6">
-            {!isViewAllowedForRole(currentRole, currentView) ? (
+            {!isViewAllowedForUser(currentUser, currentView) ? (
               <AccessRestrictedGate
                 currentUser={currentUser}
                 targetView={currentView}
@@ -997,6 +997,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
         onOpenDrawer={() => setIsOpenMobile(true)}
         isDrawerOpen={isOpenMobile}
         currentRole={currentUser?.role || currentRole}
+        currentUser={currentUser}
         isDarkMode={isDarkMode}
         pendingApprovalsCount={pendingApprovalsCount}
       />
@@ -1039,3 +1040,4 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
     </div>
   );
 };
+

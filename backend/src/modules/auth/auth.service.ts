@@ -7,6 +7,7 @@ import { GeoLocationService, GeoLocationResult } from '../../utils/geolocation';
 import { RiskService, RiskEvaluationResult, PriorSessionData } from './risk.service';
 import { notificationsService } from '../notifications/notifications.service';
 import { logAudit } from '../../services/auditLog';
+import { permissionService } from '../../services/permission.service';
 
 export interface UserRecord {
   id: string;
@@ -199,6 +200,23 @@ const IN_MEMORY_SECURITY_EVENTS: SecurityEventRecord[] = [];
 
 export class AuthService {
   private db = getDbClient();
+
+  private async buildClientUser(user: UserRecord) {
+    const effectivePermissions = await permissionService.getEffectiveUserPermissions(user.id, user.role);
+
+    return {
+      id: user.id,
+      name: user.full_name,
+      email: user.email,
+      role: user.role,
+      department: user.department,
+      phone: user.phone,
+      status: user.status,
+      isTemporaryPassword: user.is_temporary_password || false,
+      effectivePermissions: [...effectivePermissions],
+      lastLogin: user.last_login_at || new Date().toLocaleString('en-IN', { hour12: true })
+    };
+  }
 
   /**
    * Finds a user record in Supabase DB with fallback to local seed data.
@@ -1454,16 +1472,17 @@ export class AuthService {
       throw new Error('Password must be at least 8 characters long and contain at least one letter and one number.');
     }
 
-    const passwordHash = await hashPassword(rawPassword);
-    const userId = crypto.randomUUID();
-    const isTemp = params.requirePasswordChangeFirstLogin !== undefined ? params.requirePasswordChangeFirstLogin : true;
+    const normRole = normalizeRole(params.role || 'OPERATOR');
+    if (normRole === 'ServerAdmin' || (params.role && params.role.trim().toLowerCase() === 'serveradmin')) {
+      throw new Error('The ServerAdmin role cannot be created via the user API. It is strictly provisionable via CLI seed script only.');
+    }
 
     const newUser: UserRecord = {
       id: userId,
       email: cleanEmail,
       password_hash: passwordHash,
       full_name: params.name || 'New Enterprise User',
-      role: params.role || 'OPERATOR',
+      role: normRole,
       department: params.department || 'Operations',
       phone: params.phone || '',
       status: 'ACTIVE',
@@ -1694,11 +1713,19 @@ export class AuthService {
   }
 
   async updateUserRole(id: string, role: string, actorId?: string) {
+    const normRole = normalizeRole(role);
+    if (normRole === 'ServerAdmin' || role.trim().toLowerCase() === 'serveradmin') {
+      throw new Error('The ServerAdmin role cannot be assigned via the API. This role is strictly provisionable via CLI seed script only.');
+    }
+
     const existing = await this.findUserById(id);
     const beforeState = existing ? { role: existing.role, status: existing.status } : null;
-    const afterState = { role, status: existing?.status };
+    const afterState = { role: normRole, status: existing?.status };
 
-    const { error } = await this.db.from('users').update({ role, updated_at: new Date().toISOString() }).eq('id', id);
+    // Invalidate active sessions on role change
+    await this.db.from('sessions').delete().eq('user_id', id);
+
+    const { error } = await this.db.from('users').update({ role: normRole, updated_at: new Date().toISOString() }).eq('id', id);
     if (error) {
       throw new Error(`Database update failed: ${error.message}`);
     }
@@ -1792,3 +1819,4 @@ export class AuthService {
 }
 
 export const authService = new AuthService();
+

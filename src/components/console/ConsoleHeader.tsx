@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import {
   Sun,
@@ -18,13 +19,15 @@ import {
   CalendarRange,
   CircleCheck,
   UserRound,
-  Bell
+  Bell,
+  Terminal
 } from 'lucide-react';
 import { AccentColorSelector } from './AccentColorSelector';
 import { CustomerOrder, StockItem, CustomerInvoice, JobCard, UserRole, ConsoleView, SystemUser } from '../../types/console';
 import { getViewTitle } from '../../utils/navigationConfig';
 import { NotificationDrawer } from './NotificationDrawer';
 import { useInAppNotifications } from '../../hooks/useInAppNotifications';
+import { normalizeRole } from '../../utils/rbacMatrix';
 
 interface ConsoleHeaderProps {
   fiscalYear: string;
@@ -483,6 +486,18 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
             <CircleCheck className="h-3.5 w-3.5 text-emerald-500" />
             <span className="font-mono text-[9px] font-semibold text-slate-400">{lastSynced}</span>
           </div>
+
+          {/* ServerAdmin Vault Direct Link (Visible strictly to ServerAdmin accounts) */}
+          {normalizeRole(currentRole) === 'ServerAdmin' && (
+            <Link
+              to="/admin"
+              className="flex h-10 items-center gap-1.5 rounded-xl border border-purple-500/40 bg-purple-500/15 px-3 text-xs font-bold text-purple-300 hover:bg-purple-500/25 transition-all shadow-sm"
+              title="Enter ServerAdmin Maker Vault"
+            >
+              <Terminal className="h-3.5 w-3.5 text-purple-400" />
+              <span className="hidden sm:inline">Admin Vault</span>
+            </Link>
+          )}
 
           {/* Real-time Notifications Bell */}
           <button

@@ -238,6 +238,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  // Real-Time Security & RBAC Live Synchronizer
+  useEffect(() => {
+    if (!user) return;
+
+    const handleSecuritySync = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail) return;
+
+      const currentUserId = user.id || profile?.id;
+      if (detail.userId === currentUserId) {
+        if (detail.forceLogout) {
+          purgeSession();
+        } else {
+          // Live refresh profile without requiring re-login
+          refreshProfile();
+        }
+      }
+    };
+
+    window.addEventListener('guruom:security_sync', handleSecuritySync);
+    return () => window.removeEventListener('guruom:security_sync', handleSecuritySync);
+  }, [user, profile]);
+
   // Passive Activity Listeners (detect mouse, keyboard, touch, scroll)
   useEffect(() => {
     if (!user) return;

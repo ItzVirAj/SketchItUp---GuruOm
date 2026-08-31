@@ -70,25 +70,25 @@ CREATE TABLE IF NOT EXISTS ncrs (
 );
 
 -- 4. Customer Overdue Aging View & Function (for 90-day credit hold evaluation)
-CREATE OR REPLACE VIEW customer_overdue_summary AS
+CREATE OR REPLACE VIEW customer_overdue_summary WITH (security_invoker = true) AS
 SELECT 
   c.id AS customer_id,
-  c.customer_name,
+  c.name AS customer_name,
   c.legal_name,
   c.customer_type,
   COALESCE(c.credit_days, 30) AS credit_days,
   COALESCE(c.credit_limit, 0) AS credit_limit,
   COUNT(i.id) AS total_unpaid_invoices,
-  COALESCE(SUM(CASE WHEN (CURRENT_DATE - i.invoice_date::date) > 90 AND i.status != 'PAID' THEN i.total_amount ELSE 0 END), 0) AS overdue_90_days_amount,
+  COALESCE(SUM(CASE WHEN (CURRENT_DATE - i.date::date) > 90 AND i.status != 'PAID' THEN i.total_amount ELSE 0 END), 0) AS overdue_90_days_amount,
   COALESCE(SUM(CASE WHEN i.status != 'PAID' THEN i.total_amount ELSE 0 END), 0) AS total_outstanding_amount,
   CASE 
-    WHEN COALESCE(SUM(CASE WHEN (CURRENT_DATE - i.invoice_date::date) > 90 AND i.status != 'PAID' THEN i.total_amount ELSE 0 END), 0) > 0 
+    WHEN COALESCE(SUM(CASE WHEN (CURRENT_DATE - i.date::date) > 90 AND i.status != 'PAID' THEN i.total_amount ELSE 0 END), 0) > 0 
     THEN TRUE 
     ELSE FALSE 
   END AS is_credit_hold_triggered
-FROM customers c
-LEFT JOIN customer_invoices i ON i.customer_name = c.customer_name AND i.status != 'PAID'
-GROUP BY c.id, c.customer_name, c.legal_name, c.customer_type, c.credit_days, c.credit_limit;
+FROM customer_masters c
+LEFT JOIN customer_invoices i ON i.customer_name = c.name AND i.status != 'PAID'
+GROUP BY c.id, c.name, c.legal_name, c.customer_type, c.credit_days, c.credit_limit;
 
 -- 5. Seed sample NCRs, Blanket POs, and Customer Overdues for testing
 INSERT INTO ncrs (id, ncr_number, order_id, order_po, job_no, part_code, part_description, defect_type, defect_description, severity, status, raised_by)

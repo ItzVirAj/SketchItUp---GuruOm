@@ -9,8 +9,8 @@ let supabaseAdminInstance: SupabaseClient | null = null;
 
 export function getDbClient(): SupabaseClient {
   if (!supabaseAdminInstance) {
-    const url = ENV.SUPABASE_URL || 'https://txztwjvjqjczxwskzjjx.supabase.co';
-    const key = ENV.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy_fallback_for_offline';
+    const url = ENV.SUPABASE_URL as string;
+    const key = ENV.SUPABASE_SERVICE_ROLE_KEY as string;
     
     if (!ENV.SUPABASE_SERVICE_ROLE_KEY) {
       console.warn('⚠️ Supabase service credentials missing in server environment. Using offline mock client.');

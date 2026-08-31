@@ -7,7 +7,7 @@ const ORDERS_CACHE_TTL_SEC = 30; // 30s TTL for read-heavy aggregated order list
 export class OrdersController {
   async getOrders(req: Request, res: Response) {
     const tenant = extractTenantId(req);
-    const key = CacheService.buildKey(tenant, 'orders', 'list');
+    const key = CacheService.buildKey('global', 'orders', 'list');
 
     try {
       const { data, isCached } = await CacheService.getOrSetWithMeta(
@@ -46,7 +46,7 @@ export class OrdersController {
       
       // Invalidate orders list and dashboard metrics
       await Promise.all([
-        CacheService.invalidatePattern(`cache:${tenant}:orders:*`),
+        CacheService.invalidatePattern(`cache:global:orders:*`),
         CacheService.invalidatePattern(`cache:${tenant}:dashboard:*`)
       ]);
       

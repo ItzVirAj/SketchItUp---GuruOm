@@ -3,6 +3,19 @@ import { authService } from './auth.service';
 import { recordFailedLogin, clearFailedLogin } from '../../middleware/rateLimit';
 import { GeoLocationService } from '../../utils/geolocation';
 import { ENV } from '../../config/env';
+import { RBAC_ROLE_MATRIX } from '../../../../src/utils/rbacMatrix';
+
+// Roles that may be assigned during user provisioning. Built from the canonical RBAC
+// matrix (keys + display labels) plus the legacy roles the users.role CHECK constraint
+// accepts. Any other value is rejected on the trusted provisioning route (POST /users).
+const ASSIGNABLE_ROLES: ReadonlySet<string> = (() => {
+  const set = new Set<string>(['SUPER ADMIN', 'OPERATOR', 'QC_MANAGER', 'DISPATCH_CLERK', 'FINANCE_MANAGER']);
+  for (const r of Object.values(RBAC_ROLE_MATRIX)) {
+    set.add(r.role);
+    if (r.label) set.add(r.label);
+  }
+  return set;
+})();
 
 const REFRESH_COOKIE_NAME = 'owner_os_refresh_token';
 
@@ -281,12 +294,31 @@ export class AuthController {
       return res.status(400).json({ error: 'BadRequest', message: 'Email is required.' });
     }
 
+    // Role assignment policy:
+    // - Public route (POST /register): req.user is never set (no auth middleware on that
+    //   route). Discard any client-supplied role and hardcode the lowest-privilege role so
+    //   anonymous callers can never self-provision privileged accounts.
+    // - Trusted route (POST /users, requireAuth): the authenticated caller may assign a
+    //   role, but only from the canonical allow-list. Anything else is rejected with 400.
+    let assignedRole = role;
+    if (!req.user) {
+      if (role !== undefined && role !== null && String(role).trim() !== '') {
+        console.warn('Ignored client-supplied role on public registration endpoint.');
+      }
+      assignedRole = 'OPERATOR';
+    } else if (role !== undefined && role !== null && String(role).trim() !== '' && !ASSIGNABLE_ROLES.has(String(role))) {
+      return res.status(400).json({
+        error: 'BadRequest',
+        message: `Invalid role "${role}". Allowed roles: ${[...ASSIGNABLE_ROLES].join(', ')}.`
+      });
+    }
+
     try {
       const newUser = await authService.register({
         email,
         password,
         name,
-        role,
+        role: assignedRole,
         department,
         phone
       });
@@ -346,11 +378,15 @@ export class AuthController {
    */
   async updateUser(req: Request, res: Response) {
     try {
+      if (!req.user || !req.user.id) {
+        return res.status(401).json({ error: 'Unauthorized', message: 'Actor identity is missing from request context.' });
+      }
+
       const actorContext = {
-        id: req.user?.id,
-        email: req.user?.email || 'owner@guruom.in',
-        role: req.user?.role || 'Owner',
-        name: req.user?.name || 'Owner'
+        id: req.user.id,
+        email: req.user.email,
+        role: req.user.role,
+        name: req.user.name
       };
       const user = await authService.updateUser(req.params.id, req.body, actorContext);
       return res.json({ message: 'User updated successfully', user });

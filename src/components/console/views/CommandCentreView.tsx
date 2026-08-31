@@ -346,30 +346,44 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
     count: number | string; label: string; sub: string; icon: React.ElementType;
     tone: 'rose' | 'amber' | 'emerald' | 'sky' | 'violet'; onClick: () => void;
   }) => {
-    const tones: Record<string, { ring: string; icon: string; dot: string; text: string }> = {
-      rose: { ring: 'hover:border-rose-400/60', icon: 'bg-rose-500/12 text-rose-500', dot: 'bg-rose-500', text: 'text-rose-500' },
-      amber: { ring: 'hover:border-amber-400/60', icon: 'bg-amber-500/12 text-amber-500', dot: 'bg-amber-500', text: 'text-amber-500' },
-      emerald: { ring: 'hover:border-emerald-400/60', icon: 'bg-emerald-500/12 text-emerald-500', dot: 'bg-emerald-500', text: 'text-emerald-500' },
-      sky: { ring: 'hover:border-sky-400/60', icon: 'bg-sky-500/12 text-sky-500', dot: 'bg-sky-500', text: 'text-sky-500' },
-      violet: { ring: 'hover:border-violet-400/60', icon: 'bg-violet-500/12 text-violet-500', dot: 'bg-violet-500', text: 'text-violet-500' }
+    const tones: Record<string, { border: string; icon: string; glow: string; text: string }> = {
+      rose: { border: 'border-rose-500/20 hover:border-rose-500/40', icon: 'bg-rose-500/10 text-rose-500', glow: 'from-rose-500/20', text: 'text-rose-500' },
+      amber: { border: 'border-amber-500/20 hover:border-amber-500/40', icon: 'bg-amber-500/10 text-amber-500', glow: 'from-amber-500/20', text: 'text-amber-500' },
+      emerald: { border: 'border-emerald-500/20 hover:border-emerald-500/40', icon: 'bg-emerald-500/10 text-emerald-500', glow: 'from-emerald-500/20', text: 'text-emerald-500' },
+      sky: { border: 'border-sky-500/20 hover:border-sky-500/40', icon: 'bg-sky-500/10 text-sky-500', glow: 'from-sky-500/20', text: 'text-sky-500' },
+      violet: { border: 'border-violet-500/20 hover:border-violet-500/40', icon: 'bg-violet-500/10 text-violet-500', glow: 'from-violet-500/20', text: 'text-violet-500' }
     };
     const t = tones[tone];
+    
     return (
       <button
         type="button"
         onClick={onClick}
-        className={`group relative flex min-w-[176px] shrink-0 items-center gap-3 overflow-hidden rounded-2xl border px-3.5 py-3 text-left transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 ${surface} ${t.ring}`}
+        className={`group relative flex min-w-[190px] shrink-0 items-center gap-3.5 overflow-hidden rounded-[20px] border px-4 py-3.5 text-left transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-${tone}-500/10 active:translate-y-0 ${isDarkMode ? 'bg-[#14171F]' : 'bg-white'} ${t.border}`}
       >
-        <span className={`absolute left-0 top-0 h-full w-[3px] ${t.dot}`} />
-        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${t.icon}`}>
-          <Icon className="h-[18px] w-[18px]" strokeWidth={2.2} />
+        <div className={`absolute inset-0 bg-gradient-to-br ${t.glow} to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-[0.08]`} />
+        
+        <div className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] ${t.icon} transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3`}>
+          <Icon className="h-5 w-5" strokeWidth={2.2} />
+          {count !== 0 && count !== '0' && count !== '₹0' && (
+            <span className="absolute -right-1 -top-1 flex h-2.5 w-2.5 animate-pulse rounded-full bg-current" />
+          )}
         </div>
-        <div className="min-w-0">
-          <div className={`text-lg font-black leading-none tabular-nums ${textPrimary}`}>{count}</div>
-          <div className={`mt-1 text-[11px] font-bold uppercase tracking-wide ${textPrimary} truncate`}>{label}</div>
-          <div className={`text-[10px] ${textFaint} truncate`}>{sub}</div>
+        
+        <div className="relative min-w-0 flex-1">
+          <div className="flex items-center justify-between">
+            <div className={`text-[22px] font-black leading-none tabular-nums tracking-tight ${textPrimary}`}>
+              {count}
+            </div>
+            <ChevronRight className={`h-4 w-4 shrink-0 transition-all duration-300 ${t.text} opacity-0 -translate-x-2 group-hover:translate-x-0 group-hover:opacity-100`} />
+          </div>
+          <div className={`mt-1.5 text-[11px] font-bold uppercase tracking-widest ${t.text} truncate opacity-90`}>
+            {label}
+          </div>
+          <div className={`mt-0.5 text-[10px] ${textFaint} truncate`}>
+            {sub}
+          </div>
         </div>
-        <ChevronRight className={`ml-auto h-4 w-4 shrink-0 ${textFaint} opacity-0 transition group-hover:translate-x-0.5 group-hover:opacity-100`} />
       </button>
     );
   };
@@ -378,54 +392,59 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
     label: string; value: string; hint: string; delta?: string; icon: React.ElementType;
     badge?: string; tone?: 'blue' | 'rose' | 'amber' | 'emerald' | 'purple'; onClick: () => void;
   }) => {
-    const toneStyles: Record<string, { iconBg: string; bar: string; glow: string; delta: string }> = {
-      blue: {
-        iconBg: 'bg-[var(--accent-primary)]/12 text-[var(--accent-primary)]',
-        bar: 'bg-[var(--accent-primary)]',
-        glow: 'from-[var(--accent-primary)]/20',
-        delta: 'text-emerald-500'
-      },
-      rose: { iconBg: 'bg-rose-500/12 text-rose-500', bar: 'bg-rose-500', glow: 'from-rose-500/20', delta: 'text-rose-500' },
-      amber: { iconBg: 'bg-amber-500/12 text-amber-500', bar: 'bg-amber-500', glow: 'from-amber-500/20', delta: 'text-amber-500' },
-      emerald: { iconBg: 'bg-emerald-500/12 text-emerald-500', bar: 'bg-emerald-500', glow: 'from-emerald-500/20', delta: 'text-emerald-500' },
-      purple: { iconBg: 'bg-purple-500/12 text-purple-500', bar: 'bg-purple-500', glow: 'from-purple-500/20', delta: 'text-purple-500' }
+    const toneStyles: Record<string, { icon: string; bg: string; border: string; glow: string; text: string }> = {
+      blue: { icon: 'bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]', bg: 'from-[var(--accent-primary)]/5', border: 'group-hover:border-[var(--accent-primary)]/30', glow: 'bg-[var(--accent-primary)]/20', text: 'text-[var(--accent-primary)]' },
+      rose: { icon: 'bg-rose-500/10 text-rose-500', bg: 'from-rose-500/5', border: 'group-hover:border-rose-500/30', glow: 'bg-rose-500/20', text: 'text-rose-500' },
+      amber: { icon: 'bg-amber-500/10 text-amber-500', bg: 'from-amber-500/5', border: 'group-hover:border-amber-500/30', glow: 'bg-amber-500/20', text: 'text-amber-500' },
+      emerald: { icon: 'bg-emerald-500/10 text-emerald-500', bg: 'from-emerald-500/5', border: 'group-hover:border-emerald-500/30', glow: 'bg-emerald-500/20', text: 'text-emerald-500' },
+      purple: { icon: 'bg-purple-500/10 text-purple-500', bg: 'from-purple-500/5', border: 'group-hover:border-purple-500/30', glow: 'bg-purple-500/20', text: 'text-purple-500' }
     };
     const t = toneStyles[tone] || toneStyles.blue;
+
+    const baseBg = isDarkMode ? 'bg-[#14171F] border-white/5' : 'bg-white border-slate-200';
 
     return (
       <button
         type="button"
         onClick={onClick}
-        className={`group relative flex min-h-[152px] flex-col justify-between overflow-hidden rounded-[20px] border p-4 text-left transition-all duration-200 hover:-translate-y-1 hover:shadow-xl active:translate-y-0 ${surface}`}
+        className={`group relative flex min-h-[160px] flex-col justify-between overflow-hidden rounded-[24px] border p-5 text-left transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] ${baseBg} ${t.border}`}
       >
-        <span className={`absolute left-0 top-0 h-1 w-full ${t.bar} opacity-70`} />
-        <div className={`pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-gradient-to-br ${t.glow} to-transparent opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-100`} />
+        <div className={`absolute inset-0 bg-gradient-to-br ${t.bg} to-transparent opacity-50`} />
+        
+        <div className={`absolute -right-12 -top-12 h-32 w-32 rounded-full blur-[40px] transition-all duration-500 ${t.glow} opacity-0 group-hover:opacity-100 group-hover:scale-150`} />
 
-        <div className="relative flex items-start justify-between gap-3">
+        <div className="relative flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span className={`text-[10px] font-mono font-bold uppercase tracking-[0.08em] ${textMuted}`}>{label}</span>
+            <div className="flex items-center gap-2">
+              <span className={`text-[11px] font-bold uppercase tracking-[0.15em] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                {label}
+              </span>
               {badge && (
-                <span className={`rounded-md px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase ${isDarkMode ? 'bg-white/10 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>
+                <span className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wide ${t.icon}`}>
                   {badge}
                 </span>
               )}
             </div>
-            <p className={`mt-2.5 text-[26px] font-black leading-none tracking-tight ${textPrimary}`}>{value}</p>
-            <p className={`mt-2 text-xs leading-snug ${textMuted}`}>{hint}</p>
+            <p className={`mt-3 text-[32px] font-black leading-none tracking-tight ${textPrimary}`}>
+              {value}
+            </p>
           </div>
-          <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl transition-transform duration-200 group-hover:scale-110 group-hover:rotate-3 ${t.iconBg}`}>
-            <Icon className="h-5 w-5" strokeWidth={2.3} />
+          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl backdrop-blur-md transition-all duration-500 group-hover:scale-110 group-hover:-rotate-6 ${t.icon}`}>
+            <Icon className="h-6 w-6" strokeWidth={2} />
           </div>
         </div>
 
-        {delta && (
-          <div className={`relative mt-3 flex items-center gap-1.5 border-t pt-2.5 text-[11px] font-mono font-bold ${t.delta} ${isDarkMode ? 'border-white/[0.06]' : 'border-slate-100'}`}>
-            <TrendingUp className="h-3.5 w-3.5" />
-            <span>{delta}</span>
-            <ArrowUpRight className={`ml-auto h-4 w-4 ${textFaint} opacity-0 transition group-hover:opacity-100`} />
-          </div>
-        )}
+        <div className="relative mt-4 flex items-end justify-between">
+          <p className={`max-w-[70%] text-[13px] font-medium leading-snug ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>
+            {hint}
+          </p>
+          {delta && (
+            <div className={`flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-bold ${t.icon}`}>
+              <TrendingUp className="h-3 w-3" />
+              <span>{delta}</span>
+            </div>
+          )}
+        </div>
       </button>
     );
   };

@@ -1,25 +1,22 @@
 import { Request, Response } from 'express';
 import { notificationsService } from './notifications.service';
-import { verifyAccessToken } from '../../utils/jwt';
+import { verifyRefreshToken } from '../../utils/jwt';
 
 export class NotificationsController {
   /**
    * Server-Sent Events (SSE) streaming endpoint.
-   * Authenticated via Authorization header or ?token=<jwt> query parameter for native EventSource.
+   * Authenticated via HttpOnly refresh cookie to prevent token leakage in URLs.
    */
   async streamNotifications(req: Request, res: Response) {
-    let token = req.headers.authorization?.replace(/^Bearer\s+/i, '');
-    if (!token && typeof req.query.token === 'string') {
-      token = req.query.token;
-    }
+    const token = req.cookies?.['owner_os_refresh_token'];
 
     if (!token) {
-      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication token required for SSE stream.' });
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication cookie required for SSE stream.' });
     }
 
     try {
-      const payload = verifyAccessToken(token);
-      if (!payload) {
+      const payload = verifyRefreshToken(token);
+      if (!payload || !payload.sub) {
         return res.status(401).json({ error: 'Unauthorized', message: 'Invalid or expired token for SSE stream.' });
       }
 
@@ -36,7 +33,7 @@ export class NotificationsController {
       const clientId = `sse-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
       const client = {
         id: clientId,
-        userId: payload.id,
+        userId: payload.sub,
         res
       };
 
@@ -81,6 +78,15 @@ export class NotificationsController {
   async markAllAsRead(req: Request, res: Response) {
     try {
       const data = await notificationsService.markAllAsRead();
+      return res.json({ data });
+    } catch (err: any) {
+      return res.status(500).json({ error: 'InternalServerError', message: err.message });
+    }
+  }
+
+  async clearAllNotifications(req: Request, res: Response) {
+    try {
+      const data = await notificationsService.clearAllNotifications();
       return res.json({ data });
     } catch (err: any) {
       return res.status(500).json({ error: 'InternalServerError', message: err.message });

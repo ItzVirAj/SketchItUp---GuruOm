@@ -3,6 +3,8 @@
 -- ===================================================
 
 -- 1. Create or update audit_logs table with WHO, WHAT, WHEN, WHERE, BEFORE, AFTER
+DROP TABLE IF EXISTS public.audit_logs CASCADE;
+
 CREATE TABLE IF NOT EXISTS public.audit_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   actor_id UUID REFERENCES public.users(id) ON DELETE SET NULL,

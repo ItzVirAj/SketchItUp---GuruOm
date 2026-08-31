@@ -97,7 +97,7 @@ export class OrderStateMachineService {
           try {
             const p = action.payload;
             await this.db.from('purchase_requisitions').insert({
-              id: `pr-${Date.now()}`,
+              id: require('crypto').randomUUID(),
               req_number: p.reqNumber,
               order_id: ctx.orderId,
               order_po: ctx.poNo,

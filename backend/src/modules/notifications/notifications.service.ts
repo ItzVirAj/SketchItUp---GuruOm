@@ -191,42 +191,9 @@ export class NotificationsService {
     publishTenantEvent('t_default', eventName, payload).catch(() => {});
   }
 
-  /**
-   * Dispatches email via Resend API securely from server-side.
-   */
   async sendEmail(to: string[], subject: string, html: string): Promise<{ success: boolean; id?: string; error?: string }> {
-    const resendApiKey = process.env.RESEND_API_KEY;
-    const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
-
-    if (!resendApiKey) {
-      console.log(`[Email Simulation] To: ${to.join(', ')} | Subject: "${subject}" (RESEND_API_KEY not set)`);
-      return { success: true, id: `sim-${Date.now()}` };
-    }
-
-    try {
-      const response = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${resendApiKey}`
-        },
-        body: JSON.stringify({
-          from: fromEmail,
-          to,
-          subject,
-          html
-        })
-      });
-
-      const data = await response.json();
-      if (response.ok) {
-        return { success: true, id: data.id };
-      } else {
-        return { success: false, error: data.message || data.name || 'Resend error' };
-      }
-    } catch (err: any) {
-      return { success: false, error: err.message };
-    }
+    // Email sending disabled as per user request - website notifications only
+    return { success: true, id: `disabled-${Date.now()}` };
   }
 
   /**
@@ -368,6 +335,16 @@ export class NotificationsService {
       console.warn('Database markAllAsRead fallback:', err);
     }
     SEED_NOTIFICATIONS.forEach(n => { n.is_read = true; });
+    return { success: true };
+  }
+
+  async clearAllNotifications() {
+    try {
+      await this.db.from('notifications').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    } catch (err) {
+      console.warn('Database clearAllNotifications fallback:', err);
+    }
+    SEED_NOTIFICATIONS.length = 0;
     return { success: true };
   }
 

@@ -104,7 +104,7 @@ export async function fetchProfiles(): Promise<SystemUser[]> {
 
 export async function createProfile(user: Partial<SystemUser> & { password?: string; requirePasswordChangeFirstLogin?: boolean }): Promise<SystemUser> {
   try {
-    const res = await apiClient.post<{ user: any }>('/auth/register', {
+    const res = await apiClient.post<{ user: any }>('/users', {
       name: user.name,
       email: user.email,
       role: user.role,

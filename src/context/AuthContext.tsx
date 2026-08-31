@@ -321,7 +321,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [user]);
 
-  const signIn = async (email: string, password = '1234567890') => {
+  const signIn = async (email: string, password?: string) => {
     setLoading(true);
     const cleanEmail = email.trim().toLowerCase();
 
@@ -342,30 +342,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       throw new Error('Invalid response received from authentication server.');
     } catch (err: any) {
-      try {
-        const cachedUsersStr = localStorage.getItem('stratum_demo_users');
-        let availableUsers: SystemUser[] = [];
-        if (cachedUsersStr) {
-          availableUsers = JSON.parse(cachedUsersStr);
-        }
-        const matched = availableUsers.find(u => u.email?.toLowerCase() === cleanEmail);
-        if (matched) {
-          const fallbackToken = 'local_session_' + Date.now();
-          persistSession(matched, fallbackToken);
-          setUser(matched);
-          setSession({ access_token: fallbackToken });
-          setProfile(matched);
-          setLoading(false);
-          return { error: null };
-        }
-      } catch (_) {}
-
       setLoading(false);
       return { error: err instanceof Error ? err : new Error(err?.message || 'Failed to sign in.') };
     }
   };
 
-  const signUp = async (email: string, password = '1234567890', fullName?: string, role: UserRole = 'OPERATOR') => {
+  const signUp = async (email: string, password?: string, fullName?: string, role: UserRole = 'OPERATOR') => {
     setLoading(true);
     const cleanEmail = email.trim().toLowerCase();
 

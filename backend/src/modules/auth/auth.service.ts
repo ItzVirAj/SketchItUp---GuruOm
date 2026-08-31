@@ -404,7 +404,10 @@ export class AuthService {
   /**
    * Authenticates user, evaluates risk, generates tokens with family ID, and creates a session record.
    */
-  async login(email: string, password = '1234567890', ipAddress?: string, userAgent?: string, reqHeaders?: Record<string, any>) {
+  async login(email: string, password?: string, ipAddress?: string, userAgent?: string, reqHeaders?: Record<string, any>) {
+    if (!password) {
+      throw new Error('Password is required.');
+    }
     const cleanEmail = email.trim().toLowerCase();
     const user = await this.findUserByEmail(cleanEmail);
     const clientIp = ipAddress || '127.0.0.1';
@@ -1442,7 +1445,11 @@ export class AuthService {
       throw new Error(`User with email "${cleanEmail}" already exists.`);
     }
 
-    const rawPassword = params.password || '1234567890';
+    const rawPassword = params.password;
+    if (!rawPassword) {
+      throw new Error('Password is required.');
+    }
+
     if (rawPassword.length < 8 || !/(?=.*[a-zA-Z])(?=.*\d)/.test(rawPassword)) {
       throw new Error('Password must be at least 8 characters long and contain at least one letter and one number.');
     }
@@ -1465,23 +1472,21 @@ export class AuthService {
       created_at: new Date().toISOString()
     };
 
-    SEED_USERS.push(newUser);
+    const { error } = await this.db.from('users').insert({
+      id: newUser.id,
+      email: newUser.email,
+      password_hash: newUser.password_hash,
+      full_name: newUser.full_name,
+      role: newUser.role,
+      department: newUser.department,
+      phone: newUser.phone,
+      status: newUser.status,
+      org_id: newUser.org_id,
+      is_temporary_password: isTemp
+    });
 
-    try {
-      await this.db.from('users').insert({
-        id: newUser.id,
-        email: newUser.email,
-        password_hash: newUser.password_hash,
-        full_name: newUser.full_name,
-        role: newUser.role,
-        department: newUser.department,
-        phone: newUser.phone,
-        status: newUser.status,
-        org_id: newUser.org_id,
-        is_temporary_password: isTemp
-      });
-    } catch (e) {
-      console.warn('Database insert user fallback:', e);
+    if (error) {
+      throw new Error(`Database insert failed: ${error.message}`);
     }
 
     notificationsService.broadcastEvent('user_created', {
@@ -1693,13 +1698,10 @@ export class AuthService {
     const beforeState = existing ? { role: existing.role, status: existing.status } : null;
     const afterState = { role, status: existing?.status };
 
-    try {
-      await this.db.from('users').update({ role, updated_at: new Date().toISOString() }).eq('id', id);
-    } catch (err) {
-      console.warn('Database updateUserRole fallback:', err);
+    const { error } = await this.db.from('users').update({ role, updated_at: new Date().toISOString() }).eq('id', id);
+    if (error) {
+      throw new Error(`Database update failed: ${error.message}`);
     }
-    const user = SEED_USERS.find(u => u.id === id);
-    if (user) user.role = role;
 
     try {
       await logAudit({
@@ -1724,17 +1726,13 @@ export class AuthService {
     const beforeState = existing ? { status: existing.status, role: existing.role } : null;
     const afterState = { status, role: existing?.role };
 
-    try {
-      await this.db.from('users').update({ status, updated_at: nowIso }).eq('id', id);
-      if (status === 'REVOKED' || status === 'SUSPENDED') {
-        await this.db.from('sessions').update({ revoked_at: nowIso, revoked_reason: 'USER_ACCOUNT_REVOKED' }).eq('user_id', id);
-      }
-    } catch (err) {
-      console.warn('Database updateUserStatus fallback:', err);
+    const { error } = await this.db.from('users').update({ status, updated_at: nowIso }).eq('id', id);
+    if (error) {
+      throw new Error(`Database update failed: ${error.message}`);
     }
-
-    const user = SEED_USERS.find(u => u.id === id);
-    if (user) user.status = status;
+    if (status === 'REVOKED' || status === 'SUSPENDED') {
+      await this.db.from('sessions').update({ revoked_at: nowIso, revoked_reason: 'USER_ACCOUNT_REVOKED' }).eq('user_id', id);
+    }
 
     if (status === 'REVOKED' || status === 'SUSPENDED') {
       IN_MEMORY_SESSIONS.forEach(s => {
@@ -1766,16 +1764,13 @@ export class AuthService {
     const existing = await this.findUserById(id);
     const beforeState = existing ? { email: existing.email, name: existing.full_name, role: existing.role, status: existing.status } : null;
 
-    try {
-      await this.db.from('sessions').delete().eq('user_id', id);
-      await this.db.from('users').delete().eq('id', id);
-    } catch (err) {
-      console.warn('Database deleteUser fallback:', err);
+    const { error: sessionError } = await this.db.from('sessions').delete().eq('user_id', id);
+    if (sessionError) {
+      throw new Error(`Session deletion failed: ${sessionError.message}`);
     }
-
-    const index = SEED_USERS.findIndex(u => u.id === id);
-    if (index !== -1) {
-      SEED_USERS.splice(index, 1);
+    const { error: userError } = await this.db.from('users').delete().eq('id', id);
+    if (userError) {
+      throw new Error(`User deletion failed: ${userError.message}`);
     }
 
     try {

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authController } from './auth.controller';
 import { requireAuth } from '../../middleware/auth.middleware';
+import { requirePermission } from '../../middleware/rbac.middleware';
 import { 
   loginRateLimiter, 
   refreshRateLimiter, 
@@ -18,8 +19,7 @@ router.post('/forgot-password', (req, res) => authController.forgotPassword(req,
 router.post('/reset-password', (req, res) => authController.resetPassword(req, res));
 
 // 2. User Provisioning (Self-registration or Admin user setup)
-router.post('/register', (req, res) => authController.register(req, res));
-router.post('/users', requireAuth, (req, res) => authController.register(req, res));
+router.post('/users', requireAuth, requirePermission('masters', 'CREATE_EDIT'), (req, res) => authController.register(req, res));
 
 // 3. User Profile & Credential Management
 router.get('/me', requireAuth, (req, res) => authController.getMe(req, res));

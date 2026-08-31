@@ -12,6 +12,8 @@ router.get('/stream', (req, res) => notificationsController.streamNotifications(
 router.get('/', requireAuth, (req, res) => notificationsController.getNotifications(req, res));
 router.patch('/:id/read', requireAuth, (req, res) => notificationsController.markAsRead(req, res));
 router.post('/read-all', requireAuth, (req, res) => notificationsController.markAllAsRead(req, res));
+router.delete('/clear-all', requireAuth, (req, res) => notificationsController.clearAllNotifications(req, res));
+router.delete('/', requireAuth, (req, res) => notificationsController.clearAllNotifications(req, res));
 router.post('/trigger', requireAuth, (req, res) => notificationsController.triggerNotification(req, res));
 
 // 3. Notification Rules Configuration

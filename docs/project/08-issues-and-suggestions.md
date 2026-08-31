@@ -6,7 +6,7 @@ Every item points at code read for this audit. Fixes are described on paper only
 
 ### Critical
 
-- **Issue:** `POST /api/v1/auth/register` is unauthenticated (`auth.routes.ts` line 21) and
+- [NOT FIXED] **Issue:** `POST /api/v1/auth/register` is unauthenticated (`auth.routes.ts` line 21) and
   `authService.register` accepts an arbitrary `role` string (`auth.service.ts` line 1459,
   default `'OPERATOR'`). The `users.role` CHECK constraint (migration 007 line 12) *permits*
   `'SUPER ADMIN'`, so an anonymous caller can self-provision a SUPER ADMIN. The protected
@@ -18,7 +18,7 @@ Every item points at code read for this audit. Fixes are described on paper only
   `authService.register` before insert.
   **Effort:** small.
 
-- **Issue:** default password `'1234567890'` when none supplied — `auth.service.ts` line 1445
+- [FIXED] **Issue:** default password `'1234567890'` when none supplied — `auth.service.ts` line 1445
   (`params.password || '1234567890'`) and `AuthContext.signUp` (`src/context/AuthContext.tsx`
   line 368, same literal as default argument).
   **Why it matters:** accounts provisioned without an explicit password are known-credential
@@ -27,7 +27,7 @@ Every item points at code read for this audit. Fixes are described on paper only
   the only "temporary" mechanism; have the frontend always send one.
   **Effort:** small.
 
-- **Issue:** `AuthContext.signIn` falls back to a cached "demo user" from
+- [FIXED] **Issue:** `AuthContext.signIn` falls back to a cached "demo user" from
   `localStorage['stratum_demo_users']` with a fabricated token `'local_session_' + Date.now()`
   when the API fails (`src/context/AuthContext.tsx` lines 344–361) — no password verified.
   **Why it matters:** client-side sessions the server never issued; UI acts with the cached
@@ -37,7 +37,7 @@ Every item points at code read for this audit. Fixes are described on paper only
   null on API failure.
   **Effort:** small.
 
-- **Issue:** default JWT secrets baked into `backend/src/config/env.ts` (lines 16–17) — server
+- [FIXED] **Issue:** default JWT secrets baked into `backend/src/config/env.ts` (lines 16–17) — server
   boots with publicly-known constants if the env vars are unset. Related: `config/database.ts`
   line 13 falls back to a dummy Supabase key; `env.ts` line 12 falls back to a hardcoded
   project URL.
@@ -49,7 +49,7 @@ Every item points at code read for this audit. Fixes are described on paper only
 
 ### Moderate
 
-- **Issue:** `auth.service.ts` keeps a module-level `SEED_USERS` array as a second source of
+- [FIXED] **Issue:** `auth.service.ts` keeps a module-level `SEED_USERS` array as a second source of
   truth beside the `users` table (`register` pushes at line 1468; `updateUserRole` mutates it
   at line 1701). `updateUserRole` also swallows DB errors with `console.warn(...)` and still
   returns success (lines 1696–1700).
@@ -59,14 +59,14 @@ Every item points at code read for this audit. Fixes are described on paper only
   paths); re-throw on update failure so the controller returns an error status.
   **Effort:** medium.
 
-- **Issue:** `AuthController.updateUser` fabricates actor identity when the JWT payload is
+- [FIXED] **Issue:** `AuthController.updateUser` fabricates actor identity when the JWT payload is
   incomplete: `email: req.user?.email || 'owner@guruom.in'`, `role: ... || 'Owner'`
   (`auth.controller.ts` lines 349–354); these defaults flow into audit records.
   **Why it matters:** audit trails can attribute actions to the Owner that the Owner never did.
   **Suggested fix:** 401 when `req.user` is absent; record only real payload values.
   **Effort:** small.
 
-- **Issue:** notifications SSE passes the access token as a query parameter:
+- [FIXED] **Issue:** notifications SSE passes the access token as a query parameter:
   `src/hooks/useInAppNotifications.ts` line 43 and `src/hooks/useOwnerOSData.ts` line 234
   (`?token=...` on `/notifications/stream`).
   **Why it matters:** bearer tokens leak into proxy/access logs and history; `EventSource`
@@ -79,7 +79,7 @@ Every item points at code read for this audit. Fixes are described on paper only
 
 ### Critical
 
-- **Issue:** the Owner-override check for the customer credit gate authorizes by display-name
+- [FIXED] **Issue:** the Owner-override check for the customer credit gate authorizes by display-name
   substring: `overrideBy.toLowerCase().includes('owner') || ...includes('admin') ||
   ...includes('viraj')` (`src/utils/orderStateMachine.ts` lines 396–402). The override value is
   client-supplied free text (credit-override field in `OrdersView.tsx`, passed through
@@ -93,7 +93,7 @@ Every item points at code read for this audit. Fixes are described on paper only
 
 ### Moderate
 
-- **Issue:** `OrdersService.getOrders` selects `*` from five tables unfiltered —
+- [FIXED] **Issue:** `OrdersService.getOrders` selects `*` from five tables unfiltered —
   `order_line_items`, `job_cards`, `dispatch_challans`, `customer_invoices`, `ncrs`
   (`orders.service.ts` lines 67–72) — then joins them in JS per order.
   **Why it matters:** O(entire DB) per request regardless of page size; the 30s Redis cache
@@ -103,7 +103,7 @@ Every item points at code read for this audit. Fixes are described on paper only
   move assembly into a Postgres view/RPC; add pagination.
   **Effort:** medium.
 
-- **Issue:** order creation performs two independent inserts — `customer_orders` then
+- [FIXED] **Issue:** order creation performs two independent inserts — `customer_orders` then
   `order_line_items` — with no transaction (`orders.service.ts` lines 618–640); a line failure
   leaves a header with zero lines.
   **Why it matters:** partial writes create orders that pass header gates but have no
@@ -111,7 +111,7 @@ Every item points at code read for this audit. Fixes are described on paper only
   **Suggested fix:** wrap both inserts in a Postgres function (RPC) called from `createOrder`.
   **Effort:** medium.
 
-- **Issue:** `isTestOrderPo` hides "test" orders via hardcoded substrings including numeric
+- [FIXED] **Issue:** `isTestOrderPo` hides "test" orders via hardcoded substrings including numeric
   magic values `poNo.includes('615144') || poNo.includes('678480')` (`orders.service.ts`
   lines 24–35), mirrored as SQL `.not('po_no','like',…)` filters (lines 51–58).
   **Why it matters:** real POs containing those substrings silently vanish from lists; the JS
@@ -120,7 +120,7 @@ Every item points at code read for this audit. Fixes are described on paper only
   mirror.
   **Effort:** small.
 
-- **Issue:** auto-generated purchase requisitions use `id: \`pr-${Date.now()}\`` as primary key
+- [FIXED] **Issue:** auto-generated purchase requisitions use `id: \`pr-${Date.now()}\`` as primary key
   (`orders.state-machine.ts` line 100) and `PR-${Date.now()...}` as requisition number
   (`orderStateMachine.ts` line 435) — millisecond timestamps collide under concurrency.
   **Why it matters:** duplicate-key failures on the auto-action path are swallowed by the
@@ -131,7 +131,7 @@ Every item points at code read for this audit. Fixes are described on paper only
 
 ### Minor
 
-- **Issue:** `'PAYMENT_PENDING': ['COMPLETED', 'CLOSED' as any]` (`src/utils/orderStateMachine.ts`
+- [FIXED] **Issue:** `'PAYMENT_PENDING': ['COMPLETED', 'CLOSED' as any]` (`src/utils/orderStateMachine.ts`
   line 98) — a `CLOSED` state that exists only via a type assertion, while
   `normalizeOrderState` maps `CLOSED → COMPLETED` (lines 139–141).
   **Why it matters:** two spellings of the terminal state in the adjacency list; the `as any`
@@ -139,7 +139,7 @@ Every item points at code read for this audit. Fixes are described on paper only
   **Suggested fix:** remove the `'CLOSED'` entry; `COMPLETED` stays the single terminal state.
   **Effort:** small.
 
-- **Issue:** `orders.controller.ts` builds tenant-scoped cache keys via `extractTenantId(req)`
+- [FIXED] **Issue:** `orders.controller.ts` builds tenant-scoped cache keys via `extractTenantId(req)`
   and invalidates `cache:<tenant>:orders:*` (lines 9–10, 48–51), but `OrdersService.getOrders`
   never filters by tenant.
   **Why it matters:** cache correctness and any future tenant isolation depend on a parameter
@@ -153,7 +153,7 @@ Every item points at code read for this audit. Fixes are described on paper only
 
 ### Moderate
 
-- **Issue:** `isViewAllowedForRole` is default-allow: a role with no entry in
+- [NOT FIXED] **Issue:** `isViewAllowedForRole` is default-allow: a role with no entry in
   `ROLE_PERMISSIONS` gets every view (`src/utils/permissions.ts` lines 216–221 —
   `if (!allowed) return true`). Frontend CTA gating in `rbacMatrix.isRoleAuthorizedForCta` is
   default-deny (line 130), so the two UI layers disagree on unknown roles.
@@ -163,7 +163,7 @@ Every item points at code read for this audit. Fixes are described on paper only
   explicit entries for any role that genuinely needs broad access.
   **Effort:** small.
 
-- **Issue:** `normalizeRole` maps any unrecognized role to `'Shop Floor Supervisor'`
+- [NOT FIXED] **Issue:** `normalizeRole` maps any unrecognized role to `'Shop Floor Supervisor'`
   (`src/utils/rbacMatrix.ts` line 571) instead of failing.
   **Why it matters:** a typo'd role in `users.role` becomes a real (if limited) permission set
   rather than an error — permission drift is invisible.
@@ -171,7 +171,7 @@ Every item points at code read for this audit. Fixes are described on paper only
   setup error instead of a silent downgrade.
   **Effort:** small.
 
-- **Issue:** the DB `users.role` CHECK still enumerates only the five legacy roles (migration
+- [NOT FIXED] **Issue:** the DB `users.role` CHECK still enumerates only the five legacy roles (migration
   007 line 12; re-created in `018_persistence_convergence.sql` line 838), while
   `authService.updateUserRole` writes whatever string it receives (line 1697) — canonical
   roles like `Owner` violate the constraint, hit the `catch`, and (per the SEED_USERS issue)
@@ -184,14 +184,14 @@ Every item points at code read for this audit. Fixes are described on paper only
 
 ### Minor
 
-- **Issue:** two migrations share number 018 (`018_master_tables_complete.sql` and
+- [NOT FIXED] **Issue:** two migrations share number 018 (`018_master_tables_complete.sql` and
   `018_persistence_convergence.sql`).
   **Why it matters:** tools ordering migrations by filename can apply them in the wrong
   sequence; the dependency between them is undocumented.
   **Suggested fix:** renumber one (e.g. `018b_…`) with an ordering note, or merge them.
   **Effort:** small.
 
-- **Issue:** legacy `requireRole([...])` guards compare raw strings against the JWT role
+- [NOT FIXED] **Issue:** legacy `requireRole([...])` guards compare raw strings against the JWT role
   (`backend/src/middleware/rbac.middleware.ts` lines 241–263) while newer routes use
   `requirePermission(module, level)` — two enforcement models in one codebase.
   **Why it matters:** permission changes in `RBAC_ROLE_MATRIX` never affect legacy-guarded
@@ -205,7 +205,7 @@ Every item points at code read for this audit. Fixes are described on paper only
 
 ### Moderate
 
-- **Issue:** `src/services/supabaseServices.ts` contains two verbatim copies of the helpers
+- [NOT FIXED] **Issue:** `src/services/supabaseServices.ts` contains two verbatim copies of the helpers
   `parseDateToTimestamp` and `getOrderTime` — inside `fetchOrders` (lines 292–333) and again at
   module scope (lines 348–396). The module-level `ordersCache` is also mutated independently of
   React state.
@@ -215,7 +215,7 @@ Every item points at code read for this audit. Fixes are described on paper only
   `ordersCache` as a write-through mirror owned only by the exported service functions.
   **Effort:** small.
 
-- **Issue:** `updateOrder` and `updateOrderStatus` swallow backend failures with
+- [NOT FIXED] **Issue:** `updateOrder` and `updateOrderStatus` swallow backend failures with
   `console.warn` (`src/services/supabaseServices.ts` lines 470–474 and 489–493); callers treat
   the promise as resolved (only `handleConfirmOrder` re-syncs on failure).
   **Why it matters:** a state-machine rejection still leaves the UI showing the new status
@@ -226,7 +226,7 @@ Every item points at code read for this audit. Fixes are described on paper only
 
 ### Minor
 
-- **Issue:** `useOwnerOSData.ts` is ~1,636 lines exporting ~60 handlers and ~21 state slices;
+- [NOT FIXED] **Issue:** `useOwnerOSData.ts` is ~1,636 lines exporting ~60 handlers and ~21 state slices;
   `OrdersView.tsx` and `OrderDetailView.tsx` are each >1,200 lines.
   **Why it matters:** every subscribed view re-renders on any slice change through one hook;
   the file is the repo's merge-conflict and regression hotspot.
@@ -234,13 +234,13 @@ Every item points at code read for this audit. Fixes are described on paper only
   inside `useOwnerOSData`, or extract section components from the big views.
   **Effort:** large.
 
-- **Issue:** `ToastContext` exposes `window.appToast` in all builds
+- [NOT FIXED] **Issue:** `ToastContext` exposes `window.appToast` in all builds
   (`src/context/ToastContext.tsx` lines 54–57).
   **Why it matters:** any injected or third-party script can fabricate UI "success" toasts.
   **Suggested fix:** gate behind `import.meta.env.DEV`.
   **Effort:** small.
 
-- **Issue:** loose typing at trust boundaries: `user: any | null` (`AuthContext.tsx` line 49),
+- [NOT FIXED] **Issue:** loose typing at trust boundaries: `user: any | null` (`AuthContext.tsx` line 49),
   `paymentData?: any` (`useOwnerOSData.ts` line 953), `data: any` in service methods
   (`masters.service.ts` line 104 and similar).
   **Why it matters:** the compiler cannot catch field renames between API and UI — the bug
@@ -253,7 +253,7 @@ Every item points at code read for this audit. Fixes are described on paper only
 
 ### Minor
 
-- **Issue:** unreferenced legacy components remain in the live tree — `AiStudioView.tsx`,
+- [NOT FIXED] **Issue:** unreferenced legacy components remain in the live tree — `AiStudioView.tsx`,
   `DashboardView.tsx`, `AnalyticsView.tsx`, `TeamView.tsx`, `ProjectsView.tsx`,
   `SettingsView.tsx`, `UpgradeModal.tsx`, `NotificationDrawer.tsx`, `Header.tsx`,
   `Sidebar.tsx` (a repo-wide import search matches only their own definitions, not
@@ -269,7 +269,7 @@ Every item points at code read for this audit. Fixes are described on paper only
   `backend/app` tree and the stub.
   **Effort:** small (deletion) / medium (re-wiring).
 
-- **Issue:** `handleImportOMGST` inserts imported masters one-by-one in a sequential loop
+- [NOT FIXED] **Issue:** `handleImportOMGST` inserts imported masters one-by-one in a sequential loop
   (`src/hooks/useOwnerOSData.ts` lines 1528–1540 — `await insertCustomer(c)` per row).
   **Why it matters:** a large spreadsheet becomes N sequential HTTP round-trips with no
   per-row failure report; a mid-loop failure leaves a partial import.

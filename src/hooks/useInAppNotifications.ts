@@ -38,9 +38,8 @@ export function useInAppNotifications() {
   useEffect(() => {
     loadNotifications();
 
-    const token = getAccessToken();
     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
-    const streamUrl = `${apiBaseUrl}/notifications/stream${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+    const streamUrl = `${apiBaseUrl}/notifications/stream`;
 
     let eventSource: EventSource | null = null;
 
@@ -105,6 +104,17 @@ export function useInAppNotifications() {
     }
   };
 
+  const clearAll = async () => {
+    setNotifications([]);
+    setUnreadCount(0);
+
+    try {
+      await apiClient.delete('/notifications/clear-all');
+    } catch (err) {
+      console.warn('Error clearing all notifications:', err);
+    }
+  };
+
   return {
     notifications,
     unreadCount,
@@ -113,6 +123,7 @@ export function useInAppNotifications() {
     toggleSound,
     markAsRead,
     markAllAsRead,
+    clearAll,
     refresh: loadNotifications
   };
 }

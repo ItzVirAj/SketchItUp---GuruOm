@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS public.role_permissions (
 );
 
 -- 2. Create or Upgrade pending_approvals Table
+DROP TABLE IF EXISTS public.pending_approvals CASCADE;
+
 CREATE TABLE IF NOT EXISTS public.pending_approvals (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
@@ -228,7 +230,7 @@ CREATE POLICY "role_permissions_admin_write" ON public.role_permissions
         auth.jwt() ->> 'role' IN ('Owner', 'Admin (System)', 'SUPER ADMIN') OR
         EXISTS (
             SELECT 1 FROM public.users 
-            WHERE id = auth.uid()::text AND role IN ('Owner', 'Admin (System)', 'SUPER ADMIN')
+            WHERE id = auth.uid() AND role IN ('Owner', 'Admin (System)', 'SUPER ADMIN')
         )
     );
 

@@ -21,55 +21,31 @@ import { logAudit } from '../../services/auditLog';
 
 
 
-export function isTestOrderPo(poNo?: string): boolean {
-  if (!poNo) return false;
-  return poNo.startsWith('PO-GOLDEN-') ||
-         poNo.startsWith('PO-TEST-REG-') ||
-         poNo.startsWith('PO-PERSIST-') ||
-         poNo.startsWith('PO-TATA-') ||
-         poNo.startsWith('PO-TEST-') ||
-         poNo.startsWith('PO-PROC-') ||
-         poNo.startsWith('__TEST__') ||
-         poNo.includes('615144') ||
-         poNo.includes('678480');
-}
-
 export class OrdersService {
   private db = getDbClient();
 
   /**
    * Fetches all customer orders with line items, job cards, dispatches, and gate statuses.
    */
-  async getOrders(options?: { includeTest?: boolean }) {
-    const shouldIncludeTest = options?.includeTest === true || process.env.NODE_ENV === 'test';
+  async getOrders() {
     try {
       let query = this.db
         .from('customer_orders')
         .select('*');
 
-      if (!shouldIncludeTest) {
-        query = query
-          .not('po_no', 'like', 'PO-GOLDEN-%')
-          .not('po_no', 'like', 'PO-TEST-REG-%')
-          .not('po_no', 'like', 'PO-PERSIST-%')
-          .not('po_no', 'like', 'PO-TATA-%')
-          .not('po_no', 'like', 'PO-TEST-%')
-          .not('po_no', 'like', 'PO-PROC-%')
-          .not('po_no', 'like', '__TEST__%');
-      }
-
       const { data: ordersData, error: ordersErr } = await query.order('created_at', { ascending: false });
 
-      const finalOrdersData = shouldIncludeTest 
-        ? (ordersData || []) 
-        : (ordersData || []).filter(o => !isTestOrderPo(o.po_no));
+      const finalOrdersData = ordersData || [];
 
       if (!ordersErr && finalOrdersData.length > 0) {
-        const { data: linesData } = await this.db.from('order_line_items').select('*');
-        const { data: jobsData } = await this.db.from('job_cards').select('*');
-        const { data: dispatchesData } = await this.db.from('dispatch_challans').select('*');
-        const { data: invoicesData } = await this.db.from('customer_invoices').select('*');
-        const { data: ncrsData } = await this.db.from('ncrs').select('*').in('status', ['OPEN', 'UNDER_REVIEW', 'REWORK_PLANNED']);
+        const orderIds = finalOrdersData.map(o => o.id);
+        const poNos = finalOrdersData.map(o => o.po_no);
+
+        const { data: linesData } = await this.db.from('order_line_items').select('*').in('order_id', orderIds);
+        const { data: jobsData } = await this.db.from('job_cards').select('*').in('order_po', poNos);
+        const { data: dispatchesData } = await this.db.from('dispatch_challans').select('*').in('order_po', poNos);
+        const { data: invoicesData } = await this.db.from('customer_invoices').select('*').in('order_po', poNos);
+        const { data: ncrsData } = await this.db.from('ncrs').select('*').in('status', ['OPEN', 'UNDER_REVIEW', 'REWORK_PLANNED']).in('order_po', poNos);
 
         const combined = finalOrdersData.map(o => {
           const lines = (linesData || []).filter(l => l.order_id === o.id).map(l => ({
@@ -262,7 +238,7 @@ export class OrdersService {
    * Fetches a single customer order by ID with full traceability.
    */
   async getOrderById(orderId: string) {
-    const orders = await this.getOrders({ includeTest: true });
+    const orders = await this.getOrders();
     return orders.find(o => o.id === orderId || o.poNo === orderId) || null;
   }
 
@@ -616,14 +592,9 @@ export class OrdersService {
     };
 
     try {
-      const { error: insertErr } = await this.db.from('customer_orders').insert(insertPayload);
-      if (insertErr) {
-        console.error('Database createOrder error:', insertErr);
-        throw new Error(`Failed to save order to database: ${insertErr.message}`);
-      }
-
+      let linePayloads: any[] = [];
       if (validated.lines && validated.lines.length > 0) {
-        const linePayloads = validated.lines.map((l, idx) => ({
+        linePayloads = validated.lines.map((l, idx) => ({
           id: l.id ? `${orderId}-${l.id}` : `line-${Date.now()}-${Math.random().toString(36).slice(2, 7)}-${idx}`,
           order_id: orderId,
           item_code: l.itemCode,
@@ -635,11 +606,16 @@ export class OrdersService {
           dispatched_qty: 0,
           pending_qty: l.orderQty
         }));
-        const { error: linesErr } = await this.db.from('order_line_items').insert(linePayloads);
-        if (linesErr) {
-          console.error('Database order_line_items insert error:', linesErr);
-          // Lines failure is non-fatal — order header was saved
-        }
+      }
+
+      const { error: insertErr } = await this.db.rpc('create_order_with_lines', {
+        order_payload: insertPayload,
+        lines_payload: linePayloads.length > 0 ? linePayloads : null
+      });
+
+      if (insertErr) {
+        console.error('Database create_order_with_lines RPC error:', insertErr);
+        throw new Error(`Failed to save order to database: ${insertErr.message}`);
       }
     } catch (dbErr: any) {
       console.warn('Database createOrder exception:', dbErr);

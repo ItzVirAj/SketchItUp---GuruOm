@@ -9,12 +9,12 @@ export const ENV = {
   FRONTEND_ORIGIN: process.env.FRONTEND_ORIGIN || 'http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000',
 
   // Database / Supabase Service Secrets (Server Only)
-  SUPABASE_URL: process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://txztwjvjqjczxwskzjjx.supabase.co',
-  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || '',
+  SUPABASE_URL: process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
+  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY,
 
   // JWT Token Secrets & Durations (Server Only)
-  JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET || 'stratum_owner_os_access_secret_2026_secure_key_32chars',
-  JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || 'stratum_owner_os_refresh_secret_2026_secure_key_32chars',
+  JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET,
+  JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET,
   
   ACCESS_TOKEN_EXPIRES_IN: '15m',
   REFRESH_TOKEN_EXPIRES_IN_DAYS: 7,
@@ -41,3 +41,25 @@ export const ENV = {
   // Resend Secrets (Server Only)
   RESEND_API_KEY: process.env.RESEND_API_KEY || ''
 };
+
+// --- Environment Validation (Fail-Close Security) ---
+const requiredSecrets = {
+  SUPABASE_URL: ENV.SUPABASE_URL,
+  SUPABASE_SERVICE_ROLE_KEY: ENV.SUPABASE_SERVICE_ROLE_KEY,
+  JWT_ACCESS_SECRET: ENV.JWT_ACCESS_SECRET,
+  JWT_REFRESH_SECRET: ENV.JWT_REFRESH_SECRET,
+};
+
+const missing = Object.entries(requiredSecrets)
+  .filter(([_, value]) => !value)
+  .map(([key]) => key);
+
+if (missing.length > 0) {
+  const msg = `CRITICAL: Missing required environment variables: ${missing.join(', ')}`;
+  if (ENV.NODE_ENV === 'production') {
+    throw new Error(msg);
+  } else {
+    console.error(`\x1b[31m${msg}\x1b[0m`);
+    console.error('\x1b[33mServer is booting in DEVELOPMENT mode with MISSING SECRETS. Operations will fail.\x1b[0m');
+  }
+}

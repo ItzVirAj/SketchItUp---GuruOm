@@ -95,7 +95,7 @@ export const ALLOWED_TRANSITIONS: Record<CanonicalOrderState, CanonicalOrderStat
   'DISPATCHED': ['INVOICED', 'DELIVERED', 'IN_TRANSIT', 'DELIVERY_DELAYED', 'PAYMENT_PENDING'],
   'DELIVERY_DELAYED': ['DELIVERED'],     // Mark Delayed -> ONLY "Order Received" (DELIVERED) unlocks Payment
   'DELIVERED': ['PAYMENT_PENDING', 'INVOICED', 'COMPLETED'],
-  'PAYMENT_PENDING': ['COMPLETED', 'CLOSED' as any],
+  'PAYMENT_PENDING': ['COMPLETED'],
   'INVOICED': ['COMPLETED', 'DELIVERED', 'PAYMENT_PENDING'],
   'COMPLETED': []
 };
@@ -390,15 +390,16 @@ export function validateDrawingRevision(orderRev: string, masterRev: string, par
 export function validateCustomerCredit(
   isOverdue90Days: boolean, 
   customerName: string, 
-  overrideBy?: string, 
-  overrideReason?: string
+  overrideByRole?: string, 
+  overrideReason?: string,
+  overrideByName?: string
 ): TransitionValidationResult {
   if (isOverdue90Days) {
-    // Check for Owner-level override
-    const isOwnerOverride = overrideBy && (
-      overrideBy.toLowerCase().includes('owner') || 
-      overrideBy.toLowerCase().includes('admin') ||
-      overrideBy.toLowerCase().includes('viraj')
+    // Check for Owner or Admin-level override by ROLE
+    const isOwnerOverride = overrideByRole && (
+      overrideByRole === 'SUPER ADMIN' ||
+      overrideByRole === 'Admin (System)' ||
+      overrideByRole === 'Owner'
     );
 
     if (!isOwnerOverride || !overrideReason) {
@@ -413,7 +414,7 @@ export function validateCustomerCredit(
       valid: true,
       autoActionsTriggered: [{
         type: 'CREDIT_HOLD_OVERRIDDEN',
-        details: `Customer "${customerName}" Credit Hold overridden by ${overrideBy}. Reason: ${overrideReason}`
+        details: `Customer "${customerName}" Credit Hold overridden by ${overrideByName || overrideByRole}. Reason: ${overrideReason}`
       }]
     };
   }
@@ -432,7 +433,9 @@ export function validateMaterialAvailability(
 ): TransitionValidationResult {
   if (availableStock < requiredQty) {
     const deficit = requiredQty - availableStock;
-    const reqNumber = `PR-${Date.now().toString().slice(-6)}`;
+    // We dynamically require this to avoid circular dependencies if any, but since it's a util it's fine.
+    const { formatDocumentNumber, getCurrentFinancialYear } = require('./statutoryAccountingEngine');
+    const reqNumber = formatDocumentNumber('PR', getCurrentFinancialYear(), Math.floor(1000 + Math.random() * 8999));
 
     return {
       valid: true, // Transition proceeds, but auto-generates Purchase Requisition
@@ -596,8 +599,9 @@ export function executeOrderStageTransition(ctx: StateMachineContext): Transitio
     const creditRes = validateCustomerCredit(
       ctx.isCustomerOverdue90Days, 
       ctx.customerName, 
-      ctx.creditHoldOverrideBy, 
-      ctx.creditHoldOverrideReason
+      ctx.actorRole, 
+      ctx.creditHoldOverrideReason,
+      ctx.creditHoldOverrideBy
     );
     if (!creditRes.valid) return creditRes;
     if (creditRes.autoActionsTriggered) autoActions.push(...creditRes.autoActionsTriggered);
@@ -619,8 +623,9 @@ export function executeOrderStageTransition(ctx: StateMachineContext): Transitio
     const creditRes = validateCustomerCredit(
       ctx.isCustomerOverdue90Days, 
       ctx.customerName, 
-      ctx.creditHoldOverrideBy, 
-      ctx.creditHoldOverrideReason
+      ctx.actorRole, 
+      ctx.creditHoldOverrideReason,
+      ctx.creditHoldOverrideBy
     );
     if (!creditRes.valid) return creditRes;
     if (creditRes.autoActionsTriggered) autoActions.push(...creditRes.autoActionsTriggered);

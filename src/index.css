@@ -2,40 +2,56 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ========================================================================== */
+/* UI POLISH REMEDIATION (Fix 2): SCOPED TRANSITION UTILITY                    */
+/* Replaces `transition-all` with an explicit property list so the browser     */
+/* never interpolates layout geometry (width/height/margins) on state change.  */
+/* Standard motion signature: 150ms / ease-out.                                */
+/* ========================================================================== */
+@utility transition-ui {
+  transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, translate, scale, rotate, filter, backdrop-filter;
+  transition-timing-function: ease-out;
+  transition-duration: 150ms;
+}
+
 @theme {
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-noto: 'Noto Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
-  --color-navy-950: #121316;
-  --color-navy-900: #16171B;
-  --color-navy-800: #1C1E24;
-  --color-navy-700: #282A34;
-  --color-teal-500: #5B75F8;
-  --color-teal-400: #7B92FF;
-  --color-teal-300: #A3B3FF;
+  /* True Neutral Carbon/Obsidian Primitives (better-colors overhaul) */
+  --color-carbon-950: #09090B;
+  --color-carbon-900: #121215;
+  --color-carbon-850: #18181B;
+  --color-carbon-800: #202024;
+  --color-carbon-700: #2E2E34;
+  --color-carbon-600: #3F3F46;
+  --color-dark-base: #09090B;
+  --color-dark-surface: #121215;
+  --color-dark-elevated: #18181B;
+  --color-dark-border: #202024;
+  --color-dark-muted: #71717A;
+  --color-dark-text: #F4F4F5;
+  /* True Status Primitives */
+  --color-teal-500: #0F766E;
+  --color-teal-400: #2DD4BF;
   --color-amber-500: #F59E0B;
-  --color-dark-base: #121316;
-  --color-dark-surface: #1C1E24;
-  --color-dark-elevated: #16171B;
-  --color-dark-border: #282A34;
-  --color-dark-muted: #9CA3AF;
-  --color-dark-text: #F3F4F6;
+  --color-rose-500: #F43F5E;
 }
 
 /* Centralized Accent Color Tokens */
 :root, [data-accent="blue"] {
-  --accent-primary: #5B75F8;
-  --accent-hover: #4A64E8;
-  --accent-active: #3B52D9;
-  --accent-text-light: #3B52D9;
-  --accent-text-dark: #7B92FF;
-  --accent-soft-light: rgba(91, 117, 248, 0.10);
-  --accent-soft-dark: rgba(91, 117, 248, 0.18);
-  --accent-border-light: rgba(91, 117, 248, 0.35);
-  --accent-border-dark: rgba(91, 117, 248, 0.30);
-  --accent-ring: rgba(91, 117, 248, 0.50);
-  --accent-shadow: rgba(91, 117, 248, 0.25);
-  --accent-gradient-from: #5B75F8;
+  --accent-primary: #435BE8;
+  --accent-hover: #344BC7;
+  --accent-active: #273AA6;
+  --accent-text-light: #344BC7;
+  --accent-text-dark: #8CA0FF;
+  --accent-soft-light: rgba(67, 91, 232, 0.08);
+  --accent-soft-dark: rgba(67, 91, 232, 0.12);
+  --accent-border-light: rgba(67, 91, 232, 0.30);
+  --accent-border-dark: rgba(140, 160, 255, 0.25);
+  --accent-ring: rgba(67, 91, 232, 0.50);
+  --accent-shadow: rgba(67, 91, 232, 0.20);
+  --accent-gradient-from: #435BE8;
   --accent-gradient-to: #4f46e5;
 }
 
@@ -45,12 +61,12 @@
   --accent-active: #115E59;
   --accent-text-light: #0F766E;
   --accent-text-dark: #2DD4BF;
-  --accent-soft-light: rgba(15, 118, 110, 0.10);
-  --accent-soft-dark: rgba(45, 212, 191, 0.18);
-  --accent-border-light: rgba(15, 118, 110, 0.35);
-  --accent-border-dark: rgba(45, 212, 191, 0.30);
+  --accent-soft-light: rgba(15, 118, 110, 0.08);
+  --accent-soft-dark: rgba(45, 212, 191, 0.12);
+  --accent-border-light: rgba(15, 118, 110, 0.30);
+  --accent-border-dark: rgba(45, 212, 191, 0.25);
   --accent-ring: rgba(15, 118, 110, 0.50);
-  --accent-shadow: rgba(15, 118, 110, 0.25);
+  --accent-shadow: rgba(15, 118, 110, 0.20);
   --accent-gradient-from: #0F766E;
   --accent-gradient-to: #059669;
 }
@@ -61,12 +77,12 @@
   --accent-active: #9A3412;
   --accent-text-light: #C2410C;
   --accent-text-dark: #FB923C;
-  --accent-soft-light: rgba(234, 88, 12, 0.10);
-  --accent-soft-dark: rgba(251, 146, 60, 0.18);
-  --accent-border-light: rgba(234, 88, 12, 0.35);
-  --accent-border-dark: rgba(251, 146, 60, 0.30);
+  --accent-soft-light: rgba(234, 88, 12, 0.08);
+  --accent-soft-dark: rgba(251, 146, 60, 0.12);
+  --accent-border-light: rgba(234, 88, 12, 0.30);
+  --accent-border-dark: rgba(251, 146, 60, 0.25);
   --accent-ring: rgba(234, 88, 12, 0.50);
-  --accent-shadow: rgba(234, 88, 12, 0.25);
+  --accent-shadow: rgba(234, 88, 12, 0.20);
   --accent-gradient-from: #EA580C;
   --accent-gradient-to: #d97706;
 }
@@ -77,14 +93,30 @@
   --accent-active: #991B1B;
   --accent-text-light: #B91C1C;
   --accent-text-dark: #F87171;
-  --accent-soft-light: rgba(220, 38, 38, 0.10);
-  --accent-soft-dark: rgba(248, 113, 113, 0.18);
-  --accent-border-light: rgba(220, 38, 38, 0.35);
-  --accent-border-dark: rgba(248, 113, 113, 0.30);
+  --accent-soft-light: rgba(220, 38, 38, 0.08);
+  --accent-soft-dark: rgba(248, 113, 113, 0.12);
+  --accent-border-light: rgba(220, 38, 38, 0.30);
+  --accent-border-dark: rgba(248, 113, 113, 0.25);
   --accent-ring: rgba(220, 38, 38, 0.50);
-  --accent-shadow: rgba(220, 38, 38, 0.25);
+  --accent-shadow: rgba(220, 38, 38, 0.20);
   --accent-gradient-from: #DC2626;
   --accent-gradient-to: #e11d48;
+}
+
+[data-accent="monochrome"] {
+  --accent-primary: #F4F4F5;
+  --accent-hover: #E4E4E7;
+  --accent-active: #D4D4D8;
+  --accent-text-light: #18181B;
+  --accent-text-dark: #FFFFFF;
+  --accent-soft-light: rgba(0, 0, 0, 0.06);
+  --accent-soft-dark: rgba(255, 255, 255, 0.08);
+  --accent-border-light: rgba(0, 0, 0, 0.20);
+  --accent-border-dark: rgba(255, 255, 255, 0.15);
+  --accent-ring: rgba(255, 255, 255, 0.40);
+  --accent-shadow: rgba(0, 0, 0, 0.50);
+  --accent-gradient-from: #F4F4F5;
+  --accent-gradient-to: #A1A1AA;
 }
 
 /* Multi-Accent System Utility & Direct Color Override Bindings */
@@ -229,9 +261,29 @@
   color: var(--accent-text-dark) !important;
 }
 
+/* Monochrome accent: ink text on light accent surfaces (prevents white-on-white) */
+[data-accent="monochrome"] .from-\[\#5B75F8\],
+[data-accent="monochrome"] .from-\[\#FF5000\],
+[data-accent="monochrome"] .from-\[\#6C63FF\],
+[data-accent="monochrome"] button.from-\[\#5B75F8\],
+[data-accent="monochrome"] a.from-\[\#5B75F8\],
+[data-accent="monochrome"] button[class*="from-[#5B75F8]"],
+[data-accent="monochrome"] button[class*="from-[#FF5000]"],
+[data-accent="monochrome"] .accent-btn,
+[data-accent="monochrome"] .from-\[\#5B75F8\]:hover,
+[data-accent="monochrome"] .hover\:from-indigo-600:hover,
+[data-accent="monochrome"] .hover\:bg-\[\#5B75F8\]:hover,
+[data-accent="monochrome"] .bg-\[\#5B75F8\],
+[data-accent="monochrome"] .bg-teal-600,
+[data-accent="monochrome"] .bg-teal-500 {
+  color: #09090B !important;
+}
+
 /* Sidebar Module Item Hover Accent System (User Configurable) */
 .sidebar-module-btn {
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition-property: color, background-color, border-color, box-shadow;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
 }
 
 .sidebar-module-btn:not(.is-active):hover {
@@ -327,8 +379,8 @@
 
 /* Explicit ByteBoost Dark Mode Global Theme Overrides */
 .dark {
-  background-color: #121316;
-  color: #F3F4F6;
+  background-color: #09090B;
+  color: #F4F4F5;
 }
 
 .dark .bg-slate-950,
@@ -336,7 +388,7 @@
 .dark .bg-slate-950\/70,
 .dark .bg-slate-950\/60,
 .dark .bg-slate-950\/40 {
-  background-color: #121316 !important;
+  background-color: #09090B !important;
 }
 
 .dark .bg-slate-900,
@@ -351,7 +403,7 @@
 .dark .bg-slate-800\/60,
 .dark .bg-slate-800\/50,
 .dark .bg-slate-800\/40 {
-  background-color: #1C1E24 !important;
+  background-color: #121215 !important;
 }
 
 .dark .border-slate-800,
@@ -360,7 +412,7 @@
 .dark .border-slate-800\/50,
 .dark .border-slate-800\/40,
 .dark .border-slate-700 {
-  border-color: #282A34 !important;
+  border-color: #202024 !important;
 }
 
 /* Explicit Google Noto Sans Font & Scaled Styling for all tables across the application */
@@ -423,7 +475,7 @@ tbody tr {
 }
 
 .dark ::-webkit-scrollbar-track {
-  background: #121316;
+  background: #09090B;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -432,7 +484,7 @@ tbody tr {
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: #282A34;
+  background: #27272A;
   border-radius: 4px;
 }
 
@@ -448,8 +500,8 @@ tbody tr {
 
 /* Explicit ByteBoost Dark Mode Global Theme Overrides */
 .dark {
-  background-color: #121316;
-  color: #F3F4F6;
+  background-color: #09090B;
+  color: #F4F4F5;
 }
 
 .dark .bg-slate-950,
@@ -457,7 +509,7 @@ tbody tr {
 .dark .bg-slate-950\/70,
 .dark .bg-slate-950\/60,
 .dark .bg-slate-950\/40 {
-  background-color: #121316 !important;
+  background-color: #09090B !important;
 }
 
 .dark .bg-slate-900,
@@ -472,7 +524,7 @@ tbody tr {
 .dark .bg-slate-800\/60,
 .dark .bg-slate-800\/50,
 .dark .bg-slate-800\/40 {
-  background-color: #1C1E24 !important;
+  background-color: #121215 !important;
 }
 
 .dark .border-slate-800,
@@ -481,7 +533,7 @@ tbody tr {
 .dark .border-slate-800\/50,
 .dark .border-slate-800\/40,
 .dark .border-slate-700 {
-  border-color: #282A34 !important;
+  border-color: #202024 !important;
 }
 
 /* Explicit Google Noto Sans Font & Scaled Styling for all tables across the application */
@@ -544,7 +596,7 @@ tbody tr {
 }
 
 .dark ::-webkit-scrollbar-track {
-  background: #121316;
+  background: #09090B;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -553,12 +605,12 @@ tbody tr {
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: #282A34;
+  background: #27272A;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #5B75F8;
+  background: var(--accent-primary);
 }
 
 /* Lenis butter-smooth delayed momentum scrolling rules for desktop */
@@ -696,8 +748,8 @@ body.modal-open, html.modal-open {
 .dark textarea:-webkit-autofill,
 .dark select:-webkit-autofill {
   -webkit-text-fill-color: #f8fafc !important;
-  -webkit-box-shadow: 0 0 0px 1000px #13171d inset !important;
-  box-shadow: 0 0 0px 1000px #13171d inset !important;
+  -webkit-box-shadow: 0 0 0px 1000px #121215 inset !important;
+  box-shadow: 0 0 0px 1000px #121215 inset !important;
   caret-color: #f8fafc !important;
   transition: background-color 5000s ease-in-out 0s;
 }
@@ -728,5 +780,50 @@ select:-webkit-autofill {
 
 .modal-animate-enter {
   animation: modalEnter 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ========================================================================== */
+/* UI POLISH REMEDIATION (Fix 3): STANDARD TACTILE BUTTON FEEDBACK            */
+/* ========================================================================== */
+.btn-tactile {
+  transition-property: transform, opacity, background-color, border-color, box-shadow;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+}
+
+.btn-tactile:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+/* ========================================================================== */
+/* UI POLISH REMEDIATION (Fix 5): LAYERED DEPTH SHADOWS FOR ELEVATED SURFACES */
+/* Hairline ring + soft ambient layers blend smoothly over any background,    */
+/* unlike heavy solid borders.                                                */
+/* ========================================================================== */
+:root {
+  --shadow-surface-card:
+    0px 0px 0px 1px oklch(0 0 0 / 0.06),
+    0px 1px 2px -1px oklch(0 0 0 / 0.06),
+    0px 2px 4px 0px oklch(0 0 0 / 0.04);
+  --shadow-surface-hover:
+    0px 0px 0px 1px oklch(0 0 0 / 0.08),
+    0px 1px 2px -1px oklch(0 0 0 / 0.08),
+    0px 2px 4px 0px oklch(0 0 0 / 0.06);
+}
+
+.dark {
+  --shadow-surface-card: 0 0 0 1px oklch(1 0 0 / 0.08);
+  --shadow-surface-hover: 0 0 0 1px oklch(1 0 0 / 0.13);
+}
+
+.card-elevated {
+  box-shadow: var(--shadow-surface-card);
+  transition-property: box-shadow, transform;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+}
+
+.card-elevated:hover {
+  box-shadow: var(--shadow-surface-hover);
 }
 

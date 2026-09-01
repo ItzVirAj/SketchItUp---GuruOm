@@ -124,9 +124,9 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
     <div className="space-y-6 max-w-5xl font-sans">
       
       {/* Top Banner Header */}
-      <div className={`p-5 sm:p-6 rounded-3xl border transition-all ${
+      <div className={`p-5 sm:p-6 rounded-3xl border transition-ui ${
         isDarkMode 
-          ? 'bg-[#0d1017] border-slate-800 text-white shadow-xl' 
+          ? 'bg-[#09090B] border-slate-800 text-white shadow-xl' 
           : 'bg-white border-slate-200 shadow-sm text-slate-900'
       }`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -161,7 +161,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
               type="button"
               onClick={handleResetToCurrent}
               title="Reset fields to current saved profile"
-              className={`p-2.5 rounded-2xl border text-xs font-mono transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`p-2.5 rounded-2xl border text-xs font-mono transition-ui cursor-pointer flex items-center gap-1.5 ${
                 isDarkMode 
                   ? 'border-slate-800 bg-slate-900/60 text-slate-400 hover:text-white hover:bg-slate-800' 
                   : 'border-slate-200 bg-slate-50 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -177,7 +177,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
       {/* Live Document Header Preview Card */}
       <div className={`p-5 rounded-3xl border space-y-3 ${
         isDarkMode 
-          ? 'bg-gradient-to-br from-[#0d1017] via-slate-900/80 to-[#0d1017] border-slate-800 text-white' 
+          ? 'bg-gradient-to-br from-[#09090B] via-slate-900/80 to-[#09090B] border-slate-800 text-white' 
           : 'bg-gradient-to-br from-slate-50 via-white to-slate-50 border-slate-200 text-slate-900'
       }`}>
         <div className="flex items-center justify-between pb-2 border-b border-slate-800/60 dark:border-slate-800">
@@ -218,7 +218,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
           </div>
 
           <div className={`p-3 rounded-2xl border space-y-1.5 font-mono text-[11px] ${
-            isDarkMode ? 'bg-[#0d1017]/80 border-slate-800' : 'bg-white border-slate-200'
+            isDarkMode ? 'bg-[#09090B]/80 border-slate-800' : 'bg-white border-slate-200'
           }`}>
             <div className="flex justify-between items-center">
               <span className="text-slate-500">GSTIN:</span>
@@ -237,8 +237,8 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
       </div>
 
       {/* Main Profile Form Card */}
-      <div className={`p-5 sm:p-8 rounded-3xl border transition-all shadow-xl ${
-        isDarkMode ? 'bg-[#0d1017] border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+      <div className={`p-5 sm:p-8 rounded-3xl border transition-ui shadow-xl ${
+        isDarkMode ? 'bg-[#09090B] border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
       }`}>
         <form onSubmit={handleSave} className="space-y-6 text-xs font-sans">
           
@@ -271,7 +271,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                     value={legalName}
                     onChange={(e) => setLegalName(e.target.value)}
                     placeholder="e.g. GuruOm Industries LLP"
-                    className={`h-11 w-full pl-10 pr-3.5 rounded-xl border text-xs font-bold outline-none transition-all ${
+                    className={`h-11 w-full pl-10 pr-3.5 rounded-xl border text-xs font-bold outline-none transition-ui ${
                       isDarkMode 
                         ? 'bg-slate-900/80 border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
                         : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
@@ -291,7 +291,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="e.g. +91 98250 12345"
-                    className={`h-11 w-full pl-10 pr-3.5 rounded-xl border text-xs font-mono outline-none transition-all ${
+                    className={`h-11 w-full pl-10 pr-3.5 rounded-xl border text-xs font-mono outline-none transition-ui ${
                       isDarkMode 
                         ? 'bg-slate-900/80 border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
                         : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
@@ -312,7 +312,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="e.g. contact@guruom.in"
-                  className={`h-11 w-full pl-10 pr-3.5 rounded-xl border text-xs font-mono outline-none transition-all ${
+                  className={`h-11 w-full pl-10 pr-3.5 rounded-xl border text-xs font-mono outline-none transition-ui ${
                     isDarkMode 
                       ? 'bg-slate-900/80 border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
                       : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
@@ -341,7 +341,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="Full street address, industrial estate, city, state and pincode"
-                className={`w-full rounded-2xl border p-3.5 text-xs outline-none transition-all ${
+                className={`w-full rounded-2xl border p-3.5 text-xs outline-none transition-ui ${
                   isDarkMode 
                     ? 'bg-slate-900/80 border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
                     : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
@@ -370,7 +370,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                   value={gstin}
                   onChange={(e) => handleGstinChange(e.target.value)}
                   placeholder="24AAAFG1234C1Z9"
-                  className={`h-11 w-full px-3.5 rounded-xl border text-xs font-mono font-bold text-emerald-500 outline-none transition-all ${
+                  className={`h-11 w-full px-3.5 rounded-xl border text-xs font-mono font-bold text-emerald-500 outline-none transition-ui ${
                     isDarkMode 
                       ? 'bg-slate-900/80 border-slate-700/80 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
                       : 'bg-slate-50 border-slate-300 focus:border-emerald-500 shadow-xs'
@@ -387,7 +387,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                   value={pan}
                   onChange={(e) => setPan(e.target.value.toUpperCase())}
                   placeholder="AAAFG1234C"
-                  className={`h-11 w-full px-3.5 rounded-xl border text-xs font-mono font-bold text-sky-400 outline-none transition-all ${
+                  className={`h-11 w-full px-3.5 rounded-xl border text-xs font-mono font-bold text-sky-400 outline-none transition-ui ${
                     isDarkMode 
                       ? 'bg-slate-900/80 border-slate-700/80 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20' 
                       : 'bg-slate-50 border-slate-300 focus:border-sky-500 shadow-xs'
@@ -404,7 +404,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                   value={state}
                   onChange={(e) => setState(e.target.value)}
                   placeholder="e.g. Gujarat"
-                  className={`h-11 w-full px-3.5 rounded-xl border text-xs outline-none transition-all ${
+                  className={`h-11 w-full px-3.5 rounded-xl border text-xs outline-none transition-ui ${
                     isDarkMode 
                       ? 'bg-slate-900/80 border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
                       : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
@@ -421,7 +421,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                   value={stateCode}
                   onChange={(e) => setStateCode(e.target.value)}
                   placeholder="e.g. 24"
-                  className={`h-11 w-full px-3.5 rounded-xl border text-xs font-mono font-bold text-center text-purple-400 outline-none transition-all ${
+                  className={`h-11 w-full px-3.5 rounded-xl border text-xs font-mono font-bold text-center text-purple-400 outline-none transition-ui ${
                     isDarkMode 
                       ? 'bg-slate-900/80 border-slate-700/80 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20' 
                       : 'bg-slate-50 border-slate-300 focus:border-purple-500 shadow-xs'
@@ -439,7 +439,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
             <button
               type="submit"
               disabled={isSaving}
-              className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-gradient-to-r from-[var(--accent-primary)] to-indigo-600 hover:from-indigo-600 hover:to-[var(--accent-primary)] text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[var(--accent-primary)]/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+              className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-gradient-to-r from-[var(--accent-primary)] to-indigo-600 hover:from-indigo-600 hover:to-[var(--accent-primary)] text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[var(--accent-primary)]/20 transition-ui hover:scale-[1.02] active:scale-[0.96] disabled:opacity-50"
             >
               {isSaving ? (
                 <>

@@ -141,7 +141,7 @@ export const HubAndSpokeVisual: React.FC = () => {
                   setActiveNodeId(node.id);
                   analytics.trackEvent('hub_node_click', { nodeId: node.id });
                 }}
-                className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer relative ${
+                className={`p-3.5 rounded-xl border text-left transition-ui cursor-pointer relative ${
                   isActive
                     ? 'bg-slate-950 border-teal-400 shadow-lg shadow-teal-500/20 ring-1 ring-teal-400'
                     : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'

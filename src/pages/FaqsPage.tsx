@@ -70,7 +70,7 @@ export const FaqsPage: React.FC = () => {
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-ui cursor-pointer whitespace-nowrap ${
                   selectedCategory === cat
                     ? 'bg-teal-500 text-slate-950 font-bold'
                     : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
@@ -89,7 +89,7 @@ export const FaqsPage: React.FC = () => {
             return (
               <div
                 key={faq.id}
-                className={`rounded-xl border transition-all overflow-hidden ${
+                className={`rounded-xl border transition-ui overflow-hidden ${
                   isOpen ? 'bg-slate-900 border-teal-500/50 shadow-lg' : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
                 }`}
               >

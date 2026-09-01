@@ -501,7 +501,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                 setModalError(null);
                 createInvoiceModal.open();
               }}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold shadow-md active:scale-95 transition-all"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold shadow-md active:scale-[0.96] transition-ui"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Create</span>
@@ -548,7 +548,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
         {/* ── HERO HEADER CARD ── */}
         <section className={`relative overflow-hidden rounded-[26px] border ${
           isDarkMode
-            ? 'border-white/[0.08] bg-gradient-to-br from-[#13171f] via-[#171b24] to-[#0f1318]'
+            ? 'border-white/[0.08] bg-gradient-to-br from-[#121215] via-[#121215] to-[#09090B]'
             : 'border-slate-200/80 bg-gradient-to-br from-white via-slate-50 to-slate-100/60 shadow-[0_16px_48px_rgba(15,23,42,0.08)]'
         }`}>
           {/* Decorative gradient orbs */}
@@ -588,7 +588,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                   setModalError(null);
                   createInvoiceModal.open();
                 }}
-                className="group relative inline-flex h-11 shrink-0 items-center justify-center gap-2.5 rounded-2xl bg-[var(--accent-primary)] px-6 text-[13px] font-bold text-white shadow-lg shadow-[var(--accent-shadow)] transition-all hover:brightness-110 hover:shadow-xl hover:shadow-[var(--accent-shadow)] active:scale-[0.97]"
+                className="group relative inline-flex h-11 shrink-0 items-center justify-center gap-2.5 rounded-2xl bg-[var(--accent-primary)] px-6 text-[13px] font-bold text-white shadow-lg shadow-[var(--accent-shadow)] transition-ui hover:brightness-110 hover:shadow-xl hover:shadow-[var(--accent-shadow)] active:scale-[0.96]"
               >
                 <Plus className="h-4 w-4 transition-transform group-hover:rotate-90 duration-200" />
                 <span>New Invoice</span>
@@ -675,7 +675,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
         {/* ── FILTER & SEARCH TOOLBAR ── */}
         <div className={`rounded-2xl border px-4 py-3 ${
           isDarkMode
-            ? 'border-white/[0.08] bg-[#171b24]'
+            ? 'border-white/[0.08] bg-[#121215]'
             : 'border-slate-200 bg-white shadow-[0_4px_16px_rgba(15,23,42,0.04)]'
         }`}>
           <div className="flex items-center gap-3 flex-wrap">
@@ -695,7 +695,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                     key={tab.id}
                     type="button"
                     onClick={() => setStatusFilter(tab.id)}
-                    className={`flex h-8 items-center gap-1.5 rounded-xl border px-3.5 text-[11px] font-bold transition-all ${
+                    className={`flex h-8 items-center gap-1.5 rounded-xl border px-3.5 text-[11px] font-bold transition-ui ${
                       isActive
                         ? isDarkMode
                           ? 'border-[var(--accent-primary)]/50 bg-[var(--accent-primary)]/20 text-[var(--accent-text-dark)] shadow-sm'
@@ -746,7 +746,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
       <div className="block md:hidden space-y-3">
         {filteredInvoices.length === 0 ? (
           <div className={`p-8 text-center rounded-2xl border font-mono text-xs ${
-            isDarkMode ? 'bg-[#171b24] border-white/[0.08] text-slate-400' : 'bg-white border-slate-200 text-slate-500'
+            isDarkMode ? 'bg-[#121215] border-white/[0.08] text-slate-400' : 'bg-white border-slate-200 text-slate-500'
           }`}>
             <Receipt className="w-8 h-8 mx-auto mb-2 opacity-30" />
             <p>No customer invoices found matching filter criteria.</p>
@@ -760,12 +760,12 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
             return (
               <div
                 key={inv.id || inv.invoiceNo}
-                className={`p-4 rounded-2xl border transition-all space-y-3.5 shadow-sm ${
+                className={`p-4 rounded-2xl border transition-ui space-y-3.5 shadow-sm ${
                   isPaid
-                    ? isDarkMode ? 'bg-[#171b24] border-emerald-500/30' : 'bg-emerald-50/40 border-emerald-200'
+                    ? isDarkMode ? 'bg-[#121215] border-emerald-500/30' : 'bg-emerald-50/40 border-emerald-200'
                     : isDraft
-                    ? isDarkMode ? 'bg-[#171b24] border-amber-500/30' : 'bg-amber-50/40 border-amber-200'
-                    : isDarkMode ? 'bg-[#171b24] border-white/[0.08]' : 'bg-white border-slate-200'
+                    ? isDarkMode ? 'bg-[#121215] border-amber-500/30' : 'bg-amber-50/40 border-amber-200'
+                    : isDarkMode ? 'bg-[#121215] border-white/[0.08]' : 'bg-white border-slate-200'
                 }`}
               >
                 {/* Header: Invoice # + Status Badge */}
@@ -854,7 +854,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                         setActionSuccessMsg(`Invoice ${inv.invoiceNo} issued successfully.`);
                         setTimeout(() => setActionSuccessMsg(null), 4000);
                       }}
-                      className="flex-1 py-2 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/40 font-mono text-xs font-bold flex items-center justify-center gap-1 cursor-pointer active:scale-[0.98]"
+                      className="flex-1 py-2 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/40 font-mono text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-transform duration-150 ease-out active:scale-[0.96]"
                     >
                       <Send className="w-3.5 h-3.5" />
                       <span>Issue Invoice</span>
@@ -864,7 +864,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                   {inv.status !== 'PAID' && inv.status !== 'DRAFT' && Number(inv.balanceAmount || inv.totalAmount) > 0 && (
                     <button
                       onClick={() => handleOpenPaymentModal(inv)}
-                      className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20 cursor-pointer active:scale-[0.98]"
+                      className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20 cursor-pointer transition-transform duration-150 ease-out active:scale-[0.96]"
                     >
                       <CreditCard className="w-3.5 h-3.5" />
                       <span>Record Payment</span>
@@ -887,8 +887,8 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
       {/* ========================================================================= */}
       {/* DESKTOP INVOICES TABLE (Viewport >= md) */}
       {/* ========================================================================= */}
-      <div className={`hidden md:block overflow-hidden rounded-[22px] border transition-all ${
-        isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
+      <div className={`hidden md:block overflow-hidden rounded-[22px] border transition-ui ${
+        isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
       }`}>
         <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
           <div>
@@ -1006,7 +1006,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                               setActionSuccessMsg(`Invoice ${inv.invoiceNo} issued successfully.`);
                               setTimeout(() => setActionSuccessMsg(null), 4000);
                             }}
-                            className={`px-2.5 py-1 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                            className={`px-2.5 py-1 rounded-xl font-mono text-xs font-bold transition-ui cursor-pointer flex items-center gap-1 ${
                               isDarkMode ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 border border-blue-500/40' : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'
                             }`}
                           >
@@ -1017,7 +1017,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                         {inv.status !== 'PAID' && inv.status !== 'DRAFT' && Number(inv.balanceAmount || inv.totalAmount) > 0 && (
                           <button
                             onClick={() => handleOpenPaymentModal(inv)}
-                            className="px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs"
+                            className="px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-ui cursor-pointer flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs"
                           >
                             <CreditCard className="w-3.5 h-3.5" />
                             <span>Record Payment</span>
@@ -1080,9 +1080,9 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
               <select
                 value={selectedDispatchNo}
                 onChange={(e) => handleSelectDispatch(e.target.value)}
-                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono font-bold outline-none cursor-pointer transition-all ${
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono font-bold outline-none cursor-pointer transition-ui ${
                   isDarkMode 
-                    ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
+                    ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
                     : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
                 }`}
               >
@@ -1108,9 +1108,9 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                     type="text"
                     value={invoiceNoInput}
                     onChange={(e) => setInvoiceNoInput(e.target.value)}
-                    className={`h-11 w-full rounded-xl border px-3 text-xs font-mono font-bold outline-none transition-all ${
+                    className={`h-11 w-full rounded-xl border px-3 text-xs font-mono font-bold outline-none transition-ui ${
                       isDarkMode 
-                        ? 'bg-[#0d1017] border-slate-700/80 text-emerald-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
+                        ? 'bg-[#09090B] border-slate-700/80 text-emerald-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
                         : 'bg-slate-50 border-slate-300 text-emerald-700 focus:border-emerald-500 shadow-xs'
                     }`}
                   />
@@ -1123,9 +1123,9 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                     type="date"
                     value={invoiceDate}
                     onChange={(e) => setInvoiceDate(e.target.value)}
-                    className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                    className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
                       isDarkMode 
-                        ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
+                        ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
                         : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
                     }`}
                   />
@@ -1164,9 +1164,9 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                     type="date"
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
-                    className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                    className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
                       isDarkMode 
-                        ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
+                        ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
                         : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
                     }`}
                   />
@@ -1175,7 +1175,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
 
               {/* Customer and GSTIN Info Card */}
               <div className={`p-4 rounded-2xl border ${
-                isDarkMode ? 'bg-[#0d1017] border-slate-800' : 'bg-slate-50/80 border-slate-200'
+                isDarkMode ? 'bg-[#09090B] border-slate-800' : 'bg-slate-50/80 border-slate-200'
               }`}>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="space-y-0.5">
@@ -1216,7 +1216,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                 </label>
                 <div className={`border rounded-2xl overflow-hidden overflow-x-auto ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
                   <table className="w-full text-left text-xs">
-                    <thead className={`font-mono text-[10px] uppercase ${isDarkMode ? 'bg-[#0d1017] text-slate-400' : 'bg-slate-100 text-slate-600'}`}>
+                    <thead className={`font-mono text-[10px] uppercase ${isDarkMode ? 'bg-[#09090B] text-slate-400' : 'bg-slate-100 text-slate-600'}`}>
                       <tr>
                         <th className="py-2.5 px-3.5">Item Code</th>
                         <th className="py-2.5 px-3">Description</th>
@@ -1246,7 +1246,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
 
               {/* Summary Totals */}
               <div className={`p-4 rounded-2xl border ${
-                isDarkMode ? 'bg-[#0d1017] border-slate-800' : 'bg-slate-50 border-slate-200'
+                isDarkMode ? 'bg-[#09090B] border-slate-800' : 'bg-slate-50 border-slate-200'
               }`}>
                 <div className="space-y-2 font-mono text-xs">
                   <div className={`flex justify-between ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
@@ -1287,7 +1287,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
               type="button"
               onClick={() => createInvoiceModal.close()}
               disabled={isSubmitting}
-              className={`w-full sm:w-auto px-4 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
+              className={`w-full sm:w-auto px-4 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-ui ${
                 isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
               }`}
             >
@@ -1298,7 +1298,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                 type="button"
                 onClick={() => handleSaveInvoice('DRAFT')}
                 disabled={isSubmitting || !selectedDispatch}
-                className={`flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs font-mono font-bold border cursor-pointer disabled:opacity-50 transition-all ${
+                className={`flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs font-mono font-bold border cursor-pointer disabled:opacity-50 transition-ui ${
                   isDarkMode 
                     ? 'border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200' 
                     : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-700 shadow-xs'
@@ -1310,7 +1310,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                 type="button"
                 onClick={() => handleSaveInvoice('ISSUED')}
                 disabled={isSubmitting || !selectedDispatch}
-                className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl text-xs font-mono font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-500/20 cursor-pointer disabled:opacity-50 transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]"
+                className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl text-xs font-mono font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-500/20 cursor-pointer disabled:opacity-50 transition-ui flex items-center justify-center gap-1.5 active:scale-[0.96]"
               >
                 <Send className="w-3.5 h-3.5" />
                 <span>Issue Invoice</span>
@@ -1356,7 +1356,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
 
               {/* Commercial Summary Box */}
               <div className={`p-4 rounded-2xl border space-y-3 ${
-                isDarkMode ? 'bg-[#0d1017] border-slate-800' : 'bg-slate-50 border-slate-200'
+                isDarkMode ? 'bg-[#09090B] border-slate-800' : 'bg-slate-50 border-slate-200'
               }`}>
                 <div className="grid grid-cols-3 gap-2.5 text-center font-mono">
                   <div className={`p-2.5 rounded-xl border ${isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-xs'}`}>
@@ -1393,7 +1393,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                       <button
                         type="button"
                         onClick={() => setPayAmount(balance)}
-                        className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${
+                        className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg border transition-ui cursor-pointer ${
                           payAmount === balance 
                             ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
                             : isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
@@ -1405,7 +1405,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                         <button
                           type="button"
                           onClick={() => setPayAmount(Math.round(balance / 2))}
-                          className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${
+                          className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg border transition-ui cursor-pointer ${
                             payAmount === Math.round(balance / 2)
                               ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
                               : isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
@@ -1423,9 +1423,9 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                       step="0.01"
                       value={payAmount}
                       onChange={(e) => setPayAmount(Number(e.target.value))}
-                      className={`h-11 w-full pl-8 pr-3.5 rounded-xl border font-mono font-bold text-sm outline-none transition-all ${
+                      className={`h-11 w-full pl-8 pr-3.5 rounded-xl border font-mono font-bold text-sm outline-none transition-ui ${
                         isDarkMode 
-                          ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
+                          ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
                           : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
                       }`}
                       required
@@ -1441,9 +1441,9 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                     <select
                       value={payMode}
                       onChange={(e) => setPayMode(e.target.value)}
-                      className={`h-11 w-full px-3 rounded-xl border text-xs outline-none cursor-pointer transition-all ${
+                      className={`h-11 w-full px-3 rounded-xl border text-xs outline-none cursor-pointer transition-ui ${
                         isDarkMode 
-                          ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
+                          ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
                           : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
                       }`}
                     >
@@ -1464,9 +1464,9 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                       type="date"
                       value={payDate}
                       onChange={(e) => setPayDate(e.target.value)}
-                      className={`h-11 w-full px-3 rounded-xl border font-mono text-xs outline-none transition-all ${
+                      className={`h-11 w-full px-3 rounded-xl border font-mono text-xs outline-none transition-ui ${
                         isDarkMode 
-                          ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
+                          ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
                           : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
                       }`}
                       required
@@ -1483,9 +1483,9 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                     placeholder="e.g. UTR-HDFC98234723 or CHQ-004521"
                     value={payRefNo}
                     onChange={(e) => setPayRefNo(e.target.value)}
-                    className={`h-11 w-full px-3 rounded-xl border font-mono text-xs outline-none transition-all ${
+                    className={`h-11 w-full px-3 rounded-xl border font-mono text-xs outline-none transition-ui ${
                       isDarkMode 
-                        ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
+                        ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
                         : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
                     }`}
                     required
@@ -1501,9 +1501,9 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                     placeholder="e.g. HDFC Current A/c • Verified with Bank Statement"
                     value={payNotes}
                     onChange={(e) => setPayNotes(e.target.value)}
-                    className={`h-11 w-full px-3 rounded-xl border text-xs outline-none transition-all ${
+                    className={`h-11 w-full px-3 rounded-xl border text-xs outline-none transition-ui ${
                       isDarkMode 
-                        ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
+                        ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
                         : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
                     }`}
                   />
@@ -1535,7 +1535,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                   type="button"
                   onClick={() => paymentModal.close()}
                   disabled={isSubmittingPayment}
-                  className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                  className={`px-4 py-2 rounded-xl border text-xs font-bold transition-ui cursor-pointer ${
                     isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
                   }`}
                 >
@@ -1545,7 +1545,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                   type="submit"
                   form="payment-form"
                   disabled={isSubmittingPayment || payAmount <= 0 || payAmount > balance}
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-500/25 disabled:opacity-50 transition-all active:scale-[0.98]"
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-500/25 disabled:opacity-50 transition-ui active:scale-[0.96]"
                 >
                   <CreditCard className="w-4 h-4" />
                   <span>{isSubmittingPayment ? 'Recording...' : `Settle ₹${payAmount.toLocaleString('en-IN')}`}</span>

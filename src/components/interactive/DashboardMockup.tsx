@@ -119,7 +119,7 @@ export const DashboardMockup: React.FC = () => {
                 setTimeframe(t);
                 analytics.trackEvent('dashboard_timeframe_change', { timeframe: t });
               }}
-              className={`px-3 py-1 text-xs font-semibold rounded-md transition-all uppercase cursor-pointer ${
+              className={`px-3 py-1 text-xs font-semibold rounded-md transition-ui uppercase cursor-pointer ${
                 timeframe === t
                   ? 'bg-teal-500 text-slate-950 shadow-md font-bold'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
@@ -144,7 +144,7 @@ export const DashboardMockup: React.FC = () => {
         {/* Top KPI Metrics Row */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           
-          <div className="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800 hover:border-teal-500/30 transition-all">
+          <div className="bg-slate-950/80 p-3.5 rounded-[22px] border border-slate-800 hover:border-teal-500/30 transition-ui">
             <div className="flex items-center justify-between text-slate-400 text-[11px] font-medium">
               <span>Gross Revenue</span>
               <DollarSign className="w-3.5 h-3.5 text-teal-400" />
@@ -155,7 +155,7 @@ export const DashboardMockup: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800 hover:border-teal-500/30 transition-all">
+          <div className="bg-slate-950/80 p-3.5 rounded-[22px] border border-slate-800 hover:border-teal-500/30 transition-ui">
             <div className="flex items-center justify-between text-slate-400 text-[11px] font-medium">
               <span>Active Orders</span>
               <ShoppingCart className="w-3.5 h-3.5 text-sky-400" />
@@ -166,7 +166,7 @@ export const DashboardMockup: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800 hover:border-teal-500/30 transition-all">
+          <div className="bg-slate-950/80 p-3.5 rounded-[22px] border border-slate-800 hover:border-teal-500/30 transition-ui">
             <div className="flex items-center justify-between text-slate-400 text-[11px] font-medium">
               <span>Plant OEE</span>
               <Factory className="w-3.5 h-3.5 text-emerald-400" />
@@ -177,7 +177,7 @@ export const DashboardMockup: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800 hover:border-teal-500/30 transition-all">
+          <div className="bg-slate-950/80 p-3.5 rounded-[22px] border border-slate-800 hover:border-teal-500/30 transition-ui">
             <div className="flex items-center justify-between text-slate-400 text-[11px] font-medium">
               <span>Stock Accuracy</span>
               <Package className="w-3.5 h-3.5 text-amber-400" />
@@ -188,7 +188,7 @@ export const DashboardMockup: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800 hover:border-teal-500/30 transition-all">
+          <div className="bg-slate-950/80 p-3.5 rounded-[22px] border border-slate-800 hover:border-teal-500/30 transition-ui">
             <div className="flex items-center justify-between text-slate-400 text-[11px] font-medium">
               <span>Net Cash Flow</span>
               <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
@@ -199,7 +199,7 @@ export const DashboardMockup: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-slate-950/80 p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/5 transition-all">
+          <div className="bg-slate-950/80 p-3.5 rounded-[22px] border border-amber-500/30 bg-amber-500/5 transition-ui">
             <div className="flex items-center justify-between text-amber-400 text-[11px] font-medium">
               <span>AI Anomaly Stream</span>
               <Sparkles className="w-3.5 h-3.5 text-amber-400" />
@@ -240,7 +240,7 @@ export const DashboardMockup: React.FC = () => {
                     setSelectedAlert(selectedAlert === alert.id ? null : alert.id);
                     analytics.trackEvent('dashboard_alert_clicked', { alertId: alert.id });
                   }}
-                  className={`p-3.5 rounded-lg border transition-all cursor-pointer ${
+                  className={`p-3.5 rounded-lg border transition-ui cursor-pointer ${
                     selectedAlert === alert.id
                       ? 'bg-slate-900 border-teal-500 shadow-md'
                       : alert.type === 'warning'

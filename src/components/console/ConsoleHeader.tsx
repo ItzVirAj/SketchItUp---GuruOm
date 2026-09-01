@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 import {
   Sun,
   Moon,
@@ -218,7 +218,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
 
   return (
     <header className={`relative z-30 shrink-0 border-b px-3 font-sans transition-colors sm:px-4 lg:px-7 ${isDarkMode
-        ? 'border-white/[0.07] bg-[#12161e]/95 text-slate-100'
+        ? 'border-white/[0.07] bg-[#09090B]/95 text-slate-100'
         : 'border-slate-200/80 bg-white/95 text-slate-900'
       }`}>
       <div className="flex h-[76px] items-center gap-4">
@@ -297,7 +297,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
                 searchInputRef.current?.focus();
               }
             }}
-            className={`group relative flex h-11 w-full max-w-[640px] items-center justify-between rounded-xl border px-3.5 transition-all cursor-pointer ${isDarkMode
+            className={`group relative flex h-11 w-full max-w-[640px] items-center justify-between rounded-xl border px-3.5 transition-ui cursor-pointer ${isDarkMode
                 ? 'border-white/[0.08] bg-white/[0.045] hover:border-white/[0.15] hover:bg-white/[0.07] text-slate-300'
                 : 'border-slate-200 bg-slate-50/80 hover:border-slate-300 hover:bg-slate-100 text-slate-700'
               }`}
@@ -317,7 +317,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
           </button>
 
           {isSearchFocused && searchQuery.trim() !== '' && (
-            <div className={`absolute left-1/2 top-full mt-2 w-full max-w-[640px] -translate-x-1/2 overflow-hidden rounded-2xl border shadow-2xl ${isDarkMode ? 'border-slate-800 bg-slate-900 text-slate-100 shadow-black/40' : 'border-slate-200 bg-white text-slate-900 shadow-slate-300/50'
+            <div className={`absolute left-1/2 top-full mt-2 w-full max-w-[640px] -translate-x-1/2 overflow-hidden rounded-[20px] card-elevated ${isDarkMode ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'
               }`}>
               <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 text-xs font-semibold text-slate-500 dark:border-slate-800">
                 <span>Search results ({totalResultsCount})</span>
@@ -412,7 +412,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
               <ChevronDown className={`h-3.5 w-3.5 text-slate-400 transition-transform ${showScopeDropdown ? 'rotate-180 text-[var(--accent-primary)]' : ''}`} />
             </button>
             {showScopeDropdown && (
-              <div className={`absolute right-0 top-full mt-2 w-40 rounded-xl border p-1 text-xs shadow-xl ${isDarkMode ? 'border-slate-800 bg-slate-900 text-slate-100' : 'border-slate-200 bg-white text-slate-900'
+              <div className={`absolute right-0 top-full mt-2 w-40 rounded-xl card-elevated p-1 text-xs ${isDarkMode ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'
                 }`}>
                 {scopeOptions.map(sc => (
                   <button
@@ -447,7 +447,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
             </button>
 
             {showCustomizeMenu && (
-              <div className={`absolute right-0 top-full mt-2 w-72 rounded-2xl border p-4 shadow-2xl ${isDarkMode ? 'border-slate-800 bg-slate-900/95 text-white shadow-black/40' : 'border-slate-200 bg-white text-slate-900 shadow-slate-300/50'
+              <div className={`absolute right-0 top-full mt-2 w-72 rounded-[28px] card-elevated p-4 ${isDarkMode ? 'bg-slate-900/95 text-white' : 'bg-white text-slate-900'
                 }`}>
                 <AccentColorSelector isDarkMode={isDarkMode} />
                 {onOpenCustomize && (
@@ -473,7 +473,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
             onClick={handleSyncClick}
             disabled={isSyncing}
             title="Refresh and synchronize system data"
-            className={`flex h-10 items-center gap-2 rounded-xl border px-3 text-xs font-bold transition-all active:scale-95 ${isSyncing
+            className={`flex h-10 items-center gap-2 rounded-xl border px-3 text-xs font-bold transition-ui active:scale-[0.96] ${isSyncing
                 ? 'cursor-wait opacity-80'
                 : 'cursor-pointer bg-[var(--accent-soft-light)] text-[var(--accent-text-light)] hover:bg-[var(--accent-primary)] hover:text-white dark:bg-[var(--accent-soft-dark)] dark:text-[var(--accent-text-dark)]'
               } border-[var(--accent-border-light)] dark:border-[var(--accent-border-dark)]`}
@@ -491,7 +491,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
           {normalizeRole(currentRole) === 'ServerAdmin' && (
             <Link
               to="/admin"
-              className="flex h-10 items-center gap-1.5 rounded-xl border border-purple-500/40 bg-purple-500/15 px-3 text-xs font-bold text-purple-300 hover:bg-purple-500/25 transition-all shadow-sm"
+              className="flex h-10 items-center gap-1.5 rounded-xl border border-purple-500/40 bg-purple-500/15 ps-2.5 pe-3 text-xs font-bold text-purple-300 hover:bg-purple-500/25 transition-ui shadow-sm"
               title="Enter ServerAdmin Maker Vault"
             >
               <Terminal className="h-3.5 w-3.5 text-purple-400" />
@@ -528,7 +528,18 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
               className={`flex h-8 w-8 items-center justify-center rounded-lg text-white shadow-sm ${isDarkMode ? 'ml-4 bg-indigo-600' : 'ml-0 bg-[var(--accent-primary)]'
                 }`}
             >
-              {isDarkMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+              <AnimatePresence mode="popLayout" initial={false}>
+                <motion.div
+                  key={isDarkMode ? 'moon' : 'sun'}
+                  initial={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
+                  animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+                  exit={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
+                  transition={{ type: 'spring', duration: 0.3, bounce: 0 }}
+                  className="flex h-8 w-8 items-center justify-center"
+                >
+                  {isDarkMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                </motion.div>
+              </AnimatePresence>
             </motion.div>
           </button>
 
@@ -545,7 +556,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
       </div>
 
       {isMobileSearchOpen && (
-        <div className={`absolute left-0 right-0 top-full z-40 border-b p-3 shadow-xl lg:hidden ${isDarkMode ? 'border-slate-800 bg-[#16171B]' : 'border-slate-200 bg-white'
+        <div className={`absolute left-0 right-0 top-full z-40 border-b p-3 shadow-xl lg:hidden ${isDarkMode ? 'border-slate-800 bg-[#18181B]' : 'border-slate-200 bg-white'
           }`}>
           <div className="relative flex items-center">
             <Search className="absolute left-3 h-4 w-4 text-slate-400" />

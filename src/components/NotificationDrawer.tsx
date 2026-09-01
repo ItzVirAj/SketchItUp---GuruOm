@@ -205,7 +205,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
         data-lenis-prevent="true"
         className={`fixed inset-y-0 right-0 z-[10000] w-full max-w-md h-full shadow-2xl flex flex-col border-l transition-transform duration-200 ease-out animate-in slide-in-from-right ${
           isDarkMode 
-            ? 'bg-[#16171B] border-white/[0.08] text-white' 
+            ? 'bg-[#18181B] border-white/[0.08] text-white' 
             : 'bg-white border-slate-200 text-slate-900'
         }`}
         onClick={(e) => e.stopPropagation()}
@@ -213,7 +213,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
       >
         {/* Header */}
         <div className={`px-5 py-4 flex items-center justify-between border-b shrink-0 ${
-          isDarkMode ? 'border-white/[0.08] bg-[#121316]/70' : 'border-slate-100 bg-slate-50/70'
+          isDarkMode ? 'border-white/[0.08] bg-[#09090B]/70' : 'border-slate-100 bg-slate-50/70'
         }`}>
           <div className="flex items-center space-x-2.5">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] text-white shadow-xs">
@@ -257,7 +257,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
           ref={tabsContainerRef}
           data-lenis-prevent="true"
           className={`px-3 py-2 border-b shrink-0 flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth cursor-grab active:cursor-grabbing ${
-            isDarkMode ? 'border-white/[0.06] bg-[#121316]/40' : 'border-slate-100 bg-slate-50/40'
+            isDarkMode ? 'border-white/[0.06] bg-[#09090B]/40' : 'border-slate-100 bg-slate-50/40'
           }`}
         >
           {SECTIONS_CONFIG.map((sec) => {
@@ -270,7 +270,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                 key={sec.key}
                 type="button"
                 onClick={() => setActiveTab(sec.key)}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-ui cursor-pointer ${
                   isActive
                     ? (isDarkMode 
                         ? 'bg-white/[0.12] text-white shadow-xs ring-1 ring-white/10' 
@@ -297,7 +297,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
         {/* Actions Bar */}
         {notifications.length > 0 && (
           <div className={`px-4 py-2 border-b shrink-0 flex items-center justify-between ${
-            isDarkMode ? 'border-white/[0.06] bg-[#121316]/20' : 'border-slate-100 bg-slate-50/20'
+            isDarkMode ? 'border-white/[0.06] bg-[#09090B]/20' : 'border-slate-100 bg-slate-50/20'
           }`}>
             <div className="flex items-center gap-3">
               {unreadCount > 0 && (
@@ -360,10 +360,10 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                   return (
                     <div 
                       key={notif.id}
-                      className={`p-3.5 rounded-xl border transition-all ${
+                      className={`p-3.5 rounded-xl border transition-ui ${
                         notif.is_read 
                           ? (isDarkMode ? 'bg-white/[0.015] border-white/[0.04]' : 'bg-slate-50/60 border-slate-100')
-                          : (isDarkMode ? 'bg-[#1C1E24] border-white/[0.12] shadow-sm' : 'bg-white border-slate-200 shadow-xs')
+                          : (isDarkMode ? 'bg-[#121215] border-white/[0.12] shadow-sm' : 'bg-white border-slate-200 shadow-xs')
                       }`}
                     >
                       <div className="flex items-start gap-3">

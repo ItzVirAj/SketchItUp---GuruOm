@@ -398,14 +398,14 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
 
       {/* Main Command Modal Card - Matching GuruOm OS Modal Standard */}
       <div
-        className={`relative w-full max-w-3xl rounded-2xl border shadow-2xl overflow-hidden flex flex-col max-h-[85vh] transition-all ${
+        className={`relative w-full max-w-3xl rounded-2xl border shadow-2xl overflow-hidden flex flex-col max-h-[85vh] transition-ui ${
           isDarkMode 
-            ? 'bg-[#16171B] border-[#262832] text-slate-200' 
+            ? 'bg-[#18181B] border-[#2E2E34] text-slate-200' 
             : 'bg-white border-[#d8dde8] text-slate-900'
         }`}
       >
         {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-[#d8dde8] dark:border-[#262832] flex items-center justify-between gap-4 bg-slate-50/40 dark:bg-[#16171B]">
+        <div className="px-6 py-4 border-b border-[#d8dde8] dark:border-[#2E2E34] flex items-center justify-between gap-4 bg-slate-50/40 dark:bg-[#18181B]">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-[#5B75F8]/10 text-[#5B75F8] dark:text-[#7B92FF] border border-[#5B75F8]/20">
               <Search className="w-5 h-5" />
@@ -435,7 +435,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
         </div>
 
         {/* Search Input Bar */}
-        <div className="px-6 py-3 border-b border-[#d8dde8] dark:border-[#262832] bg-white dark:bg-[#121316]">
+        <div className="px-6 py-3 border-b border-[#d8dde8] dark:border-[#2E2E34] bg-white dark:bg-[#09090B]">
           <div className="relative flex items-center">
             <Search className="absolute left-3.5 h-4 w-4 text-slate-400 pointer-events-none" />
             <input
@@ -445,7 +445,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Search PO #, Job Card #, Part Code, Customer Name, or Module..."
-              className="w-full h-11 pl-10 pr-10 rounded-xl border border-slate-200 dark:border-[#262832] bg-slate-50/80 dark:bg-[#16171B] text-sm font-medium text-slate-900 dark:text-white outline-none focus:border-[#5B75F8] focus:ring-2 focus:ring-[#5B75F8]/20 transition-all placeholder:text-slate-400"
+              className="w-full h-11 pl-10 pr-10 rounded-xl border border-slate-200 dark:border-[#2E2E34] bg-slate-50/80 dark:bg-[#18181B] text-sm font-medium text-slate-900 dark:text-white outline-none focus:border-[#5B75F8] focus:ring-2 focus:ring-[#5B75F8]/20 transition-ui placeholder:text-slate-400"
             />
             {query && (
               <button
@@ -463,7 +463,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
         {/* Tab Navigation (Exact GuruOm Tab Language) */}
         <div
           ref={tabsContainerRef}
-          className="px-6 border-b border-[#d8dde8] dark:border-[#262832] flex items-center gap-2 pt-2 bg-slate-50/50 dark:bg-[#121316] overflow-x-auto no-scrollbar scroll-smooth"
+          className="px-6 border-b border-[#d8dde8] dark:border-[#2E2E34] flex items-center gap-2 pt-2 bg-slate-50/50 dark:bg-[#09090B] overflow-x-auto no-scrollbar scroll-smooth"
         >
           {CATEGORIES.map((cat) => {
             const isActive = activeCategory === cat.key;
@@ -473,7 +473,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
                 key={cat.key}
                 type="button"
                 onClick={() => { setActiveCategory(cat.key); inputRef.current?.focus(); }}
-                className={`pb-2.5 px-3 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-all cursor-pointer shrink-0 ${
+                className={`pb-2.5 px-3 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-ui cursor-pointer shrink-0 ${
                   isActive
                     ? 'border-[#5B75F8] text-[#5B75F8] dark:text-[#7B92FF]'
                     : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
@@ -518,10 +518,10 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
                         key={item.id}
                         data-index={item.flatIndex}
                         onClick={item.onSelect}
-                        className={`group relative flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all border ${
+                        className={`group relative flex items-center justify-between p-3 rounded-xl cursor-pointer transition-ui border ${
                           isSelected
                             ? 'bg-[#5B75F8]/10 border-[#5B75F8]/40 dark:bg-[#5B75F8]/15 text-slate-900 dark:text-white shadow-xs'
-                            : 'border-slate-100 dark:border-[#262832]/60 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-800 dark:text-slate-200'
+                            : 'border-slate-100 dark:border-[#2E2E34]/60 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-800 dark:text-slate-200'
                         }`}
                       >
                         {isSelected && (
@@ -568,7 +568,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
                               {item.meta}
                             </span>
                           )}
-                          <div className={`p-1.5 rounded-lg border transition-all ${
+                          <div className={`p-1.5 rounded-lg border transition-ui ${
                             isSelected 
                               ? 'bg-[#5B75F8] border-transparent text-white shadow-xs' 
                               : 'opacity-0 group-hover:opacity-100 border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-500'
@@ -586,7 +586,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
         </div>
 
         {/* Modal Footer Status Bar */}
-        <div className="px-6 py-3 border-t border-[#d8dde8] dark:border-[#262832] bg-slate-50/60 dark:bg-[#121316] flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 shrink-0">
+        <div className="px-6 py-3 border-t border-[#d8dde8] dark:border-[#2E2E34] bg-slate-50/60 dark:bg-[#09090B] flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 shrink-0">
           <div className="flex items-center gap-3 sm:gap-4">
             <span className="flex items-center gap-1.5">
               <kbd className="px-1.5 py-0.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-[10px] font-mono font-bold text-slate-700 dark:text-slate-300">↑↓</kbd>

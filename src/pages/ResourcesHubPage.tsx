@@ -38,7 +38,7 @@ export const ResourcesHubPage: React.FC = () => {
           
           <Link
             to="/resources/faqs"
-            className="p-8 rounded-2xl bg-slate-900 border border-slate-800 hover:border-teal-500/50 transition-all space-y-4 group shadow-xl"
+            className="p-8 rounded-2xl bg-slate-900 border border-slate-800 hover:border-teal-500/50 transition-ui space-y-4 group shadow-xl"
           >
             <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-teal-400 inline-block">
               <HelpCircle className="w-6 h-6" />
@@ -57,7 +57,7 @@ export const ResourcesHubPage: React.FC = () => {
 
           <Link
             to="/resources/blog"
-            className="p-8 rounded-2xl bg-slate-900 border border-slate-800 hover:border-teal-500/50 transition-all space-y-4 group shadow-xl"
+            className="p-8 rounded-2xl bg-slate-900 border border-slate-800 hover:border-teal-500/50 transition-ui space-y-4 group shadow-xl"
           >
             <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-sky-400 inline-block">
               <FileText className="w-6 h-6" />
@@ -76,7 +76,7 @@ export const ResourcesHubPage: React.FC = () => {
 
           <Link
             to="/resources/case-studies"
-            className="p-8 rounded-2xl bg-slate-900 border border-slate-800 hover:border-teal-500/50 transition-all space-y-4 group shadow-xl"
+            className="p-8 rounded-2xl bg-slate-900 border border-slate-800 hover:border-teal-500/50 transition-ui space-y-4 group shadow-xl"
           >
             <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-amber-400 inline-block">
               <Sparkles className="w-6 h-6" />

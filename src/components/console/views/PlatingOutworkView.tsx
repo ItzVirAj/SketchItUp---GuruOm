@@ -229,7 +229,7 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
       
       {/* Overdue Subcontracting Alert Banner */}
       {overdueCount > 0 && (
-        <div className={`p-3.5 sm:p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
+        <div className={`p-3.5 sm:p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-ui ${
           isDarkMode 
             ? 'bg-rose-500/10 border-rose-500/30 text-rose-400' 
             : 'bg-rose-50 border-rose-200 text-rose-900 shadow-xs'
@@ -250,7 +250,7 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
           <button
             type="button"
             onClick={() => setStatusTab('OVERDUE')}
-            className={`self-start sm:self-auto px-3 py-1.5 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer ${
+            className={`self-start sm:self-auto px-3 py-1.5 rounded-xl text-xs font-mono font-bold border transition-ui cursor-pointer ${
               isDarkMode 
                 ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-500/30' 
                 : 'bg-rose-200/80 text-rose-900 border-rose-300 hover:bg-rose-200'
@@ -281,7 +281,7 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
           <button
             type="button"
             onClick={() => gatePassModal.open()}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold shadow-md active:scale-95 transition-all"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold shadow-md active:scale-[0.96] transition-ui"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Issue Pass</span>
@@ -324,7 +324,7 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
       {/* ── DESKTOP HEADER & INTEGRATED KPI ROW (≥ md) ──                          */}
       {/* ========================================================================= */}
       <div className="hidden md:block space-y-4">
-        <section className={`overflow-hidden rounded-[24px] border ${isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'}`}>
+        <section className={`overflow-hidden rounded-[24px] border ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'}`}>
           <div className="flex items-center justify-between gap-6 px-6 py-5">
             <div className="min-w-0">
               <div className="mb-1.5 flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">
@@ -349,7 +349,7 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
             <button
               type="button"
               onClick={() => gatePassModal.open()}
-              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-5 text-xs font-bold text-white shadow-lg shadow-[var(--accent-shadow)] transition hover:brightness-110 active:scale-95"
+              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-5 text-xs font-bold text-white shadow-lg shadow-[var(--accent-shadow)] transition hover:brightness-110 active:scale-[0.96]"
             >
               <Plus className="h-4 w-4" />
               <span>Issue Gate-Out Pass</span>
@@ -382,7 +382,7 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
         </section>
 
         {/* Desktop Filter & Search Toolbar */}
-        <div className={`rounded-2xl border p-3 ${isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
+        <div className={`rounded-2xl border p-3 ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
           <div className="flex items-center gap-3 flex-wrap">
             <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${isDarkMode ? 'bg-white/[0.05] text-slate-400' : 'bg-slate-100 text-slate-500'}`} title="Modules">
               <Wrench className="h-4 w-4" />
@@ -464,7 +464,7 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
       <div className="block md:hidden space-y-3">
         {filtered.length === 0 ? (
           <div className={`p-8 text-center rounded-2xl border font-mono text-xs ${
-            isDarkMode ? 'bg-[#171b24] border-white/[0.08] text-slate-400' : 'bg-white border-slate-200 text-slate-500'
+            isDarkMode ? 'bg-[#121215] border-white/[0.08] text-slate-400' : 'bg-white border-slate-200 text-slate-500'
           }`}>
             No outwork gate passes found matching your filters.
           </div>
@@ -475,12 +475,12 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
             return (
               <div
                 key={meta.passNo}
-                className={`p-4 rounded-2xl border transition-all space-y-3.5 shadow-sm ${
+                className={`p-4 rounded-2xl border transition-ui space-y-3.5 shadow-sm ${
                   meta.isOverdue
-                    ? isDarkMode ? 'bg-[#171b24] border-rose-500/40' : 'bg-rose-50/40 border-rose-300'
+                    ? isDarkMode ? 'bg-[#121215] border-rose-500/40' : 'bg-rose-50/40 border-rose-300'
                     : meta.isCompleted
-                    ? isDarkMode ? 'bg-[#171b24] border-emerald-500/30' : 'bg-emerald-50/40 border-emerald-200'
-                    : isDarkMode ? 'bg-[#171b24] border-white/[0.08]' : 'bg-white border-slate-200'
+                    ? isDarkMode ? 'bg-[#121215] border-emerald-500/30' : 'bg-emerald-50/40 border-emerald-200'
+                    : isDarkMode ? 'bg-[#121215] border-white/[0.08]' : 'bg-white border-slate-200'
                 }`}
               >
                 {/* Header: Pass No + Status + Job Card */}
@@ -545,7 +545,7 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
                   </div>
                   <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
                     <div 
-                      className={`h-full rounded-full transition-all ${
+                      className={`h-full rounded-full transition-ui ${
                         meta.isCompleted ? 'bg-emerald-500' : meta.isOverdue ? 'bg-rose-500' : 'bg-[var(--accent-primary)]'
                       }`}
                       style={{ width: `${meta.pctReceived}%` }}
@@ -572,7 +572,7 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
                   <button
                     type="button"
                     onClick={() => handleOpenReceive(s, idx)}
-                    className={`w-full py-2.5 rounded-xl font-mono text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    className={`w-full py-2.5 rounded-xl font-mono text-xs font-bold flex items-center justify-center gap-1.5 transition-ui cursor-pointer ${
                       isDarkMode 
                         ? 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 border border-emerald-500/40' 
                         : 'bg-emerald-600 text-white shadow-xs hover:bg-emerald-700'
@@ -591,8 +591,8 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
       {/* ========================================================================= */}
       {/* DESKTOP OUTWORK TABLE (Viewport >= md) */}
       {/* ========================================================================= */}
-      <div className={`hidden md:block overflow-hidden rounded-[22px] border transition-all ${
-        isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
+      <div className={`hidden md:block overflow-hidden rounded-[22px] border transition-ui ${
+        isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
       }`}>
         <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
           <div>
@@ -694,7 +694,7 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
                         <button
                           type="button"
                           onClick={() => handleOpenReceive(s, idx)}
-                          className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                          className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-ui cursor-pointer inline-flex items-center gap-1.5 ${
                             isDarkMode 
                               ? 'bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 border border-emerald-500/30' 
                               : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 shadow-xs'
@@ -723,9 +723,9 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
       {/* ========================================================================= */}
       {gatePassModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md font-sans overflow-y-auto">
-          <div className={`relative w-full max-w-lg h-[100dvh] sm:h-auto sm:max-h-[92vh] flex flex-col rounded-none sm:rounded-[24px] border shadow-2xl transition-all overflow-hidden ${
+          <div className={`relative w-full max-w-lg h-[100dvh] sm:h-auto sm:max-h-[92vh] flex flex-col rounded-none sm:rounded-[24px] border shadow-2xl transition-ui overflow-hidden ${
             isDarkMode 
-              ? 'border-white/[0.08] bg-[#171b24] text-white' 
+              ? 'border-white/[0.08] bg-[#121215] text-white' 
               : 'border-slate-200 bg-white text-slate-900 shadow-2xl'
           }`}>
             <div className={`flex items-center justify-between p-4 sm:p-6 border-b shrink-0 ${isDarkMode ? 'border-white/[0.07] bg-black/20' : 'border-slate-200 bg-slate-50/80'}`}>
@@ -745,7 +745,7 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
               <button 
                 type="button" 
                 onClick={() => gatePassModal.close()} 
-                className={`p-2 rounded-xl border transition-all cursor-pointer ${
+                className={`p-2 rounded-xl border transition-ui cursor-pointer ${
                   isDarkMode 
                     ? 'border-white/[0.08] bg-black/20 text-slate-400 hover:text-white hover:bg-white/[0.05]' 
                     : 'border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
@@ -765,7 +765,7 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
                     value={jobNo}
                     onChange={(e) => setJobNo(e.target.value)}
                     placeholder="e.g. JC/0001/26-27"
-                    className={`w-full rounded-xl border px-3.5 py-2.5 text-xs font-mono outline-none transition-all ${
+                    className={`w-full rounded-xl border px-3.5 py-2.5 text-xs font-mono outline-none transition-ui ${
                       isDarkMode 
                         ? 'border-white/[0.08] bg-black/20 text-white focus:border-[var(--accent-border-dark)]' 
                         : 'border-slate-200 bg-slate-50 text-slate-900 focus:border-[var(--accent-primary)]'
@@ -777,9 +777,9 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
                   <select
                     value={process}
                     onChange={(e) => setProcess(e.target.value)}
-                    className={`w-full rounded-xl border px-3.5 py-2.5 text-xs font-mono outline-none transition-all ${
+                    className={`w-full rounded-xl border px-3.5 py-2.5 text-xs font-mono outline-none transition-ui ${
                       isDarkMode 
-                        ? 'border-white/[0.08] bg-[#171b24] text-white focus:border-[var(--accent-border-dark)]' 
+                        ? 'border-white/[0.08] bg-[#121215] text-white focus:border-[var(--accent-border-dark)]' 
                         : 'border-slate-200 bg-slate-50 text-slate-900 focus:border-[var(--accent-primary)]'
                     }`}
                   >
@@ -802,7 +802,7 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
                   value={vendorName}
                   onChange={(e) => setVendorName(e.target.value)}
                   placeholder="e.g. Apex Heat Treaters Ltd"
-                  className={`w-full rounded-xl border px-4 py-2.5 text-xs outline-none transition-all ${
+                  className={`w-full rounded-xl border px-4 py-2.5 text-xs outline-none transition-ui ${
                     isDarkMode 
                       ? 'border-white/[0.08] bg-black/20 text-white focus:border-[var(--accent-border-dark)]' 
                       : 'border-slate-200 bg-slate-50 text-slate-900 focus:border-[var(--accent-primary)]'
@@ -819,7 +819,7 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
                     min="1"
                     value={sentQty}
                     onChange={(e) => setSentQty(Number(e.target.value))}
-                    className={`w-full rounded-xl border px-4 py-2.5 text-xs font-mono font-bold outline-none transition-all ${
+                    className={`w-full rounded-xl border px-4 py-2.5 text-xs font-mono font-bold outline-none transition-ui ${
                       isDarkMode 
                         ? 'border-white/[0.08] bg-black/20 text-white focus:border-[var(--accent-border-dark)]' 
                         : 'border-slate-200 bg-slate-50 text-slate-900 focus:border-[var(--accent-primary)]'
@@ -833,7 +833,7 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
                     required
                     value={expectedDate}
                     onChange={(e) => setExpectedDate(e.target.value)}
-                    className={`w-full rounded-xl border px-3.5 py-2.5 text-xs font-mono outline-none transition-all ${
+                    className={`w-full rounded-xl border px-3.5 py-2.5 text-xs font-mono outline-none transition-ui ${
                       isDarkMode ? 'border-white/[0.08] bg-black/20 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'
                     }`}
                   />
@@ -848,7 +848,7 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
                     value={transporter}
                     onChange={(e) => setTransporter(e.target.value)}
                     placeholder="e.g. Shree Logistics"
-                    className={`w-full rounded-xl border px-3.5 py-2.5 text-xs outline-none transition-all ${
+                    className={`w-full rounded-xl border px-3.5 py-2.5 text-xs outline-none transition-ui ${
                       isDarkMode ? 'border-white/[0.08] bg-black/20 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'
                     }`}
                   />
@@ -860,7 +860,7 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
                     value={vehicleNo}
                     onChange={(e) => setVehicleNo(e.target.value)}
                     placeholder="e.g. MH-12-QW-4011"
-                    className={`w-full rounded-xl border px-3.5 py-2.5 text-xs font-mono outline-none transition-all ${
+                    className={`w-full rounded-xl border px-3.5 py-2.5 text-xs font-mono outline-none transition-ui ${
                       isDarkMode ? 'border-white/[0.08] bg-black/20 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'
                     }`}
                   />
@@ -871,7 +871,7 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
                 <button 
                   type="button" 
                   onClick={() => gatePassModal.close()} 
-                  className={`px-5 py-2.5 rounded-xl border text-xs font-mono font-bold cursor-pointer transition-all ${
+                  className={`px-5 py-2.5 rounded-xl border text-xs font-mono font-bold cursor-pointer transition-ui ${
                     isDarkMode 
                       ? 'border-white/[0.08] bg-black/20 text-slate-300 hover:bg-white/[0.05]' 
                       : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
@@ -881,7 +881,7 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
                 </button>
                 <button 
                   type="submit" 
-                  className="px-6 py-2.5 rounded-xl bg-[var(--accent-primary)] hover:brightness-110 text-white font-bold text-xs font-mono cursor-pointer shadow-lg shadow-[var(--accent-shadow)] transition-all active:scale-[0.98]"
+                  className="px-6 py-2.5 rounded-xl bg-[var(--accent-primary)] hover:brightness-110 text-white font-bold text-xs font-mono cursor-pointer shadow-lg shadow-[var(--accent-shadow)] transition-ui active:scale-[0.96]"
                 >
                   Issue Gate-Out Pass
                 </button>
@@ -896,9 +896,9 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
       {/* ========================================================================= */}
       {receiveModalItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md font-sans overflow-y-auto">
-          <div className={`relative w-full max-w-lg h-[100dvh] sm:h-auto sm:max-h-[92vh] flex flex-col rounded-none sm:rounded-[24px] border shadow-2xl transition-all overflow-hidden ${
+          <div className={`relative w-full max-w-lg h-[100dvh] sm:h-auto sm:max-h-[92vh] flex flex-col rounded-none sm:rounded-[24px] border shadow-2xl transition-ui overflow-hidden ${
             isDarkMode 
-              ? 'border-white/[0.08] bg-[#171b24] text-white' 
+              ? 'border-white/[0.08] bg-[#121215] text-white' 
               : 'border-slate-200 bg-white text-slate-900 shadow-2xl'
           }`}>
             <div className={`flex items-center justify-between p-4 sm:p-6 border-b shrink-0 ${isDarkMode ? 'border-white/[0.07] bg-black/20' : 'border-slate-200 bg-slate-50/80'}`}>
@@ -918,7 +918,7 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
               <button 
                 type="button" 
                 onClick={() => setReceiveModalItem(null)} 
-                className={`p-2 rounded-xl border transition-all cursor-pointer ${
+                className={`p-2 rounded-xl border transition-ui cursor-pointer ${
                   isDarkMode 
                     ? 'border-white/[0.08] bg-black/20 text-slate-400 hover:text-white hover:bg-white/[0.05]' 
                     : 'border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
@@ -967,7 +967,7 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
                     min="1"
                     value={receivedQtyInput}
                     onChange={(e) => setReceivedQtyInput(Number(e.target.value))}
-                    className={`w-full rounded-xl border px-4 py-2.5 text-xs font-mono font-bold outline-none transition-all ${
+                    className={`w-full rounded-xl border px-4 py-2.5 text-xs font-mono font-bold outline-none transition-ui ${
                       isDarkMode 
                         ? 'border-white/[0.08] bg-black/20 text-emerald-400 focus:border-emerald-500' 
                         : 'border-slate-200 bg-slate-50 text-slate-900 focus:border-emerald-500'
@@ -983,7 +983,7 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
                     min="0"
                     value={rejectedQtyInput}
                     onChange={(e) => setRejectedQtyInput(Number(e.target.value))}
-                    className={`w-full rounded-xl border px-4 py-2.5 text-xs font-mono font-bold outline-none transition-all ${
+                    className={`w-full rounded-xl border px-4 py-2.5 text-xs font-mono font-bold outline-none transition-ui ${
                       isDarkMode 
                         ? 'border-white/[0.08] bg-black/20 text-rose-400 focus:border-rose-500' 
                         : 'border-slate-200 bg-slate-50 text-slate-900 focus:border-rose-500'
@@ -1000,7 +1000,7 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setQcStatusInput('INSPECTED_ACCEPTED')}
-                    className={`py-2.5 px-3 rounded-xl border text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    className={`py-2.5 px-3 rounded-xl border text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition-ui cursor-pointer ${
                       qcStatusInput === 'INSPECTED_ACCEPTED'
                         ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50 shadow-xs'
                         : isDarkMode ? 'border-white/[0.08] bg-black/20 text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-600'
@@ -1012,7 +1012,7 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setQcStatusInput('INSPECTED_REJECTED')}
-                    className={`py-2.5 px-3 rounded-xl border text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    className={`py-2.5 px-3 rounded-xl border text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition-ui cursor-pointer ${
                       qcStatusInput === 'INSPECTED_REJECTED'
                         ? 'bg-rose-500/20 text-rose-400 border-rose-500/50 shadow-xs'
                         : isDarkMode ? 'border-white/[0.08] bg-black/20 text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-600'
@@ -1033,7 +1033,7 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
                   value={inspectionNotesInput}
                   onChange={(e) => setInspectionNotesInput(e.target.value)}
                   placeholder="e.g. Inward plating thickness verified as per drawing spec (12-15 microns). No visual pitting or burn marks."
-                  className={`w-full rounded-xl border px-3.5 py-2.5 text-xs outline-none transition-all ${
+                  className={`w-full rounded-xl border px-3.5 py-2.5 text-xs outline-none transition-ui ${
                     isDarkMode 
                       ? 'border-white/[0.08] bg-black/20 text-white focus:border-[var(--accent-border-dark)]' 
                       : 'border-slate-200 bg-slate-50 text-slate-900 focus:border-[var(--accent-primary)]'
@@ -1045,7 +1045,7 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
                 <button 
                   type="button" 
                   onClick={() => setReceiveModalItem(null)} 
-                  className={`px-5 py-2.5 rounded-xl border text-xs font-mono font-bold cursor-pointer transition-all ${
+                  className={`px-5 py-2.5 rounded-xl border text-xs font-mono font-bold cursor-pointer transition-ui ${
                     isDarkMode 
                       ? 'border-white/[0.08] bg-black/20 text-slate-300 hover:bg-white/[0.05]' 
                       : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
@@ -1056,7 +1056,7 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
                 <button 
                   type="submit" 
                   disabled={isSubmittingReceive}
-                  className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs font-mono cursor-pointer shadow-lg shadow-emerald-900/30 transition-all active:scale-[0.98] disabled:opacity-50"
+                  className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs font-mono cursor-pointer shadow-lg shadow-emerald-900/30 transition-ui active:scale-[0.96] disabled:opacity-50"
                 >
                   {isSubmittingReceive ? 'Receiving...' : 'Record Inward Gate-In'}
                 </button>

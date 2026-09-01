@@ -13,7 +13,7 @@ export const ModuleCard: React.FC<ModuleCardProps> = ({ module }) => {
   return (
     <motion.div
       whileHover={{ y: -4 }}
-      className="bg-slate-900 border border-slate-800 hover:border-teal-500/50 rounded-2xl p-6 transition-all shadow-lg hover:shadow-teal-500/10 flex flex-col justify-between group font-sans"
+      className="bg-slate-900 border border-slate-800 hover:border-teal-500/50 rounded-2xl p-6 transition-ui shadow-lg hover:shadow-teal-500/10 flex flex-col justify-between group font-sans"
     >
       <div className="space-y-4">
         <div className="flex items-center justify-between">

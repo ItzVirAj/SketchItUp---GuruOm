@@ -53,7 +53,7 @@ export const BeforeAfter: React.FC = () => {
         <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
           <button
             onClick={() => setViewMode('sideBySide')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded transition-all ${
+            className={`px-3 py-1.5 text-xs font-semibold rounded transition-ui ${
               viewMode === 'sideBySide' ? 'bg-teal-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -61,7 +61,7 @@ export const BeforeAfter: React.FC = () => {
           </button>
           <button
             onClick={() => setViewMode('before')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded transition-all ${
+            className={`px-3 py-1.5 text-xs font-semibold rounded transition-ui ${
               viewMode === 'before' ? 'bg-rose-500 text-white font-bold' : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -69,7 +69,7 @@ export const BeforeAfter: React.FC = () => {
           </button>
           <button
             onClick={() => setViewMode('after')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded transition-all ${
+            className={`px-3 py-1.5 text-xs font-semibold rounded transition-ui ${
               viewMode === 'after' ? 'bg-emerald-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
             }`}
           >

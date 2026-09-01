@@ -70,7 +70,7 @@ export const ModulesCatalogPage: React.FC = () => {
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
-                  className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+                  className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-ui cursor-pointer whitespace-nowrap ${
                     selectedCategory === cat
                       ? 'bg-teal-500 text-slate-950 font-bold shadow-md'
                       : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'

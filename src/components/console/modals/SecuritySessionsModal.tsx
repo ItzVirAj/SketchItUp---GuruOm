@@ -222,12 +222,12 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs font-sans animate-in fade-in duration-200">
       <div 
-        className={`w-full max-w-3xl rounded-2xl border shadow-2xl overflow-hidden flex flex-col max-h-[90vh] transition-all ${
-          isDarkMode ? 'bg-[#16171B] border-[#262832] text-slate-200' : 'bg-white border-[#d8dde8] text-slate-900'
+        className={`w-full max-w-3xl rounded-2xl border shadow-2xl overflow-hidden flex flex-col max-h-[90vh] transition-ui ${
+          isDarkMode ? 'bg-[#18181B] border-[#2E2E34] text-slate-200' : 'bg-white border-[#d8dde8] text-slate-900'
         }`}
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-[#d8dde8] dark:border-[#262832] flex items-center justify-between gap-4">
+        <div className="px-6 py-4 border-b border-[#d8dde8] dark:border-[#2E2E34] flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-[#5B75F8]/10 text-[#5B75F8] dark:text-[#7B92FF] border border-[#5B75F8]/20">
               <ShieldCheck className="w-5 h-5" />
@@ -264,11 +264,11 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
         </div>
 
         {/* Tab Navigation */}
-        <div className="px-6 border-b border-[#d8dde8] dark:border-[#262832] flex items-center gap-2 pt-2 bg-slate-50/50 dark:bg-[#121316]">
+        <div className="px-6 border-b border-[#d8dde8] dark:border-[#2E2E34] flex items-center gap-2 pt-2 bg-slate-50/50 dark:bg-[#09090B]">
           <button
             type="button"
             onClick={() => { setActiveTab('SESSIONS'); setActionError(null); setActionSuccess(null); }}
-            className={`pb-2.5 px-3 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`pb-2.5 px-3 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-ui cursor-pointer ${
               activeTab === 'SESSIONS'
                 ? 'border-[#5B75F8] text-[#5B75F8] dark:text-[#7B92FF]'
                 : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
@@ -284,7 +284,7 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
           <button
             type="button"
             onClick={() => { setActiveTab('HISTORY'); setActionError(null); setActionSuccess(null); }}
-            className={`pb-2.5 px-3 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`pb-2.5 px-3 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-ui cursor-pointer ${
               activeTab === 'HISTORY'
                 ? 'border-[#5B75F8] text-[#5B75F8] dark:text-[#7B92FF]'
                 : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
@@ -300,7 +300,7 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
           <button
             type="button"
             onClick={() => { setActiveTab('TIMEOUTS'); setActionError(null); setActionSuccess(null); }}
-            className={`pb-2.5 px-3 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`pb-2.5 px-3 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-ui cursor-pointer ${
               activeTab === 'TIMEOUTS'
                 ? 'border-[#5B75F8] text-[#5B75F8] dark:text-[#7B92FF]'
                 : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
@@ -316,7 +316,7 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
           <button
             type="button"
             onClick={() => { setActiveTab('PASSWORD'); setActionError(null); setActionSuccess(null); }}
-            className={`pb-2.5 px-3 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`pb-2.5 px-3 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-ui cursor-pointer ${
               activeTab === 'PASSWORD'
                 ? 'border-[#5B75F8] text-[#5B75F8] dark:text-[#7B92FF]'
                 : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
@@ -362,7 +362,7 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowRevokeOthersModal(true)}
-                    className="px-3 py-1.5 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                    className="px-3 py-1.5 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 transition-ui cursor-pointer flex items-center gap-1.5 shadow-2xs"
                   >
                     <LogOut className="w-3.5 h-3.5" />
                     Revoke All Other Sessions ({otherSessionsCount})
@@ -384,10 +384,10 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
                   {sessions.map((session) => (
                     <div
                       key={session.id}
-                      className={`p-4 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+                      className={`p-4 rounded-xl border transition-ui flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
                         session.isCurrent 
                           ? (isDarkMode ? 'bg-[#5B75F8]/5 border-[#5B75F8]/30' : 'bg-indigo-50/50 border-indigo-200')
-                          : (isDarkMode ? 'bg-[#1C1E24]/60 border-[#262832] hover:border-slate-700' : 'bg-slate-50/60 border-slate-200 hover:border-slate-300')
+                          : (isDarkMode ? 'bg-[#121215]/60 border-[#2E2E34] hover:border-slate-700' : 'bg-slate-50/60 border-slate-200 hover:border-slate-300')
                       }`}
                     >
                       <div className="flex items-start gap-3.5 min-w-0">
@@ -429,7 +429,7 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
                           <button
                             type="button"
                             onClick={() => setSessionToRevoke(session)}
-                            className="px-3 py-1.5 rounded-xl border border-rose-500/30 text-rose-500 dark:text-rose-400 hover:bg-rose-500/10 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                            className="px-3 py-1.5 rounded-xl border border-rose-500/30 text-rose-500 dark:text-rose-400 hover:bg-rose-500/10 text-xs font-bold transition-ui cursor-pointer flex items-center gap-1.5 shadow-2xs"
                           >
                             <LogOut className="w-3.5 h-3.5" />
                             Revoke
@@ -470,7 +470,7 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
                     <div
                       key={ev.id}
                       className={`p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                        isDarkMode ? 'bg-[#1C1E24]/60 border-[#262832]' : 'bg-slate-50/60 border-slate-200'
+                        isDarkMode ? 'bg-[#121215]/60 border-[#2E2E34]' : 'bg-slate-50/60 border-slate-200'
                       }`}
                     >
                       <div className="flex items-start gap-3 min-w-0">
@@ -536,7 +536,7 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
 
               {/* Setting 1: Inactivity Idle Logout */}
               <div className={`p-4 rounded-2xl border space-y-3 ${
-                isDarkMode ? 'bg-[#1C1E24]/60 border-[#262832]' : 'bg-slate-50 border-slate-200'
+                isDarkMode ? 'bg-[#121215]/60 border-[#2E2E34]' : 'bg-slate-50 border-slate-200'
               }`}>
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -564,10 +564,10 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
                       key={opt.value}
                       type="button"
                       onClick={() => setTempIdleTimeout(opt.value)}
-                      className={`p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer text-center ${
+                      className={`p-2.5 rounded-xl border text-xs font-bold transition-ui cursor-pointer text-center ${
                         tempIdleTimeout === opt.value
                           ? 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-md shadow-[#5B75F8]/25 font-black'
-                          : (isDarkMode ? 'bg-[#121316] border-slate-800 text-slate-300 hover:border-slate-700' : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300')
+                          : (isDarkMode ? 'bg-[#09090B] border-slate-800 text-slate-300 hover:border-slate-700' : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300')
                       }`}
                     >
                       {opt.label}
@@ -578,7 +578,7 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
 
               {/* Setting 2: Maximum Absolute Session Ceiling */}
               <div className={`p-4 rounded-2xl border space-y-3 ${
-                isDarkMode ? 'bg-[#1C1E24]/60 border-[#262832]' : 'bg-slate-50 border-slate-200'
+                isDarkMode ? 'bg-[#121215]/60 border-[#2E2E34]' : 'bg-slate-50 border-slate-200'
               }`}>
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -606,10 +606,10 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
                       key={opt.value}
                       type="button"
                       onClick={() => setTempMaxSession(opt.value)}
-                      className={`p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer text-center ${
+                      className={`p-2.5 rounded-xl border text-xs font-bold transition-ui cursor-pointer text-center ${
                         tempMaxSession === opt.value
                           ? 'bg-amber-600 text-white border-amber-600 shadow-md shadow-amber-600/25 font-black'
-                          : (isDarkMode ? 'bg-[#121316] border-slate-800 text-slate-300 hover:border-slate-700' : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300')
+                          : (isDarkMode ? 'bg-[#09090B] border-slate-800 text-slate-300 hover:border-slate-700' : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300')
                       }`}
                     >
                       {opt.label}
@@ -620,7 +620,7 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
 
               {/* Setting 3: Inactivity Warning Toggle */}
               <div className={`p-4 rounded-2xl border flex items-center justify-between gap-4 ${
-                isDarkMode ? 'bg-[#1C1E24]/60 border-[#262832]' : 'bg-slate-50 border-slate-200'
+                isDarkMode ? 'bg-[#121215]/60 border-[#2E2E34]' : 'bg-slate-50 border-slate-200'
               }`}>
                 <div>
                   <h4 className="text-xs font-bold text-slate-900 dark:text-white">
@@ -638,7 +638,7 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
                     onChange={(e) => setTempWarningEnabled(e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5B75F8]"></div>
+                  <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-ui peer-checked:bg-[#5B75F8]"></div>
                 </label>
               </div>
 
@@ -668,7 +668,7 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
                 <button
                   type="button"
                   onClick={handleSaveTimeouts}
-                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold shadow-lg shadow-[#5B75F8]/25 transition-all cursor-pointer flex items-center gap-2"
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold shadow-lg shadow-[#5B75F8]/25 transition-ui cursor-pointer flex items-center gap-2"
                 >
                   <CheckCircle2 className="w-4 h-4" />
                   Save & Apply Session Policy
@@ -737,7 +737,7 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
                 <button
                   type="submit"
                   disabled={isChangingPassword}
-                  className="px-4 py-2 rounded-xl bg-[#5B75F8] hover:bg-[#4A64E8] text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shadow-xs"
+                  className="px-4 py-2 rounded-xl bg-[#5B75F8] hover:bg-[#4A64E8] text-white text-xs font-bold transition-ui cursor-pointer flex items-center gap-2 shadow-xs"
                 >
                   {isChangingPassword ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5" />}
                   Update Password
@@ -749,7 +749,7 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3.5 border-t border-[#d8dde8] dark:border-[#262832] flex items-center justify-between text-xs text-slate-400 bg-slate-50/50 dark:bg-[#121316]">
+        <div className="px-6 py-3.5 border-t border-[#d8dde8] dark:border-[#2E2E34] flex items-center justify-between text-xs text-slate-400 bg-slate-50/50 dark:bg-[#09090B]">
           <div className="flex items-center gap-1.5">
             <Info className="w-3.5 h-3.5 text-slate-400" />
             <span>Encrypted with Argon2id & rotating HMAC token families.</span>
@@ -769,7 +769,7 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
       {/* Confirmation Modal: Revoke Single Session */}
       {sessionToRevoke && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in">
-          <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-[#1C1E24] border border-[#d8dde8] dark:border-slate-800 p-5 shadow-2xl space-y-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-[#121215] border border-[#d8dde8] dark:border-slate-800 p-5 shadow-2xl space-y-4">
             <div className="flex items-center gap-3 text-rose-500">
               <div className="p-2 rounded-xl bg-rose-500/10 border border-rose-500/20">
                 <AlertTriangle className="w-5 h-5" />
@@ -810,7 +810,7 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
       {/* Confirmation Modal: Revoke All Other Sessions */}
       {showRevokeOthersModal && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in">
-          <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-[#1C1E24] border border-[#d8dde8] dark:border-slate-800 p-5 shadow-2xl space-y-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-[#121215] border border-[#d8dde8] dark:border-slate-800 p-5 shadow-2xl space-y-4">
             <div className="flex items-center gap-3 text-rose-500">
               <div className="p-2 rounded-xl bg-rose-500/10 border border-rose-500/20">
                 <LogOut className="w-5 h-5" />

@@ -106,7 +106,7 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
     <div className="space-y-4 sm:space-y-6 font-sans">
       
       {/* Top Banner Header */}
-      <div className={`p-4 sm:p-6 md:p-8 rounded-3xl border transition-all shadow-xl ${
+      <div className={`p-4 sm:p-6 md:p-8 rounded-3xl border transition-ui shadow-xl ${
         isDarkMode 
           ? 'bg-slate-900/85 border-slate-800/80 text-white backdrop-blur-xl' 
           : 'bg-white border-slate-200 shadow-sm text-slate-900'
@@ -147,7 +147,7 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
       </div>
 
       {/* Filter Bar */}
-      <div className={`p-3 sm:p-4 rounded-3xl border transition-all flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0 scrollbar-none shadow-sm ${
+      <div className={`p-3 sm:p-4 rounded-3xl border transition-ui flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0 scrollbar-none shadow-sm ${
         isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-xs'
       }`}>
         {[
@@ -163,7 +163,7 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
             <button
               key={tab.id}
               onClick={() => setFilterType(tab.id)}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-2xl text-xs font-mono font-bold transition-all cursor-pointer whitespace-nowrap border ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-2xl text-xs font-mono font-bold transition-ui cursor-pointer whitespace-nowrap border ${
                 isActive
                   ? isDarkMode 
                     ? 'bg-teal-500/20 text-teal-300 border-teal-500/40 shadow-xs' 
@@ -213,7 +213,7 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
             pendingOrders.map((ord) => (
               <div
                 key={ord.id}
-                className={`p-4 sm:p-6 rounded-3xl border transition-all space-y-3.5 shadow-md ${
+                className={`p-4 sm:p-6 rounded-3xl border transition-ui space-y-3.5 shadow-md ${
                   isDarkMode 
                     ? 'bg-slate-900/85 border-slate-800/80 text-white backdrop-blur-xl hover:border-blue-500/40' 
                     : 'bg-white border-slate-200 text-slate-900 shadow-sm hover:border-blue-300'
@@ -278,7 +278,7 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
                     <button
                       type="button"
                       onClick={() => onViewOrder(ord.id)}
-                      className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-2xl border text-xs font-mono font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
+                      className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-2xl border text-xs font-mono font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-ui ${
                         isDarkMode 
                           ? 'border-slate-700 bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white' 
                           : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -293,7 +293,7 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
                   <button
                     type="button"
                     onClick={() => onConfirmOrder?.(ord.id)}
-                    className="flex-1 sm:flex-initial px-5 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-bold text-xs font-mono flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-500/25 transition-all active:scale-[0.98]"
+                    className="flex-1 sm:flex-initial px-5 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-bold text-xs font-mono flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-500/25 transition-ui active:scale-[0.96]"
                   >
                     <Check className="w-4 h-4" />
                     <span>Confirm Order</span>
@@ -333,7 +333,7 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
             filteredApprovals.map((item) => (
               <div
                 key={item.id}
-                className={`p-4 sm:p-6 rounded-3xl border transition-all space-y-3 shadow-md ${
+                className={`p-4 sm:p-6 rounded-3xl border transition-ui space-y-3 shadow-md ${
                   isDarkMode 
                     ? 'bg-slate-900/80 border-slate-800/80 text-white backdrop-blur-xl' 
                     : 'bg-white border-slate-200 text-slate-900 shadow-sm'
@@ -380,7 +380,7 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
                   <button
                     type="button"
                     onClick={() => onReject(item.id)}
-                    className="flex-1 sm:flex-initial px-4 py-2.5 rounded-2xl border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 font-bold text-xs font-mono flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-[0.98]"
+                    className="flex-1 sm:flex-initial px-4 py-2.5 rounded-2xl border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 font-bold text-xs font-mono flex items-center justify-center gap-1.5 cursor-pointer transition-ui active:scale-[0.96]"
                   >
                     <X className="w-4 h-4" />
                     <span>Reject</span>
@@ -389,7 +389,7 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
                   <button
                     type="button"
                     onClick={() => onApprove(item.id)}
-                    className="flex-1 sm:flex-initial px-5 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-bold text-xs font-mono flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-500/20 transition-all active:scale-[0.98]"
+                    className="flex-1 sm:flex-initial px-5 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-bold text-xs font-mono flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-500/20 transition-ui active:scale-[0.96]"
                   >
                     <Check className="w-4 h-4" />
                     <span>Authorize</span>

@@ -956,7 +956,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
     <div className="space-y-6 font-sans">
       
       {/* Top Banner Header with Summary Telemetry */}
-      <div className={`p-4 sm:p-6 rounded-3xl border transition-all ${
+      <div className={`p-4 sm:p-6 rounded-3xl border transition-ui ${
         isDarkMode 
           ? 'bg-slate-900/80 border-slate-800/80 text-white backdrop-blur-xl shadow-2xl' 
           : 'bg-white border-slate-200 shadow-sm text-slate-900'
@@ -985,7 +985,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
             {activeTab === 'CUSTOMERS' && (
               <button
                 onClick={openCustomerModal}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-blue-600 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-blue-600 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.96] transition-ui"
               >
                 <Plus className="w-4 h-4" />
                 <span>New Customer</span>
@@ -995,7 +995,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
             {activeTab === 'VENDORS' && (
               <button
                 onClick={openVendorModal}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.96] transition-ui"
               >
                 <Plus className="w-4 h-4" />
                 <span>New Vendor</span>
@@ -1005,7 +1005,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
             {activeTab === 'ITEMS' && (
               <button
                 onClick={openItemModal}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.96] transition-ui"
               >
                 <Plus className="w-4 h-4" />
                 <span>New Item</span>
@@ -1015,7 +1015,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
             {activeTab === 'MACHINES' && (
               <button
                 onClick={openMachineModal}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-amber-600 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-amber-600 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.96] transition-ui"
               >
                 <Plus className="w-4 h-4" />
                 <span>New Machine</span>
@@ -1026,22 +1026,22 @@ export const MastersView: React.FC<MastersViewProps> = ({
 
         {/* Master Metrics Strip */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 mt-4 sm:mt-5 pt-3 sm:pt-4 border-t border-slate-200 dark:border-slate-800/60">
-          <div className={`p-3 sm:p-4 rounded-2xl border transition-all ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
+          <div className={`p-3 sm:p-4 rounded-2xl border transition-ui ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
             <div className={`text-[10px] sm:text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Total Customers</div>
             <div className="text-base sm:text-xl font-bold text-blue-600 dark:text-blue-400 mt-0.5 sm:mt-1">{customers.length} Accounts</div>
             <div className="text-[10px] sm:text-[11px] text-emerald-600 dark:text-emerald-400 font-mono font-semibold mt-0.5">● {customers.filter(c => c.status === 'Active').length} Active</div>
           </div>
-          <div className={`p-3 sm:p-4 rounded-2xl border transition-all ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
+          <div className={`p-3 sm:p-4 rounded-2xl border transition-ui ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
             <div className={`text-[10px] sm:text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Total Vendors</div>
             <div className="text-base sm:text-xl font-bold text-indigo-600 dark:text-indigo-400 mt-0.5 sm:mt-1">{vendors.length} Suppliers</div>
             <div className="text-[10px] sm:text-[11px] text-indigo-600 dark:text-indigo-400 font-mono font-semibold mt-0.5">● {vendors.filter(v => v.vendorType === 'Subcontractor / Job Worker').length} Subcontractors</div>
           </div>
-          <div className={`p-3 sm:p-4 rounded-2xl border transition-all ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
+          <div className={`p-3 sm:p-4 rounded-2xl border transition-ui ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
             <div className={`text-[10px] sm:text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Item Master Parts</div>
             <div className="text-base sm:text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 sm:mt-1">{masters.length} SKUs</div>
             <div className={`text-[10px] sm:text-[11px] font-mono font-semibold mt-0.5 truncate ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{masters.filter(m => m.isFinishedGoods || m.itemType === 'Finished Good').length} FG / {masters.filter(m => m.itemType === 'Raw Material').length} RM</div>
           </div>
-          <div className={`p-3 sm:p-4 rounded-2xl border transition-all ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
+          <div className={`p-3 sm:p-4 rounded-2xl border transition-ui ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
             <div className={`text-[10px] sm:text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Machine Fleet</div>
             <div className="text-base sm:text-xl font-bold text-amber-600 dark:text-amber-400 mt-0.5 sm:mt-1">{machines.length} Units</div>
             <div className="text-[10px] sm:text-[11px] text-amber-600 dark:text-amber-400 font-mono font-semibold mt-0.5">● {machines.filter(m => m.status === 'Active').length} Operational</div>
@@ -1050,13 +1050,13 @@ export const MastersView: React.FC<MastersViewProps> = ({
       </div>
 
       {/* Main Tab Controls Bar */}
-      <div className={`p-3.5 sm:p-4 rounded-3xl border transition-all space-y-3 ${
+      <div className={`p-3.5 sm:p-4 rounded-3xl border transition-ui space-y-3 ${
         isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-sm'
       }`}>
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
           <button
             onClick={() => handleSelectTab('CUSTOMERS')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-ui cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
               activeTab === 'CUSTOMERS'
                 ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-md'
                 : isDarkMode ? 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-white' : 'bg-slate-100 text-slate-600 border-slate-200 hover:text-slate-900'
@@ -1068,7 +1068,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
           
           <button
             onClick={() => handleSelectTab('VENDORS')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-ui cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
               activeTab === 'VENDORS'
                 ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-md'
                 : isDarkMode ? 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-white' : 'bg-slate-100 text-slate-600 border-slate-200 hover:text-slate-900'
@@ -1080,7 +1080,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
 
           <button
             onClick={() => handleSelectTab('ITEMS')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-ui cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
               activeTab === 'ITEMS'
                 ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-md'
                 : isDarkMode ? 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-white' : 'bg-slate-100 text-slate-600 border-slate-200 hover:text-slate-900'
@@ -1092,7 +1092,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
 
           <button
             onClick={() => handleSelectTab('MACHINES')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-ui cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
               activeTab === 'MACHINES'
                 ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-md'
                 : isDarkMode ? 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-white' : 'bg-slate-100 text-slate-600 border-slate-200 hover:text-slate-900'
@@ -1104,7 +1104,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
 
           <button
             onClick={() => handleSelectTab('IMPORT_OMGST')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-ui cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
               activeTab === 'IMPORT_OMGST'
                 ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-md'
                 : isDarkMode ? 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-white' : 'bg-slate-100 text-slate-600 border-slate-200 hover:text-slate-900'
@@ -1118,7 +1118,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
         {/* Filter & Search Toolbar */}
         {activeTab !== 'IMPORT_OMGST' && (
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className={`relative flex items-center rounded-2xl border px-3.5 py-2 transition-all flex-1 ${
+            <div className={`relative flex items-center rounded-2xl border px-3.5 py-2 transition-ui flex-1 ${
               isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white focus-within:border-[#5B75F8]' : 'bg-slate-50 border-slate-200 text-slate-900 focus-within:border-[#5B75F8]'
             }`}>
               <Search className="w-3.5 h-3.5 text-slate-400 shrink-0 mr-2" />
@@ -1170,7 +1170,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
               filteredCustomers.map((cust) => (
                 <div
                   key={cust.code}
-                  className={`p-4 rounded-3xl border transition-all space-y-3 shadow-sm ${
+                  className={`p-4 rounded-3xl border transition-ui space-y-3 shadow-sm ${
                     cust.status === 'Inactive'
                       ? isDarkMode ? 'bg-slate-950/70 border-slate-800/80 text-slate-500' : 'bg-slate-100/60 border-slate-200 text-slate-400'
                       : isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'
@@ -1261,7 +1261,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
           </div>
 
           {/* Desktop Table (Viewport >= md) */}
-          <div className={`hidden md:block rounded-3xl border overflow-hidden transition-all shadow-xl ${
+          <div className={`hidden md:block rounded-3xl border overflow-hidden transition-ui shadow-xl ${
             isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-sm'
           }`}>
             <div className="overflow-x-auto">
@@ -1361,7 +1361,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
                             <button
                               type="button"
                               onClick={() => openEditCustomer(cust)}
-                              className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                              className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-ui cursor-pointer ${
                                 isDarkMode 
                                   ? 'bg-slate-800 hover:bg-slate-700 text-blue-400 border-slate-700 hover:border-blue-500/50' 
                                   : 'bg-white hover:bg-blue-50 text-blue-600 border-slate-200 hover:border-blue-300 shadow-xs'
@@ -1374,7 +1374,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
                             <button
                               type="button"
                               onClick={() => handleDeletePrompt('CUSTOMER', cust.code, cust.name)}
-                              className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                              className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-ui cursor-pointer ${
                                 isDarkMode 
                                   ? 'bg-slate-800 hover:bg-rose-950/40 text-rose-400 border-slate-700 hover:border-rose-500/50' 
                                   : 'bg-white hover:bg-rose-50 text-rose-600 border-slate-200 hover:border-rose-300 shadow-xs'
@@ -1414,7 +1414,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
               filteredVendors.map((vend) => (
                 <div
                   key={vend.code}
-                  className={`p-4 rounded-3xl border transition-all space-y-3 shadow-sm ${
+                  className={`p-4 rounded-3xl border transition-ui space-y-3 shadow-sm ${
                     vend.status === 'Inactive'
                       ? isDarkMode ? 'bg-slate-950/70 border-slate-800/80 text-slate-500' : 'bg-slate-100/60 border-slate-200 text-slate-400'
                       : isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'
@@ -1457,7 +1457,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
                       <button
                         type="button"
                         onClick={() => handleToggleScorecard(vend.code)}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-[10px] font-mono font-bold transition-ui cursor-pointer ${
                           isDarkMode 
                             ? 'bg-slate-950/60 text-slate-400 hover:text-white border-slate-800 hover:border-slate-700' 
                             : 'bg-slate-50 text-slate-600 hover:text-slate-900 border-slate-200 shadow-xs'
@@ -1575,7 +1575,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
           </div>
 
           {/* Desktop Table (Viewport >= md) */}
-          <div className={`hidden md:block rounded-3xl border overflow-hidden transition-all shadow-xl ${
+          <div className={`hidden md:block rounded-3xl border overflow-hidden transition-ui shadow-xl ${
             isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-sm'
           }`}>
             <div className="overflow-x-auto">
@@ -1628,7 +1628,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
                               <button
                                 type="button"
                                 onClick={() => handleToggleScorecard(vend.code)}
-                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[10px] font-mono font-bold transition-ui cursor-pointer ${
                                   isDarkMode 
                                     ? 'bg-slate-800/80 text-slate-400 hover:text-white border-slate-700 hover:border-slate-600' 
                                     : 'bg-slate-50 text-slate-600 hover:text-slate-900 border-slate-200 hover:border-slate-300 shadow-xs'
@@ -1746,7 +1746,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
                             <button
                               type="button"
                               onClick={() => openEditVendor(vend)}
-                              className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                              className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-ui cursor-pointer ${
                                 isDarkMode 
                                   ? 'bg-slate-800 hover:bg-slate-700 text-indigo-400 border-slate-700 hover:border-indigo-500/50' 
                                   : 'bg-white hover:bg-indigo-50 text-indigo-600 border-slate-200 hover:border-indigo-300 shadow-xs'
@@ -1759,7 +1759,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
                             <button
                               type="button"
                               onClick={() => handleDeletePrompt('VENDOR', vend.code, vend.name)}
-                              className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                              className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-ui cursor-pointer ${
                                 isDarkMode 
                                   ? 'bg-slate-800 hover:bg-rose-950/40 text-rose-400 border-slate-700 hover:border-rose-500/50' 
                                   : 'bg-white hover:bg-rose-50 text-rose-600 border-slate-200 hover:border-rose-300 shadow-xs'
@@ -1799,7 +1799,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
               filteredItems.map((item) => (
                 <div
                   key={item.code}
-                  className={`p-4 rounded-3xl border transition-all space-y-3 shadow-sm ${
+                  className={`p-4 rounded-3xl border transition-ui space-y-3 shadow-sm ${
                     item.status === 'Inactive'
                       ? isDarkMode ? 'bg-slate-950/70 border-slate-800/80 text-slate-500' : 'bg-slate-100/60 border-slate-200 text-slate-400'
                       : isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'
@@ -1898,7 +1898,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
           </div>
 
           {/* Desktop Table (Viewport >= md) */}
-          <div className={`hidden md:block rounded-3xl border overflow-hidden transition-all shadow-xl ${
+          <div className={`hidden md:block rounded-3xl border overflow-hidden transition-ui shadow-xl ${
             isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-sm'
           }`}>
             <div className="overflow-x-auto">
@@ -1992,7 +1992,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
                             <button
                               type="button"
                               onClick={() => openEditItem(item)}
-                              className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                              className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-ui cursor-pointer ${
                                 isDarkMode 
                                   ? 'bg-slate-800 hover:bg-slate-700 text-emerald-400 border-slate-700 hover:border-emerald-500/50' 
                                   : 'bg-white hover:bg-emerald-50 text-emerald-600 border-slate-200 hover:border-emerald-300 shadow-xs'
@@ -2005,7 +2005,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
                             <button
                               type="button"
                               onClick={() => handleDeletePrompt('ITEM', item.code, item.name || item.description || item.code)}
-                              className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                              className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-ui cursor-pointer ${
                                 isDarkMode 
                                   ? 'bg-slate-800 hover:bg-rose-950/40 text-rose-400 border-slate-700 hover:border-rose-500/50' 
                                   : 'bg-white hover:bg-rose-50 text-rose-600 border-slate-200 hover:border-rose-300 shadow-xs'
@@ -2045,7 +2045,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
               filteredMachines.map((mch) => (
                 <div
                   key={mch.code}
-                  className={`p-4 rounded-3xl border transition-all space-y-3 shadow-sm ${
+                  className={`p-4 rounded-3xl border transition-ui space-y-3 shadow-sm ${
                     mch.status === 'Under Maintenance' || mch.status === 'Decommissioned'
                       ? isDarkMode ? 'bg-amber-950/20 border-amber-900/40' : 'bg-amber-50/70 border-amber-200'
                       : isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'
@@ -2130,7 +2130,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
           </div>
 
           {/* Desktop Table (Viewport >= md) */}
-          <div className={`hidden md:block rounded-3xl border overflow-hidden transition-all shadow-xl ${
+          <div className={`hidden md:block rounded-3xl border overflow-hidden transition-ui shadow-xl ${
             isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-sm'
           }`}>
             <div className="overflow-x-auto">
@@ -2215,7 +2215,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
                             <button
                               type="button"
                               onClick={() => openEditMachine(mch)}
-                              className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                              className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-ui cursor-pointer ${
                                 isDarkMode 
                                   ? 'bg-slate-800 hover:bg-slate-700 text-amber-400 border-slate-700 hover:border-amber-500/50' 
                                   : 'bg-white hover:bg-amber-50 text-amber-600 border-slate-200 hover:border-amber-300 shadow-xs'
@@ -2228,7 +2228,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
                             <button
                               type="button"
                               onClick={() => handleDeletePrompt('MACHINE', mch.code, mch.name)}
-                              className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                              className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-ui cursor-pointer ${
                                 isDarkMode 
                                   ? 'bg-slate-800 hover:bg-rose-950/40 text-rose-400 border-slate-700 hover:border-rose-500/50' 
                                   : 'bg-white hover:bg-rose-50 text-rose-600 border-slate-200 hover:border-rose-300 shadow-xs'
@@ -2254,7 +2254,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
       {/* 5. IMPORT / OMGST TAB */}
       {/* ========================================================================= */}
       {activeTab === 'IMPORT_OMGST' && (
-        <div className={`p-8 rounded-3xl border transition-all ${
+        <div className={`p-8 rounded-3xl border transition-ui ${
           isDarkMode ? 'bg-slate-900/60 border-slate-800/80 text-white backdrop-blur-xl' : 'bg-white border-slate-200 shadow-sm text-slate-900'
         }`}>
           <div className="max-w-2xl mx-auto text-center space-y-4">
@@ -2266,7 +2266,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
               Upload standard Indian GST sales registers, purchase bills, or inventory item CSV/Excel spreadsheets. The engine will automatically validate 15-char GSTINs, 10-char PANs, 10-digit mobile numbers, and generate sequential master codes.
             </p>
             
-<div className="p-6 border-2 border-dashed border-slate-700/80 rounded-2xl bg-slate-800/30 hover:border-[#5B75F8] transition-all cursor-pointer">
+<div className="p-6 border-2 border-dashed border-slate-700/80 rounded-2xl bg-slate-800/30 hover:border-[#5B75F8] transition-ui cursor-pointer">
               <FileSpreadsheet className="w-10 h-10 mx-auto text-slate-400 mb-2" />
               <div className="text-xs font-semibold text-slate-200">Drag & Drop master files here or click to browse</div>
               <div className="text-[10px] text-slate-500 font-mono mt-1">Supports CSV, XLSX up to 25MB (Customers, Vendors, Items, Machines)</div>
@@ -2297,7 +2297,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
                 addCustomerModal.close();
                 setEditingCustomer(null);
               }}
-              className={`px-4 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
+              className={`px-4 py-2.5 rounded-xl font-bold transition-ui cursor-pointer ${
                 isDarkMode 
                   ? 'text-slate-400 hover:text-white hover:bg-slate-800' 
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
@@ -2308,7 +2308,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
             <button
               type="submit"
               form="save-customer-form"
-              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-blue-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-blue-500/25 hover:scale-[1.02] active:scale-[0.96] transition-ui cursor-pointer"
             >
               <Check className="w-4 h-4" />
               <span>{editingCustomer ? 'Update Customer Master' : 'Save Customer Master'}</span>
@@ -2343,7 +2343,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
                 placeholder="e.g. Tata Motors Ltd"
                 value={cName}
                 onChange={(e) => setCName(e.target.value)}
-                className={`w-full p-2.5 rounded-xl border transition-all ${
+                className={`w-full p-2.5 rounded-xl border transition-ui ${
                   formErrors.name 
                     ? 'border-rose-500 ring-1 ring-rose-500' 
                     : isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:bg-white'
@@ -2753,7 +2753,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
                 addVendorModal.close();
                 setEditingVendor(null);
               }}
-              className={`px-4 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
+              className={`px-4 py-2.5 rounded-xl font-bold transition-ui cursor-pointer ${
                 isDarkMode 
                   ? 'text-slate-400 hover:text-white hover:bg-slate-800' 
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
@@ -2764,7 +2764,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
             <button
               type="submit"
               form="save-vendor-form"
-              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-indigo-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-indigo-500/25 hover:scale-[1.02] active:scale-[0.96] transition-ui cursor-pointer"
             >
               <Check className="w-4 h-4" />
               <span>{editingVendor ? 'Update Vendor Master' : 'Save Vendor Master'}</span>
@@ -2834,7 +2834,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
                 placeholder="e.g. Shree Steel Suppliers"
                 value={vName}
                 onChange={(e) => setVName(e.target.value)}
-                className={`w-full p-2.5 rounded-xl border transition-all ${
+                className={`w-full p-2.5 rounded-xl border transition-ui ${
                   formErrors.name 
                     ? 'border-rose-500 ring-1 ring-rose-500' 
                     : isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:bg-white'
@@ -3015,7 +3015,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
                 maxLength={15}
                 value={vGstExempt ? GST_EXEMPT_VALUE : vGstin}
                 onChange={(e) => setVGstin(e.target.value.toUpperCase())}
-                className={`w-full p-2.5 rounded-xl border font-mono transition-all ${
+                className={`w-full p-2.5 rounded-xl border font-mono transition-ui ${
                   vGstExempt 
                     ? isDarkMode ? 'bg-slate-800/50 text-amber-400 border-slate-700 cursor-not-allowed' : 'bg-slate-100 text-amber-700 border-slate-200 cursor-not-allowed'
                     : formErrors.gstin 
@@ -3217,7 +3217,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
                 addItemModal.close();
                 setEditingItem(null);
               }}
-              className={`px-4 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
+              className={`px-4 py-2.5 rounded-xl font-bold transition-ui cursor-pointer ${
                 isDarkMode 
                   ? 'text-slate-400 hover:text-white hover:bg-slate-800' 
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
@@ -3228,7 +3228,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
             <button
               type="submit"
               form="save-item-form"
-              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-500/25 hover:scale-[1.02] active:scale-[0.96] transition-ui cursor-pointer"
             >
               <Check className="w-4 h-4" />
               <span>{editingItem ? 'Update Item Master' : 'Save Item Master'}</span>
@@ -3581,7 +3581,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
                 addMachineModal.close();
                 setEditingMachine(null);
               }}
-              className={`px-4 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
+              className={`px-4 py-2.5 rounded-xl font-bold transition-ui cursor-pointer ${
                 isDarkMode 
                   ? 'text-slate-400 hover:text-white hover:bg-slate-800' 
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
@@ -3592,7 +3592,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
             <button
               type="submit"
               form="save-machine-form"
-              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-amber-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-amber-500/25 hover:scale-[1.02] active:scale-[0.96] transition-ui cursor-pointer"
             >
               <Check className="w-4 h-4" />
               <span>{editingMachine ? 'Update Machine Master' : 'Save Machine Master'}</span>
@@ -3895,7 +3895,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
                 setDeleteConfirm(null);
                 deleteMasterModal.close();
               }}
-              className={`px-4 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
+              className={`px-4 py-2.5 rounded-xl font-bold transition-ui cursor-pointer ${
                 isDarkMode 
                   ? 'text-slate-400 hover:text-white hover:bg-slate-800' 
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
@@ -3907,7 +3907,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
               type="button"
               disabled={isDeleting}
               onClick={handleConfirmDelete}
-              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-rose-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
+              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-rose-500/25 hover:scale-[1.02] active:scale-[0.96] transition-ui cursor-pointer disabled:opacity-50"
             >
               <Trash2 className="w-4 h-4" />
               <span>{isDeleting ? 'Deleting...' : 'Confirm Delete'}</span>

@@ -1403,7 +1403,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
     <div className="space-y-6 font-sans">
 
       {/* 1. Header Navigation & Action Bar */}
-      <div className={`p-4 sm:p-6 rounded-3xl border transition-all relative overflow-hidden ${isDarkMode
+      <div className={`p-4 sm:p-6 rounded-3xl border transition-ui relative overflow-hidden ${isDarkMode
         ? 'bg-slate-900/90 border-slate-800/80 text-white backdrop-blur-xl shadow-2xl'
         : 'bg-white border-slate-200/80 shadow-md text-slate-900'
         }`}>
@@ -1415,7 +1415,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           <div className="flex items-start sm:items-center gap-3.5 min-w-0">
             <button
               onClick={onBack}
-              className={`p-2.5 rounded-2xl border cursor-pointer transition-all hover:scale-105 active:scale-95 shrink-0 flex items-center justify-center ${isDarkMode
+              className={`p-2.5 rounded-2xl border cursor-pointer transition-ui hover:scale-105 active:scale-[0.96] shrink-0 flex items-center justify-center ${isDarkMode
                 ? 'border-slate-800 bg-slate-950/80 text-slate-300 hover:bg-slate-800 hover:text-white shadow-xs'
                 : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 shadow-xs'
                 }`}
@@ -1448,7 +1448,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   </span>
                 )}
 
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono font-bold uppercase border transition-all ${isQcRejected ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/15 dark:text-rose-400 dark:border-rose-500/30' :
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono font-bold uppercase border transition-ui ${isQcRejected ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/15 dark:text-rose-400 dark:border-rose-500/30' :
                   isQcHold || hasNcr ? 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/30' :
                     order.status === 'CANCELLED' ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/15 dark:text-rose-400 dark:border-rose-500/30' :
                       order.status === 'DRAFT' || order.status === 'PO_RECEIVED' || order.status === 'SUBMITTED' ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30' :
@@ -1500,7 +1500,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           <div className="flex items-center gap-2.5 w-full sm:w-auto shrink-0">
             <button
               onClick={() => uploadPoModal.open()}
-              className={`w-full sm:w-auto px-4 py-2 rounded-2xl border text-xs font-mono font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${isDarkMode
+              className={`w-full sm:w-auto px-4 py-2 rounded-2xl border text-xs font-mono font-bold transition-ui cursor-pointer flex items-center justify-center gap-2 ${isDarkMode
                 ? 'border-slate-800 bg-slate-950/70 text-slate-300 hover:bg-slate-800 hover:text-white shadow-xs'
                 : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 shadow-xs'
                 }`}
@@ -1528,7 +1528,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       </div>
 
       {/* 2. Redesigned Milestone Progress Pipeline */}
-      <div className={`p-4 sm:p-7 rounded-3xl border transition-all shadow-xl relative overflow-hidden ${isDarkMode
+      <div className={`p-4 sm:p-7 rounded-3xl border transition-ui shadow-xl relative overflow-hidden ${isDarkMode
         ? 'bg-slate-900/90 border-slate-800/90 backdrop-blur-xl text-white'
         : 'bg-white border-slate-200 text-slate-900 shadow-sm'
         }`}>
@@ -1572,7 +1572,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   <div className="flex flex-col items-center shrink-0 min-w-[105px] max-w-[135px] group text-center">
 
                     {/* Node Circle */}
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 relative ${isCurrent
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-300 relative ${isCurrent
                       ? isQcRejected
                         ? 'bg-gradient-to-tr from-rose-600 to-rose-500 text-white ring-4 ring-rose-500/30 shadow-lg shadow-rose-500/40 scale-110 border-2 border-rose-400'
                         : isQcHold || hasNcr
@@ -1617,7 +1617,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   {/* Connector Line between Steps */}
                   {idx < steps.length - 1 && (
                     <div className="flex-1 self-center px-2 -mt-7">
-                      <div className={`h-1.5 rounded-full transition-all duration-500 ${idx < activeStepIndex
+                      <div className={`h-1.5 rounded-full transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-500 ${idx < activeStepIndex
                         ? 'bg-gradient-to-r from-emerald-500 to-teal-500 shadow-xs shadow-emerald-500/30'
                         : 'bg-slate-200 dark:bg-slate-800'
                         }`} />
@@ -1663,7 +1663,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
                     <button
                       onClick={openEditModal}
-                      className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${isDarkMode
+                      className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-ui cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${isDarkMode
                         ? 'border-indigo-500/40 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20'
                         : 'border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
                         }`}
@@ -1674,14 +1674,14 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     <button
                       disabled={isConfirming || !allowed}
                       onClick={handleConfirmAction}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white text-xs font-bold shadow-lg shadow-emerald-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white text-xs font-bold shadow-lg shadow-emerald-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                       <span>{isConfirming ? 'Confirming...' : 'Confirm Order'}</span>
                     </button>
                     <button
                       onClick={() => onCancelOrder?.(order.id)}
-                      className="px-3 py-2 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 text-xs font-bold cursor-pointer transition-all flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
+                      className="px-3 py-2 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 text-xs font-bold cursor-pointer transition-ui flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
                     >
                       <XCircle className="w-3.5 h-3.5 shrink-0" />
                       <span>Cancel</span>
@@ -1703,7 +1703,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
                   <button
                     onClick={openEditModal}
-                    className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${isDarkMode
+                    className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-ui cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${isDarkMode
                       ? 'border-purple-500/40 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20'
                       : 'border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100'
                       }`}
@@ -1714,7 +1714,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   <button
                     disabled={isRunningMaterialCheck}
                     onClick={handleMaterialCheckAction}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold shadow-lg shadow-[#5B75F8]/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold shadow-lg shadow-[#5B75F8]/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${isRunningMaterialCheck ? 'animate-spin' : ''}`} />
                     <span>{isRunningMaterialCheck ? 'Checking Material...' : 'Proceed to Material Check'}</span>
@@ -1736,7 +1736,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   <button
                     disabled={isRunningMaterialCheck}
                     onClick={handleMaterialCheckAction}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold shadow-md shadow-[#5B75F8]/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold shadow-md shadow-[#5B75F8]/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${isRunningMaterialCheck ? 'animate-spin' : ''}`} />
                     <span>{isRunningMaterialCheck ? 'Checking...' : 'Re-run Material Check'}</span>
@@ -1744,7 +1744,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   {isOwner && (
                     <button
                       onClick={() => setShowOverrideModal(true)}
-                      className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${isDarkMode
+                      className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-ui cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${isDarkMode
                         ? 'border-purple-500/40 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20'
                         : 'border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100'
                         }`}
@@ -1849,7 +1849,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     <button
                       disabled={!allowed || lineCount === 0}
                       onClick={handleGoToCreateJobCard}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-500 hover:from-orange-500 hover:to-amber-600 text-white text-xs font-bold shadow-md shadow-amber-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-500 hover:from-orange-500 hover:to-amber-600 text-white text-xs font-bold shadow-md shadow-amber-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
                     >
                       <RefreshCw className="w-3.5 h-3.5 shrink-0" />
                       <span>Create Job Card ({lineCount} item{lineCount === 1 ? '' : 's'})</span>
@@ -1872,7 +1872,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
                   <button
                     onClick={() => onNavigate?.('production')}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-indigo-600 hover:to-purple-600 text-white text-xs font-bold shadow-md shadow-purple-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-indigo-600 hover:to-purple-600 text-white text-xs font-bold shadow-md shadow-purple-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
                   >
                     <RefreshCw className="w-3.5 h-3.5 shrink-0" />
                     <span>Issue / Receive Subcontractor Outwork</span>
@@ -1893,7 +1893,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
                   <button
                     onClick={() => onNavigate?.('production')}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-indigo-600 hover:to-purple-600 text-white text-xs font-bold shadow-md shadow-purple-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-indigo-600 hover:to-purple-600 text-white text-xs font-bold shadow-md shadow-purple-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
                   >
                     <Flame className="w-3.5 h-3.5 shrink-0" />
                     <span>Log Production / Start Operations</span>
@@ -1940,7 +1940,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                         else pdiModal.open();
                       }}
                       title={`Inspect PDI for ${order.jobCards?.[0]?.jobNo || 'JC'} (${order.poNo || order.id})`}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
                     >
                       <ClipboardCheck className="w-3.5 h-3.5 shrink-0" />
                       <span>Proceed to PDI / Inspect PDI ➔</span>
@@ -1948,7 +1948,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   ) : (
                     <button
                       onClick={() => onNavigate?.('qc')}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white text-xs font-bold shadow-md shadow-indigo-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white text-xs font-bold shadow-md shadow-indigo-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
                     >
                       <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
                       <span>Upload Quality Report / Perform QC</span>
@@ -1975,7 +1975,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                       else pdiModal.open();
                     }}
                     title={`Inspect PDI for ${order.jobCards?.[0]?.jobNo || 'JC'} (${order.poNo || order.id})`}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold shadow-md shadow-[#5B75F8]/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold shadow-md shadow-[#5B75F8]/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
                   >
                     <ClipboardCheck className="w-3.5 h-3.5 shrink-0" />
                     <span>Inspect PDI</span>
@@ -1996,7 +1996,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
                   <button
                     onClick={() => pdiModal.open()}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
                   >
                     <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
                     <span>Mark Ready to Dispatch</span>
@@ -2028,7 +2028,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                       <button
                         disabled={isConfirming || hasNcr || !allowed}
                         onClick={handleGoToCreateChallan}
-                        className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 whitespace-nowrap shrink-0"
+                        className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 transition-ui hover:scale-[1.02] active:scale-[0.96] disabled:opacity-50 whitespace-nowrap shrink-0"
                       >
                         <Plus className="w-4 h-4 shrink-0" />
                         <span>Generate Delivery Challan</span>
@@ -2037,7 +2037,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                       <button
                         type="button"
                         onClick={handleOpenChallanDetailModal}
-                        className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-blue-600 hover:to-cyan-600 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-cyan-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap shrink-0"
+                        className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-blue-600 hover:to-cyan-600 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-cyan-500/20 transition-ui hover:scale-[1.02] active:scale-[0.96] whitespace-nowrap shrink-0"
                       >
                         <Eye className="w-4 h-4 shrink-0" />
                         <span>View / Dispatch Challan ({effectiveChallanNo})</span>
@@ -2068,7 +2068,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                       {onNavigate && (
                         <button
                           onClick={() => onNavigate('invoices')}
-                          className="px-3 py-1.5 rounded-xl bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 border border-indigo-500/30 text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                          className="px-3 py-1.5 rounded-xl bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 border border-indigo-500/30 text-xs font-bold transition-ui cursor-pointer flex items-center gap-1"
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
                           <span>View in Invoices</span>
@@ -2082,7 +2082,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     <button
                       disabled={isConfirming || !allowed}
                       onClick={handleGoToCreateInvoice}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white text-xs font-bold shadow-md shadow-indigo-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white text-xs font-bold shadow-md shadow-indigo-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
                     >
                       <Receipt className="w-3.5 h-3.5 shrink-0" />
                       <span>Generate GST Tax Invoice</span>
@@ -2119,7 +2119,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                       disabled={isConfirming || !allowedDelivered}
                       onClick={() => deliveryModal.open()}
                       title={!allowedDelivered ? 'Only Dispatch Clerk or Owner can confirm delivery' : undefined}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-emerald-600 hover:to-blue-600 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-emerald-600 hover:to-blue-600 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                       <span>Mark Delivered (POD)</span>
@@ -2129,7 +2129,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                         disabled={isConfirming || !allowedDelayed}
                         onClick={() => delayedModal.open()}
                         title={!allowedDelayed ? 'Only Dispatch Clerk or Owner can mark delayed' : undefined}
-                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-bold shadow-md shadow-amber-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
+                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-bold shadow-md shadow-amber-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
                       >
                         <Clock className="w-3.5 h-3.5 shrink-0" />
                         <span>Mark Delayed</span>
@@ -2166,7 +2166,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                       disabled={isConfirming || !allowed}
                       onClick={() => paymentModal.open()}
                       title={!allowed ? 'Only Finance / Accounts or Owner can record payment' : undefined}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
                     >
                       <CreditCard className="w-3.5 h-3.5 shrink-0" />
                       <span>{isPartial ? 'Record Remaining Payment' : 'Record Payment'}</span>
@@ -2205,7 +2205,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                         disabled={isConfirming || !canClose}
                         onClick={handleCloseOrderAction}
                         title={!canClose ? disabledReason : undefined}
-                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
+                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                         <span>Mark Order Closed</span>
@@ -2245,7 +2245,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             <div className="space-y-2.5 w-full">
               <div
                 key={currentStageDef.id}
-                className={`p-5 sm:p-6 rounded-3xl border transition-all w-full relative overflow-hidden ${isDarkMode
+                className={`p-5 sm:p-6 rounded-3xl border transition-ui w-full relative overflow-hidden ${isDarkMode
                   ? 'bg-gradient-to-r from-slate-900/95 via-indigo-950/40 to-slate-900/95 border-[#5B75F8]/50 ring-1 ring-[#5B75F8]/30 shadow-2xl text-white'
                   : 'bg-gradient-to-r from-indigo-50/90 via-white to-blue-50/90 border-indigo-200 ring-1 ring-indigo-300 shadow-lg text-slate-900'
                   }`}
@@ -2255,7 +2255,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full relative z-10">
                   <div className="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
-                    <div className={`p-3.5 rounded-2xl shrink-0 transition-all ${isDarkMode
+                    <div className={`p-3.5 rounded-2xl shrink-0 transition-ui ${isDarkMode
                       ? 'bg-gradient-to-br from-[#5B75F8]/25 to-indigo-500/25 text-[#7B92FF] border border-[#5B75F8]/40 shadow-sm'
                       : 'bg-indigo-100/80 text-indigo-700 border border-indigo-200 shadow-sm'
                       }`}>
@@ -2311,7 +2311,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 font-mono">
 
         {/* Card 1: Gross Commercials */}
-        <div className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border transition-all ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
+        <div className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border transition-ui ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
           }`}>
           <div className="flex items-center justify-between mb-2 sm:mb-3">
             <span className="text-[10px] sm:text-[11px] text-slate-400 uppercase font-bold tracking-wider">Gross Value</span>
@@ -2329,7 +2329,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         </div>
 
         {/* Card 2: Delivery & Timeline */}
-        <div className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border transition-all ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
+        <div className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border transition-ui ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
           }`}>
           <div className="flex items-center justify-between mb-2 sm:mb-3">
             <span className="text-[10px] sm:text-[11px] text-slate-400 uppercase font-bold tracking-wider">Target Date</span>
@@ -2347,7 +2347,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         </div>
 
         {/* Card 3: Quality & Heat Traceability */}
-        <div className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border transition-all ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
+        <div className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border transition-ui ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
           }`}>
           <div className="flex items-center justify-between mb-2 sm:mb-3">
             <span className="text-[10px] sm:text-[11px] text-slate-400 uppercase font-bold tracking-wider">QA Gate</span>
@@ -2372,7 +2372,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         </div>
 
         {/* Card 4: Fulfillment Progress */}
-        <div className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border transition-all ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
+        <div className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border transition-ui ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
           }`}>
           <div className="flex items-center justify-between mb-2 sm:mb-3">
             <span className="text-[10px] sm:text-[11px] text-slate-400 uppercase font-bold tracking-wider">Dispatched</span>
@@ -2386,7 +2386,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
             <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
               <div
-                className="bg-gradient-to-r from-[#5B75F8] to-emerald-500 h-full rounded-full transition-all duration-500"
+                className="bg-gradient-to-r from-[#5B75F8] to-emerald-500 h-full rounded-full transition-[width] duration-500"
                 style={{ width: `${fulfillmentPercentage}%` }}
               />
             </div>
@@ -2411,7 +2411,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           </div>
           <button
             onClick={() => uploadPoModal.open()}
-            className="px-3 py-1.5 sm:px-3.5 sm:py-1.5 rounded-xl border border-[#5B75F8]/30 bg-[#5B75F8]/10 text-[#5B75F8] dark:text-[#7B92FF] font-bold hover:bg-[#5B75F8]/20 cursor-pointer text-[11px] sm:text-xs flex items-center gap-1.5 transition-all shrink-0"
+            className="px-3 py-1.5 sm:px-3.5 sm:py-1.5 rounded-xl border border-[#5B75F8]/30 bg-[#5B75F8]/10 text-[#5B75F8] dark:text-[#7B92FF] font-bold hover:bg-[#5B75F8]/20 cursor-pointer text-[11px] sm:text-xs flex items-center gap-1.5 transition-ui shrink-0"
           >
             <Upload className="w-3.5 h-3.5" />
             <span>Upload</span>
@@ -2434,7 +2434,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       </div>
 
       {/* 5. LINE ITEMS SECTION */}
-      <div className={`p-4 sm:p-6 rounded-2xl sm:rounded-3xl border space-y-4 font-mono text-xs transition-all shadow-lg ${isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl text-white' : 'bg-white border-slate-200 text-slate-900 shadow-xs'
+      <div className={`p-4 sm:p-6 rounded-2xl sm:rounded-3xl border space-y-4 font-mono text-xs transition-ui shadow-lg ${isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl text-white' : 'bg-white border-slate-200 text-slate-900 shadow-xs'
         }`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-4 border-b border-slate-200 dark:border-slate-800 pb-3">
           <h3 className="font-bold uppercase tracking-wider text-[#5B75F8] dark:text-[#7B92FF] text-xs sm:text-sm flex items-center gap-2">
@@ -2447,7 +2447,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         {/* Mobile Line Items Cards (< md) */}
         <div className="block md:hidden space-y-2.5">
           {order.lines.map((ln, idx) => (
-            <div key={ln.id} className={`p-3.5 rounded-2xl border transition-all space-y-2.5 ${isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+            <div key={ln.id} className={`p-3.5 rounded-2xl border transition-ui space-y-2.5 ${isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
               }`}>
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
@@ -2536,13 +2536,13 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       {/* Upload Modal */}
       {uploadPoModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-md rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          <div className={`relative w-full max-w-md rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-ui ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
             }`}>
             <div className={`flex items-center justify-between border-b pb-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <h3 className="font-bold text-sm uppercase text-[#5B75F8] dark:text-[#7B92FF]">Upload Client PO Document</h3>
               <button
                 onClick={() => uploadPoModal.close()}
-                className={`p-1 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
+                className={`p-1 rounded-xl transition-ui cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -2561,7 +2561,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             <div className={`pt-3 flex justify-end border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <button
                 onClick={() => uploadPoModal.close()}
-                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-ui cursor-pointer ${isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`}
               >
                 Close
@@ -2574,7 +2574,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       {/* Edit Order Modal */}
       {editOrderModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border shadow-2xl p-6 transition-all ${isDarkMode ? 'bg-slate-900/95 border-slate-800 text-white backdrop-blur-2xl' : 'bg-white border-slate-200 text-slate-900 shadow-2xl'
+          <div className={`relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border shadow-2xl p-6 transition-ui ${isDarkMode ? 'bg-slate-900/95 border-slate-800 text-white backdrop-blur-2xl' : 'bg-white border-slate-200 text-slate-900 shadow-2xl'
             }`}>
             <div className={`flex items-center justify-between pb-4 border-b ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <div className="flex items-center gap-3">
@@ -2593,7 +2593,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               </div>
               <button
                 onClick={() => editOrderModal.close()}
-                className={`p-2 rounded-2xl border transition-all cursor-pointer ${isDarkMode
+                className={`p-2 rounded-2xl border transition-ui cursor-pointer ${isDarkMode
                   ? 'border-slate-800 bg-slate-950/60 text-slate-400 hover:text-white hover:bg-slate-800'
                   : 'border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
                   }`}
@@ -2626,7 +2626,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     required
                     value={editPoNo}
                     onChange={(e) => setEditPoNo(e.target.value)}
-                    className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none transition-all ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white focus:border-indigo-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500 focus:bg-white'
+                    className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none transition-ui ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white focus:border-indigo-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500 focus:bg-white'
                       }`}
                   />
                 </div>
@@ -2806,14 +2806,14 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 <button
                   type="button"
                   onClick={() => editOrderModal.close()}
-                  className={`px-4 py-2 rounded-xl text-xs font-mono font-bold cursor-pointer transition-all ${isDarkMode ? 'text-slate-400 hover:text-white' : 'border border-slate-200 text-slate-600 hover:bg-slate-100 text-slate-700'
+                  className={`px-4 py-2 rounded-xl text-xs font-mono font-bold cursor-pointer transition-ui ${isDarkMode ? 'text-slate-400 hover:text-white' : 'border border-slate-200 text-slate-600 hover:bg-slate-100 text-slate-700'
                     }`}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white font-bold text-xs font-mono shadow-lg cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-1.5"
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white font-bold text-xs font-mono shadow-lg cursor-pointer transition-ui hover:scale-[1.02] active:scale-[0.96] flex items-center gap-1.5"
                 >
                   <Save className="w-4 h-4" />
                   <span>Save Changes</span>
@@ -2828,7 +2828,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       {/* 1. PRE-DISPATCH INSPECTION (PDI) MODAL */}
       {pdiModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-xl rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900 shadow-slate-200/50'
+          <div className={`relative w-full max-w-xl rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-ui ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900 shadow-slate-200/50'
             }`}>
             {/* Header */}
             <div className={`flex items-center justify-between border-b pb-4 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'
@@ -2848,7 +2848,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               </div>
               <button
                 onClick={() => pdiModal.close()}
-                className={`p-1.5 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                className={`p-1.5 rounded-xl transition-ui cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
                   }`}
               >
                 <X className="w-5 h-5" />
@@ -2910,7 +2910,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                       <div
                         key={key}
                         onClick={() => setPdiChecklist(prev => ({ ...prev, [key]: !isChecked }))}
-                        className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-start gap-2.5 select-none ${isChecked
+                        className={`p-3 rounded-2xl border cursor-pointer transition-ui flex items-start gap-2.5 select-none ${isChecked
                           ? isDarkMode
                             ? 'bg-emerald-950/20 border-emerald-500/40 text-emerald-300'
                             : 'bg-emerald-50 border-emerald-300 text-emerald-900'
@@ -2944,7 +2944,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     min={0}
                     value={pdiAcceptedQty}
                     onChange={(e) => setPdiAcceptedQty(Number(e.target.value))}
-                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${isDarkMode
+                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-ui ${isDarkMode
                       ? 'bg-slate-900/90 border-slate-800 text-white focus:border-indigo-500'
                       : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500'
                       }`}
@@ -2959,7 +2959,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     min={0}
                     value={pdiRejectedQty}
                     onChange={(e) => setPdiRejectedQty(Number(e.target.value))}
-                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${isDarkMode
+                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-ui ${isDarkMode
                       ? 'bg-slate-900/90 border-slate-800 text-white focus:border-rose-500'
                       : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
                       }`}
@@ -2977,7 +2977,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   placeholder="e.g. COC-2026-0816.pdf or https://..."
                   value={pdiReportUrl}
                   onChange={(e) => setPdiReportUrl(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${isDarkMode
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-ui ${isDarkMode
                     ? 'bg-slate-900/90 border-slate-800 text-white focus:border-indigo-500 placeholder-slate-600'
                     : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500 placeholder-slate-400'
                     }`}
@@ -2994,7 +2994,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   placeholder="e.g. 100% parts cleared visual, dimensional, and thread tolerance checks without non-conformance."
                   value={pdiRemarks}
                   onChange={(e) => setPdiRemarks(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${isDarkMode
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-ui ${isDarkMode
                     ? 'bg-slate-900/90 border-slate-800 text-white focus:border-indigo-500 placeholder-slate-600'
                     : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500 placeholder-slate-400'
                     }`}
@@ -3009,7 +3009,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 type="button"
                 onClick={() => handlePdiDecisionSubmit('FAIL')}
                 disabled={isConfirming}
-                className="px-4 py-2.5 rounded-xl bg-rose-500/10 text-rose-500 dark:text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all disabled:opacity-50"
+                className="px-4 py-2.5 rounded-xl bg-rose-500/10 text-rose-500 dark:text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-ui disabled:opacity-50"
               >
                 <AlertTriangle className="w-3.5 h-3.5" />
                 <span>PDI Fail (Flag Rework)</span>
@@ -3019,7 +3019,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 <button
                   type="button"
                   onClick={() => pdiModal.close()}
-                  className={`px-4 py-2.5 rounded-xl border text-xs font-semibold cursor-pointer transition-all ${isDarkMode
+                  className={`px-4 py-2.5 rounded-xl border text-xs font-semibold cursor-pointer transition-ui ${isDarkMode
                     ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800'
                     : 'border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                     }`}
@@ -3030,7 +3030,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   type="button"
                   onClick={() => handlePdiDecisionSubmit('PASS')}
                   disabled={isConfirming || pdiAcceptedQty <= 0}
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-500/25 disabled:opacity-50 transition-all"
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-500/25 disabled:opacity-50 transition-ui"
                 >
                   <ShieldCheck className="w-4 h-4" />
                   <span>{isConfirming ? 'Processing...' : 'Complete PDI (Pass & Release)'}</span>
@@ -3044,7 +3044,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       {/* 2. GENERATE TAX INVOICE MODAL */}
       {invoiceModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-ui ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
             }`}>
             <div className={`flex items-center justify-between border-b pb-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <div className="flex items-center gap-2.5">
@@ -3058,7 +3058,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               </div>
               <button
                 onClick={() => invoiceModal.close()}
-                className={`p-1 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
+                className={`p-1 rounded-xl transition-ui cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -3072,7 +3072,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     type="text"
                     value={genInvoiceNo}
                     onChange={(e) => setGenInvoiceNo(e.target.value)}
-                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
+                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-ui ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
                       }`}
                   />
                 </div>
@@ -3082,7 +3082,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     type="date"
                     value={genInvoiceDate}
                     onChange={(e) => setGenInvoiceDate(e.target.value)}
-                    className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
+                    className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-ui ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
                       }`}
                   />
                 </div>
@@ -3134,7 +3134,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               <button
                 type="button"
                 onClick={() => invoiceModal.close()}
-                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-ui cursor-pointer ${isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`}
               >
                 Cancel
@@ -3156,7 +3156,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       {/* 3. GENERATE DELIVERY CHALLAN MODAL */}
       {challanModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-ui ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
             }`}>
             <div className={`flex items-center justify-between border-b pb-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <div className="flex items-center gap-2.5">
@@ -3170,7 +3170,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               </div>
               <button
                 onClick={() => challanModal.close()}
-                className={`p-1 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
+                className={`p-1 rounded-xl transition-ui cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -3184,7 +3184,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     type="text"
                     value={genChallanNo}
                     onChange={(e) => setGenChallanNo(e.target.value)}
-                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-ui ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
                       }`}
                   />
                 </div>
@@ -3195,7 +3195,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     value={challanVehicleNo}
                     onChange={(e) => setChallanVehicleNo(e.target.value)}
                     placeholder="e.g. MH 12 AB 4589"
-                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-ui ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
                       }`}
                   />
                 </div>
@@ -3209,7 +3209,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 <select
                   value={challanTransporter}
                   onChange={(e) => setChallanTransporter(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border text-xs outline-none cursor-pointer transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none cursor-pointer transition-ui ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
                     }`}
                 >
                   {allTransporterOptions.map((t, idx) => (
@@ -3224,7 +3224,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   type="text"
                   value={challanDriverContact}
                   onChange={(e) => setChallanDriverContact(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-ui ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
                     }`}
                 />
               </div>
@@ -3235,7 +3235,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   type="text"
                   value={challanRemarks}
                   onChange={(e) => setChallanRemarks(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-ui ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
                     }`}
                 />
               </div>
@@ -3245,7 +3245,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               <button
                 type="button"
                 onClick={() => challanModal.close()}
-                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-ui cursor-pointer ${isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`}
               >
                 Cancel
@@ -3276,7 +3276,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       {/* 4. DISPATCH OUTWARD CONSIGNMENT MODAL */}
       {dispatchModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-ui ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
             }`}>
             <div className={`flex items-center justify-between border-b pb-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <div className="flex items-center gap-2.5">
@@ -3290,7 +3290,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               </div>
               <button
                 onClick={() => dispatchModal.close()}
-                className={`p-1 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
+                className={`p-1 rounded-xl transition-ui cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -3304,7 +3304,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     type="date"
                     value={dispatchDate}
                     onChange={(e) => setDispatchDate(e.target.value)}
-                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-ui ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
                       }`}
                   />
                 </div>
@@ -3314,7 +3314,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     type="text"
                     value={dispatchLrNo}
                     onChange={(e) => setDispatchLrNo(e.target.value)}
-                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-ui ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
                       }`}
                   />
                 </div>
@@ -3325,7 +3325,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 <select
                   value={dispatchTransporter}
                   onChange={(e) => setDispatchTransporter(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border text-xs outline-none cursor-pointer transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none cursor-pointer transition-ui ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
                     }`}
                 >
                   {allTransporterOptions.map((t, idx) => (
@@ -3341,7 +3341,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     type="text"
                     value={dispatchVehicleNo}
                     onChange={(e) => setDispatchVehicleNo(e.target.value)}
-                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-ui ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
                       }`}
                   />
                 </div>
@@ -3351,7 +3351,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     type="text"
                     value={dispatchDriverContact}
                     onChange={(e) => setDispatchDriverContact(e.target.value)}
-                    className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                    className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-ui ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
                       }`}
                   />
                 </div>
@@ -3364,7 +3364,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   placeholder="e.g. Lorry loaded and sealed with GPS tracking active"
                   value={dispatchRemarks}
                   onChange={(e) => setDispatchRemarks(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-ui ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
                     }`}
                 />
               </div>
@@ -3374,7 +3374,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               <button
                 type="button"
                 onClick={() => dispatchModal.close()}
-                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-ui cursor-pointer ${isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`}
               >
                 Cancel
@@ -3396,7 +3396,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       {/* 5. CONFIRM DELIVERY MODAL (WITH FILE CHOOSER & CLEAN UI) */}
       {deliveryModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-ui ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
             }`}>
             <div className={`flex items-center justify-between border-b pb-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <div className="flex items-center gap-2.5">
@@ -3410,7 +3410,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               </div>
               <button
                 onClick={() => deliveryModal.close()}
-                className={`p-1 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
+                className={`p-1 rounded-xl transition-ui cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -3424,7 +3424,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     type="date"
                     value={deliveryDate}
                     onChange={(e) => setDeliveryDate(e.target.value)}
-                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-blue-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-600 focus:bg-white'
+                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-ui ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-blue-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-600 focus:bg-white'
                       }`}
                   />
                 </div>
@@ -3435,7 +3435,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     value={deliveryReceivedBy}
                     onChange={(e) => setDeliveryReceivedBy(e.target.value)}
                     placeholder="e.g. Ramesh Kumar (Stores)"
-                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-blue-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-600 focus:bg-white'
+                    className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-ui ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-blue-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-600 focus:bg-white'
                       }`}
                   />
                 </div>
@@ -3449,7 +3449,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   <button
                     type="button"
                     onClick={() => podFileInputRef.current?.click()}
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition-all flex items-center gap-1 cursor-pointer ${isDarkMode ? 'bg-slate-900 border-slate-700 text-blue-400 hover:bg-slate-800' : 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100'
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition-ui flex items-center gap-1 cursor-pointer ${isDarkMode ? 'bg-slate-900 border-slate-700 text-blue-400 hover:bg-slate-800' : 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100'
                       }`}
                   >
                     <Upload className="w-3 h-3" />
@@ -3470,7 +3470,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   placeholder="e.g. signed-pod-challan.pdf or attachment URL"
                   value={deliveryPodUrl}
                   onChange={(e) => setDeliveryPodUrl(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-blue-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-600 focus:bg-white'
+                  className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-ui ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-blue-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-600 focus:bg-white'
                     }`}
                 />
                 {!deliveryPodUrl.trim() ? (
@@ -3499,7 +3499,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   type="text"
                   value={deliveryRemarks}
                   onChange={(e) => setDeliveryRemarks(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-blue-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-600 focus:bg-white'
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-ui ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-blue-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-600 focus:bg-white'
                     }`}
                 />
               </div>
@@ -3509,7 +3509,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               <button
                 type="button"
                 onClick={() => deliveryModal.close()}
-                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-ui cursor-pointer ${isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`}
               >
                 Cancel
@@ -3532,7 +3532,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       {/* 5b. MARK DELIVERY DELAYED MODAL */}
       {delayedModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-ui ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
             }`}>
             <div className={`flex items-center justify-between border-b pb-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <div className="flex items-center gap-2.5">
@@ -3546,7 +3546,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               </div>
               <button
                 onClick={() => delayedModal.close()}
-                className={`p-1 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
+                className={`p-1 rounded-xl transition-ui cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -3566,7 +3566,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   placeholder="e.g. Transporter vehicle breakdown near highway checkpoint; rescheduled."
                   value={delayedReason}
                   onChange={(e) => setDelayedReason(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border text-xs outline-none resize-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-amber-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-amber-600 focus:bg-white'
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none resize-none transition-ui ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-amber-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-amber-600 focus:bg-white'
                     }`}
                 />
               </div>
@@ -3577,7 +3577,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   type="date"
                   value={delayedFollowUpDate}
                   onChange={(e) => setDelayedFollowUpDate(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-amber-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-amber-600 focus:bg-white'
+                  className={`w-full p-2.5 rounded-xl border font-bold text-xs outline-none transition-ui ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-amber-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-amber-600 focus:bg-white'
                     }`}
                 />
               </div>
@@ -3587,7 +3587,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               <button
                 type="button"
                 onClick={() => delayedModal.close()}
-                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-ui cursor-pointer ${isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`}
               >
                 Cancel
@@ -3609,7 +3609,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       {/* 6. RECORD PAYMENT & SETTLE MODAL */}
       {paymentModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-ui ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
             }`}>
             <div className={`flex items-center justify-between border-b pb-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <div className="flex items-center gap-2.5">
@@ -3625,7 +3625,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               </div>
               <button
                 onClick={() => paymentModal.close()}
-                className={`p-1 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
+                className={`p-1 rounded-xl transition-ui cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -3687,7 +3687,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     <button
                       type="button"
                       onClick={() => setPaymentAmount(remainingOutstanding)}
-                      className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${paymentAmount === remainingOutstanding
+                      className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg border transition-ui cursor-pointer ${paymentAmount === remainingOutstanding
                         ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
                         : isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
                         }`}
@@ -3698,7 +3698,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                       <button
                         type="button"
                         onClick={() => setPaymentAmount(Math.round(remainingOutstanding / 2))}
-                        className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${paymentAmount === Math.round(remainingOutstanding / 2)
+                        className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg border transition-ui cursor-pointer ${paymentAmount === Math.round(remainingOutstanding / 2)
                           ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
                           : isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
                           }`}
@@ -3715,7 +3715,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     step="0.01"
                     value={paymentAmount}
                     onChange={(e) => setPaymentAmount(Number(e.target.value))}
-                    className={`w-full pl-8 pr-3.5 py-2.5 rounded-xl border font-mono font-bold text-sm outline-none transition-all ${isDarkMode
+                    className={`w-full pl-8 pr-3.5 py-2.5 rounded-xl border font-mono font-bold text-sm outline-none transition-ui ${isDarkMode
                       ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500'
                       : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
                       }`}
@@ -3730,7 +3730,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   <select
                     value={paymentMode}
                     onChange={(e) => setPaymentMode(e.target.value as any)}
-                    className={`w-full p-2.5 rounded-xl border text-xs outline-none cursor-pointer transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
+                    className={`w-full p-2.5 rounded-xl border text-xs outline-none cursor-pointer transition-ui ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
                       }`}
                   >
                     <option value="NEFT">Bank NEFT</option>
@@ -3745,7 +3745,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     type="date"
                     value={paymentDate}
                     onChange={(e) => setPaymentDate(e.target.value)}
-                    className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
+                    className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none transition-ui ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
                       }`}
                   />
                 </div>
@@ -3758,7 +3758,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   placeholder="e.g. UTR-HDFC98234723 or CHQ-004521"
                   value={paymentRefNo}
                   onChange={(e) => setPaymentRefNo(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
+                  className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none transition-ui ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
                     }`}
                 />
               </div>
@@ -3768,7 +3768,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               <button
                 type="button"
                 onClick={() => paymentModal.close()}
-                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-ui cursor-pointer ${isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`}
               >
                 Cancel
@@ -3777,7 +3777,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 type="button"
                 onClick={handleRecordPaymentSubmit}
                 disabled={isConfirming || paymentAmount <= 0}
-                className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-500/25 disabled:opacity-50 transition-all"
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-500/25 disabled:opacity-50 transition-ui"
               >
                 <CreditCard className="w-4 h-4" />
                 <span>{isConfirming ? 'Recording...' : `Confirm & Settle ₹${paymentAmount.toLocaleString('en-IN')}`}</span>
@@ -3790,7 +3790,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       {/* Owner Override Material Check Modal */}
       {overrideModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-md rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-all ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          <div className={`relative w-full max-w-md rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-ui ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
             }`}>
             <div className={`flex items-center justify-between border-b pb-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <div className="flex items-center gap-2">
@@ -3804,7 +3804,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               </div>
               <button
                 onClick={() => overrideModal.close()}
-                className={`p-1 rounded-xl transition-all cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
+                className={`p-1 rounded-xl transition-ui cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -3826,7 +3826,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   placeholder="e.g. Raw material stock verified physically in bay 3 / Expedited demo order approval"
                   value={overrideReason}
                   onChange={(e) => setOverrideReason(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-purple-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-purple-600 focus:bg-white'
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-ui ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-purple-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-purple-600 focus:bg-white'
                     }`}
                   required
                 />
@@ -3840,7 +3840,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 <button
                   type="button"
                   onClick={() => overrideModal.close()}
-                  className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  className={`px-4 py-2 rounded-xl border text-xs font-bold transition-ui cursor-pointer ${isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                     }`}
                 >
                   Cancel

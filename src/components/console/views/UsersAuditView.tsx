@@ -769,7 +769,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
     <div className="space-y-6 font-sans">
       
       {/* Top Banner Header with Summary Telemetry */}
-      <div className={`p-4 sm:p-6 rounded-3xl border transition-all ${
+      <div className={`p-4 sm:p-6 rounded-3xl border transition-ui ${
         isDarkMode 
           ? 'bg-slate-900/80 border-slate-800/80 text-white backdrop-blur-xl shadow-2xl' 
           : 'bg-white border-slate-200 shadow-sm text-slate-900'
@@ -798,7 +798,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
             {activeTab === 'AUDIT' && (
               <button
                 onClick={handleExportCSV}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-blue-600 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-blue-600 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.96] transition-ui"
               >
                 {copiedExport ? <Check className="w-4 h-4" /> : <Download className="w-4 h-4" />}
                 <span>{copiedExport ? 'Exported Log!' : 'Export Log CSV'}</span>
@@ -808,7 +808,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
             {activeTab === 'USERS' && onAddUser && (
               <button
                 onClick={openAddUserModal}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.96] transition-ui"
               >
                 <Plus className="w-4 h-4" />
                 <span>Provision New User</span>
@@ -819,22 +819,22 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
 
         {/* Master Metrics Strip */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 mt-4 sm:mt-5 pt-3 sm:pt-4 border-t border-slate-200 dark:border-slate-800/60">
-          <div className={`p-3 sm:p-4 rounded-2xl border transition-all ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
+          <div className={`p-3 sm:p-4 rounded-2xl border transition-ui ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
             <div className={`text-[10px] sm:text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>System Directory</div>
             <div className="text-base sm:text-xl font-bold text-indigo-600 dark:text-indigo-400 mt-0.5 sm:mt-1">{users.length} Users</div>
             <div className="text-[10px] sm:text-[11px] text-emerald-600 dark:text-emerald-400 font-mono font-semibold mt-0.5">● {users.filter(u => u.status === 'ACTIVE' || u.status === 'Active').length} Active Accounts</div>
           </div>
-          <div className={`p-3 sm:p-4 rounded-2xl border transition-all ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
+          <div className={`p-3 sm:p-4 rounded-2xl border transition-ui ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
             <div className={`text-[10px] sm:text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Immutable Audit Ledger</div>
             <div className="text-base sm:text-xl font-bold text-blue-600 dark:text-blue-400 mt-0.5 sm:mt-1">{mergedAuditLogs.length} Events</div>
             <div className="text-[10px] sm:text-[11px] text-blue-600 dark:text-blue-400 font-mono font-semibold mt-0.5">● Real-time Stream</div>
           </div>
-          <div className={`p-3 sm:p-4 rounded-2xl border transition-all ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
+          <div className={`p-3 sm:p-4 rounded-2xl border transition-ui ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
             <div className={`text-[10px] sm:text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>RBAC Architecture</div>
             <div className="text-base sm:text-xl font-bold text-purple-600 dark:text-purple-400 mt-0.5 sm:mt-1">12 Matrix Roles</div>
             <div className="text-[10px] sm:text-[11px] text-purple-600 dark:text-purple-400 font-mono font-semibold mt-0.5">● Strict Boundaries</div>
           </div>
-          <div className={`p-3 sm:p-4 rounded-2xl border transition-all ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
+          <div className={`p-3 sm:p-4 rounded-2xl border transition-ui ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
             <div className={`text-[10px] sm:text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Monetary Ceilings</div>
             <div className="text-base sm:text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 sm:mt-1">PO ₹1L • Pay ₹50k</div>
             <div className="text-[10px] sm:text-[11px] text-emerald-600 dark:text-emerald-400 font-mono font-semibold mt-0.5">● Auto-Escalation</div>
@@ -843,13 +843,13 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
       </div>
 
       {/* Main Tab Controls Bar */}
-      <div className={`p-3.5 sm:p-4 rounded-3xl border transition-all space-y-3 ${
+      <div className={`p-3.5 sm:p-4 rounded-3xl border transition-ui space-y-3 ${
         isDarkMode ? 'bg-slate-900/70 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-xs'
       }`}>
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
           <button
             onClick={() => setActiveTab('AUDIT')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-ui cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
               activeTab === 'AUDIT'
                 ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-xs'
                 : isDarkMode ? 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-white' : 'bg-slate-100 text-slate-600 border-slate-200 hover:text-slate-900'
@@ -861,7 +861,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
           
           <button
             onClick={() => setActiveTab('USERS')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-ui cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
               activeTab === 'USERS'
                 ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-xs'
                 : isDarkMode ? 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-white' : 'bg-slate-100 text-slate-600 border-slate-200 hover:text-slate-900'
@@ -873,7 +873,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
 
           <button
             onClick={() => setActiveTab('RBAC_MATRIX')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-ui cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
               activeTab === 'RBAC_MATRIX'
                 ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-xs'
                 : isDarkMode ? 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-white' : 'bg-slate-100 text-slate-600 border-slate-200 hover:text-slate-900'
@@ -901,7 +901,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
               </select>
             )}
 
-            <div className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl border text-xs flex-1 transition-all ${
+            <div className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl border text-xs flex-1 transition-ui ${
               isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white focus-within:border-[#5B75F8]' : 'bg-slate-50 border-slate-200 text-slate-900 focus-within:border-[#5B75F8]'
             }`}>
               <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
@@ -972,7 +972,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                     type="button"
                     disabled={isExporting || filteredLogs.length === 0}
                     onClick={handleExportCSV}
-                    className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold font-mono flex items-center gap-1.5 cursor-pointer shadow-md shadow-[#5B75F8]/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                    className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold font-mono flex items-center gap-1.5 cursor-pointer shadow-md shadow-[#5B75F8]/20 transition-ui hover:scale-[1.02] active:scale-[0.96] disabled:opacity-50"
                   >
                     {isExporting ? (
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
@@ -985,7 +985,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
               </div>
 
               {/* Advanced Multi-Filter Toolbar */}
-              <div className={`p-4 rounded-2xl border transition-all space-y-3 ${
+              <div className={`p-4 rounded-2xl border transition-ui space-y-3 ${
                 isDarkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200'
               }`}>
                 {/* Category Pills */}
@@ -1001,7 +1001,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                         setSelectedSection(cat);
                         setAuditPage(1);
                       }}
-                      className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                      className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold transition-ui cursor-pointer ${
                         selectedSection === cat
                           ? isDarkMode ? 'bg-[#5B75F8] text-white shadow-xs' : 'bg-[#5B75F8] text-white shadow-xs'
                           : isDarkMode ? 'bg-slate-950/60 text-slate-400 hover:text-white border border-slate-800' : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
@@ -1096,7 +1096,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                       type="button"
                       disabled={activeFiltersCount === 0}
                       onClick={handleClearFilters}
-                      className={`w-full px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition-all ${
+                      className={`w-full px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition-ui ${
                         activeFiltersCount > 0
                           ? isDarkMode 
                             ? 'bg-slate-800/80 hover:bg-slate-700 text-amber-400 border-amber-500/30 cursor-pointer shadow-xs' 
@@ -1130,7 +1130,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                       <div
                         key={log.id}
                         onClick={() => toggleExpandLog(log.id)}
-                        className={`p-3.5 rounded-3xl border transition-all space-y-2.5 cursor-pointer shadow-sm ${
+                        className={`p-3.5 rounded-3xl border transition-ui space-y-2.5 cursor-pointer shadow-sm ${
                           isSuspicious 
                             ? isDarkMode ? 'bg-rose-950/20 border-rose-500/40 hover:bg-rose-900/30' : 'bg-rose-50/70 border-rose-200 hover:bg-rose-100/70'
                             : isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'
@@ -1197,7 +1197,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
               </div>
 
               {/* Desktop Immutable Ledger Table (Viewport >= md) */}
-              <div className={`hidden md:block rounded-3xl border overflow-hidden shadow-2xl transition-all ${
+              <div className={`hidden md:block rounded-3xl border overflow-hidden shadow-2xl transition-ui ${
                 isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200'
               }`}>
                 <div className="overflow-x-auto">
@@ -1359,7 +1359,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                         type="button"
                         disabled={auditPage === 1}
                         onClick={() => setAuditPage(p => Math.max(1, p - 1))}
-                        className={`px-3 py-1.5 rounded-xl border disabled:opacity-40 cursor-pointer transition-all ${
+                        className={`px-3 py-1.5 rounded-xl border disabled:opacity-40 cursor-pointer transition-ui ${
                           isDarkMode ? 'border-slate-700 hover:bg-slate-800' : 'border-slate-200 hover:bg-slate-100'
                         }`}
                       >
@@ -1370,7 +1370,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                         type="button"
                         disabled={auditPage === totalAuditPages}
                         onClick={() => setAuditPage(p => Math.min(totalAuditPages, p + 1))}
-                        className={`px-3 py-1.5 rounded-xl border disabled:opacity-40 cursor-pointer transition-all ${
+                        className={`px-3 py-1.5 rounded-xl border disabled:opacity-40 cursor-pointer transition-ui ${
                           isDarkMode ? 'border-slate-700 hover:bg-slate-800' : 'border-slate-200 hover:bg-slate-100'
                         }`}
                       >
@@ -1409,7 +1409,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                 return (
                   <div
                     key={usr.id}
-                    className={`p-4 rounded-3xl border transition-all space-y-3 shadow-sm ${
+                    className={`p-4 rounded-3xl border transition-ui space-y-3 shadow-sm ${
                       isRevoked
                         ? isDarkMode ? 'bg-slate-950/70 border-rose-500/30' : 'bg-rose-50/40 border-rose-200'
                         : isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'
@@ -1474,7 +1474,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                     <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-200 dark:border-slate-800/60">
                       <button
                         onClick={() => handleOpenEditUser(usr)}
-                        className={`flex-1 py-2 rounded-xl border font-mono text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-all ${
+                        className={`flex-1 py-2 rounded-xl border font-mono text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-ui ${
                           isDarkMode 
                             ? 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30 hover:bg-indigo-500/25' 
                             : 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100'
@@ -1490,7 +1490,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                           setNewSelectedRole(normRole);
                           editRoleModal.open({ userId: usr.id });
                         }}
-                        className={`flex-1 py-2 rounded-xl border font-mono text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-all ${
+                        className={`flex-1 py-2 rounded-xl border font-mono text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-ui ${
                           isDarkMode 
                             ? 'bg-blue-500/15 text-blue-300 border-blue-500/30 hover:bg-blue-500/25' 
                             : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
@@ -1503,7 +1503,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                       {!isRevoked ? (
                         <button
                           onClick={() => onRevokeUser && onRevokeUser(usr.id)}
-                          className={`px-3 py-2 rounded-xl border font-mono text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-all ${
+                          className={`px-3 py-2 rounded-xl border font-mono text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-ui ${
                             isDarkMode 
                               ? 'bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25' 
                               : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
@@ -1515,7 +1515,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                       ) : (
                         <button
                           onClick={() => onRestoreUser && onRestoreUser(usr.id)}
-                          className={`px-3 py-2 rounded-xl border font-mono text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-all ${
+                          className={`px-3 py-2 rounded-xl border font-mono text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-ui ${
                             isDarkMode 
                               ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25' 
                               : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
@@ -1532,7 +1532,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                             setUserToDelete(usr);
                             deleteUserModal.open({ userId: usr.id });
                           }}
-                          className={`p-2 rounded-xl border cursor-pointer transition-all ${
+                          className={`p-2 rounded-xl border cursor-pointer transition-ui ${
                             isDarkMode 
                               ? 'bg-rose-500/15 text-rose-400 border-rose-500/30 hover:bg-rose-500/25' 
                               : 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100'
@@ -1550,7 +1550,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
           </div>
 
           {/* Desktop User Directory Table (Viewport >= md) */}
-          <div className={`hidden md:block rounded-3xl border overflow-hidden shadow-2xl transition-all ${
+          <div className={`hidden md:block rounded-3xl border overflow-hidden shadow-2xl transition-ui ${
             isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200'
           }`}>
             <div className="overflow-x-auto">
@@ -1626,7 +1626,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                           <div className="flex items-center justify-end gap-1.5">
                             <button
                               onClick={() => handleOpenEditUser(usr)}
-                              className={`p-1.5 px-2.5 rounded-xl border text-[11px] font-bold font-mono transition-all cursor-pointer flex items-center gap-1 ${
+                              className={`p-1.5 px-2.5 rounded-xl border text-[11px] font-bold font-mono transition-ui cursor-pointer flex items-center gap-1 ${
                                 isDarkMode 
                                   ? 'border-indigo-500/30 bg-indigo-500/10 text-indigo-300 hover:text-white hover:bg-indigo-500/20' 
                                   : 'border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
@@ -1643,7 +1643,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                                 setNewSelectedRole(normRole);
                                 editRoleModal.open({ userId: usr.id });
                               }}
-                              className={`p-1.5 px-2.5 rounded-xl border text-[11px] font-bold font-mono transition-all cursor-pointer flex items-center gap-1 ${
+                              className={`p-1.5 px-2.5 rounded-xl border text-[11px] font-bold font-mono transition-ui cursor-pointer flex items-center gap-1 ${
                                 isDarkMode 
                                   ? 'bg-blue-500/10 text-blue-300 border-blue-500/30 hover:bg-blue-500/20' 
                                   : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
@@ -1657,7 +1657,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                             {!isRevoked ? (
                               <button
                                 onClick={() => onRevokeUser && onRevokeUser(usr.id)}
-                                className={`p-1.5 px-2 rounded-xl border text-[11px] font-bold font-mono transition-all cursor-pointer flex items-center gap-1 ${
+                                className={`p-1.5 px-2 rounded-xl border text-[11px] font-bold font-mono transition-ui cursor-pointer flex items-center gap-1 ${
                                   isDarkMode 
                                     ? 'bg-amber-500/10 text-amber-300 border-amber-500/30 hover:bg-amber-500/20' 
                                     : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
@@ -1670,7 +1670,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                             ) : (
                               <button
                                 onClick={() => onRestoreUser && onRestoreUser(usr.id)}
-                                className={`p-1.5 px-2 rounded-xl border text-[11px] font-bold font-mono transition-all cursor-pointer flex items-center gap-1 ${
+                                className={`p-1.5 px-2 rounded-xl border text-[11px] font-bold font-mono transition-ui cursor-pointer flex items-center gap-1 ${
                                   isDarkMode 
                                     ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20' 
                                     : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
@@ -1688,7 +1688,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                                   setUserToDelete(usr);
                                   deleteUserModal.open({ userId: usr.id });
                                 }}
-                                className={`p-1.5 px-2 rounded-xl border text-[11px] font-bold font-mono transition-all cursor-pointer flex items-center gap-1 ${
+                                className={`p-1.5 px-2 rounded-xl border text-[11px] font-bold font-mono transition-ui cursor-pointer flex items-center gap-1 ${
                                   isDarkMode 
                                     ? 'bg-rose-500/10 text-rose-300 border-rose-500/30 hover:bg-rose-500/20' 
                                     : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
@@ -1760,7 +1760,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
               return (
                 <div 
                   key={rDef.role}
-                  className={`p-5 rounded-3xl border transition-all ${
+                  className={`p-5 rounded-3xl border transition-ui ${
                     isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-sm'
                   }`}
                 >
@@ -1865,7 +1865,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
             <button
               type="button"
               onClick={() => addUserModal.close()}
-              className={`px-4 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
+              className={`px-4 py-2.5 rounded-xl font-bold transition-ui cursor-pointer ${
                 isDarkMode 
                   ? 'text-slate-400 hover:text-white hover:bg-slate-800' 
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
@@ -1876,7 +1876,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
             <button
               type="submit"
               form="provision-user-form"
-              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-indigo-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-indigo-500/25 hover:scale-[1.02] active:scale-[0.96] transition-ui cursor-pointer"
             >
               <Check className="w-4 h-4" />
               <span>Provision System User</span>
@@ -1911,7 +1911,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                 placeholder="e.g. Ramesh Kulkarni"
                 value={uFullName}
                 onChange={(e) => setUFullName(e.target.value)}
-                className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${
+                className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-ui ${
                   userErrors.fullName 
                     ? 'border-rose-500 ring-1 ring-rose-500' 
                     : isDarkMode ? 'bg-slate-950 border-slate-800 text-white focus:border-indigo-500' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white'
@@ -1929,7 +1929,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                 placeholder="e.g. EMP-1048"
                 value={uEmployeeCode}
                 onChange={(e) => setUEmployeeCode(e.target.value)}
-                className={`w-full p-2.5 rounded-xl border text-xs font-mono outline-none transition-all ${
+                className={`w-full p-2.5 rounded-xl border text-xs font-mono outline-none transition-ui ${
                   isDarkMode ? 'bg-slate-950 border-slate-800 text-white focus:border-indigo-500' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white'
                 }`}
               />
@@ -1951,7 +1951,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                   placeholder="9876543210"
                   value={uMobile}
                   onChange={(e) => setUMobile(e.target.value.replace(/\D/g, ''))}
-                  className={`w-full pl-9 p-2.5 rounded-xl border text-xs font-mono outline-none transition-all ${
+                  className={`w-full pl-9 p-2.5 rounded-xl border text-xs font-mono outline-none transition-ui ${
                     userErrors.mobile 
                       ? 'border-rose-500 ring-1 ring-rose-500' 
                       : isDarkMode ? 'bg-slate-950 border-slate-800 text-white focus:border-indigo-500' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white'
@@ -1972,7 +1972,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                   placeholder="ramesh@guruom.in"
                   value={uEmail}
                   onChange={(e) => setUEmail(e.target.value)}
-                  className={`w-full pl-9 p-2.5 rounded-xl border text-xs font-mono outline-none transition-all ${
+                  className={`w-full pl-9 p-2.5 rounded-xl border text-xs font-mono outline-none transition-ui ${
                     userErrors.email 
                       ? 'border-rose-500 ring-1 ring-rose-500' 
                       : isDarkMode ? 'bg-slate-950 border-slate-800 text-white focus:border-indigo-500' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white'
@@ -1997,7 +1997,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
               <button
                 type="button"
                 onClick={handleGeneratePassword}
-                className="px-2.5 py-1 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 text-[10px] font-mono font-bold flex items-center gap-1 hover:bg-indigo-500/20 transition-all cursor-pointer"
+                className="px-2.5 py-1 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 text-[10px] font-mono font-bold flex items-center gap-1 hover:bg-indigo-500/20 transition-ui cursor-pointer"
               >
                 <Sparkles className="w-3 h-3" />
                 <span>Generate Strong Password</span>
@@ -2020,7 +2020,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                       setUPassword(e.target.value);
                       setCopiedPassword(false);
                     }}
-                    className={`w-full pr-16 p-2.5 rounded-xl border text-xs font-mono outline-none transition-all ${
+                    className={`w-full pr-16 p-2.5 rounded-xl border text-xs font-mono outline-none transition-ui ${
                       userErrors.password 
                         ? 'border-rose-500 ring-1 ring-rose-500' 
                         : isDarkMode ? 'bg-slate-950 border-slate-800 text-white focus:border-indigo-500' : 'bg-white border-slate-300 text-slate-900 focus:border-indigo-500'
@@ -2038,7 +2038,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                           }
                         }}
                         title={copiedPassword ? 'Copied!' : 'Copy Password'}
-                        className={`p-1 rounded-lg transition-all ${
+                        className={`p-1 rounded-lg transition-ui ${
                           copiedPassword ? 'text-emerald-500' : 'text-slate-400 hover:text-slate-200'
                         }`}
                       >
@@ -2048,7 +2048,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="p-1 text-slate-400 hover:text-slate-200 transition-all cursor-pointer"
+                      className="p-1 text-slate-400 hover:text-slate-200 transition-ui cursor-pointer"
                     >
                       {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                     </button>
@@ -2069,7 +2069,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                     placeholder="Re-enter same password"
                     value={uConfirmPassword}
                     onChange={(e) => setUConfirmPassword(e.target.value)}
-                    className={`w-full pr-9 p-2.5 rounded-xl border text-xs font-mono outline-none transition-all ${
+                    className={`w-full pr-9 p-2.5 rounded-xl border text-xs font-mono outline-none transition-ui ${
                       userErrors.confirmPassword 
                         ? 'border-rose-500 ring-1 ring-rose-500' 
                         : isDarkMode ? 'bg-slate-950 border-slate-800 text-white focus:border-indigo-500' : 'bg-white border-slate-300 text-slate-900 focus:border-indigo-500'
@@ -2078,7 +2078,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="p-1 absolute right-2 top-2 text-slate-400 hover:text-slate-200 transition-all cursor-pointer"
+                    className="p-1 absolute right-2 top-2 text-slate-400 hover:text-slate-200 transition-ui cursor-pointer"
                   >
                     {showConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   </button>
@@ -2110,7 +2110,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
               <select
                 value={uReportingManager}
                 onChange={(e) => setUReportingManager(e.target.value)}
-                className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all cursor-pointer ${
+                className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-ui cursor-pointer ${
                   isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
                 }`}
               >
@@ -2130,7 +2130,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                 placeholder="e.g. Production Operations"
                 value={uDepartment}
                 onChange={(e) => setUDepartment(e.target.value)}
-                className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all ${
+                className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-ui ${
                   userErrors.department 
                     ? 'border-rose-500 ring-1 ring-rose-500' 
                     : isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
@@ -2145,7 +2145,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
               <select
                 value={uStatus}
                 onChange={(e) => setUStatus(e.target.value as any)}
-                className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-all cursor-pointer ${
+                className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-ui cursor-pointer ${
                   isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
                 }`}
               >
@@ -2167,7 +2167,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                   <div
                     key={r.role}
                     onClick={() => handleRoleSelect(r.label)}
-                    className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 ${
+                    className={`p-3 rounded-2xl border transition-ui cursor-pointer flex items-start gap-3 ${
                       isSelected
                         ? isDarkMode 
                           ? 'border-indigo-500/80 bg-indigo-500/10 shadow-sm' 
@@ -2218,7 +2218,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                   <label
                     key={mod.id}
                     onClick={() => toggleModuleAccess(mod.id)}
-                    className={`p-2 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
+                    className={`p-2 rounded-xl border flex items-center gap-2 cursor-pointer transition-ui ${
                       isChecked
                         ? isDarkMode
                           ? 'border-indigo-500/50 bg-indigo-500/10 text-white'
@@ -2269,7 +2269,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                 editUserModal.close();
                 setUserToEdit(null);
               }} 
-              className={`px-5 py-2.5 rounded-2xl border text-xs font-mono font-bold transition-all cursor-pointer ${
+              className={`px-5 py-2.5 rounded-2xl border text-xs font-mono font-bold transition-ui cursor-pointer ${
                 isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
               }`}
             >
@@ -2278,7 +2278,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
             <button 
               type="button"
               onClick={handleSaveEditUser}
-              className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold text-xs font-mono shadow-lg shadow-indigo-500/25 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold text-xs font-mono shadow-lg shadow-indigo-500/25 cursor-pointer transition-ui hover:scale-[1.02] active:scale-[0.96]"
             >
               Save Master Changes
             </button>
@@ -2451,7 +2451,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                 editRoleModal.close();
                 setUserToEditRole(null);
               }} 
-              className={`px-5 py-2.5 rounded-2xl border text-xs font-mono font-bold transition-all cursor-pointer ${
+              className={`px-5 py-2.5 rounded-2xl border text-xs font-mono font-bold transition-ui cursor-pointer ${
                 isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
               }`}
             >
@@ -2466,7 +2466,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                 editRoleModal.close();
                 setUserToEditRole(null);
               }}
-              className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-600 text-white font-bold text-xs font-mono shadow-lg shadow-blue-500/25 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-600 text-white font-bold text-xs font-mono shadow-lg shadow-blue-500/25 cursor-pointer transition-ui hover:scale-[1.02] active:scale-[0.96]"
             >
               Save Role Change
             </button>
@@ -2483,7 +2483,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
               <div
                 key={r.role}
                 onClick={() => setNewSelectedRole(r.role)}
-                className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 ${
+                className={`p-3 rounded-2xl border transition-ui cursor-pointer flex items-start gap-3 ${
                   isSelected
                     ? isDarkMode ? 'border-blue-500/60 bg-blue-500/10 shadow-sm' : 'border-blue-600 bg-blue-50 shadow-sm ring-1 ring-blue-500/20'
                     : isDarkMode ? 'border-slate-800 bg-slate-950/50 hover:border-slate-700' : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
@@ -2539,7 +2539,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                 deleteUserModal.close();
                 setUserToDelete(null);
               }}
-              className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+              className={`px-4 py-2 rounded-xl text-xs font-bold border transition-ui cursor-pointer ${
                 isDarkMode ? 'border-slate-800 text-slate-300 hover:bg-slate-800' : 'border-slate-200 text-slate-700 hover:bg-slate-100'
               }`}
             >

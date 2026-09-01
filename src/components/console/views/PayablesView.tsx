@@ -164,7 +164,7 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
           <button
             type="button"
             onClick={() => createBillModal.open()}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold shadow-md active:scale-95 transition-all cursor-pointer"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold shadow-md active:scale-[0.96] transition-ui cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>New Bill</span>
@@ -207,7 +207,7 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
       {/* ── DESKTOP HEADER & INTEGRATED KPI ROW (≥ md) ──                          */}
       {/* ========================================================================= */}
       <div className="hidden md:block space-y-4">
-        <section className={`overflow-hidden rounded-[24px] border ${isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'}`}>
+        <section className={`overflow-hidden rounded-[24px] border ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'}`}>
           <div className="flex items-center justify-between gap-6 px-6 py-5">
             <div className="min-w-0">
               <div className="mb-1.5 flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">
@@ -232,7 +232,7 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
             <button
               type="button"
               onClick={() => createBillModal.open()}
-              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-5 text-xs font-bold text-white shadow-lg shadow-[var(--accent-shadow)] transition hover:brightness-110 active:scale-95 cursor-pointer"
+              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-5 text-xs font-bold text-white shadow-lg shadow-[var(--accent-shadow)] transition hover:brightness-110 active:scale-[0.96] cursor-pointer"
             >
               <Plus className="h-4 w-4" />
               <span>New Bill</span>
@@ -265,7 +265,7 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
         </section>
 
         {/* Desktop Filter & Search Toolbar */}
-        <div className={`rounded-2xl border p-3 ${isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
+        <div className={`rounded-2xl border p-3 ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
           <div className="flex items-center gap-3 flex-wrap">
             <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${isDarkMode ? 'bg-white/[0.05] text-slate-400' : 'bg-slate-100 text-slate-500'}`} title="Modules">
               <Building2 className="h-4 w-4" />
@@ -332,7 +332,7 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
       <div className="block md:hidden space-y-3">
         {filtered.length === 0 ? (
           <div className={`p-8 text-center rounded-2xl border font-mono text-xs ${
-            isDarkMode ? 'bg-[#171b24] border-white/[0.08] text-slate-400' : 'bg-white border-slate-200 text-slate-500'
+            isDarkMode ? 'bg-[#121215] border-white/[0.08] text-slate-400' : 'bg-white border-slate-200 text-slate-500'
           }`}>
             <Building2 className="w-8 h-8 mx-auto mb-2 opacity-30" />
             <p>No vendor bills found matching search criteria.</p>
@@ -346,12 +346,12 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
             return (
               <div
                 key={bill.billNo}
-                className={`p-4 rounded-2xl border transition-all space-y-3.5 shadow-sm ${
+                className={`p-4 rounded-2xl border transition-ui space-y-3.5 shadow-sm ${
                   isPaid
-                    ? isDarkMode ? 'bg-[#171b24] border-emerald-500/30' : 'bg-emerald-50/40 border-emerald-200'
+                    ? isDarkMode ? 'bg-[#121215] border-emerald-500/30' : 'bg-emerald-50/40 border-emerald-200'
                     : isOverdue
-                    ? isDarkMode ? 'bg-[#171b24] border-rose-500/30' : 'bg-rose-50/40 border-rose-200'
-                    : isDarkMode ? 'bg-[#171b24] border-white/[0.08]' : 'bg-white border-slate-200'
+                    ? isDarkMode ? 'bg-[#121215] border-rose-500/30' : 'bg-rose-50/40 border-rose-200'
+                    : isDarkMode ? 'bg-[#121215] border-white/[0.08]' : 'bg-white border-slate-200'
                 }`}
               >
                 {/* Header: Bill # + Status Badge */}
@@ -427,7 +427,7 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                   {!isPaid && Number(bill.balanceAmount) > 0 ? (
                     <button
                       onClick={() => handleDisbursementClick(bill.billNo)}
-                      className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-mono text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-blue-500/20 cursor-pointer active:scale-[0.98]"
+                      className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-mono text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-blue-500/20 cursor-pointer transition-transform duration-150 ease-out active:scale-[0.96]"
                     >
                       <CreditCard className="w-3.5 h-3.5" />
                       <span>Disburse Funds (₹{Number(bill.balanceAmount).toLocaleString('en-IN')})</span>
@@ -448,8 +448,8 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
       {/* ========================================================================= */}
       {/* DESKTOP PAYABLES TABLE (Viewport >= md) */}
       {/* ========================================================================= */}
-      <div className={`hidden md:block overflow-hidden rounded-[22px] border transition-all ${
-        isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
+      <div className={`hidden md:block overflow-hidden rounded-[22px] border transition-ui ${
+        isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
       }`}>
         <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
           <div>
@@ -539,7 +539,7 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                     {bill.status !== 'PAID' && Number(bill.balanceAmount) > 0 && (
                       <button
                         onClick={() => handleDisbursementClick(bill.billNo)}
-                        className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer ${
+                        className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-ui cursor-pointer ${
                           isDarkMode ? 'bg-[var(--accent-primary)]/10 text-[var(--accent-text-dark)] hover:bg-[var(--accent-primary)]/20 border border-[var(--accent-primary)]/30' : 'bg-[var(--accent-primary)]/10 text-[var(--accent-text-light)] hover:bg-[var(--accent-primary)]/20 border border-[var(--accent-primary)]/20'
                         }`}
                       >
@@ -586,8 +586,8 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                 onChange={(e) => handleVendorNameChange(e.target.value)}
                 list="vendors-datalist"
                 placeholder="e.g. Mahalaxmi Steel Traders"
-                className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
-                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-ui ${
+                  isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
                 }`}
               />
               {vendors && vendors.length > 0 && (
@@ -608,8 +608,8 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                 name="vendorType"
                 value={formVendorType}
                 onChange={(e) => setFormVendorType(e.target.value)}
-                className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
-                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-ui ${
+                  isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
                 }`}
               >
                 <option value="Supplier">Supplier (Goods / Raw Material)</option>
@@ -632,8 +632,8 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                 value={formBillNo}
                 onChange={(e) => setFormBillNo(e.target.value)}
                 placeholder="e.g. INV-MST-2026-089"
-                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
-                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
+                  isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
                 }`}
               />
             </div>
@@ -647,8 +647,8 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                 onChange={(e) => setFormVendorPan(e.target.value.toUpperCase())}
                 placeholder="e.g. AAACM1234F"
                 maxLength={10}
-                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all uppercase ${
-                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui uppercase ${
+                  isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
                 }`}
               />
             </div>
@@ -665,8 +665,8 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                 value={formPoNo}
                 onChange={(e) => setFormPoNo(e.target.value)}
                 placeholder="e.g. PO-PUR-2026-001"
-                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
-                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
+                  isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
                 }`}
               />
             </div>
@@ -679,8 +679,8 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                 value={formGrnNo}
                 onChange={(e) => setFormGrnNo(e.target.value)}
                 placeholder="e.g. GRN-26-001"
-                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
-                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
+                  isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
                 }`}
               />
             </div>
@@ -700,8 +700,8 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                 value={formGrossAmount}
                 onChange={(e) => setFormGrossAmount(e.target.value === '' ? '' : Number(e.target.value))}
                 placeholder="150000"
-                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
-                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
+                  isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
                 }`}
               />
             </div>
@@ -715,8 +715,8 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                 required
                 value={formDate}
                 onChange={(e) => setFormDate(e.target.value)}
-                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
-                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
+                  isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
                 }`}
               />
             </div>
@@ -730,15 +730,15 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                 required
                 value={formDueDate}
                 onChange={(e) => setFormDueDate(e.target.value)}
-                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
-                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
+                  isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
                 }`}
               />
             </div>
           </div>
 
           <div className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 ${
-            isDarkMode ? 'bg-[#0d1017] border-slate-800' : 'bg-slate-50 border-slate-200'
+            isDarkMode ? 'bg-[#09090B] border-slate-800' : 'bg-slate-50 border-slate-200'
           }`}>
             <div>
               <div className="font-bold text-xs">Statutory TDS Section 194Q Applicability</div>
@@ -751,7 +751,7 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                 onChange={(e) => setFormIsPurchaseOfGoods(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--accent-primary)]"></div>
+              <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-ui peer-checked:bg-[var(--accent-primary)]"></div>
             </label>
           </div>
 
@@ -759,7 +759,7 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
             <button
               type="button"
               onClick={() => createBillModal.close()}
-              className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+              className={`px-4 py-2 rounded-xl border text-xs font-bold transition-ui cursor-pointer ${
                 isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
               }`}
             >
@@ -768,7 +768,7 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2 rounded-xl bg-[var(--accent-primary)] hover:brightness-110 text-white font-bold text-xs cursor-pointer shadow-lg shadow-[var(--accent-shadow)] transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+              className="px-5 py-2 rounded-xl bg-[var(--accent-primary)] hover:brightness-110 text-white font-bold text-xs cursor-pointer shadow-lg shadow-[var(--accent-shadow)] transition-ui hover:scale-[1.01] active:scale-[0.96] disabled:opacity-50"
             >
               {isSubmitting ? 'Recording...' : 'Record Vendor Bill'}
             </button>

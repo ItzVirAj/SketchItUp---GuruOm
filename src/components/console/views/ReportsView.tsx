@@ -79,7 +79,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           <button
             type="button"
             onClick={exportCSV}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold shadow-md active:scale-95 transition-all"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold shadow-md active:scale-[0.96] transition-ui"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Export</span>
@@ -122,7 +122,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       {/* ── DESKTOP HEADER & INTEGRATED KPI ROW (≥ md) ──                          */}
       {/* ========================================================================= */}
       <div className="hidden md:block space-y-4">
-        <section className={`overflow-hidden rounded-[24px] border ${isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'}`}>
+        <section className={`overflow-hidden rounded-[24px] border ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'}`}>
           <div className="flex items-center justify-between gap-6 px-6 py-5">
             <div className="min-w-0">
               <div className="mb-1.5 flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">
@@ -147,7 +147,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
             <button
               type="button"
               onClick={exportCSV}
-              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-5 text-xs font-bold text-white shadow-lg shadow-[var(--accent-shadow)] transition hover:brightness-110 active:scale-95"
+              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-5 text-xs font-bold text-white shadow-lg shadow-[var(--accent-shadow)] transition hover:brightness-110 active:scale-[0.96]"
             >
               <Download className="h-4 w-4" />
               <span>Export CSV Report</span>
@@ -180,7 +180,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         </section>
 
         {/* Desktop Date Filter & Search Toolbar */}
-        <div className={`rounded-2xl border p-3 ${isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
+        <div className={`rounded-2xl border p-3 ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
           <div className="flex items-center gap-3 flex-wrap">
             <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${isDarkMode ? 'bg-white/[0.05] text-slate-400' : 'bg-slate-100 text-slate-500'}`} title="Modules">
               <FileText className="h-4 w-4" />
@@ -246,7 +246,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       <div className="block md:hidden space-y-3">
         {filteredLogs.length === 0 ? (
           <div className={`p-8 text-center rounded-2xl border font-mono text-xs ${
-            isDarkMode ? 'bg-[#171b24] border-white/[0.08] text-slate-400' : 'bg-white border-slate-200 text-slate-500'
+            isDarkMode ? 'bg-[#121215] border-white/[0.08] text-slate-400' : 'bg-white border-slate-200 text-slate-500'
           }`}>
             No production logs found matching your filters.
           </div>
@@ -254,8 +254,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           filteredLogs.map((log, idx) => (
             <div
               key={idx}
-              className={`p-4 rounded-2xl border transition-all space-y-3 shadow-sm ${
-                isDarkMode ? 'bg-[#171b24] border-white/[0.08]' : 'bg-white border-slate-200'
+              className={`p-4 rounded-2xl border transition-ui space-y-3 shadow-sm ${
+                isDarkMode ? 'bg-[#121215] border-white/[0.08]' : 'bg-white border-slate-200'
               }`}
             >
               {/* Header: Job No + Step Pill */}
@@ -303,8 +303,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       {/* ========================================================================= */}
       {/* DESKTOP REPORTS TABLE (Viewport >= md) */}
       {/* ========================================================================= */}
-      <div className={`hidden md:block overflow-hidden rounded-[22px] border transition-all ${
-        isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
+      <div className={`hidden md:block overflow-hidden rounded-[22px] border transition-ui ${
+        isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
       }`}>
         <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
           <div>

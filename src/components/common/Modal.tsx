@@ -129,9 +129,9 @@ export const Modal: React.FC<ModalProps> = ({
         data-lenis-prevent="true"
         onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
-        className={`relative w-full ${maxWidthClass} max-h-[92vh] sm:max-h-[88vh] flex flex-col rounded-2xl border shadow-2xl transition-all overflow-hidden overscroll-contain modal-animate-enter ${
+        className={`relative w-full ${maxWidthClass} max-h-[92vh] sm:max-h-[88vh] flex flex-col rounded-2xl border shadow-2xl transition-ui overflow-hidden overscroll-contain modal-animate-enter ${
           isDarkMode
-            ? 'bg-[#11141c] border-slate-800/90 text-white shadow-black/80 ring-1 ring-white/5'
+            ? 'bg-[#18181B] border-slate-800/90 text-white shadow-black/80 ring-1 ring-white/5'
             : 'bg-white border-slate-200 text-slate-900 shadow-2xl ring-1 ring-black/5'
         } ${className}`}
       >
@@ -140,7 +140,7 @@ export const Modal: React.FC<ModalProps> = ({
           <div
             className={`shrink-0 px-6 py-4.5 border-b flex items-center justify-between gap-4 select-none ${
               isDarkMode
-                ? 'border-slate-800/80 bg-[#141822]/90 text-white'
+                ? 'border-slate-800/80 bg-[#18181B]/90 text-white'
                 : 'border-slate-200 bg-slate-50/90 text-slate-900'
             } ${headerClassName}`}
           >
@@ -184,7 +184,7 @@ export const Modal: React.FC<ModalProps> = ({
                 <button
                   type="button"
                   onClick={onClose}
-                  className={`p-2 rounded-xl border transition-all cursor-pointer ${
+                  className={`p-2 rounded-xl border transition-ui cursor-pointer ${
                     isDarkMode
                       ? 'border-slate-750 bg-slate-800/60 text-slate-400 hover:text-white hover:bg-slate-750'
                       : 'border-slate-200 bg-white text-slate-500 hover:text-slate-900 hover:bg-slate-100 shadow-xs'
@@ -211,7 +211,7 @@ export const Modal: React.FC<ModalProps> = ({
           <div
             className={`shrink-0 px-6 py-4 border-t flex flex-wrap items-center justify-between gap-3 select-none ${
               isDarkMode
-                ? 'border-slate-800/80 bg-[#141822]/90 text-slate-300'
+                ? 'border-slate-800/80 bg-[#18181B]/90 text-slate-300'
                 : 'border-slate-200 bg-slate-50/90 text-slate-700'
             } ${footerClassName}`}
           >

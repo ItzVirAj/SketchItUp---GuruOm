@@ -80,7 +80,7 @@ export const ArchitectureDiagram: React.FC = () => {
             <motion.div
               key={layer.num}
               onClick={() => setActiveLayer(layer.num)}
-              className={`p-4 sm:p-5 rounded-xl border transition-all cursor-pointer ${
+              className={`p-4 sm:p-5 rounded-xl border transition-ui cursor-pointer ${
                 isActive
                   ? 'bg-slate-900 border-teal-400 shadow-xl ring-1 ring-teal-400/50'
                   : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'

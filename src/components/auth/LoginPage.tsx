@@ -26,6 +26,7 @@ import {
   X,
   Zap
 } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 import { useAuth } from '../../context/AuthContext';
 import { fetchProfiles } from '../../services/supabaseServices';
 import type { SystemUser } from '../../types/console';
@@ -232,7 +233,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     };
   });
 
-  const inputClassName = `h-13 w-full rounded-2xl border pl-12 pr-4 text-sm font-semibold outline-none transition-all duration-200 focus:border-[var(--accent-primary)] focus:ring-4 focus:ring-[var(--accent-ring)] ${
+  const inputClassName = `h-13 w-full rounded-2xl border pl-12 pr-4 text-sm font-semibold outline-none transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-200 focus:border-[var(--accent-primary)] focus:ring-4 focus:ring-[var(--accent-ring)] ${
     isDarkMode
       ? 'border-white/10 bg-white/[0.04] text-white placeholder:text-slate-500 hover:border-white/20 focus:bg-white/[0.07]'
       : 'border-slate-200 bg-slate-50/80 text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:bg-white'
@@ -242,7 +243,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     <div
       className={`relative min-h-screen overflow-hidden font-sans transition-colors duration-300 ${
         isDarkMode
-          ? 'bg-[#090d14] text-slate-100'
+          ? 'bg-[#09090B] text-slate-100'
           : 'bg-[#f4f6fa] text-slate-900'
       }`}
     >
@@ -280,7 +281,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         <header
           className={`flex h-18 shrink-0 items-center justify-between rounded-2xl border px-5 shadow-sm backdrop-blur-xl transition-colors ${
             isDarkMode
-              ? 'border-white/[0.08] bg-[#111722]/85 shadow-black/30'
+              ? 'border-white/[0.08] bg-[#121215]/85 shadow-black/30'
               : 'border-slate-200/80 bg-white/90 shadow-slate-200/50'
           }`}
         >
@@ -344,17 +345,28 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 onClick={onToggleTheme}
                 aria-label="Toggle color theme"
                 title={isDarkMode ? 'Switch to light theme' : 'Switch to dark theme'}
-                className={`flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border transition-all duration-200 ${
+                className={`flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-200 ${
                   isDarkMode
                     ? 'border-white/10 bg-white/[0.05] text-slate-300 hover:border-white/20 hover:bg-white/10 hover:text-white'
                     : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950 shadow-xs'
                 }`}
               >
-                {isDarkMode ? (
-                  <Sun className="h-4.5 w-4.5 text-amber-400" />
-                ) : (
-                  <Moon className="h-4.5 w-4.5 text-slate-700" />
-                )}
+                <AnimatePresence mode="popLayout" initial={false}>
+                  <motion.div
+                    key={isDarkMode ? 'sun' : 'moon'}
+                    initial={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
+                    animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+                    exit={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
+                    transition={{ type: 'spring', duration: 0.3, bounce: 0 }}
+                    className="flex h-8 w-8 items-center justify-center"
+                  >
+                    {isDarkMode ? (
+                      <Sun className="h-4.5 w-4.5 text-amber-400" />
+                    ) : (
+                      <Moon className="h-4.5 w-4.5 text-slate-700" />
+                    )}
+                  </motion.div>
+                </AnimatePresence>
               </button>
             )}
           </div>
@@ -363,9 +375,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         {/* Main Application Container */}
         <main className="flex flex-1 items-center py-5 sm:py-6">
           <div
-            className={`grid w-full overflow-hidden rounded-[28px] border shadow-2xl transition-all lg:min-h-[680px] lg:grid-cols-[minmax(0,1.2fr)_minmax(450px,0.8fr)] xl:grid-cols-[minmax(0,1.25fr)_minmax(480px,0.75fr)] ${
+            className={`grid w-full overflow-hidden rounded-[28px] border shadow-2xl transition-ui lg:min-h-[680px] lg:grid-cols-[minmax(0,1.2fr)_minmax(450px,0.8fr)] xl:grid-cols-[minmax(0,1.25fr)_minmax(480px,0.75fr)] ${
               isDarkMode
-                ? 'border-white/[0.08] bg-[#111622] shadow-black/50'
+                ? 'border-white/[0.08] bg-[#121215] shadow-black/50'
                 : 'border-slate-200/90 bg-white shadow-slate-300/40'
             }`}
           >
@@ -373,7 +385,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             <section
               className={`relative hidden min-w-0 overflow-hidden lg:flex lg:flex-col ${
                 isDarkMode
-                  ? 'bg-gradient-to-br from-[#0c1018] via-[#0f1420] to-[#121926]'
+                  ? 'bg-gradient-to-br from-[#09090B] via-[#09090B] to-[#121215]'
                   : 'bg-gradient-to-br from-slate-900 via-[#111827] to-[#0f172a] text-white'
               }`}
             >
@@ -481,7 +493,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             {/* Right Authentication Panel */}
             <section
               className={`relative flex min-w-0 flex-col justify-center px-6 py-9 sm:px-10 lg:px-10 xl:px-12 ${
-                isDarkMode ? 'bg-[#121824]' : 'bg-white'
+                isDarkMode ? 'bg-[#121215]' : 'bg-white'
               }`}
             >
               <div className="mx-auto w-full max-w-[420px]">
@@ -665,7 +677,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="group relative flex h-13 w-full cursor-pointer items-center justify-center overflow-hidden rounded-2xl bg-[var(--accent-primary)] px-5 text-sm font-black text-white shadow-xl shadow-[var(--accent-shadow)] transition-all duration-200 hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 disabled:cursor-wait disabled:opacity-60 disabled:hover:translate-y-0 mt-2"
+                    className="group relative flex h-13 w-full cursor-pointer items-center justify-center overflow-hidden rounded-2xl bg-[var(--accent-primary)] px-5 text-sm font-black text-white shadow-xl shadow-[var(--accent-shadow)] transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-200 hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 disabled:cursor-wait disabled:opacity-60 disabled:hover:translate-y-0 mt-2"
                   >
                     <span className="absolute inset-0 translate-x-[-110%] bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-[110%]" />
 
@@ -782,9 +794,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                               )
                             }
                             disabled={isLoading}
-                            className={`group flex min-h-[62px] cursor-pointer items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-left transition-all disabled:cursor-wait disabled:opacity-50 ${
+                            className={`group flex min-h-[62px] cursor-pointer items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-left transition-ui disabled:cursor-wait disabled:opacity-50 ${
                               isDarkMode
-                                ? 'border-white/[0.07] bg-[#0c1119] hover:border-[var(--accent-primary)] hover:bg-white/[0.04]'
+                                ? 'border-white/[0.07] bg-[#09090B] hover:border-[var(--accent-primary)] hover:bg-white/[0.04]'
                                 : 'border-slate-200 bg-slate-50 hover:border-[var(--accent-primary)] hover:bg-white hover:shadow-xs'
                             }`}
                           >
@@ -834,7 +846,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       {/* Forgot Password Dialog */}
       {isForgotOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#05070b]/80 p-4 backdrop-blur-md"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#000000]/80 p-4 backdrop-blur-md"
           role="dialog"
           aria-modal="true"
           aria-labelledby="reset-password-title"
@@ -842,7 +854,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           <div
             className={`w-full max-w-md overflow-hidden rounded-[26px] border shadow-2xl ${
               isDarkMode
-                ? 'border-white/10 bg-[#121722] text-white shadow-black/50'
+                ? 'border-white/10 bg-[#121215] text-white shadow-black/50'
                 : 'border-white bg-white text-slate-950 shadow-slate-900/20'
             }`}
           >
@@ -940,7 +952,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   <button
                     type="submit"
                     disabled={isResetting}
-                    className="flex h-12 cursor-pointer items-center justify-center rounded-2xl bg-[var(--accent-primary)] px-4 text-sm font-black text-white shadow-lg shadow-[var(--accent-shadow)] transition-all hover:brightness-110 disabled:cursor-wait disabled:opacity-60"
+                    className="flex h-12 cursor-pointer items-center justify-center rounded-2xl bg-[var(--accent-primary)] px-4 text-sm font-black text-white shadow-lg shadow-[var(--accent-shadow)] transition-ui hover:brightness-110 disabled:cursor-wait disabled:opacity-60"
                   >
                     {isResetting ? (
                       <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
@@ -958,7 +970,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       {/* Enterprise Access Dialog */}
       {isSignUpModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#05070b]/80 p-4 backdrop-blur-md"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#000000]/80 p-4 backdrop-blur-md"
           role="dialog"
           aria-modal="true"
           aria-labelledby="enterprise-access-title"
@@ -966,7 +978,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           <div
             className={`w-full max-w-md overflow-hidden rounded-[26px] border shadow-2xl ${
               isDarkMode
-                ? 'border-white/10 bg-[#121722] text-white shadow-black/50'
+                ? 'border-white/10 bg-[#121215] text-white shadow-black/50'
                 : 'border-white bg-white text-slate-950 shadow-slate-900/20'
             }`}
           >
@@ -1037,7 +1049,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               <button
                 type="button"
                 onClick={() => setIsSignUpModalOpen(false)}
-                className="mt-5 h-12 w-full cursor-pointer rounded-2xl bg-[var(--accent-primary)] text-sm font-black text-white shadow-lg shadow-[var(--accent-shadow)] transition-all hover:brightness-110"
+                className="mt-5 h-12 w-full cursor-pointer rounded-2xl bg-[var(--accent-primary)] text-sm font-black text-white shadow-lg shadow-[var(--accent-shadow)] transition-ui hover:brightness-110"
               >
                 Understood
               </button>

@@ -81,9 +81,9 @@ export function FeatCard({
       transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
         "group relative flex flex-col gap-2 overflow-hidden rounded-2xl p-4.5 font-sans",
-        "bg-white dark:bg-[#1C1E24]",
+        "bg-white dark:bg-[#121215]",
         "border border-slate-200/90 dark:border-slate-800",
-        "shadow-2xs hover:shadow-xs transition-all",
+        "shadow-2xs hover:shadow-xs transition-ui",
         className
       )}
     >
@@ -100,7 +100,7 @@ export function FeatCard({
           <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed max-w-[95%]">{description}</p>
         </div>
       </div>
-      <div className="relative mt-2 flex-1 w-full rounded-xl overflow-hidden border border-slate-100 dark:border-slate-800/80 bg-slate-50/70 dark:bg-[#16171B] p-2.5">
+      <div className="relative mt-2 flex-1 w-full rounded-xl overflow-hidden border border-slate-100 dark:border-slate-800/80 bg-slate-50/70 dark:bg-[#18181B] p-2.5">
         {children}
       </div>
     </motion.div>
@@ -294,7 +294,7 @@ export function Card1({
   };
 
   return (
-    <div className="w-full h-full relative overflow-hidden select-none bg-slate-50/70 dark:bg-[#16171B] rounded-xl flex flex-col items-center justify-between p-2 font-sans">
+    <div className="w-full h-full relative overflow-hidden select-none bg-slate-50/70 dark:bg-[#18181B] rounded-xl flex flex-col items-center justify-between p-2 font-sans">
       {/* ── Layer 1: Dotted grid ── */}
       <svg className="absolute inset-0 w-full h-full pointer-events-none" aria-hidden>
         <defs>
@@ -381,7 +381,7 @@ export function Card1({
                   {isBox && node.icon ? (
                     <div
                       className={cn(
-                        "w-full h-full rounded-xl border flex flex-col items-center justify-center transition-all duration-300 text-white shadow-md font-sans",
+                        "w-full h-full rounded-xl border flex flex-col items-center justify-center transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-300 text-white shadow-md font-sans",
                         colorStyles.buttonBg,
                         colorStyles.buttonBorder,
                         isActive ? "scale-105 ring-2 ring-white/50 shadow-lg shadow-[#5B75F8]/20" : "opacity-80"
@@ -398,10 +398,10 @@ export function Card1({
                     /* Central Router Node */
                     <div
                       className={cn(
-                        "w-6 h-6 rounded-full border-2 flex items-center justify-center shadow-sm transition-all duration-300",
+                        "w-6 h-6 rounded-full border-2 flex items-center justify-center shadow-sm transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-300",
                         isActive
                           ? "bg-amber-500/20 border-amber-500 ring-2 ring-amber-400/40"
-                          : "bg-white dark:bg-[#1C1E24] border-slate-300 dark:border-slate-700"
+                          : "bg-white dark:bg-[#121215] border-slate-300 dark:border-slate-700"
                       )}
                     >
                       <motion.div
@@ -422,7 +422,7 @@ export function Card1({
       </div>
 
       {/* Dynamic Action Subtext */}
-      <div className="w-full z-10 px-2.5 py-1.5 bg-white/80 dark:bg-[#1C1E24]/90 backdrop-blur-xs rounded-xl border border-slate-200/80 dark:border-slate-800 flex items-center gap-2 shadow-2xs">
+      <div className="w-full z-10 px-2.5 py-1.5 bg-white/80 dark:bg-[#121215]/90 backdrop-blur-xs rounded-xl border border-slate-200/80 dark:border-slate-800 flex items-center gap-2 shadow-2xs">
         <Sparkle className="w-3.5 h-3.5 text-[#5B75F8] dark:text-[#7B92FF] shrink-0" weight="fill" />
         <span className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">{stepStatusText}</span>
       </div>
@@ -508,7 +508,7 @@ export function Card2({
               <motion.div
                 className={cn(
                   "absolute inset-0 w-full h-full rounded-xl p-2.5 backdrop-blur-xs flex items-center justify-between gap-2 cursor-pointer transition-colors duration-300 border shadow-2xs",
-                  "bg-white/95 dark:bg-[#1C1E24] border-slate-200/90 dark:border-slate-700/80 text-slate-900 dark:text-white",
+                  "bg-white/95 dark:bg-[#121215] border-slate-200/90 dark:border-slate-700/80 text-slate-900 dark:text-white",
                   isActive ? "border-[#5B75F8]/60 shadow-md" : ""
                 )}
                 animate={{
@@ -558,7 +558,7 @@ export function Card2({
                         cx={pt.x}
                         cy={pt.y}
                         r="1.75"
-                        className="fill-[#5B75F8] stroke-white dark:stroke-[#1C1E24]"
+                        className="fill-[#5B75F8] stroke-white dark:stroke-[#121215]"
                         strokeWidth="1"
                         initial={{ scale: 0, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
@@ -578,7 +578,7 @@ export function Card2({
         {weeklyDayBars.map((h, i) => (
           <div
             key={i}
-            className="flex-1 h-full rounded-lg bg-slate-100/60 dark:bg-[#121316] border border-slate-200/80 dark:border-slate-800/80 relative overflow-hidden text-slate-300 dark:text-slate-800"
+            className="flex-1 h-full rounded-lg bg-slate-100/60 dark:bg-[#09090B] border border-slate-200/80 dark:border-slate-800/80 relative overflow-hidden text-slate-300 dark:text-slate-800"
             style={{
               backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 5px, currentColor 5px, currentColor 6px)",
             }}
@@ -789,15 +789,15 @@ export function Card3({
             }}
           >
             <div className={cn(
-              "w-full rounded-2xl border flex items-center gap-2.5 transition-all shadow-2xs",
+              "w-full rounded-2xl border flex items-center gap-2.5 transition-ui shadow-2xs",
               isActive
-                ? "px-3.5 py-2.5 bg-white dark:bg-[#1C1E24] border-slate-300 dark:border-slate-700 ring-1 ring-[#5B75F8]/20"
-                : "px-3 py-1.5 bg-slate-50/80 dark:bg-[#16171B] border-slate-200/60 dark:border-slate-800/60"
+                ? "px-3.5 py-2.5 bg-white dark:bg-[#121215] border-slate-300 dark:border-slate-700 ring-1 ring-[#5B75F8]/20"
+                : "px-3 py-1.5 bg-slate-50/80 dark:bg-[#18181B] border-slate-200/60 dark:border-slate-800/60"
             )}>
 
               {/* Icon badge */}
               <div className={cn(
-                "shrink-0 rounded-lg flex items-center justify-center font-bold text-white transition-all duration-300 border shadow-xs",
+                "shrink-0 rounded-lg flex items-center justify-center font-bold text-white transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-300 border shadow-xs",
                 si.gradient,
                 si.border,
                 isActive ? "w-8 h-8" : "w-5.5 h-5.5"
@@ -932,10 +932,10 @@ export function Card4({
                 {/* Icon Container */}
                 <div
                   className={cn(
-                    "relative flex shrink-0 items-center justify-center w-7 h-7 rounded-lg border transition-all duration-300",
+                    "relative flex shrink-0 items-center justify-center w-7 h-7 rounded-lg border transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-300",
                     isActive
                       ? `text-white ${c.buttonBg} ${c.buttonBorder} scale-105 shadow-sm`
-                      : "bg-white dark:bg-[#1C1E24] border-slate-200 dark:border-slate-800 text-slate-400"
+                      : "bg-white dark:bg-[#121215] border-slate-200 dark:border-slate-800 text-slate-400"
                   )}
                 >
                   <Icon size={13} weight={isActive ? "fill" : "regular"} className="relative z-10" />
@@ -973,7 +973,7 @@ export function Card4({
 
                 {/* Hit count */}
                 <div className={cn(
-                  "flex items-center gap-1.5 w-10 justify-end transition-all duration-300",
+                  "flex items-center gap-1.5 w-10 justify-end transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-300",
                   isActive ? "opacity-100 scale-105" : "opacity-60 scale-100"
                 )}>
                   <span className={cn("text-xs font-bold font-mono", isActive ? "text-slate-900 dark:text-white" : "text-slate-500")}>
@@ -1019,7 +1019,7 @@ export function Card4({
             return (
               <motion.div
                 key={`${q.ns}-${q.q}-${qi}`}
-                className="rounded-xl border border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-[#1C1E24] px-2.5 py-2 shadow-2xs"
+                className="rounded-xl border border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-[#121215] px-2.5 py-2 shadow-2xs"
                 initial={{ opacity: 0, y: -6 }}
                 animate={{
                   opacity: qi === 0 ? 1 : qi === 1 ? 0.75 : 0.45,
@@ -1117,7 +1117,7 @@ export function Card5({
         {industryStats.map((st, i) => (
           <motion.div
             key={i}
-            className="relative rounded-xl border border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-[#1C1E24] shadow-2xs hover:shadow-xs transition-all duration-300 flex flex-col justify-between p-3 group hover:border-slate-300 dark:hover:border-slate-700"
+            className="relative rounded-xl border border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-[#121215] shadow-2xs hover:shadow-xs transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-300 flex flex-col justify-between p-3 group hover:border-slate-300 dark:hover:border-slate-700"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.08, type: "spring", stiffness: 300, damping: 25 }}

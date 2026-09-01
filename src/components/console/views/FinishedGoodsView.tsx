@@ -145,7 +145,7 @@ export const FinishedGoodsView: React.FC<FinishedGoodsViewProps> = ({
     <div className="space-y-5 font-sans w-full max-w-full min-w-0 pb-6">
 
       {/* HEADER */}
-      <section className={`overflow-hidden rounded-[24px] border ${isDarkMode ? "border-white/[0.08] bg-[#171b24]" : "border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]"}`}>
+      <section className={`overflow-hidden rounded-[24px] border ${isDarkMode ? "border-white/[0.08] bg-[#121215]" : "border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]"}`}>
         <div className="flex items-center gap-6 px-6 py-5">
           <div className="min-w-0">
             <div className="mb-1.5 flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">
@@ -183,13 +183,13 @@ export const FinishedGoodsView: React.FC<FinishedGoodsViewProps> = ({
       </section>
 
       {/* TOOLBAR */}
-      <div className={`rounded-2xl border p-3 ${isDarkMode ? "border-white/[0.08] bg-[#171b24]" : "border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]"}`}>
+      <div className={`rounded-2xl border p-3 ${isDarkMode ? "border-white/[0.08] bg-[#121215]" : "border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]"}`}>
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-1.5">
             <Filter className={`w-3.5 h-3.5 ${isDarkMode ? "text-slate-500" : "text-slate-400"}`} />
             {(["ALL","OK","SHORTAGE","CRITICAL"] as const).map(s => (
               <button key={s} onClick={() => setStatusFilter(s)}
-                className={`px-3 py-1.5 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wider transition-ui cursor-pointer ${
                   statusFilter === s
                     ? "bg-[var(--accent-primary)] text-white shadow-sm"
                     : isDarkMode ? "bg-white/[0.05] text-slate-400 hover:bg-white/[0.09]" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
@@ -220,7 +220,7 @@ export const FinishedGoodsView: React.FC<FinishedGoodsViewProps> = ({
       </div>
 
       {/* TABLE */}
-      <div className={`overflow-hidden rounded-[22px] border ${isDarkMode ? "border-white/[0.08] bg-[#171b24]" : "border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]"}`}>
+      <div className={`overflow-hidden rounded-[22px] border ${isDarkMode ? "border-white/[0.08] bg-[#121215]" : "border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]"}`}>
         <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? "border-white/[0.07]" : "border-slate-200"}`}>
           <div>
             <div className={`text-xs font-extrabold ${isDarkMode ? "text-white" : "text-slate-900"}`}>Finished Goods Item Master</div>

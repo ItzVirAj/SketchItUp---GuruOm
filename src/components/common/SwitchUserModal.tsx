@@ -113,7 +113,7 @@ export const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer transition-all"
+            className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer transition-ui"
           >
             <X className="w-4 h-4" />
           </button>
@@ -123,7 +123,7 @@ export const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
         <div className="shrink-0 flex border-b border-slate-100 dark:border-slate-800 px-4 pt-2 gap-2 text-xs font-mono">
           <button
             onClick={() => { setActiveTab('SWITCH'); setErrorMsg(null); }}
-            className={`pb-2.5 px-3 font-semibold border-b-2 cursor-pointer transition-all ${
+            className={`pb-2.5 px-3 font-semibold border-b-2 cursor-pointer transition-ui ${
               activeTab === 'SWITCH'
                 ? 'border-teal-600 text-teal-600 dark:text-teal-400 font-bold'
                 : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
@@ -133,7 +133,7 @@ export const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
           </button>
           <button
             onClick={() => { setActiveTab('NEW'); setErrorMsg(null); }}
-            className={`pb-2.5 px-3 font-semibold border-b-2 cursor-pointer transition-all flex items-center gap-1 ${
+            className={`pb-2.5 px-3 font-semibold border-b-2 cursor-pointer transition-ui flex items-center gap-1 ${
               activeTab === 'NEW'
                 ? 'border-teal-600 text-teal-600 dark:text-teal-400 font-bold'
                 : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
@@ -166,7 +166,7 @@ export const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
               return (
                 <div
                   key={usr.id}
-                  className={`p-3.5 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                  className={`p-3.5 rounded-xl border transition-ui flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                     isCurrent
                       ? 'border-teal-500/80 bg-teal-50/40 dark:bg-dark-surface/20 ring-1 ring-teal-500/30'
                       : isRevoked
@@ -231,7 +231,7 @@ export const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
                       <button
                         onClick={() => handleSwitch(usr.id)}
                         disabled={isRevoked}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold font-mono transition-all flex items-center gap-1 cursor-pointer ${
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold font-mono transition-ui flex items-center gap-1 cursor-pointer ${
                           isRevoked
                             ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed'
                             : 'bg-teal-600 hover:bg-teal-500 text-white shadow-2xs'
@@ -246,7 +246,7 @@ export const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
                     {isRevoked ? (
                       <button
                         onClick={() => onRestoreUser(usr.id)}
-                        className="px-2.5 py-1.5 rounded-lg text-xs font-bold font-mono bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/80 cursor-pointer transition-all"
+                        className="px-2.5 py-1.5 rounded-lg text-xs font-bold font-mono bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/80 cursor-pointer transition-ui"
                         title="Restore Active User Access"
                       >
                         Restore
@@ -255,7 +255,7 @@ export const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
                       usr.role !== 'SUPER ADMIN' && (
                         <button
                           onClick={() => onRevokeUser(usr.id)}
-                          className="px-2.5 py-1.5 rounded-lg text-xs font-bold font-mono bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:hover:bg-rose-900/60 dark:text-rose-400 border border-rose-200 dark:border-rose-800/80 cursor-pointer transition-all flex items-center gap-1"
+                          className="px-2.5 py-1.5 rounded-lg text-xs font-bold font-mono bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:hover:bg-rose-900/60 dark:text-rose-400 border border-rose-200 dark:border-rose-800/80 cursor-pointer transition-ui flex items-center gap-1"
                           title="Revoke Access Immediately"
                         >
                           <Ban className="w-3 h-3" />

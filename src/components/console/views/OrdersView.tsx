@@ -598,7 +598,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
         {/* Status Header */}
         <div className="flex items-center justify-between gap-2">
           {/* Active Stage Pill */}
-          <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase border transition-all ${prog.badgeBg}`}>
+          <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase border transition-ui ${prog.badgeBg}`}>
             <span className="relative flex h-1.5 w-1.5 shrink-0">
               <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
                 prog.isQcRejected ? 'bg-rose-400' : (prog.isQcHold || prog.isPdiHold) ? 'bg-amber-400' : prog.badgeDot
@@ -626,7 +626,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
           }`}
         >
           <div
-            className={`h-full rounded-full bg-gradient-to-r ${progressGradient} transition-all duration-500 ease-out shadow-xs`}
+            className={`h-full rounded-full bg-gradient-to-r ${progressGradient} transition-[width] duration-500 ease-out shadow-xs`}
             style={{ width: `${Math.max(stagePct, 6)}%` }}
           />
         </div>
@@ -686,7 +686,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
 
           <button
             onClick={openNewOrderModal}
-            className="min-h-[44px] px-3.5 py-2 rounded-xl bg-gradient-to-r from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer shrink-0 active:scale-95 transition-transform font-mono"
+            className="min-h-[44px] px-3.5 py-2 rounded-xl bg-gradient-to-r from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer shrink-0 active:scale-[0.96] transition-transform font-mono"
           >
             <Plus className="w-4 h-4" />
             <span>New PO</span>
@@ -761,7 +761,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
               <button
                 key={stage.id}
                 onClick={() => setStatusFilter(stage.id)}
-                className={`min-h-[36px] px-3 py-1 rounded-xl text-xs font-bold font-mono shrink-0 transition-all border cursor-pointer ${
+                className={`min-h-[36px] px-3 py-1 rounded-xl text-xs font-bold font-mono shrink-0 transition-ui border cursor-pointer ${
                   isSelected
                     ? `${stage.active} shadow-xs border-transparent scale-105`
                     : `${stage.idle}`
@@ -778,7 +778,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
       {/* ── DESKTOP HEADER & KPI ROW (≥ md) ──                                      */}
       {/* ========================================================================= */}
       <div className="hidden md:block space-y-4">
-        <section className={`overflow-hidden rounded-[24px] border ${isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'}`}>
+        <section className={`overflow-hidden rounded-[24px] border ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'}`}>
           <div className="flex items-center justify-between gap-6 px-6 py-5">
             <div className="min-w-0">
               <div className="mb-1.5 flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">
@@ -795,7 +795,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
             </div>
             <button
               onClick={openNewOrderModal}
-              className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-all hover:bg-[var(--accent-hover)] active:scale-[0.98]"
+              className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96]"
             >
               <Plus className="h-4 w-4" />
               New purchase order
@@ -824,7 +824,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
           </div>
         </section>
 
-        <div className={`rounded-2xl border p-3 ${isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
+        <div className={`rounded-2xl border p-3 ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
           <div className="flex items-center gap-2">
             <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${isDarkMode ? 'bg-white/[0.05] text-slate-400' : 'bg-slate-100 text-slate-500'}`} title="Filters">
               <Filter className="h-4 w-4" />
@@ -889,7 +889,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
             <div className={`flex h-10 items-center rounded-xl border p-1 ${isDarkMode ? 'border-white/[0.08] bg-black/20' : 'border-slate-200 bg-slate-100'}`}>
               <button
                 onClick={() => setViewMode('table')}
-                className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all ${viewMode === 'table'
+                className={`flex h-8 w-8 items-center justify-center rounded-lg transition-ui ${viewMode === 'table'
                   ? isDarkMode ? 'bg-white/[0.09] text-[var(--accent-text-dark)]' : 'bg-white text-[var(--accent-text-light)] shadow-xs'
                   : isDarkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-900'
                   }`}
@@ -899,7 +899,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
               </button>
               <button
                 onClick={() => setViewMode('grid')}
-                className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all ${viewMode === 'grid'
+                className={`flex h-8 w-8 items-center justify-center rounded-lg transition-ui ${viewMode === 'grid'
                   ? isDarkMode ? 'bg-white/[0.09] text-[var(--accent-text-dark)]' : 'bg-white text-[var(--accent-text-light)] shadow-xs'
                   : isDarkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-900'
                   }`}
@@ -975,7 +975,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
               <div
                 key={ord.id}
                 onClick={() => onSelectOrder(ord)}
-                className={`p-4 rounded-2xl border space-y-3 cursor-pointer shadow-2xs active:scale-[0.99] transition-all ${
+                className={`p-4 rounded-2xl border space-y-3 cursor-pointer shadow-2xs active:scale-[0.96] transition-ui ${
                   isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
                 }`}
               >
@@ -1071,7 +1071,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
       {/* ========================================================================= */}
       <div className="hidden md:block">
         {viewMode === 'table' ? (
-          <div className={`overflow-hidden rounded-[22px] border transition-all ${isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
+          <div className={`overflow-hidden rounded-[22px] border transition-ui ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
             }`}>
             <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
               <div>
@@ -1245,7 +1245,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                           </td>
 
                           <td className="py-4 px-5 text-center">
-                            <button className={`mx-auto flex h-8 items-center justify-center gap-1 rounded-lg border px-2.5 font-mono text-[10px] font-bold transition-all ${isDarkMode
+                            <button className={`mx-auto flex h-8 items-center justify-center gap-1 rounded-lg border px-2.5 font-mono text-[10px] font-bold transition-ui ${isDarkMode
                               ? 'border-white/[0.08] bg-white/[0.04] text-slate-300 hover:border-[var(--accent-border-dark)] hover:text-[var(--accent-text-dark)]'
                               : 'border-slate-200 bg-white text-slate-600 shadow-xs hover:border-[var(--accent-border-light)] hover:text-[var(--accent-text-light)]'
                               }`}>
@@ -1268,7 +1268,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                 <div
                   key={ord.id}
                   onClick={() => onSelectOrder(ord)}
-                  className={`group cursor-pointer space-y-3 rounded-[20px] border p-5 transition-all ${isDarkMode ? 'border-white/[0.08] bg-[#171b24] hover:border-white/[0.14]' : 'border-slate-200 bg-white shadow-[0_8px_24px_rgba(15,23,42,0.05)] hover:-translate-y-0.5 hover:border-[var(--accent-border-light)] hover:shadow-[0_14px_34px_rgba(15,23,42,0.08)]'
+                  className={`group cursor-pointer space-y-3 rounded-[20px] border p-5 transition-ui ${isDarkMode ? 'border-white/[0.08] bg-[#121215] hover:border-white/[0.14]' : 'border-slate-200 bg-white shadow-[0_8px_24px_rgba(15,23,42,0.05)] hover:-translate-y-0.5 hover:border-[var(--accent-border-light)] hover:shadow-[0_14px_34px_rgba(15,23,42,0.08)]'
                     }`}
                 >
                   <div className="flex items-center justify-between">
@@ -1305,7 +1305,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
         footer={
           <>
             <div className={`flex items-center justify-between px-4 py-2.5 rounded-xl font-mono border shadow-xs ${
-              isDarkMode ? 'bg-[#0d1017] border-slate-800' : 'bg-slate-50 border-slate-200'
+              isDarkMode ? 'bg-[#09090B] border-slate-800' : 'bg-slate-50 border-slate-200'
             }`}>
               <span className={`text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Total Gross:</span>
               <span className="font-black text-emerald-500 dark:text-emerald-400 text-sm ml-3">
@@ -1317,7 +1317,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
               <button
                 type="button"
                 onClick={() => createOrderModal.close()}
-                className={`min-h-[42px] px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                className={`min-h-[42px] px-4 py-2 rounded-xl text-xs font-bold transition-ui cursor-pointer ${
                   isDarkMode 
                     ? 'text-slate-300 hover:text-white bg-slate-800/60 hover:bg-slate-800 border border-slate-750' 
                     : 'border border-slate-300 text-slate-700 hover:bg-slate-100 hover:text-slate-900'
@@ -1328,7 +1328,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
               <button
                 type="submit"
                 form="create-po-form"
-                className="min-h-[42px] px-6 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-bold text-xs shadow-lg shadow-indigo-500/25 cursor-pointer transition-all hover:scale-[1.01] active:scale-[0.99]"
+                className="min-h-[42px] px-6 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-bold text-xs shadow-lg shadow-indigo-500/25 cursor-pointer transition-ui hover:scale-[1.01] active:scale-[0.96]"
               >
                 Validate & Confirm Order
               </button>
@@ -1351,14 +1351,14 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
 
           {/* Sub-Type Selection - Fresh PO or Blanket Call-Off */}
           <div className={`p-1.5 rounded-xl border grid grid-cols-2 gap-1.5 ${
-            isDarkMode ? 'bg-[#0d1017] border-slate-800' : 'bg-slate-100 border-slate-200'
+            isDarkMode ? 'bg-[#09090B] border-slate-800' : 'bg-slate-100 border-slate-200'
           }`}>
             {(['FRESH_PO', 'BLANKET_CALLOFF'] as OrderSubType[]).map(type => (
               <button
                 key={type}
                 type="button"
                 onClick={() => setNewSubType(type)}
-                className={`py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                className={`py-2 px-3 rounded-lg text-xs font-bold transition-ui cursor-pointer ${
                   newSubType === type
                     ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-black'
                     : (isDarkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50' : 'text-slate-600 hover:text-slate-900 hover:bg-white')
@@ -1383,8 +1383,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                   placeholder="e.g. BPO-2026-TATA-01"
                   value={newBlanketPoId}
                   onChange={(e) => setNewBlanketPoId(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border text-xs font-medium outline-none transition-all ${
-                    isDarkMode ? 'bg-[#0d1017] border-purple-500/40 text-white focus:border-purple-400' : 'bg-white border-purple-300 text-slate-900 focus:border-purple-600'
+                  className={`w-full p-2.5 rounded-xl border text-xs font-medium outline-none transition-ui ${
+                    isDarkMode ? 'bg-[#09090B] border-purple-500/40 text-white focus:border-purple-400' : 'bg-white border-purple-300 text-slate-900 focus:border-purple-600'
                   }`}
                 />
               </div>
@@ -1396,8 +1396,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                   type="number"
                   value={newBlanketBalance}
                   onChange={(e) => setNewBlanketBalance(Number(e.target.value))}
-                  className={`w-full p-2.5 rounded-xl border text-xs font-medium outline-none transition-all ${
-                    isDarkMode ? 'bg-[#0d1017] border-purple-500/40 text-white focus:border-purple-400' : 'bg-white border-purple-300 text-slate-900 focus:border-purple-600'
+                  className={`w-full p-2.5 rounded-xl border text-xs font-medium outline-none transition-ui ${
+                    isDarkMode ? 'bg-[#09090B] border-purple-500/40 text-white focus:border-purple-400' : 'bg-white border-purple-300 text-slate-900 focus:border-purple-600'
                   }`}
                 />
               </div>
@@ -1422,7 +1422,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                   createOrderModal.close();
                   onNavigateToCustomers?.();
                 }}
-                className="mt-3 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-md transition-all hover:scale-[1.01]"
+                className="mt-3 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-md transition-ui hover:scale-[1.01]"
               >
                 <span>Create Customer in Master First</span>
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -1440,8 +1440,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                   value={newPoNo}
                   onChange={(e) => setNewPoNo(e.target.value)}
                   placeholder="e.g. PO-2026-901"
-                  className={`h-11 w-full rounded-xl border px-3 text-xs font-medium outline-none transition-all ${
-                    isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white shadow-xs'
+                  className={`h-11 w-full rounded-xl border px-3 text-xs font-medium outline-none transition-ui ${
+                    isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white shadow-xs'
                   }`}
                 />
               </div>
@@ -1468,8 +1468,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                   required
                   value={selectedCustomerCode}
                   onChange={(e) => handleSelectCustomer(e.target.value)}
-                  className={`h-11 w-full rounded-xl border px-3 text-xs font-medium outline-none transition-all ${
-                    isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white shadow-xs'
+                  className={`h-11 w-full rounded-xl border px-3 text-xs font-medium outline-none transition-ui ${
+                    isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white shadow-xs'
                   }`}
                 >
                   <option value="">Select registered customer from Master...</option>
@@ -1508,7 +1508,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                     value={creditOverrideBy}
                     onChange={(e) => setCreditOverrideBy(e.target.value)}
                     className={`w-full p-2.5 rounded-xl border text-xs font-medium outline-none ${
-                      isDarkMode ? 'bg-[#0d1017] border-rose-500/50 text-white focus:border-rose-400' : 'bg-white border-rose-300 text-slate-900 focus:border-rose-500'
+                      isDarkMode ? 'bg-[#09090B] border-rose-500/50 text-white focus:border-rose-400' : 'bg-white border-rose-300 text-slate-900 focus:border-rose-500'
                     }`}
                   />
                 </div>
@@ -1522,7 +1522,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                     value={creditOverrideReason}
                     onChange={(e) => setCreditOverrideReason(e.target.value)}
                     className={`w-full p-2.5 rounded-xl border text-xs font-medium outline-none ${
-                      isDarkMode ? 'bg-[#0d1017] border-rose-500/50 text-white focus:border-rose-400' : 'bg-white border-rose-300 text-slate-900 focus:border-rose-500'
+                      isDarkMode ? 'bg-[#09090B] border-rose-500/50 text-white focus:border-rose-400' : 'bg-white border-rose-300 text-slate-900 focus:border-rose-500'
                     }`}
                   />
                 </div>
@@ -1540,8 +1540,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                 type="date"
                 value={newPoDate}
                 onChange={(e) => setNewPoDate(e.target.value)}
-                className={`h-11 w-full rounded-xl border px-3 text-xs font-medium outline-none transition-all ${
-                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white shadow-xs'
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-medium outline-none transition-ui ${
+                  isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white shadow-xs'
                 }`}
               />
             </div>
@@ -1553,8 +1553,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                 type="date"
                 value={newDeliveryDate}
                 onChange={(e) => setNewDeliveryDate(e.target.value)}
-                className={`h-11 w-full rounded-xl border px-3 text-xs font-medium outline-none transition-all ${
-                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white shadow-xs'
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-medium outline-none transition-ui ${
+                  isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white shadow-xs'
                 }`}
               />
             </div>
@@ -1565,8 +1565,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
               <select
                 value={newTaxCategory}
                 onChange={(e) => setNewTaxCategory(e.target.value)}
-                className={`h-11 w-full rounded-xl border px-3 text-xs font-medium outline-none transition-all ${
-                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white shadow-xs'
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-medium outline-none transition-ui ${
+                  isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white shadow-xs'
                 }`}
               >
                 <option value="GST 18%">GST 18% (Standard Engineering)</option>
@@ -1593,7 +1593,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
               <button
                 type="button"
                 onClick={addLineItem}
-                className="px-3 py-1.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 hover:text-indigo-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all border border-indigo-500/20"
+                className="px-3 py-1.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 hover:text-indigo-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-ui border border-indigo-500/20"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Add Part Line</span>
@@ -1607,9 +1607,9 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                 return (
                   <div
                     key={idx}
-                    className={`p-3.5 sm:p-4 rounded-2xl border transition-all relative ${
+                    className={`p-3.5 sm:p-4 rounded-2xl border transition-ui relative ${
                       isDarkMode
-                        ? 'bg-[#0d1017] border-slate-800 hover:border-slate-700/80 shadow-xs'
+                        ? 'bg-[#09090B] border-slate-800 hover:border-slate-700/80 shadow-xs'
                         : 'bg-slate-50/80 border-slate-200 hover:border-slate-300 shadow-xs'
                     }`}
                   >
@@ -1656,9 +1656,9 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                         <select
                           value={line.itemCode}
                           onChange={(e) => handleSelectItemForLine(idx, e.target.value)}
-                          className={`w-full h-9 p-2 rounded-xl border text-xs font-mono outline-none transition-all ${
+                          className={`w-full h-9 p-2 rounded-xl border text-xs font-mono outline-none transition-ui ${
                             isDarkMode
-                              ? 'bg-[#141822] border-slate-700 text-white focus:border-indigo-500'
+                              ? 'bg-[#18181B] border-slate-700 text-white focus:border-indigo-500'
                               : 'bg-white border-slate-300 text-slate-900 focus:border-indigo-500 shadow-xs'
                           }`}
                         >
@@ -1682,9 +1682,9 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                           value={line.itemDescription}
                           onChange={(e) => updateLineItem(idx, 'itemDescription', e.target.value)}
                           placeholder="e.g. CNC Shaft Bushing"
-                          className={`w-full h-9 px-2.5 rounded-xl border text-xs outline-none transition-all ${
+                          className={`w-full h-9 px-2.5 rounded-xl border text-xs outline-none transition-ui ${
                             isDarkMode
-                              ? 'bg-[#141822] border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500'
+                              ? 'bg-[#18181B] border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500'
                               : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 shadow-xs'
                           }`}
                         />
@@ -1700,9 +1700,9 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                           value={line.custPartNo}
                           onChange={(e) => updateLineItem(idx, 'custPartNo', e.target.value)}
                           placeholder="e.g. DWG-8802"
-                          className={`w-full h-9 px-2.5 rounded-xl border text-xs font-mono outline-none transition-all ${
+                          className={`w-full h-9 px-2.5 rounded-xl border text-xs font-mono outline-none transition-ui ${
                             isDarkMode
-                              ? 'bg-[#141822] border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500'
+                              ? 'bg-[#18181B] border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500'
                               : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 shadow-xs'
                           }`}
                         />
@@ -1718,9 +1718,9 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                           value={line.drawingRevision}
                           onChange={(e) => updateLineItem(idx, 'drawingRevision', e.target.value)}
                           placeholder="01"
-                          className={`w-full h-9 px-2.5 rounded-xl border text-xs font-mono text-center outline-none transition-all ${
+                          className={`w-full h-9 px-2.5 rounded-xl border text-xs font-mono text-center outline-none transition-ui ${
                             isDarkMode
-                              ? 'bg-[#141822] border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500'
+                              ? 'bg-[#18181B] border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500'
                               : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 shadow-xs'
                           }`}
                         />
@@ -1736,9 +1736,9 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                           min="1"
                           value={line.orderQty}
                           onChange={(e) => updateLineItem(idx, 'orderQty', Number(e.target.value))}
-                          className={`w-full h-9 px-2.5 rounded-xl border text-xs font-mono text-right outline-none transition-all ${
+                          className={`w-full h-9 px-2.5 rounded-xl border text-xs font-mono text-right outline-none transition-ui ${
                             isDarkMode
-                              ? 'bg-[#141822] border-slate-700 text-white focus:border-indigo-500'
+                              ? 'bg-[#18181B] border-slate-700 text-white focus:border-indigo-500'
                               : 'bg-white border-slate-300 text-slate-900 focus:border-indigo-500 shadow-xs'
                           }`}
                         />
@@ -1755,9 +1755,9 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                           step="0.5"
                           value={line.rate}
                           onChange={(e) => updateLineItem(idx, 'rate', Number(e.target.value))}
-                          className={`w-full h-9 px-2.5 rounded-xl border text-xs font-mono text-right outline-none transition-all ${
+                          className={`w-full h-9 px-2.5 rounded-xl border text-xs font-mono text-right outline-none transition-ui ${
                             isDarkMode
-                              ? 'bg-[#141822] border-slate-700 text-white focus:border-indigo-500'
+                              ? 'bg-[#18181B] border-slate-700 text-white focus:border-indigo-500'
                               : 'bg-white border-slate-300 text-slate-900 focus:border-indigo-500 shadow-xs'
                           }`}
                         />
@@ -1779,8 +1779,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
               placeholder="e.g. VCI Anti-rust polybag packing with Mill TC inspection report attached"
               value={newRemark}
               onChange={(e) => setNewRemark(e.target.value)}
-              className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
-                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white shadow-xs'
+              className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-ui ${
+                isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white shadow-xs'
               }`}
             />
           </div>

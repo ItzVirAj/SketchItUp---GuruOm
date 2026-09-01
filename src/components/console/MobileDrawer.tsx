@@ -158,13 +158,13 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
             transition={{ type: 'spring', damping: 28, stiffness: 300 }}
             className={`relative flex flex-col w-[85vw] max-w-[340px] h-full shadow-2xl z-10 select-none overflow-hidden font-sans border-r ${
               isDarkMode 
-                ? 'bg-[#16171B] border-[#262832] text-slate-200' 
+                ? 'bg-[#18181B] border-[#2E2E34] text-slate-200' 
                 : 'bg-[#F8FAFC] border-[#E2E8F0] text-slate-800'
             }`}
           >
             {/* Header: Brand Logo, Role Badge & Close Button */}
             <div className={`px-4 py-3.5 border-b flex items-center justify-between gap-3 shrink-0 ${
-              isDarkMode ? 'border-[#262832] bg-[#1A1B1F]/60' : 'border-[#E2E8F0] bg-[#F1F5F9]'
+              isDarkMode ? 'border-[#2E2E34] bg-[#18181B]/60' : 'border-[#E2E8F0] bg-[#F1F5F9]'
             }`}>
               <div className="flex items-center gap-2.5 overflow-hidden">
                 <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] flex items-center justify-center text-white text-xs font-black shadow-sm shrink-0">
@@ -198,7 +198,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
               <button
                 type="button"
                 onClick={() => handleItemClick('command-centre')}
-                className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-sm font-semibold border transition-all cursor-pointer ${
+                className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-sm font-semibold border transition-ui cursor-pointer ${
                   currentView === 'command-centre'
                     ? 'bg-[var(--accent-primary)] text-white font-bold shadow-md shadow-[var(--accent-shadow)] border-transparent'
                     : isDarkMode
@@ -237,7 +237,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
                     <button
                       type="button"
                       onClick={() => toggleSection(section.id)}
-                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold border transition-all cursor-pointer ${
+                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold border transition-ui cursor-pointer ${
                         hasActiveChild && !isOpen
                           ? isDarkMode
                             ? 'bg-[var(--accent-soft-dark)] text-[var(--accent-text-dark)] border-[var(--accent-border-dark)]'
@@ -292,7 +292,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
                                   key={item.id}
                                   type="button"
                                   onClick={() => handleItemClick(item.id)}
-                                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold border transition-ui cursor-pointer ${
                                     isActive
                                       ? 'bg-[var(--accent-primary)] text-white font-bold shadow-md shadow-[var(--accent-shadow)] border-transparent'
                                       : isDarkMode
@@ -326,7 +326,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
 
             {/* Footer Profile & Actions Card */}
             <div className={`p-3 border-t space-y-2 shrink-0 ${
-              isDarkMode ? 'border-[#262832] bg-[#1A1B1F]/80' : 'border-[#d8dde8] bg-[#F8FAFC]'
+              isDarkMode ? 'border-[#2E2E34] bg-[#18181B]/80' : 'border-[#d8dde8] bg-[#F8FAFC]'
             }`}>
               {/* User Identity Box */}
               <div 
@@ -338,7 +338,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
                 }}
                 className={`p-2.5 rounded-xl border flex items-center justify-between gap-2.5 transition-colors cursor-pointer ${
                   isDarkMode 
-                    ? 'bg-[#121316] border-[#262832] hover:border-slate-700' 
+                    ? 'bg-[#09090B] border-[#2E2E34] hover:border-slate-700' 
                     : 'bg-white border-[#E2EAE5] hover:border-slate-300'
                 }`}
                 title="Tap to switch user role"

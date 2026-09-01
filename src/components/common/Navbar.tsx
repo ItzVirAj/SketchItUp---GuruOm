@@ -41,7 +41,7 @@ export const Navbar: React.FC = () => {
   }, [location]);
 
   return (
-    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+    <header className={`fixed top-0 left-0 right-0 z-50 transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-300 ${
       isScrolled ? 'bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 shadow-xl' : 'bg-slate-950/40 backdrop-blur-sm border-b border-slate-900/50'
     }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -49,7 +49,7 @@ export const Navbar: React.FC = () => {
           
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#5B75F8] to-indigo-600 p-0.5 shadow-lg shadow-[#5B75F8]/20 group-hover:shadow-[#5B75F8]/35 transition-all">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#5B75F8] to-indigo-600 p-0.5 shadow-lg shadow-[#5B75F8]/20 group-hover:shadow-[#5B75F8]/35 transition-ui">
               <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
                 <Cpu className="w-5 h-5 text-[#5B75F8] group-hover:rotate-12 transition-transform duration-300" />
               </div>
@@ -244,7 +244,7 @@ export const Navbar: React.FC = () => {
           <div className="hidden lg:flex items-center gap-3">
             <Link
               to="/console"
-              className="px-3 py-2 text-xs font-mono font-bold text-orange-400 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 rounded-lg transition-all flex items-center gap-1.5"
+              className="px-3 py-2 text-xs font-mono font-bold text-orange-400 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 rounded-lg transition-ui flex items-center gap-1.5"
             >
               <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
               Live Console

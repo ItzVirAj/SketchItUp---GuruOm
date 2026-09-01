@@ -294,7 +294,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
           <button
             type="button"
             onClick={handleOpenCreateModal}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold shadow-md active:scale-95 transition-all"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold shadow-md active:scale-[0.96] transition-ui"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Issue Challan</span>
@@ -337,7 +337,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
       {/* ── DESKTOP HEADER & INTEGRATED KPI ROW (≥ md) ──                          */}
       {/* ========================================================================= */}
       <div className="hidden md:block space-y-4">
-        <section className={`overflow-hidden rounded-[24px] border ${isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'}`}>
+        <section className={`overflow-hidden rounded-[24px] border ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'}`}>
           <div className="flex items-center justify-between gap-6 px-6 py-5">
             <div className="min-w-0">
               <div className="mb-1.5 flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">
@@ -362,7 +362,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
             <button
               type="button"
               onClick={handleOpenCreateModal}
-              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-5 text-xs font-bold text-white shadow-lg shadow-[var(--accent-shadow)] transition hover:brightness-110 active:scale-95"
+              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-5 text-xs font-bold text-white shadow-lg shadow-[var(--accent-shadow)] transition hover:brightness-110 active:scale-[0.96]"
             >
               <Plus className="h-4 w-4" />
               <span>Issue Delivery Challan</span>
@@ -395,7 +395,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
         </section>
 
         {/* Desktop Filter & Search Toolbar */}
-        <div className={`rounded-2xl border p-3 ${isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
+        <div className={`rounded-2xl border p-3 ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
           <div className="flex items-center gap-3 flex-wrap">
             <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${isDarkMode ? 'bg-white/[0.05] text-slate-400' : 'bg-slate-100 text-slate-500'}`} title="Modules">
               <Truck className="h-4 w-4" />
@@ -469,7 +469,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
       <div className="block md:hidden space-y-3">
         {filteredDispatches.length === 0 ? (
           <div className={`p-8 text-center rounded-2xl border font-mono text-xs ${
-            isDarkMode ? 'bg-[#171b24] border-white/[0.08] text-slate-400' : 'bg-white border-slate-200 text-slate-500'
+            isDarkMode ? 'bg-[#121215] border-white/[0.08] text-slate-400' : 'bg-white border-slate-200 text-slate-500'
           }`}>
             No delivery challans found matching your filters.
           </div>
@@ -482,12 +482,12 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
               <div
                 key={disp.challanNo}
                 onClick={() => handleRowClick(disp)}
-                className={`p-4 rounded-2xl border transition-all space-y-3.5 shadow-sm cursor-pointer ${
+                className={`p-4 rounded-2xl border transition-ui space-y-3.5 shadow-sm cursor-pointer ${
                   isDelivered
-                    ? isDarkMode ? 'bg-[#171b24] border-emerald-500/30' : 'bg-emerald-50/40 border-emerald-200'
+                    ? isDarkMode ? 'bg-[#121215] border-emerald-500/30' : 'bg-emerald-50/40 border-emerald-200'
                     : isStaging
-                    ? isDarkMode ? 'bg-[#171b24] border-amber-500/30' : 'bg-amber-50/40 border-amber-200'
-                    : isDarkMode ? 'bg-[#171b24] border-white/[0.08]' : 'bg-white border-slate-200'
+                    ? isDarkMode ? 'bg-[#121215] border-amber-500/30' : 'bg-amber-50/40 border-amber-200'
+                    : isDarkMode ? 'bg-[#121215] border-white/[0.08]' : 'bg-white border-slate-200'
                 }`}
               >
                 {/* Header: Challan # + Status Pill */}
@@ -541,7 +541,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                   <button
                     type="button"
                     onClick={() => handleRowClick(disp)}
-                    className={`px-3 py-2 rounded-xl text-xs font-mono font-bold flex items-center gap-1 border transition-all ${
+                    className={`px-3 py-2 rounded-xl text-xs font-mono font-bold flex items-center gap-1 border transition-ui ${
                       isDarkMode ? 'border-white/[0.08] bg-black/20 text-slate-200 hover:text-white' : 'bg-slate-100 text-slate-700 border-slate-200'
                     }`}
                   >
@@ -558,7 +558,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                     <button
                       type="button"
                       onClick={(e) => handleOpenDeliveryModal(disp, e)}
-                      className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold flex items-center gap-1 shadow-md shadow-emerald-500/20 active:scale-[0.98]"
+                      className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold flex items-center gap-1 shadow-md shadow-emerald-500/20 transition-transform duration-150 ease-out active:scale-[0.96]"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       <span>Mark Delivered</span>
@@ -574,8 +574,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
       {/* ========================================================================= */}
       {/* DESKTOP DISPATCH TABLE (Viewport >= md) */}
       {/* ========================================================================= */}
-      <div className={`hidden md:block overflow-hidden rounded-[22px] border transition-all ${
-        isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
+      <div className={`hidden md:block overflow-hidden rounded-[22px] border transition-ui ${
+        isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
       }`}>
         <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
           <div>
@@ -676,7 +676,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                           <button
                             type="button"
                             onClick={(e) => handleOpenDeliveryModal(disp, e)}
-                            className="px-2.5 py-1 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-mono font-bold hover:bg-emerald-500/20 transition-all flex items-center gap-1 cursor-pointer"
+                            className="px-2.5 py-1 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-mono font-bold hover:bg-emerald-500/20 transition-ui flex items-center gap-1 cursor-pointer"
                           >
                             <CheckCircle2 className="w-3 h-3" />
                             <span>Delivered</span>
@@ -685,7 +685,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                         <button
                           type="button"
                           onClick={() => handleRowClick(disp)}
-                          className={`p-2 rounded-xl border transition-all inline-flex items-center gap-1 text-xs font-mono font-bold cursor-pointer ${
+                          className={`p-2 rounded-xl border transition-ui inline-flex items-center gap-1 text-xs font-mono font-bold cursor-pointer ${
                             isDarkMode 
                               ? 'border-white/[0.08] bg-black/20 text-slate-200 hover:bg-white/[0.05] hover:text-white' 
                               : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
@@ -762,9 +762,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                   type="date"
                   value={deliveryDate}
                   onChange={(e) => setDeliveryDate(e.target.value)}
-                  className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                  className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
                     isDarkMode 
-                      ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
+                      ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
                       : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
                   }`}
                   required
@@ -780,9 +780,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                   value={receivedBy}
                   onChange={(e) => setReceivedBy(e.target.value)}
                   placeholder="e.g. Customer Plant Inward / Store Manager"
-                  className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
+                  className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-ui ${
                     isDarkMode 
-                      ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
+                      ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
                       : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
                   }`}
                   required
@@ -799,9 +799,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                 value={podDocumentUrl}
                 onChange={(e) => setPodDocumentUrl(e.target.value)}
                 placeholder="https://.../signed-pod.pdf or Physical Copy Serial"
-                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
                   isDarkMode 
-                    ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
+                    ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
                     : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
                 }`}
               />
@@ -816,9 +816,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                 value={podRemarks}
                 onChange={(e) => setPodRemarks(e.target.value)}
                 placeholder="Verified quantity and outward seal intact with signed stamp..."
-                className={`w-full p-3 rounded-xl border text-xs outline-none transition-all ${
+                className={`w-full p-3 rounded-xl border text-xs outline-none transition-ui ${
                   isDarkMode 
-                    ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
+                    ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
                     : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
                 }`}
               />
@@ -828,7 +828,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
               <button
                 type="button"
                 onClick={() => deliveryModal.close()}
-                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-ui cursor-pointer ${
                   isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
                 }`}
               >
@@ -837,7 +837,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
               <button
                 type="submit"
                 disabled={isDelivering}
-                className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs font-mono cursor-pointer shadow-lg shadow-emerald-500/25 flex items-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.98] disabled:opacity-50"
+                className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs font-mono cursor-pointer shadow-lg shadow-emerald-500/25 flex items-center gap-2 transition-ui hover:scale-[1.01] active:scale-[0.96] disabled:opacity-50"
               >
                 {isDelivering ? (
                   <>
@@ -902,9 +902,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
               <select
                 value={orderPo}
                 onChange={(e) => setOrderPo(e.target.value)}
-                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono font-bold outline-none transition-all cursor-pointer ${
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono font-bold outline-none transition-ui cursor-pointer ${
                   isDarkMode 
-                    ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
+                    ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
                     : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
                 }`}
               >
@@ -924,7 +924,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
               const totalItems = selOrder.lines?.reduce((sum, l) => sum + Number(l.pendingQty ?? l.orderQty ?? 0), 0) || 0;
               return (
                 <div className={`p-4 rounded-2xl border space-y-3 font-sans ${
-                  isDarkMode ? 'bg-[#0d1017] border-slate-800' : 'bg-slate-50/80 border-slate-200'
+                  isDarkMode ? 'bg-[#09090B] border-slate-800' : 'bg-slate-50/80 border-slate-200'
                 }`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -990,9 +990,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                 required
                 value={transporter}
                 onChange={(e) => setTransporter(e.target.value)}
-                className={`h-11 w-full rounded-xl border px-3 text-xs outline-none cursor-pointer transition-all ${
+                className={`h-11 w-full rounded-xl border px-3 text-xs outline-none cursor-pointer transition-ui ${
                   isDarkMode 
-                    ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
+                    ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
                     : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
                 }`}
               >
@@ -1013,9 +1013,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                   value={vehicleNo}
                   onChange={(e) => setVehicleNo(e.target.value)}
                   placeholder="e.g. MH 12 AB 4589"
-                  className={`h-11 w-full rounded-xl border px-3 text-xs font-mono font-bold uppercase outline-none transition-all ${
+                  className={`h-11 w-full rounded-xl border px-3 text-xs font-mono font-bold uppercase outline-none transition-ui ${
                     isDarkMode 
-                      ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
+                      ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
                       : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
                   }`}
                 />
@@ -1029,9 +1029,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                   value={lrNo}
                   onChange={(e) => setLrNo(e.target.value)}
                   placeholder="e.g. VRL-98762"
-                  className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                  className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
                     isDarkMode 
-                      ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
+                      ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
                       : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
                   }`}
                 />
@@ -1048,9 +1048,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                   value={eWayBillNo}
                   onChange={(e) => setEWayBillNo(e.target.value)}
                   placeholder="e.g. 2710 9821 4455"
-                  className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                  className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
                     isDarkMode 
-                      ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
+                      ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
                       : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
                   }`}
                 />
@@ -1064,9 +1064,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                   value={driverContact}
                   onChange={(e) => setDriverContact(e.target.value)}
                   placeholder="e.g. +91 98765 43210"
-                  className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
+                  className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
                     isDarkMode 
-                      ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
+                      ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
                       : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
                   }`}
                 />
@@ -1082,9 +1082,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                 value={remarks}
                 onChange={(e) => setRemarks(e.target.value)}
                 placeholder="e.g. Goods packed in sealed wooden crates with anti-corrosion VCI covers"
-                className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
+                className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-ui ${
                   isDarkMode 
-                    ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
+                    ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
                     : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
                 }`}
               />
@@ -1096,7 +1096,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
               type="button" 
               disabled={isSubmitting}
               onClick={() => createChallanModal.close()} 
-              className={`px-4 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
+              className={`px-4 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-ui ${
                 isDarkMode 
                   ? 'border-slate-700 text-slate-300 hover:bg-slate-800' 
                   : 'border-slate-300 text-slate-700 hover:bg-slate-100'
@@ -1107,7 +1107,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
             <button 
               type="submit" 
               disabled={isSubmitting || !vehicleNo.trim()}
-              className="px-5 py-2.5 rounded-xl bg-[var(--accent-primary)] hover:brightness-110 text-white font-bold text-xs font-mono cursor-pointer shadow-lg shadow-[var(--accent-shadow)] transition-all hover:scale-[1.01] active:scale-[0.98] disabled:opacity-50 flex items-center gap-2"
+              className="px-5 py-2.5 rounded-xl bg-[var(--accent-primary)] hover:brightness-110 text-white font-bold text-xs font-mono cursor-pointer shadow-lg shadow-[var(--accent-shadow)] transition-ui hover:scale-[1.01] active:scale-[0.96] disabled:opacity-50 flex items-center gap-2"
             >
               {isSubmitting ? (
                 <>

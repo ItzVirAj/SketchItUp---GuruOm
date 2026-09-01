@@ -179,7 +179,7 @@ const ToastCard: React.FC<{ item: ToastItem; onDismiss: () => void }> = ({ item,
   return (
     <div
       role="alert"
-      className={`pointer-events-auto relative overflow-hidden rounded-2xl border backdrop-blur-md transition-all duration-300 transform translate-y-0 opacity-100 p-3.5 flex items-start gap-3 animate-in slide-in-from-bottom-4 fade-in duration-200 ${theme.containerBg}`}
+      className={`pointer-events-auto relative overflow-hidden rounded-2xl border backdrop-blur-md transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-300 transform translate-y-0 opacity-100 p-3.5 flex items-start gap-3 animate-in slide-in-from-bottom-4 fade-in duration-200 ${theme.containerBg}`}
     >
       {/* Icon & Pulse Beacon */}
       <div className="relative mt-0.5 shrink-0 flex items-center justify-center">

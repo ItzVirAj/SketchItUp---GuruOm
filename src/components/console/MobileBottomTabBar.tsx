@@ -68,7 +68,7 @@ export const MobileBottomTabBar: React.FC<MobileBottomTabBarProps> = ({
       aria-label="Mobile Navigation"
       className={`fixed bottom-0 left-0 right-0 z-40 lg:hidden border-t select-none ${
         isDarkMode 
-          ? 'bg-[#16171B] border-[#262832] text-slate-400 shadow-[0_-4px_25px_rgba(0,0,0,0.4)]' 
+          ? 'bg-[#18181B] border-[#2E2E34] text-slate-400 shadow-[0_-4px_25px_rgba(0,0,0,0.4)]' 
           : 'bg-white border-[#d8dde8] text-slate-600 shadow-[0_-4px_20px_rgba(15,23,42,0.06)]'
       }`}
       style={{
@@ -90,7 +90,7 @@ export const MobileBottomTabBar: React.FC<MobileBottomTabBarProps> = ({
               key={tab.id}
               type="button"
               onClick={() => handleTabClick(tab.id)}
-              className={`relative flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-xl transition-all duration-150 cursor-pointer active:scale-95 group ${
+              className={`relative flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-xl transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-150 cursor-pointer active:scale-[0.96] group ${
                 isActive || isMoreActive
                   ? 'text-[var(--accent-primary)] font-bold'
                   : isDarkMode

@@ -628,7 +628,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-slate-950/85 backdrop-blur-md font-sans overflow-y-auto">
-      <div className={`relative w-full max-w-5xl h-[100dvh] sm:h-auto sm:max-h-[92vh] flex flex-col rounded-none sm:rounded-3xl border shadow-2xl transition-all overflow-hidden ${
+      <div className={`relative w-full max-w-5xl h-[100dvh] sm:h-auto sm:max-h-[92vh] flex flex-col rounded-none sm:rounded-3xl border shadow-2xl transition-ui overflow-hidden ${
         isDarkMode 
           ? 'bg-slate-900/95 border-slate-800 text-white backdrop-blur-2xl shadow-[#5B75F8]/10' 
           : 'bg-white border-slate-200 text-slate-900 shadow-2xl'
@@ -732,7 +732,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
             )}
             <button
               onClick={onClose}
-              className={`p-2 rounded-2xl border transition-all cursor-pointer ${
+              className={`p-2 rounded-2xl border transition-ui cursor-pointer ${
                 isDarkMode 
                   ? 'border-slate-800 bg-slate-950/60 text-slate-400 hover:text-white hover:bg-slate-800' 
                   : 'border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
@@ -746,7 +746,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
         {/* ========================================================================= */}
         {/* SUMMARY KPI CARDS (Both Mobile & PC View) */}
         {/* ========================================================================= */}
-        <div className={`p-3.5 sm:p-5 border-b shrink-0 transition-all ${
+        <div className={`p-3.5 sm:p-5 border-b shrink-0 transition-ui ${
           isDarkMode 
             ? 'bg-slate-950/40 border-slate-800/80 backdrop-blur-xl' 
             : 'bg-slate-50/70 border-slate-200'
@@ -754,7 +754,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
             
             {/* Card 1: Target Output */}
-            <div className={`p-3 sm:p-3.5 rounded-2xl border transition-all relative overflow-hidden group ${
+            <div className={`p-3 sm:p-3.5 rounded-2xl border transition-ui relative overflow-hidden group ${
               isDarkMode 
                 ? 'bg-gradient-to-b from-slate-900/90 to-slate-950/90 border-slate-800/90 hover:border-emerald-500/40 shadow-xs' 
                 : 'bg-white border-slate-200/90 hover:border-emerald-500/30 shadow-xs'
@@ -779,7 +779,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
             </div>
 
             {/* Card 2: Target Date */}
-            <div className={`p-3 sm:p-3.5 rounded-2xl border transition-all relative overflow-hidden group ${
+            <div className={`p-3 sm:p-3.5 rounded-2xl border transition-ui relative overflow-hidden group ${
               isDarkMode 
                 ? 'bg-gradient-to-b from-slate-900/90 to-slate-950/90 border-slate-800/90 hover:border-amber-500/40 shadow-xs' 
                 : 'bg-white border-slate-200/90 hover:border-amber-500/30 shadow-xs'
@@ -801,7 +801,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
             </div>
 
             {/* Card 3: Route Progress */}
-            <div className={`p-3 sm:p-3.5 rounded-2xl border transition-all relative overflow-hidden group ${
+            <div className={`p-3 sm:p-3.5 rounded-2xl border transition-ui relative overflow-hidden group ${
               isDarkMode 
                 ? 'bg-gradient-to-b from-slate-900/90 to-slate-950/90 border-slate-800/90 hover:border-[#5B75F8]/40 shadow-xs' 
                 : 'bg-white border-slate-200/90 hover:border-[#5B75F8]/30 shadow-xs'
@@ -828,7 +828,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
             </div>
 
             {/* Card 4: Next Milestone */}
-            <div className={`p-3 sm:p-3.5 rounded-2xl border transition-all relative overflow-hidden group ${
+            <div className={`p-3 sm:p-3.5 rounded-2xl border transition-ui relative overflow-hidden group ${
               isDarkMode 
                 ? 'bg-gradient-to-b from-slate-900/90 to-slate-950/90 border-slate-800/90 hover:border-purple-500/40 shadow-xs' 
                 : 'bg-white border-slate-200/90 hover:border-purple-500/30 shadow-xs'
@@ -876,7 +876,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
               <button
                 key={tab.id}
                 onClick={() => setActiveMobileSection(tab.id as any)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-bold whitespace-nowrap transition-all cursor-pointer border ${
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-bold whitespace-nowrap transition-ui cursor-pointer border ${
                   isActive
                     ? 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-sm'
                     : isDarkMode 
@@ -934,7 +934,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
             </div>
 
             {/* Desktop Table View */}
-            <div className={`hidden md:block rounded-2xl border overflow-hidden transition-all shadow-sm ${
+            <div className={`hidden md:block rounded-2xl border overflow-hidden transition-ui shadow-sm ${
               isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-white border-slate-200'
             }`}>
               <div className="overflow-x-auto">
@@ -1034,7 +1034,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                 return (
                   <div
                     key={step.sequenceNo}
-                    className={`p-4 rounded-2xl border transition-all space-y-3 shadow-xs ${
+                    className={`p-4 rounded-2xl border transition-ui space-y-3 shadow-xs ${
                       step.isCompleted
                         ? isDarkMode ? 'bg-slate-950/70 border-emerald-500/30' : 'bg-emerald-50/40 border-emerald-200'
                         : step.isNextIncomplete
@@ -1094,7 +1094,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                       </div>
                       <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
                         <div 
-                          className={`h-full rounded-full transition-all ${
+                          className={`h-full rounded-full transition-ui ${
                             step.isCompleted ? 'bg-emerald-500' : 'bg-gradient-to-r from-[#5B75F8] to-indigo-500'
                           }`}
                           style={{ width: `${pct}%` }}
@@ -1159,7 +1159,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
               <button
                 type="button"
                 onClick={() => setShowAddMaterialModal(true)}
-                className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-all ${
+                className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-ui ${
                   isDarkMode 
                     ? 'border-indigo-500/40 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20' 
                     : 'border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
@@ -1171,7 +1171,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
             </div>
 
             {/* Desktop Table View */}
-            <div className={`hidden md:block rounded-2xl border overflow-hidden transition-all shadow-sm ${
+            <div className={`hidden md:block rounded-2xl border overflow-hidden transition-ui shadow-sm ${
               isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-white border-slate-200'
             }`}>
               <div className="overflow-x-auto">
@@ -1222,7 +1222,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                                 placeholder={mat.remainingLeft > 0 ? String(mat.remainingLeft) : '0'}
                                 value={inputVal}
                                 onChange={(e) => handleInputChange(mat.componentCode, 'qty', e.target.value)}
-                                className={`w-28 rounded-xl border px-3 py-1.5 text-xs font-mono text-right outline-none transition-all ${
+                                className={`w-28 rounded-xl border px-3 py-1.5 text-xs font-mono text-right outline-none transition-ui ${
                                   isDarkMode 
                                     ? 'bg-slate-900 border-slate-700 text-white focus:border-[#5B75F8]' 
                                     : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[#5B75F8]'
@@ -1236,7 +1236,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                               type="button"
                               disabled={isBooking}
                               onClick={() => handleBookMaterialSubmit(mat)}
-                              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-mono font-bold shadow-md shadow-emerald-500/20 disabled:opacity-50 flex items-center justify-center gap-1 mx-auto cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]"
+                              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-mono font-bold shadow-md shadow-emerald-500/20 disabled:opacity-50 flex items-center justify-center gap-1 mx-auto cursor-pointer transition-ui hover:scale-[1.02] active:scale-[0.96]"
                             >
                               <Check className="w-3.5 h-3.5" />
                               <span>{isBooking ? 'Booking...' : 'Book'}</span>
@@ -1268,7 +1268,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
             </div>
 
             {/* Desktop Table View */}
-            <div className={`hidden md:block rounded-2xl border overflow-hidden transition-all shadow-sm ${
+            <div className={`hidden md:block rounded-2xl border overflow-hidden transition-ui shadow-sm ${
               isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-white border-slate-200'
             }`}>
               <div className="overflow-x-auto">
@@ -1368,7 +1368,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
             </div>
 
             {/* Desktop Table View */}
-            <div className={`hidden md:block rounded-2xl border overflow-hidden transition-all shadow-sm ${
+            <div className={`hidden md:block rounded-2xl border overflow-hidden transition-ui shadow-sm ${
               isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-white border-slate-200'
             }`}>
               <div className="overflow-x-auto">
@@ -1475,7 +1475,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className={`px-4 sm:px-5 py-2 rounded-xl border font-bold cursor-pointer transition-all ${
+            className={`px-4 sm:px-5 py-2 rounded-xl border font-bold cursor-pointer transition-ui ${
               isDarkMode ? 'border-slate-800 text-slate-300 hover:bg-slate-800' : 'border-slate-200 text-slate-700 hover:bg-slate-100'
             }`}
           >
@@ -1490,7 +1490,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
       {/* ========================================================================= */}
       {showAddMaterialModal && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className={`w-full max-w-md rounded-3xl border p-6 space-y-4 shadow-2xl transition-all ${
+          <div className={`w-full max-w-md rounded-3xl border p-6 space-y-4 shadow-2xl transition-ui ${
             isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
           }`}>
             <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
@@ -1524,7 +1524,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                       setAddMatUnit(matchedStock.unit || 'Nos');
                     }
                   }}
-                  className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono border focus:outline-none transition-all ${
+                  className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono border focus:outline-none transition-ui ${
                     isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                   }`}
                 />
@@ -1539,7 +1539,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                   placeholder="e.g. Aluminum 6061 Round Bar 40mm"
                   value={addMatName}
                   onChange={(e) => setAddMatName(e.target.value)}
-                  className={`w-full px-3.5 py-2 rounded-xl text-xs border focus:outline-none transition-all ${
+                  className={`w-full px-3.5 py-2 rounded-xl text-xs border focus:outline-none transition-ui ${
                     isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                   }`}
                 />
@@ -1556,7 +1556,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                     required
                     value={addMatQty}
                     onChange={(e) => setAddMatQty(e.target.value)}
-                    className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono border focus:outline-none transition-all ${
+                    className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono border focus:outline-none transition-ui ${
                       isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                     }`}
                   />
@@ -1568,7 +1568,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                   <select
                     value={addMatUnit}
                     onChange={(e) => setAddMatUnit(e.target.value)}
-                    className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono border focus:outline-none transition-all ${
+                    className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono border focus:outline-none transition-ui ${
                       isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                     }`}
                   >
@@ -1591,7 +1591,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                     step="any"
                     value={addMatScrap}
                     onChange={(e) => setAddMatScrap(e.target.value)}
-                    className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono border focus:outline-none transition-all ${
+                    className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono border focus:outline-none transition-ui ${
                       isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                     }`}
                   />
@@ -1605,7 +1605,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                     placeholder="HT-2026-####"
                     value={addMatHeatLot}
                     onChange={(e) => setAddMatHeatLot(e.target.value)}
-                    className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono border focus:outline-none transition-all ${
+                    className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono border focus:outline-none transition-ui ${
                       isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                     }`}
                   />
@@ -1619,7 +1619,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                 <select
                   value={addMatStepSeq}
                   onChange={(e) => setAddMatStepSeq(Number(e.target.value))}
-                  className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono border focus:outline-none transition-all ${
+                  className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono border focus:outline-none transition-ui ${
                     isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                   }`}
                 >
@@ -1657,7 +1657,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
       {/* ========================================================================= */}
       {showLogProductionModal && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className={`w-full max-w-md rounded-3xl border p-6 space-y-4 shadow-2xl transition-all ${
+          <div className={`w-full max-w-md rounded-3xl border p-6 space-y-4 shadow-2xl transition-ui ${
             isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
           }`}>
             <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
@@ -1688,7 +1688,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                       setLogQty(rem);
                     }
                   }}
-                  className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-mono border focus:outline-none transition-all ${
+                  className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-mono border focus:outline-none transition-ui ${
                     isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                   }`}
                 >
@@ -1721,7 +1721,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                     max={maxLoggableQty}
                     value={logQty}
                     onChange={(e) => setLogQty(Number(e.target.value))}
-                    className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono font-bold border focus:outline-none transition-all ${
+                    className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono font-bold border focus:outline-none transition-ui ${
                       logQty > maxLoggableQty
                         ? 'border-rose-500 bg-rose-500/10 text-rose-300'
                         : isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
@@ -1740,7 +1740,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                     min="0"
                     value={logMins}
                     onChange={(e) => setLogMins(Number(e.target.value))}
-                    className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono border focus:outline-none transition-all ${
+                    className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono border focus:outline-none transition-ui ${
                       isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                     }`}
                   />
@@ -1756,7 +1756,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                   placeholder="e.g. Completed batch with zero tool wear"
                   value={logNotes}
                   onChange={(e) => setLogNotes(e.target.value)}
-                  className={`w-full px-3.5 py-2 rounded-xl text-xs border focus:outline-none transition-all ${
+                  className={`w-full px-3.5 py-2 rounded-xl text-xs border focus:outline-none transition-ui ${
                     isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                   }`}
                 />

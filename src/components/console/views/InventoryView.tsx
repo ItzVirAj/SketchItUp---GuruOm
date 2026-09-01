@@ -426,7 +426,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     adjustStockModal.open({ itemId: target.code });
                   }
                 }}
-                className="min-h-[40px] px-3.5 py-2 rounded-xl bg-gradient-to-r from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer shrink-0 active:scale-95 transition-transform font-mono"
+                className="min-h-[40px] px-3.5 py-2 rounded-xl bg-gradient-to-r from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer shrink-0 active:scale-[0.96] transition-transform font-mono"
               >
                 <SlidersHorizontal className="w-3.5 h-3.5" />
                 <span>Adjust</span>
@@ -435,7 +435,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             {subTab === 'purchases' && (
               <button
                 onClick={() => createPoModal.open()}
-                className="min-h-[40px] px-3.5 py-2 rounded-xl bg-gradient-to-r from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer shrink-0 active:scale-95 transition-transform font-mono"
+                className="min-h-[40px] px-3.5 py-2 rounded-xl bg-gradient-to-r from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer shrink-0 active:scale-[0.96] transition-transform font-mono"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>New PO</span>
@@ -444,7 +444,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             {subTab === 'grn' && (
               <button
                 onClick={() => createGrnModal.open()}
-                className="min-h-[40px] px-3.5 py-2 rounded-xl bg-gradient-to-r from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer shrink-0 active:scale-95 transition-transform font-mono"
+                className="min-h-[40px] px-3.5 py-2 rounded-xl bg-gradient-to-r from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer shrink-0 active:scale-[0.96] transition-transform font-mono"
               >
                 <Truck className="w-3.5 h-3.5" />
                 <span>GRN</span>
@@ -518,7 +518,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               <button
                 key={tab.id}
                 onClick={() => setSubTab(tab.id as any)}
-                className={`min-h-[36px] px-3 py-1 rounded-xl text-xs font-bold font-mono shrink-0 transition-all border cursor-pointer ${
+                className={`min-h-[36px] px-3 py-1 rounded-xl text-xs font-bold font-mono shrink-0 transition-ui border cursor-pointer ${
                   isSelected
                     ? 'bg-[var(--accent-primary)] text-white shadow-xs border-transparent scale-105'
                     : isDarkMode
@@ -551,7 +551,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       {/* ── DESKTOP HEADER & KPI ROW (≥ md) ──                                      */}
       {/* ========================================================================= */}
       <div className="hidden md:block space-y-4">
-        <section className={`overflow-hidden rounded-[24px] border ${isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'}`}>
+        <section className={`overflow-hidden rounded-[24px] border ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'}`}>
           <div className="flex items-center justify-between gap-6 px-6 py-5">
             <div className="min-w-0">
               <div className="mb-1.5 flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">
@@ -583,7 +583,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                       adjustStockModal.open({ itemId: target.code });
                     }
                   }}
-                  className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-all hover:bg-[var(--accent-hover)] active:scale-[0.98]"
+                  className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96]"
                 >
                   <SlidersHorizontal className="h-4 w-4" />
                   Adjust Stock
@@ -592,7 +592,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               {subTab === 'purchases' && (
                 <button
                   onClick={() => createPoModal.open()}
-                  className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-all hover:bg-[var(--accent-hover)] active:scale-[0.98]"
+                  className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96]"
                 >
                   <Plus className="h-4 w-4" />
                   Create Purchase Order
@@ -601,7 +601,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               {subTab === 'grn' && (
                 <button
                   onClick={() => createGrnModal.open()}
-                  className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-all hover:bg-[var(--accent-hover)] active:scale-[0.98]"
+                  className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96]"
                 >
                   <Truck className="h-4 w-4" />
                   Receive Material (GRN)
@@ -636,7 +636,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         </section>
 
         {/* Desktop Sub-Tabs Navigation & Search Toolbar */}
-        <div className={`rounded-2xl border p-3 ${isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
+        <div className={`rounded-2xl border p-3 ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
           <div className="flex items-center gap-2">
             <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${isDarkMode ? 'bg-white/[0.05] text-slate-400' : 'bg-slate-100 text-slate-500'}`} title="Modules">
               <Layers className="h-4 w-4" />
@@ -654,7 +654,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 <button
                   key={t.id}
                   onClick={() => setSubTab(t.id as any)}
-                  className={`flex items-center gap-1.5 h-10 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap border ${
+                  className={`flex items-center gap-1.5 h-10 px-3.5 rounded-xl text-xs font-bold transition-ui cursor-pointer whitespace-nowrap border ${
                     subTab === t.id
                       ? isDarkMode
                         ? 'bg-[var(--accent-primary)]/20 text-[var(--accent-text-dark)] border-[var(--accent-primary)]/40 shadow-xs'
@@ -706,8 +706,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       {subTab === 'stock' && (
         <div className="space-y-4">
           {/* Category Filter Tabs Bar */}
-          <div className={`p-2.5 rounded-2xl border flex items-center gap-1.5 overflow-x-auto scrollbar-none transition-all ${
-            isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'
+          <div className={`p-2.5 rounded-2xl border flex items-center gap-1.5 overflow-x-auto scrollbar-none transition-ui ${
+            isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'
           }`}>
             <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 px-2 shrink-0">
               Category:
@@ -719,7 +719,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 <button
                   key={cat.key}
                   onClick={() => setSelectedCategory(cat.key)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer whitespace-nowrap border ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-ui cursor-pointer whitespace-nowrap border ${
                     isActive
                       ? isDarkMode 
                         ? 'bg-[var(--accent-soft-dark)] text-[var(--accent-text-dark)] border-[var(--accent-border-dark)] shadow-xs'
@@ -743,8 +743,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
           </div>
 
           {/* Desktop Stock Master Table */}
-          <div className={`hidden md:block overflow-hidden rounded-[22px] border transition-all ${
-            isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
+          <div className={`hidden md:block overflow-hidden rounded-[22px] border transition-ui ${
+            isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
           }`}>
             <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
               <div>
@@ -855,7 +855,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                                 setSelectedStockForAdjust(stk);
                                 adjustStockModal.open({ itemId: stk.code });
                               }}
-                              className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer ${
+                              className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-ui cursor-pointer ${
                                 isDarkMode ? 'bg-[var(--accent-soft-dark)] text-[var(--accent-text-dark)] hover:brightness-125 border border-[var(--accent-border-dark)]' : 'bg-[var(--accent-soft-light)] text-[var(--accent-text-light)] hover:brightness-95 border border-[var(--accent-border-light)]'
                               }`}
                             >
@@ -863,7 +863,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                             </button>
                             <button
                               onClick={() => handleOpenItemHistory(stk)}
-                              className={`p-1.5 rounded-xl border transition-all cursor-pointer ${
+                              className={`p-1.5 rounded-xl border transition-ui cursor-pointer ${
                                 isDarkMode ? 'border-slate-800 bg-black/20 text-slate-400 hover:text-white' : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
                               }`}
                               title="View Running Ledger Movements"
@@ -894,7 +894,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               return (
                 <div
                   key={stk.code}
-                  className={`p-4 rounded-2xl border transition-all space-y-3 shadow-sm ${
+                  className={`p-4 rounded-2xl border transition-ui space-y-3 shadow-sm ${
                     isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
                   }`}
                 >
@@ -958,7 +958,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     </button>
                     <button
                       onClick={() => handleOpenItemHistory(stk)}
-                      className={`p-2 rounded-xl border transition-all cursor-pointer ${
+                      className={`p-2 rounded-xl border transition-ui cursor-pointer ${
                         isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
                       }`}
                       title="View History"
@@ -982,8 +982,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
       {/* 2. Material Shortages Sub-View */}
       {subTab === 'shortages' && (
-        <div className={`overflow-hidden rounded-[22px] border transition-all ${
-          isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
+        <div className={`overflow-hidden rounded-[22px] border transition-ui ${
+          isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
         }`}>
           <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
             <div>
@@ -1020,7 +1020,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                           setSubTab('purchases');
                           createPoModal.open();
                         }}
-                        className="px-3 py-1.5 rounded-xl bg-[var(--accent-primary)]/10 hover:bg-[var(--accent-primary)]/20 text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/30 text-xs font-mono font-bold cursor-pointer transition-all"
+                        className="px-3 py-1.5 rounded-xl bg-[var(--accent-primary)]/10 hover:bg-[var(--accent-primary)]/20 text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/30 text-xs font-mono font-bold cursor-pointer transition-ui"
                       >
                         Raise PO
                       </button>
@@ -1042,8 +1042,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
       {/* 3. Purchase Orders Sub-View */}
       {subTab === 'purchases' && (
-        <div className={`overflow-hidden rounded-[22px] border transition-all ${
-          isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
+        <div className={`overflow-hidden rounded-[22px] border transition-ui ${
+          isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
         }`}>
           <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
             <div>
@@ -1174,8 +1174,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
       {/* 4. Goods Receipt Notes (GRN) Sub-View */}
       {subTab === 'grn' && (
-        <div className={`overflow-hidden rounded-[22px] border transition-all ${
-          isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
+        <div className={`overflow-hidden rounded-[22px] border transition-ui ${
+          isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
         }`}>
           <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
             <div>
@@ -1225,7 +1225,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                       {g.status === 'RECEIVED' ? (
                         <button
                           onClick={() => handleGrnStatusChange(g.id || g.grnNo, 'QC_VERIFIED')}
-                          className="px-3 py-1.5 rounded-xl bg-[var(--accent-primary)]/20 hover:bg-[var(--accent-primary)]/30 text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/40 text-xs font-mono font-bold cursor-pointer transition-all"
+                          className="px-3 py-1.5 rounded-xl bg-[var(--accent-primary)]/20 hover:bg-[var(--accent-primary)]/30 text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/40 text-xs font-mono font-bold cursor-pointer transition-ui"
                         >
                           QC Verify
                         </button>
@@ -1253,7 +1253,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         <div className="space-y-4">
           {/* Security & Immutability Badge Banner */}
           <div className={`p-4 rounded-2xl border flex items-center justify-between gap-4 ${
-            isDarkMode ? 'border-white/[0.08] bg-[#171b24] text-white' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)] text-slate-900'
+            isDarkMode ? 'border-white/[0.08] bg-[#121215] text-white' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)] text-slate-900'
           }`}>
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-2xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
@@ -1273,7 +1273,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 <button
                   key={t}
                   onClick={() => setMovementTypeFilter(t)}
-                  className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold transition-ui cursor-pointer whitespace-nowrap ${
                     movementTypeFilter === t
                       ? 'bg-[var(--accent-primary)] text-white shadow-xs'
                       : isDarkMode ? 'bg-white/[0.06] text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -1285,8 +1285,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             </div>
           </div>
 
-          <div className={`overflow-hidden rounded-[22px] border transition-all ${
-            isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
+          <div className={`overflow-hidden rounded-[22px] border transition-ui ${
+            isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
           }`}>
             <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
               <div>
@@ -1403,17 +1403,17 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       {subTab === 'reconciliation' && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className={`p-4 rounded-2xl border ${isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
+            <div className={`p-4 rounded-2xl border ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
               <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">Audited Items</div>
               <div className="text-2xl font-extrabold font-mono mt-1 text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{(reconciliationReport || []).length}</div>
             </div>
-            <div className={`p-4 rounded-2xl border ${isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
+            <div className={`p-4 rounded-2xl border ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
               <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">100% Ledger Matched</div>
               <div className="text-2xl font-extrabold font-mono mt-1 text-emerald-400">
                 {(reconciliationReport || []).filter(r => r.status === 'MATCHED').length}
               </div>
             </div>
-            <div className={`p-4 rounded-2xl border ${isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
+            <div className={`p-4 rounded-2xl border ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
               <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">Discrepancies Flagged</div>
               <div className="text-2xl font-extrabold font-mono mt-1 text-rose-400">
                 {(reconciliationReport || []).filter(r => r.status === 'DISCREPANCY').length}
@@ -1421,8 +1421,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             </div>
           </div>
 
-          <div className={`overflow-hidden rounded-[22px] border transition-all ${
-            isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
+          <div className={`overflow-hidden rounded-[22px] border transition-ui ${
+            isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
           }`}>
             <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
               <div>
@@ -1473,7 +1473,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                             onClick={() => {
                               onAdjustStock(rec.itemCode, rec.discrepancy, 'Reconciliation Correction');
                             }}
-                            className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer ${
+                            className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-ui cursor-pointer ${
                               isDarkMode ? 'bg-[var(--accent-soft-dark)] text-[var(--accent-text-dark)] hover:brightness-125 border border-[var(--accent-border-dark)]' : 'bg-[var(--accent-soft-light)] text-[var(--accent-text-light)] hover:brightness-95 border border-[var(--accent-border-light)]'
                             }`}
                           >
@@ -1518,9 +1518,9 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   const found = stockMasterRows.find(s => s.code === e.target.value);
                   if (found) setSelectedStockForAdjust(found);
                 }}
-                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono font-bold outline-none transition-all cursor-pointer ${
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono font-bold outline-none transition-ui cursor-pointer ${
                   isDarkMode 
-                    ? 'bg-[#0d1017] border-slate-700/80 text-[var(--accent-text-dark)] focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
+                    ? 'bg-[#09090B] border-slate-700/80 text-[var(--accent-text-dark)] focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
                     : 'bg-slate-50 border-slate-300 text-[var(--accent-text-light)] focus:border-[var(--accent-primary)] shadow-xs'
                 }`}
               >
@@ -1548,7 +1548,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   Current On Hand
                 </label>
                 <div className={`h-11 px-3 flex items-center rounded-xl border font-mono font-bold text-xs ${
-                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 shadow-xs'
+                  isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 shadow-xs'
                 }`}>
                   {selectedStockForAdjust.onHand} {selectedStockForAdjust.unit}
                 </div>
@@ -1562,9 +1562,9 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   required
                   value={adjustQty}
                   onChange={(e) => setAdjustQty(Number(e.target.value))}
-                  className={`h-11 w-full rounded-xl border px-3 text-xs font-mono font-bold outline-none transition-all ${
+                  className={`h-11 w-full rounded-xl border px-3 text-xs font-mono font-bold outline-none transition-ui ${
                     isDarkMode 
-                      ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
+                      ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
                       : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
                   }`}
                   placeholder="e.g. +10 or -5"
@@ -1581,9 +1581,9 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 required
                 value={adjustReason}
                 onChange={(e) => setAdjustReason(e.target.value)}
-                className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
+                className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-ui ${
                   isDarkMode 
-                    ? 'bg-[#0d1017] border-slate-700/80 text-white placeholder:text-slate-500 focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
+                    ? 'bg-[#09090B] border-slate-700/80 text-white placeholder:text-slate-500 focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
                     : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-[var(--accent-primary)] shadow-xs'
                 }`}
                 placeholder="e.g. Physical count reconciliation"
@@ -1597,7 +1597,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   setSelectedStockForAdjust(null);
                   adjustStockModal.close();
                 }}
-                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-ui cursor-pointer ${
                   isDarkMode 
                     ? 'border-slate-700 text-slate-300 hover:bg-slate-800' 
                     : 'border-slate-300 text-slate-700 hover:bg-slate-100'
@@ -1607,7 +1607,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 rounded-xl bg-[var(--accent-primary)] hover:brightness-110 text-white font-bold text-xs cursor-pointer shadow-lg shadow-[var(--accent-shadow)] transition-all hover:scale-[1.01] active:scale-[0.99]"
+                className="px-5 py-2 rounded-xl bg-[var(--accent-primary)] hover:brightness-110 text-white font-bold text-xs cursor-pointer shadow-lg shadow-[var(--accent-shadow)] transition-ui hover:scale-[1.01] active:scale-[0.96]"
               >
                 Confirm Adjustment
               </button>
@@ -1668,14 +1668,14 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Supplier Code</label>
-              <input name="supplierCode" required defaultValue="VEND-001" className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
-                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+              <input name="supplierCode" required defaultValue="VEND-001" className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
+                isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
               }`} />
             </div>
             <div>
               <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Supplier Name</label>
-              <input name="supplierName" required defaultValue="Mahalaxmi Steel Traders" className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
-                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+              <input name="supplierName" required defaultValue="Mahalaxmi Steel Traders" className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-ui ${
+                isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
               }`} />
             </div>
           </div>
@@ -1683,14 +1683,14 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Item Code / SKU</label>
-              <input name="itemCode" required defaultValue="RAW-ALU-6061-ROD" className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
-                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+              <input name="itemCode" required defaultValue="RAW-ALU-6061-ROD" className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
+                isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
               }`} />
             </div>
             <div>
               <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Item Description</label>
-              <input name="itemDesc" required defaultValue="Aluminium 6061 Round Bar Ø50mm" className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
-                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+              <input name="itemDesc" required defaultValue="Aluminium 6061 Round Bar Ø50mm" className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-ui ${
+                isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
               }`} />
             </div>
           </div>
@@ -1698,20 +1698,20 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
           <div className="grid grid-cols-3 gap-3">
             <div>
               <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Order Qty</label>
-              <input name="qty" type="number" required defaultValue="100" className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
-                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+              <input name="qty" type="number" required defaultValue="100" className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
+                isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
               }`} />
             </div>
             <div>
               <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Unit</label>
-              <input name="unit" required defaultValue="KG" className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
-                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+              <input name="unit" required defaultValue="KG" className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
+                isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
               }`} />
             </div>
             <div>
               <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Unit Rate (₹)</label>
-              <input name="rate" type="number" required defaultValue="280" className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
-                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+              <input name="rate" type="number" required defaultValue="280" className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
+                isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
               }`} />
             </div>
           </div>
@@ -1719,23 +1719,23 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Exp Delivery Date</label>
-              <input name="deliveryDate" type="date" required defaultValue="2026-08-30" className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
-                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+              <input name="deliveryDate" type="date" required defaultValue="2026-08-30" className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
+                isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
               }`} />
             </div>
             <div>
               <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Notes</label>
-              <input name="notes" defaultValue="Standard factory delivery" className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
-                isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white placeholder:text-slate-500 focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-[var(--accent-primary)] shadow-xs'
+              <input name="notes" defaultValue="Standard factory delivery" className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-ui ${
+                isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white placeholder:text-slate-500 focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-[var(--accent-primary)] shadow-xs'
               }`} />
             </div>
           </div>
 
           <div className={`pt-4 border-t flex justify-end gap-3 font-sans ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
-            <button type="button" onClick={() => createPoModal.close()} className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+            <button type="button" onClick={() => createPoModal.close()} className={`px-4 py-2 rounded-xl border text-xs font-bold transition-ui cursor-pointer ${
               isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
             }`}>Cancel</button>
-            <button type="submit" className="px-5 py-2 rounded-xl bg-[var(--accent-primary)] hover:brightness-110 text-white font-bold text-xs cursor-pointer shadow-lg shadow-[var(--accent-shadow)] transition-all hover:scale-[1.01]">Issue PO</button>
+            <button type="submit" className="px-5 py-2 rounded-xl bg-[var(--accent-primary)] hover:brightness-110 text-white font-bold text-xs cursor-pointer shadow-lg shadow-[var(--accent-shadow)] transition-ui hover:scale-[1.01]">Issue PO</button>
           </div>
         </form>
       </Modal>
@@ -1784,7 +1784,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 setSelectedItemHistory(null);
                 itemHistoryModal.close();
               }}
-              className={`px-5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+              className={`px-5 py-2 rounded-xl border text-xs font-bold transition-ui cursor-pointer ${
                 isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
               }`}
             >
@@ -1804,7 +1804,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 <div 
                   key={h.id}
                   className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 ${
-                    isDarkMode ? 'bg-[#0d1017] border-slate-800/90' : 'bg-slate-50 border-slate-200'
+                    isDarkMode ? 'bg-[#09090B] border-slate-800/90' : 'bg-slate-50 border-slate-200'
                   }`}
                 >
                   <div className="flex items-center gap-3">
@@ -1874,7 +1874,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         {selectedMovementForCorrection && (
           <form onSubmit={handleReverseMovement} className="space-y-4 font-mono text-xs">
             <div className={`p-3.5 rounded-xl border space-y-1.5 ${
-              isDarkMode ? 'bg-[#0d1017] border-slate-800' : 'bg-slate-50 border-slate-200'
+              isDarkMode ? 'bg-[#09090B] border-slate-800' : 'bg-slate-50 border-slate-200'
             }`}>
               <div className="text-[10px] text-slate-400 uppercase font-bold">Target Movement</div>
               <div className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
@@ -1895,8 +1895,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 value={correctionReason} 
                 onChange={(e) => setCorrectionReason(e.target.value)}
                 placeholder="e.g. Inward counting error or damaged box returned"
-                className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
-                  isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white placeholder:text-slate-500 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-amber-500 shadow-xs'
+                className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-ui ${
+                  isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white placeholder:text-slate-500 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-amber-500 shadow-xs'
                 }`}
               />
             </div>
@@ -1905,10 +1905,10 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               <button type="button" onClick={() => {
                 setSelectedMovementForCorrection(null);
                 correctMovementModal.close();
-              }} className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+              }} className={`px-4 py-2 rounded-xl border text-xs font-bold transition-ui cursor-pointer ${
                 isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
               }`}>Cancel</button>
-              <button type="submit" className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs cursor-pointer shadow-md transition-all hover:scale-[1.01]">
+              <button type="submit" className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs cursor-pointer shadow-md transition-ui hover:scale-[1.01]">
                 Append Correction
               </button>
             </div>
@@ -2080,8 +2080,8 @@ const GrnReceiptForm: React.FC<GrnReceiptFormProps> = ({
             value={poNo}
             onChange={(e) => handlePoChange(e.target.value)}
             list="grn-po-options"
-            className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
-              isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+            className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
+              isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
             }`}
           />
           {purchaseOrders.length > 0 && (
@@ -2101,8 +2101,8 @@ const GrnReceiptForm: React.FC<GrnReceiptFormProps> = ({
             required
             value={challanNo}
             onChange={(e) => setChallanNo(e.target.value)}
-            className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
-              isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+            className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
+              isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
             }`}
           />
         </div>
@@ -2116,8 +2116,8 @@ const GrnReceiptForm: React.FC<GrnReceiptFormProps> = ({
             required
             value={vendorCode}
             onChange={(e) => setVendorCode(e.target.value)}
-            className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
-              isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+            className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
+              isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
             }`}
           />
         </div>
@@ -2128,8 +2128,8 @@ const GrnReceiptForm: React.FC<GrnReceiptFormProps> = ({
             required
             value={vendorName}
             onChange={(e) => setVendorName(e.target.value)}
-            className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
-              isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+            className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-ui ${
+              isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
             }`}
           />
         </div>
@@ -2143,8 +2143,8 @@ const GrnReceiptForm: React.FC<GrnReceiptFormProps> = ({
             required
             value={itemCode}
             onChange={(e) => setItemCode(e.target.value)}
-            className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
-              isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+            className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
+              isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
             }`}
           />
         </div>
@@ -2155,8 +2155,8 @@ const GrnReceiptForm: React.FC<GrnReceiptFormProps> = ({
             required
             value={itemDesc}
             onChange={(e) => setItemDesc(e.target.value)}
-            className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
-              isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+            className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-ui ${
+              isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
             }`}
           />
         </div>
@@ -2171,8 +2171,8 @@ const GrnReceiptForm: React.FC<GrnReceiptFormProps> = ({
             required
             value={receivedQty}
             onChange={(e) => setReceivedQty(e.target.value === '' ? '' : Number(e.target.value))}
-            className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
-              isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+            className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
+              isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
             }`}
           />
         </div>
@@ -2185,8 +2185,8 @@ const GrnReceiptForm: React.FC<GrnReceiptFormProps> = ({
             name="vehicleNo"
             value={vehicleNo}
             onChange={(e) => setVehicleNo(e.target.value)}
-            className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
-              isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+            className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
+              isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
             }`}
           />
         </div>
@@ -2196,8 +2196,8 @@ const GrnReceiptForm: React.FC<GrnReceiptFormProps> = ({
             name="unit"
             value={unit}
             onChange={(e) => setUnit(e.target.value)}
-            className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-all ${
-              isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+            className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
+              isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
             }`}
           />
         </div>
@@ -2210,8 +2210,8 @@ const GrnReceiptForm: React.FC<GrnReceiptFormProps> = ({
           value={remarks}
           onChange={(e) => setRemarks(e.target.value)}
           placeholder="Material physically verified against MTC."
-          className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-all ${
-            isDarkMode ? 'bg-[#0d1017] border-slate-700/80 text-white placeholder:text-slate-500 focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-[var(--accent-primary)] shadow-xs'
+          className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-ui ${
+            isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white placeholder:text-slate-500 focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-[var(--accent-primary)] shadow-xs'
           }`}
         />
       </div>
@@ -2220,7 +2220,7 @@ const GrnReceiptForm: React.FC<GrnReceiptFormProps> = ({
         <button
           type="button"
           onClick={onCancel}
-          className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+          className={`px-4 py-2 rounded-xl border text-xs font-bold transition-ui cursor-pointer ${
             isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
           }`}
         >
@@ -2229,7 +2229,7 @@ const GrnReceiptForm: React.FC<GrnReceiptFormProps> = ({
         <button
           type="submit"
           disabled={isSubmitting}
-          className="px-5 py-2 rounded-xl bg-[var(--accent-primary)] hover:brightness-110 text-white font-bold text-xs cursor-pointer shadow-lg shadow-[var(--accent-shadow)] transition-all hover:scale-[1.01] disabled:opacity-50"
+          className="px-5 py-2 rounded-xl bg-[var(--accent-primary)] hover:brightness-110 text-white font-bold text-xs cursor-pointer shadow-lg shadow-[var(--accent-shadow)] transition-ui hover:scale-[1.01] disabled:opacity-50"
         >
           {isSubmitting ? 'Logging...' : 'Log GRN Inward'}
         </button>

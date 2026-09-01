@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 
-export type AccentColor = 'blue' | 'teal' | 'orange' | 'red';
+export type AccentColor = 'blue' | 'teal' | 'orange' | 'red' | 'monochrome';
 
 export interface AccentThemeConfig {
   id: AccentColor;
@@ -24,36 +24,36 @@ export interface AccentThemeConfig {
 export const ACCENT_PRESETS: Record<AccentColor, AccentThemeConfig> = {
   blue: {
     id: 'blue',
-    label: 'Blue',
-    primary: '#5B75F8',
-    hover: '#4A64E8',
-    active: '#3B52D9',
-    textLight: '#3B52D9',
-    textDark: '#7B92FF',
-    softLight: 'rgba(91, 117, 248, 0.10)',
-    softDark: 'rgba(91, 117, 248, 0.18)',
-    borderLight: 'rgba(91, 117, 248, 0.35)',
-    borderDark: 'rgba(91, 117, 248, 0.30)',
-    ring: 'rgba(91, 117, 248, 0.50)',
-    shadow: 'rgba(91, 117, 248, 0.25)',
-    gradientFrom: '#5B75F8',
+    label: 'Cobalt',
+    primary: '#435BE8',
+    hover: '#344BC7',
+    active: '#273AA6',
+    textLight: '#344BC7',
+    textDark: '#8CA0FF',
+    softLight: 'rgba(67, 91, 232, 0.08)',
+    softDark: 'rgba(67, 91, 232, 0.12)',     // Subdued glow on pure black
+    borderLight: 'rgba(67, 91, 232, 0.30)',
+    borderDark: 'rgba(140, 160, 255, 0.25)', // Crisp, thin border
+    ring: 'rgba(67, 91, 232, 0.50)',
+    shadow: 'rgba(67, 91, 232, 0.20)',
+    gradientFrom: '#435BE8',
     gradientTo: '#4f46e5',
-    dotColor: '#5B75F8'
+    dotColor: '#435BE8'
   },
   teal: {
     id: 'teal',
-    label: 'Teal',
+    label: 'Cyber Teal',
     primary: '#0F766E',
     hover: '#0D655E',
     active: '#115E59',
     textLight: '#0F766E',
     textDark: '#2DD4BF',
-    softLight: 'rgba(15, 118, 110, 0.10)',
-    softDark: 'rgba(45, 212, 191, 0.18)',
-    borderLight: 'rgba(15, 118, 110, 0.35)',
-    borderDark: 'rgba(45, 212, 191, 0.30)',
+    softLight: 'rgba(15, 118, 110, 0.08)',
+    softDark: 'rgba(45, 212, 191, 0.12)',
+    borderLight: 'rgba(15, 118, 110, 0.30)',
+    borderDark: 'rgba(45, 212, 191, 0.25)',
     ring: 'rgba(15, 118, 110, 0.50)',
-    shadow: 'rgba(15, 118, 110, 0.25)',
+    shadow: 'rgba(15, 118, 110, 0.20)',
     gradientFrom: '#0F766E',
     gradientTo: '#059669',
     dotColor: '#0F766E'
@@ -66,12 +66,12 @@ export const ACCENT_PRESETS: Record<AccentColor, AccentThemeConfig> = {
     active: '#9A3412',
     textLight: '#C2410C',
     textDark: '#FB923C',
-    softLight: 'rgba(234, 88, 12, 0.10)',
-    softDark: 'rgba(251, 146, 60, 0.18)',
-    borderLight: 'rgba(234, 88, 12, 0.35)',
-    borderDark: 'rgba(251, 146, 60, 0.30)',
+    softLight: 'rgba(234, 88, 12, 0.08)',
+    softDark: 'rgba(251, 146, 60, 0.12)',
+    borderLight: 'rgba(234, 88, 12, 0.30)',
+    borderDark: 'rgba(251, 146, 60, 0.25)',
     ring: 'rgba(234, 88, 12, 0.50)',
-    shadow: 'rgba(234, 88, 12, 0.25)',
+    shadow: 'rgba(234, 88, 12, 0.20)',
     gradientFrom: '#EA580C',
     gradientTo: '#d97706',
     dotColor: '#EA580C'
@@ -84,19 +84,37 @@ export const ACCENT_PRESETS: Record<AccentColor, AccentThemeConfig> = {
     active: '#991B1B',
     textLight: '#B91C1C',
     textDark: '#F87171',
-    softLight: 'rgba(220, 38, 38, 0.10)',
-    softDark: 'rgba(248, 113, 113, 0.18)',
-    borderLight: 'rgba(220, 38, 38, 0.35)',
-    borderDark: 'rgba(248, 113, 113, 0.30)',
+    softLight: 'rgba(220, 38, 38, 0.08)',
+    softDark: 'rgba(248, 113, 113, 0.12)',
+    borderLight: 'rgba(220, 38, 38, 0.30)',
+    borderDark: 'rgba(248, 113, 113, 0.25)',
     ring: 'rgba(220, 38, 38, 0.50)',
-    shadow: 'rgba(220, 38, 38, 0.25)',
+    shadow: 'rgba(220, 38, 38, 0.20)',
     gradientFrom: '#DC2626',
     gradientTo: '#e11d48',
     dotColor: '#DC2626'
+  },
+  monochrome: {
+    id: 'monochrome',
+    label: 'Obsidian Pure',
+    primary: '#F4F4F5',
+    hover: '#E4E4E7',
+    active: '#D4D4D8',
+    textLight: '#18181B',
+    textDark: '#FFFFFF',
+    softLight: 'rgba(0, 0, 0, 0.06)',
+    softDark: 'rgba(255, 255, 255, 0.08)',
+    borderLight: 'rgba(0, 0, 0, 0.20)',
+    borderDark: 'rgba(255, 255, 255, 0.15)',
+    ring: 'rgba(255, 255, 255, 0.40)',
+    shadow: 'rgba(0, 0, 0, 0.50)',
+    gradientFrom: '#F4F4F5',
+    gradientTo: '#A1A1AA',
+    dotColor: '#F4F4F5'
   }
 };
 
-export const ACCENT_COLORS: AccentColor[] = ['blue', 'teal', 'orange', 'red'];
+export const ACCENT_COLORS: AccentColor[] = ['blue', 'teal', 'orange', 'red', 'monochrome'];
 
 const STORAGE_KEY = 'sketchitup-accent-color';
 
@@ -131,7 +149,7 @@ export const AccentThemeProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [accent, setAccentState] = useState<AccentColor>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved && (saved === 'blue' || saved === 'teal' || saved === 'orange' || saved === 'red')) {
+      if (saved && (saved === 'blue' || saved === 'teal' || saved === 'orange' || saved === 'red' || saved === 'monochrome')) {
         return saved as AccentColor;
       }
     } catch (_) {}

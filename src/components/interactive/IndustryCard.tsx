@@ -15,7 +15,7 @@ export const IndustryCard: React.FC<IndustryCardProps> = ({ industry }) => {
   return (
     <motion.div
       whileHover={{ y: -4 }}
-      className={`bg-slate-900 border rounded-2xl p-6 transition-all shadow-lg flex flex-col justify-between group font-sans ${
+      className={`bg-slate-900 border rounded-2xl p-6 transition-ui shadow-lg flex flex-col justify-between group font-sans ${
         isLive ? 'border-teal-500/30 hover:border-teal-500/60' : 'border-slate-800'
       }`}
     >

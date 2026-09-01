@@ -505,7 +505,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               <button
                 type="button"
                 onClick={resetIdleTimer}
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-black shadow-lg shadow-amber-500/20 transition-all cursor-pointer flex items-center gap-1.5"
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-black shadow-lg shadow-amber-500/20 transition-ui cursor-pointer flex items-center gap-1.5"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 Stay Logged In

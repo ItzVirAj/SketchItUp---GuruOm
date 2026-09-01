@@ -94,7 +94,7 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
     .slice(0, 2)
     .toUpperCase() || 'GO';
 
-  const navButtonClass = (active: boolean) => `sidebar-module-btn group relative flex w-full items-center rounded-xl border transition-all ${
+  const navButtonClass = (active: boolean) => `sidebar-module-btn group relative flex w-full items-center rounded-xl border transition-ui ${
     isCollapsed ? 'h-11 justify-center px-2' : 'min-h-11 gap-3 px-3'
   } ${
     active
@@ -110,15 +110,15 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
     <aside className={`hidden h-full shrink-0 overflow-visible p-3 pr-0 font-sans transition-[width] duration-300 lg:flex ${
       isCollapsed ? 'w-[88px]' : 'w-[280px]'
     }`}>
-      <div className={`console-sidebar ${isDarkMode ? 'console-sidebar-dark border-white/[0.07] bg-[#11151d] text-slate-300 shadow-[0_20px_55px_rgba(15,23,42,0.18)]' : 'console-sidebar-light border-slate-200 bg-white text-slate-700 shadow-[0_16px_42px_rgba(15,23,42,0.08)]'} relative flex h-full w-full flex-col overflow-visible rounded-[24px] border`}>
+      <div className={`console-sidebar ${isDarkMode ? 'console-sidebar-dark border-white/[0.07] bg-[#09090B] text-slate-300 shadow-[0_20px_55px_rgba(15,23,42,0.18)]' : 'console-sidebar-light border-slate-200 bg-white text-slate-700 shadow-[0_16px_42px_rgba(15,23,42,0.08)]'} relative flex h-full w-full flex-col overflow-visible rounded-[24px] border`}>
         <div className={`flex h-[76px] shrink-0 items-center border-b ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'} ${
           isCollapsed ? 'justify-center px-3' : 'justify-between px-4'
         }`}>
           {!isCollapsed && (
             <div className="flex min-w-0 items-center gap-3">
-              <div className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-sm ${isDarkMode ? 'bg-white text-[#11151d]' : 'bg-slate-950 text-white'}`}>
+              <div className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-sm ${isDarkMode ? 'bg-white text-[#09090B]' : 'bg-slate-950 text-white'}`}>
                 <Command className="h-5 w-5" strokeWidth={2.4} />
-                <span className={`absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 bg-emerald-400 ${isDarkMode ? 'border-[#11151d]' : 'border-white'}`} />
+                <span className={`absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 bg-emerald-400 ${isDarkMode ? 'border-[#09090B]' : 'border-white'}`} />
               </div>
               <div className="min-w-0">
                 <div className={`truncate text-[15px] font-extrabold tracking-[-0.03em] ${isDarkMode ? 'text-white' : 'text-slate-950'}`}>GuruOm OS</div>
@@ -248,7 +248,7 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
                   </AnimatePresence>
 
                   {isCollapsed && hoveredSection === section.id && (
-                    <div className="absolute left-full top-0 z-50 ml-3 w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 text-slate-900 shadow-[0_20px_60px_rgba(15,23,42,0.22)] dark:border-white/10 dark:bg-[#181d27] dark:text-white">
+                    <div className="absolute left-full top-0 z-50 ml-3 w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 text-slate-900 shadow-[0_20px_60px_rgba(15,23,42,0.22)] dark:border-white/10 dark:bg-[#18181B] dark:text-white">
                       <div className="flex items-center gap-2 border-b border-slate-100 px-2.5 py-2 text-[14px] font-extrabold dark:border-white/[0.07]">
                         <SectionIcon className="h-4 w-4 text-[var(--accent-primary)]" />
                         {section.label}

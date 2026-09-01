@@ -240,7 +240,7 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
       {/* Printable Area Wrapper */}
       <div 
         id="challan-print-container" 
-        className={`relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-3xl border shadow-2xl transition-all overflow-hidden ${
+        className={`relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-3xl border shadow-2xl transition-ui overflow-hidden ${
           isDarkMode 
             ? 'bg-slate-900 border-slate-800 text-white shadow-cyan-950/20' 
             : 'bg-white border-slate-200 text-slate-900 shadow-2xl'
@@ -295,7 +295,7 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
             <button
               type="button"
               onClick={handlePrint}
-              className={`p-2 rounded-xl border flex items-center gap-1.5 text-xs font-mono font-semibold transition-all cursor-pointer ${
+              className={`p-2 rounded-xl border flex items-center gap-1.5 text-xs font-mono font-semibold transition-ui cursor-pointer ${
                 isDarkMode 
                   ? 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white' 
                   : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
@@ -310,7 +310,7 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
             <button
               type="button"
               onClick={handleDownloadPdf}
-              className={`p-2 rounded-xl border flex items-center gap-1.5 text-xs font-mono font-semibold transition-all cursor-pointer ${
+              className={`p-2 rounded-xl border flex items-center gap-1.5 text-xs font-mono font-semibold transition-ui cursor-pointer ${
                 isDarkMode 
                   ? 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white' 
                   : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
@@ -326,7 +326,7 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
               <button
                 type="button"
                 onClick={() => setIsEditing(true)}
-                className="px-3 py-2 rounded-xl bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25 flex items-center gap-1.5 text-xs font-mono font-bold transition-all cursor-pointer"
+                className="px-3 py-2 rounded-xl bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25 flex items-center gap-1.5 text-xs font-mono font-bold transition-ui cursor-pointer"
               >
                 <Edit3 className="w-3.5 h-3.5" />
                 <span>Edit</span>
@@ -335,7 +335,7 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
 
             <button 
               onClick={onClose} 
-              className={`p-2 rounded-xl border transition-all cursor-pointer ${
+              className={`p-2 rounded-xl border transition-ui cursor-pointer ${
                 isDarkMode 
                   ? 'border-slate-800 bg-slate-950/60 text-slate-400 hover:text-white hover:bg-slate-800' 
                   : 'border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
@@ -547,7 +547,7 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsEditing(false)}
-                  className={`px-4 py-2 rounded-xl border text-xs font-mono font-bold cursor-pointer transition-all ${
+                  className={`px-4 py-2 rounded-xl border text-xs font-mono font-bold cursor-pointer transition-ui ${
                     isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white' : 'border-slate-200 text-slate-600 hover:bg-slate-100'
                   }`}
                 >
@@ -828,7 +828,7 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
               <button
                 type="button"
                 onClick={() => setShowCancelConfirm(true)}
-                className="px-3.5 py-2 rounded-xl text-rose-400 hover:bg-rose-500/10 border border-rose-500/30 text-xs font-mono font-bold cursor-pointer transition-all"
+                className="px-3.5 py-2 rounded-xl text-rose-400 hover:bg-rose-500/10 border border-rose-500/30 text-xs font-mono font-bold cursor-pointer transition-ui"
               >
                 Cancel Challan
               </button>
@@ -839,7 +839,7 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className={`px-4 py-2 rounded-xl border text-xs font-mono font-bold cursor-pointer transition-all ${
+              className={`px-4 py-2 rounded-xl border text-xs font-mono font-bold cursor-pointer transition-ui ${
                 isDarkMode ? 'border-slate-800 text-slate-300 hover:bg-slate-800' : 'border-slate-200 text-slate-700 hover:bg-slate-100'
               }`}
             >

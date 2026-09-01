@@ -315,7 +315,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
   /* ─────────────────────────────  DESIGN TOKENS  ───────────────────────────── */
 
   const surface = isDarkMode
-    ? 'bg-[#0F1115]/80 border-white/[0.06] backdrop-blur-xl'
+    ? 'bg-[#09090B]/80 border-white/[0.06] backdrop-blur-xl'
     : 'bg-white/90 border-slate-200/70 backdrop-blur-xl shadow-[0_1px_3px_rgba(15,23,42,0.06),0_8px_24px_-12px_rgba(15,23,42,0.12)]';
 
   const softInner = isDarkMode ? 'bg-white/[0.03] border-white/[0.05]' : 'bg-slate-50/80 border-slate-100';
@@ -359,7 +359,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
       <button
         type="button"
         onClick={onClick}
-        className={`group relative flex min-w-[190px] shrink-0 items-center gap-3.5 overflow-hidden rounded-[20px] border px-4 py-3.5 text-left transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-${tone}-500/10 active:translate-y-0 ${isDarkMode ? 'bg-[#14171F]' : 'bg-white'} ${t.border}`}
+        className={`group relative flex min-w-[190px] shrink-0 items-center gap-3.5 overflow-hidden rounded-[20px] border px-4 py-3.5 text-left transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-${tone}-500/10 active:translate-y-0 ${isDarkMode ? 'bg-[#121215]' : 'bg-white'} ${t.border}`}
       >
         <div className={`absolute inset-0 bg-gradient-to-br ${t.glow} to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-[0.08]`} />
         
@@ -375,7 +375,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
             <div className={`text-[22px] font-black leading-none tabular-nums tracking-tight ${textPrimary}`}>
               {count}
             </div>
-            <ChevronRight className={`h-4 w-4 shrink-0 transition-all duration-300 ${t.text} opacity-0 -translate-x-2 group-hover:translate-x-0 group-hover:opacity-100`} />
+            <ChevronRight className={`h-4 w-4 shrink-0 transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-300 ${t.text} opacity-0 -translate-x-2 group-hover:translate-x-0 group-hover:opacity-100`} />
           </div>
           <div className={`mt-1.5 text-[11px] font-bold uppercase tracking-widest ${t.text} truncate opacity-90`}>
             {label}
@@ -401,17 +401,17 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
     };
     const t = toneStyles[tone] || toneStyles.blue;
 
-    const baseBg = isDarkMode ? 'bg-[#14171F] border-white/5' : 'bg-white border-slate-200';
+    const baseBg = isDarkMode ? 'bg-[#121215] border-white/5' : 'bg-white border-slate-200';
 
     return (
       <button
         type="button"
         onClick={onClick}
-        className={`group relative flex min-h-[160px] flex-col justify-between overflow-hidden rounded-[24px] border p-5 text-left transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] ${baseBg} ${t.border}`}
+        className={`group relative flex min-h-[160px] flex-col justify-between overflow-hidden rounded-[24px] border p-5 text-left transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-500 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] ${baseBg} ${t.border}`}
       >
         <div className={`absolute inset-0 bg-gradient-to-br ${t.bg} to-transparent opacity-50`} />
         
-        <div className={`absolute -right-12 -top-12 h-32 w-32 rounded-full blur-[40px] transition-all duration-500 ${t.glow} opacity-0 group-hover:opacity-100 group-hover:scale-150`} />
+        <div className={`absolute -right-12 -top-12 h-32 w-32 rounded-full blur-[40px] transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-500 ${t.glow} opacity-0 group-hover:opacity-100 group-hover:scale-150`} />
 
         <div className="relative flex items-start justify-between gap-4">
           <div className="min-w-0">
@@ -429,7 +429,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
               {value}
             </p>
           </div>
-          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl backdrop-blur-md transition-all duration-500 group-hover:scale-110 group-hover:-rotate-6 ${t.icon}`}>
+          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl backdrop-blur-md transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-500 group-hover:scale-110 group-hover:-rotate-6 ${t.icon}`}>
             <Icon className="h-6 w-6" strokeWidth={2} />
           </div>
         </div>
@@ -469,7 +469,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
       {(pullDistance > 0 || isRefreshing) && (
         <div
           style={{ height: `${Math.max(pullDistance, isRefreshing ? 48 : 0)}px` }}
-          className="flex items-center justify-center overflow-hidden transition-all md:hidden"
+          className="flex items-center justify-center overflow-hidden transition-ui md:hidden"
         >
           <div className="flex items-center gap-2 rounded-full border border-[var(--accent-border-light)] bg-[var(--accent-soft-light)] px-3.5 py-1.5 text-xs font-semibold dark:bg-[var(--accent-soft-dark)]">
             <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -480,7 +480,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
 
       {/* ══════════════  HERO HEADER  ══════════════ */}
       <section className="relative overflow-hidden rounded-[28px] border border-white/10">
-        <div className={`absolute inset-0 ${isDarkMode ? 'bg-[#080A0F]' : 'bg-[#0B1020]'}`} />
+        <div className={`absolute inset-0 ${isDarkMode ? 'bg-[#09090B]' : 'bg-[#0B1020]'}`} />
         {/* aurora blobs */}
         <div className="absolute -left-24 -top-24 h-72 w-72 rounded-full bg-[var(--accent-primary)] opacity-30 blur-[90px]" />
         <div className="absolute right-0 top-10 h-64 w-64 rounded-full bg-cyan-500 opacity-20 blur-[90px]" />
@@ -560,7 +560,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
               <button
                 type="button"
                 onClick={() => handleNavigate('orders')}
-                className="flex h-10 cursor-pointer items-center gap-1.5 rounded-xl bg-white px-4 text-xs font-bold text-slate-900 shadow-lg shadow-black/20 transition hover:bg-slate-100 active:scale-95"
+                className="flex h-10 cursor-pointer items-center gap-1.5 rounded-xl bg-white px-4 text-xs font-bold text-slate-900 shadow-lg shadow-black/20 transition hover:bg-slate-100 active:scale-[0.96]"
               >
                 <Plus className="h-3.5 w-3.5" />
                 New Order
@@ -606,7 +606,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
             <div className="flex items-center gap-3.5">
               <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-600 to-amber-600 text-white shadow-lg shadow-rose-500/30">
                 <CheckSquare className="h-5 w-5" />
-                <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-[9px] font-bold text-white ring-2 ring-white dark:ring-[#0F1115]">
+                <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-[9px] font-bold text-white ring-2 ring-white dark:ring-[#09090B]">
                   {metrics.pendingApprovalsCount}
                 </span>
               </div>
@@ -638,7 +638,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
 
       {/* ══════════════  TABULAR MODE  ══════════════ */}
       {mode === 'numbers' && (
-        <section className={`space-y-4 rounded-2xl border p-4 sm:p-5 ${surface}`}>
+        <section className={`space-y-4 rounded-[28px] border p-4 sm:p-5 ${surface}`}>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <SectionTitle icon={Target} title="Telemetry Registry" sub="All operational KPIs in tabular form" />
             <div className="flex flex-wrap gap-2">
@@ -665,7 +665,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
               <button
                 type="button"
                 onClick={handleExportTabularCSV}
-                className="flex items-center gap-1.5 rounded-xl bg-[var(--accent-primary)] px-3 py-2 text-xs font-bold text-white transition hover:opacity-90 active:scale-95"
+                className="flex items-center gap-1.5 rounded-xl bg-[var(--accent-primary)] px-3 py-2 text-xs font-bold text-white transition hover:opacity-90 active:scale-[0.96]"
               >
                 <Download className="h-3.5 w-3.5" />
                 Export CSV
@@ -761,7 +761,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
 
             {/* Order Pipeline Funnel */}
             {widgetVisibility.showAnalyticsGrid && widgetVisibility.showOrderPipelineCard && (
-              <div className={`rounded-2xl border p-4 sm:p-5 lg:col-span-8 ${surface}`}>
+              <div className={`rounded-[28px] border p-4 sm:p-5 lg:col-span-8 ${surface}`}>
                 <SectionTitle
                   icon={Layers}
                   title="Order Lifecycle Pipeline"
@@ -801,7 +801,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                         </div>
                         <div className={`relative h-2.5 overflow-hidden rounded-full ${isDarkMode ? 'bg-white/[0.06]' : 'bg-slate-200/70'}`}>
                           <div
-                            className={`h-full rounded-full shadow-lg transition-all duration-700 ease-out ${stage.color} ${stage.glow}`}
+                            className={`h-full rounded-full shadow-lg transition-[width] duration-700 ease-out ${stage.color} ${stage.glow}`}
                             style={{ width: `${Math.max(pct, count > 0 ? 5 : 0)}%` }}
                           />
                         </div>
@@ -816,7 +816,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
             )}
 
             {/* Plant Health Ring */}
-            <div className={`flex flex-col rounded-2xl border p-4 sm:p-5 lg:col-span-4 ${surface}`}>
+            <div className={`flex flex-col rounded-[28px] border p-4 sm:p-5 lg:col-span-4 ${surface}`}>
               <SectionTitle icon={Radio} title="Plant Health" sub="Live shopfloor telemetry" accent="bg-emerald-500/12 text-emerald-500" />
 
               <div className="flex flex-1 flex-col items-center justify-center py-2">
@@ -832,7 +832,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                       strokeWidth="9"
                       strokeLinecap="round"
                       strokeDasharray={`${Number(metrics.qcPassRate) * 3.27} 327`}
-                      className="transition-all duration-1000 ease-out"
+                      className="transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-1000 ease-out"
                     />
                     <defs>
                       <linearGradient id="healthGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -865,7 +865,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
               <button
                 type="button"
                 onClick={() => handleNavigate('production')}
-                className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl bg-[var(--accent-primary)]/10 py-2.5 text-xs font-bold text-[var(--accent-primary)] transition hover:bg-[var(--accent-primary)]/20 active:scale-[0.98]"
+                className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl bg-[var(--accent-primary)]/10 py-2.5 text-xs font-bold text-[var(--accent-primary)] transition hover:bg-[var(--accent-primary)]/20 active:scale-[0.96]"
               >
                 <Play className="h-3.5 w-3.5" />
                 Open Shopfloor
@@ -873,7 +873,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
             </div>
 
             {/* Recent Orders */}
-            <div className={`rounded-2xl border p-4 sm:p-5 lg:col-span-6 ${surface}`}>
+            <div className={`rounded-[28px] border p-4 sm:p-5 lg:col-span-6 ${surface}`}>
               <SectionTitle
                 icon={ClipboardList}
                 title="Recent Orders"
@@ -923,7 +923,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
             </div>
 
             {/* Active Job Cards */}
-            <div className={`rounded-2xl border p-4 sm:p-5 lg:col-span-6 ${surface}`}>
+            <div className={`rounded-[28px] border p-4 sm:p-5 lg:col-span-6 ${surface}`}>
               <SectionTitle
                 icon={Factory}
                 title="Active Job Cards"
@@ -982,7 +982,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                   { label: 'Production', icon: Factory, view: 'production', color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
                   { label: 'Inventory', icon: Package, view: 'inventory', color: 'text-rose-500', bg: 'bg-rose-500/10' },
                   { label: 'QC Gate', icon: ShieldCheck, view: 'qc', color: 'text-amber-500', bg: 'bg-amber-500/10' },
-                  { label: 'Dispatch', icon: Truck, view: 'dispatch', color: 'text-teal-500', bg: 'bg-teal-500/10' },
+                  { label: 'Dispatch', icon: Truck, view: 'dispatch', color: 'text-teal-400', bg: 'bg-teal-500/10' },
                   { label: 'Invoices', icon: DollarSign, view: 'invoices', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
                   { label: 'Approvals', icon: CheckSquare, view: 'approvals', color: 'text-rose-500', bg: 'bg-rose-500/10' },
                   { label: 'AI Swarm', icon: Sparkles, view: 'command-centre', color: 'text-violet-500', bg: 'bg-violet-500/10' }
@@ -1044,7 +1044,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
 
           {/* ══════════════  ACTIVITY FEED  ══════════════ */}
           {widgetVisibility.showRecentActivities && (
-            <section className={`space-y-4 rounded-2xl border p-4 sm:p-5 ${surface}`}>
+            <section className={`space-y-4 rounded-[28px] border p-4 sm:p-5 ${surface}`}>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <SectionTitle icon={Activity} title="Factory Activity Stream" sub="Real-time audit trail across all modules" />
                 <div className="flex gap-2">
@@ -1079,7 +1079,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                   {filteredActivities.slice(0, 10).map((act, idx) => (
                     <div key={idx} className="relative flex items-start gap-4 py-2.5">
                       <div
-                        className={`relative z-10 mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ring-4 ${isDarkMode ? 'ring-[#0F1115]' : 'ring-white'} ${act.status === 'Alert'
+                        className={`relative z-10 mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ring-4 ${isDarkMode ? 'ring-[#09090B]' : 'ring-white'} ${act.status === 'Alert'
                             ? 'bg-rose-500/12 text-rose-500'
                             : act.status === 'Processing'
                               ? 'bg-amber-500/12 text-amber-500'
@@ -1123,7 +1123,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
       {showCustomizeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div onClick={() => setShowCustomizeModal(false)} className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm" />
-          <div className={`relative z-10 w-full max-w-md space-y-4 rounded-3xl border p-6 shadow-2xl ${isDarkMode ? 'border-white/[0.08] bg-[#0F1115] text-white' : 'border-slate-200 bg-white'}`}>
+          <div className={`relative z-10 w-full max-w-md space-y-4 rounded-3xl border p-6 shadow-2xl ${isDarkMode ? 'border-white/[0.08] bg-[#09090B] text-white' : 'border-slate-200 bg-white'}`}>
             <div className="flex items-center justify-between border-b pb-3 dark:border-white/[0.06]">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent-primary)]/12 text-[var(--accent-primary)]">
@@ -1230,7 +1230,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
             <button
               type="button"
               onClick={() => setShowCustomizeModal(false)}
-              className="w-full rounded-xl bg-[var(--accent-primary)] py-2.5 text-xs font-bold text-white transition hover:opacity-90 active:scale-[0.98]"
+              className="w-full rounded-xl bg-[var(--accent-primary)] py-2.5 text-xs font-bold text-white transition hover:opacity-90 active:scale-[0.96]"
             >
               Save & Apply
             </button>

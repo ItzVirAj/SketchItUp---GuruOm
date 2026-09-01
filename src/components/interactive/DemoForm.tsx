@@ -281,7 +281,7 @@ export const DemoForm: React.FC = () => {
                   type="button"
                   key={mod.slug}
                   onClick={() => handleModuleToggle(mod.slug)}
-                  className={`px-2.5 py-1.5 rounded text-[11px] font-semibold text-left border transition-all cursor-pointer flex items-center justify-between ${
+                  className={`px-2.5 py-1.5 rounded text-[11px] font-semibold text-left border transition-ui cursor-pointer flex items-center justify-between ${
                     isChecked
                       ? 'bg-teal-500/10 border-teal-500 text-teal-300'
                       : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
@@ -309,7 +309,7 @@ export const DemoForm: React.FC = () => {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full py-3.5 rounded-lg bg-gradient-to-r from-sky-500 to-teal-500 text-slate-950 font-extrabold text-sm hover:from-sky-400 hover:to-teal-400 transition-all shadow-lg shadow-sky-500/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+          className="w-full py-3.5 rounded-lg bg-gradient-to-r from-sky-500 to-teal-500 text-slate-950 font-extrabold text-sm hover:from-sky-400 hover:to-teal-400 transition-ui shadow-lg shadow-sky-500/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
         >
           {isSubmitting ? (
             <>

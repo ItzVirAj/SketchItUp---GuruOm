@@ -238,10 +238,10 @@ export const WorkflowTestingView: React.FC<WorkflowTestingViewProps> = ({ isDark
             <button
               onClick={handleRunWorkflow}
               disabled={isRunning}
-              className={`px-5 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 text-white shadow-lg transition-all ${
+              className={`px-5 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 text-white shadow-lg transition-ui ${
                 isRunning 
                   ? 'bg-indigo-500 cursor-not-allowed opacity-80' 
-                  : 'bg-indigo-600 hover:bg-indigo-500 hover:shadow-indigo-500/25 active:scale-95'
+                  : 'bg-indigo-600 hover:bg-indigo-500 hover:shadow-indigo-500/25 transition-transform duration-150 ease-out active:scale-[0.96]'
               }`}
             >
               {isRunning ? (
@@ -331,7 +331,7 @@ export const WorkflowTestingView: React.FC<WorkflowTestingViewProps> = ({ isDark
             return (
               <div
                 key={st.stage}
-                className={`rounded-xl border transition-all ${
+                className={`rounded-xl border transition-ui ${
                   st.status === 'SUCCESS' 
                     ? isDarkMode ? 'bg-emerald-950/10 border-emerald-900/40' : 'bg-emerald-50/50 border-emerald-200/80'
                     : st.status === 'FAILED'

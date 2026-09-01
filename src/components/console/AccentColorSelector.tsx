@@ -45,7 +45,7 @@ export const AccentColorSelector: React.FC<AccentColorSelectorProps> = ({
               onClick={() => handlePick(colorKey)}
               aria-label={`Select ${preset.label} theme`}
               aria-pressed={isSelected}
-              className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer select-none ${
+              className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold border transition-ui cursor-pointer select-none ${
                 isSelected
                   ? isDarkMode
                     ? 'bg-slate-800 border-white/40 text-white shadow-sm ring-1 ring-white/20'

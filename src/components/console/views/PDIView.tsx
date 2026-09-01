@@ -270,7 +270,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
       {/* ── DESKTOP HEADER & INTEGRATED KPI ROW (≥ md) ──                          */}
       {/* ========================================================================= */}
       <div className="hidden md:block space-y-4">
-        <section className={`overflow-hidden rounded-[24px] border ${isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'}`}>
+        <section className={`overflow-hidden rounded-[24px] border ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'}`}>
           <div className="flex items-center justify-between gap-6 px-6 py-5">
             <div className="min-w-0">
               <div className="mb-1.5 flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">
@@ -319,7 +319,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
         </section>
 
         {/* Desktop Filter & Search Toolbar */}
-        <div className={`rounded-2xl border p-3 ${isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
+        <div className={`rounded-2xl border p-3 ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
           <div className="flex items-center gap-3 flex-wrap">
             <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${isDarkMode ? 'bg-white/[0.05] text-slate-400' : 'bg-slate-100 text-slate-500'}`} title="Modules">
               <ClipboardCheck className="h-4 w-4" />
@@ -401,7 +401,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
       <div className="block md:hidden space-y-3">
         {filteredPdi.length === 0 ? (
           <div className={`p-8 text-center rounded-2xl border font-mono text-xs ${
-            isDarkMode ? 'bg-[#171b24] border-white/[0.08] text-slate-400' : 'bg-white border-slate-200 text-slate-500'
+            isDarkMode ? 'bg-[#121215] border-white/[0.08] text-slate-400' : 'bg-white border-slate-200 text-slate-500'
           }`}>
             No PDI items found matching your filters.
           </div>
@@ -413,12 +413,12 @@ export const PDIView: React.FC<PDIViewProps> = ({
             return (
               <div
                 key={pdi.id}
-                className={`p-4 rounded-2xl border transition-all space-y-3.5 shadow-sm ${
+                className={`p-4 rounded-2xl border transition-ui space-y-3.5 shadow-sm ${
                   isPassed
-                    ? isDarkMode ? 'bg-[#171b24] border-emerald-500/30' : 'bg-emerald-50/40 border-emerald-200'
+                    ? isDarkMode ? 'bg-[#121215] border-emerald-500/30' : 'bg-emerald-50/40 border-emerald-200'
                     : isFailed
-                    ? isDarkMode ? 'bg-[#171b24] border-rose-500/30' : 'bg-rose-50/40 border-rose-200'
-                    : isDarkMode ? 'bg-[#171b24] border-white/[0.08]' : 'bg-white border-slate-200'
+                    ? isDarkMode ? 'bg-[#121215] border-rose-500/30' : 'bg-rose-50/40 border-rose-200'
+                    : isDarkMode ? 'bg-[#121215] border-white/[0.08]' : 'bg-white border-slate-200'
                 }`}
               >
                 {/* Header: Job No + Status Pill */}
@@ -489,7 +489,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
                       handleOpenInspect(pdi);
                       inspectModal.open({ pdiNo: pdi.id, jobNo: pdi.jobNo, orderPo: pdi.orderPo });
                     }}
-                    className="flex-1 py-2.5 rounded-xl text-xs font-mono font-bold flex items-center justify-center gap-1.5 shadow-md cursor-pointer transition-all active:scale-[0.98] bg-[var(--accent-primary)] text-white shadow-[var(--accent-shadow)]"
+                    className="flex-1 py-2.5 rounded-xl text-xs font-mono font-bold flex items-center justify-center gap-1.5 shadow-md cursor-pointer transition-ui active:scale-[0.96] bg-[var(--accent-primary)] text-white shadow-[var(--accent-shadow)]"
                   >
                     <ClipboardCheck className="w-3.5 h-3.5" />
                     <span>{isPassed ? 'Re-Inspect PDI' : 'Inspect PDI Clearance'}</span>
@@ -502,9 +502,9 @@ export const PDIView: React.FC<PDIViewProps> = ({
                         setSelectedReport(pdi);
                         certModal.open({ pdiNo: pdi.id, jobNo: pdi.jobNo, orderPo: pdi.orderPo });
                       }}
-                      className={`p-2.5 rounded-xl border flex items-center justify-center cursor-pointer transition-all ${
+                      className={`p-2.5 rounded-xl border flex items-center justify-center cursor-pointer transition-ui ${
                         isDarkMode 
-                          ? 'bg-[#171b24] border-white/[0.08] text-slate-300 hover:bg-white/[0.05]' 
+                          ? 'bg-[#121215] border-white/[0.08] text-slate-300 hover:bg-white/[0.05]' 
                           : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
                       }`}
                       title="View CoC Certificate"
@@ -522,8 +522,8 @@ export const PDIView: React.FC<PDIViewProps> = ({
       {/* ========================================================================= */}
       {/* DESKTOP PDI TABLE (Viewport >= md) */}
       {/* ========================================================================= */}
-      <div className={`hidden md:block overflow-hidden rounded-[22px] border transition-all ${
-        isDarkMode ? 'border-white/[0.08] bg-[#171b24]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
+      <div className={`hidden md:block overflow-hidden rounded-[22px] border transition-ui ${
+        isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
       }`}>
         <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
           <div>
@@ -615,7 +615,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
                               handleOpenInspect(pdi);
                               inspectModal.open({ pdiNo: pdi.id, jobNo: pdi.jobNo, orderPo: pdi.orderPo });
                             }}
-                            className={`px-3.5 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-xs hover:scale-[1.02] active:scale-[0.98] ${
+                            className={`px-3.5 py-1.5 rounded-xl font-mono text-xs font-bold transition-ui cursor-pointer inline-flex items-center gap-1.5 shadow-xs hover:scale-[1.02] active:scale-[0.96] ${
                               isPassed
                                 ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
                                 : 'bg-[var(--accent-primary)] hover:brightness-110 text-white shadow-sm shadow-[var(--accent-shadow)]'
@@ -633,7 +633,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
                                 setSelectedReport(pdi);
                                 certModal.open({ pdiNo: pdi.id, jobNo: pdi.jobNo, orderPo: pdi.orderPo });
                               }}
-                              className={`p-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 ${
+                              className={`p-1.5 rounded-xl font-mono text-xs font-bold transition-ui cursor-pointer inline-flex items-center gap-1 ${
                                 isDarkMode 
                                   ? 'border border-white/[0.08] bg-black/20 text-slate-300 hover:bg-white/[0.05]' 
                                   : 'border border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -658,8 +658,8 @@ export const PDIView: React.FC<PDIViewProps> = ({
       {/* 1. INTERACTIVE PDI INSPECTION MODAL */}
       {inspectModal.isOpen && inspectingItem && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md font-sans overflow-y-auto">
-          <div className={`relative w-full max-w-xl max-h-[92vh] sm:max-h-[90vh] flex flex-col rounded-t-3xl sm:rounded-[24px] border shadow-2xl transition-all overflow-hidden ${
-            isDarkMode ? 'border-white/[0.08] bg-[#171b24] text-white' : 'border-slate-200 bg-white text-slate-900'
+          <div className={`relative w-full max-w-xl max-h-[92vh] sm:max-h-[90vh] flex flex-col rounded-t-3xl sm:rounded-[24px] border shadow-2xl transition-ui overflow-hidden ${
+            isDarkMode ? 'border-white/[0.08] bg-[#121215] text-white' : 'border-slate-200 bg-white text-slate-900'
           }`}>
             {/* Mobile Grab Handle */}
             <div className="pt-2.5 pb-0 block sm:hidden">
@@ -689,7 +689,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
                   setInspectingItem(null);
                   inspectModal.close();
                 }} 
-                className={`p-2 rounded-xl border transition-all cursor-pointer ${
+                className={`p-2 rounded-xl border transition-ui cursor-pointer ${
                   isDarkMode 
                     ? 'border-white/[0.08] bg-black/20 text-slate-400 hover:text-white hover:bg-white/[0.05]' 
                     : 'border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
@@ -736,7 +736,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
                       <div
                         key={key}
                         onClick={() => handleToggleChecklist(key as keyof typeof checklist)}
-                        className={`p-3 rounded-xl border cursor-pointer transition-all flex items-start gap-2.5 select-none ${
+                        className={`p-3 rounded-xl border cursor-pointer transition-ui flex items-start gap-2.5 select-none ${
                           isChecked
                             ? isDarkMode
                               ? 'bg-emerald-950/20 border-emerald-500/40 text-emerald-300'
@@ -861,7 +861,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
                 type="button"
                 onClick={() => handleInspectSubmit('FAIL')}
                 disabled={isSubmitting}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 text-xs font-bold font-mono flex items-center justify-center gap-1.5 cursor-pointer transition-all disabled:opacity-50"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 text-xs font-bold font-mono flex items-center justify-center gap-1.5 cursor-pointer transition-ui disabled:opacity-50"
               >
                 <AlertTriangle className="w-3.5 h-3.5" />
                 <span>PDI Fail (Flag Rework)</span>
@@ -874,7 +874,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
                     setInspectingItem(null);
                     inspectModal.close();
                   }}
-                  className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-xl border font-mono text-xs font-bold cursor-pointer transition-all ${
+                  className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-xl border font-mono text-xs font-bold cursor-pointer transition-ui ${
                     isDarkMode ? 'border-white/[0.08] text-slate-400 hover:text-white hover:bg-white/[0.05]' : 'border-slate-200 text-slate-600 hover:bg-slate-100'
                   }`}
                 >
@@ -884,7 +884,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
                   type="button"
                   onClick={() => handleInspectSubmit('PASS')}
                   disabled={isSubmitting || acceptedQty <= 0}
-                  className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs font-mono flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-500/25 transition-all active:scale-[0.98] disabled:opacity-50"
+                  className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs font-mono flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-500/25 transition-ui active:scale-[0.96] disabled:opacity-50"
                 >
                   <ShieldCheck className="w-4 h-4" />
                   <span>{isSubmitting ? 'Processing...' : 'Complete PDI (Pass & Release)'}</span>
@@ -899,7 +899,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
       {certModal.isOpen && selectedReport && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md font-sans overflow-y-auto">
           <div className={`relative w-full max-w-lg max-h-[92vh] sm:max-h-[90vh] flex flex-col rounded-t-3xl sm:rounded-[24px] border p-4 sm:p-6 space-y-4 font-mono text-xs shadow-2xl z-10 overflow-hidden ${
-            isDarkMode ? 'border-white/[0.08] bg-[#171b24] text-white' : 'border-slate-200 bg-white text-slate-900'
+            isDarkMode ? 'border-white/[0.08] bg-[#121215] text-white' : 'border-slate-200 bg-white text-slate-900'
           }`}>
             {/* Mobile Grab Handle */}
             <div className="pt-1 pb-0 block sm:hidden">

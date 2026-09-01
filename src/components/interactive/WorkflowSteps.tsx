@@ -70,7 +70,7 @@ export const WorkflowSteps: React.FC = () => {
             <button
               key={s.step}
               onClick={() => setActiveStep(s.step)}
-              className={`p-3 rounded-xl border text-left transition-all cursor-pointer relative ${
+              className={`p-3 rounded-xl border text-left transition-ui cursor-pointer relative ${
                 isActive
                   ? 'bg-slate-900 border-teal-400 shadow-lg ring-1 ring-teal-400/50'
                   : 'bg-slate-900/40 border-slate-800 hover:border-slate-700'

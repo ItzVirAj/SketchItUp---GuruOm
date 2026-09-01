@@ -33,8 +33,6 @@ import {
   FileSpreadsheet,
   Sliders,
   Settings,
-  HardDrive,
-  AlertTriangle,
   FileText,
   DollarSign,
   Briefcase,
@@ -87,7 +85,8 @@ import {
 } from '../../../utils/rbacMatrix';
 
 const getRoleBadgeClasses = (role: string): string => {
-  const c = getRoleColor(role);
+  const cleanRole = (role || '').replace(/\s+/g, ' ').trim();
+  const c = getRoleColor(cleanRole);
   if (!c) return 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700';
   if (typeof c === 'string') return c;
   return `${c.bg} ${c.text} ${c.border}`;
@@ -175,7 +174,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
   onResetAllData,
   onClearOperationalData
 }) => {
-  const [activeTab, setActiveTab] = useState<'AUDIT' | 'USERS' | 'RBAC_MATRIX' | 'DATA_ADMIN'>('AUDIT');
+  const [activeTab, setActiveTab] = useState<'AUDIT' | 'USERS' | 'RBAC_MATRIX'>('AUDIT');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'REVOKED'>('ALL');
   const [selectedSection, setSelectedSection] = useState<SectionCategory>('ALL');
@@ -191,7 +190,6 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
   const editUserModal = useUrlModal('edit-user');
   const editRoleModal = useUrlModal('edit-role');
   const deleteUserModal = useUrlModal('delete-user');
-  const purgeModal = useUrlModal('purge-data');
 
   // Role Gate Evaluation
   const normalizedUserRole = normalizeRole(currentRole || '');
@@ -223,10 +221,6 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
 
   // Delete User State
   const [userToDelete, setUserToDelete] = useState<SystemUser | null>(null);
-
-  // Download Suite State
-  const [selectedExportSection, setSelectedExportSection] = useState<string>('ALL');
-  const [exportFormat, setExportFormat] = useState<'JSON' | 'CSV'>('JSON');
 
   // New User Form State (Exact Master Module Specification)
   const [uCode, setUCode] = useState('');
@@ -662,93 +656,6 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
     setIsExporting(false);
   };
 
-  const handleDownloadSection = () => {
-    let exportData: any = null;
-    const dateStr = new Date().toISOString().split('T')[0];
-    let filename = `guruom_${selectedExportSection.toLowerCase()}_data_${dateStr}`;
-
-    switch (selectedExportSection) {
-      case 'AUDIT':
-        exportData = mergedAuditLogs;
-        break;
-      case 'ORDERS':
-        exportData = orders;
-        break;
-      case 'INVENTORY':
-        exportData = { stock };
-        break;
-      case 'PRODUCTION':
-        exportData = { jobCards, productionLogs };
-        break;
-      case 'QUALITY':
-        exportData = { qcQueue, pdiQueue };
-        break;
-      case 'DISPATCH':
-        exportData = dispatches;
-        break;
-      case 'INVOICES':
-        exportData = invoices;
-        break;
-      case 'PAYABLES':
-        exportData = payables;
-        break;
-      case 'MASTERS':
-        exportData = masters;
-        break;
-      case 'USERS':
-        exportData = users;
-        break;
-      case 'ALL':
-      default:
-        exportData = {
-          users,
-          auditLogs: mergedAuditLogs,
-          orders,
-          stock,
-          jobCards,
-          qcQueue,
-          pdiQueue,
-          dispatches,
-          invoices,
-          payables,
-          masters
-        };
-        break;
-    }
-
-    if (exportFormat === 'JSON') {
-      const jsonStr = JSON.stringify(exportData, null, 2);
-      const blob = new Blob([jsonStr], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${filename}.json`;
-      link.click();
-      URL.revokeObjectURL(url);
-    } else {
-      let csvContent = '';
-      const arrayTarget = Array.isArray(exportData) ? exportData : [exportData];
-      if (arrayTarget.length > 0) {
-        const headers = Object.keys(arrayTarget[0]).join(',');
-        const rows = arrayTarget.map(row => 
-          Object.values(row).map(val => 
-            typeof val === 'object' ? `"${JSON.stringify(val).replace(/"/g, '""')}"` : `"${String(val).replace(/"/g, '""')}"`
-          ).join(',')
-        );
-        csvContent = [headers, ...rows].join('\n');
-      } else {
-        csvContent = JSON.stringify(exportData);
-      }
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${filename}.csv`;
-      link.click();
-      URL.revokeObjectURL(url);
-    }
-  };
-
   const handleCreateUser = (e: React.FormEvent) => {
     e.preventDefault();
     const errors: Record<string, string> = {};
@@ -907,20 +814,6 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                 <span>Provision New User</span>
               </button>
             )}
-
-            {activeTab === 'DATA_ADMIN' && onResetAllData && (
-              <button
-                onClick={() => {
-                  if (window.confirm('Repopulate all 19 system tables with rich test seed data metrics?')) {
-                    onResetAllData();
-                  }
-                }}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
-              >
-                <RotateCcw className="w-4 h-4" />
-                <span>Populate Test Seed Data</span>
-              </button>
-            )}
           </div>
         </div>
 
@@ -989,22 +882,10 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
             <ShieldCheck className="w-3.5 h-3.5" />
             <span>RBAC Matrix (12 Roles)</span>
           </button>
-
-          <button
-            onClick={() => setActiveTab('DATA_ADMIN')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
-              activeTab === 'DATA_ADMIN'
-                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-xs'
-                : isDarkMode ? 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-white' : 'bg-slate-100 text-slate-600 border-slate-200 hover:text-slate-900'
-            }`}
-          >
-            <HardDrive className="w-3.5 h-3.5" />
-            <span>Data Control</span>
-          </button>
         </div>
 
         {/* Search Bar & Actions */}
-        {activeTab !== 'DATA_ADMIN' && activeTab !== 'RBAC_MATRIX' && (
+        {activeTab !== 'RBAC_MATRIX' && (
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             {activeTab === 'USERS' && (
               <select
@@ -1571,8 +1452,8 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                     }`}>
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] text-slate-400">Role:</span>
-                        <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase border whitespace-nowrap inline-flex items-center shrink-0 ${getRoleBadgeClasses(normRole)}`}>
-                          {normRole}
+                        <span className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold uppercase border inline-flex items-center justify-center text-center leading-tight whitespace-normal break-words max-w-[200px] shrink-0 ${getRoleBadgeClasses(normRole)}`}>
+                          {normRole.replace(/\s+/g, ' ').trim()}
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-[11px]">
@@ -1720,9 +1601,9 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                           <div className="font-medium">{usr.department || 'Operations'}</div>
                           <div className="text-[10px] text-slate-400 font-mono">{usr.shift || 'General-Day'}</div>
                         </td>
-                        <td className="py-4 px-5 whitespace-nowrap">
-                          <span className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border whitespace-nowrap inline-flex items-center gap-1 shrink-0 ${getRoleBadgeClasses(normRole)}`}>
-                            {normRole}
+                        <td className="py-4 px-5">
+                          <span className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border inline-flex items-center justify-center text-center leading-tight whitespace-normal break-words max-w-[200px] shrink-0 ${getRoleBadgeClasses(normRole)}`}>
+                            {normRole.replace(/\s+/g, ' ').trim()}
                           </span>
                         </td>
                         <td className="py-4 px-5 font-mono text-[11px]">
@@ -1887,7 +1768,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                     isDarkMode ? 'border-slate-800/60' : 'border-slate-200'
                   }`}>
                     <div className="flex items-center gap-3">
-                      <div className={`px-3 py-1 rounded-xl text-xs font-mono font-bold uppercase border whitespace-nowrap inline-flex items-center shrink-0 ${getRoleBadgeClasses(rDef.role)}`}>
+                      <div className={`px-3 py-1 rounded-xl text-xs font-mono font-bold uppercase border inline-flex items-center justify-center text-center leading-tight whitespace-normal break-words shrink-0 ${getRoleBadgeClasses(rDef.role)}`}>
                         {rDef.role}
                       </div>
                       <div>
@@ -1964,106 +1845,6 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                 </div>
               );
             })}
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* TAB 4: DATA CONTROL SUITE */}
-      {/* ========================================================================= */}
-      {activeTab === 'DATA_ADMIN' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 font-sans">
-          <div className={`p-6 rounded-3xl border lg:col-span-2 space-y-4 ${
-            isDarkMode ? 'bg-slate-900/80 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-          }`}>
-            <h2 className="text-base font-bold flex items-center gap-2">
-              <Download className="w-5 h-5 text-indigo-400" />
-              <span>Bulk Data Export Suite</span>
-            </h2>
-            <p className="text-xs text-slate-400">
-              Select module datasets to download as formatted JSON schemas or CSV records for external audit and compliance backup.
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-              <div>
-                <label className="block text-[11px] font-mono text-slate-400 mb-1">Target Module Dataset</label>
-                <select
-                  value={selectedExportSection}
-                  onChange={(e) => setSelectedExportSection(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white"
-                >
-                  <option value="ALL">Entire System Snapshot (All 19 Modules)</option>
-                  <option value="AUDIT">Audit Trail Logs</option>
-                  <option value="ORDERS">Customer Orders</option>
-                  <option value="INVENTORY">Inventory & Stock</option>
-                  <option value="PRODUCTION">Job Cards & Production Logs</option>
-                  <option value="QUALITY">QC & PDI Inspections</option>
-                  <option value="DISPATCH">Dispatch Challans</option>
-                  <option value="INVOICES">Commercial Invoices</option>
-                  <option value="PAYABLES">Vendor Bills</option>
-                  <option value="MASTERS">Master Data (Customers, Vendors, Items)</option>
-                  <option value="USERS">User Accounts & RBAC Matrix</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-mono text-slate-400 mb-1">Export File Format</label>
-                <select
-                  value={exportFormat}
-                  onChange={(e) => setExportFormat(e.target.value as any)}
-                  className="w-full p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white"
-                >
-                  <option value="JSON">Structured JSON (.json)</option>
-                  <option value="CSV">Comma-Separated Values (.csv)</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="pt-3">
-              <button
-                onClick={handleDownloadSection}
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
-              >
-                <Download className="w-4 h-4" />
-                <span>Generate & Download {selectedExportSection} {exportFormat}</span>
-              </button>
-            </div>
-          </div>
-
-          <div className={`p-6 rounded-3xl border space-y-4 ${
-            isDarkMode ? 'bg-slate-900/80 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-          }`}>
-            <h2 className="text-base font-bold flex items-center gap-2 text-amber-400">
-              <RotateCcw className="w-5 h-5 text-amber-400" />
-              <span>Seed & Purge Controls</span>
-            </h2>
-            <p className="text-xs text-slate-400">
-              Administrative actions for database seed management.
-            </p>
-
-            {onResetAllData && (
-              <button
-                onClick={() => {
-                  if (window.confirm('Reset and repopulate all 19 system tables with clean test seed records?')) {
-                    onResetAllData();
-                  }
-                }}
-                className="w-full p-3 rounded-xl border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20 text-xs font-bold font-mono transition-all text-left flex items-center gap-2"
-              >
-                <RotateCcw className="w-4 h-4 text-indigo-400" />
-                <span>Populate Test Seed Data</span>
-              </button>
-            )}
-
-            {onClearOperationalData && (
-              <button
-                onClick={() => purgeModal.open()}
-                className="w-full p-3 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 text-xs font-bold font-mono transition-all text-left flex items-center gap-2"
-              >
-                <Trash2 className="w-4 h-4 text-rose-400" />
-                <span>Purge Operational Logs</span>
-              </button>
-            )}
           </div>
         </div>
       )}
@@ -2404,7 +2185,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-1">
                         <span className={`font-bold text-xs ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{r.label}</span>
-                        <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-mono font-bold uppercase border whitespace-nowrap inline-flex items-center shrink-0 ${getRoleBadgeClasses(r.role)}`}>
+                        <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-mono font-bold uppercase border inline-flex items-center justify-center text-center leading-tight whitespace-normal break-words shrink-0 ${getRoleBadgeClasses(r.role)}`}>
                           {r.role}
                         </span>
                       </div>
@@ -2718,7 +2499,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                     <span className={`font-bold text-xs ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                       {r.label}
                     </span>
-                    <span className={`px-2 py-0.5 rounded-lg text-[9px] font-mono font-bold uppercase border whitespace-nowrap inline-flex items-center shrink-0 ${getRoleBadgeClasses(r.role)}`}>
+                    <span className={`px-2 py-0.5 rounded-lg text-[9px] font-mono font-bold uppercase border inline-flex items-center justify-center text-center leading-tight whitespace-normal break-words shrink-0 ${getRoleBadgeClasses(r.role)}`}>
                       {r.role}
                     </span>
                   </div>
@@ -2781,44 +2562,6 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
       >
         <p className={`text-xs leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
           Are you sure you want to permanently delete <strong className="text-rose-500">{userToDelete?.name}</strong> ({userToDelete?.email})? All active sessions for this account will be invalidated immediately.
-        </p>
-      </Modal>
-
-      {/* ========================================================================= */}
-      {/* MODAL 4: PURGE OPERATIONAL DATA CONFIRMATION */}
-      {/* ========================================================================= */}
-      <Modal
-        isOpen={purgeModal.isOpen}
-        onClose={() => purgeModal.close()}
-        maxWidth="md"
-        isDarkMode={isDarkMode}
-        icon={<AlertTriangle className="w-5 h-5" />}
-        title="Purge Operational Data?"
-        subtitle="Orders, Job Cards, QC & Invoices Reset"
-        footer={
-          <div className="flex justify-end gap-3 w-full">
-            <button
-              onClick={() => purgeModal.close()}
-              className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                isDarkMode ? 'border-slate-800 text-slate-300 hover:bg-slate-800' : 'border-slate-200 text-slate-700 hover:bg-slate-100'
-              }`}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => {
-                if (onClearOperationalData) onClearOperationalData();
-                purgeModal.close();
-              }}
-              className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md shadow-rose-500/20 cursor-pointer"
-            >
-              Confirm Purge
-            </button>
-          </div>
-        }
-      >
-        <p className={`text-xs leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-          Are you sure you want to clear operational queues? Masters (Items, Customers, Vendors) and Users will remain preserved.
         </p>
       </Modal>
     </div>

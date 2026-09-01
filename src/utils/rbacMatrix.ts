@@ -539,7 +539,7 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
 
 export function normalizeRole(rawRole?: string | null): string {
   if (!rawRole || typeof rawRole !== 'string') return 'Shop Floor Supervisor';
-  const trimmed = rawRole.trim();
+  const trimmed = rawRole.replace(/\s+/g, ' ').trim();
 
   if (trimmed === 'ServerAdmin' || trimmed === 'SERVER_ADMIN' || trimmed === 'SERVER ADMIN' || trimmed === 'Server Admin') {
     return 'ServerAdmin';

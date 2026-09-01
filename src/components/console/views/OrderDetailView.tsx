@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   ArrowLeft,
   Upload,
@@ -41,13 +41,14 @@ import {
   Eye,
   ExternalLink
 } from 'lucide-react';
-import { CustomerOrder, OrderStatus, QCInspection, PDIInspection, OrderLineItem, UserRole, VendorMaster, DispatchChallan, CustomerInvoice } from '../../../types/console';
+import { CustomerOrder, OrderStatus, QCInspection, PDIInspection, OrderLineItem, UserRole, VendorMaster, DispatchChallan, CustomerInvoice, OrderLineProgress } from '../../../types/console';
 import { isRoleAuthorizedForCta, getCtaPermission, CtaId, normalizeRole } from '../../../utils/rbacMatrix';
 import { executeOrderStageTransition, validatePodRequired, validateOrderClosure, normalizeOrderState, CanonicalOrderState } from '../../../utils/orderStateMachine';
 import { runMaterialCheckForOrder, overrideMaterialCheckForOrder } from '../../../services/supabaseServices';
 import { getCurrentFinancialYear, formatDocumentNumber } from '../../../utils/statutoryAccountingEngine';
 import { ChallanDetailModal } from '../modals/ChallanDetailModal';
 import { useUrlModal } from '../../../hooks/useUrlModal';
+import { LineItemProgressBadge } from '../LineItemProgressBadge';
 
 interface OrderDetailViewProps {
   order: CustomerOrder;
@@ -302,6 +303,63 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
     ['QC_INSPECTION', 'QC_PASS', 'QC_PASSED', 'QC_COMPLETE', 'PDI', 'PDI_HOLD', 'PDI_COMPLETE', 'READY_TO_DISPATCH', 'READY_FOR_DISPATCH', 'DISPATCHED', 'IN_TRANSIT', 'DELIVERED', 'INVOICED', 'CLOSED'].includes((order.status || order.stage || '').toUpperCase()) ||
     Boolean(isPdiPassed);
   const hasNcr = order.hasOpenNcr || isQcRejected || isQcHold;
+
+  const lineProgress: OrderLineProgress[] = useMemo(() => {
+    const relevantDispatches = (dispatches && dispatches.length > 0 ? linkedDispatches : (order.dispatches || []));
+    const invStatus = order.paymentStatus || (order as any).invoiceStatus || latestInvoice?.status || null;
+
+    return (order.lines || []).map((line) => {
+      const lineJobCards = (order.jobCards || []).filter(
+        j => j.partCode && j.partCode.trim().toUpperCase() === line.itemCode.trim().toUpperCase()
+      );
+      const jcTotal = lineJobCards.length;
+      const jcCompleted = lineJobCards.filter(
+        j => (j.status || '').toUpperCase() === 'COMPLETED'
+      ).length;
+
+      const lineQc = (qcQueue || []).filter(q =>
+        ((q.orderPo && (
+          (order.poNo && q.orderPo.trim().toUpperCase() === order.poNo.trim().toUpperCase()) ||
+          (order.id && q.orderPo.trim().toUpperCase() === order.id.trim().toUpperCase())
+        )) || (order.jobCards && order.jobCards.some(j => j.jobNo && j.jobNo.trim().toUpperCase() === (q.jobNo || '').trim().toUpperCase()))) &&
+        q.partCode && q.partCode.trim().toUpperCase() === line.itemCode.trim().toUpperCase()
+      );
+      const qcStatus = lineQc.length > 0 ? (lineQc[lineQc.length - 1].qcStatus || null) : null;
+
+      const linePdi = (pdiQueue || []).filter(p =>
+        ((p.orderPo && (
+          (order.poNo && p.orderPo.trim().toUpperCase() === order.poNo.trim().toUpperCase()) ||
+          (order.id && p.orderPo.trim().toUpperCase() === order.id.trim().toUpperCase())
+        )) || (order.jobCards && order.jobCards.some(j => j.jobNo && j.jobNo.trim().toUpperCase() === (p.jobNo || '').trim().toUpperCase()))) &&
+        p.partCode && p.partCode.trim().toUpperCase() === line.itemCode.trim().toUpperCase()
+      );
+      const pdiStatus = linePdi.length > 0 ? (linePdi[linePdi.length - 1].pdiStatus || null) : null;
+
+      let lineDispatchedQty = 0;
+      for (const d of relevantDispatches) {
+        if (d.lines && Array.isArray(d.lines)) {
+          for (const dl of d.lines) {
+            if (dl.itemCode && dl.itemCode.trim().toUpperCase() === line.itemCode.trim().toUpperCase()) {
+              lineDispatchedQty += Number(dl.qty || 0);
+            }
+          }
+        }
+      }
+      if (lineDispatchedQty === 0 && Number(line.dispatchedQty || 0) > 0) {
+        lineDispatchedQty = Number(line.dispatchedQty || 0);
+      }
+
+      return {
+        itemCode: line.itemCode,
+        jcTotal,
+        jcCompleted,
+        qcStatus,
+        pdiStatus,
+        dispatchedQty: lineDispatchedQty,
+        invoiceStatus: invStatus
+      };
+    });
+  }, [order.lines, order.jobCards, order.poNo, order.id, order.paymentStatus, order.dispatches, qcQueue, pdiQueue, dispatches, linkedDispatches, latestInvoice]);
 
   // Active step index calculation matching the 8-stage lifecycle
   let activeStepIndex = 0;
@@ -2451,13 +2509,28 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               }`}>
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold">
                       #{idx + 1}
                     </span>
                     <span className="font-mono font-bold text-xs text-[#5B75F8] dark:text-[#7B92FF] truncate">
                       {ln.itemCode}
                     </span>
+                    <LineItemProgressBadge
+                      progress={lineProgress.find(p => p.itemCode === ln.itemCode) || {
+                        itemCode: ln.itemCode,
+                        jcTotal: 0,
+                        jcCompleted: 0,
+                        qcStatus: null,
+                        pdiStatus: null,
+                        dispatchedQty: ln.dispatchedQty || 0,
+                        invoiceStatus: order.paymentStatus || null
+                      }}
+                      orderPo={order.poNo || order.id}
+                      onNavigateToCreateJobCard={onNavigateToCreateJobCard}
+                      onNavigateToPDI={onNavigateToPDI}
+                      isDarkMode={isDarkMode}
+                    />
                   </div>
                   <div className="text-xs font-semibold mt-1 text-slate-800 dark:text-slate-200 font-sans line-clamp-2">
                     {ln.itemDescription}
@@ -2505,6 +2578,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 <th className="py-3 px-4">#</th>
                 <th className="py-3 px-4">Item Code & Description</th>
                 <th className="py-3 px-4">Customer Part #</th>
+                <th className="py-3 px-4 text-center">Progress</th>
                 <th className="py-3 px-4 text-right">Order Qty</th>
                 <th className="py-3 px-4 text-right">Dispatched</th>
                 <th className="py-3 px-4 text-right">Pending</th>
@@ -2521,6 +2595,23 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     <div className="text-slate-400 text-[11px] font-normal">{ln.itemDescription}</div>
                   </td>
                   <td className="py-3.5 px-4 text-slate-400">{ln.custPartNo || '—'}</td>
+                  <td className="py-3.5 px-4 text-center">
+                    <LineItemProgressBadge
+                      progress={lineProgress.find(p => p.itemCode === ln.itemCode) || {
+                        itemCode: ln.itemCode,
+                        jcTotal: 0,
+                        jcCompleted: 0,
+                        qcStatus: null,
+                        pdiStatus: null,
+                        dispatchedQty: ln.dispatchedQty || 0,
+                        invoiceStatus: order.paymentStatus || null
+                      }}
+                      orderPo={order.poNo || order.id}
+                      onNavigateToCreateJobCard={onNavigateToCreateJobCard}
+                      onNavigateToPDI={onNavigateToPDI}
+                      isDarkMode={isDarkMode}
+                    />
+                  </td>
                   <td className="py-3.5 px-4 text-right font-bold">{ln.orderQty} {ln.unit}</td>
                   <td className="py-3.5 px-4 text-right text-emerald-500 font-bold">{ln.dispatchedQty}</td>
                   <td className="py-3.5 px-4 text-right text-amber-500 font-bold">{ln.pendingQty}</td>

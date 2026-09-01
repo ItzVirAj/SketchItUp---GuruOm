@@ -68,7 +68,9 @@ export interface OrderLineItem {
 }
 
 export interface LinkedJobCard {
+  id?: string;
   jobNo: string;
+  partCode?: string | null;
   qty: number;
   targetDate: string;
   status: 'SCHEDULED' | 'IN_PROGRESS' | 'QC_HOLD' | 'COMPLETED';
@@ -77,6 +79,7 @@ export interface LinkedJobCard {
 export interface LinkedDispatch {
   challanNo: string;
   items: string;
+  lines?: { itemCode: string; qty: number }[];
   date: string;
   status: 'GENERATED' | 'DISPATCHED' | 'IN_TRANSIT' | 'DELIVERED';
   podDocumentUrl?: string;
@@ -84,6 +87,16 @@ export interface LinkedDispatch {
   podReceivedAt?: string;
   transporterName?: string;
   vehicleNo?: string;
+}
+
+export interface OrderLineProgress {
+  itemCode: string;
+  jcTotal: number;
+  jcCompleted: number;
+  qcStatus: 'PASS' | 'PENDING' | 'QC_HOLD' | 'REJECTED' | string | null;
+  pdiStatus: 'PASS' | 'PENDING' | 'FAIL' | string | null;
+  dispatchedQty: number;
+  invoiceStatus: 'PAID' | 'OVERDUE' | 'PARTIAL' | 'PARTIALLY_PAID' | 'DRAFT' | 'UNPAID' | 'ISSUED' | 'CANCELLED' | string | null;
 }
 
 export interface CustomerOrder {

@@ -60,6 +60,20 @@ import { Modal } from '../../common/Modal';
 import { useUrlModal } from '../../../hooks/useUrlModal';
 import { evaluateGrnMismatch, evaluatePoAging } from '../../../utils/procurementEngine';
 
+/**
+ * Formats numbers/quantities rounded to at most 2 decimal places with locale formatting.
+ * e.g., 12.3456 -> "12.35", 100 -> "100", 12.3 -> "12.3"
+ */
+const formatDecimal = (val: number | string | null | undefined, maxDecimals = 2): string => {
+  if (val === null || val === undefined || val === '') return '0';
+  const num = Number(val);
+  if (isNaN(num)) return String(val);
+  return Number(num.toFixed(maxDecimals)).toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: maxDecimals
+  });
+};
+
 interface InventoryViewProps {
   stock: StockItem[];
   shortages: ShortageItem[];
@@ -465,7 +479,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
           <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
             <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">On-Hand Qty</div>
             <div className="text-base font-black text-emerald-500 tracking-tight mt-0.5">
-              {totalOnHand.toLocaleString()} Units
+              {formatDecimal(totalOnHand)} Units
             </div>
           </div>
 
@@ -614,7 +628,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
           <div className={`grid grid-cols-4 border-t ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
             {[
               { label: 'Total SKUs', value: String(stockMasterRows.length), detail: 'Active catalog parts', icon: Package, tone: 'text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)]', iconBg: 'bg-[var(--accent-soft-light)] dark:bg-[var(--accent-soft-dark)]' },
-              { label: 'Total On-Hand Qty', value: totalOnHand.toLocaleString(), detail: 'Physical warehouse units', icon: Box, tone: 'text-emerald-600 dark:text-emerald-400', iconBg: 'bg-emerald-500/10' },
+              { label: 'Total On-Hand Qty', value: formatDecimal(totalOnHand), detail: 'Physical warehouse units', icon: Box, tone: 'text-emerald-600 dark:text-emerald-400', iconBg: 'bg-emerald-500/10' },
               { label: 'Shortage Items', value: String(shortageCount), detail: 'Production deficit alerts', icon: AlertTriangle, tone: 'text-rose-600 dark:text-rose-400', iconBg: 'bg-rose-500/10' },
               { label: 'Below Reorder Point', value: String(reorderCount), detail: 'Procurement action req', icon: TrendingDown, tone: 'text-amber-600 dark:text-amber-400', iconBg: 'bg-amber-500/10' },
             ].map((metric, index) => {
@@ -824,19 +838,19 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                           )}
                         </td>
                         <td className={`py-4 px-5 text-right font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                          {stk.onHand} {stk.unit}
+                          {formatDecimal(stk.onHand)} {stk.unit}
                         </td>
                         <td className="py-4 px-5 text-right font-mono text-slate-400">
-                          {stk.reserved}
+                          {formatDecimal(stk.reserved)}
                         </td>
                         <td className="py-4 px-5 text-right font-bold font-mono text-emerald-500">
-                          {stk.available}
+                          {formatDecimal(stk.available)}
                         </td>
                         <td className="py-4 px-5 text-right font-mono text-amber-500 font-semibold">
-                          {stk.demand}
+                          {formatDecimal(stk.demand)}
                         </td>
                         <td className="py-4 px-5 text-right font-mono text-slate-400">
-                          {stk.reorderLevel}
+                          {formatDecimal(stk.reorderLevel)}
                         </td>
                         <td className="py-4 px-5 text-center">
                           <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
@@ -935,16 +949,16 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     <div>
                       <span className="text-[10px] text-slate-500 uppercase block">On Hand</span>
                       <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                        {stk.onHand} {stk.unit}
+                        {formatDecimal(stk.onHand)} {stk.unit}
                       </span>
                     </div>
                     <div>
                       <span className="text-[10px] text-slate-500 uppercase block">Available</span>
-                      <span className="font-bold text-emerald-500">{stk.available} {stk.unit}</span>
+                      <span className="font-bold text-emerald-500">{formatDecimal(stk.available)} {stk.unit}</span>
                     </div>
                     <div>
                       <span className="text-[10px] text-slate-500 uppercase block">Reserved</span>
-                      <span className="font-bold text-slate-400">{stk.reserved} {stk.unit}</span>
+                      <span className="font-bold text-slate-400">{formatDecimal(stk.reserved)} {stk.unit}</span>
                     </div>
                   </div>
 
@@ -1011,9 +1025,9 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   <tr key={sh.code} className={`transition-colors ${isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'}`}>
                     <td className="py-4 px-5 font-bold font-mono text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{sh.code}</td>
                     <td className={`py-4 px-5 font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>{sh.description}</td>
-                    <td className="py-4 px-5 text-right font-mono font-bold text-amber-500">{sh.requiredQty} {sh.unit}</td>
-                    <td className="py-4 px-5 text-right font-mono text-slate-400">{sh.availableQty} {sh.unit}</td>
-                    <td className="py-4 px-5 text-right font-mono font-bold text-rose-400">-{sh.deficit} {sh.unit}</td>
+                    <td className="py-4 px-5 text-right font-mono font-bold text-amber-500">{formatDecimal(sh.requiredQty)} {sh.unit}</td>
+                    <td className="py-4 px-5 text-right font-mono text-slate-400">{formatDecimal(sh.availableQty)} {sh.unit}</td>
+                    <td className="py-4 px-5 text-right font-mono font-bold text-rose-400">-{formatDecimal(sh.deficit)} {sh.unit}</td>
                     <td className="py-4 px-5 text-center">
                       <button
                         onClick={() => {
@@ -1116,7 +1130,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                         )}
                       </td>
                       <td className="py-4 px-5 text-right font-mono font-bold text-emerald-400">
-                        ₹{po.totalAmount.toLocaleString()}
+                        ₹{formatDecimal(po.totalAmount, 2)}
                       </td>
                     <td className="py-4 px-5 text-center">
                       <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
@@ -1347,10 +1361,10 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                               ? 'text-amber-400'
                               : isInbound ? 'text-emerald-400' : 'text-rose-400'
                           }`}>
-                            {isInbound ? `+${mov.quantityChange}` : mov.quantityChange}
+                            {isInbound ? `+${formatDecimal(mov.quantityChange)}` : formatDecimal(mov.quantityChange)}
                           </td>
                           <td className={`py-3 px-4 text-right font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                            {mov.balanceAfter}
+                            {formatDecimal(mov.balanceAfter)}
                           </td>
                           <td className="py-3 px-4 text-slate-300">
                             {mov.referenceId ? (
@@ -1453,10 +1467,10 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                       <tr key={rec.itemCode} className={`transition-colors ${isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'}`}>
                         <td className="py-4 px-5 font-bold text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{rec.itemCode}</td>
                         <td className="py-4 px-5 text-slate-200 font-sans font-medium">{rec.description}</td>
-                        <td className="py-4 px-5 text-right font-bold text-emerald-400">{rec.ledgerBalance}</td>
-                        <td className={`py-4 px-5 text-right font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{rec.cachedOnHand}</td>
+                        <td className="py-4 px-5 text-right font-bold text-emerald-400">{formatDecimal(rec.ledgerBalance)}</td>
+                        <td className={`py-4 px-5 text-right font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{formatDecimal(rec.cachedOnHand)}</td>
                         <td className={`py-4 px-5 text-right font-bold ${isDiscrepancy ? 'text-rose-400' : 'text-emerald-400'}`}>
-                          {rec.discrepancy > 0 ? `+${rec.discrepancy}` : rec.discrepancy}
+                          {rec.discrepancy > 0 ? `+${formatDecimal(rec.discrepancy)}` : formatDecimal(rec.discrepancy)}
                         </td>
                         <td className="py-4 px-5 text-center">
                           <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-bold uppercase border ${
@@ -1526,7 +1540,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               >
                 {stockMasterRows.map((s) => (
                   <option key={s.code} value={s.code} className={isDarkMode ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>
-                    [{s.categoryLabel || 'Item'}] {s.code} — {s.description} ({s.onHand} {s.unit || 'units'} on hand)
+                    [{s.categoryLabel || 'Item'}] {s.code} — {s.description} ({formatDecimal(s.onHand)} {s.unit || 'units'} on hand)
                   </option>
                 ))}
               </select>
@@ -1550,7 +1564,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 <div className={`h-11 px-3 flex items-center rounded-xl border font-mono font-bold text-xs ${
                   isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 shadow-xs'
                 }`}>
-                  {selectedStockForAdjust.onHand} {selectedStockForAdjust.unit}
+                  {formatDecimal(selectedStockForAdjust.onHand)} {selectedStockForAdjust.unit}
                 </div>
               </div>
               <div>
@@ -1822,7 +1836,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     <div>
                       <div className={`font-bold flex items-center gap-2 ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>
                         <span className={isInbound ? 'text-emerald-400 font-black' : 'text-rose-400 font-black'}>
-                          {isInbound ? `+${h.quantityChange}` : h.quantityChange}
+                          {isInbound ? `+${formatDecimal(h.quantityChange)}` : formatDecimal(h.quantityChange)}
                         </span>
                         {h.referenceId && (
                           <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold border ${
@@ -1840,7 +1854,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
                   <div className="text-right">
                     <div className="text-[10px] text-slate-400 uppercase font-bold">Running Balance</div>
-                    <div className={`text-sm font-black mt-0.5 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{h.balanceAfter} Units</div>
+                    <div className={`text-sm font-black mt-0.5 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{formatDecimal(h.balanceAfter)} Units</div>
                     <div className="text-[10px] text-slate-500 mt-0.5">
                       {new Date(h.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </div>

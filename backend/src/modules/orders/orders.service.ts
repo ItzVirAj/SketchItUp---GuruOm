@@ -47,6 +47,14 @@ export class OrdersService {
         const { data: invoicesData } = await this.db.from('customer_invoices').select('*').in('order_po', poNos);
         const { data: ncrsData } = await this.db.from('ncrs').select('*').in('status', ['OPEN', 'UNDER_REVIEW', 'REWORK_PLANNED']).in('order_po', poNos);
 
+        const challanNos = (dispatchesData || []).map(d => d.challan_no).filter(Boolean);
+        const { data: dispatchMovementsData } = challanNos.length > 0
+          ? await this.db
+              .from('inventory_movements')
+              .select('*')
+              .in('reference_id', challanNos)
+          : { data: [] };
+
         const combined = finalOrdersData.map(o => {
           const lines = (linesData || []).filter(l => l.order_id === o.id).map(l => ({
             id: l.id,
@@ -62,18 +70,30 @@ export class OrdersService {
           }));
 
           const jobCards = (jobsData || []).filter(j => j.order_po === o.po_no).map(j => ({
+            id: j.id,
             jobNo: j.job_no,
+            partCode: j.part_code,
             qty: Number(j.qty || 0),
             targetDate: j.target_date,
             status: j.status
           }));
 
-          const dispatches = (dispatchesData || []).filter(d => d.order_po === o.po_no || d.order_id === o.id).map(d => ({
-            challanNo: d.challan_no,
-            items: `Challan for PO ${d.order_po}`,
-            date: d.date,
-            status: d.status
-          }));
+          const dispatches = (dispatchesData || []).filter(d => d.order_po === o.po_no || d.order_id === o.id).map(d => {
+            const dispatchLines = (dispatchMovementsData || [])
+              .filter(m => m.reference_id === d.challan_no || m.reference_id === d.id)
+              .map(m => ({
+                itemCode: m.item_code,
+                qty: Math.abs(Number(m.quantity_change || 0))
+              }));
+
+            return {
+              challanNo: d.challan_no,
+              items: `Challan for PO ${d.order_po}`,
+              lines: dispatchLines,
+              date: d.date,
+              status: d.status
+            };
+          });
 
           const linkedInv = (invoicesData || []).find(i => 
             (i.order_po && ((o.po_no && i.order_po.trim().toUpperCase() === o.po_no.trim().toUpperCase()) || (o.id && i.order_po.trim().toUpperCase() === o.id.trim().toUpperCase()))) ||

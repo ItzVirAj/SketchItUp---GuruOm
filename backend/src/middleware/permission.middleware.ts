@@ -133,6 +133,15 @@ export function requireEffectivePermission(permissionKey: string) {
         return next();
       }
 
+      // Owner & Admin (System) have universal permission bypass for all business operational & administrative actions
+      if (actor.role === 'Owner' || actor.role === 'Admin (System)') {
+        if (!permissionKey.startsWith('system:server_admin_vault') && 
+            !permissionKey.startsWith('system:raw_database_access') && 
+            !permissionKey.startsWith('system:manage_platform_tenants')) {
+          return next();
+        }
+      }
+
       const effectivePermissions = await permissionService.getEffectiveUserPermissions(actor.id, actor.role);
       req.effectivePermissions = effectivePermissions;
 

@@ -188,12 +188,12 @@ CROSS JOIN public.permissions p
 WHERE r.name = 'ServerAdmin'
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
--- 9. Map Owner Role to All Operational & Executive Permissions
+-- 9. Map Owner & Admin (System) Roles to All Operational & Executive Permissions
 INSERT INTO public.role_permission_grants (role_id, permission_id)
 SELECT r.id, p.id
 FROM public.roles r
-JOIN public.permissions p ON p.category != 'system' OR p.key IN ('system:view_immutable_audit', 'system:manage_permission_overrides')
-WHERE r.name = 'Owner'
+JOIN public.permissions p ON p.category != 'system' OR p.key IN ('system:view_immutable_audit', 'system:manage_permission_overrides', 'system:force_password_reset')
+WHERE r.name IN ('Owner', 'Admin (System)')
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- 10. Map Department Heads & Staff Permissions
@@ -202,13 +202,16 @@ SELECT r.id, p.id
 FROM public.roles r
 JOIN public.permissions p ON (
     (r.name = 'Purchase Manager' AND (p.category IN ('procurement', 'inventory') OR p.key IN ('admin:view_users', 'orders:view'))) OR
-    (r.name = 'Accountant' AND (p.category IN ('finance', 'orders') OR p.key IN ('admin:view_users', 'dispatch:view'))) OR
-    (r.name = 'Production Planner' AND (p.category IN ('production', 'inventory') OR p.key IN ('orders:view', 'qc:view'))) OR
-    (r.name = 'Quality Auditor' AND (p.category = 'qc' OR p.key IN ('production:view', 'orders:view', 'dispatch:view'))) OR
+    (r.name = 'Accountant' AND (p.category IN ('finance', 'orders', 'dispatch') OR p.key IN ('admin:view_users', 'dispatch:view', 'dispatch:create_challan'))) OR
+    (r.name = 'Production Planner' AND (p.category IN ('production', 'inventory') OR p.key IN ('orders:view', 'qc:view', 'dispatch:view'))) OR
+    (r.name = 'Quality Auditor' AND (p.category = 'qc' OR p.key IN ('production:view', 'orders:view', 'dispatch:view', 'dispatch:create_challan'))) OR
     (r.name = 'Quality Inspector' AND (p.category = 'qc' OR p.key IN ('production:view', 'production:log_output'))) OR
-    (r.name = 'Store Keeper' AND (p.category = 'inventory' OR p.key IN ('procurement:view', 'production:view'))) OR
-    (r.name = 'Dispatch Executive' AND (p.category = 'dispatch' OR p.key IN ('orders:view', 'inventory:view'))) OR
+    (r.name = 'Store Keeper' AND (p.category = 'inventory' OR p.key IN ('procurement:view', 'production:view', 'dispatch:view', 'dispatch:create_challan'))) OR
+    (r.name = 'Dispatch Executive' AND (p.category = 'dispatch' OR p.key IN ('orders:view', 'inventory:view', 'dispatch:view', 'dispatch:create_challan', 'dispatch:confirm_delivery'))) OR
     (r.name = 'Sales/Order Desk' AND (p.category = 'orders' OR p.key IN ('inventory:view', 'dispatch:view'))) OR
+    (r.name = 'Subcontractor Coordinator' AND (p.category IN ('production', 'inventory') OR p.key IN ('orders:view', 'dispatch:view', 'dispatch:create_challan'))) OR
+    (r.name = 'Shop Floor Supervisor' AND (p.category = 'production' OR p.key IN ('inventory:view', 'qc:view'))) OR
+    (r.name = 'HR/Admin' AND (p.category = 'administration' OR p.key IN ('system:view_immutable_audit', 'admin:view_users', 'admin:create_users', 'admin:edit_users', 'admin:manage_masters'))) OR
     (r.name = 'Machine Operator' AND p.key IN ('production:view', 'production:log_output'))
 )
 ON CONFLICT (role_id, permission_id) DO NOTHING;

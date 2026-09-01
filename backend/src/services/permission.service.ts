@@ -69,12 +69,24 @@ export class PermissionService {
       // ServerAdmin has full, unrestricted platform capabilities
       if (role === 'ServerAdmin') {
         const { data: allPerms } = await this.db.from('permissions').select('key');
-        if (allPerms) {
+        if (allPerms && allPerms.length > 0) {
           allPerms.forEach((p: { key: string }) => effective.add(p.key));
         } else {
           effective.add('*');
         }
         return effective;
+      }
+
+      // Owner & Admin (System) have full executive and operational capabilities across all business modules
+      if (role === 'Owner' || role === 'Admin (System)') {
+        const { data: allPerms } = await this.db.from('permissions').select('key, category');
+        if (allPerms && allPerms.length > 0) {
+          allPerms.forEach((p: { key: string; category?: string }) => {
+            if (p.category !== 'system' || p.key === 'system:view_immutable_audit' || p.key === 'system:manage_permission_overrides' || p.key === 'system:force_password_reset') {
+              effective.add(p.key);
+            }
+          });
+        }
       }
 
       // 2. Fetch role default permissions from role_permission_grants

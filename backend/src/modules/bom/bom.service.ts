@@ -94,45 +94,95 @@ export class BomService {
 
   async createOrUpdateBOM(data: z.infer<typeof BillOfMaterialsSchema>, actorEmail?: string, actorRole?: string) {
     const validated = BillOfMaterialsSchema.parse(data);
-    const bomId = validated.id || `bom-${Date.now()}`;
+    
+    // Look up existing BOM by ID or bomCode to preserve the primary key and avoid foreign key violations
+    let bomId = validated.id;
+    let existingRow: any = null;
+
+    if (bomId) {
+      const { data: byId } = await this.db.from('bill_of_materials').select('*').eq('id', bomId).maybeSingle();
+      existingRow = byId;
+    }
+
+    if (!existingRow && validated.bomCode) {
+      const { data: byCode } = await this.db.from('bill_of_materials').select('*').eq('bom_code', validated.bomCode).maybeSingle();
+      existingRow = byCode;
+      if (existingRow) {
+        bomId = existingRow.id;
+      }
+    }
+
+    if (!bomId) {
+      bomId = `bom-${Date.now()}`;
+    }
 
     try {
-      const { error: insertErr } = await this.db.from('bill_of_materials').upsert({
-        id: bomId,
-        bom_code: validated.bomCode,
-        parent_part_code: validated.parentPartCode,
-        parent_part_name: validated.parentPartName,
-        revision: validated.revision,
-        yield_percentage: validated.yieldPercentage,
-        batch_size: validated.batchSize,
-        status: validated.status,
-        notes: validated.notes,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'bom_code' });
+      if (existingRow) {
+        const { error: updateErr } = await this.db.from('bill_of_materials').update({
+          parent_part_code: validated.parentPartCode,
+          parent_part_name: validated.parentPartName,
+          revision: validated.revision,
+          yield_percentage: validated.yieldPercentage,
+          batch_size: validated.batchSize,
+          status: validated.status,
+          notes: validated.notes,
+          updated_at: new Date().toISOString()
+        }).eq('id', bomId);
 
-      if (insertErr) throw insertErr;
+        if (updateErr) {
+          console.error('Error updating bill_of_materials:', updateErr);
+          throw updateErr;
+        }
+      } else {
+        const { error: insertErr } = await this.db.from('bill_of_materials').insert({
+          id: bomId,
+          bom_code: validated.bomCode,
+          parent_part_code: validated.parentPartCode,
+          parent_part_name: validated.parentPartName,
+          revision: validated.revision,
+          yield_percentage: validated.yieldPercentage,
+          batch_size: validated.batchSize,
+          status: validated.status,
+          notes: validated.notes,
+          updated_at: new Date().toISOString()
+        });
+
+        if (insertErr) {
+          console.error('Error inserting bill_of_materials:', insertErr);
+          throw insertErr;
+        }
+      }
+
+      // Delete existing items for clean revision replacement
+      const { error: delErr } = await this.db.from('bom_items').delete().eq('bom_id', bomId);
+      if (delErr) {
+        console.error('Error deleting old bom_items:', delErr);
+        throw delErr;
+      }
 
       if (validated.components && validated.components.length > 0) {
-        // Delete existing items for clean revision replacement
-        await this.db.from('bom_items').delete().eq('bom_id', bomId);
-
         const itemRows = validated.components.map(it => ({
-          id: it.id || `bom-item-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+          id: it.id || `bom-item-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
           bom_id: bomId,
           component_code: it.componentCode,
           component_name: it.componentName,
-          component_type: it.componentType,
+          component_type: it.componentType || 'RAW_MATERIAL',
           qty_per_unit: it.qtyPerUnit,
-          unit: it.unit,
-          scrap_allowance_pct: it.scrapAllowancePct,
-          stage: it.stage,
-          unit_cost: it.unitCost
+          unit: it.unit || 'NOS',
+          scrap_allowance_pct: it.scrapAllowancePct ?? 0,
+          stage: it.stage || 'CNC_MACHINING',
+          unit_cost: it.unitCost ?? 0
         }));
 
-        await this.db.from('bom_items').insert(itemRows);
+        const { error: insErr } = await this.db.from('bom_items').insert(itemRows);
+        if (insErr) {
+          console.error('Error inserting bom_items:', insErr);
+          throw insErr;
+        }
       }
     } catch (err) {
-      console.warn('Database createOrUpdateBOM error:', err);
+      console.error('Database createOrUpdateBOM error:', err);
+      throw err;
     }
 
     const effectiveEmail = (actorEmail && actorEmail.includes('@')) ? actorEmail : (actorEmail || 'engineering@guruom.in');

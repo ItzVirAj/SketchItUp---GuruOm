@@ -11,7 +11,12 @@ import {
   Clock,
   CheckSquare,
   Square,
-  Package
+  Package,
+  Download,
+  List,
+  LayoutGrid,
+  Activity,
+  ChevronRight
 } from 'lucide-react';
 import { PDIInspection } from '../../../types/console';
 import { triggerPDIFailure } from '../../../services/notificationService';
@@ -69,6 +74,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
   const [inspectingItem, setInspectingItem] = useState<PDIInspection | null>(null);
   const [searchQuery, setSearchQuery] = useState(preselectedOrderPo || preselectedJobNo || '');
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'PASS' | 'PENDING' | 'FAIL'>('ALL');
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
 
   // Handle preselection
   const preselectHandled = React.useRef<string | null>(null);
@@ -208,200 +214,362 @@ export const PDIView: React.FC<PDIViewProps> = ({
     return matchesSearch && matchesFilter;
   });
 
-  const totalPassedQty = activePdiItems.filter(p => p.pdiStatus === 'PASS').reduce((acc, p) => acc + (p.acceptedQty || p.qty), 0);
+  const totalCount = activePdiItems.length;
   const pendingCount = activePdiItems.filter(p => p.pdiStatus === 'PENDING').length;
   const passedCount = activePdiItems.filter(p => p.pdiStatus === 'PASS').length;
   const failedCount = activePdiItems.filter(p => p.pdiStatus === 'FAIL').length;
+  const totalPassedQty = activePdiItems.filter(p => p.pdiStatus === 'PASS').reduce((acc, p) => acc + (p.acceptedQty || p.qty || 0), 0);
+  const complianceRate = totalCount > 0 ? Math.round((passedCount / totalCount) * 100) : 100;
+
+  const passPct = totalCount > 0 ? Math.round((passedCount / totalCount) * 100) : 0;
+  const pendingPct = totalCount > 0 ? Math.round((pendingCount / totalCount) * 100) : 0;
+  const failPct = totalCount > 0 ? Math.round((failedCount / totalCount) * 100) : 0;
+
+  const handleExportCSV = () => {
+    if (activePdiItems.length === 0) return;
+    const headers = ['Job Card #', 'Customer PO', 'Part Code', 'Part Description', 'Batch Qty', 'Accepted Qty', 'Rejected Qty', 'PDI Status', 'Certificate #', 'Date'];
+    const rows = activePdiItems.map(p => [
+      `"${p.jobNo || ''}"`,
+      `"${p.orderPo || ''}"`,
+      `"${p.partCode || ''}"`,
+      `"${(p.partDescription || '').replace(/"/g, '""')}"`,
+      p.qty ?? 0,
+      p.acceptedQty ?? p.qty ?? 0,
+      p.rejectedQty ?? 0,
+      `"${p.pdiStatus || 'PENDING'}"`,
+      `"${p.certificateNo || ''}"`,
+      `"${p.reportDate || ''}"`
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `PDI_Inspection_Report_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="space-y-4 sm:space-y-6 font-sans w-full max-w-full min-w-0 pb-6">
       
       {/* ========================================================================= */}
-      {/* ── MOBILE-FIRST TOP HEADER (< md) ──                                      */}
+      {/* ── TOP HEADER & TELEMETRY WIDGETS (Apple Executive Window) ──             */}
       {/* ========================================================================= */}
-      <div className="block md:hidden space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
-                Pre-Dispatch Clearance
-              </span>
+      <div className={`p-5 sm:p-6 rounded-2xl border transition-all ${
+        isDarkMode 
+          ? 'bg-[#09090B] border-white/10 text-white shadow-[0_4px_24px_rgba(0,0,0,0.4)]' 
+          : 'bg-white/90 border-slate-200/80 shadow-xs text-slate-900 backdrop-blur-xl'
+      }`}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF] shrink-0">
+              <ClipboardCheck className="w-6 h-6 stroke-[2]" />
             </div>
-            <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
-              PDI Clearance ({filteredPdi.length})
-            </h1>
-          </div>
-        </div>
-
-        {/* Mobile 2x2 Telemetry Matrix */}
-        <div className="grid grid-cols-2 gap-2">
-          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Total PDI Lots</div>
-            <div className="text-base font-black text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)] tracking-tight mt-0.5">
-              {activePdiItems.length} <span className="text-xs font-normal text-slate-400">Lots</span>
-            </div>
-          </div>
-
-          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Passed Quantity</div>
-            <div className="text-base font-black text-emerald-500 tracking-tight mt-0.5">
-              {totalPassedQty.toLocaleString()} <span className="text-xs font-normal text-slate-400">NOS</span>
-            </div>
-          </div>
-
-          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Pending Inspection</div>
-            <div className="text-base font-black text-amber-500 tracking-tight mt-0.5">
-              {pendingCount} <span className="text-xs font-normal text-slate-400">Waiting</span>
-            </div>
-          </div>
-
-          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Compliance Rate</div>
-            <div className="text-base font-black text-purple-500 tracking-tight mt-0.5">
-              {activePdiItems.length > 0 ? `${Math.round((passedCount / activePdiItems.length) * 100)}%` : '100%'}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* ── DESKTOP HEADER & INTEGRATED KPI ROW (≥ md) ──                          */}
-      {/* ========================================================================= */}
-      <div className="hidden md:block space-y-4">
-        <section className={`overflow-hidden rounded-[24px] border ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'}`}>
-          <div className="flex items-center justify-between gap-6 px-6 py-5">
-            <div className="min-w-0">
-              <div className="mb-1.5 flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                Pre-Dispatch Clearance & Certificate of Compliance
-                <span className="text-slate-300 dark:text-slate-700">/</span>
-                <span>{filteredPdi.length} PDI Lots</span>
-              </div>
-              <div className="flex items-baseline gap-3">
-                <h1 className="truncate text-[25px] font-extrabold tracking-[-0.04em] text-slate-950 dark:text-white">
-                  PDI Queue (Pre-Dispatch Inspection)
-                </h1>
-                <span className="hidden font-mono text-[10px] font-semibold text-slate-400 xl:inline">
-                  FINAL QUALITY CLEARANCE • 4-POINT AUDIT • COC GENERATION
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  Pre-Dispatch Clearance
+                </span>
+                <span className="text-xs text-slate-400 dark:text-slate-500">
+                  • 4-Point Audit & CoC Release
                 </span>
               </div>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white mt-1">
+                PDI Queue (Pre-Dispatch Inspection)
+              </h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 max-w-xl">
                 Final pre-dispatch compliance verification for Job Cards and Customer POs, dimensional checklists, and outward CoC generation.
               </p>
             </div>
           </div>
 
-          {/* Integrated 4-Column Metric Strip (border-t) */}
-          <div className={`grid grid-cols-4 border-t ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
-            {[
-              { label: 'Total PDI Items', value: `${activePdiItems.length}`, detail: 'Active inspection lots', icon: ClipboardCheck, tone: 'text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)]', iconBg: 'bg-[var(--accent-soft-light)] dark:bg-[var(--accent-soft-dark)]' },
-              { label: 'Passed Quantity', value: `${totalPassedQty.toLocaleString()} NOS`, detail: `${passedCount} batches approved`, icon: CheckCircle2, tone: 'text-emerald-600 dark:text-emerald-400', iconBg: 'bg-emerald-500/10' },
-              { label: 'Pending Inspection', value: `${pendingCount}`, detail: 'Action required on shopfloor', icon: Clock, tone: 'text-amber-600 dark:text-amber-400', iconBg: 'bg-amber-500/10' },
-              { label: 'Compliance Rate', value: activePdiItems.length > 0 ? `${Math.round((passedCount / activePdiItems.length) * 100)}%` : '100%', detail: 'CoC certified shipments', icon: Award, tone: 'text-purple-600 dark:text-purple-400', iconBg: 'bg-purple-500/10' },
-            ].map((metric, index) => {
-              const MetricIcon = metric.icon;
-              return (
-                <div key={metric.label} className={`flex items-center gap-3 px-5 py-4 ${index > 0 ? isDarkMode ? 'border-l border-white/[0.07]' : 'border-l border-slate-200' : ''}`}>
-                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${metric.iconBg} ${metric.tone}`}>
-                    <MetricIcon className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="font-mono text-[9px] font-bold uppercase tracking-[0.13em] text-slate-400">{metric.label}</div>
-                    <div className={`mt-0.5 truncate text-lg font-extrabold tracking-[-0.03em] ${metric.tone}`}>{metric.value}</div>
-                    <div className="truncate text-[10px] text-slate-400">{metric.detail}</div>
-                  </div>
-                </div>
-              );
-            })}
+          <div className="flex items-center gap-2.5 shrink-0">
+            {/* Export CSV Button */}
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full border text-xs font-semibold transition-all cursor-pointer ${
+                isDarkMode 
+                  ? 'border-white/10 bg-black/60 text-slate-200 hover:bg-white/10' 
+                  : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 shadow-xs'
+              }`}
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Export CSV</span>
+            </button>
+
+            {/* Quick First Pending CTA */}
+            {pendingCount > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  const firstPending = activePdiItems.find(q => q.pdiStatus === 'PENDING') || activePdiItems[0];
+                  if (firstPending) {
+                    handleOpenInspect(firstPending);
+                    inspectModal.open({ pdiNo: firstPending.id, jobNo: firstPending.jobNo, orderPo: firstPending.orderPo });
+                  }
+                }}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#007AFF] hover:bg-[#0071E3] text-white text-xs font-semibold shadow-xs cursor-pointer transition-all active:scale-[0.98]"
+              >
+                <ClipboardCheck className="w-3.5 h-3.5" />
+                <span>Audit Next Pending ({pendingCount})</span>
+              </button>
+            )}
           </div>
-        </section>
+        </div>
 
-        {/* Desktop Filter & Search Toolbar */}
-        <div className={`rounded-2xl border p-3 ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${isDarkMode ? 'bg-white/[0.05] text-slate-400' : 'bg-slate-100 text-slate-500'}`} title="Modules">
-              <ClipboardCheck className="h-4 w-4" />
+        {/* Telemetry Stat Cards Grid - Apple Desktop Widgets */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-5">
+          {/* Total PDI Lots */}
+          <div className={`p-4 rounded-2xl border transition-all ${
+            isDarkMode 
+              ? 'bg-[#09090B] border-white/10 hover:border-white/20' 
+              : 'bg-white/80 border-slate-200/80 hover:border-slate-300 shadow-xs'
+          }`}>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Total PDI Lots</span>
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF]">
+                <ClipboardCheck className="w-4 h-4 stroke-[2]" />
+              </div>
             </div>
-
-            {/* Filter Pills */}
-            <div className="flex items-center gap-1.5">
-              {[
-                { id: 'ALL', label: 'All Lots', count: activePdiItems.length },
-                { id: 'PENDING', label: 'Pending PDI', count: pendingCount },
-                { id: 'PASS', label: 'Passed / CoC', count: passedCount },
-                { id: 'FAIL', label: 'Failed / Rework', count: failedCount, isAlert: failedCount > 0 },
-              ].map(tab => {
-                const isActive = filterStatus === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setFilterStatus(tab.id as any)}
-                    className={`flex h-9 items-center gap-1.5 rounded-xl border px-3 text-xs font-bold transition-colors ${
-                      isActive
-                        ? isDarkMode
-                          ? tab.isAlert
-                            ? 'border-rose-500/50 bg-rose-500/20 text-rose-300'
-                            : 'border-[var(--accent-primary)]/40 bg-[var(--accent-primary)]/20 text-[var(--accent-text-dark)] shadow-xs'
-                          : tab.isAlert
-                          ? 'border-rose-300 bg-rose-500 text-white'
-                          : 'border-[var(--accent-primary)] bg-[var(--accent-primary)] text-white shadow-sm shadow-[var(--accent-shadow)]'
-                        : isDarkMode
-                        ? tab.isAlert
-                          ? 'border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20'
-                          : 'border-white/[0.08] bg-black/20 text-slate-400 hover:bg-white/[0.04] hover:text-white'
-                        : tab.isAlert
-                        ? 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100'
-                        : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                    }`}
-                  >
-                    <span>{tab.label}</span>
-                    <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-mono font-bold ${
-                      isActive
-                        ? isDarkMode ? 'bg-white/20 text-white' : 'bg-white/30 text-white'
-                        : isDarkMode ? 'bg-white/10 text-slate-400' : 'bg-slate-200 text-slate-700'
-                    }`}>
-                      {tab.count}
-                    </span>
-                  </button>
-                );
-              })}
+            <div className="mt-2 flex items-baseline justify-between">
+              <span className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{totalCount}</span>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF]">Lots</span>
             </div>
+          </div>
 
-            {/* Search Input */}
-            <div className={`flex h-10 min-w-[240px] flex-1 items-center gap-2 rounded-xl border px-3 ml-auto ${isDarkMode ? 'border-white/[0.08] bg-black/20 text-white focus-within:border-[var(--accent-border-dark)]' : 'border-slate-200 bg-slate-50 text-slate-900 focus-within:border-[var(--accent-primary)]'}`}>
-              <Search className="h-4 w-4 shrink-0 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search Job #, Order PO, Part Code..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-full w-full bg-transparent text-xs font-semibold outline-none placeholder:font-normal placeholder:text-slate-400 font-mono"
+          {/* Passed Quantity */}
+          <div className={`p-4 rounded-2xl border transition-all ${
+            isDarkMode 
+              ? 'bg-[#09090B] border-white/10 hover:border-white/20' 
+              : 'bg-white/80 border-slate-200/80 hover:border-slate-300 shadow-xs'
+          }`}>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Passed Quantity</span>
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 className="w-4 h-4 stroke-[2]" />
+              </div>
+            </div>
+            <div className="mt-2 flex items-baseline justify-between">
+              <span className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 tabular-nums">
+                {totalPassedQty.toLocaleString()}
+              </span>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">NOS</span>
+            </div>
+          </div>
+
+          {/* Pending Inspection */}
+          <div className={`p-4 rounded-2xl border transition-all ${
+            isDarkMode 
+              ? 'bg-[#09090B] border-white/10 hover:border-white/20' 
+              : 'bg-white/80 border-slate-200/80 hover:border-slate-300 shadow-xs'
+          }`}>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Pending Inspection</span>
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                <Clock className="w-4 h-4 stroke-[2]" />
+              </div>
+            </div>
+            <div className="mt-2 flex items-baseline justify-between">
+              <span className="text-2xl font-bold tracking-tight text-amber-600 dark:text-amber-400">{pendingCount}</span>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">Waiting</span>
+            </div>
+          </div>
+
+          {/* Compliance Rate */}
+          <div className={`p-4 rounded-2xl border transition-all ${
+            isDarkMode 
+              ? 'bg-[#09090B] border-white/10 hover:border-white/20' 
+              : 'bg-white/80 border-slate-200/80 hover:border-slate-300 shadow-xs'
+          }`}>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Compliance Rate</span>
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                <Award className="w-4 h-4 stroke-[2]" />
+              </div>
+            </div>
+            <div className="mt-2 flex items-baseline justify-between">
+              <span className="text-2xl font-bold tracking-tight text-purple-600 dark:text-purple-400">
+                {complianceRate}%
+              </span>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400">Certified</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Apple PDI Compliance Distribution Bar ── */}
+        <div className={`p-4 rounded-2xl border transition-all mt-4 ${
+          isDarkMode ? 'bg-[#09090B] border-white/10' : 'bg-slate-50 border-slate-200/70'
+        }`}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
+            <div className="flex items-center gap-2">
+              <Activity className="w-4 h-4 text-[#007AFF] dark:text-[#0A84FF]" />
+              <span className="text-xs font-bold tracking-tight text-slate-900 dark:text-white">
+                Pre-Dispatch Quality Clearance & Certificate Release
+              </span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                {complianceRate}% Clearance
+              </span>
+            </div>
+            <span className="text-xs text-slate-400 dark:text-slate-500">
+              {passedCount + failedCount} of {totalCount} lots audited
+            </span>
+          </div>
+
+          {/* Multi-Segmented Pro Bar */}
+          <div className="h-2.5 w-full rounded-full bg-slate-200/60 dark:bg-black/60 overflow-hidden flex p-0.5 gap-0.5 border border-slate-200/40 dark:border-white/5">
+            {passedCount > 0 && (
+              <div 
+                style={{ width: `${(passedCount / (totalCount || 1)) * 100}%` }} 
+                className="h-full bg-emerald-500 rounded-full transition-all duration-500" 
+                title={`Passed CoC: ${passedCount} (${passPct}%)`}
               />
-              {searchQuery && (
-                <button type="button" onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-700 dark:hover:text-white">
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
+            )}
+            {pendingCount > 0 && (
+              <div 
+                style={{ width: `${(pendingCount / (totalCount || 1)) * 100}%` }} 
+                className="h-full bg-amber-400 rounded-full transition-all duration-500" 
+                title={`Pending PDI: ${pendingCount} (${pendingPct}%)`}
+              />
+            )}
+            {failedCount > 0 && (
+              <div 
+                style={{ width: `${(failedCount / (totalCount || 1)) * 100}%` }} 
+                className="h-full bg-rose-500 rounded-full transition-all duration-500" 
+                title={`Failed / Rework: ${failedCount} (${failPct}%)`}
+              />
+            )}
           </div>
 
-          <div className="mt-2.5 flex items-center justify-between px-1 font-mono text-[9px] font-semibold uppercase tracking-wider text-slate-400">
-            <span>Showing {filteredPdi.length} of {activePdiItems.length} PDI lots</span>
-            <span>Pre-Dispatch Quality & CoC Certification</span>
+          {/* Legend Pills */}
+          <div className="flex items-center flex-wrap gap-3 sm:gap-5 mt-3 text-xs">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span className="text-slate-500 dark:text-slate-400 font-medium">Passed CoC:</span>
+              <span className="font-bold text-slate-900 dark:text-white tabular-nums">{passedCount} ({passPct}%)</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-amber-400" />
+              <span className="text-slate-500 dark:text-slate-400 font-medium">Pending PDI:</span>
+              <span className="font-bold text-slate-900 dark:text-white tabular-nums">{pendingCount} ({pendingPct}%)</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-rose-500" />
+              <span className="text-slate-500 dark:text-slate-400 font-medium">Failed / Rework:</span>
+              <span className="font-bold text-slate-900 dark:text-white tabular-nums">{failedCount} ({failPct}%)</span>
+            </div>
           </div>
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* MOBILE PDI CARDS (Viewport < md) */}
+      {/* ── FILTER & SEARCH TOOLBAR (Apple Segmented Control & Finder Search) ──   */}
+      {/* ========================================================================= */}
+      <div className={`p-3 sm:p-4 rounded-2xl border transition-all space-y-3 ${
+        isDarkMode ? 'bg-[#09090B] border-white/10' : 'bg-white/90 border-slate-200/80 shadow-xs'
+      }`}>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          {/* Apple Segmented Control */}
+          <div className={`flex items-center gap-1 p-1 rounded-xl border overflow-x-auto no-scrollbar shrink-0 ${
+            isDarkMode ? 'bg-black/60 border-white/10' : 'bg-slate-100/80 border-slate-200/80'
+          }`}>
+            {[
+              { id: 'ALL', label: 'All Lots', count: totalCount },
+              { id: 'PENDING', label: 'Pending PDI', count: pendingCount },
+              { id: 'PASS', label: 'Passed / CoC', count: passedCount },
+              { id: 'FAIL', label: 'Failed / Rework', count: failedCount, isAlert: failedCount > 0 },
+            ].map(tab => {
+              const isActive = filterStatus === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setFilterStatus(tab.id as any)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
+                    isActive
+                      ? isDarkMode ? 'bg-white/10 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
+                      : tab.isAlert
+                      ? 'text-rose-500 hover:text-rose-600'
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-semibold ${
+                    isActive 
+                      ? isDarkMode ? 'bg-white/15 text-white' : 'bg-slate-100 text-slate-700' 
+                      : tab.isAlert
+                      ? 'bg-rose-500/10 text-rose-500'
+                      : isDarkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-200 text-slate-600'
+                  }`}>
+                    {tab.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Search Field & View Mode Switcher */}
+          <div className="flex items-center gap-2.5">
+            {/* macOS Finder Capsule */}
+            <div className={`relative flex items-center rounded-full border px-3.5 py-1.5 transition-all w-full sm:w-80 ${
+              isDarkMode ? 'bg-black/60 border-white/10 text-white focus-within:border-[#007AFF]' : 'bg-slate-50 border-slate-200 text-slate-900 focus-within:border-[#007AFF]'
+            }`}>
+              <Search className="w-3.5 h-3.5 text-slate-400 shrink-0 mr-2" />
+              <input
+                type="text"
+                placeholder="Search Job #, Order PO, Part..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="bg-transparent outline-none text-xs w-full placeholder:text-slate-400"
+              />
+              {searchQuery && (
+                <button type="button" onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-600 dark:hover:text-white ml-2">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Apple View Mode Switcher (Table vs Grid) */}
+            <div className={`hidden sm:flex items-center p-0.5 rounded-xl border shrink-0 ${
+              isDarkMode ? 'bg-black/60 border-white/10' : 'bg-slate-100/80 border-slate-200/80'
+            }`}>
+              <button
+                type="button"
+                onClick={() => setViewMode('table')}
+                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                  viewMode === 'table'
+                    ? isDarkMode ? 'bg-white/10 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                }`}
+                title="Table Register View"
+              >
+                <List className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('grid')}
+                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                  viewMode === 'grid'
+                    ? isDarkMode ? 'bg-white/10 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                }`}
+                title="Inspector Card Grid"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* ── MOBILE PDI CARDS (Viewport < md) ──                                    */}
       {/* ========================================================================= */}
       <div className="block md:hidden space-y-3">
         {filteredPdi.length === 0 ? (
-          <div className={`p-8 text-center rounded-2xl border font-mono text-xs ${
-            isDarkMode ? 'bg-[#121215] border-white/[0.08] text-slate-400' : 'bg-white border-slate-200 text-slate-500'
+          <div className={`p-8 text-center rounded-2xl border text-xs ${
+            isDarkMode ? 'bg-[#09090B] border-white/10 text-slate-400' : 'bg-white border-slate-200 text-slate-500'
           }`}>
             No PDI items found matching your filters.
           </div>
@@ -413,75 +581,73 @@ export const PDIView: React.FC<PDIViewProps> = ({
             return (
               <div
                 key={pdi.id}
-                className={`p-4 rounded-2xl border transition-ui space-y-3.5 shadow-sm ${
+                className={`p-4 rounded-2xl border transition-all space-y-3 shadow-xs ${
                   isPassed
-                    ? isDarkMode ? 'bg-[#121215] border-emerald-500/30' : 'bg-emerald-50/40 border-emerald-200'
+                    ? isDarkMode ? 'bg-[#09090B] border-emerald-500/30' : 'bg-emerald-50/40 border-emerald-200'
                     : isFailed
-                    ? isDarkMode ? 'bg-[#121215] border-rose-500/30' : 'bg-rose-50/40 border-rose-200'
-                    : isDarkMode ? 'bg-[#121215] border-white/[0.08]' : 'bg-white border-slate-200'
+                    ? isDarkMode ? 'bg-[#09090B] border-rose-500/30' : 'bg-rose-50/40 border-rose-200'
+                    : isDarkMode ? 'bg-[#09090B] border-white/10' : 'bg-white border-slate-200'
                 }`}
               >
                 {/* Header: Job No + Status Pill */}
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold text-xs text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">
+                      <span className="font-bold text-xs text-[#007AFF] dark:text-[#0A84FF]">
                         {pdi.jobNo}
                       </span>
                       {pdi.orderPo && (
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF] border border-blue-500/20">
                           {pdi.orderPo}
                         </span>
                       )}
                     </div>
-                    <h3 className={`text-xs font-bold font-sans mt-1 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    <h3 className={`text-xs font-semibold mt-1 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                       {pdi.partDescription}
                     </h3>
                   </div>
 
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border shrink-0 ${
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase border shrink-0 ${
                     isPassed
-                      ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                       : isFailed
-                      ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
-                      : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                      ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                      : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
                   }`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${
-                      isPassed ? 'bg-emerald-400' : isFailed ? 'bg-rose-400' : 'bg-amber-400 animate-pulse'
+                      isPassed ? 'bg-emerald-500' : isFailed ? 'bg-rose-500' : 'bg-amber-500'
                     }`} />
                     <span>{pdi.pdiStatus || 'PENDING'}</span>
                   </span>
                 </div>
 
                 {/* Part Code & Quantity Detail */}
-                <div className={`grid grid-cols-2 gap-2 p-2.5 rounded-xl border text-xs font-mono text-center ${
-                  isDarkMode ? 'bg-black/20 border-white/[0.08]' : 'bg-slate-50 border-slate-200'
+                <div className={`grid grid-cols-2 gap-2 p-2.5 rounded-xl border text-xs text-center ${
+                  isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-50 border-slate-100'
                 }`}>
                   <div>
                     <span className="text-[10px] text-slate-400 uppercase block">Part Code</span>
-                    <span className="font-bold text-slate-200">{pdi.partCode || '—'}</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-200">{pdi.partCode || '—'}</span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase block">Cleared Qty</span>
-                    <span className={`font-bold ${isPassed ? 'text-emerald-400' : 'text-slate-200'}`}>
+                    <span className="text-[10px] text-slate-400 uppercase block">Inspection Qty</span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
                       {pdi.acceptedQty ?? pdi.qty} NOS
-                      {pdi.rejectedQty ? <span className="text-rose-400 text-[10px] block">({pdi.rejectedQty} rej)</span> : null}
                     </span>
                   </div>
                 </div>
 
-                {/* Certificate Tag if available */}
-                {pdi.certificateNo && (
-                  <div className="flex items-center justify-between text-[11px] font-mono p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-                    <span className="flex items-center gap-1 font-bold">
-                      <Award className="w-3.5 h-3.5" />
-                      <span>CoC: {pdi.certificateNo}</span>
-                    </span>
-                    <span className="text-[10px]">Verified ✓</span>
+                {/* Inspector Notes */}
+                {pdi.inspectorNotes && (
+                  <div className={`p-2.5 rounded-xl border text-xs ${
+                    isDarkMode ? 'bg-black/40 border-white/10 text-slate-300' : 'bg-slate-50 border-slate-100 text-slate-600'
+                  }`}>
+                    <span className="text-slate-400 font-semibold block text-[10px] uppercase">Observations:</span>
+                    <span>{pdi.inspectorNotes}</span>
                   </div>
                 )}
 
-                {/* Action Buttons */}
+                {/* Action CTA Button */}
                 <div className="flex items-center gap-2 pt-1">
                   <button
                     type="button"
@@ -489,10 +655,14 @@ export const PDIView: React.FC<PDIViewProps> = ({
                       handleOpenInspect(pdi);
                       inspectModal.open({ pdiNo: pdi.id, jobNo: pdi.jobNo, orderPo: pdi.orderPo });
                     }}
-                    className="flex-1 py-2.5 rounded-xl text-xs font-mono font-bold flex items-center justify-center gap-1.5 shadow-md cursor-pointer transition-ui active:scale-[0.96] bg-[var(--accent-primary)] text-white shadow-[var(--accent-shadow)]"
+                    className={`flex-1 py-2 rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition-all active:scale-[0.98] ${
+                      isPassed
+                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                        : 'bg-[#007AFF] hover:bg-[#0071E3] text-white'
+                    }`}
                   >
                     <ClipboardCheck className="w-3.5 h-3.5" />
-                    <span>{isPassed ? 'Re-Inspect PDI' : 'Inspect PDI Clearance'}</span>
+                    <span>{isPassed ? 'Re-Inspect PDI' : 'Inspect PDI'}</span>
                   </button>
 
                   {(pdi.certificateNo || isPassed) && (
@@ -502,14 +672,14 @@ export const PDIView: React.FC<PDIViewProps> = ({
                         setSelectedReport(pdi);
                         certModal.open({ pdiNo: pdi.id, jobNo: pdi.jobNo, orderPo: pdi.orderPo });
                       }}
-                      className={`p-2.5 rounded-xl border flex items-center justify-center cursor-pointer transition-ui ${
+                      className={`p-2 rounded-full border flex items-center justify-center cursor-pointer transition-all ${
                         isDarkMode 
-                          ? 'bg-[#121215] border-white/[0.08] text-slate-300 hover:bg-white/[0.05]' 
-                          : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                          ? 'border-white/10 bg-black/60 text-slate-200 hover:bg-white/10' 
+                          : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200'
                       }`}
                       title="View CoC Certificate"
                     >
-                      <Award className="w-4 h-4 text-emerald-400" />
+                      <Award className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     </button>
                   )}
                 </div>
@@ -520,166 +690,292 @@ export const PDIView: React.FC<PDIViewProps> = ({
       </div>
 
       {/* ========================================================================= */}
-      {/* DESKTOP PDI TABLE (Viewport >= md) */}
+      {/* ── DESKTOP PDI VIEW: TABLE OR INSPECTOR CARD GRID (Viewport >= md) ──      */}
       {/* ========================================================================= */}
-      <div className={`hidden md:block overflow-hidden rounded-[22px] border transition-ui ${
-        isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
-      }`}>
-        <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
-          <div>
-            <div className="text-xs font-extrabold text-slate-900 dark:text-white">Pre-Dispatch Inspection Register</div>
-            <div className="mt-0.5 text-[10px] text-slate-400">Quality inspection audits, 4-point verification checks, and CoC certificates</div>
-          </div>
-          <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>{filteredPdi.length} lots</span>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${
-                isDarkMode ? 'border-white/[0.07] bg-black/20 text-slate-500' : 'border-slate-200 bg-slate-50/80 text-slate-400'
-              }`}>
-                <th className="py-4 px-5">Job No</th>
-                <th className="py-4 px-5">Order PO</th>
-                <th className="py-4 px-5">Part Description</th>
-                <th className="py-4 px-5 text-right">Inspection Qty</th>
-                <th className="py-4 px-5 text-center">PDI Status</th>
-                <th className="py-4 px-5 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
-              {filteredPdi.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-400 font-mono text-xs">
-                    No PDI inspections matching your query.
-                  </td>
+      {viewMode === 'table' ? (
+        <div className={`hidden md:block rounded-2xl border overflow-hidden transition-all shadow-xs ${
+          isDarkMode ? 'bg-[#09090B] border-white/10' : 'bg-white border-slate-200/80'
+        }`}>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className={`border-b text-xs font-semibold ${
+                  isDarkMode ? 'bg-black/60 border-white/10 text-slate-400' : 'bg-slate-50/80 border-slate-200/80 text-slate-500'
+                }`}>
+                  <th className="py-3.5 px-5">Job Card #</th>
+                  <th className="py-3.5 px-5">Customer PO</th>
+                  <th className="py-3.5 px-5">Part Description</th>
+                  <th className="py-3.5 px-5 text-right">Inspect Qty</th>
+                  <th className="py-3.5 px-5 text-center">PDI Status</th>
+                  <th className="py-3.5 px-5 text-center">Actions</th>
                 </tr>
-              ) : (
-                filteredPdi.map((pdi) => {
-                  const isPassed = pdi.pdiStatus === 'PASS';
-                  const isFailed = pdi.pdiStatus === 'FAIL';
-                  return (
-                    <tr key={pdi.id} className={`group transition-colors ${isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'}`}>
-                      <td className="py-4 px-5">
-                        <div className="flex items-center gap-2.5">
-                          <div className={`p-2 rounded-xl transition-transform group-hover:scale-105 shrink-0 ${
-                            isDarkMode 
-                              ? 'bg-[var(--accent-primary)]/20 text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/30' 
-                              : 'bg-[var(--accent-primary)]/10 text-[var(--accent-text-light)] border border-[var(--accent-primary)]/20'
-                          }`}>
-                            <Package className="w-3.5 h-3.5" />
-                          </div>
-                          <div>
-                            <div className="font-mono font-bold text-xs text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">
-                              {pdi.jobNo}
+              </thead>
+              <tbody className={`divide-y ${isDarkMode ? 'divide-white/5' : 'divide-slate-100'}`}>
+                {filteredPdi.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-slate-400 text-xs">
+                      No PDI inspections matching your query.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredPdi.map((pdi) => {
+                    const isPassed = pdi.pdiStatus === 'PASS';
+                    const isFailed = pdi.pdiStatus === 'FAIL';
+                    return (
+                      <tr 
+                        key={pdi.id} 
+                        onClick={() => {
+                          handleOpenInspect(pdi);
+                          inspectModal.open({ pdiNo: pdi.id, jobNo: pdi.jobNo, orderPo: pdi.orderPo });
+                        }}
+                        className={`group transition-colors cursor-pointer ${isDarkMode ? 'hover:bg-white/[0.04]' : 'hover:bg-slate-50/70'}`}
+                      >
+                        <td className="py-3.5 px-5">
+                          <div className="flex items-center gap-2.5">
+                            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF] shrink-0">
+                              <Package className="w-3.5 h-3.5 stroke-[2]" />
                             </div>
+                            <span className="font-bold text-[#007AFF] dark:text-[#0A84FF]">
+                              {pdi.jobNo}
+                            </span>
+                            <ChevronRight className="w-3 h-3 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                           </div>
-                        </div>
-                      </td>
-                      <td className="py-4 px-5 font-mono text-xs text-slate-400">
-                        {pdi.orderPo}
-                      </td>
-                      <td className={`py-4 px-5 font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
-                        <div className="font-bold font-mono text-xs">{pdi.partCode}</div>
-                        <div className="text-[11px] text-slate-400 font-normal">{pdi.partDescription}</div>
-                      </td>
-                      <td className="py-4 px-5 text-right font-bold font-mono">
-                        <span className={isPassed ? 'text-emerald-500' : isDarkMode ? 'text-white' : 'text-slate-900'}>
-                          {pdi.acceptedQty ?? pdi.qty} NOS
-                        </span>
-                        {pdi.rejectedQty ? (
-                          <div className="text-[10px] text-rose-400 font-normal font-mono">
-                            ({pdi.rejectedQty} rejected)
-                          </div>
-                        ) : null}
-                      </td>
-                      <td className="py-4 px-5 text-center">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
-                          isPassed
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                            : isFailed
-                            ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-                            : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                        }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${
-                            isPassed ? 'bg-emerald-500' : isFailed ? 'bg-rose-500' : 'bg-amber-500 animate-pulse'
-                          }`} />
-                          <span>{pdi.pdiStatus || 'PENDING'}</span>
-                        </span>
-                      </td>
-                      <td className="py-4 px-5 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              handleOpenInspect(pdi);
-                              inspectModal.open({ pdiNo: pdi.id, jobNo: pdi.jobNo, orderPo: pdi.orderPo });
-                            }}
-                            className={`px-3.5 py-1.5 rounded-xl font-mono text-xs font-bold transition-ui cursor-pointer inline-flex items-center gap-1.5 shadow-xs hover:scale-[1.02] active:scale-[0.96] ${
-                              isPassed
-                                ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                                : 'bg-[var(--accent-primary)] hover:brightness-110 text-white shadow-sm shadow-[var(--accent-shadow)]'
-                            }`}
-                            title={`Inspect PDI for ${pdi.jobNo} (${pdi.orderPo})`}
-                          >
-                            <ClipboardCheck className="w-3.5 h-3.5" />
-                            <span>{isPassed ? 'Re-Inspect PDI' : 'Inspect PDI'}</span>
-                          </button>
-
-                          {(pdi.certificateNo || isPassed) && (
+                        </td>
+                        <td className={`py-3.5 px-5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                          {pdi.orderPo ? (
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF] border border-blue-500/20">
+                              {pdi.orderPo}
+                            </span>
+                          ) : '—'}
+                        </td>
+                        <td className={`py-3.5 px-5 font-medium ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
+                          <span className="font-semibold text-slate-900 dark:text-white">{pdi.partCode}</span>
+                          {pdi.partDescription && (
+                            <span className="text-slate-400 dark:text-slate-500"> — {pdi.partDescription}</span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-5 text-right font-bold tabular-nums">
+                          <span className={isPassed ? 'text-emerald-600 dark:text-emerald-400' : isDarkMode ? 'text-white' : 'text-slate-900'}>
+                            {pdi.acceptedQty ?? pdi.qty} NOS
+                          </span>
+                          {pdi.rejectedQty ? (
+                            <div className="text-[10px] text-rose-500 font-normal">
+                              ({pdi.rejectedQty} rejected)
+                            </div>
+                          ) : null}
+                        </td>
+                        <td className="py-3.5 px-5 text-center">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                            isPassed
+                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                              : isFailed
+                              ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                              : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${
+                              isPassed ? 'bg-emerald-500' : isFailed ? 'bg-rose-500' : 'bg-amber-500'
+                            }`} />
+                            <span>{pdi.pdiStatus || 'PENDING'}</span>
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-5 text-center" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-center gap-2">
                             <button
                               type="button"
                               onClick={() => {
-                                setSelectedReport(pdi);
-                                certModal.open({ pdiNo: pdi.id, jobNo: pdi.jobNo, orderPo: pdi.orderPo });
+                                handleOpenInspect(pdi);
+                                inspectModal.open({ pdiNo: pdi.id, jobNo: pdi.jobNo, orderPo: pdi.orderPo });
                               }}
-                              className={`p-1.5 rounded-xl font-mono text-xs font-bold transition-ui cursor-pointer inline-flex items-center gap-1 ${
-                                isDarkMode 
-                                  ? 'border border-white/[0.08] bg-black/20 text-slate-300 hover:bg-white/[0.05]' 
-                                  : 'border border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer inline-flex items-center gap-1.5 active:scale-[0.98] ${
+                                isPassed
+                                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs'
+                                  : 'bg-[#007AFF] hover:bg-[#0071E3] text-white shadow-xs'
                               }`}
-                              title="View Compliance Certificate"
+                              title={`Inspect PDI for ${pdi.jobNo}`}
                             >
-                              <FileCheck className="w-3.5 h-3.5 text-emerald-400" />
-                              <span className="text-[10px]">CoC</span>
+                              <ClipboardCheck className="w-3.5 h-3.5" />
+                              <span>{isPassed ? 'Re-Inspect' : 'Inspect PDI'}</span>
                             </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
 
-      {/* 1. INTERACTIVE PDI INSPECTION MODAL */}
+                            {(pdi.certificateNo || isPassed) && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedReport(pdi);
+                                  certModal.open({ pdiNo: pdi.id, jobNo: pdi.jobNo, orderPo: pdi.orderPo });
+                                }}
+                                className={`px-2.5 py-1.5 rounded-full border text-xs font-semibold transition-all cursor-pointer inline-flex items-center gap-1 ${
+                                  isDarkMode 
+                                    ? 'border-white/10 bg-black/60 text-slate-300 hover:bg-white/10' 
+                                    : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                                }`}
+                                title="View Compliance Certificate"
+                              >
+                                <FileCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                <span>CoC</span>
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        /* Grid Inspector Cards View */
+        <div className="hidden md:grid grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredPdi.length === 0 ? (
+            <div className={`col-span-full p-12 text-center rounded-2xl border text-xs ${
+              isDarkMode ? 'bg-[#09090B] border-white/10 text-slate-400' : 'bg-white border-slate-200 text-slate-500'
+            }`}>
+              No PDI inspections matching your query.
+            </div>
+          ) : (
+            filteredPdi.map((pdi) => {
+              const isPassed = pdi.pdiStatus === 'PASS';
+              const isFailed = pdi.pdiStatus === 'FAIL';
+
+              return (
+                <div
+                  key={pdi.id}
+                  onClick={() => {
+                    handleOpenInspect(pdi);
+                    inspectModal.open({ pdiNo: pdi.id, jobNo: pdi.jobNo, orderPo: pdi.orderPo });
+                  }}
+                  className={`p-5 rounded-2xl border transition-all space-y-3.5 shadow-xs cursor-pointer hover:shadow-md ${
+                    isPassed
+                      ? isDarkMode ? 'bg-[#09090B] border-emerald-500/30 hover:border-emerald-500/50' : 'bg-white border-emerald-200 hover:border-emerald-300'
+                      : isFailed
+                      ? isDarkMode ? 'bg-[#09090B] border-rose-500/30 hover:border-rose-500/50' : 'bg-white border-rose-200 hover:border-rose-300'
+                      : isDarkMode ? 'bg-[#09090B] border-white/10 hover:border-white/20' : 'bg-white border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="font-bold text-xs text-[#007AFF] dark:text-[#0A84FF]">
+                        {pdi.jobNo}
+                      </span>
+                      <h3 className={`text-sm font-bold mt-1 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                        {pdi.partCode}
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">
+                        {pdi.partDescription || 'Precision Machined Component'}
+                      </p>
+                    </div>
+
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase border shrink-0 ${
+                      isPassed
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                        : isFailed
+                        ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                        : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        isPassed ? 'bg-emerald-500' : isFailed ? 'bg-rose-500' : 'bg-amber-500'
+                      }`} />
+                      <span>{pdi.pdiStatus || 'PENDING'}</span>
+                    </span>
+                  </div>
+
+                  <div className={`grid grid-cols-2 gap-2 p-2.5 rounded-xl border text-xs text-center ${
+                    isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-50 border-slate-100'
+                  }`}>
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase block">Customer PO</span>
+                      <span className="font-semibold text-slate-700 dark:text-slate-200">{pdi.orderPo || '—'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase block">Target Qty</span>
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{pdi.qty} NOS</span>
+                    </div>
+                  </div>
+
+                  {pdi.inspectorNotes ? (
+                    <div className={`p-2.5 rounded-xl border text-xs line-clamp-2 ${
+                      isDarkMode ? 'bg-black/40 border-white/10 text-slate-300' : 'bg-slate-50 border-slate-100 text-slate-600'
+                    }`}>
+                      <span className="text-slate-400 font-semibold block text-[10px] uppercase">Notes:</span>
+                      <span>{pdi.inspectorNotes}</span>
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-slate-400 italic">No notes recorded yet</div>
+                  )}
+
+                  <div className="pt-2 border-t border-slate-100 dark:border-white/5 flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
+                    <span className="text-[11px] text-slate-400 font-medium">Click to inspect</span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleOpenInspect(pdi);
+                          inspectModal.open({ pdiNo: pdi.id, jobNo: pdi.jobNo, orderPo: pdi.orderPo });
+                        }}
+                        className="px-3.5 py-1.5 rounded-full bg-[#007AFF] hover:bg-[#0071E3] text-white text-xs font-semibold shadow-xs flex items-center gap-1 transition-all active:scale-[0.98]"
+                      >
+                        <ClipboardCheck className="w-3.5 h-3.5" />
+                        <span>Inspect</span>
+                      </button>
+                      {(pdi.certificateNo || isPassed) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedReport(pdi);
+                            certModal.open({ pdiNo: pdi.id, jobNo: pdi.jobNo, orderPo: pdi.orderPo });
+                          }}
+                          className={`p-1.5 rounded-full border text-xs font-semibold transition-all cursor-pointer inline-flex items-center gap-1 ${
+                            isDarkMode 
+                              ? 'border-white/10 bg-black/60 text-slate-300 hover:bg-white/10' 
+                              : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          }`}
+                          title="View CoC Certificate"
+                        >
+                          <Award className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 1. INTERACTIVE PDI INSPECTION MODAL (Apple Sheet Presentation)            */}
+      {/* ========================================================================= */}
       {inspectModal.isOpen && inspectingItem && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md font-sans overflow-y-auto">
-          <div className={`relative w-full max-w-xl max-h-[92vh] sm:max-h-[90vh] flex flex-col rounded-t-3xl sm:rounded-[24px] border shadow-2xl transition-ui overflow-hidden ${
-            isDarkMode ? 'border-white/[0.08] bg-[#121215] text-white' : 'border-slate-200 bg-white text-slate-900'
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-md font-sans overflow-y-auto">
+          <div className={`relative w-full max-w-xl max-h-[92vh] sm:max-h-[90vh] flex flex-col rounded-t-2xl sm:rounded-2xl border shadow-2xl backdrop-blur-2xl transition-all overflow-hidden ${
+            isDarkMode 
+              ? 'bg-[#09090B] border-white/10 text-white shadow-[0_24px_60px_rgba(0,0,0,0.8)]' 
+              : 'bg-white/95 border-slate-200/80 text-slate-900 shadow-[0_20px_60px_rgba(0,0,0,0.15)]'
           }`}>
             {/* Mobile Grab Handle */}
             <div className="pt-2.5 pb-0 block sm:hidden">
-              <div className="w-12 h-1.5 bg-slate-700/80 rounded-full mx-auto" />
+              <div className="w-10 h-1 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto" />
             </div>
 
-            {/* Header */}
-            <div className={`flex items-center justify-between p-4 sm:p-6 border-b shrink-0 ${isDarkMode ? 'border-white/[0.07] bg-black/20' : 'border-slate-200 bg-slate-50/80'}`}>
-              <div className="flex items-center gap-2.5">
-                <div className="p-2.5 rounded-xl bg-[var(--accent-primary)]/15 text-[var(--accent-primary)] border border-[var(--accent-primary)]/30 shrink-0">
-                  <ClipboardCheck className="w-5 h-5" />
+            {/* Modal Window Header */}
+            <div className={`flex items-center justify-between px-5 sm:px-6 py-4 border-b shrink-0 ${
+              isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200/80 bg-slate-50/50'
+            }`}>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF] shrink-0">
+                  <ClipboardCheck className="w-5 h-5 stroke-[2]" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm uppercase text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)] tracking-tight">
+                  <h3 className="font-bold text-base tracking-tight text-slate-900 dark:text-white">
                     Pre-Dispatch Inspection (PDI)
                   </h3>
-                  <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5 font-mono">
-                    <span>Job: <strong className="text-slate-900 dark:text-white">{inspectingItem.jobNo}</strong></span>
+                  <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                    <span>Job: <strong className="text-slate-700 dark:text-slate-200">{inspectingItem.jobNo}</strong></span>
                     <span>•</span>
-                    <span>PO: <strong className="text-slate-900 dark:text-white">{inspectingItem.orderPo}</strong></span>
+                    <span>PO: <strong className="text-slate-700 dark:text-slate-200">{inspectingItem.orderPo}</strong></span>
                   </div>
                 </div>
               </div>
@@ -689,71 +985,65 @@ export const PDIView: React.FC<PDIViewProps> = ({
                   setInspectingItem(null);
                   inspectModal.close();
                 }} 
-                className={`p-2 rounded-xl border transition-ui cursor-pointer ${
-                  isDarkMode 
-                    ? 'border-white/[0.08] bg-black/20 text-slate-400 hover:text-white hover:bg-white/[0.05]' 
-                    : 'border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
-                }`}
+                className="rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-200 transition-all cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Form Body */}
-            <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 font-mono text-xs">
+            <div className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
               
-              {/* Part Summary Box */}
-              <div className={`p-3.5 rounded-xl border ${
-                isDarkMode ? 'border-white/[0.08] bg-black/20' : 'bg-slate-50 border-slate-200'
+              {/* Part Summary Inspector Box */}
+              <div className={`p-4 rounded-2xl border ${
+                isDarkMode ? 'bg-black/60 border-white/10' : 'bg-slate-50/80 border-slate-200/80'
               }`}>
                 <div className="flex justify-between items-center">
                   <div>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase">Component</span>
-                    <div className="font-bold text-sm text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{inspectingItem.partCode}</div>
-                    <div className="text-xs text-slate-500 dark:text-slate-300 font-normal font-sans">{inspectingItem.partDescription}</div>
+                    <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Component</span>
+                    <div className="font-bold text-sm text-[#007AFF] dark:text-[#0A84FF]">{inspectingItem.partCode}</div>
+                    <div className="text-xs text-slate-600 dark:text-slate-300 font-medium mt-0.5">{inspectingItem.partDescription}</div>
                   </div>
-                  <div className="text-right font-mono">
-                    <span className="text-[10px] text-slate-400 font-bold uppercase">Batch Target</span>
-                    <div className="text-base font-bold text-emerald-500">{inspectingItem.qty} NOS</div>
+                  <div className="text-right">
+                    <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Batch Target</span>
+                    <div className="text-base font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{inspectingItem.qty} NOS</div>
                   </div>
                 </div>
               </div>
 
-              {/* 4-Point Checklist */}
+              {/* 4-Point Checklist - Apple Interactive Check Cards */}
               <div className="space-y-2">
-                <label className="block text-[11px] text-slate-400 font-bold uppercase">
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400">
                   4-Point Quality & Compliance Checklist
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {[
-                    { key: 'visualFinish', label: '1. Visual Finish & Burr Removal', desc: 'No burrs, sharp edges, or surface blemishes' },
-                    { key: 'dimensionalAudit', label: '2. Critical Dimensions & Tolerances', desc: '100% drawing tolerances verified' },
+                    { key: 'visualFinish', label: '1. Visual Finish & Deburring', desc: 'No burrs, sharp edges, or surface blemishes' },
+                    { key: 'dimensionalAudit', label: '2. Dimensions & Tolerances', desc: '100% drawing tolerances verified' },
                     { key: 'gaugesChecked', label: '3. Gauge & Thread Fitment', desc: 'Go/No-Go plug and ring gauges cleared' },
-                    { key: 'packagingRustProof', label: '4. Anti-Rust Coating & Packaging', desc: 'VCI oil applied, barcode label attached' }
+                    { key: 'packagingRustProof', label: '4. Anti-Rust & Packaging', desc: 'VCI oil applied, barcode label attached' }
                   ].map(({ key, label, desc }) => {
                     const isChecked = !!checklist[key as keyof typeof checklist];
                     return (
                       <div
                         key={key}
                         onClick={() => handleToggleChecklist(key as keyof typeof checklist)}
-                        className={`p-3 rounded-xl border cursor-pointer transition-ui flex items-start gap-2.5 select-none ${
+                        className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-start gap-2.5 select-none ${
                           isChecked
-                            ? isDarkMode
-                              ? 'bg-emerald-950/20 border-emerald-500/40 text-emerald-300'
-                              : 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-900 dark:text-emerald-300 ring-1 ring-emerald-500/20 shadow-xs'
                             : isDarkMode
-                            ? 'border-white/[0.08] bg-black/20 text-slate-400 hover:border-white/[0.15]'
+                            ? 'bg-black/40 border-white/10 text-slate-400 hover:border-white/20'
                             : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
                         }`}
                       >
                         <div className={`mt-0.5 p-0.5 rounded-md ${
-                          isChecked ? 'text-emerald-400' : 'text-slate-500'
+                          isChecked ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'
                         }`}>
-                          {isChecked ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                          {isChecked ? <CheckSquare className="w-4 h-4 stroke-[2.5]" /> : <Square className="w-4 h-4 stroke-[1.5]" />}
                         </div>
                         <div>
-                          <div className="font-bold text-[11px]">{label}</div>
-                          <div className="text-[10px] opacity-80 mt-0.5 font-normal">{desc}</div>
+                          <div className="font-semibold text-xs">{label}</div>
+                          <div className="text-[11px] opacity-75 mt-0.5">{desc}</div>
                         </div>
                       </div>
                     );
@@ -765,7 +1055,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="block text-[11px] text-slate-400 font-bold uppercase">
+                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400">
                       Accepted Qty *
                     </label>
                     <button
@@ -774,7 +1064,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
                         setAcceptedQty(inspectingItem.qty || 1);
                         setRejectedQty(0);
                       }}
-                      className="text-[10px] text-emerald-500 font-bold hover:underline cursor-pointer"
+                      className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold hover:underline cursor-pointer"
                     >
                       All ({inspectingItem.qty})
                     </button>
@@ -784,13 +1074,13 @@ export const PDIView: React.FC<PDIViewProps> = ({
                     min={0}
                     value={acceptedQty}
                     onChange={(e) => setAcceptedQty(Number(e.target.value))}
-                    className={`w-full p-2.5 rounded-xl border font-mono font-bold text-xs outline-none ${
-                      isDarkMode ? 'border-white/[0.08] bg-black/20 text-emerald-400 focus:border-emerald-500' : 'bg-white border-slate-200 text-emerald-600 focus:border-emerald-500'
+                    className={`w-full px-3.5 py-2 rounded-xl border text-xs font-bold tabular-nums outline-none transition-all ${
+                      isDarkMode ? 'bg-black/60 border-white/10 text-emerald-400 focus:border-emerald-500' : 'bg-slate-50 border-slate-200 text-emerald-600 focus:border-emerald-500'
                     }`}
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
                     Rejected / Scrap
                   </label>
                   <input
@@ -798,8 +1088,8 @@ export const PDIView: React.FC<PDIViewProps> = ({
                     min={0}
                     value={rejectedQty}
                     onChange={(e) => setRejectedQty(Number(e.target.value))}
-                    className={`w-full p-2.5 rounded-xl border font-mono font-bold text-xs outline-none ${
-                      isDarkMode ? 'border-white/[0.08] bg-black/20 text-rose-400 focus:border-rose-500' : 'bg-white border-slate-200 text-rose-600 focus:border-rose-500'
+                    className={`w-full px-3.5 py-2 rounded-xl border text-xs font-bold tabular-nums outline-none transition-all ${
+                      isDarkMode ? 'bg-black/60 border-white/10 text-rose-400 focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-rose-600 focus:border-rose-500'
                     }`}
                   />
                 </div>
@@ -808,7 +1098,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
               {/* Certificate No & Report URL */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
                     CoC Certificate #
                   </label>
                   <input
@@ -816,13 +1106,13 @@ export const PDIView: React.FC<PDIViewProps> = ({
                     value={certificateNo}
                     onChange={(e) => setCertificateNo(e.target.value)}
                     placeholder="e.g. PDI-COC-2026-001"
-                    className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none ${
-                      isDarkMode ? 'border-white/[0.08] bg-black/20 text-white focus:border-[var(--accent-border-dark)]' : 'bg-white border-slate-200 text-slate-900 focus:border-[var(--accent-primary)]'
+                    className={`w-full px-3.5 py-2 rounded-xl border text-xs outline-none transition-all ${
+                      isDarkMode ? 'bg-black/60 border-white/10 text-white focus:border-[#007AFF]' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
                     }`}
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
                     Document URL (Optional)
                   </label>
                   <input
@@ -830,8 +1120,8 @@ export const PDIView: React.FC<PDIViewProps> = ({
                     value={reportUrl}
                     onChange={(e) => setReportUrl(e.target.value)}
                     placeholder="e.g. COC-Report.pdf"
-                    className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none ${
-                      isDarkMode ? 'border-white/[0.08] bg-black/20 text-white focus:border-[var(--accent-border-dark)]' : 'bg-white border-slate-200 text-slate-900 focus:border-[var(--accent-primary)]'
+                    className={`w-full px-3.5 py-2 rounded-xl border text-xs outline-none transition-all ${
+                      isDarkMode ? 'bg-black/60 border-white/10 text-white focus:border-[#007AFF]' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
                     }`}
                   />
                 </div>
@@ -839,7 +1129,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
 
               {/* Remarks */}
               <div>
-                <label className="block text-[11px] text-slate-400 font-bold uppercase mb-1">
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
                   Inspector Observations & Remarks
                 </label>
                 <textarea
@@ -847,35 +1137,37 @@ export const PDIView: React.FC<PDIViewProps> = ({
                   value={remarks}
                   onChange={(e) => setRemarks(e.target.value)}
                   placeholder="e.g. Surface finish Ra 0.8 achieved. Thread gauges matched cleanly. Ready for dispatch."
-                  className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none ${
-                    isDarkMode ? 'border-white/[0.08] bg-black/20 text-white focus:border-[var(--accent-border-dark)]' : 'bg-white border-slate-200 text-slate-900 focus:border-[var(--accent-primary)]'
+                  className={`w-full px-3.5 py-2.5 rounded-xl border text-xs outline-none transition-all ${
+                    isDarkMode ? 'bg-black/60 border-white/10 text-white focus:border-[#007AFF]' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
                   }`}
                 />
               </div>
 
             </div>
 
-            {/* Modal Actions */}
-            <div className={`p-4 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-2.5 border-t shrink-0 ${isDarkMode ? 'border-white/[0.07] bg-black/20' : 'border-slate-200 bg-slate-50/80'}`}>
+            {/* Modal Actions Footer */}
+            <div className={`px-5 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 border-t shrink-0 ${
+              isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-100 bg-slate-50/50'
+            }`}>
               <button
                 type="button"
                 onClick={() => handleInspectSubmit('FAIL')}
                 disabled={isSubmitting}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 text-xs font-bold font-mono flex items-center justify-center gap-1.5 cursor-pointer transition-ui disabled:opacity-50"
+                className="w-full sm:w-auto px-4 py-2 rounded-full border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all disabled:opacity-50"
               >
                 <AlertTriangle className="w-3.5 h-3.5" />
                 <span>PDI Fail (Flag Rework)</span>
               </button>
 
-              <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="flex items-center gap-2.5 w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => {
                     setInspectingItem(null);
                     inspectModal.close();
                   }}
-                  className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-xl border font-mono text-xs font-bold cursor-pointer transition-ui ${
-                    isDarkMode ? 'border-white/[0.08] text-slate-400 hover:text-white hover:bg-white/[0.05]' : 'border-slate-200 text-slate-600 hover:bg-slate-100'
+                  className={`flex-1 sm:flex-initial px-5 py-2 rounded-full border text-xs font-semibold cursor-pointer transition-all ${
+                    isDarkMode ? 'border-white/10 bg-black/60 text-slate-300 hover:bg-white/10' : 'border-slate-200/80 bg-slate-100 text-slate-700 hover:bg-slate-200'
                   }`}
                 >
                   Cancel
@@ -884,7 +1176,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
                   type="button"
                   onClick={() => handleInspectSubmit('PASS')}
                   disabled={isSubmitting || acceptedQty <= 0}
-                  className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs font-mono flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-500/25 transition-ui active:scale-[0.96] disabled:opacity-50"
+                  className="flex-1 sm:flex-initial px-6 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-all active:scale-[0.98] disabled:opacity-50"
                 >
                   <ShieldCheck className="w-4 h-4" />
                   <span>{isSubmitting ? 'Processing...' : 'Complete PDI (Pass & Release)'}</span>
@@ -895,25 +1187,27 @@ export const PDIView: React.FC<PDIViewProps> = ({
         </div>
       )}
 
-      {/* 2. PDI CERTIFICATE MODAL */}
+      {/* ========================================================================= */}
+      {/* 2. PDI CERTIFICATE MODAL (Apple Sheet Presentation)                       */}
+      {/* ========================================================================= */}
       {certModal.isOpen && selectedReport && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md font-sans overflow-y-auto">
-          <div className={`relative w-full max-w-lg max-h-[92vh] sm:max-h-[90vh] flex flex-col rounded-t-3xl sm:rounded-[24px] border p-4 sm:p-6 space-y-4 font-mono text-xs shadow-2xl z-10 overflow-hidden ${
-            isDarkMode ? 'border-white/[0.08] bg-[#121215] text-white' : 'border-slate-200 bg-white text-slate-900'
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-md font-sans overflow-y-auto">
+          <div className={`relative w-full max-w-lg max-h-[92vh] sm:max-h-[90vh] flex flex-col rounded-t-2xl sm:rounded-2xl border p-5 sm:p-6 space-y-4 shadow-2xl backdrop-blur-2xl transition-all overflow-hidden ${
+            isDarkMode ? 'bg-[#09090B] border-white/10 text-white shadow-[0_24px_60px_rgba(0,0,0,0.8)]' : 'bg-white/95 border-slate-200/80 text-slate-900 shadow-[0_20px_60px_rgba(0,0,0,0.15)]'
           }`}>
             {/* Mobile Grab Handle */}
             <div className="pt-1 pb-0 block sm:hidden">
-              <div className="w-12 h-1.5 bg-slate-700/80 rounded-full mx-auto" />
+              <div className="w-10 h-1 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto" />
             </div>
 
-            <div className={`flex items-center justify-between border-b pb-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400">
-                  <Award className="w-5 h-5" />
+            <div className={`flex items-center justify-between border-b pb-3.5 ${isDarkMode ? 'border-white/10' : 'border-slate-100'}`}>
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  <Award className="w-5 h-5 stroke-[2]" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm uppercase text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">Certificate of Compliance (CoC)</h3>
-                  <p className="text-[11px] text-slate-400">Pre-Dispatch Inspection Report</p>
+                  <h3 className="font-bold text-sm tracking-tight">Certificate of Compliance (CoC)</h3>
+                  <p className="text-xs text-slate-400">Pre-Dispatch Inspection Report</p>
                 </div>
               </div>
               <button 
@@ -921,37 +1215,39 @@ export const PDIView: React.FC<PDIViewProps> = ({
                   setSelectedReport(null);
                   certModal.close();
                 }} 
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white font-bold cursor-pointer p-1 rounded-lg"
+                className="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-200 transition-all cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="space-y-3 overflow-y-auto flex-1">
-              <div className={`p-4 rounded-xl border space-y-2.5 ${
-                isDarkMode ? 'border-white/[0.08] bg-black/20' : 'bg-slate-50 border-slate-200'
+            <div className="space-y-3 overflow-y-auto flex-1 text-xs">
+              <div className={`p-4 rounded-2xl border space-y-2.5 ${
+                isDarkMode ? 'bg-black/60 border-white/10' : 'bg-slate-50 border-slate-200/80'
               }`}>
-                <div className="flex justify-between font-bold text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">
-                  <span>Certificate #: {selectedReport.certificateNo || 'PDI-COC-2026-001'}</span>
-                  <span className="text-emerald-400">STATUS: PASSED</span>
+                <div className="flex justify-between items-center font-semibold">
+                  <span className="text-[#007AFF] dark:text-[#0A84FF]">{selectedReport.certificateNo || 'PDI-COC-2026-001'}</span>
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    Status: Passed
+                  </span>
                 </div>
-                <div className="text-slate-800 dark:text-slate-300 font-semibold font-sans">{selectedReport.partCode} — {selectedReport.partDescription}</div>
+                <div className="font-semibold text-slate-900 dark:text-white">{selectedReport.partCode} — {selectedReport.partDescription}</div>
                 <div className="flex justify-between text-slate-400">
-                  <span>Job #: <strong className="text-slate-900 dark:text-white">{selectedReport.jobNo}</strong></span>
-                  <span>PO #: <strong className="text-slate-900 dark:text-white">{selectedReport.orderPo}</strong></span>
+                  <span>Job #: <strong className="text-slate-700 dark:text-slate-200">{selectedReport.jobNo}</strong></span>
+                  <span>PO #: <strong className="text-slate-700 dark:text-slate-200">{selectedReport.orderPo}</strong></span>
                 </div>
-                <div className={`flex justify-between text-slate-400 border-t pt-2 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+                <div className={`flex justify-between text-slate-400 border-t pt-2 ${isDarkMode ? 'border-white/10' : 'border-slate-200/60'}`}>
                   <span>Quantity Passed:</span>
-                  <span className="font-bold text-emerald-500">{selectedReport.acceptedQty || selectedReport.qty} NOS</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{selectedReport.acceptedQty || selectedReport.qty} NOS</span>
                 </div>
                 {selectedReport.inspectorNotes ? (
-                  <div className="text-[11px] text-slate-400 pt-1">
-                    <span className="font-bold">Observations:</span> {selectedReport.inspectorNotes}
+                  <div className="text-slate-400 pt-1">
+                    <span className="font-semibold text-slate-600 dark:text-slate-300">Observations:</span> {selectedReport.inspectorNotes}
                   </div>
                 ) : null}
               </div>
 
-              <div className="p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-center font-bold">
+              <div className="p-3 rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-center font-medium text-xs">
                 ✓ 100% Dimensional Audit & Visual Surface Quality Verified
               </div>
             </div>
@@ -962,8 +1258,8 @@ export const PDIView: React.FC<PDIViewProps> = ({
                   setSelectedReport(null);
                   certModal.close();
                 }} 
-                className={`w-full sm:w-auto px-5 py-2.5 rounded-xl border font-bold cursor-pointer ${
-                  isDarkMode ? 'border-white/[0.08] bg-black/20 text-slate-300 hover:bg-white/[0.05]' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                className={`w-full sm:w-auto px-5 py-2 rounded-full border text-xs font-semibold cursor-pointer transition-all ${
+                  isDarkMode ? 'border-white/10 bg-black/60 text-slate-300 hover:bg-white/10' : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
               >
                 Close Certificate

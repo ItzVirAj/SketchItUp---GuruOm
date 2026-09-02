@@ -59,7 +59,8 @@ import {
   RouteCardTemplateStep,
   StockItem,
   MasterItem,
-  CompanyProfile
+  CompanyProfile,
+  MachineMaster
 } from '../../../types/console';
 import {
   fetchBOMs,
@@ -90,6 +91,7 @@ interface ProductionViewProps {
   qcItems?: QCInspection[];
   stock?: StockItem[];
   masters?: MasterItem[];
+  machines?: MachineMaster[];
   companyProfile?: CompanyProfile | null;
   isDarkMode: boolean;
   initialSection?: ProductionSection;
@@ -110,6 +112,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
   qcItems = [],
   stock = [],
   masters = [],
+  machines = [],
   companyProfile,
   isDarkMode,
   initialSection = 'job-cards',
@@ -164,8 +167,25 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
   const [selectedJobForTraveler, setSelectedJobForTraveler] = useState<JobCard | null>(null);
   const [selectedOpSequence, setSelectedOpSequence] = useState<number | null>(null);
 
+  // Machine Master Integration - strictly linked to /masters/machines
+  const availableMachines = useMemo(() => {
+    return machines || [];
+  }, [machines]);
+
   // Machine Breakdown Reporting Modal State
-  const [breakdownMachine, setBreakdownMachine] = useState('CNC-LATHE-01');
+  const [breakdownMachine, setBreakdownMachine] = useState<string>('');
+
+  useEffect(() => {
+    if (availableMachines.length > 0) {
+      const match = availableMachines.find(m => (m.name || m.code) === breakdownMachine || m.code === breakdownMachine);
+      if (!match) {
+        setBreakdownMachine(availableMachines[0].name || availableMachines[0].code);
+      }
+    } else {
+      setBreakdownMachine('');
+    }
+  }, [availableMachines]);
+
   const [breakdownReason, setBreakdownReason] = useState('Spindle Overheat & Axis Servo Error');
   const [breakdownOperator, setBreakdownOperator] = useState('Sachin G. (Lead Machinist)');
   const [breakdownNotes, setBreakdownNotes] = useState('');
@@ -309,7 +329,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
   const [newDrawingRev, setNewDrawingRev] = useState('REV-A');
   const [newHeatLot, setNewHeatLot] = useState(''); // Optional!
   const [newQty, setNewQty] = useState(100);
-  const [newMachine, setNewMachine] = useState('VMC-01 (Vertical Milling)');
+  const [newMachine, setNewMachine] = useState('');
   const [newTargetDate, setNewTargetDate] = useState('2026-08-20');
 
   // Computed linked BOM and Route Card for selected Part Code
@@ -829,12 +849,18 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
   // Non-finished-goods categorized items for BOM Component Rows
   const bomComponentMasters = useMemo(() => {
     const list = masters || [];
-    const rm = list.filter(m => m.itemType === 'Raw Material').sort((a, b) => (a.code || '').localeCompare(b.code || ''));
-    const sf = list.filter(m => m.itemType === 'Semi-Finished').sort((a, b) => (a.code || '').localeCompare(b.code || ''));
-    const bo = list.filter(m => m.itemType === 'Bought-Out').sort((a, b) => (a.code || '').localeCompare(b.code || ''));
-    const co = list.filter(m => m.itemType === 'Consumable').sort((a, b) => (a.code || '').localeCompare(b.code || ''));
-    const totalCount = rm.length + sf.length + bo.length + co.length;
-    return { rm, sf, bo, co, totalCount };
+    const isRM = (m: MasterItem) => m.itemType === 'Raw Material' || m.category === 'RAW_MATERIAL' || m.category === 'Raw Material';
+    const isSF = (m: MasterItem) => m.itemType === 'Semi-Finished' || m.category === 'SEMI_FINISHED' || m.category === 'Semi-Finished';
+    const isBO = (m: MasterItem) => m.itemType === 'Bought-Out' || m.category === 'BOUGHT_OUT' || m.category === 'Bought-Out';
+    const isCO = (m: MasterItem) => m.itemType === 'Consumable' || m.category === 'CONSUMABLE' || m.category === 'Consumable';
+
+    const rm = list.filter(isRM).sort((a, b) => (a.code || '').localeCompare(b.code || ''));
+    const sf = list.filter(isSF).sort((a, b) => (a.code || '').localeCompare(b.code || ''));
+    const bo = list.filter(isBO).sort((a, b) => (a.code || '').localeCompare(b.code || ''));
+    const co = list.filter(isCO).sort((a, b) => (a.code || '').localeCompare(b.code || ''));
+    const other = list.filter(m => !isRM(m) && !isSF(m) && !isBO(m) && !isCO(m) && m.itemType !== 'Finished Good' && !m.isFinishedGoods && m.category !== 'FINISHED_GOODS').sort((a, b) => (a.code || '').localeCompare(b.code || ''));
+    const totalCount = rm.length + sf.length + bo.length + co.length + other.length;
+    return { rm, sf, bo, co, other, totalCount };
   }, [masters]);
 
   // Dynamic component items for BOM modal
@@ -859,6 +885,16 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
       unitCost: 95
     }
   ]);
+
+  // Track components with SKUs not found in the Items Master
+  const unmatchedComponentCount = useMemo(() => {
+    const list = masters || [];
+    return bomFormComponents.filter(c => {
+      const code = (c.componentCode || '').trim().toLowerCase();
+      if (!code) return false;
+      return !list.some(m => (m.code || '').trim().toLowerCase() === code);
+    }).length;
+  }, [bomFormComponents, masters]);
 
   const handleOpenCreateBom = () => {
     setEditingBom(null);
@@ -911,6 +947,13 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
     createBomModal.open({ bomCode: bom.bomCode });
   };
 
+  const handleCloseCreateBom = () => {
+    createBomModal.close();
+    setEditingBom(null);
+    setBomFormParentCode('');
+    setBomFormParentName('');
+  };
+
   const handleAddBomComponentRow = () => {
     setBomFormComponents(prev => [
       ...prev,
@@ -953,20 +996,32 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
     e.preventDefault();
     const form = e.target as any;
     const bomPayload: BillOfMaterials = {
-      bomCode: form.bomCode.value,
-      parentPartCode: form.parentCode.value,
-      parentPartName: form.parentName.value,
-      revision: form.revision.value || 'v1.0',
-      yieldPercentage: Number(form.yield.value || 98.5),
-      batchSize: Number(form.batchSize.value || 100),
-      status: (form.status?.value as any) || 'ACTIVE',
-      notes: form.notes.value || '',
-      components: bomFormComponents.filter(c => c.componentCode.trim().length > 0)
+      id: editingBom?.id,
+      bomCode: form.bomCode?.value || editingBom?.bomCode || 'BOM-00000001-A',
+      parentPartCode: bomFormParentCode || form.parentCode?.value,
+      parentPartName: bomFormParentName || form.parentName?.value,
+      revision: form.revision?.value || 'v1.0',
+      yieldPercentage: Number(form.yield?.value || 98.5),
+      batchSize: Number(form.batchSize?.value || 100),
+      status: (form.status?.value as any) || (editingBom?.status as any) || 'ACTIVE',
+      notes: form.notes?.value || '',
+      components: bomFormComponents
+        .filter(c => c.componentCode && c.componentCode.trim().length > 0)
+        .map(c => ({
+          ...c,
+          componentCode: c.componentCode.trim(),
+          componentName: c.componentName?.trim() || c.componentCode.trim(),
+          qtyPerUnit: Number(c.qtyPerUnit) > 0 ? Number(c.qtyPerUnit) : 1,
+          unit: c.unit || 'NOS',
+          scrapAllowancePct: Number(c.scrapAllowancePct) >= 0 ? Number(c.scrapAllowancePct) : 0,
+          stage: c.stage || 'CNC_MACHINING',
+          unitCost: Number(c.unitCost) >= 0 ? Number(c.unitCost) : 0
+        }))
     };
 
     try {
       await saveBOM(bomPayload);
-      createBomModal.close();
+      handleCloseCreateBom();
       setActionSuccess(`BOM ${bomPayload.bomCode} saved successfully.`);
       await loadManufacturingData();
     } catch (err: any) {
@@ -1055,13 +1110,13 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
     inspectionRequired: boolean;
     requiredCertification: string;
   }> = [
-    { sequenceNo: 10, operationName: 'Raw Material Saw Cutting', workCenter: 'BANDSAW-01', standardTimeMinutes: 5, inspectionRequired: false, requiredCertification: 'Operator Lv1' },
-    { sequenceNo: 20, operationName: 'CNC Turning (OD/Facing)', workCenter: 'CNC-LATHE-01', standardTimeMinutes: 12, inspectionRequired: false, requiredCertification: 'CNC Certified' },
-    { sequenceNo: 30, operationName: 'VMC Drilling & Tapping', workCenter: 'VMC-02', standardTimeMinutes: 15, inspectionRequired: false, requiredCertification: 'VMC Machinist' },
-    { sequenceNo: 40, operationName: 'Heat Treatment (Hardening)', workCenter: 'HT-FURNACE-01', standardTimeMinutes: 30, inspectionRequired: true, requiredCertification: 'Heat Treatment Tech' },
-    { sequenceNo: 50, operationName: 'Cylindrical Precision Grinding', workCenter: 'GRIND-01', standardTimeMinutes: 10, inspectionRequired: true, requiredCertification: 'Grinding Specialist' },
-    { sequenceNo: 60, operationName: 'Final Quality Inspection (QC)', workCenter: 'QC-LAB', standardTimeMinutes: 8, inspectionRequired: true, requiredCertification: 'QC Inspector Lv2' },
-    { sequenceNo: 70, operationName: 'Ultrasonic Cleaning & Protective Packing', workCenter: 'PACK-01', standardTimeMinutes: 5, inspectionRequired: false, requiredCertification: 'Packing Clerk' }
+    { sequenceNo: 10, operationName: 'Raw Material Saw Cutting', workCenter: '', standardTimeMinutes: 5, inspectionRequired: false, requiredCertification: 'Operator Lv1' },
+    { sequenceNo: 20, operationName: 'CNC Turning (OD/Facing)', workCenter: '', standardTimeMinutes: 12, inspectionRequired: false, requiredCertification: 'CNC Certified' },
+    { sequenceNo: 30, operationName: 'VMC Drilling & Tapping', workCenter: '', standardTimeMinutes: 15, inspectionRequired: false, requiredCertification: 'VMC Machinist' },
+    { sequenceNo: 40, operationName: 'Heat Treatment (Hardening)', workCenter: '', standardTimeMinutes: 30, inspectionRequired: true, requiredCertification: 'Heat Treatment Tech' },
+    { sequenceNo: 50, operationName: 'Cylindrical Precision Grinding', workCenter: '', standardTimeMinutes: 10, inspectionRequired: true, requiredCertification: 'Grinding Specialist' },
+    { sequenceNo: 60, operationName: 'Final Quality Inspection (QC)', workCenter: '', standardTimeMinutes: 8, inspectionRequired: true, requiredCertification: 'QC Inspector Lv2' },
+    { sequenceNo: 70, operationName: 'Ultrasonic Cleaning & Protective Packing', workCenter: '', standardTimeMinutes: 5, inspectionRequired: false, requiredCertification: 'Packing Clerk' }
   ];
 
   const [routeFormSteps, setRouteFormSteps] = useState<Array<{
@@ -1094,7 +1149,10 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
             id: op.id,
             sequenceNo: op.sequenceNo,
             operationName: op.operationName,
-            workCenter: op.workCenter,
+            // Only retain workCenter if it actually exists in Machine Master (availableMachines)
+            workCenter: availableMachines.some(m => (m.name || m.code) === op.workCenter || m.code === op.workCenter)
+              ? op.workCenter
+              : '',
             standardTimeMinutes: op.standardTimeMinutes || 10,
             inspectionRequired: !!op.inspectionRequired,
             requiredCertification: op.requiredCertification || 'None'
@@ -1107,12 +1165,13 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
   const handleAddRouteStepRow = () => {
     setRouteFormSteps(prev => {
       const lastSeq = prev.length > 0 ? Math.max(...prev.map(s => s.sequenceNo)) : 0;
+      const defaultMch = availableMachines[0]?.name || availableMachines[0]?.code || '';
       return [
         ...prev,
         {
           sequenceNo: lastSeq + 10,
           operationName: 'Precision Machining',
-          workCenter: 'VMC-01',
+          workCenter: defaultMch,
           standardTimeMinutes: 10,
           inspectionRequired: false,
           requiredCertification: 'None'
@@ -1209,10 +1268,43 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
   };
 
   useEffect(() => {
-    if (createBomModal.isOpen && createBomModal.params.bomCode && !editingBom) {
-      const found = boms.find(b => b.bomCode === createBomModal.params.bomCode);
-      if (found) handleOpenEditBom(found);
-    } else if (createBomModal.isOpen && !editingBom && !bomFormParentCode) {
+    if (!createBomModal.isOpen) {
+      if (editingBom) setEditingBom(null);
+      return;
+    }
+    if (createBomModal.params.bomCode) {
+      if (!editingBom || editingBom.bomCode !== createBomModal.params.bomCode) {
+        const found = boms.find(b => b.bomCode === createBomModal.params.bomCode);
+        if (found) {
+          setEditingBom(found);
+          setBomFormParentCode(found.parentPartCode || '');
+          setBomFormParentName(found.parentPartName || '');
+          setBomFormComponents(
+            found.components?.length > 0 
+              ? found.components.map(c => ({
+                  componentCode: c.componentCode,
+                  componentName: c.componentName,
+                  componentType: c.componentType || 'RAW_MATERIAL',
+                  qtyPerUnit: c.qtyPerUnit,
+                  unit: c.unit || 'KG',
+                  scrapAllowancePct: c.scrapAllowancePct || 0,
+                  stage: c.stage || 'MACHINING',
+                  unitCost: c.unitCost || 0
+                }))
+              : [{
+                  componentCode: 'RAW-EN8-BAR-32MM',
+                  componentName: 'EN8 Steel Bar Ø32mm',
+                  componentType: 'RAW_MATERIAL',
+                  qtyPerUnit: 1.8,
+                  unit: 'KG',
+                  scrapAllowancePct: 2.5,
+                  stage: 'CNC_MACHINING',
+                  unitCost: 95
+                }]
+          );
+        }
+      }
+    } else if (!editingBom && !bomFormParentCode) {
       const initialCode = fgMasters[0]?.code || '';
       setBomFormParentCode(initialCode);
       const matched = masters.find(m => m.code === initialCode);
@@ -2784,9 +2876,25 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
           {/* Sequenced Operations Builder */}
           <div className="space-y-3 pt-2">
             <div className="flex items-center justify-between">
-              <div className="text-[11px] font-bold uppercase text-emerald-500 dark:text-emerald-400 font-mono">
-                Operation Steps & Sequence Builder ({routeFormSteps.length} Stages)
+              <div className="flex items-center gap-2.5">
+                <span className="text-[11px] font-bold uppercase text-emerald-500 dark:text-emerald-400 font-mono">
+                  Operation Steps & Sequence Builder ({routeFormSteps.length} Stages)
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    createRouteModal.close();
+                    navigate('/masters/machines');
+                    if (onNavigate) onNavigate('masters');
+                  }}
+                  className="text-[10px] font-mono font-medium text-emerald-500 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer transition-ui"
+                  title="Manage Machines in Machine Master"
+                >
+                  <span>Manage Machine Master</span>
+                  <ExternalLink className="w-3 h-3" />
+                </button>
               </div>
+
               <button
                 type="button"
                 onClick={handleAddRouteStepRow}
@@ -2796,6 +2904,26 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                 <span>Add Operation Step</span>
               </button>
             </div>
+
+            {availableMachines.length === 0 && (
+              <div className="p-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs flex items-center justify-between">
+                <span className="flex items-center gap-1.5 font-mono text-[11px]">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                  Machine Master is empty. Register machines at Machine Master.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    createRouteModal.close();
+                    navigate('/masters/machines');
+                    if (onNavigate) onNavigate('masters');
+                  }}
+                  className="font-bold underline hover:text-amber-300 font-mono text-[11px] flex items-center gap-1 cursor-pointer"
+                >
+                  <span>Go to Machine Master</span>
+                </button>
+              </div>
+            )}
 
             <div className="space-y-2.5 max-h-[320px] overflow-y-auto pr-1">
               {routeFormSteps.map((step, idx) => (
@@ -2843,17 +2971,50 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                     />
                   </div>
 
-                  {/* Work Center */}
-                  <div className="w-32">
-                    <input
+                  {/* Work Center / Machine from Machine Master */}
+                  <div className="w-48 sm:w-56">
+                    <select
                       value={step.workCenter}
-                      onChange={(e) => handleRouteStepChange(idx, 'workCenter', e.target.value)}
-                      placeholder="Work Center (e.g. VMC-01)"
-                      required
-                      className={`w-full rounded-xl border p-2 text-xs font-mono outline-none focus:border-emerald-500 ${
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        handleRouteStepChange(idx, 'workCenter', val);
+                        const match = availableMachines.find(m => (m.name || m.code) === val || m.code === val);
+                        if (match && (!step.operationName || step.operationName === 'Precision Machining')) {
+                          handleRouteStepChange(idx, 'operationName', match.type || match.name);
+                        }
+                      }}
+                      className={`w-full rounded-xl border p-2 text-xs font-mono outline-none focus:border-emerald-500 cursor-pointer ${
                         isDarkMode ? 'border-slate-700/80 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-900 shadow-2xs'
                       }`}
-                    />
+                    >
+                      {availableMachines.length === 0 ? (
+                        <option value="">-- No machines in Machine Master --</option>
+                      ) : (
+                        <>
+                          <option value="">-- Select Machine from Master --</option>
+                          {availableMachines.map((m) => (
+                            <option key={m.code} value={m.name || m.code}>
+                              {m.code} — {m.name} ({m.type || m.department || 'Machine Shop'})
+                            </option>
+                          ))}
+                        </>
+                      )}
+                    </select>
+                    {availableMachines.length === 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          createRouteModal.close();
+                          navigate('/masters/machines');
+                          if (onNavigate) onNavigate('masters');
+                        }}
+                        className="text-[9px] font-mono text-emerald-500 dark:text-emerald-400 hover:underline flex items-center gap-0.5 mt-1 cursor-pointer"
+                        title="Add machines in Machine Master"
+                      >
+                        <span>+ Add in Machine Master</span>
+                        <ExternalLink className="w-2.5 h-2.5" />
+                      </button>
+                    )}
                   </div>
 
                   {/* Standard Time Mins */}
@@ -2944,7 +3105,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
       {/* ========================================================================================= */}
       <Modal
         isOpen={createBomModal.isOpen}
-        onClose={() => createBomModal.close()}
+        onClose={handleCloseCreateBom}
         maxWidth="3xl"
         isDarkMode={isDarkMode}
         icon={<Layers className="w-5 h-5" />}
@@ -2975,7 +3136,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    createBomModal.close();
+                    handleCloseCreateBom();
                     navigate('/masters/items');
                     if (onNavigate) onNavigate('masters');
                   }}
@@ -3096,8 +3257,21 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
           {/* Dynamic Components Multi-Row Table */}
           <div className="space-y-3 pt-2">
             <div className="flex items-center justify-between">
-              <div className="text-[11px] font-bold uppercase text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] font-mono">
-                Raw Materials & Components ({bomFormComponents.length} Items)
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <div className="text-[11px] font-bold uppercase text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] font-mono">
+                  Raw Materials & Components ({bomFormComponents.length} Items)
+                </div>
+                {unmatchedComponentCount > 0 && (
+                  <span
+                    className="px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1.5"
+                    title={`${unmatchedComponentCount} component(s) have SKU codes that do not exist in the Items Master`}
+                  >
+                    <AlertTriangle className="w-3 h-3 shrink-0 text-amber-500" />
+                    <span>
+                      {unmatchedComponentCount} of {bomFormComponents.length} component{unmatchedComponentCount === 1 ? '' : 's'} {unmatchedComponentCount === 1 ? 'has' : 'have'} an unmatched SKU
+                    </span>
+                  </span>
+                )}
               </div>
               <button
                 type="button"
@@ -3110,30 +3284,44 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
             </div>
 
             <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
-              {bomFormComponents.map((comp, idx) => (
+              {bomFormComponents.map((comp, idx) => {
+                const isMatched = (masters || []).some(m => (m.code || '').trim().toLowerCase() === (comp.componentCode || '').trim().toLowerCase());
+                const isUnmatched = Boolean(comp.componentCode && comp.componentCode.trim().length > 0 && !isMatched);
+
+                return (
                 <div
                   key={idx}
-                  className={`p-3 rounded-2xl border flex flex-wrap items-center gap-2.5 ${
-                    isDarkMode ? 'bg-[#09090B] border-slate-800' : 'bg-slate-50 border-slate-200'
+                  className={`p-3 rounded-2xl border flex flex-wrap items-center gap-2.5 transition-ui ${
+                    isUnmatched
+                      ? isDarkMode
+                        ? 'bg-amber-950/20 border-amber-500/50 shadow-xs'
+                        : 'bg-amber-50/70 border-amber-300 shadow-xs'
+                      : isDarkMode
+                        ? 'bg-[#09090B] border-slate-800'
+                        : 'bg-slate-50 border-slate-200'
                   }`}
                 >
                   <div className="w-40 sm:w-48">
                     {bomComponentMasters.totalCount > 0 ? (
                       <select
+                        id={`bom-comp-code-${idx}`}
                         value={comp.componentCode}
                         onChange={(e) => handleBomComponentChange(idx, 'componentCode', e.target.value)}
                         required
-                        className={`w-full rounded-xl border p-2 text-xs font-mono outline-none cursor-pointer focus:border-[var(--accent-primary)] ${
-                          isDarkMode ? 'border-slate-700/80 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-900 shadow-2xs'
+                        className={`w-full rounded-xl border p-2 text-xs font-mono outline-none cursor-pointer focus:border-[var(--accent-primary)] transition-ui ${
+                          isUnmatched
+                            ? 'border-amber-500/80 bg-amber-500/10 text-amber-700 dark:text-amber-300 font-bold'
+                            : isDarkMode
+                              ? 'border-slate-700/80 bg-slate-900 text-white'
+                              : 'border-slate-300 bg-white text-slate-900 shadow-2xs'
                         }`}
                       >
                         <option value="" disabled>Select Component...</option>
                         {/* Preserve existing/custom code if not in any optgroup */}
-                        {comp.componentCode &&
-                          !masters.some(m => m.code === comp.componentCode && (m.itemType === 'Raw Material' || m.itemType === 'Semi-Finished' || m.itemType === 'Bought-Out' || m.itemType === 'Consumable')) && (
-                            <option value={comp.componentCode}>
-                              {comp.componentCode} — {comp.componentName || 'Custom / Existing Component'}
-                            </option>
+                        {comp.componentCode && !isMatched && (
+                          <option value={comp.componentCode}>
+                            ⚠ {comp.componentCode} — {comp.componentName || 'Unlisted SKU'}
+                          </option>
                         )}
                         {bomComponentMasters.rm.length > 0 && (
                           <optgroup label="Raw Material">
@@ -3171,22 +3359,64 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                             ))}
                           </optgroup>
                         )}
+                        {bomComponentMasters.other.length > 0 && (
+                          <optgroup label="Other Components">
+                            {bomComponentMasters.other.map(m => (
+                              <option key={m.code} value={m.code}>
+                                {m.code} — {m.name || m.description}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
                       </select>
                     ) : (
                       <>
                         <input
+                          id={`bom-comp-code-${idx}`}
                           value={comp.componentCode}
                           onChange={(e) => handleBomComponentChange(idx, 'componentCode', e.target.value)}
                           placeholder="SKU (e.g. RAW-EN8)"
                           required
-                          className={`w-full rounded-xl border p-2 text-xs font-mono outline-none focus:border-[var(--accent-primary)] ${
-                            isDarkMode ? 'border-slate-700/80 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-900 shadow-2xs'
+                          className={`w-full rounded-xl border p-2 text-xs font-mono outline-none focus:border-[var(--accent-primary)] transition-ui ${
+                            isUnmatched
+                              ? 'border-amber-500/80 bg-amber-500/10 text-amber-700 dark:text-amber-300 font-bold'
+                              : isDarkMode
+                                ? 'border-slate-700/80 bg-slate-900 text-white'
+                                : 'border-slate-300 bg-white text-slate-900 shadow-2xs'
                           }`}
                         />
                         <p className="text-[10px] text-amber-500 dark:text-amber-400 mt-1 font-mono">
                           No component items found in Items Master — showing manual entry
                         </p>
                       </>
+                    )}
+
+                    {isUnmatched && (
+                      <div className="flex items-center justify-between gap-1.5 mt-1">
+                        <span
+                          title={`SKU "${comp.componentCode}" not found in Items Master — this component will always show as out of stock`}
+                          className="px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1 text-[10px] font-mono font-bold cursor-help truncate"
+                        >
+                          <AlertTriangle className="w-3 h-3 shrink-0 text-amber-500" />
+                          <span className="truncate">Unmatched SKU</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const el = document.getElementById(`bom-comp-code-${idx}`) as HTMLSelectElement | HTMLInputElement | null;
+                            if (el) {
+                              el.focus();
+                              if ('showPicker' in el && typeof (el as any).showPicker === 'function') {
+                                try { (el as any).showPicker(); } catch (_) {}
+                              }
+                            }
+                          }}
+                          className="px-2 py-0.5 rounded-md bg-[var(--accent-primary)]/20 text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] hover:bg-[var(--accent-primary)]/30 border border-[var(--accent-primary)]/40 text-[10px] font-mono font-bold transition-ui cursor-pointer shrink-0 hover:scale-105 active:scale-95"
+                          title="Reassign to a valid SKU from Items Master"
+                        >
+                          Fix SKU
+                        </button>
+                      </div>
                     )}
                   </div>
 
@@ -3260,7 +3490,8 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -3280,7 +3511,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
           <div className={`pt-4 border-t flex justify-end gap-3 font-sans ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
             <button
               type="button"
-              onClick={() => createBomModal.close()}
+              onClick={handleCloseCreateBom}
               className={`px-4 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-ui ${
                 isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
               }`}
@@ -3884,19 +4115,38 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Machine Center *</label>
-              <input
-                type="text"
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Machine Center (Machine Master) *
+              </label>
+              <select
                 required
                 value={newMachine}
                 onChange={(e) => setNewMachine(e.target.value)}
-                placeholder="e.g. VMC-01 (Vertical Milling)"
-                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none cursor-pointer transition-ui ${
                   isDarkMode 
                     ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
                     : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
                 }`}
-              />
+              >
+                {availableMachines.length === 0 ? (
+                  <>
+                    <option value="" disabled>No machines in Machine Master</option>
+                    {newMachine && <option value={newMachine}>{newMachine}</option>}
+                  </>
+                ) : (
+                  <>
+                    <option value="">-- Select Machine from Master --</option>
+                    {availableMachines.map((m) => (
+                      <option key={m.code} value={m.name || m.code}>
+                        {m.code} — {m.name} ({m.type || m.department || 'Machine Shop'})
+                      </option>
+                    ))}
+                    {newMachine && !availableMachines.some(m => (m.name || m.code) === newMachine || m.code === newMachine) && (
+                      <option value={newMachine}>{newMachine}</option>
+                    )}
+                  </>
+                )}
+              </select>
             </div>
             <div>
               <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Target Completion Date</label>
@@ -4530,18 +4780,35 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-[11px] font-mono uppercase font-bold text-slate-400 mb-1.5">
-                            Assigned Machine / Work Center *
+                            Assigned Machine / Work Center (Machine Master) *
                           </label>
-                          <input
-                            type="text"
+                          <select
                             required
                             value={opMachineId}
                             onChange={(e) => setOpMachineId(e.target.value)}
-                            placeholder="e.g. VMC-01 (Vertical Milling)"
-                            className={`w-full rounded-2xl border px-4 py-3 text-xs font-mono outline-none transition-ui ${
+                            className={`w-full rounded-2xl border px-4 py-3 text-xs font-mono outline-none cursor-pointer transition-ui ${
                               isDarkMode ? 'bg-slate-900 border-slate-800 text-white focus:border-[#5B75F8]' : 'bg-white border-slate-200 text-slate-900 focus:border-[#5B75F8]'
                             }`}
-                          />
+                          >
+                            {availableMachines.length === 0 ? (
+                              <>
+                                <option value="" disabled>No machines in Machine Master</option>
+                                {opMachineId && <option value={opMachineId}>{opMachineId}</option>}
+                              </>
+                            ) : (
+                              <>
+                                <option value="">-- Select Machine from Master --</option>
+                                {availableMachines.map((m) => (
+                                  <option key={m.code} value={m.name || m.code}>
+                                    {m.code} — {m.name} ({m.type || m.department || 'Machining'})
+                                  </option>
+                                ))}
+                                {opMachineId && !availableMachines.some(m => (m.name || m.code) === opMachineId || m.code === opMachineId) && (
+                                  <option value={opMachineId}>{opMachineId}</option>
+                                )}
+                              </>
+                            )}
+                          </select>
                         </div>
 
                         <div>
@@ -4818,20 +5085,29 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Select Work Center / Machine *
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                Select Work Center / Machine (Machine Master) *
+              </label>
+              <span className="text-[10px] text-slate-500 font-mono">
+                {availableMachines.length} Machine{availableMachines.length === 1 ? '' : 's'} in Master
+              </span>
+            </div>
             <select
+              required
               value={breakdownMachine}
               onChange={(e) => setBreakdownMachine(e.target.value)}
               className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-rose-500"
             >
-              <option value="CNC-LATHE-01">CNC-LATHE-01 (Heavy Turning)</option>
-              <option value="VMC-01">VMC-01 (Vertical Machining Center)</option>
-              <option value="HOBBING-01">HOBBING-01 (Gear Hobber)</option>
-              <option value="BANDSAW-01">BANDSAW-01 (Horizontal Bandsaw)</option>
-              <option value="GRIND-01">GRIND-01 (Precision Cylindrical Grinder)</option>
-              <option value="HT-FURNACE-01">HT-FURNACE-01 (Induction Furnace)</option>
+              {availableMachines.length === 0 ? (
+                <option value="" disabled>No machines found in Machine Master</option>
+              ) : (
+                availableMachines.map((m) => (
+                  <option key={m.code} value={m.name || m.code}>
+                    {m.code} — {m.name} ({m.type || m.department || 'Machine Shop'}) [{m.status || 'Active'}]
+                  </option>
+                ))
+              )}
             </select>
           </div>
 

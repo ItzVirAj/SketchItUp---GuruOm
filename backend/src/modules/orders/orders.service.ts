@@ -848,6 +848,7 @@ export class OrdersService {
         .from('customer_orders')
         .update({
           status: newStatus,
+          stage: newStatus,
           progress_step: progressStep,
           updated_at: updatedAt
         })

@@ -578,27 +578,21 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
     const prog = getOrderProgression(ord);
     const stagePct = Math.round(((prog.activeStepIndex + 1) / 8) * 100);
 
-    let progressGradient = 'from-rose-500 via-amber-500 to-emerald-500';
+    let progressBg = 'bg-[#007AFF]';
     if (prog.isQcRejected) {
-      progressGradient = 'from-rose-600 to-rose-700';
+      progressBg = 'bg-rose-500';
     } else if (prog.isQcHold || prog.isPdiHold) {
-      progressGradient = 'from-amber-500 to-amber-600';
-    } else if (stagePct <= 25) {
-      progressGradient = 'from-rose-500 to-orange-500';
-    } else if (stagePct <= 50) {
-      progressGradient = 'from-rose-500 via-orange-500 to-amber-400';
-    } else if (stagePct <= 75) {
-      progressGradient = 'from-rose-500 via-amber-500 to-teal-400';
-    } else {
-      progressGradient = 'from-rose-500 via-amber-500 to-emerald-500';
+      progressBg = 'bg-amber-500';
+    } else if (prog.activeStepIndex >= 7) {
+      progressBg = 'bg-emerald-500';
     }
 
     return (
-      <div className={`space-y-1.5 select-none font-mono ${variant === 'table' ? 'min-w-[220px] max-w-[300px]' : 'w-full'}`}>
+      <div className={`space-y-1.5 select-none ${variant === 'table' ? 'min-w-[190px] max-w-[270px]' : 'w-full'}`}>
         {/* Status Header */}
         <div className="flex items-center justify-between gap-2">
-          {/* Active Stage Pill */}
-          <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase border transition-ui ${prog.badgeBg}`}>
+          {/* Apple Active Stage Capsule */}
+          <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${prog.badgeBg}`}>
             <span className="relative flex h-1.5 w-1.5 shrink-0">
               <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
                 prog.isQcRejected ? 'bg-rose-400' : (prog.isQcHold || prog.isPdiHold) ? 'bg-amber-400' : prog.badgeDot
@@ -607,26 +601,26 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                 prog.isQcRejected ? 'bg-rose-500' : (prog.isQcHold || prog.isPdiHold) ? 'bg-amber-500' : prog.badgeDot
               }`} />
             </span>
-            <span className="tracking-wide truncate max-w-[160px]">{prog.statusLabel}</span>
+            <span className="truncate max-w-[150px]">{prog.statusLabel}</span>
           </div>
 
           {/* Telemetry Gate & % Badge */}
-          <div className="flex items-center gap-1 text-[9px] font-bold shrink-0 text-slate-400 dark:text-slate-500">
+          <div className="flex items-center gap-1 text-[10px] font-medium shrink-0 text-slate-400 dark:text-slate-500">
             <span>{prog.activeStepIndex + 1}/8</span>
             <span>•</span>
             <span>{stagePct}%</span>
           </div>
         </div>
 
-        {/* Continuous Seamless Red-to-Green Progress Bar */}
+        {/* Apple Style Smooth Track */}
         <div
           title={`Stage ${prog.activeStepIndex + 1}/8: ${prog.statusLabel} (${stagePct}% complete)`}
-          className={`w-full h-2 rounded-full overflow-hidden relative cursor-help ${
-            isDarkMode ? 'bg-slate-800/80 border border-slate-700/60' : 'bg-slate-200/80 border border-slate-300/60'
+          className={`w-full h-1.5 rounded-full overflow-hidden ${
+            isDarkMode ? 'bg-slate-800' : 'bg-slate-100'
           }`}
         >
           <div
-            className={`h-full rounded-full bg-gradient-to-r ${progressGradient} transition-[width] duration-500 ease-out shadow-xs`}
+            className={`h-full rounded-full ${progressBg} transition-[width] duration-500 ease-out`}
             style={{ width: `${Math.max(stagePct, 6)}%` }}
           />
         </div>
@@ -778,44 +772,50 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
       {/* ── DESKTOP HEADER & KPI ROW (≥ md) ──                                      */}
       {/* ========================================================================= */}
       <div className="hidden md:block space-y-4">
-        <section className={`overflow-hidden rounded-[24px] border ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'}`}>
+        {/* Apple macOS Frosted Header & Integrated Metrics */}
+        <section className={`overflow-hidden rounded-2xl border transition-all backdrop-blur-xl ${
+          isDarkMode
+            ? 'bg-slate-900/80 border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.3)] text-white'
+            : 'bg-white/90 border-slate-200/80 shadow-[0_4px_20px_rgba(0,0,0,0.04)] text-slate-900'
+        }`}>
           <div className="flex items-center justify-between gap-6 px-6 py-5">
             <div className="min-w-0">
-              <div className="mb-1.5 flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                Live order book
-                <span className="text-slate-300 dark:text-slate-700">/</span>
-                <span>{orders.length} purchase orders</span>
+              <div className="mb-1 flex items-center gap-2 text-[11px] font-medium text-slate-400 dark:text-slate-500 tracking-wide">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                <span>Active Order Book</span>
+                <span className="text-slate-300 dark:text-slate-700">•</span>
+                <span>{orders.length} Purchase Orders</span>
               </div>
               <div className="flex items-baseline gap-3">
-                <h1 className="truncate text-[25px] font-extrabold tracking-[-0.04em] text-slate-950 dark:text-white">Customer Orders</h1>
-                <span className="hidden font-mono text-[10px] font-semibold text-slate-400 xl:inline">PO → MATERIAL → PRODUCTION → QC → DISPATCH → INVOICE</span>
+                <h1 className="truncate text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Customer Orders</h1>
               </div>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Track commercial value, delivery commitments, and every gated manufacturing handoff.</p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Track commercial value, delivery commitments, and gated manufacturing handoffs.</p>
             </div>
             <button
               onClick={openNewOrderModal}
-              className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96]"
+              className="flex h-10 shrink-0 items-center gap-2 rounded-full bg-[#007AFF] hover:bg-[#0071E3] active:scale-[0.98] px-4 text-xs font-semibold text-white shadow-sm shadow-blue-500/25 transition-all cursor-pointer"
             >
               <Plus className="h-4 w-4" />
-              New purchase order
+              <span>New Purchase Order</span>
             </button>
           </div>
 
-          <div className={`grid grid-cols-4 border-t ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+          <div className={`grid grid-cols-4 border-t ${isDarkMode ? 'border-white/10 bg-slate-950/40' : 'border-slate-100 bg-slate-50/50'}`}>
             {[
-              { label: 'Pipeline value', value: `₹${totalActiveValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`, detail: `${orders.length} total orders`, icon: TrendingUp, tone: 'text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)]', iconBg: 'bg-[var(--accent-soft-light)] dark:bg-[var(--accent-soft-dark)]' },
-              { label: 'In production', value: String(inProdCount), detail: 'Active shop-floor jobs', icon: Package, tone: 'text-amber-600 dark:text-amber-400', iconBg: 'bg-amber-500/10' },
-              { label: 'Quality gate', value: String(qcGateCount), detail: 'Inspection or NCR review', icon: ShieldCheck, tone: 'text-violet-600 dark:text-violet-400', iconBg: 'bg-violet-500/10' },
-              { label: 'Dispatch ready', value: String(dispatchReadyCount), detail: 'PDI-cleared orders', icon: Truck, tone: 'text-emerald-600 dark:text-emerald-400', iconBg: 'bg-emerald-500/10' },
+              { label: 'Pipeline Value', value: `₹${totalActiveValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`, detail: `${orders.length} total orders`, icon: TrendingUp, iconColor: 'text-[#007AFF] dark:text-[#0A84FF]', iconBg: 'bg-blue-500/10' },
+              { label: 'In Production', value: String(inProdCount), detail: 'Active shop-floor jobs', icon: Package, iconColor: 'text-amber-600 dark:text-amber-400', iconBg: 'bg-amber-500/10' },
+              { label: 'Quality Gate', value: String(qcGateCount), detail: 'Under inspection or NCR', icon: ShieldCheck, iconColor: 'text-purple-600 dark:text-purple-400', iconBg: 'bg-purple-500/10' },
+              { label: 'Ready for Dispatch', value: String(dispatchReadyCount), detail: 'PDI-cleared shipments', icon: Truck, iconColor: 'text-emerald-600 dark:text-emerald-400', iconBg: 'bg-emerald-500/10' },
             ].map((metric, index) => {
               const MetricIcon = metric.icon;
               return (
-                <div key={metric.label} className={`flex items-center gap-3 px-5 py-4 ${index > 0 ? isDarkMode ? 'border-l border-white/[0.07]' : 'border-l border-slate-200' : ''}`}>
-                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${metric.iconBg} ${metric.tone}`}><MetricIcon className="h-4 w-4" /></div>
+                <div key={metric.label} className={`flex items-center gap-3.5 px-6 py-4 ${index > 0 ? isDarkMode ? 'border-l border-white/10' : 'border-l border-slate-100' : ''}`}>
+                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${metric.iconBg} ${metric.iconColor}`}>
+                    <MetricIcon className="h-4 w-4 stroke-[2]" />
+                  </div>
                   <div className="min-w-0">
-                    <div className="font-mono text-[9px] font-bold uppercase tracking-[0.13em] text-slate-400">{metric.label}</div>
-                    <div className={`mt-0.5 truncate text-lg font-extrabold tracking-[-0.03em] ${metric.tone}`}>{metric.value}</div>
+                    <div className="text-[11px] font-medium text-slate-400 dark:text-slate-500">{metric.label}</div>
+                    <div className="mt-0.5 truncate text-lg font-bold tracking-tight text-slate-900 dark:text-white">{metric.value}</div>
                     <div className="truncate text-[10px] text-slate-400">{metric.detail}</div>
                   </div>
                 </div>
@@ -824,40 +824,59 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
           </div>
         </section>
 
-        <div className={`rounded-2xl border p-3 ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
-          <div className="flex items-center gap-2">
-            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${isDarkMode ? 'bg-white/[0.05] text-slate-400' : 'bg-slate-100 text-slate-500'}`} title="Filters">
+        {/* Apple macOS Style Toolbar / Filters */}
+        <div className={`rounded-2xl border p-2.5 transition-all backdrop-blur-xl ${
+          isDarkMode ? 'border-white/10 bg-slate-900/80 shadow-[0_4px_24px_rgba(0,0,0,0.3)]' : 'border-slate-200/80 bg-white/90 shadow-[0_4px_20px_rgba(0,0,0,0.04)]'
+        }`}>
+          <div className="flex items-center gap-2.5">
+            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${isDarkMode ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-600'}`} title="Filters">
               <Filter className="h-4 w-4" />
             </div>
-            <div className={`flex h-10 min-w-[260px] flex-1 items-center gap-2 rounded-xl border px-3 ${isDarkMode ? 'border-white/[0.08] bg-black/20 text-white focus-within:border-[var(--accent-border-dark)]' : 'border-slate-200 bg-slate-50 text-slate-900 focus-within:border-[var(--accent-primary)]'}`}>
-              <Search className="h-4 w-4 shrink-0 text-slate-400" />
+
+            {/* Apple Search Field */}
+            <div className={`flex h-9 min-w-[260px] flex-1 items-center gap-2 rounded-xl border px-3 transition-all ${
+              isDarkMode 
+                ? 'border-white/10 bg-slate-950/60 text-white focus-within:border-blue-500/50 focus-within:bg-slate-900' 
+                : 'border-slate-200/80 bg-slate-100/80 text-slate-900 focus-within:border-blue-500/50 focus-within:bg-white'
+            }`}>
+              <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search PO, customer, part, revision or heat lot..."
+                placeholder="Search PO, customer, part, revision..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-full w-full bg-transparent text-xs font-semibold outline-none placeholder:font-normal placeholder:text-slate-400"
+                className="h-full w-full bg-transparent text-xs font-medium outline-none placeholder:text-slate-400"
               />
-              {searchQuery && <button type="button" onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-700 dark:hover:text-white"><X className="h-3.5 w-3.5" /></button>}
+              {searchQuery && (
+                <button type="button" onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-0.5">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
 
+            {/* SubType Filter Pill */}
             <select
               value={subTypeFilter}
               onChange={(e) => setSubTypeFilter(e.target.value)}
-              className={`h-10 rounded-xl border px-3 text-[11px] font-bold outline-none ${isDarkMode ? 'border-white/[0.08] bg-black/20 text-white' : 'border-slate-200 bg-slate-50 text-slate-700'}`}
+              className={`h-9 rounded-xl border px-3 text-xs font-medium outline-none cursor-pointer transition-all ${
+                isDarkMode ? 'border-white/10 bg-slate-800/80 text-slate-200' : 'border-slate-200/80 bg-slate-100/80 text-slate-700'
+              }`}
             >
-              <option value="ALL">All types ({orders.length})</option>
+              <option value="ALL">All Types ({orders.length})</option>
               <option value="FRESH_PO">Fresh POs ({orders.filter(o => (o.subType || 'FRESH_PO') === 'FRESH_PO').length})</option>
               <option value="BLANKET_CALLOFF">Blanket Call-Offs ({orders.filter(o => o.subType === 'BLANKET_CALLOFF').length})</option>
               <option value="AMENDMENT">Amendments ({orders.filter(o => o.subType === 'AMENDMENT').length})</option>
             </select>
 
+            {/* Status Filter Pill */}
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className={`h-10 rounded-xl border px-3 text-[11px] font-bold outline-none ${isDarkMode ? 'border-white/[0.08] bg-black/20 text-white' : 'border-slate-200 bg-slate-50 text-slate-700'}`}
+              className={`h-9 rounded-xl border px-3 text-xs font-medium outline-none cursor-pointer transition-all ${
+                isDarkMode ? 'border-white/10 bg-slate-800/80 text-slate-200' : 'border-slate-200/80 bg-slate-100/80 text-slate-700'
+              }`}
             >
-              <option value="ALL">All stages ({orders.length})</option>
+              <option value="ALL">All Stages ({orders.length})</option>
               <option value="PO_RECEIVED">1. PO Confirmed</option>
               <option value="MATERIAL_CHECKED">2. Material Verified</option>
               <option value="IN_PRODUCTION">3. In Production</option>
@@ -868,6 +887,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
               <option value="CLOSED">8. Closed & Settled</option>
             </select>
 
+            {/* Sort Pill */}
             <select
               value={`${sortField}_${sortDirection}`}
               onChange={(e) => {
@@ -875,9 +895,11 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                 setSortField(field as any);
                 setSortDirection(dir as any);
               }}
-              className={`hidden h-10 rounded-xl border px-3 text-[11px] font-bold outline-none xl:block ${isDarkMode ? 'border-white/[0.08] bg-black/20 text-white' : 'border-slate-200 bg-slate-50 text-slate-700'}`}
+              className={`hidden h-9 rounded-xl border px-3 text-xs font-medium outline-none cursor-pointer xl:block transition-all ${
+                isDarkMode ? 'border-white/10 bg-slate-800/80 text-slate-200' : 'border-slate-200/80 bg-slate-100/80 text-slate-700'
+              }`}
             >
-              <option value="RECENCY_DESC">Sort: Recent Orders (Newest First)</option>
+              <option value="RECENCY_DESC">Sort: Recent Orders</option>
               <option value="RECENCY_ASC">Sort: Oldest Orders First</option>
               <option value="PO_NO_ASC">Sort: PO Number (A → Z)</option>
               <option value="PO_NO_DESC">Sort: PO Number (Z → A)</option>
@@ -886,26 +908,31 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
               <option value="AMOUNT_ASC">Sort: Amount (Low → High)</option>
             </select>
 
-            <div className={`flex h-10 items-center rounded-xl border p-1 ${isDarkMode ? 'border-white/[0.08] bg-black/20' : 'border-slate-200 bg-slate-100'}`}>
+            {/* Apple Segmented View Toggle */}
+            <div className={`flex h-9 items-center rounded-xl border p-0.5 ${
+              isDarkMode ? 'border-white/10 bg-slate-950/60' : 'border-slate-200/80 bg-slate-100/80'
+            }`}>
               <button
                 onClick={() => setViewMode('table')}
-                className={`flex h-8 w-8 items-center justify-center rounded-lg transition-ui ${viewMode === 'table'
-                  ? isDarkMode ? 'bg-white/[0.09] text-[var(--accent-text-dark)]' : 'bg-white text-[var(--accent-text-light)] shadow-xs'
-                  : isDarkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-900'
-                  }`}
+                className={`flex h-7.5 w-8 items-center justify-center rounded-lg transition-all cursor-pointer ${
+                  viewMode === 'table'
+                    ? isDarkMode ? 'bg-slate-800 text-white shadow-2xs' : 'bg-white text-slate-900 shadow-2xs'
+                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+                }`}
                 title="Table View"
               >
-                <List className="w-4 h-4" />
+                <List className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => setViewMode('grid')}
-                className={`flex h-8 w-8 items-center justify-center rounded-lg transition-ui ${viewMode === 'grid'
-                  ? isDarkMode ? 'bg-white/[0.09] text-[var(--accent-text-dark)]' : 'bg-white text-[var(--accent-text-light)] shadow-xs'
-                  : isDarkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-900'
-                  }`}
+                className={`flex h-7.5 w-8 items-center justify-center rounded-lg transition-all cursor-pointer ${
+                  viewMode === 'grid'
+                    ? isDarkMode ? 'bg-slate-800 text-white shadow-2xs' : 'bg-white text-slate-900 shadow-2xs'
+                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+                }`}
                 title="Grid View"
               >
-                <LayoutGrid className="w-4 h-4" />
+                <LayoutGrid className="w-3.5 h-3.5" />
               </button>
             </div>
 
@@ -918,16 +945,16 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                   setSortField('RECENCY');
                   setSortDirection('DESC');
                 }}
-                className="h-10 rounded-xl px-3 text-[11px] font-bold text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-white/[0.06] dark:hover:text-white"
+                className="h-9 rounded-xl px-3 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
               >
-                Clear
+                Reset
               </button>
             )}
           </div>
 
-          <div className="mt-2.5 flex items-center justify-between px-1 font-mono text-[9px] font-semibold uppercase tracking-wider text-slate-400">
+          <div className="mt-2 flex items-center justify-between px-1 text-[11px] font-medium text-slate-400 dark:text-slate-500">
             <span>Showing {sortedOrders.length} of {orders.length} orders</span>
-            <span>Click an order to inspect its lifecycle</span>
+            <span>Click any order to inspect details</span>
           </div>
         </div>
       </div>
@@ -1071,20 +1098,28 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
       {/* ========================================================================= */}
       <div className="hidden md:block">
         {viewMode === 'table' ? (
-          <div className={`overflow-hidden rounded-[22px] border transition-ui ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
-            }`}>
-            <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+          <div className={`overflow-hidden rounded-2xl border transition-all backdrop-blur-xl ${
+            isDarkMode 
+              ? 'border-white/10 bg-slate-900/80 shadow-[0_4px_24px_rgba(0,0,0,0.3)]' 
+              : 'border-slate-200/80 bg-white/90 shadow-[0_4px_20px_rgba(0,0,0,0.04)]'
+          }`}>
+            <div className={`flex items-center justify-between border-b px-5 py-3.5 ${isDarkMode ? 'border-white/10' : 'border-slate-100'}`}>
               <div>
-                <div className="text-xs font-extrabold text-slate-900 dark:text-white">Order lifecycle queue</div>
-                <div className="mt-0.5 text-[10px] text-slate-400">Commercial and manufacturing status in one view</div>
+                <div className="text-xs font-semibold text-slate-900 dark:text-white">Order Lifecycle Queue</div>
+                <div className="mt-0.5 text-[11px] text-slate-400">Commercial status and manufacturing progress in one view</div>
               </div>
-              <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>{sortedOrders.length} records</span>
+              <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${
+                isDarkMode ? 'border-white/10 bg-slate-800 text-slate-300' : 'border-slate-200 bg-slate-100 text-slate-600'
+              }`}>
+                {sortedOrders.length} records
+              </span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse font-sans">
                 <thead>
-                  <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${isDarkMode ? 'border-white/[0.07] bg-black/20 text-slate-500' : 'border-slate-200 bg-slate-50/80 text-slate-400'
-                    }`}>
+                  <tr className={`border-b text-[11px] font-semibold ${
+                    isDarkMode ? 'border-white/10 bg-slate-950/40 text-slate-400' : 'border-slate-100 bg-slate-50/75 text-slate-500'
+                  }`}>
                     <th
                       onClick={() => {
                         if (sortField === 'RECENCY') {
@@ -1094,17 +1129,17 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                           setSortDirection('DESC');
                         }
                       }}
-                      className="py-4 px-5 cursor-pointer hover:text-[#5B75F8] select-none transition-colors"
+                      className="py-3 px-5 cursor-pointer hover:text-[#007AFF] select-none transition-colors"
                     >
                       <div className="flex items-center gap-1.5">
                         <span>Purchase Order & Date</span>
                         {sortField === 'RECENCY' && (
-                          <span className="text-[#5B75F8] font-bold text-[10px] bg-[#5B75F8]/10 px-1.5 py-0.5 rounded border border-[#5B75F8]/20">
+                          <span className="text-[#007AFF] text-[10px] bg-blue-500/10 px-1.5 py-0.5 rounded-full font-medium">
                             {sortDirection === 'DESC' ? '↓ Recent' : '↑ Oldest'}
                           </span>
                         )}
                         {sortField === 'PO_NO' && (
-                          <span className="text-[#5B75F8]">{sortDirection === 'ASC' ? '↑' : '↓'}</span>
+                          <span className="text-[#007AFF]">{sortDirection === 'ASC' ? '↑' : '↓'}</span>
                         )}
                       </div>
                     </th>
@@ -1117,14 +1152,14 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                           setSortDirection('ASC');
                         }
                       }}
-                      className="py-4 px-5 cursor-pointer hover:text-[#5B75F8] select-none transition-colors"
+                      className="py-3 px-5 cursor-pointer hover:text-[#007AFF] select-none transition-colors"
                     >
                       <div className="flex items-center gap-1.5">
                         <span>Customer & Credit Status</span>
-                        {sortField === 'CUSTOMER' && <span className="text-[#5B75F8]">{sortDirection === 'ASC' ? '↑' : '↓'}</span>}
+                        {sortField === 'CUSTOMER' && <span className="text-[#007AFF]">{sortDirection === 'ASC' ? '↑' : '↓'}</span>}
                       </div>
                     </th>
-                    <th className="py-4 px-5">Current State</th>
+                    <th className="py-3 px-5">Lifecycle Progress</th>
                     <th
                       onClick={() => {
                         if (sortField === 'AMOUNT') {
@@ -1134,22 +1169,22 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                           setSortDirection('DESC');
                         }
                       }}
-                      className="py-4 px-5 text-right cursor-pointer hover:text-[#5B75F8] select-none transition-colors"
+                      className="py-3 px-5 text-right cursor-pointer hover:text-[#007AFF] select-none transition-colors"
                     >
                       <div className="flex items-center justify-end gap-1.5">
                         <span>Gross Amount</span>
-                        {sortField === 'AMOUNT' && <span className="text-[#5B75F8]">{sortDirection === 'ASC' ? '↑' : '↓'}</span>}
+                        {sortField === 'AMOUNT' && <span className="text-[#007AFF]">{sortDirection === 'ASC' ? '↑' : '↓'}</span>}
                       </div>
                     </th>
-                    <th className="py-4 px-5 text-center">Action</th>
+                    <th className="py-3 px-5 text-center">Action</th>
                   </tr>
                 </thead>
-                <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
+                <tbody className={`divide-y ${isDarkMode ? 'divide-white/5' : 'divide-slate-100'}`}>
                   {sortedOrders.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="py-12 text-center">
                         <div className="flex flex-col items-center justify-center gap-2">
-                          <ShoppingCart className="w-8 h-8 text-slate-400 opacity-50" />
+                          <ShoppingCart className="w-8 h-8 text-slate-400 opacity-40" />
                           <p className={`text-sm font-semibold ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>No purchase orders found</p>
                           <p className={`text-xs ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>Try adjusting your status or sub-type filter</p>
                         </div>
@@ -1189,66 +1224,72 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                         <tr
                           key={ord.id}
                           onClick={() => onSelectOrder(ord)}
-                          className={`group cursor-pointer transition-colors ${isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'
-                            }`}
+                          className={`group cursor-pointer transition-colors ${
+                            isDarkMode ? 'hover:bg-white/[0.03]' : 'hover:bg-slate-50/80'
+                          }`}
                         >
-                          <td className="py-4 px-5 font-bold font-mono">
-                            <div className="flex items-center gap-2.5">
-                              <div className={`p-2 rounded-xl transition-transform group-hover:scale-105 ${subType === 'BLANKET_CALLOFF'
-                                ? isDarkMode ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' : 'bg-purple-100 text-purple-700 border border-purple-200'
-                                : isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/30' : 'bg-[#5B75F8]/10 text-[#5B75F8] border border-[#5B75F8]/20'
-                                }`}>
-                                <ShoppingCart className="w-3.5 h-3.5" />
+                          <td className="py-3.5 px-5">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${
+                                subType === 'BLANKET_CALLOFF'
+                                  ? isDarkMode ? 'bg-purple-500/15 text-purple-300 border border-purple-500/20' : 'bg-purple-50 text-purple-700 border border-purple-100'
+                                  : isDarkMode ? 'bg-blue-500/15 text-[#0A84FF] border border-blue-500/20' : 'bg-blue-50 text-[#007AFF] border border-blue-100'
+                              }`}>
+                                <ShoppingCart className="w-4 h-4 stroke-[1.8]" />
                               </div>
                               <div>
-                                <div className={`text-xs font-bold flex items-center gap-1.5 ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>
+                                <div className="text-xs font-semibold flex items-center gap-1.5 text-slate-900 dark:text-white">
                                   <span>{ord.poNo}</span>
-                                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase border ${subType === 'BLANKET_CALLOFF'
-                                    ? isDarkMode ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' : 'bg-purple-100 text-purple-800 border-purple-200'
-                                    : subType === 'AMENDMENT'
-                                      ? isDarkMode ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' : 'bg-amber-100 text-amber-800 border-amber-200'
-                                      : isDarkMode ? 'bg-blue-500/20 text-blue-300 border-blue-500/30' : 'bg-blue-100 text-blue-800 border-blue-200'
-                                    }`}>
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${
+                                    subType === 'BLANKET_CALLOFF'
+                                      ? isDarkMode ? 'bg-purple-500/15 text-purple-300 border-purple-500/30' : 'bg-purple-50 text-purple-700 border-purple-200'
+                                      : subType === 'AMENDMENT'
+                                        ? isDarkMode ? 'bg-amber-500/15 text-amber-300 border-amber-500/30' : 'bg-amber-50 text-amber-700 border-amber-200'
+                                        : isDarkMode ? 'bg-blue-500/15 text-[#0A84FF] border-blue-500/30' : 'bg-blue-50 text-[#007AFF] border-blue-200'
+                                  }`}>
                                     {subType === 'BLANKET_CALLOFF' ? 'Blanket Call-off' : subType === 'AMENDMENT' ? 'Amendment' : 'Fresh PO'}
                                   </span>
                                 </div>
-                                <div className={`text-[10px] font-mono font-normal mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                                  {ord.lines ? `${ord.lines.length} Lines` : '0 Lines'} • PO Date: <span className="font-semibold">{ord.poDate || ord.createdAt?.split('T')[0] || 'N/A'}</span> • Del: {ord.deliveryDate}
+                                <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+                                  {ord.lines ? `${ord.lines.length} Lines` : '0 Lines'} • {ord.poDate || ord.createdAt?.split('T')[0] || 'N/A'} • Due: {ord.deliveryDate}
                                 </div>
                               </div>
                             </div>
                           </td>
 
-                          <td className="py-4 px-5">
-                            <div className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>{ord.customerName}</div>
+                          <td className="py-3.5 px-5">
+                            <div className="font-semibold text-slate-800 dark:text-slate-200">{ord.customerName}</div>
                             {hasCreditHold ? (
-                              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold mt-1 border ${isDarkMode ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
-                                }`}>
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-medium mt-1 border ${
+                                isDarkMode ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
+                              }`}>
                                 <AlertCircle className="w-3 h-3 text-rose-500" />
-                                <span>Credit Hold {ord.creditHoldOverrideBy ? '(Owner Overridden)' : '(Blocked)'}</span>
+                                <span>Credit Hold {ord.creditHoldOverrideBy ? '(Overridden)' : '(Blocked)'}</span>
                               </span>
                             ) : (
-                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-mono font-medium mt-1 border ${isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                }`}>
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-medium mt-1 border ${
+                                isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              }`}>
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                <span>Credit Verified OK</span>
+                                <span>Credit Approved</span>
                               </span>
                             )}
                           </td>
 
-                          <td className="py-4 px-5">
+                          <td className="py-3.5 px-5">
                             {renderProgressionStepper(ord, 'table')}
                           </td>
 
-                          <td className={`py-4 px-5 text-right font-bold font-mono text-xs ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                          <td className="py-3.5 px-5 text-right font-semibold text-xs text-slate-900 dark:text-white">
                             ₹{ord.grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                           </td>
 
-                          <td className="py-4 px-5 text-center">
-                            <button className={`mx-auto flex h-8 items-center justify-center gap-1 rounded-lg border px-2.5 font-mono text-[10px] font-bold transition-ui ${isDarkMode
-                              ? 'border-white/[0.08] bg-white/[0.04] text-slate-300 hover:border-[var(--accent-border-dark)] hover:text-[var(--accent-text-dark)]'
-                              : 'border-slate-200 bg-white text-slate-600 shadow-xs hover:border-[var(--accent-border-light)] hover:text-[var(--accent-text-light)]'
-                              }`}>
+                          <td className="py-3.5 px-5 text-center">
+                            <button className={`mx-auto flex h-8 items-center justify-center gap-1 rounded-full border px-3 text-xs font-medium transition-all cursor-pointer ${
+                              isDarkMode
+                                ? 'border-white/10 bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white'
+                                : 'border-slate-200 bg-slate-100/80 text-slate-700 hover:bg-slate-200'
+                            }`}>
                               <span>Inspect</span>
                               <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                             </button>
@@ -1262,26 +1303,29 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2 2xl:grid-cols-3">
             {sortedOrders.map((ord) => {
               return (
                 <div
                   key={ord.id}
                   onClick={() => onSelectOrder(ord)}
-                  className={`group cursor-pointer space-y-3 rounded-[20px] border p-5 transition-ui ${isDarkMode ? 'border-white/[0.08] bg-[#121215] hover:border-white/[0.14]' : 'border-slate-200 bg-white shadow-[0_8px_24px_rgba(15,23,42,0.05)] hover:-translate-y-0.5 hover:border-[var(--accent-border-light)] hover:shadow-[0_14px_34px_rgba(15,23,42,0.08)]'
-                    }`}
+                  className={`group cursor-pointer space-y-3 rounded-2xl border p-4.5 transition-all backdrop-blur-xl ${
+                    isDarkMode 
+                      ? 'border-white/10 bg-slate-900/80 hover:bg-slate-900 shadow-[0_4px_24px_rgba(0,0,0,0.3)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)]' 
+                      : 'border-slate-200/80 bg-white/90 hover:bg-white shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)]'
+                  }`}
                 >
                   <div className="flex items-center justify-between">
-                    <div className="font-bold font-mono text-sm text-[#5B75F8]">{ord.poNo}</div>
-                    <div className="text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                    <div className="font-semibold text-sm text-[#007AFF] dark:text-[#0A84FF]">{ord.poNo}</div>
+                    <div className="text-sm font-semibold text-slate-900 dark:text-white">
                       ₹{ord.grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </div>
                   </div>
-                  <div className={`text-xs font-bold ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>{ord.customerName}</div>
-                  <div className={`text-[10px] font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    PO Date: <span className="font-semibold">{ord.poDate || ord.createdAt?.split('T')[0] || 'N/A'}</span> • Del: {ord.deliveryDate}
+                  <div className={`text-xs font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>{ord.customerName}</div>
+                  <div className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                    PO Date: <span className="font-medium text-slate-700 dark:text-slate-300">{ord.poDate || ord.createdAt?.split('T')[0] || 'N/A'}</span> • Due: {ord.deliveryDate}
                   </div>
-                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80">
+                  <div className="pt-2 border-t border-slate-100 dark:border-white/5">
                     {renderProgressionStepper(ord, 'grid')}
                   </div>
                 </div>

@@ -675,35 +675,47 @@ body.modal-open, html.modal-open {
 
 /* Statutory Print Media Styles */
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm;
+  }
+
   body, html {
     background: #ffffff !important;
     color: #000000 !important;
-    font-size: 11pt !important;
+    font-size: 10pt !important;
     margin: 0 !important;
     padding: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 100% !important;
   }
 
   .no-print, header, aside, nav, button, .lucide-x {
     display: none !important;
   }
 
-  #challan-print-container {
+  /* Reset fixed modal overlay backdrops during print */
+  .fixed:has(#job-card-print-container),
+  .fixed:has(#challan-print-container) {
     position: static !important;
-    max-width: 100% !important;
-    max-height: none !important;
-    border: none !important;
-    box-shadow: none !important;
+    inset: auto !important;
     background: transparent !important;
-    color: #000000 !important;
+    backdrop-filter: none !important;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
     padding: 0 !important;
     margin: 0 !important;
-    overflow: visible !important;
+    display: block !important;
   }
 
+  #challan-print-container,
   #job-card-print-container {
     position: static !important;
     max-width: 100% !important;
     max-height: none !important;
+    height: auto !important;
     border: none !important;
     box-shadow: none !important;
     background: transparent !important;
@@ -711,6 +723,23 @@ body.modal-open, html.modal-open {
     padding: 0 !important;
     margin: 0 !important;
     overflow: visible !important;
+    display: block !important;
+  }
+
+  #challan-print-container > div,
+  #job-card-print-container > div {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    display: block !important;
+  }
+
+  .print-clean-box,
+  .print-clean-box * {
+    color: #000000 !important;
+    border-color: #333333 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
   }
 
   .print-clean-box {
@@ -718,8 +747,7 @@ body.modal-open, html.modal-open {
     border-radius: 0 !important;
     background: #ffffff !important;
     color: #000000 !important;
-    box-shadow: none !important;
-    padding: 15pt !important;
+    padding: 10pt !important;
   }
 
   table {
@@ -730,7 +758,7 @@ body.modal-open, html.modal-open {
   th, td {
     border: 1pt solid #333333 !important;
     color: #000000 !important;
-    padding: 6pt !important;
+    padding: 4pt 6pt !important;
   }
 
   thead tr {

@@ -248,6 +248,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   const [editChangeReason, setEditChangeReason] = useState('');
   const [editLines, setEditLines] = useState<OrderLineItem[]>(order.lines || []);
   const [editError, setEditError] = useState<string | null>(null);
+  const [isUnmatchedBannerDismissed, setIsUnmatchedBannerDismissed] = useState(false);
 
   const editTotalGross = editLines.reduce((sum, l) => sum + (Number(l.orderQty || 0) * Number(l.rate || 0)), 0);
 
@@ -268,7 +269,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   // 8-Stage Order Lifecycle: Confirmed -> Production -> QC/PDI -> Invoice & Challan -> Dispatched -> Delivered -> Receivable -> Closed
   const steps = [
     { name: 'Confirmed', subtitle: 'Order Approved', key: 0, icon: CheckCircle2, stageMatch: ['DRAFT', 'SUBMITTED', 'PO_RECEIVED', 'CONFIRMED', 'APPROVED', 'RELEASED'] },
-    { name: 'Production', subtitle: 'Job Cards & Machining', key: 1, icon: Package, stageMatch: ['MATERIAL_CHECKED', 'MATERIAL_CHECK', 'MATERIAL_READY', 'MATERIAL_VERIFIED', 'PROCUREMENT_PENDING', 'GRN', 'PO_SENT', 'GRN_RECEIVED', 'JOB_RELEASED', 'MATERIAL_ISSUED', 'IN_PRODUCTION', 'WITH_SUBCONTRACTOR', 'REWORK'] },
+    { name: 'Production', subtitle: 'Job Cards & Machining', key: 1, icon: Package, stageMatch: ['MATERIAL_CHECKED', 'MATERIAL_CHECK', 'MATERIAL_READY', 'MATERIAL_VERIFIED', 'MATERIAL_SHORT', 'MATERIAL_SHORTAGE', 'PROCUREMENT_PENDING', 'GRN', 'PO_SENT', 'GRN_RECEIVED', 'JOB_RELEASED', 'MATERIAL_ISSUED', 'IN_PRODUCTION', 'WITH_SUBCONTRACTOR', 'REWORK'] },
     { name: 'QC / PDI', subtitle: 'Compliance & Audit', key: 2, icon: ShieldCheck, stageMatch: ['READY_FOR_QC', 'QC', 'QC_INSPECTION', 'QC_HOLD', 'QC_REPORT_UPLOADED', 'PDI', 'PDI_HOLD'] },
     { name: 'Invoice & Challan', subtitle: 'Dispatch Prep', key: 3, icon: FileText, stageMatch: ['PDI_COMPLETE', 'READY_FOR_DISPATCH', 'READY_TO_DISPATCH', 'INVOICE_GENERATED', 'DISPATCH_READY'] },
     { name: 'Dispatched', subtitle: 'Shipped to Customer', key: 4, icon: Truck, stageMatch: ['PARTIALLY_DISPATCHED', 'DISPATCHED', 'IN_TRANSIT', 'DELIVERY_DELAYED'] },
@@ -377,7 +378,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
     activeStepIndex = 3;
   } else if (['READY_FOR_QC', 'MANUFACTURING_COMPLETED', 'QC', 'QC_INSPECTION', 'QC_HOLD', 'QC_REPORT_UPLOADED', 'PDI', 'PDI_HOLD'].includes(currentStage)) {
     activeStepIndex = 2;
-  } else if (['CONFIRMED', 'APPROVED', 'RELEASED', 'MATERIAL_CHECKED', 'MATERIAL_CHECK', 'MATERIAL_READY', 'MATERIAL_VERIFIED', 'PROCUREMENT_PENDING', 'GRN', 'PO_SENT', 'GRN_RECEIVED', 'JOB_RELEASED', 'MATERIAL_ISSUED', 'IN_PRODUCTION', 'WITH_SUBCONTRACTOR', 'REWORK'].includes(currentStage)) {
+  } else if (['CONFIRMED', 'APPROVED', 'RELEASED', 'MATERIAL_CHECKED', 'MATERIAL_CHECK', 'MATERIAL_READY', 'MATERIAL_VERIFIED', 'MATERIAL_SHORT', 'MATERIAL_SHORTAGE', 'PROCUREMENT_PENDING', 'GRN', 'PO_SENT', 'GRN_RECEIVED', 'JOB_RELEASED', 'MATERIAL_ISSUED', 'IN_PRODUCTION', 'WITH_SUBCONTRACTOR', 'REWORK'].includes(currentStage)) {
     activeStepIndex = 1;
   } else {
     activeStepIndex = 0;
@@ -1461,22 +1462,19 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   return (
     <div className="space-y-6 font-sans">
 
-      {/* 1. Header Navigation & Action Bar */}
-      <div className={`p-4 sm:p-6 rounded-3xl border transition-ui relative overflow-hidden ${isDarkMode
-        ? 'bg-slate-900/90 border-slate-800/80 text-white backdrop-blur-xl shadow-2xl'
-        : 'bg-white border-slate-200/80 shadow-md text-slate-900'
+      {/* 1. Header Navigation & Action Bar - Apple HIG Toolbar */}
+      <div className={`p-4 sm:p-5 rounded-2xl border transition-all relative overflow-hidden backdrop-blur-xl ${isDarkMode
+        ? 'bg-slate-900/80 border-white/10 text-white shadow-[0_4px_24px_rgba(0,0,0,0.3)]'
+        : 'bg-white/90 border-slate-200/80 shadow-[0_4px_20px_rgba(0,0,0,0.04)] text-slate-900'
         }`}>
-        {/* Subtle Ambient Light */}
-        <div className="absolute top-0 right-0 w-80 h-32 bg-gradient-to-bl from-[#5B75F8]/10 to-transparent rounded-full blur-2xl pointer-events-none -z-0" />
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
-
-          <div className="flex items-start sm:items-center gap-3.5 min-w-0">
+          <div className="flex items-start md:items-center gap-3.5 min-w-0">
             <button
               onClick={onBack}
-              className={`p-2.5 rounded-2xl border cursor-pointer transition-ui hover:scale-105 active:scale-[0.96] shrink-0 flex items-center justify-center ${isDarkMode
-                ? 'border-slate-800 bg-slate-950/80 text-slate-300 hover:bg-slate-800 hover:text-white shadow-xs'
-                : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 shadow-xs'
+              className={`w-9 h-9 rounded-full border cursor-pointer transition-all hover:scale-105 active:scale-[0.96] shrink-0 flex items-center justify-center ${isDarkMode
+                ? 'border-white/10 bg-slate-800 text-slate-200 hover:bg-slate-700 shadow-2xs'
+                : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 shadow-2xs'
                 }`}
               title="Back to Orders Hub"
             >
@@ -1485,46 +1483,46 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
             <div className="min-w-0">
               {/* Breadcrumb row */}
-              <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-widest text-slate-400 mb-1">
+              <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-400 dark:text-slate-500 mb-1 tracking-wide">
                 <span>Orders</span>
                 <span>/</span>
                 <span>PO Detail</span>
                 <span>/</span>
-                <span className="text-[#5B75F8] dark:text-[#7B92FF] font-bold">{order.poNo}</span>
+                <span className="text-[#007AFF] dark:text-[#0A84FF] font-semibold">{order.poNo}</span>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-black font-mono tracking-tight text-[#5B75F8] dark:text-[#7B92FF] flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
                   <span>{order.poNo}</span>
                 </h1>
 
                 {order.subType && (
-                  <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-mono font-bold uppercase border ${order.subType === 'BLANKET_CALLOFF'
+                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${order.subType === 'BLANKET_CALLOFF'
                     ? isDarkMode ? 'bg-purple-500/15 text-purple-300 border-purple-500/30' : 'bg-purple-50 text-purple-700 border-purple-200'
-                    : isDarkMode ? 'bg-blue-500/15 text-blue-300 border-blue-500/30' : 'bg-blue-50 text-blue-700 border-blue-200'
+                    : isDarkMode ? 'bg-blue-500/15 text-[#0A84FF] border-blue-500/30' : 'bg-blue-50 text-[#007AFF] border-blue-200'
                     }`}>
                     {order.subType === 'BLANKET_CALLOFF' ? 'Blanket Call-Off' : 'Fresh PO'}
                   </span>
                 )}
 
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono font-bold uppercase border transition-ui ${isQcRejected ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/15 dark:text-rose-400 dark:border-rose-500/30' :
-                  isQcHold || hasNcr ? 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/30' :
-                    order.status === 'CANCELLED' ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/15 dark:text-rose-400 dark:border-rose-500/30' :
-                      order.status === 'DRAFT' || order.status === 'PO_RECEIVED' || order.status === 'SUBMITTED' ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30' :
-                        order.status === 'CONFIRMED' || order.status === 'APPROVED' ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-400 dark:border-blue-500/30' :
-                          order.status === 'MATERIAL_CHECKED' || order.status === 'MATERIAL_CHECK' || order.status === 'MATERIAL_READY' ? 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-500/15 dark:text-indigo-400 dark:border-indigo-500/30' :
-                            order.status === 'IN_PRODUCTION' || order.status === 'JOB_RELEASED' ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/30' :
-                              order.status === 'READY_FOR_QC' || order.status === 'MANUFACTURING_COMPLETED' || order.status === 'QC_INSPECTION' || order.status === 'QC' ? 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-500/15 dark:text-purple-400 dark:border-purple-500/30' :
-                                order.status === 'READY_TO_DISPATCH' || order.status === 'READY_FOR_DISPATCH' || order.status === 'PDI_COMPLETE' ? 'bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-500/15 dark:text-cyan-400 dark:border-cyan-500/30' :
-                                  order.status === 'PARTIALLY_DISPATCHED' || order.status === 'DISPATCHED' ? 'bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-500/15 dark:text-teal-400 dark:border-teal-500/30' :
-                                    order.status === 'CLOSED' || order.status === 'COMPLETED' ? 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700' :
-                                      'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30'
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-all ${isQcRejected ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20' :
+                  isQcHold || hasNcr ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
+                    order.status === 'CANCELLED' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20' :
+                      order.status === 'DRAFT' || order.status === 'PO_RECEIVED' || order.status === 'SUBMITTED' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
+                        order.status === 'CONFIRMED' || order.status === 'APPROVED' ? 'bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF] border-blue-500/20' :
+                          order.status === 'MATERIAL_CHECKED' || order.status === 'MATERIAL_CHECK' || order.status === 'MATERIAL_READY' ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20' :
+                            order.status === 'IN_PRODUCTION' || order.status === 'JOB_RELEASED' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
+                              order.status === 'READY_FOR_QC' || order.status === 'MANUFACTURING_COMPLETED' || order.status === 'QC_INSPECTION' || order.status === 'QC' ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20' :
+                                order.status === 'READY_TO_DISPATCH' || order.status === 'READY_FOR_DISPATCH' || order.status === 'PDI_COMPLETE' ? 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20' :
+                                  order.status === 'PARTIALLY_DISPATCHED' || order.status === 'DISPATCHED' ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20' :
+                                    order.status === 'CLOSED' || order.status === 'COMPLETED' ? 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20' :
+                                      'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                   }`}>
-                  <span className={`w-2 h-2 rounded-full ${isQcRejected ? 'bg-rose-500 animate-pulse' :
+                  <span className={`w-1.5 h-1.5 rounded-full ${isQcRejected ? 'bg-rose-500 animate-pulse' :
                     isQcHold || hasNcr ? 'bg-amber-500 animate-pulse' :
                       order.status === 'CANCELLED' ? 'bg-rose-500' :
                         order.status === 'DRAFT' || order.status === 'PO_RECEIVED' || order.status === 'SUBMITTED' ? 'bg-amber-500 animate-pulse' :
-                          order.status === 'CONFIRMED' || order.status === 'APPROVED' ? 'bg-blue-500' :
+                          order.status === 'CONFIRMED' || order.status === 'APPROVED' ? 'bg-[#007AFF]' :
                             order.status === 'MATERIAL_CHECKED' || order.status === 'MATERIAL_CHECK' || order.status === 'MATERIAL_READY' ? 'bg-indigo-500' :
                               order.status === 'IN_PRODUCTION' || order.status === 'JOB_RELEASED' ? 'bg-amber-500 animate-pulse' :
                                 order.status === 'READY_FOR_QC' || order.status === 'MANUFACTURING_COMPLETED' ? 'bg-purple-500 animate-pulse' :
@@ -1539,16 +1537,16 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
               {/* Customer & Date Metadata Strip */}
               <div className="flex flex-wrap items-center gap-2 text-xs mt-1.5 text-slate-500 dark:text-slate-400">
-                <span className="flex items-center gap-1">
-                  <span>Customer:</span>
-                  <strong className="text-[#5B75F8] dark:text-[#7B92FF] font-semibold">{order.customerName}</strong>
+                <span className="flex items-center gap-1.5">
+                  <span className="text-slate-400 dark:text-slate-500 font-normal">Customer:</span>
+                  <strong className="text-slate-900 dark:text-white font-semibold">{order.customerName}</strong>
                 </span>
-                <span className="text-slate-400 dark:text-slate-600">•</span>
+                <span className="text-slate-300 dark:text-slate-700">•</span>
                 <span>Created {order.poDate}</span>
                 {order.deliveryDate && (
                   <>
-                    <span className="text-slate-400 dark:text-slate-600">•</span>
-                    <span>Due: <strong className="font-semibold text-slate-700 dark:text-slate-300">{order.deliveryDate}</strong></span>
+                    <span className="text-slate-300 dark:text-slate-700">•</span>
+                    <span>Due: <strong className="font-medium text-slate-800 dark:text-slate-200">{order.deliveryDate}</strong></span>
                   </>
                 )}
               </div>
@@ -1556,12 +1554,12 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           </div>
 
           {/* Action Button Strip */}
-          <div className="flex items-center gap-2.5 w-full sm:w-auto shrink-0">
+          <div className="flex items-center gap-2 w-full md:w-auto shrink-0 justify-end">
             <button
               onClick={() => uploadPoModal.open()}
-              className={`w-full sm:w-auto px-4 py-2 rounded-2xl border text-xs font-mono font-bold transition-ui cursor-pointer flex items-center justify-center gap-2 ${isDarkMode
-                ? 'border-slate-800 bg-slate-950/70 text-slate-300 hover:bg-slate-800 hover:text-white shadow-xs'
-                : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 shadow-xs'
+              className={`w-full md:w-auto px-4 py-2 rounded-full border text-xs font-medium transition-all cursor-pointer flex items-center justify-center gap-2 ${isDarkMode
+                ? 'border-white/10 bg-slate-800/90 text-slate-200 hover:bg-slate-700 shadow-2xs'
+                : 'border-slate-200/80 bg-slate-100/80 text-slate-700 hover:bg-slate-200 shadow-2xs'
                 }`}
             >
               <Upload className="w-3.5 h-3.5" />
@@ -1571,7 +1569,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         </div>
 
         {confirmError && (
-          <div className="mt-4 p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-mono flex items-center justify-between gap-3 relative z-10 animate-fade-in">
+          <div className="mt-3.5 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs flex items-center justify-between gap-3 relative z-10 animate-fade-in">
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0" />
               <span>{confirmError}</span>
@@ -1586,125 +1584,82 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         )}
       </div>
 
-      {/* 2. Redesigned Milestone Progress Pipeline */}
-      <div className={`p-4 sm:p-7 rounded-3xl border transition-ui shadow-xl relative overflow-hidden ${isDarkMode
-        ? 'bg-slate-900/90 border-slate-800/90 backdrop-blur-xl text-white'
-        : 'bg-white border-slate-200 text-slate-900 shadow-sm'
+      {/* 2. Apple HIG Segmented Progress Stepper */}
+      <div className={`p-4 sm:p-5 rounded-2xl border transition-all relative overflow-hidden backdrop-blur-xl ${isDarkMode
+        ? 'bg-slate-900/80 border-white/10 text-white shadow-[0_4px_24px_rgba(0,0,0,0.3)]'
+        : 'bg-white/90 border-slate-200/80 shadow-[0_4px_20px_rgba(0,0,0,0.04)] text-slate-900'
         }`}>
 
-        {/* Ambient Glow */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-indigo-500/10 via-blue-500/5 to-transparent rounded-full blur-3xl pointer-events-none -z-0" />
-
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-100 dark:border-slate-800/80 relative z-10">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-[#5B75F8]/15 text-[#5B75F8] dark:text-[#7B92FF] shrink-0">
-              <RefreshCw className="w-4 h-4" />
-            </div>
-            <div>
-              <h2 className="font-bold text-xs sm:text-sm uppercase tracking-wider">
-                Production & Order Fulfillment Pipeline
-              </h2>
-              <p className={`text-[10px] sm:text-[11px] font-mono mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                Gated Lifecycle Stages • Single Source of Truth Action Gateways
-              </p>
-            </div>
-          </div>
+        <div className="flex items-center justify-between gap-2.5 mb-3 px-1">
           <div className="flex items-center gap-2">
-            <span className={`px-3 py-1 rounded-xl text-xs font-mono font-bold border ${isDarkMode ? 'bg-indigo-500/10 border-indigo-500/30 text-[#7B92FF]' : 'bg-indigo-50 border-indigo-200 text-indigo-700'
-              }`}>
-              Status: {(order.status || order.stage || 'DRAFT').replace(/_/g, ' ')}
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Lifecycle Progress
             </span>
           </div>
+          <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${isDarkMode ? 'bg-blue-500/10 border-blue-500/20 text-[#0A84FF]' : 'bg-blue-50 border-blue-100 text-[#007AFF]'
+            }`}>
+            Phase {activeStepIndex + 1} of {steps.length} • {(order.status || order.stage || 'DRAFT').replace(/_/g, ' ')}
+          </span>
         </div>
 
-        {/* Milestone Steps Bar */}
-        <div className="relative z-10 py-2 overflow-x-auto scrollbar-none">
-          <div className="flex items-start justify-between min-w-[720px] px-2">
-            {steps.map((st, idx) => {
-              const isCompleted = idx < activeStepIndex;
-              const isCurrent = idx === activeStepIndex;
-              const StepIcon = st.icon;
+        {/* Apple Segmented Control Rail */}
+        <div className={`p-1.5 rounded-2xl border flex items-center gap-1.5 overflow-x-auto scrollbar-none ${isDarkMode
+          ? 'bg-slate-950/60 border-white/5'
+          : 'bg-slate-100/80 border-slate-200/60'
+          }`}>
+          {steps.map((st, idx) => {
+            const isCompleted = idx < activeStepIndex;
+            const isCurrent = idx === activeStepIndex;
+            const StepIcon = st.icon;
 
-              return (
-                <React.Fragment key={st.name}>
-                  {/* Step Node */}
-                  <div className="flex flex-col items-center shrink-0 min-w-[105px] max-w-[135px] group text-center">
-
-                    {/* Node Circle */}
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-300 relative ${isCurrent
-                      ? isQcRejected
-                        ? 'bg-gradient-to-tr from-rose-600 to-rose-500 text-white ring-4 ring-rose-500/30 shadow-lg shadow-rose-500/40 scale-110 border-2 border-rose-400'
-                        : isQcHold || hasNcr
-                          ? 'bg-gradient-to-tr from-amber-600 to-amber-500 text-white ring-4 ring-amber-500/30 shadow-lg shadow-amber-500/40 scale-110 border-2 border-amber-400'
-                          : 'bg-gradient-to-tr from-[#5B75F8] to-indigo-600 text-white ring-4 ring-[#5B75F8]/30 shadow-lg shadow-[#5B75F8]/40 scale-110 border-2 border-indigo-300'
-                      : isCompleted
-                        ? 'bg-emerald-500/15 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-2 border-emerald-500/40 shadow-xs'
-                        : 'bg-slate-100 dark:bg-slate-800/80 text-slate-400 dark:text-slate-500 border-2 border-slate-200 dark:border-slate-700/60'
-                      }`}>
-                      {isCompleted ? (
-                        <CheckCircle2 className="w-5 h-5 stroke-[2.5]" />
-                      ) : (
-                        <StepIcon className="w-5 h-5 stroke-[2]" />
-                      )}
-
-                      {/* Step index badge */}
-                      <span className={`absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full text-[9px] font-mono font-bold flex items-center justify-center ${isCurrent
-                        ? 'bg-white text-indigo-700 shadow-xs'
-                        : isCompleted
-                          ? 'bg-emerald-600 text-white'
-                          : 'bg-slate-300 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-                        }`}>
-                        {idx + 1}
-                      </span>
-                    </div>
-
-                    {/* Step Title & Subtitle */}
-                    <span className={`mt-3 text-xs font-bold tracking-tight block ${isCurrent
-                      ? 'text-[#5B75F8] dark:text-[#7B92FF]'
-                      : isCompleted
-                        ? (isDarkMode ? 'text-slate-200' : 'text-slate-800')
-                        : 'text-slate-400 dark:text-slate-500'
-                      }`}>
-                      {st.name}
-                    </span>
-                    <span className={`text-[10px] font-mono mt-0.5 block ${isCurrent ? 'text-indigo-400 font-semibold' : 'text-slate-400 dark:text-slate-500'
-                      }`}>
-                      {st.subtitle}
-                    </span>
-                  </div>
-
-                  {/* Connector Line between Steps */}
-                  {idx < steps.length - 1 && (
-                    <div className="flex-1 self-center px-2 -mt-7">
-                      <div className={`h-1.5 rounded-full transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-500 ${idx < activeStepIndex
-                        ? 'bg-gradient-to-r from-emerald-500 to-teal-500 shadow-xs shadow-emerald-500/30'
-                        : 'bg-slate-200 dark:bg-slate-800'
-                        }`} />
-                    </div>
+            return (
+              <div
+                key={st.name}
+                className={`flex-1 min-w-[110px] sm:min-w-[130px] px-3 py-2 rounded-xl flex items-center gap-2.5 transition-all select-none ${isCurrent
+                  ? 'bg-[#007AFF] text-white shadow-sm shadow-blue-500/25'
+                  : isCompleted
+                    ? isDarkMode
+                      ? 'bg-slate-900/90 text-slate-200 border border-white/5'
+                      : 'bg-white text-slate-800 shadow-2xs border border-slate-200/50'
+                    : 'text-slate-400 dark:text-slate-500'
+                  }`}
+              >
+                <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 text-xs font-semibold ${isCurrent
+                  ? 'bg-white/20 text-white'
+                  : isCompleted
+                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                    : isDarkMode
+                      ? 'bg-slate-800 text-slate-400'
+                      : 'bg-slate-200/70 text-slate-500'
+                  }`}>
+                  {isCompleted ? (
+                    <CheckCircle2 className="w-3.5 h-3.5 stroke-[2.5]" />
+                  ) : isCurrent ? (
+                    <StepIcon className="w-3.5 h-3.5 stroke-[2.2]" />
+                  ) : (
+                    <span>{idx + 1}</span>
                   )}
-                </React.Fragment>
-              );
-            })}
-          </div>
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className={`text-xs truncate ${isCurrent ? 'font-semibold text-white' : isCompleted ? 'font-medium' : 'font-normal'}`}>
+                    {st.name}
+                  </div>
+                  <div className={`text-[10px] truncate ${isCurrent ? 'text-blue-100' : 'text-slate-400 dark:text-slate-500'}`}>
+                    {st.subtitle}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
       {/* 2.5 Unified Stage Gateway Panels (Single Source of Truth) */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between px-1">
-          <div>
-            <h2 className="font-bold text-sm uppercase tracking-wider flex items-center gap-2">
-              <Layers className="w-4 h-4 text-[#5B75F8] dark:text-[#7B92FF]" />
-              <span>Stage Gateway Panels</span>
-            </h2>
-            <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-              One Stage Gateway Panel Per Stage • Exact 1 Active Stage at a time
-            </p>
-          </div>
-        </div>
+      <div className="space-y-2.5">
 
         {(() => {
-          const norm = normalizeOrderState(order.stage || order.status);
+          const norm = normalizeOrderState(order.status || order.stage);
 
           const stageDefinitions = [
             {
@@ -1823,7 +1778,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               description: 'Raw material allocation verified and reserved for job card cutting.',
               icon: CheckCircle2,
               matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) =>
-                n === 'MATERIAL_SHORT' || ['MATERIAL_SHORT', 'MATERIAL_SHORTAGE'].includes((o.status || '').toUpperCase()),
+                n === 'MATERIAL_SHORT' || ['MATERIAL_SHORT', 'MATERIAL_SHORTAGE'].includes((o.status || o.stage || '').toUpperCase()),
               renderActions: () => (
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
                   <button
@@ -1851,7 +1806,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               role: 'Purchase / Procurement',
               description: 'Shortage identified. Purchase orders issued to raw material vendors.',
               icon: Building,
-              isConditional: (o: CustomerOrder) => ['PROCUREMENT_PENDING', 'PO_SENT', 'GRN', 'GRN_PENDING', 'MATERIAL_SHORT'].includes((o.status || o.stage || '').toUpperCase()),
+              isConditional: (o: CustomerOrder) => ['PROCUREMENT_PENDING', 'PO_SENT', 'GRN', 'GRN_PENDING', 'MATERIAL_SHORT', 'MATERIAL_SHORTAGE'].includes((o.status || o.stage || '').toUpperCase()),
               matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) =>
                 n === 'PROCUREMENT_PENDING' || ['PROCUREMENT_PENDING', 'PO_SENT', 'UNDER_PROCUREMENT'].includes((o.status || '').toUpperCase()),
               renderActions: () => (
@@ -2291,7 +2246,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
           const visibleStages = stageDefinitions.filter(s => !s.isConditional || s.isConditional(order));
 
-          let activeIndex = 0;
+          let activeIndex = -1;
           for (let i = 0; i < visibleStages.length; i++) {
             if (visibleStages[i].matchCurrent(norm, order)) {
               activeIndex = i;
@@ -2302,6 +2257,23 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             activeIndex = visibleStages.length - 1;
           }
 
+          const isUnmatchedStage = activeIndex === -1;
+          if (isUnmatchedStage) {
+            console.warn(
+              `[OrderDetailView] Order ${order.poNo || order.id} status='${order.status}', stage='${order.stage}', norm='${norm}' did not match any known lifecycle stage. Using best-guess fallback.`
+            );
+            // Search visibleStages in reverse for the highest-indexed stage whose isConditional evaluates true
+            for (let i = visibleStages.length - 1; i >= 0; i--) {
+              if (visibleStages[i].isConditional && visibleStages[i].isConditional!(order)) {
+                activeIndex = i;
+                break;
+              }
+            }
+            if (activeIndex === -1) {
+              activeIndex = 0;
+            }
+          }
+
           const currentStageDef = visibleStages[activeIndex] || visibleStages[0];
           if (!currentStageDef) return null;
 
@@ -2310,53 +2282,68 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
           return (
             <div className="space-y-2.5 w-full">
+              {isUnmatchedStage && !isUnmatchedBannerDismissed && (
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-mono flex items-center justify-between gap-3 relative z-10 animate-fade-in">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                    <span>
+                      Order status &apos;{order.status}&apos; didn&apos;t match a known lifecycle stage — showing best guess. Please report this.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsUnmatchedBannerDismissed(true)}
+                    className="p-1 hover:bg-amber-500/20 rounded-lg transition-colors cursor-pointer"
+                    title="Dismiss warning"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
               <div
                 key={currentStageDef.id}
-                className={`p-5 sm:p-6 rounded-3xl border transition-ui w-full relative overflow-hidden ${isDarkMode
-                  ? 'bg-gradient-to-r from-slate-900/95 via-indigo-950/40 to-slate-900/95 border-[#5B75F8]/50 ring-1 ring-[#5B75F8]/30 shadow-2xl text-white'
-                  : 'bg-gradient-to-r from-indigo-50/90 via-white to-blue-50/90 border-indigo-200 ring-1 ring-indigo-300 shadow-lg text-slate-900'
+                className={`p-4 sm:p-5 rounded-2xl border transition-all w-full relative overflow-hidden backdrop-blur-xl ${isDarkMode
+                  ? 'bg-slate-900/80 border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.3)] text-white'
+                  : 'bg-white/90 border-slate-200/80 shadow-[0_4px_20px_rgba(0,0,0,0.04)] text-slate-900'
                   }`}
               >
-                {/* Ambient glow in stage gateway */}
-                <div className="absolute top-0 right-0 w-80 h-32 bg-gradient-to-bl from-[#5B75F8]/15 to-transparent rounded-full blur-2xl pointer-events-none -z-0" />
-
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full relative z-10">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 w-full relative z-10">
                   <div className="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
-                    <div className={`p-3.5 rounded-2xl shrink-0 transition-ui ${isDarkMode
-                      ? 'bg-gradient-to-br from-[#5B75F8]/25 to-indigo-500/25 text-[#7B92FF] border border-[#5B75F8]/40 shadow-sm'
-                      : 'bg-indigo-100/80 text-indigo-700 border border-indigo-200 shadow-sm'
+                    <div className={`w-10 h-10 rounded-xl shrink-0 flex items-center justify-center transition-all ${isDarkMode
+                      ? 'bg-blue-500/15 text-[#0A84FF] border border-blue-500/20'
+                      : 'bg-blue-50 text-[#007AFF] border border-blue-100 shadow-2xs'
                       }`}>
-                      <StageIcon className="w-6 h-6 shrink-0" />
+                      <StageIcon className="w-5 h-5 stroke-[2]" />
                     </div>
 
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className={`text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-lg font-mono shrink-0 ${isDarkMode
-                          ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/30'
-                          : 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                        <span className={`text-[11px] font-semibold uppercase px-2 py-0.5 rounded-md shrink-0 ${isDarkMode
+                          ? 'bg-blue-500/15 text-[#0A84FF] border border-blue-500/20'
+                          : 'bg-blue-50 text-[#007AFF] border border-blue-100'
                           }`}>
                           {currentStageDef.stageNumber}
                         </span>
 
-                        <h3 className={`font-bold text-base tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'
-                          }`}>
+                        <h3 className="font-semibold text-sm sm:text-base tracking-tight">
                           {currentStageDef.name}
                         </h3>
 
-                        <span className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shrink-0 ${isClosed
-                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                          : 'bg-indigo-500/20 text-[#7B92FF] border border-indigo-500/40 animate-pulse'
+                        <span className={`text-[11px] font-medium px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shrink-0 ${isClosed
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                          : 'bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF] border border-blue-500/20'
                           }`}>
-                          {isClosed ? '✓ Order Closed' : '● Active Stage'}
+                          <span className={`w-1.5 h-1.5 rounded-full ${isClosed ? 'bg-emerald-500' : 'bg-[#007AFF] animate-pulse'}`} />
+                          <span>{isClosed ? 'Order Closed' : 'Active Stage'}</span>
                         </span>
 
-                        <span className={`hidden sm:inline text-[10px] font-mono px-2 py-0.5 rounded-md shrink-0 ${isDarkMode ? 'bg-slate-800/80 text-slate-300 border border-slate-700' : 'bg-slate-100 text-slate-700 border border-slate-200'
+                        <span className={`hidden sm:inline text-[11px] font-medium px-2 py-0.5 rounded-md shrink-0 ${isDarkMode ? 'bg-slate-800 text-slate-300 border border-white/5' : 'bg-slate-100 text-slate-600 border border-slate-200/60'
                           }`}>
                           {currentStageDef.role}
                         </span>
                       </div>
 
-                      <p className={`text-xs mt-1.5 leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-600'
+                      <p className={`text-xs mt-1 leading-relaxed ${isDarkMode ? 'text-slate-400' : 'text-slate-500'
                         }`}>
                         {currentStageDef.description}
                       </p>
@@ -2364,7 +2351,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   </div>
 
                   {/* Action Buttons Right-Aligned */}
-                  <div className="w-full lg:w-auto flex items-center justify-start lg:justify-end shrink-0 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-200/60 dark:border-slate-800/80">
+                  <div className="w-full lg:w-auto flex items-center justify-start lg:justify-end shrink-0 pt-2.5 lg:pt-0 border-t lg:border-t-0 border-slate-100 dark:border-white/5">
                     {currentStageDef.renderActions && currentStageDef.renderActions()}
                   </div>
                 </div>
@@ -3317,21 +3304,20 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 </div>
               </div>
 
-              {/* Transporter selection fetched from Vendor Master */}
+              {/* Transporter partner free-text entry */}
               <div>
                 <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                  Transporter Partner (Vendor Master) *
+                  Transporter Partner *
                 </label>
-                <select
+                <input
+                  type="text"
+                  required
                   value={challanTransporter}
                   onChange={(e) => setChallanTransporter(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border text-xs outline-none cursor-pointer transition-ui ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                  placeholder="e.g. VRL Logistics, SafeXpress, Self Pick-up"
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-ui ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
                     }`}
-                >
-                  {allTransporterOptions.map((t, idx) => (
-                    <option key={idx} value={t}>{t}</option>
-                  ))}
-                </select>
+                />
               </div>
 
               <div>
@@ -3438,16 +3424,15 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
               <div>
                 <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Transporter Partner *</label>
-                <select
+                <input
+                  type="text"
+                  required
                   value={dispatchTransporter}
                   onChange={(e) => setDispatchTransporter(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border text-xs outline-none cursor-pointer transition-ui ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
+                  placeholder="e.g. VRL Logistics, SafeXpress, Self Pick-up"
+                  className={`w-full p-2.5 rounded-xl border text-xs outline-none transition-ui ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-cyan-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600 focus:bg-white'
                     }`}
-                >
-                  {allTransporterOptions.map((t, idx) => (
-                    <option key={idx} value={t}>{t}</option>
-                  ))}
-                </select>
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-3">

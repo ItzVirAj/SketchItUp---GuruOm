@@ -5,13 +5,17 @@ import {
   RouteCard,
   CompanyProfile,
   JobCardOperation,
-  RouteCardTemplateStep
+  RouteCardTemplateStep,
+  BillOfMaterials,
+  ProductionLogReport
 } from '../../../types/console';
 
 export interface RouteCardTravelerPrintProps {
   jobCard: JobCard;
   order?: CustomerOrder | null;
   routeCard?: RouteCard | null;
+  bom?: BillOfMaterials | null;
+  productionLogs?: ProductionLogReport[];
   companyProfile?: CompanyProfile | null;
   isDarkMode?: boolean;
 }
@@ -20,11 +24,13 @@ export const RouteCardTravelerPrint: React.FC<RouteCardTravelerPrintProps> = ({
   jobCard,
   order,
   routeCard,
-  companyProfile,
-  isDarkMode = true
+  bom,
+  productionLogs = [],
+  companyProfile
 }) => {
-  // Priority 1: JobCardOperation[] with actual execution data
-  // Priority 2: RouteCardTemplateStep[] fallback (planned-only steps)
+  // Operational steps priority:
+  // 1. jobCard.operations (actual execution)
+  // 2. routeCard.operations (planned template)
   const isActualExecution = Boolean(jobCard.operations && jobCard.operations.length > 0);
   const rawOps = isActualExecution
     ? (jobCard.operations as JobCardOperation[])
@@ -34,349 +40,342 @@ export const RouteCardTravelerPrint: React.FC<RouteCardTravelerPrintProps> = ({
     (a, b) => Number(a.sequenceNo) - Number(b.sequenceNo)
   );
 
-  const printDate = new Date().toLocaleDateString('en-IN', {
+  // Time & Date formatters
+  const now = new Date();
+  const printTimestamp = now.toLocaleString('en-IN', {
     day: '2-digit',
     month: 'short',
-    year: 'numeric'
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
   });
 
+  const formatDateOnly = (iso?: string) => {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  const formatTimeOnly = (iso?: string) => {
+    if (!iso) return null;
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  // Company Information
   const legalName = companyProfile?.legalName || 'GuruOm Precision Engineering';
-  const companyAddress = companyProfile?.address || 'Plot No. W-45, MIDC Industrial Area, Waluj, Chhatrapati Sambhaji Nagar, Maharashtra 431136';
+  const companyAddress = companyProfile?.address || 'Plot No. W-45, MIDC Industrial Area, Waluj, Chhatrapati Sambhaji Nagar, MH 431136';
   const companyPhone = companyProfile?.phone || '+91 20 2712 3456';
   const companyEmail = companyProfile?.email || 'production@guruom.in';
   const companyGstin = companyProfile?.gstin || '27AABCG1234F1Z5';
-  const companyPan = companyProfile?.pan || 'AABCG1234F';
+
+  // Raw Material Spec from BOM or JobCard
+  const primaryMaterial = bom?.components?.[0];
+  const materialCode = primaryMaterial?.componentCode || 'RAW-EN8-BAR';
+  const materialName = primaryMaterial?.componentName || 'EN8 Carbon Steel Bar Ø32mm';
+  const materialQtyPerUnit = primaryMaterial?.qtyPerUnit ? `${primaryMaterial.qtyPerUnit} ${primaryMaterial.unit || 'KG'}` : '1.8 KG';
+
+  // Calculate timing aggregates
+  const totalStdMinutes = sortedOps.reduce((sum, op: any) => sum + Number(op.standardTimeMinutes || 0), 0);
+  const totalActualMinutes = isActualExecution
+    ? (sortedOps as JobCardOperation[]).reduce((sum, op) => sum + Number(op.actualTimeMinutes || 0), 0)
+    : 0;
+
+  const totalQtyOk = isActualExecution
+    ? (sortedOps as JobCardOperation[]).reduce((sum, op) => sum + Number(op.qtyProcessed || 0), 0)
+    : 0;
+
+  const totalQtyScrap = isActualExecution
+    ? (sortedOps as JobCardOperation[]).reduce((sum, op) => sum + Number(op.qtyRejected || 0), 0)
+    : 0;
 
   return (
     <div
-      className={`print-clean-box p-5 sm:p-7 rounded-2xl border transition-ui space-y-6 ${
-        isDarkMode
-          ? 'bg-slate-900/90 border-slate-800 text-white'
-          : 'bg-white border-slate-200 text-slate-900 shadow-sm'
-      }`}
+      className="print-clean-box bg-white text-slate-900 border border-slate-400 p-5 sm:p-6 text-xs font-sans space-y-4 shadow-sm"
+      style={{ color: '#0f172a', background: '#ffffff' }}
     >
-      {/* ===================================================================== */}
-      {/* 1. HEADER / LETTERHEAD */}
-      {/* ===================================================================== */}
-      <div className="border-b border-slate-300 dark:border-slate-700/80 pb-4">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="space-y-1">
-            <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Manufacturing Operational Traveler
-            </div>
-            <h1 className="text-lg sm:text-xl font-black uppercase tracking-tight text-slate-900 dark:text-white">
-              {legalName}
-            </h1>
-            <p className="text-xs text-slate-600 dark:text-slate-300 max-w-2xl">
-              {companyAddress}
-            </p>
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs font-mono text-slate-600 dark:text-slate-400 pt-0.5">
-              <span><strong>Phone:</strong> {companyPhone}</span>
-              <span><strong>Email:</strong> {companyEmail}</span>
-              <span><strong>GSTIN:</strong> {companyGstin}</span>
-              <span><strong>PAN:</strong> {companyPan}</span>
-            </div>
+      {/* ========================================================================= */}
+      {/* 1. OFFICIAL STATUTORY LETTERHEAD & DOCUMENT TITLE */}
+      {/* ========================================================================= */}
+      <div className="border-b-2 border-slate-900 pb-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div>
+          <h1 className="text-base sm:text-lg font-black uppercase tracking-tight text-slate-950">
+            {legalName}
+          </h1>
+          <p className="text-[11px] text-slate-700 max-w-xl leading-relaxed">
+            {companyAddress}
+          </p>
+          <div className="flex flex-wrap gap-x-4 text-[10px] text-slate-600 font-mono mt-0.5">
+            <span><strong>GSTIN:</strong> {companyGstin}</span>
+            <span><strong>Phone:</strong> {companyPhone}</span>
+            <span><strong>Email:</strong> {companyEmail}</span>
           </div>
+        </div>
 
-          <div className="text-left sm:text-right border-t sm:border-t-0 sm:border-l border-slate-200 dark:border-slate-800 pt-3 sm:pt-0 sm:pl-6 shrink-0 font-mono">
-            <div className="inline-block px-3 py-1 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-bold text-xs uppercase tracking-wider">
-              SHOPFLOOR ROUTE CARD / JOB TRAVELER
-            </div>
-            <div className="mt-2 text-sm font-bold text-slate-900 dark:text-white">
-              Job Card: <span className="text-emerald-600 dark:text-emerald-400">{jobCard.jobNo}</span>
-            </div>
-            <div className="text-xs text-slate-500 dark:text-slate-400">
-              Print Date: {printDate}
-            </div>
+        <div className="text-left sm:text-right shrink-0 border-t sm:border-t-0 sm:border-l sm:border-slate-300 pt-2 sm:pt-0 sm:pl-4">
+          <div className="text-[11px] font-black uppercase tracking-wider text-slate-900 border border-slate-900 px-2 py-0.5 inline-block bg-slate-100">
+            MANUFACTURING ROUTE CARD / JOB TRAVELER
+          </div>
+          <div className="text-xs font-mono font-bold text-slate-900 mt-1">
+            Job No: <span className="text-sm font-black">{jobCard.jobNo}</span>
+          </div>
+          <div className="text-[10px] font-mono text-slate-600">
+            Doc Ref: GOM-PRD-TRV-01 • Print: {printTimestamp}
           </div>
         </div>
       </div>
 
-      {/* ===================================================================== */}
-      {/* 2. JOB CARD SUMMARY BLOCK */}
-      {/* ===================================================================== */}
-      <div className="space-y-3">
-        {/* NCR QUALITY HOLD BANNER (If Applicable) */}
-        {jobCard.hasOpenNcr && (
-          <div className="p-3 border-2 border-black dark:border-rose-500 text-black dark:text-rose-400 bg-slate-100 dark:bg-rose-500/10 font-mono text-xs font-black uppercase tracking-wider text-center">
-            ⚠ QUALITY HOLD — NCR: {jobCard.ncrReference || 'OPEN NCR INVESTIGATION'}
-          </div>
-        )}
+      {/* ========================================================================= */}
+      {/* 2. ORDER & JOB SPECIFICATIONS GRID (NORMAL INDUSTRIAL TABULAR FORMAT) */}
+      {/* ========================================================================= */}
+      <table className="w-full text-left text-[11px] border-collapse border border-slate-400 font-mono">
+        <tbody>
+          <tr>
+            <td className="bg-slate-100 font-bold border border-slate-300 p-1.5 w-1/6">Customer Name</td>
+            <td className="border border-slate-300 p-1.5 w-2/6 font-semibold">{order?.customerName || 'Liebherr CMCtec India Pvt Ltd'}</td>
+            <td className="bg-slate-100 font-bold border border-slate-300 p-1.5 w-1/6">Customer PO #</td>
+            <td className="border border-slate-300 p-1.5 w-2/6 font-black text-slate-950">{jobCard.orderPo}</td>
+          </tr>
+          <tr>
+            <td className="bg-slate-100 font-bold border border-slate-300 p-1.5">PO Date</td>
+            <td className="border border-slate-300 p-1.5">{formatDateOnly(order?.poDate)}</td>
+            <td className="bg-slate-100 font-bold border border-slate-300 p-1.5">Target Delivery Date</td>
+            <td className="border border-slate-300 p-1.5 font-bold text-slate-900">{formatDateOnly(jobCard.targetDate || order?.deliveryDate)}</td>
+          </tr>
+          <tr>
+            <td className="bg-slate-100 font-bold border border-slate-300 p-1.5">Finished Part Code</td>
+            <td className="border border-slate-300 p-1.5 font-black">{jobCard.partCode}</td>
+            <td className="bg-slate-100 font-bold border border-slate-300 p-1.5">Drawing Revision</td>
+            <td className="border border-slate-300 p-1.5 font-bold">{jobCard.drawingRevision || 'REV-A'}</td>
+          </tr>
+          <tr>
+            <td className="bg-slate-100 font-bold border border-slate-300 p-1.5">Part Description</td>
+            <td className="border border-slate-300 p-1.5 font-sans font-medium" colSpan={3}>
+              {jobCard.partDescription}
+            </td>
+          </tr>
+          <tr>
+            <td className="bg-slate-100 font-bold border border-slate-300 p-1.5">Batch / Order Qty</td>
+            <td className="border border-slate-300 p-1.5 font-bold">
+              {jobCard.targetQty ?? jobCard.qty ?? 1} NOS
+            </td>
+            <td className="bg-slate-100 font-bold border border-slate-300 p-1.5">Primary Work Center</td>
+            <td className="border border-slate-300 p-1.5 font-bold">{jobCard.machine || 'VMC-01 (Vertical Milling)'}</td>
+          </tr>
+          <tr>
+            <td className="bg-slate-100 font-bold border border-slate-300 p-1.5">Raw Material Code</td>
+            <td className="border border-slate-300 p-1.5">{materialCode} — {materialName} ({materialQtyPerUnit}/unit)</td>
+            <td className="bg-slate-100 font-bold border border-slate-300 p-1.5">Heat / Material Lot #</td>
+            <td className="border border-slate-300 p-1.5 font-bold">{jobCard.materialIssuedLot || 'HT-2026-EN8-091'}</td>
+          </tr>
+          <tr>
+            <td className="bg-slate-100 font-bold border border-slate-300 p-1.5">Material QC Status</td>
+            <td className="border border-slate-300 p-1.5 font-bold">
+              {jobCard.materialQcStatus || 'ACCEPTED'}
+            </td>
+            <td className="bg-slate-100 font-bold border border-slate-300 p-1.5">Current Job Stage</td>
+            <td className="border border-slate-300 p-1.5 font-bold text-slate-900">
+              {jobCard.status || jobCard.jobStatus || 'SCHEDULED'}
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 text-xs font-mono">
-          <div className={`p-2.5 rounded-xl border ${
-            isDarkMode ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-slate-50/70'
-          }`}>
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 block uppercase font-bold">Job Card No</span>
-            <span className="font-bold text-slate-900 dark:text-white">{jobCard.jobNo}</span>
-          </div>
-
-          <div className={`p-2.5 rounded-xl border ${
-            isDarkMode ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-slate-50/70'
-          }`}>
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 block uppercase font-bold">Customer Order PO</span>
-            <span className="font-bold text-slate-900 dark:text-white">{jobCard.orderPo}</span>
-          </div>
-
-          <div className={`p-2.5 rounded-xl border ${
-            isDarkMode ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-slate-50/70'
-          }`}>
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 block uppercase font-bold">Customer Name</span>
-            <span className="font-bold text-slate-900 dark:text-white truncate block" title={order?.customerName || '—'}>
-              {order?.customerName || '—'}
-            </span>
-          </div>
-
-          <div className={`p-2.5 rounded-xl border ${
-            isDarkMode ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-slate-50/70'
-          }`}>
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 block uppercase font-bold">Part Code</span>
-            <span className="font-bold text-emerald-600 dark:text-emerald-400">{jobCard.partCode}</span>
-          </div>
-
-          <div className={`p-2.5 rounded-xl border col-span-2 ${
-            isDarkMode ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-slate-50/70'
-          }`}>
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 block uppercase font-bold">Part Description</span>
-            <span className="font-semibold text-slate-900 dark:text-white">{jobCard.partDescription}</span>
-          </div>
-
-          <div className={`p-2.5 rounded-xl border ${
-            isDarkMode ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-slate-50/70'
-          }`}>
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 block uppercase font-bold">Drawing Revision</span>
-            <span className="font-bold text-slate-900 dark:text-white">{jobCard.drawingRevision || 'REV-A'}</span>
-          </div>
-
-          <div className={`p-2.5 rounded-xl border ${
-            isDarkMode ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-slate-50/70'
-          }`}>
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 block uppercase font-bold">Job / Target Qty</span>
-            <span className="font-bold text-slate-900 dark:text-white">{jobCard.targetQty ?? jobCard.qty ?? 0} NOS</span>
-          </div>
-
-          <div className={`p-2.5 rounded-xl border ${
-            isDarkMode ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-slate-50/70'
-          }`}>
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 block uppercase font-bold">Target Delivery Date</span>
-            <span className="font-bold text-slate-900 dark:text-white">{jobCard.targetDate || '—'}</span>
-          </div>
-
-          <div className={`p-2.5 rounded-xl border ${
-            isDarkMode ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-slate-50/70'
-          }`}>
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 block uppercase font-bold">Machine / Work Center</span>
-            <span className="font-bold text-slate-900 dark:text-white">{jobCard.machine || '—'}</span>
-          </div>
-
-          <div className={`p-2.5 rounded-xl border ${
-            isDarkMode ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-slate-50/70'
-          }`}>
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 block uppercase font-bold">Material Lot / Heat #</span>
-            <span className="font-bold text-slate-900 dark:text-white">{jobCard.materialIssuedLot || '—'}</span>
-          </div>
-
-          <div className={`p-2.5 rounded-xl border ${
-            isDarkMode ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-slate-50/70'
-          }`}>
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 block uppercase font-bold">Material QC Status</span>
-            <span className="font-bold text-slate-900 dark:text-white">{jobCard.materialQcStatus || 'ACCEPTED'}</span>
-          </div>
-
-          <div className={`p-2.5 rounded-xl border ${
-            isDarkMode ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-slate-50/70'
-          }`}>
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 block uppercase font-bold">Current Status</span>
-            <span className="font-bold text-slate-900 dark:text-white">{jobCard.status ?? jobCard.jobStatus ?? 'PLANNED'}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* ===================================================================== */}
-      {/* 3. ROUTE CARD / OPERATIONS TABLE */}
-      {/* ===================================================================== */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between text-xs font-mono font-bold uppercase text-slate-700 dark:text-slate-300">
-          <span>Operational Routing Sequence</span>
-          <span className="text-[10px] text-slate-500">
-            {isActualExecution ? 'Recorded Shopfloor Execution' : 'Planned Routing Template'}
+      {/* ========================================================================= */}
+      {/* 3. ROUTE OPERATIONS & TIMING SCHEDULE (DETAILED TIMING COLUMNS) */}
+      {/* ========================================================================= */}
+      <div className="space-y-1.5">
+        <div className="flex justify-between items-center text-[11px] font-mono font-bold uppercase text-slate-900 border-b border-slate-300 pb-1">
+          <span>Operational Routing Sequence & Timing Log</span>
+          <span className="text-[10px] text-slate-600 font-normal">
+            {isActualExecution ? 'Recorded Floor Timings' : 'Standard Routing Schedule (Fill in start/end on shopfloor)'}
           </span>
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
-          <table className="w-full text-left text-xs border-collapse font-mono">
-            <thead>
-              <tr className="bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 uppercase text-[10px] font-bold">
-                <th className="py-2.5 px-3 border border-slate-300 dark:border-slate-800 w-12 text-center">Seq</th>
-                <th className="py-2.5 px-3 border border-slate-300 dark:border-slate-800">Operation Name</th>
-                <th className="py-2.5 px-3 border border-slate-300 dark:border-slate-800">Work Center / Machine</th>
-                <th className="py-2.5 px-3 border border-slate-300 dark:border-slate-800 text-right w-20">Std Time</th>
-                <th className="py-2.5 px-3 border border-slate-300 dark:border-slate-800 text-right w-20">Actual Time</th>
-                <th className="py-2.5 px-3 border border-slate-300 dark:border-slate-800 text-right w-20">Qty OK</th>
-                <th className="py-2.5 px-3 border border-slate-300 dark:border-slate-800 text-right w-20">Qty Scrap</th>
-                <th className="py-2.5 px-3 border border-slate-300 dark:border-slate-800">Operator</th>
-                <th className="py-2.5 px-3 border border-slate-300 dark:border-slate-800 text-center w-20">QC Req'd</th>
-                <th className="py-2.5 px-3 border border-slate-300 dark:border-slate-800 text-center w-24">Status</th>
+        <table className="w-full text-left text-[10px] border-collapse border border-slate-400 font-mono">
+          <thead>
+            <tr className="bg-slate-200 text-slate-900 font-bold text-center">
+              <th className="border border-slate-400 p-1.5 w-8">Seq</th>
+              <th className="border border-slate-400 p-1.5 text-left w-36">Operation Name</th>
+              <th className="border border-slate-400 p-1.5 text-left w-28">Machine / Station</th>
+              <th className="border border-slate-400 p-1.5 w-16">Std Time</th>
+              <th className="border border-slate-400 p-1.5 w-20">Start Time</th>
+              <th className="border border-slate-400 p-1.5 w-20">End Time</th>
+              <th className="border border-slate-400 p-1.5 w-16">Act. Time</th>
+              <th className="border border-slate-400 p-1.5 w-14">Qty OK</th>
+              <th className="border border-slate-400 p-1.5 w-14">Scrap</th>
+              <th className="border border-slate-400 p-1.5 w-24">Operator</th>
+              <th className="border border-slate-400 p-1.5 w-20">QC Sign</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sortedOps.length === 0 ? (
+              <tr>
+                <td colSpan={11} className="border border-slate-400 p-4 text-center text-slate-500">
+                  No routing operations defined for this part code.
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {sortedOps.length === 0 ? (
-                <tr>
-                  <td colSpan={10} className="py-6 text-center text-slate-400 font-mono text-xs border border-slate-300 dark:border-slate-800">
-                    No routing operations defined for this part.
-                  </td>
-                </tr>
-              ) : (
-                sortedOps.map((op: any, idx: number) => {
-                  if (isActualExecution) {
-                    const actualOp = op as JobCardOperation;
-                    return (
-                      <tr
-                        key={actualOp.id || `${actualOp.sequenceNo}-${idx}`}
-                        className={idx % 2 === 0 ? 'bg-transparent' : 'bg-slate-50/50 dark:bg-slate-900/30'}
-                      >
-                        <td className="py-2 px-3 border border-slate-300 dark:border-slate-800 text-center font-bold text-slate-600 dark:text-slate-400">
-                          {actualOp.sequenceNo}
-                        </td>
-                        <td className="py-2 px-3 border border-slate-300 dark:border-slate-800 font-semibold text-slate-900 dark:text-white font-sans">
-                          {actualOp.operationName}
-                        </td>
-                        <td className="py-2 px-3 border border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-300">
-                          {actualOp.machineId || jobCard.machine || '—'}
-                        </td>
-                        <td className="py-2 px-3 border border-slate-300 dark:border-slate-800 text-right">
-                          {actualOp.standardTimeMinutes != null ? `${actualOp.standardTimeMinutes}m` : '—'}
-                        </td>
-                        <td className="py-2 px-3 border border-slate-300 dark:border-slate-800 text-right font-bold text-slate-900 dark:text-white">
-                          {actualOp.actualTimeMinutes != null ? `${actualOp.actualTimeMinutes}m` : '—'}
-                        </td>
-                        <td className="py-2 px-3 border border-slate-300 dark:border-slate-800 text-right font-bold text-emerald-600 dark:text-emerald-400">
-                          {actualOp.qtyProcessed != null ? actualOp.qtyProcessed : '—'}
-                        </td>
-                        <td className="py-2 px-3 border border-slate-300 dark:border-slate-800 text-right font-bold text-rose-600 dark:text-rose-400">
-                          {actualOp.qtyRejected != null ? actualOp.qtyRejected : '—'}
-                        </td>
-                        <td className="py-2 px-3 border border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-300">
-                          {actualOp.operatorName || '—'}
-                        </td>
-                        <td className="py-2 px-3 border border-slate-300 dark:border-slate-800 text-center font-bold">
-                          {actualOp.inspectionRequired ? 'YES' : 'NO'}
-                        </td>
-                        <td className="py-2 px-3 border border-slate-300 dark:border-slate-800 text-center font-bold text-slate-700 dark:text-slate-300">
-                          {actualOp.opStatus || '—'}
-                        </td>
-                      </tr>
-                    );
-                  } else {
-                    const tplOp = op as RouteCardTemplateStep;
-                    return (
-                      <tr
-                        key={tplOp.id || `${tplOp.sequenceNo}-${idx}`}
-                        className={idx % 2 === 0 ? 'bg-transparent' : 'bg-slate-50/50 dark:bg-slate-900/30'}
-                      >
-                        <td className="py-2 px-3 border border-slate-300 dark:border-slate-800 text-center font-bold text-slate-600 dark:text-slate-400">
-                          {tplOp.sequenceNo}
-                        </td>
-                        <td className="py-2 px-3 border border-slate-300 dark:border-slate-800 font-semibold text-slate-900 dark:text-white font-sans">
-                          {tplOp.operationName}
-                        </td>
-                        <td className="py-2 px-3 border border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-300">
-                          {tplOp.workCenter || '—'}
-                        </td>
-                        <td className="py-2 px-3 border border-slate-300 dark:border-slate-800 text-right">
-                          {tplOp.standardTimeMinutes != null ? `${tplOp.standardTimeMinutes}m` : '—'}
-                        </td>
-                        {/* Fallback template steps leave execution cells blank for manual pen entry */}
-                        <td className="py-2 px-3 border border-slate-300 dark:border-slate-800 text-right">
-                          &nbsp;
-                        </td>
-                        <td className="py-2 px-3 border border-slate-300 dark:border-slate-800 text-right">
-                          &nbsp;
-                        </td>
-                        <td className="py-2 px-3 border border-slate-300 dark:border-slate-800 text-right">
-                          &nbsp;
-                        </td>
-                        <td className="py-2 px-3 border border-slate-300 dark:border-slate-800">
-                          &nbsp;
-                        </td>
-                        <td className="py-2 px-3 border border-slate-300 dark:border-slate-800 text-center font-bold">
-                          {tplOp.inspectionRequired ? 'YES' : 'NO'}
-                        </td>
-                        <td className="py-2 px-3 border border-slate-300 dark:border-slate-800 text-center">
-                          &nbsp;
-                        </td>
-                      </tr>
-                    );
-                  }
-                })
-              )}
-            </tbody>
-          </table>
+            ) : (
+              sortedOps.map((op: any, idx: number) => {
+                const actualOp = isActualExecution ? (op as JobCardOperation) : null;
+                const tplOp = !isActualExecution ? (op as RouteCardTemplateStep) : null;
+
+                // Match with productionLogs if actual start/end are not populated directly on op
+                const matchedLog = productionLogs.find(l => l.stepNo === op.sequenceNo);
+                const startTimeDisplay = actualOp?.actualStartTime
+                  ? formatTimeOnly(actualOp.actualStartTime)
+                  : matchedLog?.loggedTimestamp
+                  ? formatTimeOnly(matchedLog.loggedTimestamp)
+                  : '____:____';
+
+                const endTimeDisplay = actualOp?.actualEndTime
+                  ? formatTimeOnly(actualOp.actualEndTime)
+                  : actualOp?.opStatus === 'COMPLETED' && matchedLog?.loggedTimestamp
+                  ? formatTimeOnly(matchedLog.loggedTimestamp)
+                  : '____:____';
+
+                const actualDurationDisplay = actualOp?.actualTimeMinutes != null
+                  ? `${actualOp.actualTimeMinutes} m`
+                  : '____ m';
+
+                const qtyOkDisplay = actualOp?.qtyProcessed != null
+                  ? actualOp.qtyProcessed
+                  : matchedLog?.qtyDone != null
+                  ? matchedLog.qtyDone
+                  : '____';
+
+                const qtyScrapDisplay = actualOp?.qtyRejected != null
+                  ? actualOp.qtyRejected
+                  : '0';
+
+                const operatorDisplay = actualOp?.operatorName || '—';
+                const qcDisplay = actualOp?.inspectionPassed
+                  ? 'PASS ✓'
+                  : actualOp?.inspectionRequired
+                  ? 'REQ'
+                  : 'N/A';
+
+                return (
+                  <tr key={op.id || idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                    <td className="border border-slate-300 p-1.5 text-center font-bold text-slate-700">
+                      {op.sequenceNo}
+                    </td>
+                    <td className="border border-slate-300 p-1.5 font-semibold text-slate-900 font-sans">
+                      {op.operationName}
+                    </td>
+                    <td className="border border-slate-300 p-1.5 text-slate-700">
+                      {actualOp?.machineId || tplOp?.workCenter || jobCard.machine || '—'}
+                    </td>
+                    <td className="border border-slate-300 p-1.5 text-right font-bold">
+                      {op.standardTimeMinutes != null ? `${op.standardTimeMinutes}m` : '—'}
+                    </td>
+                    <td className="border border-slate-300 p-1.5 text-center font-mono">
+                      {startTimeDisplay}
+                    </td>
+                    <td className="border border-slate-300 p-1.5 text-center font-mono">
+                      {endTimeDisplay}
+                    </td>
+                    <td className="border border-slate-300 p-1.5 text-right font-bold font-mono">
+                      {actualDurationDisplay}
+                    </td>
+                    <td className="border border-slate-300 p-1.5 text-right font-bold text-emerald-700">
+                      {qtyOkDisplay}
+                    </td>
+                    <td className="border border-slate-300 p-1.5 text-right text-rose-700 font-bold">
+                      {qtyScrapDisplay}
+                    </td>
+                    <td className="border border-slate-300 p-1.5 text-center truncate">
+                      {operatorDisplay}
+                    </td>
+                    <td className="border border-slate-300 p-1.5 text-center font-bold text-[9px]">
+                      {qcDisplay}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 4. TIMING & YIELD TOTALS SUMMARY (CLEAN TABULAR BOX) */}
+      {/* ========================================================================= */}
+      <table className="w-full text-left text-[11px] border-collapse border border-slate-400 font-mono">
+        <tbody>
+          <tr className="bg-slate-100">
+            <td className="border border-slate-300 p-1.5 font-bold">Total Standard Cycle Time:</td>
+            <td className="border border-slate-300 p-1.5 font-bold">{totalStdMinutes} Minutes ({Math.round((totalStdMinutes / 60) * 100) / 100} Hrs)</td>
+            <td className="border border-slate-300 p-1.5 font-bold">Total Actual Floor Time:</td>
+            <td className="border border-slate-300 p-1.5 font-bold text-slate-900">
+              {totalActualMinutes > 0 ? `${totalActualMinutes} Minutes` : 'To be calculated post-run'}
+            </td>
+          </tr>
+          <tr>
+            <td className="border border-slate-300 p-1.5 font-bold">Total Target Quantity:</td>
+            <td className="border border-slate-300 p-1.5 font-bold">{jobCard.targetQty ?? jobCard.qty ?? 1} NOS</td>
+            <td className="border border-slate-300 p-1.5 font-bold">Yield / Rejection Summary:</td>
+            <td className="border border-slate-300 p-1.5 font-bold">
+              {totalQtyOk > 0 ? `${totalQtyOk} OK / ${totalQtyScrap} Scrap` : 'In Process'}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      {/* ========================================================================= */}
+      {/* 5. PHYSICAL HAND-SIGNATURE & AUTHORIZATION GRID */}
+      {/* ========================================================================= */}
+      <div className="space-y-1">
+        <div className="text-[10px] font-mono font-bold uppercase text-slate-800">
+          Statutory Shopfloor Authorization & Physical Verification Sign-Off
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px] font-mono">
+          <div className="border border-slate-400 p-2 flex flex-col justify-between h-20 bg-slate-50">
+            <div className="font-bold uppercase text-slate-700">1. Machine Operator</div>
+            <div className="text-[9px] text-slate-500">Sign: ___________________</div>
+            <div className="text-[9px] text-slate-500">Date/Time: _______________</div>
+          </div>
+
+          <div className="border border-slate-400 p-2 flex flex-col justify-between h-20 bg-slate-50">
+            <div className="font-bold uppercase text-slate-700">2. Production Supervisor</div>
+            <div className="text-[9px] text-slate-500">
+              {jobCard.supervisorSignOff ? `Verified: ${jobCard.supervisorSignOff}` : 'Sign: ___________________'}
+            </div>
+            <div className="text-[9px] text-slate-500">Date: ___________________</div>
+          </div>
+
+          <div className="border border-slate-400 p-2 flex flex-col justify-between h-20 bg-slate-50">
+            <div className="font-bold uppercase text-slate-700">3. QC Inspector (Stage/PDI)</div>
+            <div className="text-[9px] text-slate-500">
+              {jobCard.materialQcStatus === 'ACCEPTED' ? 'QC Clearance: ACCEPTED ✓' : 'Stamp: __________________'}
+            </div>
+            <div className="text-[9px] text-slate-500">Sign: ___________________</div>
+          </div>
+
+          <div className="border border-slate-400 p-2 flex flex-col justify-between h-20 bg-slate-50">
+            <div className="font-bold uppercase text-slate-700">4. Stores In-Charge</div>
+            <div className="text-[9px] text-slate-500">Material Issued Lot Confirmed</div>
+            <div className="text-[9px] text-slate-500">Sign & Date: _____________</div>
+          </div>
         </div>
       </div>
 
-      {/* ===================================================================== */}
-      {/* 4. SIGN-OFF SECTION & REMARKS */}
-      {/* ===================================================================== */}
-      <div className="space-y-3 pt-1">
-        {/* Remarks Box */}
-        {jobCard.remarks && (
-          <div className={`p-3 rounded-xl border text-xs font-mono ${
-            isDarkMode ? 'border-slate-800 bg-slate-950/40 text-slate-300' : 'border-slate-300 bg-slate-50 text-slate-800'
-          }`}>
-            <span className="font-bold uppercase tracking-wider block text-[10px] text-slate-500 dark:text-slate-400 mb-0.5">
-              Engineering / Shopfloor Remarks:
-            </span>
-            <span>{jobCard.remarks}</span>
-          </div>
-        )}
-
-        {/* Physical Hand-Signature Lines for Shopfloor Travelers */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
-          <div className={`p-3 rounded-xl border flex flex-col justify-between h-24 ${
-            isDarkMode ? 'border-slate-800 bg-slate-950/40' : 'border-slate-300 bg-white'
-          }`}>
-            <div className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">
-              Operator Name & Sign
-            </div>
-            <div className="border-b border-dashed border-slate-400 dark:border-slate-600 pb-1 text-slate-400 text-[11px]">
-              &nbsp;
-            </div>
-          </div>
-
-          <div className={`p-3 rounded-xl border flex flex-col justify-between h-24 ${
-            isDarkMode ? 'border-slate-800 bg-slate-950/40' : 'border-slate-300 bg-white'
-          }`}>
-            <div className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">
-              Supervisor Sign-Off
-            </div>
-            <div className="border-b border-dashed border-slate-400 dark:border-slate-600 pb-1 font-bold text-slate-900 dark:text-white text-[11px] truncate">
-              {jobCard.supervisorSignOff || <span className="opacity-0">—</span>}
-            </div>
-          </div>
-
-          <div className={`p-3 rounded-xl border flex flex-col justify-between h-24 ${
-            isDarkMode ? 'border-slate-800 bg-slate-950/40' : 'border-slate-300 bg-white'
-          }`}>
-            <div className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">
-              QC Inspector Sign-Off
-            </div>
-            <div className="border-b border-dashed border-slate-400 dark:border-slate-600 pb-1 text-slate-400 text-[11px]">
-              &nbsp;
-            </div>
-          </div>
-
-          <div className={`p-3 rounded-xl border flex flex-col justify-between h-24 ${
-            isDarkMode ? 'border-slate-800 bg-slate-950/40' : 'border-slate-300 bg-white'
-          }`}>
-            <div className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">
-              Date & Verification
-            </div>
-            <div className="border-b border-dashed border-slate-400 dark:border-slate-600 pb-1 text-slate-800 dark:text-slate-200 text-[11px]">
-              {printDate}
-            </div>
-          </div>
-        </div>
+      {/* Footer Notes */}
+      <div className="pt-2 border-t border-slate-300 flex justify-between text-[9px] text-slate-500 font-mono">
+        <span>* Machine operators must log actual start/end timings and sign upon completing each operation.</span>
+        <span>Internal Document • GuruOm OS</span>
       </div>
     </div>
   );

@@ -40,6 +40,7 @@ import {
 } from '../../../types/console';
 import { recordInventoryMovement } from '../../../services/supabaseServices';
 import { RouteCardTravelerPrint } from '../shared/RouteCardTravelerPrint';
+import { printElementById } from '../../../utils/printDocument';
 
 export interface MaterialConsumptionRecord {
   id: string;
@@ -630,56 +631,58 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
     });
   };
 
+  const handlePrintTraveler = () => {
+    printElementById('job-traveler-printable-document', `Route Card Traveler - ${jobCard?.jobNo || 'JC'}`);
+  };
+
   if (!isOpen || !jobCard) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-slate-950/85 backdrop-blur-md font-sans overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-md font-sans overflow-y-auto">
       <div 
         id="job-card-print-container" 
-        className={`relative w-full max-w-5xl h-[100dvh] sm:h-auto sm:max-h-[92vh] flex flex-col rounded-none sm:rounded-3xl border shadow-2xl transition-ui overflow-hidden ${
+        className={`relative w-full max-w-5xl h-[100dvh] sm:h-auto sm:max-h-[90vh] flex flex-col rounded-none sm:rounded-2xl border shadow-2xl backdrop-blur-2xl transition-all overflow-hidden ${
         isDarkMode 
-          ? 'bg-slate-900/95 border-slate-800 text-white backdrop-blur-2xl shadow-[#5B75F8]/10' 
-          : 'bg-white border-slate-200 text-slate-900 shadow-2xl'
+          ? 'bg-slate-900/95 border-white/10 text-white shadow-[0_20px_60px_rgba(0,0,0,0.6)]' 
+          : 'bg-white/95 border-slate-200/80 text-slate-900 shadow-[0_20px_60px_rgba(0,0,0,0.15)]'
       }`}>
         
         {/* ========================================================================= */}
-        {/* 1. HEADER BLOCK */}
+        {/* 1. APPLE HIG WINDOW TOOLBAR / HEADER */}
         {/* ========================================================================= */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-200 dark:border-slate-800/90 bg-slate-50/80 dark:bg-slate-950/60 shrink-0 no-print">
-          <div className="flex items-start sm:items-center gap-3">
-            <div className="p-2.5 sm:p-3 rounded-2xl bg-gradient-to-tr from-[#5B75F8] to-indigo-600 text-white shadow-md shadow-[#5B75F8]/20 shrink-0">
-              <Factory className="w-5 h-5 sm:w-6 sm:h-6" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 sm:px-6 py-4 border-b border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-slate-950/40 shrink-0 no-print">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF] shrink-0">
+              <Factory className="w-5 h-5 stroke-[2]" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-lg sm:text-xl font-bold font-mono tracking-tight text-[#5B75F8] dark:text-[#7B92FF]">
+                <h2 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white">
                   {jobCard.jobNo}
                 </h2>
 
                 {/* Status Badge */}
-                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-xl text-[11px] font-mono font-bold uppercase border ${
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
                   allStepsDone || jobCard.jobStatus === 'COMPLETED' || jobCard.status === 'COMPLETED'
-                    ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                     : jobCard.jobStatus === 'QC_HOLD' || jobCard.status === 'QC_HOLD'
-                    ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
-                    : jobCard.jobStatus === 'IN_PROGRESS' || jobCard.status === 'IN_PROGRESS' || jobCard.status === 'RUNNING' || completedStepsCount > 0
-                    ? 'bg-purple-500/15 text-purple-300 border-purple-500/30 animate-pulse'
-                    : 'bg-[#5B75F8]/15 text-[#7B92FF] border-[#5B75F8]/30'
+                    ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                    : 'bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF] border-blue-500/20'
                 }`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${
                     allStepsDone || jobCard.jobStatus === 'COMPLETED' || jobCard.status === 'COMPLETED'
-                      ? 'bg-emerald-400'
+                      ? 'bg-emerald-500'
                       : jobCard.jobStatus === 'QC_HOLD' || jobCard.status === 'QC_HOLD'
-                      ? 'bg-rose-400'
-                      : 'bg-purple-400'
+                      ? 'bg-rose-500'
+                      : 'bg-[#007AFF] animate-pulse'
                   }`} />
                   <span>
-                    {allStepsDone ? 'COMPLETED' : (jobCard.jobStatus || jobCard.status || 'PLANNED')}
+                    {allStepsDone ? 'Completed' : (jobCard.jobStatus || jobCard.status || 'Planned')}
                   </span>
                 </span>
 
                 {jobCard.drawingRevision && (
-                  <span className="px-2 py-0.5 rounded-lg text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-white/10">
                     Rev: {jobCard.drawingRevision}
                   </span>
                 )}
@@ -687,23 +690,23 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
 
               {/* Part Description and Customer PO */}
               <p className={`text-xs mt-1 truncate ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                <span className="font-bold text-slate-100 dark:text-white">{jobCard.partCode}</span> — {jobCard.partDescription}
+                <span className="font-semibold text-slate-900 dark:text-white">{jobCard.partCode}</span> — {jobCard.partDescription}
               </p>
-              <div className="flex items-center gap-2 mt-0.5 text-[11px] font-mono text-slate-400">
-                <span>PO: <strong className="text-indigo-400">{jobCard.orderPo}</strong></span>
+              <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-400 dark:text-slate-500">
+                <span>PO: <strong className="font-semibold text-slate-700 dark:text-slate-200">{jobCard.orderPo}</strong></span>
                 <span>•</span>
                 <span className="truncate">
                   {allStepsDone ? (
-                    <span className="text-emerald-400 font-bold">Ready for PDI</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">Ready for PDI Inspection</span>
                   ) : (
-                    <span>Next: <strong className="text-indigo-300">{nextIncompleteStep ? `Op ${nextIncompleteStep.sequenceNo}` : 'Production'}</strong></span>
+                    <span>Next: <strong className="font-semibold text-[#007AFF] dark:text-[#0A84FF]">{nextIncompleteStep ? `Op ${nextIncompleteStep.sequenceNo}` : 'Production'}</strong></span>
                   )}
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center justify-between sm:justify-end gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800/60">
+          <div className="flex items-center justify-between sm:justify-end gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200 dark:border-white/10">
             {allStepsDone ? (
               <button
                 type="button"
@@ -715,7 +718,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                     onNavigate('qc');
                   }
                 }}
-                className="flex-1 sm:flex-initial px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-mono font-bold shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
+                className="flex-1 sm:flex-initial px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-[0.98]"
               >
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 <span>QC / PDI →</span>
@@ -732,163 +735,160 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                   }
                   setShowLogProductionModal(true);
                 }}
-                className="flex-1 sm:flex-initial px-4 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 text-white text-xs font-mono font-bold shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
+                className="flex-1 sm:flex-initial px-4 py-2 rounded-full bg-[#007AFF] hover:bg-[#0071E3] active:scale-[0.98] text-white text-xs font-semibold shadow-sm shadow-blue-500/25 flex items-center justify-center gap-1.5 cursor-pointer transition-all"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Log Production</span>
               </button>
             )}
+
             {/* Print Action */}
             <button
               type="button"
-              onClick={() => window.print()}
-              className={`p-2 rounded-xl border flex items-center gap-1.5 text-xs font-mono font-semibold transition-ui cursor-pointer ${
+              onClick={handlePrintTraveler}
+              className={`px-3 py-1.5 rounded-full border flex items-center gap-1.5 text-xs font-medium transition-all cursor-pointer ${
                 isDarkMode 
-                  ? 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white' 
-                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
+                  ? 'border-white/10 bg-slate-800/80 text-slate-200 hover:bg-slate-700' 
+                  : 'border-slate-200/80 bg-slate-100/80 text-slate-700 hover:bg-slate-200'
               }`}
               title="Print Route Card Traveler"
             >
-              <Printer className="w-4 h-4 text-emerald-400" />
+              <Printer className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
               <span className="hidden sm:inline">Print</span>
             </button>
 
             {/* Download PDF Action */}
             <button
               type="button"
-              onClick={() => window.print()}
-              className={`p-2 rounded-xl border flex items-center gap-1.5 text-xs font-mono font-semibold transition-ui cursor-pointer ${
+              onClick={handlePrintTraveler}
+              className={`px-3 py-1.5 rounded-full border flex items-center gap-1.5 text-xs font-medium transition-all cursor-pointer ${
                 isDarkMode 
-                  ? 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white' 
-                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
+                  ? 'border-white/10 bg-slate-800/80 text-slate-200 hover:bg-slate-700' 
+                  : 'border-slate-200/80 bg-slate-100/80 text-slate-700 hover:bg-slate-200'
               }`}
-              title="Use 'Save as PDF' in the print dialog"
+              title="Save as PDF via Print dialog"
             >
-              <Download className="w-4 h-4 text-indigo-400" />
+              <Download className="w-3.5 h-3.5 text-[#007AFF] dark:text-[#0A84FF]" />
               <span className="hidden sm:inline">PDF</span>
             </button>
 
             <button
               onClick={onClose}
-              className={`p-2 rounded-2xl border transition-ui cursor-pointer ${
-                isDarkMode 
-                  ? 'border-slate-800 bg-slate-950/60 text-slate-400 hover:text-white hover:bg-slate-800' 
-                  : 'border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
-              }`}
+              className="rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-200 transition-all cursor-pointer"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4.5 h-4.5" />
             </button>
           </div>
         </div>
 
         {/* ========================================================================= */}
-        {/* SUMMARY KPI CARDS (Both Mobile & PC View) */}
+        {/* SUMMARY KPI CARDS (Apple Widget Cards) */}
         {/* ========================================================================= */}
-        <div className={`p-3.5 sm:p-5 border-b shrink-0 transition-ui no-print ${
+        <div className={`p-4 sm:p-5 border-b shrink-0 transition-all no-print ${
           isDarkMode 
-            ? 'bg-slate-950/40 border-slate-800/80 backdrop-blur-xl' 
-            : 'bg-slate-50/70 border-slate-200'
+            ? 'bg-slate-950/40 border-white/5 backdrop-blur-xl' 
+            : 'bg-slate-50/50 border-slate-200/80'
         }`}>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             
             {/* Card 1: Target Output */}
-            <div className={`p-3 sm:p-3.5 rounded-2xl border transition-ui relative overflow-hidden group ${
+            <div className={`p-4 rounded-2xl border transition-all ${
               isDarkMode 
-                ? 'bg-gradient-to-b from-slate-900/90 to-slate-950/90 border-slate-800/90 hover:border-emerald-500/40 shadow-xs' 
-                : 'bg-white border-slate-200/90 hover:border-emerald-500/30 shadow-xs'
+                ? 'bg-slate-900/80 border-white/10 hover:border-white/20' 
+                : 'bg-white/90 border-slate-200/80 hover:border-slate-300 shadow-xs'
             }`}>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] font-mono uppercase font-bold text-slate-400 tracking-wider">
+                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
                   Target Qty
                 </span>
-                <div className="p-1.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  <Package className="w-3.5 h-3.5" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  <Package className="w-4 h-4 stroke-[2]" />
                 </div>
               </div>
-              <div className="mt-1 flex items-baseline gap-1.5 font-mono">
-                <span className={`text-base sm:text-lg font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+              <div className="mt-2 flex items-baseline gap-1.5">
+                <span className={`text-xl sm:text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                   {targetQuantity}
                 </span>
-                <span className="text-xs font-semibold text-emerald-400">NOS</span>
+                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">NOS</span>
               </div>
-              <div className="mt-0.5 text-[10px] font-mono text-slate-400 truncate">
+              <div className="mt-1 text-xs text-slate-400 dark:text-slate-500 truncate">
                 Customer PO Target
               </div>
             </div>
 
             {/* Card 2: Target Date */}
-            <div className={`p-3 sm:p-3.5 rounded-2xl border transition-ui relative overflow-hidden group ${
+            <div className={`p-4 rounded-2xl border transition-all ${
               isDarkMode 
-                ? 'bg-gradient-to-b from-slate-900/90 to-slate-950/90 border-slate-800/90 hover:border-amber-500/40 shadow-xs' 
-                : 'bg-white border-slate-200/90 hover:border-amber-500/30 shadow-xs'
+                ? 'bg-slate-900/80 border-white/10 hover:border-white/20' 
+                : 'bg-white/90 border-slate-200/80 hover:border-slate-300 shadow-xs'
             }`}>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] font-mono uppercase font-bold text-slate-400 tracking-wider">
+                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
                   Target Delivery
                 </span>
-                <div className="p-1.5 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                  <Clock className="w-3.5 h-3.5" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                  <Clock className="w-4 h-4 stroke-[2]" />
                 </div>
               </div>
-              <div className="mt-1 font-mono font-bold text-amber-400 text-sm sm:text-base truncate">
+              <div className="mt-2 text-sm sm:text-base font-bold text-amber-600 dark:text-amber-400 truncate">
                 {jobCard.targetDate || '2026-08-30'}
               </div>
-              <div className="mt-0.5 text-[10px] font-mono text-slate-400 truncate">
+              <div className="mt-1 text-xs text-slate-400 dark:text-slate-500 truncate">
                 Shift Commitment
               </div>
             </div>
 
             {/* Card 3: Route Progress */}
-            <div className={`p-3 sm:p-3.5 rounded-2xl border transition-ui relative overflow-hidden group ${
+            <div className={`p-4 rounded-2xl border transition-all ${
               isDarkMode 
-                ? 'bg-gradient-to-b from-slate-900/90 to-slate-950/90 border-slate-800/90 hover:border-[#5B75F8]/40 shadow-xs' 
-                : 'bg-white border-slate-200/90 hover:border-[#5B75F8]/30 shadow-xs'
+                ? 'bg-slate-900/80 border-white/10 hover:border-white/20' 
+                : 'bg-white/90 border-slate-200/80 hover:border-slate-300 shadow-xs'
             }`}>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] font-mono uppercase font-bold text-slate-400 tracking-wider">
+                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
                   Route Execution
                 </span>
-                <div className="p-1.5 rounded-xl bg-[#5B75F8]/10 text-[#7B92FF] border border-[#5B75F8]/20">
-                  <Route className="w-3.5 h-3.5" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF]">
+                  <Route className="w-4 h-4 stroke-[2]" />
                 </div>
               </div>
-              <div className="mt-1 flex items-baseline gap-2 font-mono">
-                <span className={`text-base sm:text-lg font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className={`text-xl sm:text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                   {completedStepsCount} / {totalStepsCount}
                 </span>
-                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-[#5B75F8]/15 text-[#7B92FF] border border-[#5B75F8]/25">
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF]">
                   {Math.round((completedStepsCount / (totalStepsCount || 1)) * 100)}%
                 </span>
               </div>
-              <div className="mt-0.5 text-[10px] font-mono text-slate-400 truncate">
+              <div className="mt-1 text-xs text-slate-400 dark:text-slate-500 truncate">
                 {allStepsDone ? 'All stages completed ✓' : `${totalStepsCount - completedStepsCount} stages remaining`}
               </div>
             </div>
 
             {/* Card 4: Next Milestone */}
-            <div className={`p-3 sm:p-3.5 rounded-2xl border transition-ui relative overflow-hidden group ${
+            <div className={`p-4 rounded-2xl border transition-all ${
               isDarkMode 
-                ? 'bg-gradient-to-b from-slate-900/90 to-slate-950/90 border-slate-800/90 hover:border-purple-500/40 shadow-xs' 
-                : 'bg-white border-slate-200/90 hover:border-purple-500/30 shadow-xs'
+                ? 'bg-slate-900/80 border-white/10 hover:border-white/20' 
+                : 'bg-white/90 border-slate-200/80 hover:border-slate-300 shadow-xs'
             }`}>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] font-mono uppercase font-bold text-slate-400 tracking-wider">
+                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
                   Next Milestone
                 </span>
-                <div className={`p-1.5 rounded-xl border ${
+                <div className={`flex h-8 w-8 items-center justify-center rounded-xl ${
                   allStepsDone
-                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                    : 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                    : 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
                 }`}>
-                  {allStepsDone ? <ShieldCheck className="w-3.5 h-3.5" /> : <Sparkles className="w-3.5 h-3.5" />}
+                  {allStepsDone ? <ShieldCheck className="w-4 h-4 stroke-[2]" /> : <Sparkles className="w-4 h-4 stroke-[2]" />}
                 </div>
               </div>
-              <div className={`mt-1 font-mono font-bold text-xs sm:text-sm truncate ${
-                allStepsDone ? 'text-emerald-400' : 'text-indigo-400 dark:text-[#7B92FF]'
+              <div className={`mt-2 font-bold text-xs sm:text-sm truncate ${
+                allStepsDone ? 'text-emerald-600 dark:text-emerald-400' : 'text-[#007AFF] dark:text-[#0A84FF]'
               }`}>
                 {allStepsDone ? 'Pre-Dispatch QC (PDI)' : nextIncompleteStep ? `Op ${nextIncompleteStep.sequenceNo}: ${nextIncompleteStep.operationName}` : 'In Production'}
               </div>
-              <div className="mt-0.5 text-[10px] font-mono text-slate-400 truncate">
+              <div className="mt-1 text-xs text-slate-400 dark:text-slate-500 truncate">
                 {allStepsDone ? 'Ready for final inspection' : nextIncompleteStep ? `Work Center: ${nextIncompleteStep.workCenter}` : 'Pending line release'}
               </div>
             </div>
@@ -897,10 +897,10 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
         </div>
 
         {/* ========================================================================= */}
-        {/* MOBILE SECTION NAVIGATION BAR (Viewport < md) */}
+        {/* MOBILE SECTION NAVIGATION BAR (Apple Segmented Switcher) */}
         {/* ========================================================================= */}
-        <div className={`flex md:hidden items-center gap-1.5 p-2.5 border-b overflow-x-auto scrollbar-none shrink-0 no-print ${
-          isDarkMode ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-100/90 border-slate-200'
+        <div className={`flex md:hidden items-center gap-1 p-1.5 border-b overflow-x-auto no-scrollbar shrink-0 no-print ${
+          isDarkMode ? 'bg-slate-950/60 border-white/5' : 'bg-slate-100/80 border-slate-200/80'
         }`}>
           {[
             { id: 'routes', label: 'Route Steps', icon: Route, count: `${completedStepsCount}/${totalStepsCount}` },
@@ -915,20 +915,18 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
               <button
                 key={tab.id}
                 onClick={() => setActiveMobileSection(tab.id as any)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-bold whitespace-nowrap transition-ui cursor-pointer border ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
                   isActive
-                    ? 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-sm'
-                    : isDarkMode 
-                      ? 'bg-slate-900/80 text-slate-400 border-slate-800 hover:text-white' 
-                      : 'bg-white text-slate-600 border-slate-200 hover:text-slate-900'
+                    ? isDarkMode ? 'bg-slate-800 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
                 <span>{tab.label}</span>
                 <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
                   isActive 
-                    ? 'bg-white/25 text-white' 
-                    : isDarkMode ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-700'
+                    ? isDarkMode ? 'bg-white/15 text-white' : 'bg-slate-100 text-slate-700' 
+                    : isDarkMode ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-600'
                 }`}>
                   {tab.count}
                 </span>
@@ -961,36 +959,38 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
           {/* ========================================================================= */}
           <div className={`space-y-3 no-print ${activeMobileSection === 'routes' ? 'block' : 'hidden md:block'}`}>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Route className="w-4 h-4 text-[#5B75F8]" />
-                <h3 className={`font-bold text-sm font-mono tracking-tight ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF]">
+                  <Route className="w-4 h-4 stroke-[2]" />
+                </div>
+                <h3 className={`font-bold text-sm tracking-tight ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
                   Route Steps
                 </h3>
               </div>
-              <span className="text-[11px] font-mono text-slate-400">
+              <span className="text-xs text-slate-400 dark:text-slate-500">
                 {completedStepsCount} of {totalStepsCount} Executed ({Math.round((completedStepsCount / (totalStepsCount || 1)) * 100)}%)
               </span>
             </div>
 
             {/* Desktop Table View */}
-            <div className={`hidden md:block rounded-2xl border overflow-hidden transition-ui shadow-sm ${
-              isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-white border-slate-200'
+            <div className={`hidden md:block rounded-2xl border overflow-hidden transition-all shadow-xs ${
+              isDarkMode ? 'bg-slate-950/40 border-white/10' : 'bg-white border-slate-200/80'
             }`}>
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse font-mono">
+                <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className={`border-b font-bold uppercase tracking-wider text-[10px] ${
-                      isDarkMode ? 'bg-slate-900/80 border-slate-800 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-500'
+                    <tr className={`border-b text-xs font-semibold ${
+                      isDarkMode ? 'bg-slate-900/60 border-white/10 text-slate-400' : 'bg-slate-50/80 border-slate-200/80 text-slate-500'
                     }`}>
                       <th className="py-3 px-4 w-14">Seq</th>
                       <th className="py-3 px-4">Operation</th>
-                      <th className="py-3 px-4">Machine</th>
+                      <th className="py-3 px-4">Work Center</th>
                       <th className="py-3 px-4 text-center">Progress</th>
                       <th className="py-3 px-4">Material Needed</th>
                       <th className="py-3 px-4 text-right">Std Time</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
+                  <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                     {stepProgressList.map((step) => {
                       const mats = materialNeededPerStep[step.sequenceNo] || [];
 
@@ -999,51 +999,51 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                           key={step.sequenceNo}
                           className={`transition-colors ${
                             !step.isReachable && !step.isCompleted
-                              ? isDarkMode ? 'opacity-40 bg-slate-950/20' : 'opacity-40 bg-slate-100/50'
+                              ? isDarkMode ? 'opacity-40 bg-slate-950/20' : 'opacity-40 bg-slate-50/50'
                               : step.isNextIncomplete
-                              ? isDarkMode ? 'bg-[#5B75F8]/10' : 'bg-indigo-50/70'
-                              : isDarkMode ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'
+                              ? isDarkMode ? 'bg-blue-500/10' : 'bg-blue-50/60'
+                              : isDarkMode ? 'hover:bg-white/[0.03]' : 'hover:bg-slate-50/70'
                           }`}
                         >
-                          <td className="py-3 px-4 font-bold text-slate-400">
+                          <td className="py-3.5 px-4 font-semibold text-slate-400">
                             <div className="flex items-center gap-1.5">
-                              {!step.isReachable && !step.isCompleted && <Lock className="w-3 h-3 text-slate-500 shrink-0" />}
-                              <span>{step.sequenceNo}</span>
+                              {!step.isReachable && !step.isCompleted && <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
+                              <span className="tabular-nums">{step.sequenceNo}</span>
                             </div>
                           </td>
-                          <td className={`py-3 px-4 font-sans font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
-                            <div className="flex items-center gap-1.5">
+                          <td className={`py-3.5 px-4 font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+                            <div className="flex items-center gap-2">
                               <span>{step.operationName}</span>
                               {step.inspectionRequired && (
-                                <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
                                   QC Gate
                                 </span>
                               )}
                             </div>
                           </td>
-                          <td className="py-3 px-4 text-purple-400 font-medium">
+                          <td className="py-3.5 px-4 text-purple-600 dark:text-purple-400 font-medium">
                             {step.workCenter}
                           </td>
-                          <td className="py-3 px-4 text-center">
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono font-bold ${
+                          <td className="py-3.5 px-4 text-center">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${
                               step.isCompleted
-                                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                                 : step.loggedQty > 0
-                                ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
-                                : 'bg-slate-800/60 text-slate-400 border border-slate-700'
+                                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                                : isDarkMode ? 'bg-slate-800 text-slate-400 border-white/5' : 'bg-slate-100 text-slate-500 border-slate-200'
                             }`}>
-                              <span>{step.loggedQty} / {targetQuantity}</span>
-                              {step.isCompleted && <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[2.5]" />}
+                              <span className="tabular-nums">{step.loggedQty} / {targetQuantity}</span>
+                              {step.isCompleted && <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 stroke-[2.5]" />}
                             </span>
                           </td>
-                          <td className="py-3 px-4 text-xs font-mono">
+                          <td className="py-3.5 px-4 text-xs">
                             {mats.length > 0 ? (
                               <div className="space-y-1">
                                 {mats.map((m, mIdx) => (
                                   <div key={mIdx} className="flex items-center gap-1.5">
-                                    <span className={`font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{m.code}:</span>
+                                    <span className={`font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{m.code}:</span>
                                     <span className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>{m.req} {m.uom}</span>
-                                    <span className={`font-bold ${m.left > 0 ? (isDarkMode ? 'text-amber-400' : 'text-amber-600') : (isDarkMode ? 'text-emerald-400' : 'text-emerald-600')}`}>
+                                    <span className={`font-medium ${m.left > 0 ? (isDarkMode ? 'text-amber-400' : 'text-amber-600') : (isDarkMode ? 'text-emerald-400' : 'text-emerald-600')}`}>
                                       (left {m.left} {m.uom})
                                     </span>
                                   </div>
@@ -1053,7 +1053,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                               <span className={isDarkMode ? 'text-slate-500' : 'text-slate-400'}>—</span>
                             )}
                           </td>
-                          <td className={`py-3 px-4 text-right font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                          <td className={`py-3.5 px-4 text-right tabular-nums ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                             {step.standardTimeMinutes || 15} mins
                           </td>
                         </tr>
@@ -1073,37 +1073,37 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                 return (
                   <div
                     key={step.sequenceNo}
-                    className={`p-4 rounded-2xl border transition-ui space-y-3 shadow-xs ${
+                    className={`p-4 rounded-2xl border transition-all space-y-3 shadow-xs ${
                       step.isCompleted
-                        ? isDarkMode ? 'bg-slate-950/70 border-emerald-500/30' : 'bg-emerald-50/40 border-emerald-200'
+                        ? isDarkMode ? 'bg-slate-950/70 border-emerald-500/20' : 'bg-emerald-50/40 border-emerald-200'
                         : step.isNextIncomplete
-                        ? isDarkMode ? 'bg-[#5B75F8]/10 border-[#5B75F8]/40 shadow-xs' : 'bg-indigo-50/80 border-indigo-200'
+                        ? isDarkMode ? 'bg-blue-500/10 border-blue-500/30' : 'bg-blue-50/80 border-blue-200'
                         : !step.isReachable
-                        ? isDarkMode ? 'bg-slate-950/40 border-slate-800/60 opacity-60' : 'bg-slate-100/60 border-slate-200 opacity-60'
-                        : isDarkMode ? 'bg-slate-950/70 border-slate-800' : 'bg-white border-slate-200'
+                        ? isDarkMode ? 'bg-slate-950/40 border-white/5 opacity-60' : 'bg-slate-100/60 border-slate-200 opacity-60'
+                        : isDarkMode ? 'bg-slate-950/70 border-white/10' : 'bg-white border-slate-200'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2.5">
-                        <span className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-mono font-bold border shrink-0 ${
+                        <span className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold border shrink-0 ${
                           step.isCompleted
                             ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
                             : step.isNextIncomplete
-                            ? 'bg-[#5B75F8]/20 text-[#7B92FF] border-[#5B75F8]/50'
-                            : 'bg-slate-800 text-slate-400 border-slate-700'
+                            ? 'bg-blue-500/20 text-[#007AFF] dark:text-[#0A84FF] border-blue-500/30'
+                            : isDarkMode ? 'bg-slate-800 text-slate-400 border-white/10' : 'bg-slate-100 text-slate-500 border-slate-200'
                         }`}>
                           {step.isCompleted ? <Check className="w-4 h-4 stroke-[3]" /> : step.sequenceNo}
                         </span>
                         <div>
-                          <h4 className={`text-xs font-bold font-sans ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>
+                          <h4 className={`text-xs font-bold ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>
                             {step.operationName}
                           </h4>
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="text-[10px] font-mono font-medium text-purple-400">
+                            <span className="text-[11px] font-medium text-purple-600 dark:text-purple-400">
                               {step.workCenter}
                             </span>
                             {step.inspectionRequired && (
-                              <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                              <span className="px-1.5 py-0.2 rounded-full text-[9px] font-medium bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
                                 QC Gate
                               </span>
                             )}
@@ -1111,30 +1111,30 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                         </div>
                       </div>
 
-                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold uppercase border shrink-0 ${
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase border shrink-0 ${
                         step.isCompleted
-                          ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                           : step.isNextIncomplete
-                          ? 'bg-[#5B75F8]/20 text-[#7B92FF] border-[#5B75F8]/40 animate-pulse'
+                          ? 'bg-blue-500/15 text-[#007AFF] dark:text-[#0A84FF] border-blue-500/25'
                           : !step.isReachable
-                          ? 'bg-slate-800/80 text-slate-500 border-slate-700'
-                          : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                          ? 'bg-slate-800/80 text-slate-400 border-white/5'
+                          : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
                       }`}>
                         {step.isCompleted ? 'Done' : step.isNextIncomplete ? 'Active' : !step.isReachable ? 'Locked' : 'Queued'}
                       </span>
                     </div>
 
                     <div className="space-y-1">
-                      <div className="flex items-center justify-between text-[11px] font-mono">
+                      <div className="flex items-center justify-between text-xs">
                         <span className="text-slate-400">Step Progress:</span>
-                        <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                        <span className={`font-semibold tabular-nums ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                           {step.loggedQty} / {targetQuantity} NOS ({pct}%)
                         </span>
                       </div>
-                      <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                      <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
                         <div 
-                          className={`h-full rounded-full transition-ui ${
-                            step.isCompleted ? 'bg-emerald-500' : 'bg-gradient-to-r from-[#5B75F8] to-indigo-500'
+                          className={`h-full rounded-full transition-all ${
+                            step.isCompleted ? 'bg-emerald-500' : 'bg-[#007AFF]'
                           }`}
                           style={{ width: `${pct}%` }}
                         />
@@ -1142,14 +1142,14 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                     </div>
 
                     {mats.length > 0 && (
-                      <div className={`p-2.5 rounded-xl border text-[11px] font-mono space-y-1 ${
-                        isDarkMode ? 'bg-slate-900/60 border-slate-800/80' : 'bg-slate-50 border-slate-200'
+                      <div className={`p-2.5 rounded-xl border text-xs space-y-1 ${
+                        isDarkMode ? 'bg-slate-900/60 border-white/5' : 'bg-slate-50 border-slate-100'
                       }`}>
-                        <span className={`font-bold block text-[10px] uppercase ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Material Requirement:</span>
+                        <span className="font-semibold block text-[10px] text-slate-400 uppercase">Material Requirement:</span>
                         {mats.map((m, idx) => (
                           <div key={idx} className={`flex items-center justify-between ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                            <span className="font-bold">{m.code}</span>
-                            <span className={m.left > 0 ? (isDarkMode ? 'text-amber-400 font-bold' : 'text-amber-600 font-bold') : (isDarkMode ? 'text-emerald-400 font-bold' : 'text-emerald-600 font-bold')}>
+                            <span className="font-medium">{m.code}</span>
+                            <span className={m.left > 0 ? (isDarkMode ? 'text-amber-400 font-semibold' : 'text-amber-600 font-semibold') : (isDarkMode ? 'text-emerald-400 font-semibold' : 'text-emerald-600 font-semibold')}>
                               Req: {m.req} {m.uom} (Left: {m.left})
                             </span>
                           </div>
@@ -1166,10 +1166,10 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                           setLogQty(rem);
                           setShowLogProductionModal(true);
                         }}
-                        className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 text-white text-xs font-mono font-bold flex items-center justify-center gap-1.5 shadow-md shadow-[#5B75F8]/20 cursor-pointer"
+                        className="w-full py-2 rounded-full bg-[#007AFF] hover:bg-[#0071E3] active:scale-[0.98] text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition-all"
                       >
                         <Plus className="w-3.5 h-3.5" />
-                        <span>+ Log Output for Op {step.sequenceNo}</span>
+                        <span>Log Output for Op {step.sequenceNo}</span>
                       </button>
                     )}
                   </div>
@@ -1181,36 +1181,42 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
           {/* ========================================================================= */}
           {/* 3. PRINTABLE ROUTE CARD / JOB TRAVELER (PRINT-READY DOCUMENT) */}
           {/* ========================================================================= */}
-          <div className={`space-y-3 ${activeMobileSection === 'traveler' ? 'block' : 'hidden md:block'}`}>
+          <div className={`space-y-3 print:block ${activeMobileSection === 'traveler' ? 'block' : 'hidden md:block'}`}>
             <div className="flex items-center justify-between no-print">
-              <div className="flex items-center gap-2">
-                <Printer className="w-4 h-4 text-emerald-400" />
-                <h3 className={`font-bold text-sm font-mono tracking-tight ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  <Printer className="w-4 h-4 stroke-[2]" />
+                </div>
+                <h3 className={`font-bold text-sm tracking-tight ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
                   Shopfloor Route Card / Job Traveler (Print Preview)
                 </h3>
               </div>
               <button
                 type="button"
-                onClick={() => window.print()}
-                className={`px-3 py-1.5 rounded-xl border flex items-center gap-1.5 text-xs font-mono font-bold transition-ui cursor-pointer ${
+                onClick={handlePrintTraveler}
+                className={`px-3.5 py-1.5 rounded-full border flex items-center gap-1.5 text-xs font-semibold transition-all cursor-pointer ${
                   isDarkMode
-                    ? 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white'
-                    : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    ? 'border-white/10 bg-slate-800/80 text-slate-200 hover:bg-slate-700'
+                    : 'border-slate-200/80 bg-slate-100/80 text-slate-700 hover:bg-slate-200'
                 }`}
                 title="Print Traveler Sheet"
               >
-                <Printer className="w-3.5 h-3.5 text-emerald-400" />
+                <Printer className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 <span>Print Sheet</span>
               </button>
             </div>
 
-            <RouteCardTravelerPrint
-              jobCard={jobCard}
-              order={orders.find(o => o.poNo === jobCard.orderPo || o.id === jobCard.orderPo)}
-              routeCard={routeCards.find(rc => rc.partCode === jobCard.partCode)}
-              companyProfile={companyProfile}
-              isDarkMode={isDarkMode}
-            />
+            <div id="job-traveler-printable-document">
+              <RouteCardTravelerPrint
+                jobCard={jobCard}
+                order={orders.find(o => o.poNo === jobCard.orderPo || o.id === jobCard.orderPo)}
+                routeCard={routeCards.find(rc => rc.partCode === jobCard.partCode)}
+                bom={boms?.find(b => b.parentPartCode === jobCard.partCode || b.bomCode === (jobCard as any).bomCode)}
+                productionLogs={productionLogs?.filter(l => l.jobNo === jobCard.jobNo || l.orderPo === jobCard.orderPo)}
+                companyProfile={companyProfile}
+                isDarkMode={isDarkMode}
+              />
+            </div>
           </div>
 
           {/* ========================================================================= */}
@@ -1219,13 +1225,15 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
           <div className={`space-y-3 no-print ${activeMobileSection === 'materials' ? 'block' : 'hidden md:block'}`}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <div className="flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-[#5B75F8]" />
-                  <h3 className={`font-bold text-sm font-mono tracking-tight ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF]">
+                    <Layers className="w-4 h-4 stroke-[2]" />
+                  </div>
+                  <h3 className={`font-bold text-sm tracking-tight ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
                     Material Consumption
                   </h3>
                 </div>
-                <p className={`text-[11px] font-mono mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                   Bill of Materials — expected/guide only · book any qty, or add material
                 </p>
               </div>
@@ -1233,10 +1241,10 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
               <button
                 type="button"
                 onClick={() => setShowAddMaterialModal(true)}
-                className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-ui ${
+                className={`px-3.5 py-1.5 rounded-full border text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all ${
                   isDarkMode 
-                    ? 'border-indigo-500/40 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20' 
-                    : 'border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
+                    ? 'border-white/10 bg-slate-800/80 text-slate-200 hover:bg-slate-700' 
+                    : 'border-slate-200/80 bg-slate-100/80 text-slate-700 hover:bg-slate-200'
                 }`}
               >
                 <Plus className="w-3.5 h-3.5" />
@@ -1245,14 +1253,14 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
             </div>
 
             {/* Desktop Table View */}
-            <div className={`hidden md:block rounded-2xl border overflow-hidden transition-ui shadow-sm ${
-              isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-white border-slate-200'
+            <div className={`hidden md:block rounded-2xl border overflow-hidden transition-all shadow-xs ${
+              isDarkMode ? 'bg-slate-950/40 border-white/10' : 'bg-white border-slate-200/80'
             }`}>
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse font-mono">
+                <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className={`border-b font-bold uppercase tracking-wider text-[10px] ${
-                      isDarkMode ? 'bg-slate-900/80 border-slate-800 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-500'
+                    <tr className={`border-b text-xs font-semibold ${
+                      isDarkMode ? 'bg-slate-900/60 border-white/10 text-slate-400' : 'bg-slate-50/80 border-slate-200/80 text-slate-500'
                     }`}>
                       <th className="py-3 px-4">Component</th>
                       <th className="py-3 px-4 text-right">Planned Total</th>
@@ -1261,28 +1269,28 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                       <th className="py-3 px-4 text-center">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
+                  <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                     {allMaterialRows.map((mat) => {
                       const inputVal = toBookInputs[mat.componentCode]?.qty ?? '';
                       const isBooking = isBookingMaterial === mat.componentCode;
 
                       return (
-                        <tr key={mat.componentCode} className={isDarkMode ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}>
-                          <td className="py-3.5 px-4 font-sans">
-                            <div className={`font-bold text-xs font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                        <tr key={mat.componentCode} className={isDarkMode ? 'hover:bg-white/[0.03]' : 'hover:bg-slate-50/70'}>
+                          <td className="py-3.5 px-4">
+                            <div className={`font-semibold text-xs ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                               {mat.componentCode}
                             </div>
-                            <div className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                            <div className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                               {mat.componentName}
                             </div>
-                            <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded text-[9px] font-mono bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/20 font-medium">
+                            <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/20">
                               Op {mat.assignedStepSeq}: {mat.assignedOpName}
                             </span>
                           </td>
-                          <td className={`py-3.5 px-4 text-right font-mono ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                          <td className={`py-3.5 px-4 text-right tabular-nums ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                             {mat.plannedTotal} {mat.uom}
                           </td>
-                          <td className={`py-3.5 px-4 text-right font-mono font-bold ${
+                          <td className={`py-3.5 px-4 text-right tabular-nums font-semibold ${
                             mat.remainingLeft > 0 ? (isDarkMode ? 'text-amber-400' : 'text-amber-600') : (isDarkMode ? 'text-emerald-400' : 'text-emerald-600')
                           }`}>
                             {mat.remainingLeft} {mat.uom}
@@ -1296,13 +1304,13 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                                 placeholder={mat.remainingLeft > 0 ? String(mat.remainingLeft) : '0'}
                                 value={inputVal}
                                 onChange={(e) => handleInputChange(mat.componentCode, 'qty', e.target.value)}
-                                className={`w-28 rounded-xl border px-3 py-1.5 text-xs font-mono text-right outline-none transition-ui ${
+                                className={`w-28 rounded-xl border px-3 py-1.5 text-xs text-right outline-none transition-all ${
                                   isDarkMode 
-                                    ? 'bg-slate-900 border-slate-700 text-white focus:border-[#5B75F8]' 
-                                    : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[#5B75F8]'
+                                    ? 'bg-slate-900/90 border-white/10 text-white focus:border-[#007AFF]' 
+                                    : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
                                 }`}
                               />
-                              <span className={`text-[11px] font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{mat.uom}</span>
+                              <span className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{mat.uom}</span>
                             </div>
                           </td>
                           <td className="py-3.5 px-4 text-center">
@@ -1310,7 +1318,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                               type="button"
                               disabled={isBooking}
                               onClick={() => handleBookMaterialSubmit(mat)}
-                              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-mono font-bold shadow-md shadow-emerald-500/20 disabled:opacity-50 flex items-center justify-center gap-1 mx-auto cursor-pointer transition-ui hover:scale-[1.02] active:scale-[0.96]"
+                              className="px-3.5 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-xs disabled:opacity-50 flex items-center justify-center gap-1 mx-auto cursor-pointer transition-all active:scale-[0.98]"
                             >
                               <Check className="w-3.5 h-3.5" />
                               <span>{isBooking ? 'Booking...' : 'Book'}</span>
@@ -1330,57 +1338,59 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
           {/* ========================================================================= */}
           <div className={`space-y-3 no-print ${(activeMobileSection === 'shifts' || activeMobileSection === 'logs') ? 'block' : 'hidden md:block'}`}>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Activity className="w-4 h-4 text-[#5B75F8]" />
-                <h3 className={`font-bold text-sm font-mono tracking-tight ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF]">
+                  <Activity className="w-4 h-4 stroke-[2]" />
+                </div>
+                <h3 className={`font-bold text-sm tracking-tight ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
                   Shift Execution Logs
                 </h3>
               </div>
-              <span className={`text-[11px] font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              <span className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                 Recorded output batches ({allJobLogs.length})
               </span>
             </div>
 
             {/* Desktop Table View */}
-            <div className={`hidden md:block rounded-2xl border overflow-hidden transition-ui shadow-sm ${
-              isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-white border-slate-200'
+            <div className={`hidden md:block rounded-2xl border overflow-hidden transition-all shadow-xs ${
+              isDarkMode ? 'bg-slate-950/40 border-white/10' : 'bg-white border-slate-200/80'
             }`}>
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse font-mono">
+                <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className={`border-b font-bold uppercase tracking-wider text-[10px] ${
-                      isDarkMode ? 'bg-slate-900/80 border-slate-800 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-500'
+                    <tr className={`border-b text-xs font-semibold ${
+                      isDarkMode ? 'bg-slate-900/60 border-white/10 text-slate-400' : 'bg-slate-50/80 border-slate-200/80 text-slate-500'
                     }`}>
                       <th className="py-3 px-4">When</th>
                       <th className="py-3 px-4 text-center w-16">Step</th>
                       <th className="py-3 px-4">Operation</th>
                       <th className="py-3 px-4 text-right">Qty Done</th>
-                      <th className="py-3 px-4 text-right">Mins</th>
+                      <th className="py-3 px-4 text-right">Duration</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
+                  <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                     {allJobLogs.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="py-8 text-center text-slate-400 font-mono">
+                        <td colSpan={5} className="py-8 text-center text-slate-400">
                           No production shifts logged yet.
                         </td>
                       </tr>
                     ) : (
                       allJobLogs.map((log, idx) => (
-                        <tr key={log.id || idx} className={isDarkMode ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}>
-                          <td className={`py-3 px-4 font-mono text-[11px] ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                        <tr key={log.id || idx} className={isDarkMode ? 'hover:bg-white/[0.03]' : 'hover:bg-slate-50/70'}>
+                          <td className={`py-3 px-4 text-xs ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                             {formatDateTime(log.loggedTimestamp)}
                           </td>
-                          <td className={`py-3 px-4 text-center font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                          <td className={`py-3 px-4 text-center font-semibold ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                             {log.stepNo}
                           </td>
-                          <td className={`py-3 px-4 font-sans font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>
+                          <td className={`py-3 px-4 font-medium ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>
                             {log.operationName}
                           </td>
-                          <td className="py-3 px-4 text-right font-bold text-emerald-600 dark:text-emerald-400 font-mono">
-                            {log.qtyDone} NOS
+                          <td className="py-3 px-4 text-right font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                            +{log.qtyDone} NOS
                           </td>
-                          <td className={`py-3 px-4 text-right font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                          <td className={`py-3 px-4 text-right ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                             —
                           </td>
                         </tr>
@@ -1394,8 +1404,8 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
             {/* Mobile Shift Log Cards (Viewport < md) */}
             <div className="block md:hidden space-y-2.5">
               {allJobLogs.length === 0 ? (
-                <div className={`p-8 text-center rounded-2xl border font-mono text-xs ${
-                  isDarkMode ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-500'
+                <div className={`p-8 text-center rounded-2xl border text-xs ${
+                  isDarkMode ? 'border-white/10 text-slate-400' : 'border-slate-200 text-slate-500'
                 }`}>
                   No production output logged yet.
                 </div>
@@ -1403,21 +1413,21 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                 allJobLogs.map((log, idx) => (
                   <div 
                     key={log.id || idx} 
-                    className={`p-3.5 rounded-2xl border space-y-1.5 font-mono text-xs ${
-                      isDarkMode ? 'bg-slate-950/70 border-slate-800' : 'bg-slate-50 border-slate-200'
+                    className={`p-3.5 rounded-2xl border space-y-1.5 text-xs ${
+                      isDarkMode ? 'bg-slate-950/70 border-white/10' : 'bg-slate-50 border-slate-200'
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className={`font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>
+                      <span className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>
                         Op {log.stepNo} — {log.operationName}
                       </span>
-                      <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm tabular-nums">
                         +{log.qtyDone} NOS
                       </span>
                     </div>
-                    <div className={`text-[10px] flex items-center justify-between ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                    <div className={`text-[11px] flex items-center justify-between ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                       <span>{formatDateTime(log.loggedTimestamp)}</span>
-                      <span>Verified Shift Log</span>
+                      <span className="text-emerald-600 dark:text-emerald-400 font-medium">Verified Shift Log</span>
                     </div>
                   </div>
                 ))
@@ -1430,26 +1440,28 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
           {/* ========================================================================= */}
           <div className={`space-y-3 no-print ${activeMobileSection === 'history' ? 'block' : 'hidden md:block'}`}>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <History className="w-4 h-4 text-[#5B75F8]" />
-                <h3 className={`font-bold text-sm font-mono tracking-tight ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF]">
+                  <History className="w-4 h-4 stroke-[2]" />
+                </div>
+                <h3 className={`font-bold text-sm tracking-tight ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
                   Consumption History
                 </h3>
               </div>
-              <span className={`text-[11px] font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              <span className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                 Historical material booking audit trail ({localConsumptions.length})
               </span>
             </div>
 
             {/* Desktop Table View */}
-            <div className={`hidden md:block rounded-2xl border overflow-hidden transition-ui shadow-sm ${
-              isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-white border-slate-200'
+            <div className={`hidden md:block rounded-2xl border overflow-hidden transition-all shadow-xs ${
+              isDarkMode ? 'bg-slate-950/40 border-white/10' : 'bg-white border-slate-200/80'
             }`}>
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse font-mono">
+                <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className={`border-b font-bold uppercase tracking-wider text-[10px] ${
-                      isDarkMode ? 'bg-slate-900/80 border-slate-800 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-500'
+                    <tr className={`border-b text-xs font-semibold ${
+                      isDarkMode ? 'bg-slate-900/60 border-white/10 text-slate-400' : 'bg-slate-50/80 border-slate-200/80 text-slate-500'
                     }`}>
                       <th className="py-3 px-4">Component</th>
                       <th className="py-3 px-4">When</th>
@@ -1460,39 +1472,41 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                       <th className="py-3 px-4">Heat / Lot</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
+                  <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                     {localConsumptions.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-8 text-center text-slate-400 font-mono">
+                        <td colSpan={7} className="py-8 text-center text-slate-400">
                           No consumption booked
                         </td>
                       </tr>
                     ) : (
                       localConsumptions.map((c) => (
-                        <tr key={c.id} className={isDarkMode ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}>
-                          <td className={`py-3 px-4 font-mono font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>
-                            <div>{c.itemCode}</div>
-                            <div className={`text-[10px] font-sans font-normal truncate max-w-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                        <tr key={c.id} className={isDarkMode ? 'hover:bg-white/[0.03]' : 'hover:bg-slate-50/70'}>
+                          <td className={`py-3 px-4 ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>
+                            <div className="font-semibold">{c.itemCode}</div>
+                            <div className={`text-xs truncate max-w-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                               {c.itemName}
                             </div>
                           </td>
-                          <td className={`py-3 px-4 font-mono text-[11px] ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                          <td className={`py-3 px-4 text-xs ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                             {formatDateTime(c.bookedAt)}
                           </td>
-                          <td className={`py-3 px-4 text-right ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                          <td className={`py-3 px-4 text-right tabular-nums ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                             {c.plannedQty}
                           </td>
-                          <td className="py-3 px-4 text-right font-bold text-emerald-600 dark:text-emerald-400">
+                          <td className="py-3 px-4 text-right font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
                             {c.actualQty}
                           </td>
-                          <td className="py-3 px-4 text-right text-rose-500 dark:text-rose-400">
+                          <td className="py-3 px-4 text-right text-rose-500 dark:text-rose-400 tabular-nums">
                             {c.scrapQty || 0}
                           </td>
-                          <td className={`py-3 px-4 text-center font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                          <td className={`py-3 px-4 text-center ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                             {c.unit}
                           </td>
-                          <td className="py-3 px-4 text-amber-600 dark:text-amber-400 font-bold">
-                            {c.heatLotNumber || '—'}
+                          <td className="py-3 px-4">
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                              {c.heatLotNumber || '—'}
+                            </span>
                           </td>
                         </tr>
                       ))
@@ -1505,8 +1519,8 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
             {/* Mobile History Cards (Viewport < md) */}
             <div className="block md:hidden space-y-2.5">
               {localConsumptions.length === 0 ? (
-                <div className={`p-8 text-center rounded-2xl border font-mono text-xs ${
-                  isDarkMode ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-500'
+                <div className={`p-8 text-center rounded-2xl border text-xs ${
+                  isDarkMode ? 'border-white/10 text-slate-400' : 'border-slate-200 text-slate-500'
                 }`}>
                   No material consumption recorded yet.
                 </div>
@@ -1514,21 +1528,21 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                 localConsumptions.map((c) => (
                   <div 
                     key={c.id} 
-                    className={`p-3.5 rounded-2xl border space-y-1.5 font-mono text-xs ${
-                      isDarkMode ? 'bg-slate-950/70 border-slate-800' : 'bg-slate-50 border-slate-200'
+                    className={`p-3.5 rounded-2xl border space-y-1.5 text-xs ${
+                      isDarkMode ? 'bg-slate-950/70 border-white/10' : 'bg-slate-50 border-slate-200'
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-[#5B75F8] dark:text-[#7B92FF]">{c.itemCode}</span>
-                      <span className="font-bold text-emerald-400 text-sm">
+                      <span className="font-semibold text-[#007AFF] dark:text-[#0A84FF]">{c.itemCode}</span>
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm tabular-nums">
                         {c.actualQty} {c.unit}
                       </span>
                     </div>
-                    <div className={`text-[11px] font-sans ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                    <div className={`text-xs ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                       {c.itemName}
                     </div>
-                    <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-800/60">
-                      <span>Heat/Lot: <strong className="text-amber-400">{c.heatLotNumber || '—'}</strong></span>
+                    <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1.5 border-t border-slate-100 dark:border-white/5">
+                      <span>Heat/Lot: <strong className="text-amber-600 dark:text-amber-400">{c.heatLotNumber || '—'}</strong></span>
                       <span>{formatDateTime(c.bookedAt)}</span>
                     </div>
                   </div>
@@ -1540,20 +1554,20 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-t border-slate-200 dark:border-slate-800/90 bg-slate-50/50 dark:bg-slate-950/40 flex items-center justify-between font-mono text-xs shrink-0 no-print">
-          <div className="text-slate-400 flex items-center gap-2 text-[11px]">
-            <span>Job: <strong>{jobCard.jobNo}</strong></span>
+        <div className="px-5 sm:px-6 py-3.5 border-t border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-slate-950/40 flex items-center justify-between text-xs shrink-0 no-print">
+          <div className="text-slate-400 flex items-center gap-2">
+            <span>Job: <strong className="text-slate-700 dark:text-slate-200">{jobCard.jobNo}</strong></span>
             <span>•</span>
-            <span className="truncate">Heat/Lot: <strong className="text-amber-400">{jobCard.materialIssuedLot || 'HT-2026-9921'}</strong></span>
+            <span className="truncate">Heat/Lot: <strong className="text-amber-600 dark:text-amber-400">{jobCard.materialIssuedLot || 'HT-2026-9921'}</strong></span>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className={`px-4 sm:px-5 py-2 rounded-xl border font-bold cursor-pointer transition-ui ${
-              isDarkMode ? 'border-slate-800 text-slate-300 hover:bg-slate-800' : 'border-slate-200 text-slate-700 hover:bg-slate-100'
+            className={`px-5 py-2 rounded-full border text-xs font-semibold cursor-pointer transition-all ${
+              isDarkMode ? 'border-white/10 text-slate-300 hover:bg-slate-800' : 'border-slate-200/80 text-slate-700 hover:bg-slate-100'
             }`}
           >
-            Close
+            Done
           </button>
         </div>
 
@@ -1563,25 +1577,25 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
       {/* SUB-MODAL 1: ADD UNPLANNED MATERIAL */}
       {/* ========================================================================= */}
       {showAddMaterialModal && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans no-print">
-          <div className={`w-full max-w-md rounded-3xl border p-6 space-y-4 shadow-2xl transition-ui ${
-            isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md font-sans no-print">
+          <div className={`w-full max-w-md rounded-2xl border p-6 space-y-4 shadow-2xl backdrop-blur-2xl transition-all ${
+            isDarkMode ? 'bg-slate-900/95 border-white/10 text-white' : 'bg-white/95 border-slate-200/80 text-slate-900'
           }`}>
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between pb-3.5 border-b border-slate-100 dark:border-white/10">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                  <Plus className="w-5 h-5" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF]">
+                  <Plus className="w-4 h-4 stroke-[2]" />
                 </div>
-                <h4 className="font-bold text-sm">Add Material / Substitute</h4>
+                <h4 className="font-bold text-sm tracking-tight">Add Material / Substitute</h4>
               </div>
-              <button onClick={() => setShowAddMaterialModal(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setShowAddMaterialModal(false)} className="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <form onSubmit={handleAddCustomMaterialSubmit} className="space-y-3.5">
               <div>
-                <label className="block text-[10px] font-mono uppercase font-bold text-slate-400 mb-1">
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
                   Item / Material Code *
                 </label>
                 <input
@@ -1598,14 +1612,14 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                       setAddMatUnit(matchedStock.unit || 'Nos');
                     }
                   }}
-                  className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono border focus:outline-none transition-ui ${
-                    isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                  className={`w-full px-3.5 py-2 rounded-xl text-xs border outline-none transition-all ${
+                    isDarkMode ? 'bg-slate-950/80 border-white/10 text-white focus:border-[#007AFF]' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
                   }`}
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-mono uppercase font-bold text-slate-400 mb-1">
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
                   Material Description
                 </label>
                 <input
@@ -1613,15 +1627,15 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                   placeholder="e.g. Aluminum 6061 Round Bar 40mm"
                   value={addMatName}
                   onChange={(e) => setAddMatName(e.target.value)}
-                  className={`w-full px-3.5 py-2 rounded-xl text-xs border focus:outline-none transition-ui ${
-                    isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                  className={`w-full px-3.5 py-2 rounded-xl text-xs border outline-none transition-all ${
+                    isDarkMode ? 'bg-slate-950/80 border-white/10 text-white focus:border-[#007AFF]' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
                   }`}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-mono uppercase font-bold text-slate-400 mb-1">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
                     Qty to Book *
                   </label>
                   <input
@@ -1630,20 +1644,20 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                     required
                     value={addMatQty}
                     onChange={(e) => setAddMatQty(e.target.value)}
-                    className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono border focus:outline-none transition-ui ${
-                      isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                    className={`w-full px-3.5 py-2 rounded-xl text-xs border outline-none transition-all ${
+                      isDarkMode ? 'bg-slate-950/80 border-white/10 text-white focus:border-[#007AFF]' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
                     }`}
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-mono uppercase font-bold text-slate-400 mb-1">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
                     Unit (UOM)
                   </label>
                   <select
                     value={addMatUnit}
                     onChange={(e) => setAddMatUnit(e.target.value)}
-                    className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono border focus:outline-none transition-ui ${
-                      isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                    className={`w-full px-3.5 py-2 rounded-xl text-xs border outline-none transition-all ${
+                      isDarkMode ? 'bg-slate-950/80 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                     }`}
                   >
                     <option value="Nos">Nos</option>
@@ -1657,7 +1671,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-mono uppercase font-bold text-slate-400 mb-1">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
                     Scrap Allowance
                   </label>
                   <input
@@ -1665,13 +1679,13 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                     step="any"
                     value={addMatScrap}
                     onChange={(e) => setAddMatScrap(e.target.value)}
-                    className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono border focus:outline-none transition-ui ${
-                      isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                    className={`w-full px-3.5 py-2 rounded-xl text-xs border outline-none transition-all ${
+                      isDarkMode ? 'bg-slate-950/80 border-white/10 text-white focus:border-[#007AFF]' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
                     }`}
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-mono uppercase font-bold text-slate-400 mb-1">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
                     Heat / Lot #
                   </label>
                   <input
@@ -1679,22 +1693,22 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                     placeholder="HT-2026-####"
                     value={addMatHeatLot}
                     onChange={(e) => setAddMatHeatLot(e.target.value)}
-                    className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono border focus:outline-none transition-ui ${
-                      isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                    className={`w-full px-3.5 py-2 rounded-xl text-xs border outline-none transition-all ${
+                      isDarkMode ? 'bg-slate-950/80 border-white/10 text-white focus:border-[#007AFF]' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
                     }`}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[10px] font-mono uppercase font-bold text-slate-400 mb-1">
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
                   Assign to Route Operation
                 </label>
                 <select
                   value={addMatStepSeq}
                   onChange={(e) => setAddMatStepSeq(Number(e.target.value))}
-                  className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono border focus:outline-none transition-ui ${
-                    isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                  className={`w-full px-3.5 py-2 rounded-xl text-xs border outline-none transition-all ${
+                    isDarkMode ? 'bg-slate-950/80 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                   }`}
                 >
                   {routeOperations.map(op => (
@@ -1705,18 +1719,18 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                 </select>
               </div>
 
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <div className="flex items-center justify-end gap-2.5 pt-3.5 border-t border-slate-100 dark:border-white/10">
                 <button
                   type="button"
                   onClick={() => setShowAddMaterialModal(false)}
-                  className="px-4 py-2 rounded-xl border text-xs font-mono text-slate-400 hover:text-white"
+                  className="px-4 py-2 rounded-full border border-slate-200/80 dark:border-white/10 text-xs font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isAddingCustomMaterial}
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 text-white text-xs font-mono font-bold shadow-md cursor-pointer disabled:opacity-50"
+                  className="px-5 py-2 rounded-full bg-[#007AFF] hover:bg-[#0071E3] active:scale-[0.98] text-white text-xs font-semibold shadow-xs cursor-pointer disabled:opacity-50 transition-all"
                 >
                   {isAddingCustomMaterial ? 'Booking...' : 'Book & Add Material'}
                 </button>
@@ -1730,25 +1744,25 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
       {/* SUB-MODAL 2: QUICK LOG PRODUCTION SHIFT OUTPUT */}
       {/* ========================================================================= */}
       {showLogProductionModal && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans no-print">
-          <div className={`w-full max-w-md rounded-3xl border p-6 space-y-4 shadow-2xl transition-ui ${
-            isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md font-sans no-print">
+          <div className={`w-full max-w-md rounded-2xl border p-6 space-y-4 shadow-2xl backdrop-blur-2xl transition-all ${
+            isDarkMode ? 'bg-slate-900/95 border-white/10 text-white' : 'bg-white/95 border-slate-200/80 text-slate-900'
           }`}>
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between pb-3.5 border-b border-slate-100 dark:border-white/10">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-[#5B75F8]/10 text-[#5B75F8] border border-[#5B75F8]/20">
-                  <Activity className="w-5 h-5" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF]">
+                  <Activity className="w-4 h-4 stroke-[2]" />
                 </div>
-                <h4 className="font-bold text-sm">Log Production Shift Output</h4>
+                <h4 className="font-bold text-sm tracking-tight">Log Production Shift Output</h4>
               </div>
-              <button onClick={() => setShowLogProductionModal(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setShowLogProductionModal(false)} className="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <form onSubmit={handleLogProductionSubmit} className="space-y-3.5">
               <div>
-                <label className="block text-[10px] font-mono uppercase font-bold text-slate-400 mb-1">
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
                   Operation Step *
                 </label>
                 <select
@@ -1762,8 +1776,8 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                       setLogQty(rem);
                     }
                   }}
-                  className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-mono border focus:outline-none transition-ui ${
-                    isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                  className={`w-full px-3.5 py-2.5 rounded-xl text-xs border outline-none transition-all ${
+                    isDarkMode ? 'bg-slate-950/80 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                   }`}
                 >
                   {incompleteSteps.length === 0 ? (
@@ -1781,10 +1795,10 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="block text-[10px] font-mono uppercase font-bold text-slate-400">
+                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400">
                       Qty Produced (NOS) *
                     </label>
-                    <span className="text-[10px] font-mono text-emerald-400 font-bold">
+                    <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
                       Max: {maxLoggableQty} NOS
                     </span>
                   </div>
@@ -1795,18 +1809,18 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                     max={maxLoggableQty}
                     value={logQty}
                     onChange={(e) => setLogQty(Number(e.target.value))}
-                    className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono font-bold border focus:outline-none transition-ui ${
+                    className={`w-full px-3.5 py-2 rounded-xl text-xs font-bold border outline-none transition-all ${
                       logQty > maxLoggableQty
-                        ? 'border-rose-500 bg-rose-500/10 text-rose-300'
-                        : isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                        ? 'border-rose-500 bg-rose-500/10 text-rose-600 dark:text-rose-300'
+                        : isDarkMode ? 'bg-slate-950/80 border-white/10 text-white focus:border-[#007AFF]' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
                     }`}
                   />
-                  <p className="text-[9px] font-mono text-slate-400 mt-1">
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
                     Capped at remaining PO target ({maxLoggableQty} of {targetQuantity} NOS)
                   </p>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-mono uppercase font-bold text-slate-400 mb-1">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
                     Duration (Minutes)
                   </label>
                   <input
@@ -1814,15 +1828,15 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                     min="0"
                     value={logMins}
                     onChange={(e) => setLogMins(Number(e.target.value))}
-                    className={`w-full px-3.5 py-2 rounded-xl text-xs font-mono border focus:outline-none transition-ui ${
-                      isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                    className={`w-full px-3.5 py-2 rounded-xl text-xs border outline-none transition-all ${
+                      isDarkMode ? 'bg-slate-950/80 border-white/10 text-white focus:border-[#007AFF]' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
                     }`}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[10px] font-mono uppercase font-bold text-slate-400 mb-1">
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
                   Operator Notes (Optional)
                 </label>
                 <input
@@ -1830,24 +1844,24 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                   placeholder="e.g. Completed batch with zero tool wear"
                   value={logNotes}
                   onChange={(e) => setLogNotes(e.target.value)}
-                  className={`w-full px-3.5 py-2 rounded-xl text-xs border focus:outline-none transition-ui ${
-                    isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                  className={`w-full px-3.5 py-2 rounded-xl text-xs border outline-none transition-all ${
+                    isDarkMode ? 'bg-slate-950/80 border-white/10 text-white focus:border-[#007AFF]' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
                   }`}
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <div className="flex items-center justify-end gap-2.5 pt-3.5 border-t border-slate-100 dark:border-white/10">
                 <button
                   type="button"
                   onClick={() => setShowLogProductionModal(false)}
-                  className="px-4 py-2 rounded-xl border text-xs font-mono text-slate-400 hover:text-white"
+                  className="px-4 py-2 rounded-full border border-slate-200/80 dark:border-white/10 text-xs font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingLog}
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 text-white text-xs font-mono font-bold shadow-md cursor-pointer disabled:opacity-50"
+                  className="px-5 py-2 rounded-full bg-[#007AFF] hover:bg-[#0071E3] active:scale-[0.98] text-white text-xs font-semibold shadow-xs cursor-pointer disabled:opacity-50 transition-all"
                 >
                   {isSubmittingLog ? 'Logging...' : 'Save Production Log'}
                 </button>

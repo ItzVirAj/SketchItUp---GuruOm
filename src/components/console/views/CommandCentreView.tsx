@@ -315,10 +315,10 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
   /* ─────────────────────────────  DESIGN TOKENS  ───────────────────────────── */
 
   const surface = isDarkMode
-    ? 'bg-[#09090B]/80 border-white/[0.06] backdrop-blur-xl'
-    : 'bg-white/90 border-slate-200/70 backdrop-blur-xl shadow-[0_1px_3px_rgba(15,23,42,0.06),0_8px_24px_-12px_rgba(15,23,42,0.12)]';
+    ? 'bg-slate-900/80 border-white/10 backdrop-blur-xl shadow-[0_4px_24px_rgba(0,0,0,0.3)]'
+    : 'bg-white/90 border-slate-200/80 backdrop-blur-xl shadow-[0_4px_20px_rgba(0,0,0,0.04)]';
 
-  const softInner = isDarkMode ? 'bg-white/[0.03] border-white/[0.05]' : 'bg-slate-50/80 border-slate-100';
+  const softInner = isDarkMode ? 'bg-slate-950/60 border-white/5' : 'bg-slate-50/80 border-slate-100';
   const textPrimary = isDarkMode ? 'text-white' : 'text-slate-900';
   const textMuted = isDarkMode ? 'text-slate-400' : 'text-slate-500';
   const textFaint = isDarkMode ? 'text-slate-500' : 'text-slate-400';
@@ -330,12 +330,12 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
   }) => (
     <div className="mb-4 flex items-start justify-between gap-3">
       <div className="flex items-start gap-3">
-        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${accent || 'bg-[var(--accent-primary)]/12 text-[var(--accent-primary)]'}`}>
-          <Icon className="h-[18px] w-[18px]" strokeWidth={2.2} />
+        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${accent || 'bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF]'}`}>
+          <Icon className="h-4.5 w-4.5 stroke-[2]" />
         </div>
         <div>
-          <h2 className={`text-[15px] font-bold leading-tight ${textPrimary}`}>{title}</h2>
-          {sub && <p className={`mt-0.5 text-[11px] ${textMuted}`}>{sub}</p>}
+          <h2 className={`text-[15px] font-bold tracking-tight leading-tight ${textPrimary}`}>{title}</h2>
+          {sub && <p className={`mt-0.5 text-xs ${textMuted}`}>{sub}</p>}
         </div>
       </div>
       {action}
@@ -346,41 +346,41 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
     count: number | string; label: string; sub: string; icon: React.ElementType;
     tone: 'rose' | 'amber' | 'emerald' | 'sky' | 'violet'; onClick: () => void;
   }) => {
-    const tones: Record<string, { border: string; icon: string; glow: string; text: string }> = {
-      rose: { border: 'border-rose-500/20 hover:border-rose-500/40', icon: 'bg-rose-500/10 text-rose-500', glow: 'from-rose-500/20', text: 'text-rose-500' },
-      amber: { border: 'border-amber-500/20 hover:border-amber-500/40', icon: 'bg-amber-500/10 text-amber-500', glow: 'from-amber-500/20', text: 'text-amber-500' },
-      emerald: { border: 'border-emerald-500/20 hover:border-emerald-500/40', icon: 'bg-emerald-500/10 text-emerald-500', glow: 'from-emerald-500/20', text: 'text-emerald-500' },
-      sky: { border: 'border-sky-500/20 hover:border-sky-500/40', icon: 'bg-sky-500/10 text-sky-500', glow: 'from-sky-500/20', text: 'text-sky-500' },
-      violet: { border: 'border-violet-500/20 hover:border-violet-500/40', icon: 'bg-violet-500/10 text-violet-500', glow: 'from-violet-500/20', text: 'text-violet-500' }
+    const tones: Record<string, { border: string; icon: string; text: string }> = {
+      rose: { border: 'border-rose-500/20', icon: 'bg-rose-500/10 text-rose-600 dark:text-rose-400', text: 'text-rose-600 dark:text-rose-400' },
+      amber: { border: 'border-amber-500/20', icon: 'bg-amber-500/10 text-amber-600 dark:text-amber-400', text: 'text-amber-600 dark:text-amber-400' },
+      emerald: { border: 'border-emerald-500/20', icon: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400', text: 'text-emerald-600 dark:text-emerald-400' },
+      sky: { border: 'border-blue-500/20', icon: 'bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF]', text: 'text-[#007AFF] dark:text-[#0A84FF]' },
+      violet: { border: 'border-purple-500/20', icon: 'bg-purple-500/10 text-purple-600 dark:text-purple-400', text: 'text-purple-600 dark:text-purple-400' }
     };
-    const t = tones[tone];
+    const t = tones[tone] || tones.sky;
     
     return (
       <button
         type="button"
         onClick={onClick}
-        className={`group relative flex min-w-[190px] shrink-0 items-center gap-3.5 overflow-hidden rounded-[20px] border px-4 py-3.5 text-left transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-${tone}-500/10 active:translate-y-0 ${isDarkMode ? 'bg-[#121215]' : 'bg-white'} ${t.border}`}
+        className={`group relative flex min-w-[190px] shrink-0 items-center gap-3.5 rounded-2xl border px-4 py-3 text-left transition-all backdrop-blur-xl hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
+          isDarkMode ? 'bg-slate-900/80 border-white/10' : 'bg-white/90 border-slate-200/80 shadow-xs'
+        } ${t.border}`}
       >
-        <div className={`absolute inset-0 bg-gradient-to-br ${t.glow} to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-[0.08]`} />
-        
-        <div className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] ${t.icon} transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3`}>
-          <Icon className="h-5 w-5" strokeWidth={2.2} />
+        <div className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${t.icon} transition-transform`}>
+          <Icon className="h-4.5 w-4.5 stroke-[2]" />
           {count !== 0 && count !== '0' && count !== '₹0' && (
-            <span className="absolute -right-1 -top-1 flex h-2.5 w-2.5 animate-pulse rounded-full bg-current" />
+            <span className="absolute -right-1 -top-1 flex h-2 w-2 animate-pulse rounded-full bg-current" />
           )}
         </div>
         
         <div className="relative min-w-0 flex-1">
           <div className="flex items-center justify-between">
-            <div className={`text-[22px] font-black leading-none tabular-nums tracking-tight ${textPrimary}`}>
+            <div className={`text-xl font-bold tracking-tight text-slate-900 dark:text-white`}>
               {count}
             </div>
-            <ChevronRight className={`h-4 w-4 shrink-0 transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-300 ${t.text} opacity-0 -translate-x-2 group-hover:translate-x-0 group-hover:opacity-100`} />
+            <ChevronRight className="h-3.5 w-3.5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
-          <div className={`mt-1.5 text-[11px] font-bold uppercase tracking-widest ${t.text} truncate opacity-90`}>
+          <div className={`text-xs font-semibold ${t.text} truncate`}>
             {label}
           </div>
-          <div className={`mt-0.5 text-[10px] ${textFaint} truncate`}>
+          <div className={`text-[10px] text-slate-400 dark:text-slate-500 truncate`}>
             {sub}
           </div>
         </div>
@@ -392,57 +392,55 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
     label: string; value: string; hint: string; delta?: string; icon: React.ElementType;
     badge?: string; tone?: 'blue' | 'rose' | 'amber' | 'emerald' | 'purple'; onClick: () => void;
   }) => {
-    const toneStyles: Record<string, { icon: string; bg: string; border: string; glow: string; text: string }> = {
-      blue: { icon: 'bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]', bg: 'from-[var(--accent-primary)]/5', border: 'group-hover:border-[var(--accent-primary)]/30', glow: 'bg-[var(--accent-primary)]/20', text: 'text-[var(--accent-primary)]' },
-      rose: { icon: 'bg-rose-500/10 text-rose-500', bg: 'from-rose-500/5', border: 'group-hover:border-rose-500/30', glow: 'bg-rose-500/20', text: 'text-rose-500' },
-      amber: { icon: 'bg-amber-500/10 text-amber-500', bg: 'from-amber-500/5', border: 'group-hover:border-amber-500/30', glow: 'bg-amber-500/20', text: 'text-amber-500' },
-      emerald: { icon: 'bg-emerald-500/10 text-emerald-500', bg: 'from-emerald-500/5', border: 'group-hover:border-emerald-500/30', glow: 'bg-emerald-500/20', text: 'text-emerald-500' },
-      purple: { icon: 'bg-purple-500/10 text-purple-500', bg: 'from-purple-500/5', border: 'group-hover:border-purple-500/30', glow: 'bg-purple-500/20', text: 'text-purple-500' }
+    const toneStyles: Record<string, { icon: string; text: string }> = {
+      blue: { icon: 'bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF]', text: 'text-[#007AFF] dark:text-[#0A84FF]' },
+      rose: { icon: 'bg-rose-500/10 text-rose-600 dark:text-rose-400', text: 'text-rose-600 dark:text-rose-400' },
+      amber: { icon: 'bg-amber-500/10 text-amber-600 dark:text-amber-400', text: 'text-amber-600 dark:text-amber-400' },
+      emerald: { icon: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400', text: 'text-emerald-600 dark:text-emerald-400' },
+      purple: { icon: 'bg-purple-500/10 text-purple-600 dark:text-purple-400', text: 'text-purple-600 dark:text-purple-400' }
     };
     const t = toneStyles[tone] || toneStyles.blue;
-
-    const baseBg = isDarkMode ? 'bg-[#121215] border-white/5' : 'bg-white border-slate-200';
 
     return (
       <button
         type="button"
         onClick={onClick}
-        className={`group relative flex min-h-[160px] flex-col justify-between overflow-hidden rounded-[24px] border p-5 text-left transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-500 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] ${baseBg} ${t.border}`}
+        className={`group relative flex min-h-[140px] flex-col justify-between rounded-2xl border p-4.5 text-left transition-all backdrop-blur-xl hover:scale-[1.01] active:scale-[0.99] cursor-pointer ${
+          isDarkMode 
+            ? 'bg-slate-900/80 border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.3)] hover:bg-slate-900' 
+            : 'bg-white/90 border-slate-200/80 shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:bg-white'
+        }`}
       >
-        <div className={`absolute inset-0 bg-gradient-to-br ${t.bg} to-transparent opacity-50`} />
-        
-        <div className={`absolute -right-12 -top-12 h-32 w-32 rounded-full blur-[40px] transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-500 ${t.glow} opacity-0 group-hover:opacity-100 group-hover:scale-150`} />
-
-        <div className="relative flex items-start justify-between gap-4">
+        <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className={`text-[11px] font-bold uppercase tracking-[0.15em] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 tracking-wide">
                 {label}
               </span>
               {badge && (
-                <span className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wide ${t.icon}`}>
+                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${t.icon}`}>
                   {badge}
                 </span>
               )}
             </div>
-            <p className={`mt-3 text-[32px] font-black leading-none tracking-tight ${textPrimary}`}>
+            <p className="mt-2 text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
               {value}
             </p>
           </div>
-          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl backdrop-blur-md transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-500 group-hover:scale-110 group-hover:-rotate-6 ${t.icon}`}>
-            <Icon className="h-6 w-6" strokeWidth={2} />
+          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${t.icon}`}>
+            <Icon className="h-5 w-5 stroke-[2]" />
           </div>
         </div>
 
-        <div className="relative mt-4 flex items-end justify-between">
-          <p className={`max-w-[70%] text-[13px] font-medium leading-snug ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>
+        <div className="mt-3 flex items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-white/5">
+          <p className="text-xs text-slate-400 dark:text-slate-500 truncate">
             {hint}
           </p>
           {delta && (
-            <div className={`flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-bold ${t.icon}`}>
+            <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">
               <TrendingUp className="h-3 w-3" />
-              <span>{delta}</span>
-            </div>
+              {delta}
+            </span>
           )}
         </div>
       </button>
@@ -452,12 +450,12 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
   const statusChip = (status: string) => {
     const s = status.toLowerCase();
     if (s.includes('critical') || s.includes('due') || s === 'alert')
-      return 'bg-rose-500/12 text-rose-500';
+      return 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20';
     if (s.includes('run') || s.includes('active') || s.includes('process'))
-      return 'bg-amber-500/12 text-amber-500';
+      return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20';
     if (s.includes('optimal') || s.includes('healthy') || s.includes('ok') || s.includes('complete'))
-      return 'bg-emerald-500/12 text-emerald-500';
-    return 'bg-slate-500/12 text-slate-400';
+      return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20';
+    return 'bg-slate-500/10 text-slate-500 dark:text-slate-400 border border-slate-500/20';
   };
 
   /* ─────────────────────────────  RENDER  ───────────────────────────── */
@@ -478,81 +476,98 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
         </div>
       )}
 
-      {/* ══════════════  HERO HEADER  ══════════════ */}
-      <section className="relative overflow-hidden rounded-[28px] border border-white/10">
-        <div className={`absolute inset-0 ${isDarkMode ? 'bg-[#09090B]' : 'bg-[#0B1020]'}`} />
-        {/* aurora blobs */}
-        <div className="absolute -left-24 -top-24 h-72 w-72 rounded-full bg-[var(--accent-primary)] opacity-30 blur-[90px]" />
-        <div className="absolute right-0 top-10 h-64 w-64 rounded-full bg-cyan-500 opacity-20 blur-[90px]" />
-        <div className="absolute bottom-0 left-1/3 h-56 w-56 rounded-full bg-violet-600 opacity-20 blur-[90px]" />
-        {/* fine grid */}
-        <div
-          className="absolute inset-0 opacity-[0.15]"
-          style={{
-            backgroundImage:
-              'linear-gradient(rgba(255,255,255,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.4) 1px, transparent 1px)',
-            backgroundSize: '44px 44px',
-            maskImage: 'radial-gradient(ellipse at top, black, transparent 75%)',
-            WebkitMaskImage: 'radial-gradient(ellipse at top, black, transparent 75%)'
-          }}
-        />
-
-        <div className="relative p-5 sm:p-7 lg:p-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="grid gap-3">
+      {/* ══════════════  APPLE HIG EXECUTIVE WINDOW HEADER  ══════════════ */}
+      <section className={`relative overflow-hidden rounded-2xl border transition-all backdrop-blur-xl ${
+        isDarkMode
+          ? 'bg-slate-900/80 border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.3)] text-white'
+          : 'bg-white/90 border-slate-200/80 shadow-[0_4px_20px_rgba(0,0,0,0.04)] text-slate-900'
+      }`}>
+        <div className="relative p-5 sm:p-6 lg:p-7">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-1.5">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-emerald-300 backdrop-blur-sm">
+                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                   <span className="relative flex h-2 w-2">
                     {isRealtimeStreaming && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />}
-                    <span className={`relative inline-flex h-2 w-2 rounded-full ${isRealtimeStreaming ? 'bg-emerald-400' : 'bg-slate-400'}`} />
+                    <span className={`relative inline-flex h-2 w-2 rounded-full ${isRealtimeStreaming ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                   </span>
-                  {isRealtimeStreaming ? 'Live Operations' : 'Paused'}
+                  <span>{isRealtimeStreaming ? 'Live Operations' : 'Paused'}</span>
                 </span>
                 {metrics.criticalCount > 0 && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-400/30 bg-rose-500/15 px-3 py-1 text-[11px] font-bold text-rose-200 backdrop-blur-sm">
-                    <AlertTriangle className="h-3 w-3" />
-                    {metrics.criticalCount} items need attention
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/20 bg-rose-500/10 px-3 py-1 text-xs font-semibold text-rose-600 dark:text-rose-400">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    <span>{metrics.criticalCount} attention items</span>
                   </span>
                 )}
               </div>
 
               <div>
-                <h1 className="bg-gradient-to-br from-white via-white to-slate-400 bg-clip-text text-[26px] font-black leading-[1.05] tracking-tight text-transparent sm:text-3xl lg:text-[40px]">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
                   Executive Command Centre
                 </h1>
-                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-300/90">
+                <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
                   Real-time visibility across orders, shopfloor, quality gates, and finance — scoped to{' '}
-                  <span className="font-semibold text-white">{scope}</span>.
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{scope}</span>.
                 </p>
               </div>
             </div>
 
+            {/* Apple Window Toolbar Controls */}
             <div className="flex flex-wrap items-center gap-2">
               <select
                 value={scope}
                 onChange={e => setScope(e.target.value)}
-                className="h-10 cursor-pointer rounded-xl border border-white/15 bg-white/10 px-3 text-xs font-bold text-white outline-none backdrop-blur-md transition hover:bg-white/15"
+                className={`h-9 cursor-pointer rounded-xl border px-3 text-xs font-medium outline-none transition-all ${
+                  isDarkMode 
+                    ? 'border-white/10 bg-slate-800/80 text-slate-200' 
+                    : 'border-slate-200/80 bg-slate-100/80 text-slate-700'
+                }`}
               >
-                <option value="FY 26-27" className="text-slate-900">FY 26-27</option>
-                <option value="FY 25-26" className="text-slate-900">FY 25-26</option>
-                <option value="Q3 2026" className="text-slate-900">Q3 2026</option>
-                <option value="All-Time" className="text-slate-900">All Time</option>
+                <option value="FY 26-27">FY 26-27</option>
+                <option value="FY 25-26">FY 25-26</option>
+                <option value="Q3 2026">Q3 2026</option>
+                <option value="All-Time">All Time</option>
               </select>
 
-              <button
-                type="button"
-                onClick={() => setMode(m => (m === 'charts' ? 'numbers' : 'charts'))}
-                className="flex h-10 cursor-pointer items-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-3.5 text-xs font-bold text-white backdrop-blur-md transition hover:bg-white/15"
-              >
-                {mode === 'charts' ? <BarChart3 className="h-3.5 w-3.5" /> : <Hash className="h-3.5 w-3.5" />}
-                {mode === 'charts' ? 'Visual' : 'Tabular'}
-              </button>
+              {/* Apple Segmented View Toggle */}
+              <div className={`flex h-9 items-center rounded-xl border p-0.5 ${
+                isDarkMode ? 'border-white/10 bg-slate-950/60' : 'border-slate-200/80 bg-slate-100/80'
+              }`}>
+                <button
+                  type="button"
+                  onClick={() => setMode('charts')}
+                  className={`flex h-7.5 px-3 items-center gap-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    mode === 'charts'
+                      ? isDarkMode ? 'bg-slate-800 text-white shadow-2xs' : 'bg-white text-slate-900 shadow-2xs'
+                      : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <BarChart3 className="h-3.5 w-3.5" />
+                  <span>Visual</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode('numbers')}
+                  className={`flex h-7.5 px-3 items-center gap-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    mode === 'numbers'
+                      ? isDarkMode ? 'bg-slate-800 text-white shadow-2xs' : 'bg-white text-slate-900 shadow-2xs'
+                      : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <Hash className="h-3.5 w-3.5" />
+                  <span>Tabular</span>
+                </button>
+              </div>
 
               <button
                 type="button"
                 onClick={() => setShowCustomizeModal(true)}
-                className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white backdrop-blur-md transition hover:bg-white/15"
-                title="Customize"
+                className={`flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border transition-all ${
+                  isDarkMode 
+                    ? 'border-white/10 bg-slate-800/80 text-slate-300 hover:bg-slate-700' 
+                    : 'border-slate-200/80 bg-slate-100/80 text-slate-700 hover:bg-slate-200'
+                }`}
+                title="Customize Dashboard"
               >
                 <SlidersHorizontal className="h-4 w-4" />
               </button>
@@ -560,33 +575,37 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
               <button
                 type="button"
                 onClick={() => handleNavigate('orders')}
-                className="flex h-10 cursor-pointer items-center gap-1.5 rounded-xl bg-white px-4 text-xs font-bold text-slate-900 shadow-lg shadow-black/20 transition hover:bg-slate-100 active:scale-[0.96]"
+                className="flex h-9 cursor-pointer items-center gap-1.5 rounded-full bg-[#007AFF] hover:bg-[#0071E3] active:scale-[0.98] px-4 text-xs font-semibold text-white shadow-sm shadow-blue-500/25 transition-all"
               >
                 <Plus className="h-3.5 w-3.5" />
-                New Order
+                <span>New Order</span>
               </button>
             </div>
           </div>
 
           {/* Quick stats strip */}
-          <div className="mt-7 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 pt-5 border-t border-slate-100 dark:border-white/10">
             {[
-              { label: 'Open POs', value: metrics.openOrders.length, icon: ShoppingCart, tint: 'text-sky-300' },
-              { label: 'Active JCs', value: metrics.activeJobCards.length, icon: Factory, tint: 'text-indigo-300' },
-              { label: 'QC Pass', value: `${metrics.qcPassRate}%`, icon: ShieldCheck, tint: 'text-emerald-300' },
-              { label: 'Parts Output', value: metrics.totalOutput.toLocaleString('en-IN'), icon: Gauge, tint: 'text-amber-300' }
+              { label: 'Open POs', value: metrics.openOrders.length, icon: ShoppingCart, tone: 'text-[#007AFF] dark:text-[#0A84FF]', bg: 'bg-blue-500/10' },
+              { label: 'Active JCs', value: metrics.activeJobCards.length, icon: Factory, tone: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-500/10' },
+              { label: 'QC Pass Rate', value: `${metrics.qcPassRate}%`, icon: ShieldCheck, tone: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' },
+              { label: 'Parts Output', value: metrics.totalOutput.toLocaleString('en-IN'), icon: Gauge, tone: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' }
             ].map(item => {
               const Icon = item.icon;
               return (
                 <div
                   key={item.label}
-                  className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 backdrop-blur-md transition hover:bg-white/[0.08]"
+                  className={`flex items-center gap-3.5 p-3.5 rounded-xl border transition-all ${
+                    isDarkMode ? 'border-white/5 bg-slate-950/40' : 'border-slate-100 bg-slate-50/60'
+                  }`}
                 >
-                  <div className="flex items-center gap-2 text-slate-300">
-                    <Icon className={`h-3.5 w-3.5 ${item.tint}`} />
-                    <span className="text-[10px] font-bold uppercase tracking-wider">{item.label}</span>
+                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${item.bg} ${item.tone}`}>
+                    <Icon className="h-5 w-5 stroke-[2]" />
                   </div>
-                  <div className="mt-1.5 text-2xl font-black tabular-nums text-white">{item.value}</div>
+                  <div className="min-w-0">
+                    <div className="text-[11px] font-medium text-slate-400 dark:text-slate-500">{item.label}</div>
+                    <div className="mt-0.5 text-lg font-bold tracking-tight text-slate-900 dark:text-white tabular-nums">{item.value}</div>
+                  </div>
                 </div>
               );
             })}
@@ -599,28 +618,24 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
         <button
           type="button"
           onClick={() => handleNavigate('approvals')}
-          className="group relative w-full overflow-hidden rounded-2xl border border-rose-500/25 bg-gradient-to-r from-rose-500/[0.07] via-amber-500/[0.06] to-rose-500/[0.07] p-4 text-left transition hover:shadow-lg hover:shadow-rose-500/10"
+          className={`group w-full rounded-2xl border border-rose-500/20 p-3.5 text-left transition-all backdrop-blur-xl flex items-center justify-between gap-3 cursor-pointer ${
+            isDarkMode ? 'bg-rose-500/10 hover:bg-rose-500/15' : 'bg-rose-50/80 hover:bg-rose-50 shadow-2xs'
+          }`}
         >
-          <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-rose-500 to-amber-500" />
-          <div className="flex items-center justify-between gap-3 pl-1">
-            <div className="flex items-center gap-3.5">
-              <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-600 to-amber-600 text-white shadow-lg shadow-rose-500/30">
-                <CheckSquare className="h-5 w-5" />
-                <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-[9px] font-bold text-white ring-2 ring-white dark:ring-[#09090B]">
-                  {metrics.pendingApprovalsCount}
-                </span>
-              </div>
-              <div>
-                <p className="text-sm font-extrabold text-rose-600 dark:text-rose-300">
-                  {metrics.pendingApprovalsCount} approval{metrics.pendingApprovalsCount > 1 ? 's' : ''} awaiting sign-off
-                </p>
-                <p className={`text-xs ${textMuted}`}>High-value POs and credit dispatches need your action</p>
-              </div>
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400 shrink-0">
+              <CheckSquare className="h-5 w-5" />
             </div>
-            <div className="flex items-center gap-2 rounded-xl bg-rose-500/10 px-3 py-2 text-xs font-bold text-rose-500 transition group-hover:bg-rose-500 group-hover:text-white">
-              Review
-              <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+            <div>
+              <p className="text-xs sm:text-sm font-semibold text-rose-700 dark:text-rose-300">
+                {metrics.pendingApprovalsCount} approval{metrics.pendingApprovalsCount > 1 ? 's' : ''} awaiting sign-off
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">High-value POs and credit dispatches need your action</p>
             </div>
+          </div>
+          <div className="flex items-center gap-1.5 rounded-full bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 group-hover:bg-rose-500 group-hover:text-white transition-all">
+            <span>Review</span>
+            <ArrowRight className="h-3.5 w-3.5" />
           </div>
         </button>
       )}
@@ -638,23 +653,23 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
 
       {/* ══════════════  TABULAR MODE  ══════════════ */}
       {mode === 'numbers' && (
-        <section className={`space-y-4 rounded-[28px] border p-4 sm:p-5 ${surface}`}>
+        <section className={`space-y-4 rounded-2xl border p-5 ${surface}`}>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <SectionTitle icon={Target} title="Telemetry Registry" sub="All operational KPIs in tabular form" />
-            <div className="flex flex-wrap gap-2">
-              <div className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-xs ${softInner}`}>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs ${softInner}`}>
                 <Search className="h-3.5 w-3.5 text-slate-400" />
                 <input
                   value={tabularSearchQuery}
                   onChange={e => setTabularSearchQuery(e.target.value)}
                   placeholder="Search metrics"
-                  className={`w-40 bg-transparent outline-none ${textPrimary}`}
+                  className={`w-40 bg-transparent outline-none text-xs ${textPrimary}`}
                 />
               </div>
               <select
                 value={tabularCategoryFilter}
                 onChange={e => setTabularCategoryFilter(e.target.value)}
-                className={`cursor-pointer rounded-xl border px-3 py-2 text-xs font-semibold outline-none ${softInner} ${textPrimary}`}
+                className={`cursor-pointer rounded-xl border px-3 py-1.5 text-xs font-medium outline-none ${softInner} ${textPrimary}`}
               >
                 <option value="ALL">All Categories</option>
                 <option value="FINANCIAL">Financial</option>
@@ -665,42 +680,43 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
               <button
                 type="button"
                 onClick={handleExportTabularCSV}
-                className="flex items-center gap-1.5 rounded-xl bg-[var(--accent-primary)] px-3 py-2 text-xs font-bold text-white transition hover:opacity-90 active:scale-[0.96]"
+                className="flex items-center gap-1.5 rounded-full bg-[#007AFF] hover:bg-[#0071E3] active:scale-[0.98] px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs transition-all cursor-pointer"
               >
                 <Download className="h-3.5 w-3.5" />
-                Export CSV
+                <span>Export CSV</span>
               </button>
             </div>
           </div>
-          <div className={`overflow-x-auto rounded-2xl border ${isDarkMode ? 'border-white/[0.06]' : 'border-slate-100'}`}>
+          <div className={`overflow-x-auto rounded-xl border ${isDarkMode ? 'border-white/10' : 'border-slate-200/80'}`}>
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className={`border-b text-[11px] uppercase tracking-wider ${isDarkMode ? 'border-white/[0.06] bg-white/[0.02] text-slate-500' : 'border-slate-100 bg-slate-50/60 text-slate-400'}`}>
+                <tr className={`border-b text-xs font-semibold ${isDarkMode ? 'border-white/10 bg-slate-950/60 text-slate-400' : 'border-slate-200/80 bg-slate-50/80 text-slate-500'}`}>
                   <th className="px-4 py-3">Code</th>
                   <th className="px-4 py-3">Metric</th>
                   <th className="px-4 py-3">Category</th>
                   <th className="px-4 py-3">Value</th>
                   <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3" />
+                  <th className="px-4 py-3 text-right" />
                 </tr>
               </thead>
-              <tbody className={`divide-y ${isDarkMode ? 'divide-white/[0.05]' : 'divide-slate-100'}`}>
+              <tbody className={`divide-y ${isDarkMode ? 'divide-white/5' : 'divide-slate-100'}`}>
                 {filteredTabularMetrics.map(m => (
-                  <tr key={m.code} className={`transition ${isDarkMode ? 'hover:bg-white/[0.03]' : 'hover:bg-slate-50'}`}>
+                  <tr key={m.code} className={`transition-all ${isDarkMode ? 'hover:bg-white/[0.03]' : 'hover:bg-slate-50/70'}`}>
                     <td className="px-4 py-3 font-mono text-slate-400">{m.code}</td>
-                    <td className={`px-4 py-3 font-semibold ${textPrimary}`}>{m.name}</td>
-                    <td className="px-4 py-3 text-slate-500">{m.category}</td>
-                    <td className={`px-4 py-3 font-black ${textPrimary}`}>{m.valueStr}</td>
+                    <td className={`px-4 py-3 font-medium ${textPrimary}`}>{m.name}</td>
+                    <td className="px-4 py-3 text-slate-400 dark:text-slate-500">{m.category}</td>
+                    <td className={`px-4 py-3 font-bold ${textPrimary}`}>{m.valueStr}</td>
                     <td className="px-4 py-3">
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${statusChip(m.status)}`}>{m.status}</span>
+                      <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium ${statusChip(m.status)}`}>{m.status}</span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-right">
                       <button
                         type="button"
                         onClick={() => handleNavigate(m.viewKey)}
-                        className="flex items-center gap-1 font-bold text-[var(--accent-primary)] transition hover:gap-1.5"
+                        className="inline-flex items-center gap-1 font-semibold text-[#007AFF] dark:text-[#0A84FF] transition hover:underline cursor-pointer"
                       >
-                        Open <ChevronRight className="h-3.5 w-3.5" />
+                        <span>Open</span>
+                        <ChevronRight className="h-3.5 w-3.5" />
                       </button>
                     </td>
                   </tr>
@@ -761,7 +777,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
 
             {/* Order Pipeline Funnel */}
             {widgetVisibility.showAnalyticsGrid && widgetVisibility.showOrderPipelineCard && (
-              <div className={`rounded-[28px] border p-4 sm:p-5 lg:col-span-8 ${surface}`}>
+              <div className={`rounded-2xl border p-5 lg:col-span-8 ${surface}`}>
                 <SectionTitle
                   icon={Layers}
                   title="Order Lifecycle Pipeline"
@@ -770,22 +786,23 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                     <button
                       type="button"
                       onClick={() => handleNavigate('orders')}
-                      className="flex items-center gap-1 text-xs font-bold text-[var(--accent-primary)] transition hover:gap-1.5"
+                      className="flex items-center gap-1 text-xs font-semibold text-[#007AFF] dark:text-[#0A84FF] transition hover:underline cursor-pointer"
                     >
-                      View all <ChevronRight className="h-3.5 w-3.5" />
+                      <span>View All</span>
+                      <ChevronRight className="h-3.5 w-3.5" />
                     </button>
                   }
                 />
 
                 <div className="grid gap-2">
                   {[
-                    { key: 'draft', label: 'PO Received', color: 'bg-slate-400', glow: 'shadow-slate-400/40', view: 'orders' },
-                    { key: 'confirmed', label: 'Confirmed', color: 'bg-indigo-500', glow: 'shadow-indigo-500/40', view: 'orders' },
-                    { key: 'production', label: 'In Production', color: 'bg-blue-600', glow: 'shadow-blue-500/40', view: 'production' },
-                    { key: 'qc', label: 'QC / Inspection', color: 'bg-amber-500', glow: 'shadow-amber-500/40', view: 'qc' },
-                    { key: 'dispatch', label: 'Dispatch Ready', color: 'bg-teal-500', glow: 'shadow-teal-500/40', view: 'dispatch' },
-                    { key: 'closed', label: 'Closed', color: 'bg-emerald-500', glow: 'shadow-emerald-500/40', view: 'orders' }
-                  ].map((stage, i) => {
+                    { key: 'draft', label: 'PO Received', color: 'bg-slate-400', view: 'orders' },
+                    { key: 'confirmed', label: 'Confirmed', color: 'bg-indigo-500', view: 'orders' },
+                    { key: 'production', label: 'In Production', color: 'bg-blue-600', view: 'production' },
+                    { key: 'qc', label: 'QC / Inspection', color: 'bg-amber-500', view: 'qc' },
+                    { key: 'dispatch', label: 'Dispatch Ready', color: 'bg-teal-500', view: 'dispatch' },
+                    { key: 'closed', label: 'Closed', color: 'bg-emerald-500', view: 'orders' }
+                  ].map((stage) => {
                     const count = metrics.pipeline[stage.key as keyof typeof metrics.pipeline] as number;
                     const pct = Math.round((count / pipelineTotal) * 100);
                     return (
@@ -793,20 +810,20 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                         key={stage.key}
                         type="button"
                         onClick={() => handleNavigate(stage.view)}
-                        className={`group grid w-full grid-cols-[minmax(112px,0.75fr)_minmax(0,1.6fr)_auto] items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition ${softInner} ${isDarkMode ? 'hover:bg-white/[0.05]' : 'hover:bg-white hover:shadow-sm'}`}
+                        className={`group grid w-full grid-cols-[minmax(112px,0.75fr)_minmax(0,1.6fr)_auto] items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left transition-all cursor-pointer ${softInner} ${isDarkMode ? 'hover:bg-white/[0.04]' : 'hover:bg-white hover:shadow-xs'}`}
                       >
                         <div className="flex items-center gap-2">
                           <span className={`h-2 w-2 shrink-0 rounded-full ${stage.color}`} />
-                          <span className={`truncate text-xs font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>{stage.label}</span>
+                          <span className={`truncate text-xs font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>{stage.label}</span>
                         </div>
-                        <div className={`relative h-2.5 overflow-hidden rounded-full ${isDarkMode ? 'bg-white/[0.06]' : 'bg-slate-200/70'}`}>
+                        <div className={`relative h-2 overflow-hidden rounded-full ${isDarkMode ? 'bg-white/[0.06]' : 'bg-slate-200/70'}`}>
                           <div
-                            className={`h-full rounded-full shadow-lg transition-[width] duration-700 ease-out ${stage.color} ${stage.glow}`}
+                            className={`h-full rounded-full transition-[width] duration-700 ease-out ${stage.color}`}
                             style={{ width: `${Math.max(pct, count > 0 ? 5 : 0)}%` }}
                           />
                         </div>
-                        <span className={`text-right font-mono text-xs font-bold ${textPrimary}`}>
-                          {count} <span className={`text-[10px] ${textFaint}`}>({pct}%)</span>
+                        <span className={`text-right text-xs font-semibold ${textPrimary}`}>
+                          {count} <span className={`text-[10px] font-normal ${textFaint}`}>({pct}%)</span>
                         </span>
                       </button>
                     );
@@ -816,35 +833,28 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
             )}
 
             {/* Plant Health Ring */}
-            <div className={`flex flex-col rounded-[28px] border p-4 sm:p-5 lg:col-span-4 ${surface}`}>
-              <SectionTitle icon={Radio} title="Plant Health" sub="Live shopfloor telemetry" accent="bg-emerald-500/12 text-emerald-500" />
+            <div className={`flex flex-col rounded-2xl border p-5 lg:col-span-4 ${surface}`}>
+              <SectionTitle icon={Radio} title="Plant Health" sub="Live shopfloor telemetry" accent="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" />
 
               <div className="flex flex-1 flex-col items-center justify-center py-2">
                 <div className="relative">
                   <svg className="h-40 w-40 -rotate-90" viewBox="0 0 120 120">
-                    <circle cx="60" cy="60" r="52" fill="none" stroke={isDarkMode ? 'rgba(255,255,255,0.06)' : '#e2e8f0'} strokeWidth="9" />
+                    <circle cx="60" cy="60" r="52" fill="none" stroke={isDarkMode ? 'rgba(255,255,255,0.06)' : '#f1f5f9'} strokeWidth="8" />
                     <circle
                       cx="60"
                       cy="60"
                       r="52"
                       fill="none"
-                      stroke="url(#healthGrad)"
-                      strokeWidth="9"
+                      stroke="#007AFF"
+                      strokeWidth="8"
                       strokeLinecap="round"
                       strokeDasharray={`${Number(metrics.qcPassRate) * 3.27} 327`}
-                      className="transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-1000 ease-out"
+                      className="transition-[stroke-dasharray] duration-1000 ease-out"
                     />
-                    <defs>
-                      <linearGradient id="healthGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#10b981" />
-                        <stop offset="60%" stopColor="#22d3ee" />
-                        <stop offset="100%" stopColor="var(--accent-primary)" />
-                      </linearGradient>
-                    </defs>
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className={`text-[32px] font-black leading-none ${textPrimary}`}>{metrics.qcPassRate}%</span>
-                    <span className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">QC Pass</span>
+                    <span className={`text-3xl font-bold tracking-tight ${textPrimary}`}>{metrics.qcPassRate}%</span>
+                    <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">QC Pass</span>
                   </div>
                 </div>
               </div>
@@ -856,8 +866,8 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                   { label: 'Output', value: metrics.totalOutput }
                 ].map(s => (
                   <div key={s.label} className={`rounded-xl border p-2.5 text-center ${softInner}`}>
-                    <div className="text-[9px] font-bold uppercase text-slate-400">{s.label}</div>
-                    <div className={`mt-0.5 text-sm font-black ${textPrimary}`}>{s.value}</div>
+                    <div className="text-[10px] font-medium text-slate-400">{s.label}</div>
+                    <div className={`mt-0.5 text-sm font-bold ${textPrimary}`}>{s.value}</div>
                   </div>
                 ))}
               </div>
@@ -865,15 +875,15 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
               <button
                 type="button"
                 onClick={() => handleNavigate('production')}
-                className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl bg-[var(--accent-primary)]/10 py-2.5 text-xs font-bold text-[var(--accent-primary)] transition hover:bg-[var(--accent-primary)]/20 active:scale-[0.96]"
+                className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/15 py-2.5 text-xs font-semibold text-[#007AFF] dark:text-[#0A84FF] transition-all active:scale-[0.98] cursor-pointer"
               >
                 <Play className="h-3.5 w-3.5" />
-                Open Shopfloor
+                <span>Open Shopfloor</span>
               </button>
             </div>
 
             {/* Recent Orders */}
-            <div className={`rounded-[28px] border p-4 sm:p-5 lg:col-span-6 ${surface}`}>
+            <div className={`rounded-2xl border p-5 lg:col-span-6 ${surface}`}>
               <SectionTitle
                 icon={ClipboardList}
                 title="Recent Orders"
@@ -881,9 +891,10 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                   <button
                     type="button"
                     onClick={() => handleNavigate('orders')}
-                    className="flex items-center gap-1 text-xs font-bold text-[var(--accent-primary)] transition hover:gap-1.5"
+                    className="flex items-center gap-1 text-xs font-semibold text-[#007AFF] dark:text-[#0A84FF] transition hover:underline cursor-pointer"
                   >
-                    View all <ChevronRight className="h-3.5 w-3.5" />
+                    <span>View All</span>
+                    <ChevronRight className="h-3.5 w-3.5" />
                   </button>
                 }
               />
@@ -899,20 +910,20 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                       key={order.id}
                       type="button"
                       onClick={() => onSelectOrder?.(order.id || order.poNo)}
-                      className={`group flex w-full items-center justify-between gap-3 rounded-xl border p-3 text-left transition hover:border-[var(--accent-primary)]/40 ${softInner} ${isDarkMode ? 'hover:bg-white/[0.05]' : 'hover:bg-white hover:shadow-sm'}`}
+                      className={`group flex w-full items-center justify-between gap-3 rounded-xl border p-3 text-left transition-all cursor-pointer ${softInner} ${isDarkMode ? 'hover:bg-white/[0.04]' : 'hover:bg-white hover:shadow-xs'}`}
                     >
                       <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF]">
                           <Receipt className="h-4 w-4" />
                         </div>
                         <div className="min-w-0">
-                          <div className={`truncate text-sm font-bold ${textPrimary}`}>{order.poNo}</div>
+                          <div className={`truncate text-sm font-semibold ${textPrimary}`}>{order.poNo}</div>
                           <div className="truncate text-[11px] text-slate-400">{order.customerName}</div>
                         </div>
                       </div>
                       <div className="shrink-0 text-right">
-                        <div className={`text-sm font-black ${textPrimary}`}>{fmt(order.grossAmount || 0)}</div>
-                        <span className="text-[10px] font-bold uppercase text-slate-400">
+                        <div className={`text-sm font-bold ${textPrimary}`}>{fmt(order.grossAmount || 0)}</div>
+                        <span className="text-[10px] font-medium text-slate-400">
                           {(order.status || order.stage || 'DRAFT').replace(/_/g, ' ')}
                         </span>
                       </div>
@@ -923,18 +934,19 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
             </div>
 
             {/* Active Job Cards */}
-            <div className={`rounded-[28px] border p-4 sm:p-5 lg:col-span-6 ${surface}`}>
+            <div className={`rounded-2xl border p-5 lg:col-span-6 ${surface}`}>
               <SectionTitle
                 icon={Factory}
                 title="Active Job Cards"
-                accent="bg-blue-500/12 text-blue-500"
+                accent="bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
                 action={
                   <button
                     type="button"
                     onClick={() => handleNavigate('production')}
-                    className="flex items-center gap-1 text-xs font-bold text-blue-500 transition hover:gap-1.5"
+                    className="flex items-center gap-1 text-xs font-semibold text-[#007AFF] dark:text-[#0A84FF] transition hover:underline cursor-pointer"
                   >
-                    Shopfloor <ChevronRight className="h-3.5 w-3.5" />
+                    <span>Shopfloor</span>
+                    <ChevronRight className="h-3.5 w-3.5" />
                   </button>
                 }
               />
@@ -945,15 +957,15 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                     className={`flex items-center justify-between gap-3 rounded-xl border p-3 ${softInner}`}
                   >
                     <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
                         <Boxes className="h-4 w-4" />
                       </div>
                       <div className="min-w-0">
-                        <div className={`text-sm font-bold ${textPrimary}`}>{jc.jobCardNo || `JC-${i + 1}`}</div>
+                        <div className={`text-sm font-semibold ${textPrimary}`}>{jc.jobCardNo || `JC-${i + 1}`}</div>
                         <div className="truncate text-[11px] text-slate-400">{jc.partDescription || jc.partCode || 'Precision component'}</div>
                       </div>
                     </div>
-                    <span className="shrink-0 rounded-full bg-blue-500/12 px-2.5 py-0.5 text-[10px] font-bold text-blue-500">
+                    <span className="shrink-0 rounded-full bg-indigo-500/10 px-2.5 py-0.5 text-[10px] font-medium text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
                       {jc.status || 'IN_PROGRESS'}
                     </span>
                   </div>
@@ -968,24 +980,24 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
             </div>
 
             {/* Quick Actions */}
-            <div className={`rounded-2xl border p-3.5 sm:p-4 lg:col-span-12 ${surface}`}>
-              <div className="mb-3 flex items-center justify-between gap-3">
+            <div className={`rounded-2xl border p-4 sm:p-5 lg:col-span-12 ${surface}`}>
+              <div className="mb-3.5 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <Zap className="h-4 w-4 text-[var(--accent-primary)]" />
-                  <h2 className={`text-sm font-bold ${textPrimary}`}>Quick Actions</h2>
+                  <Zap className="h-4 w-4 text-[#007AFF] dark:text-[#0A84FF]" />
+                  <h2 className={`text-sm font-bold tracking-tight ${textPrimary}`}>Quick Actions</h2>
                 </div>
-                <span className={`text-[10px] font-bold uppercase tracking-wider ${textFaint}`}>Module shortcuts</span>
+                <span className={`text-[11px] font-medium ${textFaint}`}>Module shortcuts</span>
               </div>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 xl:grid-cols-8">
                 {[
                   { label: 'Orders', icon: ShoppingCart, view: 'orders', color: 'text-blue-500', bg: 'bg-blue-500/10' },
                   { label: 'Production', icon: Factory, view: 'production', color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
                   { label: 'Inventory', icon: Package, view: 'inventory', color: 'text-rose-500', bg: 'bg-rose-500/10' },
                   { label: 'QC Gate', icon: ShieldCheck, view: 'qc', color: 'text-amber-500', bg: 'bg-amber-500/10' },
-                  { label: 'Dispatch', icon: Truck, view: 'dispatch', color: 'text-teal-400', bg: 'bg-teal-500/10' },
+                  { label: 'Dispatch', icon: Truck, view: 'dispatch', color: 'text-teal-500', bg: 'bg-teal-500/10' },
                   { label: 'Invoices', icon: DollarSign, view: 'invoices', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
                   { label: 'Approvals', icon: CheckSquare, view: 'approvals', color: 'text-rose-500', bg: 'bg-rose-500/10' },
-                  { label: 'AI Swarm', icon: Sparkles, view: 'command-centre', color: 'text-violet-500', bg: 'bg-violet-500/10' }
+                  { label: 'AI Swarm', icon: Sparkles, view: 'command-centre', color: 'text-purple-500', bg: 'bg-purple-500/10' }
                 ].map(action => {
                   const Icon = action.icon;
                   return (
@@ -993,12 +1005,12 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                       key={action.label}
                       type="button"
                       onClick={() => handleNavigate(action.view)}
-                      className={`group flex min-h-[80px] flex-col items-center justify-center gap-2 rounded-xl border p-3 transition hover:-translate-y-1 ${softInner} ${isDarkMode ? 'hover:bg-white/[0.05]' : 'hover:bg-white hover:shadow-md'}`}
+                      className={`group flex min-h-[84px] flex-col items-center justify-center gap-2 rounded-2xl border p-3 transition-all hover:scale-105 active:scale-[0.98] cursor-pointer ${softInner} ${isDarkMode ? 'hover:bg-white/[0.04]' : 'hover:bg-white hover:shadow-xs'}`}
                     >
-                      <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${action.bg} transition-transform group-hover:scale-110`}>
-                        <Icon className={`h-[18px] w-[18px] ${action.color}`} strokeWidth={2.2} />
+                      <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${action.bg}`}>
+                        <Icon className={`h-5 w-5 ${action.color}`} strokeWidth={2} />
                       </div>
-                      <span className={`text-[10px] font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>{action.label}</span>
+                      <span className={`text-[11px] font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{action.label}</span>
                     </button>
                   );
                 })}
@@ -1044,25 +1056,25 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
 
           {/* ══════════════  ACTIVITY FEED  ══════════════ */}
           {widgetVisibility.showRecentActivities && (
-            <section className={`space-y-4 rounded-[28px] border p-4 sm:p-5 ${surface}`}>
+            <section className={`space-y-4 rounded-2xl border p-5 ${surface}`}>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <SectionTitle icon={Activity} title="Factory Activity Stream" sub="Real-time audit trail across all modules" />
                 <div className="flex gap-2">
-                  <div className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-xs ${softInner}`}>
+                  <div className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs ${softInner}`}>
                     <Search className="h-3.5 w-3.5 text-slate-400" />
                     <input
                       value={activitySearchQuery}
                       onChange={e => setActivitySearchQuery(e.target.value)}
-                      placeholder="Search"
-                      className={`w-32 bg-transparent outline-none sm:w-48 ${textPrimary}`}
+                      placeholder="Search activities"
+                      className={`w-32 bg-transparent outline-none text-xs sm:w-48 ${textPrimary}`}
                     />
                   </div>
                   <select
                     value={activityCategoryFilter}
                     onChange={e => setActivityCategoryFilter(e.target.value)}
-                    className={`cursor-pointer rounded-xl border px-3 py-2 text-xs font-semibold outline-none ${softInner} ${textPrimary}`}
+                    className={`cursor-pointer rounded-xl border px-3 py-1.5 text-xs font-medium outline-none ${softInner} ${textPrimary}`}
                   >
-                    <option value="ALL">All</option>
+                    <option value="ALL">All Categories</option>
                     <option value="ORDER">Order</option>
                     <option value="INVENTORY">Inventory</option>
                     <option value="SYSTEM">System</option>
@@ -1073,34 +1085,36 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
               <div className="relative">
                 {/* timeline spine */}
                 {filteredActivities.length > 0 && (
-                  <div className={`absolute bottom-4 left-[15px] top-4 w-px ${isDarkMode ? 'bg-white/[0.06]' : 'bg-slate-100'}`} />
+                  <div className={`absolute bottom-4 left-[15px] top-4 w-px ${isDarkMode ? 'bg-white/10' : 'bg-slate-200/80'}`} />
                 )}
                 <div className="space-y-1">
                   {filteredActivities.slice(0, 10).map((act, idx) => (
                     <div key={idx} className="relative flex items-start gap-4 py-2.5">
                       <div
-                        className={`relative z-10 mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ring-4 ${isDarkMode ? 'ring-[#09090B]' : 'ring-white'} ${act.status === 'Alert'
-                            ? 'bg-rose-500/12 text-rose-500'
+                        className={`relative z-10 mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ring-4 ${isDarkMode ? 'ring-slate-900' : 'ring-white'} ${
+                          act.status === 'Alert'
+                            ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
                             : act.status === 'Processing'
-                              ? 'bg-amber-500/12 text-amber-500'
-                              : 'bg-emerald-500/12 text-emerald-500'
-                          }`}
+                              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                              : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                        }`}
                       >
                         <CircleDot className="h-3.5 w-3.5" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>{act.activity}</p>
-                        <p className="mt-0.5 font-mono text-[11px] text-slate-400">
+                        <p className={`text-sm font-semibold ${textPrimary}`}>{act.activity}</p>
+                        <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
                           {act.time} · {act.user} · {act.category}
                         </p>
                       </div>
                       <span
-                        className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${act.status === 'Alert'
-                            ? 'bg-rose-500/12 text-rose-500'
+                        className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-medium border ${
+                          act.status === 'Alert'
+                            ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
                             : act.status === 'Processing'
-                              ? 'bg-amber-500/12 text-amber-500'
-                              : 'bg-emerald-500/12 text-emerald-500'
-                          }`}
+                              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                              : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                        }`}
                       >
                         {act.status}
                       </span>
@@ -1122,65 +1136,65 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
       {/* ══════════════  CUSTOMIZE MODAL  ══════════════ */}
       {showCustomizeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div onClick={() => setShowCustomizeModal(false)} className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm" />
-          <div className={`relative z-10 w-full max-w-md space-y-4 rounded-3xl border p-6 shadow-2xl ${isDarkMode ? 'border-white/[0.08] bg-[#09090B] text-white' : 'border-slate-200 bg-white'}`}>
-            <div className="flex items-center justify-between border-b pb-3 dark:border-white/[0.06]">
+          <div onClick={() => setShowCustomizeModal(false)} className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity" />
+          <div className={`relative z-10 w-full max-w-md space-y-4 rounded-2xl border p-6 shadow-2xl backdrop-blur-2xl ${isDarkMode ? 'border-white/10 bg-slate-900/95 text-white' : 'border-slate-200/80 bg-white/95 text-slate-900'}`}>
+            <div className="flex items-center justify-between border-b pb-3.5 border-slate-100 dark:border-white/10">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent-primary)]/12 text-[var(--accent-primary)]">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF]">
                   <SlidersHorizontal className="h-4 w-4" />
                 </div>
-                <h3 className="font-bold">Customize Dashboard</h3>
+                <h3 className="text-base font-bold tracking-tight">Customize Dashboard</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setShowCustomizeModal(false)}
-                className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-500/10 hover:text-slate-600"
+                className="rounded-full p-1.5 text-slate-400 transition hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
               >
-                <X className="h-5 w-5" />
+                <X className="h-4.5 w-4.5" />
               </button>
             </div>
 
             <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
-              <div className={`rounded-2xl border p-3.5 ${softInner}`}>
+              <div className={`rounded-xl border p-3.5 ${softInner}`}>
                 <AccentColorSelector isDarkMode={isDarkMode} />
               </div>
 
-              <div className={`space-y-2 rounded-2xl border p-3.5 ${softInner}`}>
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Display Mode</label>
+              <div className={`space-y-2 rounded-xl border p-3.5 ${softInner}`}>
+                <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">Display Mode</label>
                 <div className="grid grid-cols-2 gap-2">
                   {(['charts', 'numbers'] as const).map(m => (
                     <button
                       key={m}
                       type="button"
                       onClick={() => setMode(m)}
-                      className={`flex min-h-[44px] items-center justify-center gap-2 rounded-xl border text-xs font-bold transition ${mode === m
-                          ? 'border-transparent bg-[var(--accent-primary)] text-white shadow-md'
+                      className={`flex min-h-[40px] items-center justify-center gap-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${mode === m
+                          ? 'border-transparent bg-[#007AFF] text-white shadow-xs'
                           : isDarkMode
-                            ? 'border-white/[0.08] bg-white/[0.03] text-slate-300'
-                            : 'border-slate-200 bg-white text-slate-700'
+                            ? 'border-white/10 bg-slate-800/80 text-slate-300 hover:bg-slate-800'
+                            : 'border-slate-200/80 bg-white text-slate-700 hover:bg-slate-50'
                         }`}
                     >
                       {m === 'charts' ? <BarChart3 className="h-4 w-4" /> : <Hash className="h-4 w-4" />}
-                      {m === 'charts' ? 'Visual' : 'Tabular'}
+                      <span>{m === 'charts' ? 'Visual' : 'Tabular'}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className={`flex items-center justify-between rounded-2xl border p-3.5 ${softInner}`}>
+              <div className={`flex items-center justify-between rounded-xl border p-3.5 ${softInner}`}>
                 <div>
-                  <div className="text-xs font-bold">Realtime Feed</div>
-                  <div className="text-[11px] text-slate-500">Auto-update every 5s</div>
+                  <div className="text-xs font-semibold">Realtime Feed</div>
+                  <div className="text-[11px] text-slate-400 dark:text-slate-500">Auto-update every 5s</div>
                 </div>
-                <button type="button" onClick={onToggleRealtimeStreaming}>
-                  <div className={`w-11 rounded-full p-0.5 transition ${isRealtimeStreaming ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'}`}>
-                    <div className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${isRealtimeStreaming ? 'translate-x-5' : ''}`} />
+                <button type="button" onClick={onToggleRealtimeStreaming} className="cursor-pointer">
+                  <div className={`w-11 rounded-full p-0.5 transition-colors ${isRealtimeStreaming ? 'bg-[#34C759]' : 'bg-slate-300 dark:bg-slate-700'}`}>
+                    <div className={`h-5 w-5 rounded-full bg-white shadow-xs transition-transform ${isRealtimeStreaming ? 'translate-x-5' : ''}`} />
                   </div>
                 </button>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Visible Widgets</label>
+                <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">Visible Widgets</label>
                 {[
                   { key: 'showAlertsBar', label: 'Alert Rail' },
                   { key: 'showTopMetricsRow', label: 'KPI Cards' },
@@ -1196,15 +1210,17 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                       key={key}
                       type="button"
                       onClick={() => toggleWidget(key)}
-                      className={`flex w-full items-center justify-between rounded-xl border p-2.5 text-xs font-medium transition ${active
-                          ? 'border-[var(--accent-primary)]/30 bg-[var(--accent-primary)]/[0.06]'
+                      className={`flex w-full items-center justify-between rounded-xl border p-2.5 text-xs font-medium transition-all cursor-pointer ${active
+                          ? isDarkMode 
+                            ? 'border-blue-500/30 bg-blue-500/10 text-white' 
+                            : 'border-blue-500/30 bg-blue-50/60 text-slate-900'
                           : isDarkMode
-                            ? 'border-white/[0.06] hover:bg-white/[0.03]'
-                            : 'border-slate-100 hover:bg-slate-50'
+                            ? 'border-white/5 text-slate-400 hover:bg-white/[0.03]'
+                            : 'border-slate-100 text-slate-500 hover:bg-slate-50'
                         }`}
                     >
                       <span>{item.label}</span>
-                      {active ? <Eye className="h-4 w-4 text-[var(--accent-primary)]" /> : <EyeOff className="h-4 w-4 text-slate-400" />}
+                      {active ? <Eye className="h-4 w-4 text-[#007AFF] dark:text-[#0A84FF]" /> : <EyeOff className="h-4 w-4 text-slate-400" />}
                     </button>
                   );
                 })}
@@ -1219,10 +1235,10 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                       setShowCustomizeModal(false);
                     }
                   }}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-rose-500/30 p-2.5 text-xs font-bold text-rose-500 transition hover:bg-rose-500/10"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-rose-500/20 p-2.5 text-xs font-semibold text-rose-600 dark:text-rose-400 transition-all hover:bg-rose-500/10 cursor-pointer"
                 >
                   <RotateCcw className="h-4 w-4" />
-                  Reset Factory Data
+                  <span>Reset Factory Data</span>
                 </button>
               )}
             </div>
@@ -1230,9 +1246,9 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
             <button
               type="button"
               onClick={() => setShowCustomizeModal(false)}
-              className="w-full rounded-xl bg-[var(--accent-primary)] py-2.5 text-xs font-bold text-white transition hover:opacity-90 active:scale-[0.96]"
+              className="w-full rounded-full bg-[#007AFF] hover:bg-[#0071E3] active:scale-[0.98] py-2.5 text-xs font-semibold text-white shadow-xs transition-all cursor-pointer"
             >
-              Save & Apply
+              Done
             </button>
           </div>
         </div>

@@ -876,12 +876,12 @@ export class DispatchService {
       ...challan,
       template: 'STANDARD_DELIVERY_CHALLAN_GST_V1',
       companyHeader: {
-        legalName: 'GURU OM PRECISION ENGINEERING PVT. LTD.',
-        factoryAddress: 'Plot No. W-45, MIDC Industrial Area, Waluj, Chhatrapati Sambhaji Nagar, Maharashtra 431136',
+        legalName: 'GuruOm Industries LLP',
+        factoryAddress: 'Plot No. 42, MIDC Industrial Area, Bhosari, Pune, Maharashtra - 411026',
         gstin: '27AABCG1234F1Z5',
         state: 'Maharashtra (Code 27)',
-        email: 'dispatch@guruom.in',
-        phone: '+91 240 255 4321'
+        email: 'operations@guruom.in',
+        phone: '+91 20 2712 3456'
       },
       consignee: {
         customerName: orderInfo?.customerName || 'Consignee Entity Ltd',

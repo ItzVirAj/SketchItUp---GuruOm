@@ -315,13 +315,15 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
   /* ─────────────────────────────  DESIGN TOKENS  ───────────────────────────── */
 
   const surface = isDarkMode
-    ? 'bg-slate-900/80 border-white/10 backdrop-blur-xl shadow-[0_4px_24px_rgba(0,0,0,0.3)]'
-    : 'bg-white/90 border-slate-200/80 backdrop-blur-xl shadow-[0_4px_20px_rgba(0,0,0,0.04)]';
+    ? 'bg-[#18181B]/90 border border-white/15 backdrop-blur-2xl shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12),0_16px_36px_rgba(0,0,0,0.5)]'
+    : 'bg-white/95 border border-slate-200/90 backdrop-blur-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)]';
 
-  const softInner = isDarkMode ? 'bg-slate-950/60 border-white/5' : 'bg-slate-50/80 border-slate-100';
+  const softInner = isDarkMode 
+    ? 'bg-white/[0.04] border border-white/10 hover:border-white/20' 
+    : 'bg-slate-50/90 border border-slate-200/80';
   const textPrimary = isDarkMode ? 'text-white' : 'text-slate-900';
-  const textMuted = isDarkMode ? 'text-slate-400' : 'text-slate-500';
-  const textFaint = isDarkMode ? 'text-slate-500' : 'text-slate-400';
+  const textMuted = isDarkMode ? 'text-slate-300' : 'text-slate-500';
+  const textFaint = isDarkMode ? 'text-slate-400' : 'text-slate-400';
 
   /* ─────────────────────────────  SUB-COMPONENTS  ───────────────────────────── */
 
@@ -347,11 +349,11 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
     tone: 'rose' | 'amber' | 'emerald' | 'sky' | 'violet'; onClick: () => void;
   }) => {
     const tones: Record<string, { border: string; icon: string; text: string }> = {
-      rose: { border: 'border-rose-500/20', icon: 'bg-rose-500/10 text-rose-600 dark:text-rose-400', text: 'text-rose-600 dark:text-rose-400' },
-      amber: { border: 'border-amber-500/20', icon: 'bg-amber-500/10 text-amber-600 dark:text-amber-400', text: 'text-amber-600 dark:text-amber-400' },
-      emerald: { border: 'border-emerald-500/20', icon: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400', text: 'text-emerald-600 dark:text-emerald-400' },
-      sky: { border: 'border-blue-500/20', icon: 'bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF]', text: 'text-[#007AFF] dark:text-[#0A84FF]' },
-      violet: { border: 'border-purple-500/20', icon: 'bg-purple-500/10 text-purple-600 dark:text-purple-400', text: 'text-purple-600 dark:text-purple-400' }
+      rose: { border: 'border-rose-500/30', icon: 'bg-rose-500/15 text-rose-400', text: 'text-rose-400' },
+      amber: { border: 'border-amber-500/30', icon: 'bg-amber-500/15 text-amber-400', text: 'text-amber-400' },
+      emerald: { border: 'border-emerald-500/30', icon: 'bg-emerald-500/15 text-emerald-400', text: 'text-emerald-400' },
+      sky: { border: 'border-blue-500/30', icon: 'bg-blue-500/15 text-[#007AFF] dark:text-[#0A84FF]', text: 'text-[#007AFF] dark:text-[#0A84FF]' },
+      violet: { border: 'border-purple-500/30', icon: 'bg-purple-500/15 text-purple-400', text: 'text-purple-400' }
     };
     const t = tones[tone] || tones.sky;
     
@@ -359,8 +361,10 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
       <button
         type="button"
         onClick={onClick}
-        className={`group relative flex min-w-[190px] shrink-0 items-center gap-3.5 rounded-2xl border px-4 py-3 text-left transition-all backdrop-blur-xl hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
-          isDarkMode ? 'bg-slate-900/80 border-white/10' : 'bg-white/90 border-slate-200/80 shadow-xs'
+        className={`group relative flex min-w-[190px] shrink-0 items-center gap-3.5 rounded-2xl border px-4 py-3 text-left transition-all backdrop-blur-2xl hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
+          isDarkMode 
+            ? 'bg-[#18181B]/90 border-white/15 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08),0_8px_20px_rgba(0,0,0,0.35)] hover:bg-[#202026] hover:border-white/25' 
+            : 'bg-white/95 border-slate-200/90 shadow-xs hover:bg-white'
         } ${t.border}`}
       >
         <div className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${t.icon} transition-transform`}>
@@ -380,7 +384,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
           <div className={`text-xs font-semibold ${t.text} truncate`}>
             {label}
           </div>
-          <div className={`text-[10px] text-slate-400 dark:text-slate-500 truncate`}>
+          <div className={`text-[10px] text-slate-400 dark:text-slate-400 truncate`}>
             {sub}
           </div>
         </div>
@@ -405,16 +409,16 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
       <button
         type="button"
         onClick={onClick}
-        className={`group relative flex min-h-[140px] flex-col justify-between rounded-2xl border p-4.5 text-left transition-all backdrop-blur-xl hover:scale-[1.01] active:scale-[0.99] cursor-pointer ${
+        className={`group relative flex min-h-[140px] flex-col justify-between rounded-3xl border p-5 text-left transition-all backdrop-blur-2xl hover:scale-[1.01] active:scale-[0.99] cursor-pointer ${
           isDarkMode 
-            ? 'bg-slate-900/80 border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.3)] hover:bg-slate-900' 
-            : 'bg-white/90 border-slate-200/80 shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:bg-white'
+            ? 'bg-[#18181B]/90 border-white/15 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12),0_12px_32px_rgba(0,0,0,0.45)] hover:bg-[#202026] hover:border-white/25' 
+            : 'bg-white/95 border-slate-200/90 shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:bg-white'
         }`}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 tracking-wide">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-300 tracking-wide">
                 {label}
               </span>
               {badge && (
@@ -461,7 +465,22 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
   /* ─────────────────────────────  RENDER  ───────────────────────────── */
 
   return (
-    <div ref={localContainerRef} className="relative space-y-4 pb-8 font-sans">
+    <div ref={localContainerRef} className="relative space-y-6 pb-12 font-sans overflow-hidden">
+
+      {/* ── Apple HIG Atmospheric Ambient Gradient Mesh Background ── */}
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+        {/* Top Center Radiant Glow (dynamic brand accent) */}
+        <div className="absolute -top-32 left-1/2 h-[550px] w-full max-w-5xl -translate-x-1/2 bg-[radial-gradient(ellipse_75%_55%_at_50%_0%,rgba(0,122,255,0.20),transparent_70%)] blur-3xl" />
+        
+        {/* Top-Right Secondary Atmospheric Orb (Electric Violet/Purple) */}
+        <div className="absolute -top-12 -right-24 h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle_at_center,rgba(147,51,234,0.14),transparent_65%)] blur-3xl" />
+        
+        {/* Mid-Left Emerald Factory Operations Aura */}
+        <div className="absolute top-[38%] -left-28 h-[480px] w-[480px] rounded-full bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.10),transparent_65%)] blur-3xl" />
+        
+        {/* Bottom-Right Sapphire Cashflow Glow */}
+        <div className="absolute -bottom-24 right-1/4 h-[400px] w-[400px] rounded-full bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.12),transparent_65%)] blur-3xl" />
+      </div>
 
       {/* Pull-to-refresh */}
       {(pullDistance > 0 || isRefreshing) && (
@@ -477,11 +496,14 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
       )}
 
       {/* ══════════════  APPLE HIG EXECUTIVE WINDOW HEADER  ══════════════ */}
-      <section className={`relative overflow-hidden rounded-2xl border transition-all backdrop-blur-xl ${
+      <section className={`relative overflow-hidden rounded-3xl border transition-all backdrop-blur-2xl ${
         isDarkMode
-          ? 'bg-slate-900/80 border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.3)] text-white'
-          : 'bg-white/90 border-slate-200/80 shadow-[0_4px_20px_rgba(0,0,0,0.04)] text-slate-900'
+          ? 'bg-gradient-to-b from-[#1c1c22]/95 via-[#16161b]/95 to-[#121216]/95 border-white/15 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.15),0_24px_60px_rgba(0,0,0,0.6)] text-white'
+          : 'bg-gradient-to-br from-white via-white/95 to-blue-50/60 border-slate-200/90 shadow-[0_4px_24px_rgba(0,0,0,0.06)] text-slate-900'
       }`}>
+        {/* Apple Inset Specular Ambient Highlight */}
+        <div className="pointer-events-none absolute -top-20 -right-20 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(0,122,255,0.22),transparent_70%)] blur-2xl" />
+        <div className="pointer-events-none absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(147,51,234,0.15),transparent_70%)] blur-2xl" />
         <div className="relative p-5 sm:p-6 lg:p-7">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-1.5">
@@ -513,14 +535,14 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
             </div>
 
             {/* Apple Window Toolbar Controls */}
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2.5">
               <select
                 value={scope}
                 onChange={e => setScope(e.target.value)}
-                className={`h-9 cursor-pointer rounded-xl border px-3 text-xs font-medium outline-none transition-all ${
+                className={`h-9 cursor-pointer rounded-full border px-3.5 text-xs font-semibold outline-none transition-all ${
                   isDarkMode 
-                    ? 'border-white/10 bg-slate-800/80 text-slate-200' 
-                    : 'border-slate-200/80 bg-slate-100/80 text-slate-700'
+                    ? 'border-white/10 bg-black/60 text-white hover:border-white/20' 
+                    : 'border-slate-200/80 bg-white/90 text-slate-700'
                 }`}
               >
                 <option value="FY 26-27">FY 26-27</option>
@@ -530,16 +552,16 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
               </select>
 
               {/* Apple Segmented View Toggle */}
-              <div className={`flex h-9 items-center rounded-xl border p-0.5 ${
-                isDarkMode ? 'border-white/10 bg-slate-950/60' : 'border-slate-200/80 bg-slate-100/80'
+              <div className={`flex h-9 items-center rounded-full border p-0.5 ${
+                isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200/80 bg-slate-100/80'
               }`}>
                 <button
                   type="button"
                   onClick={() => setMode('charts')}
-                  className={`flex h-7.5 px-3 items-center gap-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                  className={`flex h-7.5 px-3.5 items-center gap-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     mode === 'charts'
-                      ? isDarkMode ? 'bg-slate-800 text-white shadow-2xs' : 'bg-white text-slate-900 shadow-2xs'
-                      : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+                      ? 'bg-[#007AFF] text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white'
                   }`}
                 >
                   <BarChart3 className="h-3.5 w-3.5" />
@@ -548,10 +570,10 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setMode('numbers')}
-                  className={`flex h-7.5 px-3 items-center gap-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                  className={`flex h-7.5 px-3.5 items-center gap-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     mode === 'numbers'
-                      ? isDarkMode ? 'bg-slate-800 text-white shadow-2xs' : 'bg-white text-slate-900 shadow-2xs'
-                      : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+                      ? 'bg-[#007AFF] text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white'
                   }`}
                 >
                   <Hash className="h-3.5 w-3.5" />
@@ -562,10 +584,10 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
               <button
                 type="button"
                 onClick={() => setShowCustomizeModal(true)}
-                className={`flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border transition-all ${
+                className={`flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border transition-all active:scale-95 ${
                   isDarkMode 
-                    ? 'border-white/10 bg-slate-800/80 text-slate-300 hover:bg-slate-700' 
-                    : 'border-slate-200/80 bg-slate-100/80 text-slate-700 hover:bg-slate-200'
+                    ? 'border-white/10 bg-black/60 text-slate-300 hover:text-white hover:bg-white/10' 
+                    : 'border-slate-200/80 bg-white/90 text-slate-700 hover:bg-slate-100'
                 }`}
                 title="Customize Dashboard"
               >
@@ -587,23 +609,23 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 pt-5 border-t border-slate-100 dark:border-white/10">
             {[
               { label: 'Open POs', value: metrics.openOrders.length, icon: ShoppingCart, tone: 'text-[#007AFF] dark:text-[#0A84FF]', bg: 'bg-blue-500/10' },
-              { label: 'Active JCs', value: metrics.activeJobCards.length, icon: Factory, tone: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-500/10' },
-              { label: 'QC Pass Rate', value: `${metrics.qcPassRate}%`, icon: ShieldCheck, tone: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' },
-              { label: 'Parts Output', value: metrics.totalOutput.toLocaleString('en-IN'), icon: Gauge, tone: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' }
+              { label: 'Active JCs', value: metrics.activeJobCards.length, icon: Factory, tone: 'text-indigo-400', bg: 'bg-indigo-500/10' },
+              { label: 'QC Pass Rate', value: `${metrics.qcPassRate}%`, icon: ShieldCheck, tone: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+              { label: 'Parts Output', value: metrics.totalOutput.toLocaleString('en-IN'), icon: Gauge, tone: 'text-amber-400', bg: 'bg-amber-500/10' }
             ].map(item => {
               const Icon = item.icon;
               return (
                 <div
                   key={item.label}
-                  className={`flex items-center gap-3.5 p-3.5 rounded-xl border transition-all ${
-                    isDarkMode ? 'border-white/5 bg-slate-950/40' : 'border-slate-100 bg-slate-50/60'
+                  className={`flex items-center gap-3.5 p-3.5 rounded-2xl border transition-all ${
+                    isDarkMode ? 'border-white/10 bg-black/50 hover:border-white/20' : 'border-slate-100 bg-slate-50/60'
                   }`}
                 >
                   <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${item.bg} ${item.tone}`}>
                     <Icon className="h-5 w-5 stroke-[2]" />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-[11px] font-medium text-slate-400 dark:text-slate-500">{item.label}</div>
+                    <div className="text-[11px] font-medium text-slate-400 dark:text-slate-400">{item.label}</div>
                     <div className="mt-0.5 text-lg font-bold tracking-tight text-slate-900 dark:text-white tabular-nums">{item.value}</div>
                   </div>
                 </div>
@@ -618,8 +640,10 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
         <button
           type="button"
           onClick={() => handleNavigate('approvals')}
-          className={`group w-full rounded-2xl border border-rose-500/20 p-3.5 text-left transition-all backdrop-blur-xl flex items-center justify-between gap-3 cursor-pointer ${
-            isDarkMode ? 'bg-rose-500/10 hover:bg-rose-500/15' : 'bg-rose-50/80 hover:bg-rose-50 shadow-2xs'
+          className={`group w-full rounded-3xl border border-rose-500/30 p-4 text-left transition-all backdrop-blur-2xl flex items-center justify-between gap-3 cursor-pointer ${
+            isDarkMode 
+              ? 'bg-[#1c1417]/90 hover:bg-[#26191e] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1),0_12px_32px_rgba(0,0,0,0.4)]' 
+              : 'bg-rose-50/90 hover:bg-rose-50 shadow-xs'
           }`}
         >
           <div className="flex items-center gap-3.5">
@@ -653,7 +677,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
 
       {/* ══════════════  TABULAR MODE  ══════════════ */}
       {mode === 'numbers' && (
-        <section className={`space-y-4 rounded-2xl border p-5 ${surface}`}>
+        <section className={`space-y-4 rounded-3xl border p-5 ${surface}`}>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <SectionTitle icon={Target} title="Telemetry Registry" sub="All operational KPIs in tabular form" />
             <div className="flex flex-wrap items-center gap-2">
@@ -687,10 +711,10 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
               </button>
             </div>
           </div>
-          <div className={`overflow-x-auto rounded-xl border ${isDarkMode ? 'border-white/10' : 'border-slate-200/80'}`}>
+          <div className={`overflow-x-auto rounded-2xl border ${isDarkMode ? 'border-white/10 bg-white/[0.02]' : 'border-slate-200/80 bg-white'}`}>
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className={`border-b text-xs font-semibold ${isDarkMode ? 'border-white/10 bg-slate-950/60 text-slate-400' : 'border-slate-200/80 bg-slate-50/80 text-slate-500'}`}>
+                <tr className={`border-b text-xs font-semibold ${isDarkMode ? 'border-white/10 bg-white/[0.05] text-slate-300' : 'border-slate-200/80 bg-slate-50/80 text-slate-600'}`}>
                   <th className="px-4 py-3">Code</th>
                   <th className="px-4 py-3">Metric</th>
                   <th className="px-4 py-3">Category</th>
@@ -701,10 +725,10 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
               </thead>
               <tbody className={`divide-y ${isDarkMode ? 'divide-white/5' : 'divide-slate-100'}`}>
                 {filteredTabularMetrics.map(m => (
-                  <tr key={m.code} className={`transition-all ${isDarkMode ? 'hover:bg-white/[0.03]' : 'hover:bg-slate-50/70'}`}>
+                  <tr key={m.code} className={`transition-all ${isDarkMode ? 'hover:bg-white/[0.05]' : 'hover:bg-slate-50/70'}`}>
                     <td className="px-4 py-3 font-mono text-slate-400">{m.code}</td>
                     <td className={`px-4 py-3 font-medium ${textPrimary}`}>{m.name}</td>
-                    <td className="px-4 py-3 text-slate-400 dark:text-slate-500">{m.category}</td>
+                    <td className="px-4 py-3 text-slate-400 dark:text-slate-400">{m.category}</td>
                     <td className={`px-4 py-3 font-bold ${textPrimary}`}>{m.valueStr}</td>
                     <td className="px-4 py-3">
                       <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium ${statusChip(m.status)}`}>{m.status}</span>
@@ -773,11 +797,11 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
           )}
 
           {/* ══════════════  MAIN BENTO  ══════════════ */}
-          <section className="grid grid-cols-1 items-stretch gap-3 lg:grid-cols-12">
+          <section className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-12">
 
             {/* Order Pipeline Funnel */}
             {widgetVisibility.showAnalyticsGrid && widgetVisibility.showOrderPipelineCard && (
-              <div className={`rounded-2xl border p-5 lg:col-span-8 ${surface}`}>
+              <div className={`rounded-3xl border p-6 lg:col-span-8 ${surface}`}>
                 <SectionTitle
                   icon={Layers}
                   title="Order Lifecycle Pipeline"
@@ -810,13 +834,13 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                         key={stage.key}
                         type="button"
                         onClick={() => handleNavigate(stage.view)}
-                        className={`group grid w-full grid-cols-[minmax(112px,0.75fr)_minmax(0,1.6fr)_auto] items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left transition-all cursor-pointer ${softInner} ${isDarkMode ? 'hover:bg-white/[0.04]' : 'hover:bg-white hover:shadow-xs'}`}
+                        className={`group grid w-full grid-cols-[minmax(112px,0.75fr)_minmax(0,1.6fr)_auto] items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-all cursor-pointer ${softInner} ${isDarkMode ? 'hover:bg-white/[0.08]' : 'hover:bg-white hover:shadow-xs'}`}
                       >
                         <div className="flex items-center gap-2">
                           <span className={`h-2 w-2 shrink-0 rounded-full ${stage.color}`} />
                           <span className={`truncate text-xs font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>{stage.label}</span>
                         </div>
-                        <div className={`relative h-2 overflow-hidden rounded-full ${isDarkMode ? 'bg-white/[0.06]' : 'bg-slate-200/70'}`}>
+                        <div className={`relative h-2 overflow-hidden rounded-full ${isDarkMode ? 'bg-white/[0.08]' : 'bg-slate-200/70'}`}>
                           <div
                             className={`h-full rounded-full transition-[width] duration-700 ease-out ${stage.color}`}
                             style={{ width: `${Math.max(pct, count > 0 ? 5 : 0)}%` }}
@@ -833,13 +857,13 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
             )}
 
             {/* Plant Health Ring */}
-            <div className={`flex flex-col rounded-2xl border p-5 lg:col-span-4 ${surface}`}>
+            <div className={`flex flex-col rounded-3xl border p-6 lg:col-span-4 ${surface}`}>
               <SectionTitle icon={Radio} title="Plant Health" sub="Live shopfloor telemetry" accent="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" />
 
               <div className="flex flex-1 flex-col items-center justify-center py-2">
                 <div className="relative">
                   <svg className="h-40 w-40 -rotate-90" viewBox="0 0 120 120">
-                    <circle cx="60" cy="60" r="52" fill="none" stroke={isDarkMode ? 'rgba(255,255,255,0.06)' : '#f1f5f9'} strokeWidth="8" />
+                    <circle cx="60" cy="60" r="52" fill="none" stroke={isDarkMode ? 'rgba(255,255,255,0.08)' : '#f1f5f9'} strokeWidth="8" />
                     <circle
                       cx="60"
                       cy="60"
@@ -865,7 +889,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                   { label: 'QC Items', value: qcItems.length },
                   { label: 'Output', value: metrics.totalOutput }
                 ].map(s => (
-                  <div key={s.label} className={`rounded-xl border p-2.5 text-center ${softInner}`}>
+                  <div key={s.label} className={`rounded-2xl border p-2.5 text-center ${softInner}`}>
                     <div className="text-[10px] font-medium text-slate-400">{s.label}</div>
                     <div className={`mt-0.5 text-sm font-bold ${textPrimary}`}>{s.value}</div>
                   </div>
@@ -875,7 +899,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
               <button
                 type="button"
                 onClick={() => handleNavigate('production')}
-                className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/15 py-2.5 text-xs font-semibold text-[#007AFF] dark:text-[#0A84FF] transition-all active:scale-[0.98] cursor-pointer"
+                className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-2xl bg-blue-500/10 hover:bg-blue-500/15 py-3 text-xs font-semibold text-[#007AFF] dark:text-[#0A84FF] transition-all active:scale-[0.98] cursor-pointer"
               >
                 <Play className="h-3.5 w-3.5" />
                 <span>Open Shopfloor</span>
@@ -883,7 +907,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
             </div>
 
             {/* Recent Orders */}
-            <div className={`rounded-2xl border p-5 lg:col-span-6 ${surface}`}>
+            <div className={`rounded-3xl border p-6 lg:col-span-6 ${surface}`}>
               <SectionTitle
                 icon={ClipboardList}
                 title="Recent Orders"
@@ -910,7 +934,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                       key={order.id}
                       type="button"
                       onClick={() => onSelectOrder?.(order.id || order.poNo)}
-                      className={`group flex w-full items-center justify-between gap-3 rounded-xl border p-3 text-left transition-all cursor-pointer ${softInner} ${isDarkMode ? 'hover:bg-white/[0.04]' : 'hover:bg-white hover:shadow-xs'}`}
+                      className={`group flex w-full items-center justify-between gap-3 rounded-2xl border p-3.5 text-left transition-all cursor-pointer ${softInner} ${isDarkMode ? 'hover:bg-white/[0.08]' : 'hover:bg-white hover:shadow-xs'}`}
                     >
                       <div className="flex min-w-0 items-center gap-3">
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF]">
@@ -934,7 +958,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
             </div>
 
             {/* Active Job Cards */}
-            <div className={`rounded-2xl border p-5 lg:col-span-6 ${surface}`}>
+            <div className={`rounded-3xl border p-6 lg:col-span-6 ${surface}`}>
               <SectionTitle
                 icon={Factory}
                 title="Active Job Cards"
@@ -954,7 +978,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                 {(metrics.activeJobCards.length > 0 ? metrics.activeJobCards : jobCards).slice(0, 5).map((jc, i) => (
                   <div
                     key={jc.id || i}
-                    className={`flex items-center justify-between gap-3 rounded-xl border p-3 ${softInner}`}
+                    className={`flex items-center justify-between gap-3 rounded-2xl border p-3.5 ${softInner}`}
                   >
                     <div className="flex min-w-0 items-center gap-3">
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
@@ -980,7 +1004,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
             </div>
 
             {/* Quick Actions */}
-            <div className={`rounded-2xl border p-4 sm:p-5 lg:col-span-12 ${surface}`}>
+            <div className={`rounded-3xl border p-5 sm:p-6 lg:col-span-12 ${surface}`}>
               <div className="mb-3.5 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <Zap className="h-4 w-4 text-[#007AFF] dark:text-[#0A84FF]" />
@@ -988,7 +1012,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                 </div>
                 <span className={`text-[11px] font-medium ${textFaint}`}>Module shortcuts</span>
               </div>
-              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 xl:grid-cols-8">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8">
                 {[
                   { label: 'Orders', icon: ShoppingCart, view: 'orders', color: 'text-blue-500', bg: 'bg-blue-500/10' },
                   { label: 'Production', icon: Factory, view: 'production', color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
@@ -1005,12 +1029,12 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                       key={action.label}
                       type="button"
                       onClick={() => handleNavigate(action.view)}
-                      className={`group flex min-h-[84px] flex-col items-center justify-center gap-2 rounded-2xl border p-3 transition-all hover:scale-105 active:scale-[0.98] cursor-pointer ${softInner} ${isDarkMode ? 'hover:bg-white/[0.04]' : 'hover:bg-white hover:shadow-xs'}`}
+                      className={`group flex min-h-[88px] flex-col items-center justify-center gap-2.5 rounded-2xl border p-3 transition-all hover:scale-105 active:scale-[0.98] cursor-pointer ${softInner} ${isDarkMode ? 'hover:bg-white/[0.08]' : 'hover:bg-white hover:shadow-xs'}`}
                     >
                       <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${action.bg}`}>
                         <Icon className={`h-5 w-5 ${action.color}`} strokeWidth={2} />
                       </div>
-                      <span className={`text-[11px] font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{action.label}</span>
+                      <span className={`text-[11px] font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>{action.label}</span>
                     </button>
                   );
                 })}
@@ -1020,8 +1044,8 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
 
           {/* ══════════════  AI AGENT GRID  ══════════════ */}
           {widgetVisibility.showAgentBentoGrid && (
-            <section className="space-y-2.5">
-              <div className={`flex flex-wrap items-center justify-between gap-2 rounded-2xl border px-3.5 py-3 ${surface}`}>
+            <section className="space-y-3">
+              <div className={`flex flex-wrap items-center justify-between gap-2 rounded-3xl border px-4 py-3.5 ${surface}`}>
                 <div className="flex min-w-0 items-center gap-2.5">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/12 text-violet-500">
                     <Sparkles className="h-4 w-4" />
@@ -1056,7 +1080,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
 
           {/* ══════════════  ACTIVITY FEED  ══════════════ */}
           {widgetVisibility.showRecentActivities && (
-            <section className={`space-y-4 rounded-2xl border p-5 ${surface}`}>
+            <section className={`space-y-4 rounded-3xl border p-6 ${surface}`}>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <SectionTitle icon={Activity} title="Factory Activity Stream" sub="Real-time audit trail across all modules" />
                 <div className="flex gap-2">

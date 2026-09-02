@@ -1229,13 +1229,13 @@ export class MastersService {
     // 4. Default fallback
     const defaultProfile = {
       legalName: 'GuruOm Industries LLP',
-      address: 'Plot 42, GIDC Industrial Estate, Metoda, Rajkot, Gujarat - 360021',
-      phone: '+91 98250 12345',
-      email: 'contact@guruom.in',
-      gstin: '24AAAFG1234C1Z9',
-      pan: 'AAAFG1234C',
-      state: 'Gujarat',
-      stateCode: '24'
+      address: 'Plot No. 42, MIDC Industrial Area, Bhosari, Pune, Maharashtra - 411026',
+      phone: '+91 20 2712 3456',
+      email: 'operations@guruom.in',
+      gstin: '27AABCG1234F1Z5',
+      pan: 'AABCG1234F',
+      state: 'Maharashtra',
+      stateCode: '27'
     };
     this.inMemoryCompanyProfile = defaultProfile;
     return defaultProfile;

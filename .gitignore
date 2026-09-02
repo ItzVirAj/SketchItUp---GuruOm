@@ -100,3 +100,6 @@ src/backupcomponents/
 backup/
 *.backup
 
+# ---- Developer CLI & Seed Scripts ----
+scripts/
+

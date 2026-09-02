@@ -98,7 +98,7 @@ export class InvoicesService {
    * 3. HSN and master-driven GST rates (with override reasons)
    * 4. Dynamic E-invoicing applicability flag
    */
-  async createInvoice(data: z.infer<typeof CustomerInvoiceSchema>, accountantName: string) {
+  async createInvoice(data: z.infer<typeof CustomerInvoiceSchema>, accountantName: string = 'Finance Manager') {
     const validated = CustomerInvoiceSchema.parse(data);
 
     // 1. Validate GSTIN

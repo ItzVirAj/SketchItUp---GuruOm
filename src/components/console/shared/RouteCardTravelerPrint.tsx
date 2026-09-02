@@ -75,10 +75,10 @@ export const RouteCardTravelerPrint: React.FC<RouteCardTravelerPrintProps> = ({
   };
 
   // Company Information
-  const legalName = companyProfile?.legalName || 'GuruOm Precision Engineering';
-  const companyAddress = companyProfile?.address || 'Plot No. W-45, MIDC Industrial Area, Waluj, Chhatrapati Sambhaji Nagar, MH 431136';
+  const legalName = companyProfile?.legalName || 'GuruOm Industries LLP';
+  const companyAddress = companyProfile?.address || 'Plot No. 42, MIDC Industrial Area, Bhosari, Pune, Maharashtra - 411026';
   const companyPhone = companyProfile?.phone || '+91 20 2712 3456';
-  const companyEmail = companyProfile?.email || 'production@guruom.in';
+  const companyEmail = companyProfile?.email || 'operations@guruom.in';
   const companyGstin = companyProfile?.gstin || '27AABCG1234F1Z5';
 
   // Raw Material Spec from BOM or JobCard

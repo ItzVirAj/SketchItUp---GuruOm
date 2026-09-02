@@ -14,7 +14,11 @@ import {
   ShieldCheck,
   X,
   ExternalLink,
-  ChevronRight
+  ChevronRight,
+  Check,
+  Landmark,
+  FileText,
+  BadgePercent
 } from 'lucide-react';
 import { VendorBill, VendorMaster } from '../../../types/console';
 import { Modal } from '../../common/Modal';
@@ -41,8 +45,9 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
-  // URL-driven modal for Vendor Bill Creation
+  // URL-driven modals
   const createBillModal = useUrlModal('create-bill');
+  const disburseModal = useUrlModal('disburse-bill');
 
   // Controlled Bill Form States
   const [formVendorName, setFormVendorName] = useState('Mahalaxmi Steel Traders');
@@ -61,6 +66,13 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
   const [formIsPurchaseOfGoods, setFormIsPurchaseOfGoods] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
+
+  // Selected bill for disbursement modal
+  const [selectedBillForDisbursement, setSelectedBillForDisbursement] = useState<VendorBill | null>(null);
+  const [disbursePaymentMode, setDisbursePaymentMode] = useState('NEFT_RTGS');
+  const [disburseRefNo, setDisburseRefNo] = useState('');
+  const [isSubmittingDisbursement, setIsSubmittingDisbursement] = useState(false);
 
   const handleVendorNameChange = (nameVal: string) => {
     setFormVendorName(nameVal);
@@ -109,7 +121,8 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
         await insertVendorBill(newBill);
       }
       createBillModal.close();
-      // Reset bill number for next creation
+      setActionSuccessMsg(`Vendor Bill ${formBillNo} recorded successfully.`);
+      setTimeout(() => setActionSuccessMsg(null), 5000);
       setFormBillNo(`BILL-26-${Date.now().toString().slice(-4)}`);
     } catch (err: any) {
       setFormError(err.message || 'Failed to record vendor bill');
@@ -118,11 +131,29 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
     }
   };
 
-  const handleDisbursementClick = (billNo: string) => {
-    if (onRecordDisbursement) {
-      onRecordDisbursement(billNo);
-    } else if (onRecordPayment) {
-      onRecordPayment(billNo);
+  const handleOpenDisburseModal = (bill: VendorBill) => {
+    setSelectedBillForDisbursement(bill);
+    setDisbursePaymentMode('NEFT_RTGS');
+    setDisburseRefNo(`UTR-${Math.floor(10000000 + Math.random() * 90000000)}`);
+    disburseModal.open({ billNo: bill.billNo });
+  };
+
+  const handleConfirmDisbursement = async () => {
+    if (!selectedBillForDisbursement) return;
+    try {
+      setIsSubmittingDisbursement(true);
+      if (onRecordDisbursement) {
+        await onRecordDisbursement(selectedBillForDisbursement.billNo);
+      } else if (onRecordPayment) {
+        await onRecordPayment(selectedBillForDisbursement.billNo);
+      }
+      disburseModal.close();
+      setActionSuccessMsg(`Disbursement of ₹${Number(selectedBillForDisbursement.balanceAmount || selectedBillForDisbursement.amount).toLocaleString('en-IN')} settled to ${selectedBillForDisbursement.vendorName}.`);
+      setTimeout(() => setActionSuccessMsg(null), 5000);
+    } catch (err: any) {
+      console.error(err);
+    } finally {
+      setIsSubmittingDisbursement(false);
     }
   };
 
@@ -141,200 +172,211 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
   const balanceAmount = payables.reduce((acc, b) => acc + Number(b.balanceAmount || 0), 0);
   const overdueCount = payables.filter(b => b.status === 'OVERDUE' || (Number(b.balanceAmount) > 0 && b.status === 'OPEN')).length;
 
+  const inputClass = `h-11 w-full rounded-xl border px-3.5 text-xs font-medium outline-none transition-[border-color,box-shadow,background-color] duration-150 focus:border-[#007AFF] focus:ring-4 focus:ring-[#007AFF]/15 ${
+    isDarkMode 
+      ? 'border-white/10 bg-black/60 text-white placeholder:text-slate-500 hover:border-white/20 focus:bg-black/80' 
+      : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:bg-white'
+  }`;
+
   return (
     <div className="space-y-4 sm:space-y-6 font-sans w-full max-w-full min-w-0 pb-6">
       
+      {/* Toast Notification */}
+      {actionSuccessMsg && (
+        <div className="p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-between text-xs font-mono font-bold animate-in fade-in shadow-lg">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{actionSuccessMsg}</span>
+          </div>
+          <button onClick={() => setActionSuccessMsg(null)} className="text-slate-400 hover:text-white cursor-pointer">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* ========================================================================= */}
-      {/* ── MOBILE-FIRST TOP HEADER (< md) ──                                      */}
+      {/* ── 1. EXECUTIVE CONTROL DECK & KPI OVERVIEW ──                            */}
       {/* ========================================================================= */}
-      <div className="block md:hidden space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
-                Vendor Accounts
-              </span>
+      <div className={`p-6 sm:p-7 rounded-3xl border transition-all ${
+        isDarkMode 
+          ? 'bg-[#09090B] border-white/10 text-white shadow-[0_16px_40px_rgba(0,0,0,0.6)]' 
+          : 'bg-white border-slate-200/80 shadow-sm text-slate-900'
+      }`}>
+        {/* Top Header Row */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 pb-6 border-b border-white/10 dark:border-white/10">
+          <div className="flex items-start gap-4">
+            <div className="p-3.5 rounded-2xl bg-[#007AFF]/10 text-[#007AFF] border border-[#007AFF]/20 shrink-0">
+              <Building className="w-6 h-6" />
             </div>
-            <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
-              Vendor Bills & AP ({filtered.length})
-            </h1>
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide bg-[#007AFF]/15 text-[#007AFF] border border-[#007AFF]/30">
+                  Vendor Accounts & Accounts Payable
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>3-Way Match Verified</span>
+                </span>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+                Vendor Bills & Payables
+              </h1>
+              <p className={`text-xs max-w-2xl leading-relaxed ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                Manage raw material supplier bills, outwork plating invoices, disbursement schedules, and statutory TDS compliance.
+              </p>
+            </div>
           </div>
 
           <button
             type="button"
-            onClick={() => createBillModal.open()}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold shadow-md active:scale-[0.96] transition-ui cursor-pointer"
+            onClick={() => {
+              setFormError(null);
+              createBillModal.open();
+            }}
+            className="px-5 py-2.5 rounded-full bg-[#007AFF] hover:bg-[#0071E3] active:scale-[0.98] text-white text-xs font-semibold flex items-center gap-2 shadow-md shadow-blue-500/20 cursor-pointer transition-all self-start sm:self-center"
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>New Bill</span>
+            <Plus className="w-4 h-4" />
+            <span>New Vendor Bill</span>
           </button>
         </div>
 
-        {/* Mobile 2x2 Telemetry Matrix */}
-        <div className="grid grid-cols-2 gap-2">
-          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Total Payables</div>
-            <div className="text-base font-black text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)] tracking-tight mt-0.5 truncate">
-              ₹{totalAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-            </div>
-          </div>
-
-          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Disbursed</div>
-            <div className="text-base font-black text-emerald-500 tracking-tight mt-0.5 truncate">
-              ₹{paidAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-            </div>
-          </div>
-
-          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Outstanding</div>
-            <div className="text-base font-black text-rose-500 tracking-tight mt-0.5 truncate">
-              ₹{balanceAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-            </div>
-          </div>
-
-          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Pending / Due</div>
-            <div className="text-base font-black text-amber-500 tracking-tight mt-0.5">
-              {overdueCount} <span className="text-xs font-normal text-slate-400">Bills</span>
-            </div>
-          </div>
+        {/* Apple 4-Column Metric Strip */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-6">
+          {[
+            {
+              label: 'Total Payables',
+              value: `₹${totalAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`,
+              detail: `${payables.length} vendor bills`,
+              icon: Building,
+              tone: isDarkMode ? 'text-white' : 'text-slate-900',
+              iconBg: 'bg-[#007AFF]/10 text-[#007AFF] border border-[#007AFF]/20',
+            },
+            {
+              label: 'Disbursed Payments',
+              value: `₹${paidAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`,
+              detail: 'Settled to vendors',
+              icon: CreditCard,
+              tone: 'text-emerald-400',
+              iconBg: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+            },
+            {
+              label: 'Outstanding Liabilities',
+              value: `₹${balanceAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`,
+              detail: 'Unsettled balances',
+              icon: Clock,
+              tone: 'text-rose-400',
+              iconBg: 'bg-rose-500/10 text-rose-400 border border-rose-500/20',
+            },
+            {
+              label: 'Pending / Due Bills',
+              value: `${overdueCount} Bills`,
+              detail: overdueCount > 0 ? 'Disbursement due' : 'All accounts settled',
+              icon: AlertCircle,
+              tone: 'text-amber-400',
+              iconBg: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
+            },
+          ].map((m) => {
+            const Icon = m.icon;
+            return (
+              <div
+                key={m.label}
+                className={`p-4 sm:p-5 rounded-2xl border transition-all ${
+                  isDarkMode ? 'bg-black/40 border-white/10 hover:border-white/20' : 'bg-slate-50 border-slate-200'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className={`p-2.5 rounded-xl ${m.iconBg}`}>
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] font-mono uppercase font-semibold text-slate-400 tracking-wider">
+                    {m.label}
+                  </span>
+                </div>
+                <div className={`text-xl sm:text-2xl font-bold tracking-tight font-mono ${m.tone}`}>
+                  {m.value}
+                </div>
+                <div className="text-[11px] text-slate-400 mt-1 font-medium truncate">
+                  {m.detail}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* ── DESKTOP HEADER & INTEGRATED KPI ROW (≥ md) ──                          */}
+      {/* ── 2. SEGMENTED FILTER & SEARCH TOOLBAR ──                                 */}
       {/* ========================================================================= */}
-      <div className="hidden md:block space-y-4">
-        <section className={`overflow-hidden rounded-[24px] border ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'}`}>
-          <div className="flex items-center justify-between gap-6 px-6 py-5">
-            <div className="min-w-0">
-              <div className="mb-1.5 flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                Vendor Accounts & Accounts Payable Telemetry
-                <span className="text-slate-300 dark:text-slate-700">/</span>
-                <span>{filtered.length} Vendor Bills</span>
-              </div>
-              <div className="flex items-baseline gap-3">
-                <h1 className="truncate text-[25px] font-extrabold tracking-[-0.04em] text-slate-950 dark:text-white">
-                  Vendor Bills & Payables
-                </h1>
-                <span className="hidden font-mono text-[10px] font-semibold text-slate-400 xl:inline">
-                  3-WAY MATCHING • RAW MATERIAL INVOICES • OUTWORK DISBURSEMENTS
-                </span>
-              </div>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                Manage raw material supplier bills, outwork plating invoices, disbursement schedules, and accounts payable cashflows.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => createBillModal.open()}
-              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-5 text-xs font-bold text-white shadow-lg shadow-[var(--accent-shadow)] transition hover:brightness-110 active:scale-[0.96] cursor-pointer"
-            >
-              <Plus className="h-4 w-4" />
-              <span>New Bill</span>
-            </button>
-          </div>
-
-          {/* Integrated 4-Column Metric Strip (border-t) */}
-          <div className={`grid grid-cols-4 border-t ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+      <div className={`p-4 rounded-3xl border transition-all ${
+        isDarkMode 
+          ? 'bg-[#09090B] border-white/10 text-white shadow-sm' 
+          : 'bg-white border-slate-200/80 text-slate-900 shadow-sm'
+      }`}>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          {/* Apple Segmented Pills */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
             {[
-              { label: 'Total Payables (Gross)', value: `₹${totalAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`, detail: `${payables.length} vendor bills`, icon: Building, tone: 'text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)]', iconBg: 'bg-[var(--accent-soft-light)] dark:bg-[var(--accent-soft-dark)]' },
-              { label: 'Disbursed Payments', value: `₹${paidAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`, detail: 'Settled to vendors', icon: CreditCard, tone: 'text-emerald-600 dark:text-emerald-400', iconBg: 'bg-emerald-500/10' },
-              { label: 'Outstanding Liabilities', value: `₹${balanceAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`, detail: 'Unsettled balances', icon: Clock, tone: 'text-rose-600 dark:text-rose-400', iconBg: 'bg-rose-500/10' },
-              { label: 'Pending / Due Bills', value: `${overdueCount} Bills`, detail: 'Action required', icon: AlertCircle, tone: 'text-amber-600 dark:text-amber-400', iconBg: 'bg-amber-500/10' },
-            ].map((metric, index) => {
-              const MetricIcon = metric.icon;
+              { id: 'ALL', label: 'All Bills' },
+              { id: 'OPEN', label: 'Open' },
+              { id: 'PAID', label: 'Paid' },
+              { id: 'OVERDUE', label: 'Overdue' }
+            ].map((tab) => {
+              const isActive = statusFilter === tab.id;
               return (
-                <div key={metric.label} className={`flex items-center gap-3 px-5 py-4 ${index > 0 ? isDarkMode ? 'border-l border-white/[0.07]' : 'border-l border-slate-200' : ''}`}>
-                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${metric.iconBg} ${metric.tone}`}>
-                    <MetricIcon className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="font-mono text-[9px] font-bold uppercase tracking-[0.13em] text-slate-400">{metric.label}</div>
-                    <div className={`mt-0.5 truncate text-lg font-extrabold tracking-[-0.03em] ${metric.tone}`}>{metric.value}</div>
-                    <div className="truncate text-[10px] text-slate-400">{metric.detail}</div>
-                  </div>
-                </div>
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setStatusFilter(tab.id)}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-[#007AFF] text-white shadow-sm'
+                      : isDarkMode
+                      ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
+                  {tab.label}
+                </button>
               );
             })}
           </div>
-        </section>
 
-        {/* Desktop Filter & Search Toolbar */}
-        <div className={`rounded-2xl border p-3 ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${isDarkMode ? 'bg-white/[0.05] text-slate-400' : 'bg-slate-100 text-slate-500'}`} title="Modules">
-              <Building2 className="h-4 w-4" />
-            </div>
-
-            {/* Filter Pills */}
-            <div className="flex items-center gap-1.5">
-              {[
-                { id: 'ALL', label: 'All Bills' },
-                { id: 'OPEN', label: 'Open' },
-                { id: 'PAID', label: 'Paid' },
-                { id: 'OVERDUE', label: 'Overdue' }
-              ].map(tab => {
-                const isActive = statusFilter === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setStatusFilter(tab.id)}
-                    className={`flex h-9 items-center gap-1.5 rounded-xl border px-3 text-xs font-bold transition-colors ${
-                      isActive
-                        ? isDarkMode
-                          ? 'border-[var(--accent-primary)]/40 bg-[var(--accent-primary)]/20 text-[var(--accent-text-dark)] shadow-xs'
-                          : 'border-[var(--accent-primary)] bg-[var(--accent-primary)] text-white shadow-sm shadow-[var(--accent-shadow)]'
-                        : isDarkMode
-                        ? 'border-white/[0.08] bg-black/20 text-slate-400 hover:bg-white/[0.04] hover:text-white'
-                        : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                    }`}
-                  >
-                    <span>{tab.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Search Input */}
-            <div className={`flex h-10 min-w-[240px] flex-1 items-center gap-2 rounded-xl border px-3 ml-auto ${isDarkMode ? 'border-white/[0.08] bg-black/20 text-white focus-within:border-[var(--accent-border-dark)]' : 'border-slate-200 bg-slate-50 text-slate-900 focus-within:border-[var(--accent-primary)]'}`}>
-              <Search className="h-4 w-4 shrink-0 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search Bill #, Vendor Name, PO #..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="h-full w-full bg-transparent text-xs font-semibold outline-none placeholder:font-normal placeholder:text-slate-400 font-mono"
-              />
-              {searchTerm && (
-                <button type="button" onClick={() => setSearchTerm('')} className="text-slate-400 hover:text-slate-700 dark:hover:text-white">
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="mt-2.5 flex items-center justify-between px-1 font-mono text-[9px] font-semibold uppercase tracking-wider text-slate-400">
-            <span>Showing {filtered.length} of {payables.length} vendor bills</span>
-            <span>Accounts Payable & 3-Way Match Audit</span>
+          {/* Search Input */}
+          <div className="relative min-w-[260px]">
+            <Search className={`w-4 h-4 absolute left-3.5 top-3 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`} />
+            <input
+              type="text"
+              placeholder="Search Bill #, Vendor Name, PO #..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className={`h-10 w-full pl-10 pr-8 rounded-full border text-xs font-medium outline-none transition-all ${
+                isDarkMode 
+                  ? 'border-white/10 bg-black/60 text-white placeholder:text-slate-500 focus:border-[#007AFF] focus:ring-4 focus:ring-[#007AFF]/15' 
+                  : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:border-[#007AFF] focus:ring-4 focus:ring-[#007AFF]/15'
+              }`}
+            />
+            {searchTerm && (
+              <button 
+                type="button" 
+                onClick={() => setSearchTerm('')} 
+                className="absolute right-3 top-3 text-slate-400 hover:text-white cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* MOBILE VENDOR BILL CARDS (Viewport < md) */}
+      {/* ── 3. MOBILE VENDOR BILL CARDS (< md) ──                                 */}
       {/* ========================================================================= */}
-      <div className="block md:hidden space-y-3">
+      <div className="block md:hidden space-y-3.5">
         {filtered.length === 0 ? (
-          <div className={`p-8 text-center rounded-2xl border font-mono text-xs ${
-            isDarkMode ? 'bg-[#121215] border-white/[0.08] text-slate-400' : 'bg-white border-slate-200 text-slate-500'
+          <div className={`p-8 text-center rounded-3xl border text-xs font-mono ${
+            isDarkMode ? 'bg-[#09090B] border-white/10 text-slate-400' : 'bg-white border-slate-200 text-slate-500'
           }`}>
-            <Building2 className="w-8 h-8 mx-auto mb-2 opacity-30" />
+            <Building2 className="w-8 h-8 mx-auto mb-2 opacity-30 text-[#007AFF]" />
             <p>No vendor bills found matching search criteria.</p>
           </div>
         ) : (
@@ -346,43 +388,32 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
             return (
               <div
                 key={bill.billNo}
-                className={`p-4 rounded-2xl border transition-ui space-y-3.5 shadow-sm ${
-                  isPaid
-                    ? isDarkMode ? 'bg-[#121215] border-emerald-500/30' : 'bg-emerald-50/40 border-emerald-200'
-                    : isOverdue
-                    ? isDarkMode ? 'bg-[#121215] border-rose-500/30' : 'bg-rose-50/40 border-rose-200'
-                    : isDarkMode ? 'bg-[#121215] border-white/[0.08]' : 'bg-white border-slate-200'
+                className={`p-4 rounded-3xl border space-y-3 shadow-md ${
+                  isDarkMode ? 'bg-[#09090B] border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
                 }`}
               >
-                {/* Header: Bill # + Status Badge */}
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <span className="font-mono font-bold text-xs text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">
+                    <span className="font-mono font-bold text-xs text-[#007AFF]">
                       {bill.billNo}
                     </span>
-                    <h3 className={`text-xs font-bold font-sans mt-0.5 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    <h3 className="text-xs font-bold mt-0.5">
                       {bill.vendorName}
                     </h3>
                   </div>
 
                   <div className="flex items-center gap-1.5 shrink-0">
-                    {/* 3-Way Match Badge */}
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-mono font-bold uppercase border ${
-                      isMatched
-                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                        : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                    }`}>
-                      <ShieldCheck className="w-2.5 h-2.5" />
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      <ShieldCheck className="w-3 h-3" />
                       <span>{bill.matchStatus || 'MATCHED'}</span>
                     </span>
 
-                    {/* Payment Status Badge */}
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold border ${
                       isPaid
-                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                         : isOverdue
-                        ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
-                        : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                        ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                        : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                     }`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${
                         isPaid ? 'bg-emerald-400' : isOverdue ? 'bg-rose-400' : 'bg-amber-400'
@@ -392,19 +423,17 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                   </div>
                 </div>
 
-                {/* PO & Date Metadata */}
                 <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
                   <div>PO: <strong className="text-slate-200">{bill.poNo}</strong></div>
                   <div>Bill Date: <strong className="text-slate-200">{bill.date}</strong></div>
                 </div>
 
-                {/* Commercial 3-Tile Row */}
-                <div className={`grid grid-cols-3 gap-2 p-2.5 rounded-xl border text-xs font-mono text-center ${
-                  isDarkMode ? 'bg-black/20 border-white/[0.08]' : 'bg-slate-50 border-slate-200'
+                <div className={`grid grid-cols-3 gap-2 p-2.5 rounded-2xl border text-xs font-mono text-center ${
+                  isDarkMode ? 'bg-black/60 border-white/10' : 'bg-slate-50 border-slate-200'
                 }`}>
                   <div>
                     <span className="text-[9px] text-slate-400 uppercase block">Bill Amount</span>
-                    <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    <span className="font-bold text-white dark:text-white">
                       ₹{Number(bill.amount || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                     </span>
                   </div>
@@ -422,18 +451,17 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                   </div>
                 </div>
 
-                {/* Actions */}
-                <div className="pt-1 border-t border-slate-800/60">
+                <div className="pt-2 border-t border-white/10">
                   {!isPaid && Number(bill.balanceAmount) > 0 ? (
                     <button
-                      onClick={() => handleDisbursementClick(bill.billNo)}
-                      className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-mono text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-blue-500/20 cursor-pointer transition-transform duration-150 ease-out active:scale-[0.96]"
+                      onClick={() => handleOpenDisburseModal(bill)}
+                      className="w-full py-2.5 rounded-full bg-[#007AFF] hover:bg-[#0071E3] text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-blue-500/20 cursor-pointer active:scale-[0.98]"
                     >
                       <CreditCard className="w-3.5 h-3.5" />
                       <span>Disburse Funds (₹{Number(bill.balanceAmount).toLocaleString('en-IN')})</span>
                     </button>
                   ) : (
-                    <div className="w-full py-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-mono text-xs font-bold flex items-center justify-center gap-1">
+                    <div className="w-full py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-semibold flex items-center justify-center gap-1">
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       <span>Fully Disbursed & Settled</span>
                     </div>
@@ -446,102 +474,90 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
       </div>
 
       {/* ========================================================================= */}
-      {/* DESKTOP PAYABLES TABLE (Viewport >= md) */}
+      {/* ── 4. DESKTOP PAYABLES TABLE (≥ md) ──                                   */}
       {/* ========================================================================= */}
-      <div className={`hidden md:block overflow-hidden rounded-[22px] border transition-ui ${
-        isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
+      <div className={`hidden md:block rounded-3xl border overflow-hidden transition-all shadow-xl ${
+        isDarkMode ? 'bg-[#09090B] border-white/10 text-white' : 'bg-white border-slate-200/80 text-slate-900'
       }`}>
-        <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+        <div className="flex items-center justify-between border-b border-white/10 dark:border-white/10 px-6 py-4">
           <div>
-            <div className="text-xs font-extrabold text-slate-900 dark:text-white">Vendor Bills Register</div>
-            <div className="mt-0.5 text-[10px] text-slate-400">Supplier invoices, 3-way matching validation, and disbursement records</div>
+            <h2 className="text-sm font-bold tracking-tight">Vendor Bills Register</h2>
+            <p className="text-[11px] text-slate-400 mt-0.5">Supplier invoices, 3-way matching validation, and disbursement records</p>
           </div>
-          <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>{filtered.length} bills</span>
+          <span className="rounded-full border border-white/10 px-3 py-1 font-mono text-[10px] font-semibold text-slate-400">
+            {filtered.length} bills
+          </span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${
-                isDarkMode ? 'border-white/[0.07] bg-black/20 text-slate-500' : 'border-slate-200 bg-slate-50/80 text-slate-400'
+              <tr className={`border-b font-mono font-semibold uppercase tracking-wider text-[10px] ${
+                isDarkMode ? 'border-white/10 bg-black/40 text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'
               }`}>
-                <th className="py-4 px-5">Bill #</th>
-                <th className="py-4 px-5">Vendor / Supplier Name</th>
-                <th className="py-4 px-5">Purchase Order</th>
-                <th className="py-4 px-5">Date</th>
-                <th className="py-4 px-5 text-right">Bill Amount</th>
-                <th className="py-4 px-5 text-right">Paid Amount</th>
-                <th className="py-4 px-5 text-right">Outstanding Dues</th>
-                <th className="py-4 px-5 text-center">3-Way Match</th>
-                <th className="py-4 px-5 text-center">Status</th>
-                <th className="py-4 px-5 text-center">Action</th>
+                <th className="py-3.5 px-5">Bill #</th>
+                <th className="py-3.5 px-5">Vendor / Supplier Name</th>
+                <th className="py-3.5 px-5">Purchase Order</th>
+                <th className="py-3.5 px-5">Date</th>
+                <th className="py-3.5 px-5 text-right">Bill Amount</th>
+                <th className="py-3.5 px-5 text-right">Paid Amount</th>
+                <th className="py-3.5 px-5 text-right">Outstanding Dues</th>
+                <th className="py-3.5 px-5 text-center">3-Way Match</th>
+                <th className="py-3.5 px-5 text-center">Status</th>
+                <th className="py-3.5 px-5 text-center">Action</th>
               </tr>
             </thead>
-            <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
+            <tbody className={`divide-y ${isDarkMode ? 'divide-white/5' : 'divide-slate-200'}`}>
               {filtered.map((bill) => (
-                <tr key={bill.billNo} className={`group transition-colors ${isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'}`}>
+                <tr key={bill.billNo} className={`transition-colors ${isDarkMode ? 'hover:bg-white/[0.025]' : 'hover:bg-slate-50'}`}>
                   <td className="py-4 px-5">
                     <div className="flex items-center gap-2.5">
-                      <div className={`p-2 rounded-xl transition-transform group-hover:scale-105 shrink-0 ${
-                        isDarkMode 
-                          ? 'bg-[var(--accent-primary)]/20 text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/30' 
-                          : 'bg-[var(--accent-primary)]/10 text-[var(--accent-text-light)] border border-[var(--accent-primary)]/20'
-                      }`}>
+                      <div className="p-2 rounded-xl bg-[#007AFF]/10 text-[#007AFF] border border-[#007AFF]/20 shrink-0">
                         <Building2 className="w-3.5 h-3.5" />
                       </div>
-                      <div>
-                        <div className="font-mono font-bold text-xs text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">
-                          {bill.billNo}
-                        </div>
-                      </div>
+                      <span className="font-mono font-bold text-xs text-[#007AFF]">
+                        {bill.billNo}
+                      </span>
                     </div>
                   </td>
-                  <td className={`py-4 px-5 font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
+                  <td className="py-4 px-5 font-semibold text-white dark:text-white">
                     {bill.vendorName}
                   </td>
-                  <td className="py-4 px-5 font-mono text-slate-400 text-xs">
+                  <td className="py-4 px-5 font-mono text-slate-300 text-xs">
                     {bill.poNo}
                   </td>
                   <td className="py-4 px-5 font-mono text-slate-400 text-xs">
                     {bill.date}
                   </td>
-                  <td className={`py-4 px-5 text-right font-bold font-mono text-xs ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                  <td className="py-4 px-5 text-right font-bold font-mono text-xs text-white dark:text-white">
                     ₹{Number(bill.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </td>
-                  <td className="py-4 px-5 text-right font-bold font-mono text-xs text-emerald-500">
+                  <td className="py-4 px-5 text-right font-bold font-mono text-xs text-emerald-400">
                     ₹{Number(bill.paidAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </td>
-                  <td className="py-4 px-5 text-right font-bold font-mono text-xs text-rose-500">
+                  <td className="py-4 px-5 text-right font-bold font-mono text-xs text-rose-400">
                     ₹{Number(bill.balanceAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </td>
                   <td className="py-4 px-5 text-center">
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-mono font-bold uppercase border ${
-                      bill.matchStatus === 'MATCHED' || bill.isThreeWayMatched
-                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                        : bill.matchStatus === 'PRICE_VARIANCE_FLAGGED' || bill.matchStatus === 'QTY_VARIANCE_FLAGGED'
-                        ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                        : 'bg-purple-500/10 text-purple-400 border-purple-500/30'
-                    }`}>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                       {bill.matchStatus || 'MATCHED'}
                     </span>
                   </td>
                   <td className="py-4 px-5 text-center">
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-semibold border ${
                       bill.status === 'PAID'
-                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                        : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                        : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
                     }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${bill.status === 'PAID' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                      <span className={`w-1.5 h-1.5 rounded-full ${bill.status === 'PAID' ? 'bg-emerald-400' : 'bg-rose-400'}`} />
                       <span>{bill.status}</span>
                     </span>
                   </td>
                   <td className="py-4 px-5 text-center">
                     {bill.status !== 'PAID' && Number(bill.balanceAmount) > 0 && (
                       <button
-                        onClick={() => handleDisbursementClick(bill.billNo)}
-                        className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-ui cursor-pointer ${
-                          isDarkMode ? 'bg-[var(--accent-primary)]/10 text-[var(--accent-text-dark)] hover:bg-[var(--accent-primary)]/20 border border-[var(--accent-primary)]/30' : 'bg-[var(--accent-primary)]/10 text-[var(--accent-text-light)] hover:bg-[var(--accent-primary)]/20 border border-[var(--accent-primary)]/20'
-                        }`}
+                        onClick={() => handleOpenDisburseModal(bill)}
+                        className="px-3.5 py-1.5 rounded-full bg-[#007AFF] hover:bg-[#0071E3] text-white text-xs font-semibold shadow-sm transition-all cursor-pointer active:scale-95"
                       >
                         Disburse Funds
                       </button>
@@ -554,19 +570,21 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
         </div>
       </div>
 
-      {/* Record Vendor Bill Entry Modal */}
+      {/* ========================================================================= */}
+      {/* ── 5. RECORD VENDOR BILL ENTRY MODAL ──                                   */}
+      {/* ========================================================================= */}
       <Modal
         isOpen={createBillModal.isOpen}
-        onClose={() => createBillModal.close()}
+        onClose={() => !isSubmitting && createBillModal.close()}
         maxWidth="xl"
         isDarkMode={isDarkMode}
-        icon={<Receipt className="w-5 h-5" />}
+        icon={<Receipt className="w-5 h-5 text-[#007AFF]" />}
         title="Record Vendor Bill"
         subtitle="Enter supplier invoice and accounts payable liability"
       >
         <form onSubmit={handleBillSubmit} className="space-y-4 text-xs font-sans">
           {formError && (
-            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center justify-between">
+            <div className="p-3.5 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-200 text-xs flex items-center justify-between">
               <span>{formError}</span>
               <button type="button" onClick={() => setFormError(null)} className="cursor-pointer">
                 <X className="w-4 h-4" />
@@ -576,7 +594,7 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+              <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                 Vendor / Supplier *
               </label>
               <input
@@ -586,9 +604,7 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                 onChange={(e) => handleVendorNameChange(e.target.value)}
                 list="vendors-datalist"
                 placeholder="e.g. Mahalaxmi Steel Traders"
-                className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-ui ${
-                  isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
-                }`}
+                className={inputClass}
               />
               {vendors && vendors.length > 0 && (
                 <datalist id="vendors-datalist">
@@ -601,16 +617,14 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
               )}
             </div>
             <div>
-              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+              <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                 Vendor Type *
               </label>
               <select
                 name="vendorType"
                 value={formVendorType}
                 onChange={(e) => setFormVendorType(e.target.value)}
-                className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-ui ${
-                  isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
-                }`}
+                className={`${inputClass} cursor-pointer`}
               >
                 <option value="Supplier">Supplier (Goods / Raw Material)</option>
                 <option value="Subcontractor / Job Worker">Subcontractor / Job Worker</option>
@@ -623,7 +637,7 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+              <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                 Bill / Invoice Number *
               </label>
               <input
@@ -632,13 +646,11 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                 value={formBillNo}
                 onChange={(e) => setFormBillNo(e.target.value)}
                 placeholder="e.g. INV-MST-2026-089"
-                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
-                  isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
-                }`}
+                className={`${inputClass} font-mono`}
               />
             </div>
             <div>
-              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+              <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                 Vendor PAN (for Statutory TDS)
               </label>
               <input
@@ -647,16 +659,14 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                 onChange={(e) => setFormVendorPan(e.target.value.toUpperCase())}
                 placeholder="e.g. AAACM1234F"
                 maxLength={10}
-                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui uppercase ${
-                  isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
-                }`}
+                className={`${inputClass} font-mono uppercase`}
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+              <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                 Linked Purchase Order (PO #) *
               </label>
               <input
@@ -665,13 +675,11 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                 value={formPoNo}
                 onChange={(e) => setFormPoNo(e.target.value)}
                 placeholder="e.g. PO-PUR-2026-001"
-                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
-                  isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
-                }`}
+                className={`${inputClass} font-mono`}
               />
             </div>
             <div>
-              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+              <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                 Linked Goods Receipt Note (GRN #)
               </label>
               <input
@@ -679,16 +687,14 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                 value={formGrnNo}
                 onChange={(e) => setFormGrnNo(e.target.value)}
                 placeholder="e.g. GRN-26-001"
-                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
-                  isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
-                }`}
+                className={`${inputClass} font-mono`}
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+              <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                 Gross Amount (₹) *
               </label>
               <input
@@ -700,13 +706,11 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                 value={formGrossAmount}
                 onChange={(e) => setFormGrossAmount(e.target.value === '' ? '' : Number(e.target.value))}
                 placeholder="150000"
-                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
-                  isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
-                }`}
+                className={`${inputClass} font-mono font-bold`}
               />
             </div>
             <div>
-              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+              <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                 Bill Date *
               </label>
               <input
@@ -715,13 +719,11 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                 required
                 value={formDate}
                 onChange={(e) => setFormDate(e.target.value)}
-                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
-                  isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
-                }`}
+                className={`${inputClass} font-mono`}
               />
             </div>
             <div>
-              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+              <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                 Due Date *
               </label>
               <input
@@ -730,19 +732,17 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                 required
                 value={formDueDate}
                 onChange={(e) => setFormDueDate(e.target.value)}
-                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
-                  isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
-                }`}
+                className={`${inputClass} font-mono`}
               />
             </div>
           </div>
 
-          <div className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 ${
-            isDarkMode ? 'bg-[#09090B] border-slate-800' : 'bg-slate-50 border-slate-200'
+          <div className={`p-4 rounded-2xl border flex items-center justify-between gap-3 ${
+            isDarkMode ? 'bg-black/60 border-white/10' : 'bg-slate-50 border-slate-200'
           }`}>
             <div>
-              <div className="font-bold text-xs">Statutory TDS Section 194Q Applicability</div>
-              <div className="text-[11px] text-slate-400">Mark if this bill is for purchase of goods exceeding statutory thresholds</div>
+              <div className="font-semibold text-xs text-white dark:text-white">Statutory TDS Section 194Q Applicability</div>
+              <div className="text-[11px] text-slate-400 mt-0.5">Mark if this bill is for purchase of goods exceeding statutory thresholds</div>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
@@ -751,16 +751,16 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                 onChange={(e) => setFormIsPurchaseOfGoods(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-ui peer-checked:bg-[var(--accent-primary)]"></div>
+              <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#007AFF]"></div>
             </label>
           </div>
 
-          <div className={`pt-4 border-t flex justify-end gap-3 font-sans ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+          <div className="pt-4 border-t border-white/10 flex justify-end gap-2.5 font-sans">
             <button
               type="button"
               onClick={() => createBillModal.close()}
-              className={`px-4 py-2 rounded-xl border text-xs font-bold transition-ui cursor-pointer ${
-                isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+              className={`px-4 py-2.5 rounded-full border text-xs font-semibold transition-all cursor-pointer ${
+                isDarkMode ? 'border-white/10 text-slate-300 hover:bg-white/10' : 'border-slate-200 text-slate-700 hover:bg-slate-100'
               }`}
             >
               Cancel
@@ -768,12 +768,113 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2 rounded-xl bg-[var(--accent-primary)] hover:brightness-110 text-white font-bold text-xs cursor-pointer shadow-lg shadow-[var(--accent-shadow)] transition-ui hover:scale-[1.01] active:scale-[0.96] disabled:opacity-50"
+              className="px-6 py-2.5 rounded-full bg-[#007AFF] hover:bg-[#0071E3] active:scale-[0.98] text-white font-semibold text-xs cursor-pointer shadow-md shadow-blue-500/20 transition-all disabled:opacity-50"
             >
-              {isSubmitting ? 'Recording...' : 'Record Vendor Bill'}
+              {isSubmitting ? 'Recording...' : 'Record vendor bill'}
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* ========================================================================= */}
+      {/* ── 6. DEDICATED DISBURSEMENT MODAL SHEET ──                               */}
+      {/* ========================================================================= */}
+      <Modal
+        isOpen={disburseModal.isOpen && Boolean(selectedBillForDisbursement)}
+        onClose={() => !isSubmittingDisbursement && disburseModal.close()}
+        maxWidth="lg"
+        isDarkMode={isDarkMode}
+        icon={<CreditCard className="w-5 h-5 text-emerald-400" />}
+        title="Disburse Vendor Funds"
+        subtitle={
+          selectedBillForDisbursement ? (
+            <span className="font-mono text-xs text-slate-400">
+              {selectedBillForDisbursement.billNo} • {selectedBillForDisbursement.vendorName}
+            </span>
+          ) : undefined
+        }
+      >
+        {selectedBillForDisbursement && (
+          <div className="space-y-4 text-xs font-sans">
+            <div className={`p-4 rounded-2xl border space-y-3 ${
+              isDarkMode ? 'bg-black/60 border-white/10' : 'bg-slate-50 border-slate-200'
+            }`}>
+              <div className="grid grid-cols-2 gap-3 text-center font-mono">
+                <div className={`p-3 rounded-xl border ${isDarkMode ? 'bg-black/40 border-white/10' : 'bg-white border-slate-200'}`}>
+                  <span className="text-[10px] uppercase font-semibold text-slate-400 block">Total Bill Amount</span>
+                  <span className="text-sm font-bold text-white mt-0.5 block">
+                    ₹{Number(selectedBillForDisbursement.amount || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                  </span>
+                </div>
+                <div className="p-3 rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-400">
+                  <span className="text-[10px] uppercase font-semibold block">Outstanding Due</span>
+                  <span className="text-sm font-bold mt-0.5 block">
+                    ₹{Number(selectedBillForDisbursement.balanceAmount || selectedBillForDisbursement.amount).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                  </span>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px] font-mono text-slate-400">
+                <span>PO Reference: <strong className="text-white">{selectedBillForDisbursement.poNo}</strong></span>
+                <span>Bill Date: <strong className="text-white">{selectedBillForDisbursement.date}</strong></span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Disbursement Mode *
+                </label>
+                <select
+                  value={disbursePaymentMode}
+                  onChange={(e) => setDisbursePaymentMode(e.target.value)}
+                  className={`${inputClass} cursor-pointer`}
+                >
+                  <option value="NEFT_RTGS">Bank NEFT / RTGS (Direct Beneficiary Transfer)</option>
+                  <option value="IMPS">Instant IMPS Transfer</option>
+                  <option value="CHEQUE">Account Payee Cheque</option>
+                  <option value="UPI">Corporate UPI</option>
+                </select>
+              </div>
+
+              <div>
+                <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Bank Reference / UTR # *
+                </label>
+                <input
+                  type="text"
+                  value={disburseRefNo}
+                  onChange={(e) => setDisburseRefNo(e.target.value)}
+                  className={`${inputClass} font-mono`}
+                  placeholder="e.g. UTR-HDFC8492049"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-white/10 flex items-center justify-end gap-2.5 font-sans">
+              <button
+                type="button"
+                onClick={() => disburseModal.close()}
+                disabled={isSubmittingDisbursement}
+                className={`px-4 py-2.5 rounded-full border text-xs font-semibold transition-all cursor-pointer ${
+                  isDarkMode ? 'border-white/10 text-slate-300 hover:bg-white/10' : 'border-slate-200 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDisbursement}
+                disabled={isSubmittingDisbursement}
+                className="px-6 py-2.5 rounded-full bg-[#007AFF] hover:bg-[#0071E3] active:scale-[0.98] text-white font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-blue-500/25 disabled:opacity-50 transition-all"
+              >
+                <CreditCard className="w-4 h-4" />
+                <span>{isSubmittingDisbursement ? 'Settling...' : `Confirm & Disburse ₹${Number(selectedBillForDisbursement.balanceAmount || selectedBillForDisbursement.amount).toLocaleString('en-IN')}`}</span>
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
 
     </div>

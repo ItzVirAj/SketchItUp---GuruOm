@@ -168,7 +168,7 @@ export const QCView: React.FC<QCViewProps> = ({
 
   const openInspection = (item: QCInspection) => {
     setInspectingItem(item);
-    const current = item.qcStatus === 'PASSED' ? 'PASS' : item.qcStatus === 'REJECTED' ? 'REJECTED' : item.qcStatus === 'QC_HOLD' ? 'QC_HOLD' : 'PASS';
+    const current = item.qcStatus === 'PASS' ? 'PASS' : item.qcStatus === 'REJECTED' ? 'REJECTED' : item.qcStatus === 'QC_HOLD' ? 'QC_HOLD' : 'PASS';
     setQcDecision(current as any);
     setQcNotes(item.inspectorNotes || '');
     inspectModal.open({ qcId: item.id, jobNo: item.jobNo, orderPo: item.orderPo });

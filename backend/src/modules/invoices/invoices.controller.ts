@@ -32,9 +32,11 @@ export class InvoicesController {
     const tenantId = extractTenantId(req);
     const userId = (req as any).user?.userId;
 
+    const accountantName = (req as any).user?.name || (req as any).user?.userName || req.body?.accountantName || 'Finance Manager';
+
     try {
       // 1. Synchronous PostgreSQL Transaction / Insert
-      const data = await invoicesService.createInvoice(req.body);
+      const data = await invoicesService.createInvoice(req.body, accountantName);
 
       // 2. Non-Blocking Background Job Enqueue (BullMQ)
       const { enqueued, jobId } = await enqueueJob('generate-invoice-pdf', {

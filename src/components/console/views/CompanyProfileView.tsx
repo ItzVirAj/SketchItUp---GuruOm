@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Building2, 
-  MapPin, 
-  Phone, 
-  Mail, 
-  FileText, 
-  Save, 
-  CheckCircle2, 
+import {
+  Building2,
+  MapPin,
+  Phone,
+  Mail,
+  FileText,
+  Save,
+  CheckCircle2,
   Building,
   ShieldCheck,
   Landmark,
@@ -17,7 +17,12 @@ import {
   Hash,
   BadgePercent,
   Receipt,
-  FileCheck
+  FileCheck,
+  Copy,
+  Check,
+  ExternalLink,
+  Lock,
+  Stamp
 } from 'lucide-react';
 import { CompanyProfile } from '../../../types/console';
 
@@ -33,43 +38,57 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
   onSaveProfile,
 }) => {
   const [legalName, setLegalName] = useState(profile?.legalName || 'GuruOm Industries LLP');
-  const [address, setAddress] = useState(profile?.address || 'Plot 42, GIDC Industrial Estate, Metoda, Rajkot, Gujarat - 360021');
-  const [phone, setPhone] = useState(profile?.phone || '+91 98250 12345');
-  const [email, setEmail] = useState(profile?.email || 'contact@guruom.in');
-  const [gstin, setGstin] = useState(profile?.gstin || '24AAAFG1234C1Z9');
-  const [pan, setPan] = useState(profile?.pan || 'AAAFG1234C');
-  const [state, setState] = useState(profile?.state || 'Gujarat');
-  const [stateCode, setStateCode] = useState(profile?.stateCode || '24');
+  const [address, setAddress] = useState(profile?.address || 'Plot No. 42, MIDC Industrial Area, Bhosari, Pune, Maharashtra - 411026');
+  const [phone, setPhone] = useState(profile?.phone || '+91 20 2712 3456');
+  const [email, setEmail] = useState(profile?.email || 'operations@guruom.in');
+  const [gstin, setGstin] = useState(profile?.gstin || '27AABCG1234F1Z5');
+  const [pan, setPan] = useState(profile?.pan || 'AABCG1234F');
+  const [state, setState] = useState(profile?.state || 'Maharashtra');
+  const [stateCode, setStateCode] = useState(profile?.stateCode || '27');
 
   const [isSaving, setIsSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   // Synchronize local form when backend profile updates
   useEffect(() => {
     if (profile) {
-      setLegalName(profile.legalName || '');
-      setAddress(profile.address || '');
-      setPhone(profile.phone || '');
-      setEmail(profile.email || '');
-      setGstin(profile.gstin || '');
-      setPan(profile.pan || '');
-      setState(profile.state || '');
-      setStateCode(profile.stateCode || '');
+      setLegalName(profile.legalName || 'GuruOm Industries LLP');
+      setAddress(profile.address || 'Plot No. 42, MIDC Industrial Area, Bhosari, Pune, Maharashtra - 411026');
+      setPhone(profile.phone || '+91 20 2712 3456');
+      setEmail(profile.email || 'operations@guruom.in');
+      setGstin(profile.gstin || '27AABCG1234F1Z5');
+      setPan(profile.pan || 'AABCG1234F');
+      setState(profile.state || 'Maharashtra');
+      setStateCode(profile.stateCode || '27');
     }
   }, [profile]);
+
+  // Live copy helper
+  const handleCopy = (text: string, label: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedField(label);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
 
   // Auto-extract PAN & State Code from GSTIN if applicable
   const handleGstinChange = (val: string) => {
     const formatted = val.toUpperCase().trim();
     setGstin(formatted);
-    if (formatted.length >= 2 && !stateCode) {
+    if (formatted.length >= 2) {
       const derivedCode = formatted.slice(0, 2);
       if (/^\d{2}$/.test(derivedCode)) {
         setStateCode(derivedCode);
+        if (derivedCode === '27' && (!state || state === 'Maharshtra')) {
+          setState('Maharashtra');
+        } else if (derivedCode === '24' && (!state || state === 'Maharashtra')) {
+          setState('Maharashtra');
+        }
       }
     }
-    if (formatted.length >= 12 && !pan) {
+    if (formatted.length >= 12) {
       const derivedPan = formatted.slice(2, 12);
       if (/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(derivedPan)) {
         setPan(derivedPan);
@@ -77,20 +96,24 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
     }
   };
 
+  // Validation checkers
+  const isGstinValid = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gstin);
+  const isPanValid = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(pan);
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
     setSaveError(null);
 
     const updated: CompanyProfile = {
-      legalName: legalName.trim(),
-      address: address.trim(),
-      phone: phone.trim(),
-      email: email.trim(),
-      gstin: gstin.trim().toUpperCase(),
-      pan: pan.trim().toUpperCase(),
-      state: state.trim(),
-      stateCode: stateCode.trim(),
+      legalName: (legalName || 'GuruOm Industries LLP').trim(),
+      address: (address || 'Plot No. 42, MIDC Industrial Area, Bhosari, Pune, Maharashtra - 411026').trim(),
+      phone: (phone || '+91 20 2712 3456').trim(),
+      email: (email || 'operations@guruom.in').trim(),
+      gstin: (gstin || '27AABCG1234F1Z5').trim().toUpperCase(),
+      pan: (pan || 'AABCG1234F').trim().toUpperCase(),
+      state: (state || 'Maharashtra').trim(),
+      stateCode: (stateCode || '27').trim(),
     };
 
     try {
@@ -100,7 +123,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 4000);
     } catch (err: any) {
-      setSaveError(err?.message || 'Failed to persist company profile');
+      setSaveError(err?.message || 'Failed to save company profile.');
     } finally {
       setIsSaving(false);
     }
@@ -108,358 +131,533 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
 
   const handleResetToCurrent = () => {
     if (profile) {
-      setLegalName(profile.legalName || '');
-      setAddress(profile.address || '');
-      setPhone(profile.phone || '');
-      setEmail(profile.email || '');
-      setGstin(profile.gstin || '');
-      setPan(profile.pan || '');
-      setState(profile.state || '');
-      setStateCode(profile.stateCode || '');
+      setLegalName(profile.legalName || 'GuruOm Industries LLP');
+      setAddress(profile.address || 'Plot No. 42, MIDC Industrial Area, Bhosari, Pune, Maharashtra - 411026');
+      setPhone(profile.phone || '+91 20 2712 3456');
+      setEmail(profile.email || 'operations@guruom.in');
+      setGstin(profile.gstin || '27AABCG1234F1Z5');
+      setPan(profile.pan || 'AABCG1234F');
+      setState(profile.state || 'Maharashtra');
+      setStateCode(profile.stateCode || '27');
+      setSaveError(null);
+    } else {
+      setLegalName('GuruOm Industries LLP');
+      setAddress('Plot No. 42, MIDC Industrial Area, Bhosari, Pune, Maharashtra - 411026');
+      setPhone('+91 20 2712 3456');
+      setEmail('operations@guruom.in');
+      setGstin('27AABCG1234F1Z5');
+      setPan('AABCG1234F');
+      setState('Maharashtra');
+      setStateCode('27');
       setSaveError(null);
     }
   };
 
+  const inputClass = `h-11 w-full rounded-xl border px-3.5 text-xs font-medium outline-none transition-[border-color,box-shadow,background-color] duration-150 focus:border-[#007AFF] focus:ring-4 focus:ring-[#007AFF]/15 ${isDarkMode
+    ? 'border-white/10 bg-black/60 text-white placeholder:text-slate-500 hover:border-white/20 focus:bg-black/80'
+    : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:bg-white'
+    }`;
+
   return (
-    <div className="space-y-6 max-w-5xl font-sans">
-      
-      {/* Top Banner Header */}
-      <div className={`p-5 sm:p-6 rounded-3xl border transition-ui ${
-        isDarkMode 
-          ? 'bg-[#09090B] border-slate-800 text-white shadow-xl' 
-          : 'bg-white border-slate-200 shadow-sm text-slate-900'
-      }`}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider ${
-                isDarkMode ? 'bg-[var(--accent-primary)]/15 text-[var(--accent-primary)] border border-[var(--accent-primary)]/30' : 'bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] border border-[var(--accent-primary)]/20'
-              }`}>
-                Enterprise Registration
-              </span>
-              <span className="flex items-center gap-1 text-[11px] font-mono text-emerald-500 font-bold">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Real-Time Cloud Synced
-              </span>
+    <div className="space-y-6 max-w-7xl mx-auto font-sans pb-12">
+
+      {/* 1. Top Executive Control Deck */}
+      <div className={`p-6 sm:p-7 rounded-3xl border transition-all ${isDarkMode
+        ? 'bg-[#09090B] border-white/10 text-white shadow-[0_16px_40px_rgba(0,0,0,0.6)]'
+        : 'bg-white border-slate-200/80 shadow-sm text-slate-900'
+        }`}>
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+          <div className="flex items-start gap-4">
+            <div className="p-3.5 rounded-2xl bg-[#007AFF]/10 text-[#007AFF] border border-[#007AFF]/20 shrink-0">
+              <Building2 className="w-6 h-6" />
             </div>
-            <h1 className={`text-xl sm:text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-              Company Profile & Tax Settings
-            </h1>
-            <p className={`text-xs max-w-xl ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-              Master organizational entity rendered on all GST Tax Invoices, Delivery Challans, E-Way Bills, and ERP Statutory Records.
-            </p>
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide bg-[#007AFF]/15 text-[#007AFF] border border-[#007AFF]/30">
+                  Enterprise Registration
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <span>Rule 55 & GST Compliant</span>
+                </span>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+                Company Profile & Tax Settings
+              </h1>
+              <p className={`text-xs max-w-2xl leading-relaxed ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                Master organizational entity details rendered on all GST Tax Invoices, Delivery Challans (Rule 55), E-Way Bills, and inspection certificates.
+              </p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5 shrink-0 self-start lg:self-center">
             {savedSuccess && (
-              <div className="px-3.5 py-2 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-mono font-bold flex items-center gap-1.5 animate-in fade-in">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                <span>Saved Real-Time</span>
+              <div className="px-3.5 py-2 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-semibold flex items-center gap-1.5 animate-in fade-in duration-200">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>Saved & Synchronized</span>
               </div>
             )}
+
             <button
               type="button"
               onClick={handleResetToCurrent}
               title="Reset fields to current saved profile"
-              className={`p-2.5 rounded-2xl border text-xs font-mono transition-ui cursor-pointer flex items-center gap-1.5 ${
-                isDarkMode 
-                  ? 'border-slate-800 bg-slate-900/60 text-slate-400 hover:text-white hover:bg-slate-800' 
-                  : 'border-slate-200 bg-slate-50 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-              }`}
+              className={`px-4 py-2.5 rounded-full border text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 active:scale-[0.98] ${isDarkMode
+                ? 'border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/10 hover:text-white'
+                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100 shadow-xs'
+                }`}
             >
               <RefreshCw className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Reset</span>
+              <span>Reset</span>
             </button>
-          </div>
-        </div>
-      </div>
 
-      {/* Live Document Header Preview Card */}
-      <div className={`p-5 rounded-3xl border space-y-3 ${
-        isDarkMode 
-          ? 'bg-gradient-to-br from-[#09090B] via-slate-900/80 to-[#09090B] border-slate-800 text-white' 
-          : 'bg-gradient-to-br from-slate-50 via-white to-slate-50 border-slate-200 text-slate-900'
-      }`}>
-        <div className="flex items-center justify-between pb-2 border-b border-slate-800/60 dark:border-slate-800">
-          <div className="flex items-center gap-2">
-            <Receipt className="w-4 h-4 text-[var(--accent-primary)]" />
-            <span className="text-[11px] font-bold font-mono uppercase tracking-wider text-slate-400">
-              Live Statutory Header Preview (Invoices & Challans)
-            </span>
-          </div>
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-            GST Regime Active
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1 text-xs">
-          <div className="sm:col-span-2 space-y-1">
-            <h2 className="text-base font-bold text-[var(--accent-primary)]">
-              {legalName || 'Legal Entity Name'}
-            </h2>
-            <p className={`text-[11px] leading-relaxed ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-              <MapPin className="w-3.5 h-3.5 inline mr-1 text-slate-500" />
-              {address || 'Registered Works Address'}
-            </p>
-            <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px] font-mono text-slate-400">
-              {phone && (
-                <span className="flex items-center gap-1">
-                  <Phone className="w-3 h-3 text-slate-500" />
-                  {phone}
-                </span>
-              )}
-              {email && (
-                <span className="flex items-center gap-1">
-                  <Mail className="w-3 h-3 text-slate-500" />
-                  {email}
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className={`p-3 rounded-2xl border space-y-1.5 font-mono text-[11px] ${
-            isDarkMode ? 'bg-[#09090B]/80 border-slate-800' : 'bg-white border-slate-200'
-          }`}>
-            <div className="flex justify-between items-center">
-              <span className="text-slate-500">GSTIN:</span>
-              <span className="font-bold text-emerald-500">{gstin || '—'}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-slate-500">PAN:</span>
-              <span className="font-bold text-sky-400">{pan || '—'}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-slate-500">State:</span>
-              <span className="font-bold">{state || '—'} ({stateCode || '—'})</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Profile Form Card */}
-      <div className={`p-5 sm:p-8 rounded-3xl border transition-ui shadow-xl ${
-        isDarkMode ? 'bg-[#09090B] border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-      }`}>
-        <form onSubmit={handleSave} className="space-y-6 text-xs font-sans">
-          
-          {saveError && (
-            <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-500 dark:text-rose-400 text-xs font-mono flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{saveError}</span>
-            </div>
-          )}
-
-          {/* Section 1: Legal Registration */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 pb-1 border-b border-slate-800">
-              <Building2 className="w-4 h-4 text-[var(--accent-primary)]" />
-              <span className={`font-bold uppercase tracking-wider text-[11px] ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                1. Legal Entity & Communication
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className={`block font-bold uppercase text-[10px] sm:text-[11px] mb-1.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                  Legal Organization Entity Name *
-                </label>
-                <div className="relative">
-                  <Building className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-500" />
-                  <input
-                    type="text"
-                    required
-                    value={legalName}
-                    onChange={(e) => setLegalName(e.target.value)}
-                    placeholder="e.g. GuruOm Industries LLP"
-                    className={`h-11 w-full pl-10 pr-3.5 rounded-xl border text-xs font-bold outline-none transition-ui ${
-                      isDarkMode 
-                        ? 'bg-slate-900/80 border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
-                        : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className={`block font-bold uppercase text-[10px] sm:text-[11px] mb-1.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                  Official Contact Phone
-                </label>
-                <div className="relative">
-                  <Phone className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-500" />
-                  <input
-                    type="text"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="e.g. +91 98250 12345"
-                    className={`h-11 w-full pl-10 pr-3.5 rounded-xl border text-xs font-mono outline-none transition-ui ${
-                      isDarkMode 
-                        ? 'bg-slate-900/80 border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
-                        : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
-                    }`}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <label className={`block font-bold uppercase text-[10px] sm:text-[11px] mb-1.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                Official Corporate Email
-              </label>
-              <div className="relative">
-                <Mail className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-500" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e.g. contact@guruom.in"
-                  className={`h-11 w-full pl-10 pr-3.5 rounded-xl border text-xs font-mono outline-none transition-ui ${
-                    isDarkMode 
-                      ? 'bg-slate-900/80 border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
-                      : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
-                  }`}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Section 2: Registered Factory Address */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 pb-1 border-b border-slate-800">
-              <MapPin className="w-4 h-4 text-emerald-500" />
-              <span className={`font-bold uppercase tracking-wider text-[11px] ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                2. Registered Factory & Works Address
-              </span>
-            </div>
-
-            <div>
-              <label className={`block font-bold uppercase text-[10px] sm:text-[11px] mb-1.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                Registered Works & Dispatch Plant Location *
-              </label>
-              <textarea
-                rows={3}
-                required
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="Full street address, industrial estate, city, state and pincode"
-                className={`w-full rounded-2xl border p-3.5 text-xs outline-none transition-ui ${
-                  isDarkMode 
-                    ? 'bg-slate-900/80 border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
-                    : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
-                }`}
-              />
-            </div>
-          </div>
-
-          {/* Section 3: Statutory & Tax Identification */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 pb-1 border-b border-slate-800">
-              <ShieldCheck className="w-4 h-4 text-indigo-400" />
-              <span className={`font-bold uppercase tracking-wider text-[11px] ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                3. Statutory GST & Tax Registration
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-              <div>
-                <label className={`block font-bold uppercase text-[10px] sm:text-[11px] mb-1.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                  GSTIN Registration # *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={gstin}
-                  onChange={(e) => handleGstinChange(e.target.value)}
-                  placeholder="24AAAFG1234C1Z9"
-                  className={`h-11 w-full px-3.5 rounded-xl border text-xs font-mono font-bold text-emerald-500 outline-none transition-ui ${
-                    isDarkMode 
-                      ? 'bg-slate-900/80 border-slate-700/80 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' 
-                      : 'bg-slate-50 border-slate-300 focus:border-emerald-500 shadow-xs'
-                  }`}
-                />
-              </div>
-
-              <div>
-                <label className={`block font-bold uppercase text-[10px] sm:text-[11px] mb-1.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                  Income Tax PAN #
-                </label>
-                <input
-                  type="text"
-                  value={pan}
-                  onChange={(e) => setPan(e.target.value.toUpperCase())}
-                  placeholder="AAAFG1234C"
-                  className={`h-11 w-full px-3.5 rounded-xl border text-xs font-mono font-bold text-sky-400 outline-none transition-ui ${
-                    isDarkMode 
-                      ? 'bg-slate-900/80 border-slate-700/80 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20' 
-                      : 'bg-slate-50 border-slate-300 focus:border-sky-500 shadow-xs'
-                  }`}
-                />
-              </div>
-
-              <div>
-                <label className={`block font-bold uppercase text-[10px] sm:text-[11px] mb-1.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                  State Name
-                </label>
-                <input
-                  type="text"
-                  value={state}
-                  onChange={(e) => setState(e.target.value)}
-                  placeholder="e.g. Gujarat"
-                  className={`h-11 w-full px-3.5 rounded-xl border text-xs outline-none transition-ui ${
-                    isDarkMode 
-                      ? 'bg-slate-900/80 border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
-                      : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
-                  }`}
-                />
-              </div>
-
-              <div>
-                <label className={`block font-bold uppercase text-[10px] sm:text-[11px] mb-1.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                  GST State Code
-                </label>
-                <input
-                  type="text"
-                  value={stateCode}
-                  onChange={(e) => setStateCode(e.target.value)}
-                  placeholder="e.g. 24"
-                  className={`h-11 w-full px-3.5 rounded-xl border text-xs font-mono font-bold text-center text-purple-400 outline-none transition-ui ${
-                    isDarkMode 
-                      ? 'bg-slate-900/80 border-slate-700/80 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20' 
-                      : 'bg-slate-50 border-slate-300 focus:border-purple-500 shadow-xs'
-                  }`}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Action Button */}
-          <div className="pt-4 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="text-[11px] font-mono text-slate-500">
-              Changes apply instantly across all Tax Invoices, Delivery Challans, and E-Way Bills.
-            </div>
             <button
-              type="submit"
+              type="button"
+              onClick={handleSave}
               disabled={isSaving}
-              className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-gradient-to-r from-[var(--accent-primary)] to-indigo-600 hover:from-indigo-600 hover:to-[var(--accent-primary)] text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[var(--accent-primary)]/20 transition-ui hover:scale-[1.02] active:scale-[0.96] disabled:opacity-50"
+              className="px-5 py-2.5 rounded-full bg-[#007AFF] hover:bg-[#0071E3] active:scale-[0.98] text-white text-xs font-semibold flex items-center gap-2 shadow-md shadow-blue-500/20 cursor-pointer disabled:opacity-50 transition-all"
             >
               {isSaving ? (
                 <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>Saving & Syncing...</span>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>Saving...</span>
                 </>
               ) : (
                 <>
-                  <Save className="w-4 h-4" />
-                  <span>Save Enterprise Profile</span>
+                  <Save className="w-3.5 h-3.5" />
+                  <span>Save changes</span>
                 </>
               )}
             </button>
           </div>
-        </form>
+        </div>
       </div>
 
+      {/* 2. Main Two-Column Interactive Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+        {/* Left Column: Official Statutory Entity Card & Real-Time Stationery Preview */}
+        <div className="lg:col-span-5 space-y-6">
+
+          {/* Official Digital Certificate Card */}
+          <div className={`p-6 rounded-3xl border relative overflow-hidden transition-all ${isDarkMode
+            ? 'bg-[#09090B] border-white/10 text-white shadow-[0_24px_60px_rgba(0,0,0,0.8)]'
+            : 'bg-white border-slate-200/80 text-slate-900 shadow-sm'
+            }`}>
+            {/* Ambient Sapphire Glow */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -top-20 -right-20 w-52 h-52 bg-blue-500/10 rounded-full blur-3xl"
+            />
+
+            {/* Entity Header */}
+            <div className="flex items-start justify-between border-b border-white/10 dark:border-white/10 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#007AFF] to-[#5856D6] flex items-center justify-center text-white shadow-md shadow-blue-500/20 font-bold text-sm">
+                  GO
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono uppercase font-semibold text-[#007AFF] tracking-wider block">
+                    REGISTERED ENTERPRISE
+                  </span>
+                  <h3 className="text-sm font-bold tracking-tight text-white dark:text-white line-clamp-1">
+                    {legalName || 'GuruOm Industries LLP'}
+                  </h3>
+                </div>
+              </div>
+
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                <span>Active</span>
+              </span>
+            </div>
+
+            {/* Address & Contact Block */}
+            <div className="py-4 space-y-3 border-b border-white/10 dark:border-white/10 text-xs">
+              <div>
+                <span className="text-[10px] font-semibold uppercase text-slate-400 tracking-wider block mb-1">
+                  Registered Works Address
+                </span>
+                <p className={`text-xs leading-relaxed flex items-start gap-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                  <MapPin className="w-3.5 h-3.5 text-[#007AFF] shrink-0 mt-0.5" />
+                  <span>{address || 'Plot No. 42, MIDC Industrial Area, Bhosari, Pune, Maharashtra - 411026'}</span>
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <div className={`p-2.5 rounded-xl border ${isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-50 border-slate-200'}`}>
+                  <span className="text-[10px] uppercase text-slate-400 font-medium block">Phone</span>
+                  <p className="font-mono text-xs font-semibold truncate mt-0.5">{phone || '—'}</p>
+                </div>
+                <div className={`p-2.5 rounded-xl border ${isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-50 border-slate-200'}`}>
+                  <span className="text-[10px] uppercase text-slate-400 font-medium block">Email</span>
+                  <p className="font-mono text-xs font-semibold truncate mt-0.5">{email || '—'}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Key Statutory Identifiers Grid */}
+            <div className="pt-4 space-y-2.5">
+              <span className="text-[10px] font-semibold uppercase text-slate-400 tracking-wider block">
+                Statutory Identifiers
+              </span>
+
+              {/* GSTIN Row with Copy Button */}
+              <div className={`p-3 rounded-2xl border flex items-center justify-between transition-colors ${isDarkMode ? 'bg-black/60 border-white/10' : 'bg-slate-50 border-slate-200'
+                }`}>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-medium text-slate-400">GSTIN Registration</span>
+                    {isGstinValid ? (
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" title="Valid GSTIN Format" />
+                    ) : (
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400" title="Check format" />
+                    )}
+                  </div>
+                  <span className="font-mono font-bold text-xs text-emerald-400 tracking-wide block mt-0.5">
+                    {gstin || '—'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleCopy(gstin, 'gstin')}
+                  title="Copy GSTIN"
+                  className={`p-1.5 rounded-lg border text-xs cursor-pointer transition-colors ${isDarkMode ? 'border-white/10 text-slate-400 hover:text-white hover:bg-white/10' : 'border-slate-200 text-slate-600 hover:bg-slate-200'
+                    }`}
+                >
+                  {copiedField === 'gstin' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+
+              {/* PAN & State Code Row */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className={`p-3 rounded-2xl border flex items-center justify-between ${isDarkMode ? 'bg-black/60 border-white/10' : 'bg-slate-50 border-slate-200'
+                  }`}>
+                  <div>
+                    <span className="text-[10px] font-medium text-slate-400 block">PAN Number</span>
+                    <span className="font-mono font-bold text-xs text-sky-400 tracking-wide block mt-0.5">
+                      {pan || '—'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(pan, 'pan')}
+                    title="Copy PAN"
+                    className={`p-1.5 rounded-lg border text-xs cursor-pointer transition-colors ${isDarkMode ? 'border-white/10 text-slate-400 hover:text-white hover:bg-white/10' : 'border-slate-200 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {copiedField === 'pan' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+
+                <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-black/60 border-white/10' : 'bg-slate-50 border-slate-200'
+                  }`}>
+                  <span className="text-[10px] font-medium text-slate-400 block">State (Code)</span>
+                  <span className="font-mono font-bold text-xs text-purple-400 block mt-0.5 truncate">
+                    {state || 'Maharashtra'} ({stateCode || '27'})
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Rule 55 Statutory Stamp */}
+            <div className={`mt-4 p-3 rounded-2xl border flex items-center gap-2.5 text-[11px] ${isDarkMode ? 'bg-blue-500/5 border-blue-500/20 text-slate-300' : 'bg-blue-50 border-blue-200 text-slate-700'
+              }`}>
+              <ShieldCheck className="w-4 h-4 text-[#007AFF] shrink-0" />
+              <span>Registered under GST Section 31 & Rule 55 for manufacturing movement of goods.</span>
+            </div>
+          </div>
+
+          {/* Real-Time Stationery Print Box Preview */}
+          <div className={`p-5 rounded-3xl border space-y-3 ${isDarkMode
+            ? 'bg-[#09090B] border-white/10 text-white'
+            : 'bg-white border-slate-200 text-slate-900'
+            }`}>
+            <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
+              <div className="flex items-center gap-2">
+                <Receipt className="w-4 h-4 text-[#007AFF]" />
+                <span className="text-xs font-semibold">
+                  Official Document Header Preview
+                </span>
+              </div>
+              <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                Rule 55 Format
+              </span>
+            </div>
+
+            {/* Inset Stationery Template */}
+            <div className={`p-4 rounded-2xl border text-xs space-y-2 ${isDarkMode ? 'bg-black/60 border-white/10' : 'bg-slate-50 border-slate-200'
+              }`}>
+              <span className="inline-block px-2 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase bg-[#007AFF]/15 text-[#007AFF] border border-[#007AFF]/30">
+                PRECISION MANUFACTURING ENTERPRISE
+              </span>
+              <h4 className="font-bold text-sm tracking-tight text-white dark:text-white uppercase">
+                {legalName || 'GuruOm Industries LLP'}
+              </h4>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                {address || 'Plot No. 42, MIDC Industrial Area, Bhosari, Pune, Maharashtra - 411026'}
+              </p>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 font-mono text-[10px] text-slate-400 pt-1 border-t border-white/10">
+                <span><strong>GSTIN:</strong> {gstin || '27AABCG1234F1Z5'}</span>
+                <span><strong>State Code:</strong> {stateCode || '27'}</span>
+                <span><strong>PAN:</strong> {pan || 'AABCG1234F'}</span>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              This layout automatically formats the top header on generated Delivery Challans, Invoices, and Inspection CoC Certificates.
+            </p>
+          </div>
+        </div>
+
+        {/* Right Column: Inset Grouped Settings Form */}
+        <div className="lg:col-span-7">
+          <div className={`p-6 sm:p-8 rounded-3xl border transition-all ${isDarkMode
+            ? 'bg-[#09090B] border-white/10 text-white shadow-[0_24px_60px_rgba(0,0,0,0.8)]'
+            : 'bg-white border-slate-200/80 text-slate-900 shadow-sm'
+            }`}>
+            <form onSubmit={handleSave} className="space-y-6 text-xs">
+
+              {saveError && (
+                <div className="p-3.5 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-200 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                  <span>{saveError}</span>
+                </div>
+              )}
+
+              {/* Group 1: Legal Identity & Corporate Details */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 pb-2 border-b border-white/10">
+                  <div className="p-1.5 rounded-lg bg-[#007AFF]/10 text-[#007AFF]">
+                    <Building className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                      1. Legal Entity & Corporate Details
+                    </h3>
+                    <p className="text-[11px] text-slate-400">Official registered corporate title and verified contact info</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3.5">
+                  <div>
+                    <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                      Legal Organization Entity Name *
+                    </label>
+                    <div className="relative">
+                      <Building2 className={`w-4 h-4 absolute left-3.5 top-3.5 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`} />
+                      <input
+                        type="text"
+                        required
+                        value={legalName}
+                        onChange={(e) => setLegalName(e.target.value)}
+                        placeholder="e.g. GuruOm Industries LLP"
+                        className={`${inputClass} pl-10 font-medium`}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                      <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                        Official Contact Phone
+                      </label>
+                      <div className="relative">
+                        <Phone className={`w-4 h-4 absolute left-3.5 top-3.5 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`} />
+                        <input
+                          type="text"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          placeholder="e.g. +91 240 2554123"
+                          className={`${inputClass} pl-10 font-mono`}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                        Corporate Operations Email
+                      </label>
+                      <div className="relative">
+                        <Mail className={`w-4 h-4 absolute left-3.5 top-3.5 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`} />
+                        <input
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="e.g. operations@guruom.in"
+                          className={`${inputClass} pl-10 font-mono`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Group 2: Registered Manufacturing Works & Dispatch Plant */}
+              <div className="space-y-4 pt-2">
+                <div className="flex items-center gap-2 pb-2 border-b border-white/10">
+                  <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400">
+                    <MapPin className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                      2. Registered Manufacturing Works & Plant
+                    </h3>
+                    <p className="text-[11px] text-slate-400">Physical factory location used as the primary consignor facility</p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Registered Works & Dispatch Plant Address *
+                  </label>
+                  <textarea
+                    rows={3}
+                    required
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Full street address, industrial estate, city, state, and pincode"
+                    className={`w-full rounded-xl border p-3.5 text-xs font-medium outline-none transition-[border-color,box-shadow,background-color] duration-150 focus:border-[#007AFF] focus:ring-4 focus:ring-[#007AFF]/15 ${isDarkMode
+                      ? 'border-white/10 bg-black/60 text-white placeholder:text-slate-500 hover:border-white/20 focus:bg-black/80'
+                      : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:bg-white'
+                      }`}
+                  />
+                  <span className="text-[11px] text-slate-400 mt-1 block">
+                    This address appears as the Goods Origin on all outward GST delivery documents and E-Way bills.
+                  </span>
+                </div>
+              </div>
+
+              {/* Group 3: Statutory GST & Tax Registration */}
+              <div className="space-y-4 pt-2">
+                <div className="flex items-center gap-2 pb-2 border-b border-white/10">
+                  <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-400">
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                      3. Statutory GST & Tax Registration
+                    </h3>
+                    <p className="text-[11px] text-slate-400">Government statutory identifiers and state tax jurisdiction</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className={`block text-xs font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                        GSTIN Registration Number *
+                      </label>
+                      {isGstinValid && (
+                        <span className="text-[10px] font-medium text-emerald-400 flex items-center gap-1">
+                          <Check className="w-3 h-3" /> Valid format
+                        </span>
+                      )}
+                    </div>
+                    <input
+                      type="text"
+                      required
+                      value={gstin}
+                      onChange={(e) => handleGstinChange(e.target.value)}
+                      placeholder="27AABCG1234F1Z5"
+                      className={`${inputClass} font-mono font-bold text-emerald-400`}
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className={`block text-xs font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                        Permanent Account Number (PAN) *
+                      </label>
+                      {isPanValid && (
+                        <span className="text-[10px] font-medium text-sky-400 flex items-center gap-1">
+                          <Check className="w-3 h-3" /> Verified PAN
+                        </span>
+                      )}
+                    </div>
+                    <input
+                      type="text"
+                      required
+                      value={pan}
+                      onChange={(e) => setPan(e.target.value.toUpperCase())}
+                      placeholder="AABCG1234F"
+                      className={`${inputClass} font-mono font-bold text-sky-400`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                      State Jurisdiction Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={state}
+                      onChange={(e) => setState(e.target.value)}
+                      placeholder="e.g. Maharashtra"
+                      className={inputClass}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                      GST State Code *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={stateCode}
+                      onChange={(e) => setStateCode(e.target.value)}
+                      placeholder="e.g. 27"
+                      className={`${inputClass} font-mono font-bold text-purple-400 text-center`}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Form Action Footer */}
+              <div className="pt-5 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Modifications take effect immediately across all newly generated documents.
+                </p>
+
+                <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={handleResetToCurrent}
+                    className={`w-1/2 sm:w-auto px-4 py-2.5 rounded-full border text-xs font-semibold transition-all cursor-pointer ${isDarkMode
+                      ? 'border-white/10 text-slate-300 hover:bg-white/10'
+                      : 'border-slate-200 text-slate-700 hover:bg-slate-100'
+                      }`}
+                  >
+                    Discard
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={isSaving}
+                    className="w-1/2 sm:w-auto px-6 py-2.5 rounded-full bg-[#007AFF] hover:bg-[#0071E3] active:scale-[0.98] text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-500/25 cursor-pointer disabled:opacity-50 transition-all"
+                  >
+                    {isSaving ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-3.5 h-3.5" />
+                        <span>Save enterprise profile</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
 
 export default CompanyProfileView;
-

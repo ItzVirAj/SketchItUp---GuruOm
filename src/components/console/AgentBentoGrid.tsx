@@ -80,10 +80,11 @@ export function FeatCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
-        "group relative flex flex-col gap-2 overflow-hidden rounded-2xl p-4.5 font-sans",
-        "bg-white dark:bg-[#121215]",
-        "border border-slate-200/90 dark:border-slate-800",
-        "shadow-2xs hover:shadow-xs transition-ui",
+        "group relative flex flex-col gap-2 overflow-hidden rounded-3xl p-5 font-sans backdrop-blur-2xl",
+        "bg-white/95 dark:bg-[#18181B]/90",
+        "border border-slate-200/90 dark:border-white/15",
+        "shadow-[0_4px_20px_rgba(0,0,0,0.04)] dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12),0_16px_36px_rgba(0,0,0,0.5)]",
+        "hover:border-slate-300 dark:hover:border-white/25 transition-all",
         className
       )}
     >
@@ -92,7 +93,7 @@ export function FeatCard({
           <div className="flex items-center gap-2">
             <h3 className="font-bold text-slate-900 dark:text-white text-sm tracking-tight">{title}</h3>
             {badge && (
-              <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider", badgeColor)}>
+              <span className={cn("text-[10px] font-bold px-2.5 py-0.5 rounded-full border uppercase tracking-wider", badgeColor)}>
                 {badge}
               </span>
             )}
@@ -100,7 +101,7 @@ export function FeatCard({
           <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed max-w-[95%]">{description}</p>
         </div>
       </div>
-      <div className="relative mt-2 flex-1 w-full rounded-xl overflow-hidden border border-slate-100 dark:border-slate-800/80 bg-slate-50/70 dark:bg-[#18181B] p-2.5">
+      <div className="relative mt-2 flex-1 w-full rounded-2xl overflow-hidden border border-slate-100 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.04] p-3">
         {children}
       </div>
     </motion.div>

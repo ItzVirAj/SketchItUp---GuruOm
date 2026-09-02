@@ -603,10 +603,10 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
                         PRECISION MANUFACTURING ENTERPRISE
                       </span>
                       <h2 className="text-lg sm:text-xl font-black uppercase tracking-tight text-slate-900 dark:text-white">
-                        GURU OM PRECISION ENGINEERING PVT. LTD.
+                        GuruOm Industries LLP
                       </h2>
                       <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xl">
-                        Plot No. W-45, MIDC Industrial Area, Waluj, Chhatrapati Sambhaji Nagar, Maharashtra 431136
+                        Plot No. 42, MIDC Industrial Area, Bhosari, Pune, Maharashtra - 411026
                       </p>
                       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs font-mono mt-1.5 text-slate-600 dark:text-slate-400">
                         <span><strong>GSTIN:</strong> 27AABCG1234F1Z5</span>

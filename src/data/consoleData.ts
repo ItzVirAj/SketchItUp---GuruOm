@@ -42,12 +42,12 @@ export const initialAuditLogs: AuditLogEntry[] = [];
 export const initialApprovals: PendingApproval[] = [];
 
 export const initialCompanyProfile: CompanyProfile = {
-  legalName: '',
-  address: '',
-  phone: '',
-  email: '',
-  gstin: '',
-  pan: '',
-  state: '',
-  stateCode: ''
+  legalName: 'GuruOm Industries LLP',
+  address: 'Plot No. 42, MIDC Industrial Area, Bhosari, Pune, Maharashtra - 411026',
+  phone: '+91 20 2712 3456',
+  email: 'operations@guruom.in',
+  gstin: '27AABCG1234F1Z5',
+  pan: 'AABCG1234F',
+  state: 'Maharashtra',
+  stateCode: '27'
 };

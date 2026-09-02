@@ -62,14 +62,14 @@ export async function fetchCompanyProfile(): Promise<CompanyProfile> {
   } catch (_) {}
 
   return {
-    legalName: 'GuruOm Industries LLP',
-    address: 'Plot 42, GIDC Industrial Estate, Metoda, Rajkot, Gujarat - 360021',
-    phone: '+91 98250 12345',
-    email: 'contact@guruom.in',
-    gstin: '24AAAFG1234C1Z9',
-    pan: 'AAAFG1234C',
-    state: 'Gujarat',
-    stateCode: '24'
+    legalName: '',
+    address: '',
+    phone: '',
+    email: '',
+    gstin: '',
+    pan: '',
+    state: '',
+    stateCode: ''
   };
 }
 
@@ -1267,12 +1267,11 @@ export async function fetchInvoices(): Promise<CustomerInvoice[]> {
       dbInvoices = res.data;
     }
   } catch (err) {
-    console.warn('fetchInvoices REST API error, falling back:', err);
+    console.warn('fetchInvoices REST API error:', err);
   }
 
-  const { initialInvoices } = await import('../data/consoleData');
   const map = new Map<string, CustomerInvoice>();
-  [...initialInvoices, ...savedLocal, ...dbInvoices].forEach(item => {
+  [...savedLocal, ...dbInvoices].forEach(item => {
     if (item.invoiceNo) {
       map.set(item.invoiceNo, item);
     }
@@ -1381,6 +1380,39 @@ export async function payInvoice(invoiceNo: string, paymentData?: any): Promise<
     });
   } catch (err) {
     console.warn(`payInvoice(${invoiceNo}) REST API error:`, err);
+  }
+}
+
+export async function deleteCustomerInvoice(invoiceNo: string): Promise<any> {
+  try {
+    const raw = localStorage.getItem('stratum_custom_invoices');
+    if (raw) {
+      const list: CustomerInvoice[] = JSON.parse(raw);
+      const updated = list.filter(i => i.invoiceNo !== invoiceNo && i.id !== invoiceNo);
+      localStorage.setItem('stratum_custom_invoices', JSON.stringify(updated));
+    }
+  } catch (_) {}
+
+  try {
+    const res = await apiClient.delete<{ data: any }>(`/invoices/${encodeURIComponent(invoiceNo)}`);
+    return res?.data;
+  } catch (err) {
+    console.warn(`deleteCustomerInvoice(${invoiceNo}) REST API error:`, err);
+    return { success: true };
+  }
+}
+
+export async function clearAllCustomerInvoices(): Promise<any> {
+  try {
+    localStorage.removeItem('stratum_custom_invoices');
+  } catch (_) {}
+
+  try {
+    const res = await apiClient.delete<{ data: any }>('/invoices/clear-all');
+    return res?.data;
+  } catch (err) {
+    console.warn('clearAllCustomerInvoices REST API error:', err);
+    return { success: true };
   }
 }
 

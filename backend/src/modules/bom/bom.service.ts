@@ -16,10 +16,11 @@ export class BomService {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (!bomErr && bomData && bomData.length > 0) {
+      // DB is the source of truth: an empty result means "no BOMs" (never fall back to the cache here)
+      if (!bomErr) {
         const { data: itemsData } = await this.db.from('bom_items').select('*');
 
-        return bomData.map(b => ({
+        return (bomData || []).map(b => ({
           id: b.id,
           bomCode: b.bom_code,
           parentPartCode: b.parent_part_code,
@@ -45,6 +46,7 @@ export class BomService {
     } catch (err) {
       console.warn('Database getBOMs error:', err);
     }
+    // Only reached when the database is unreachable — serve the offline cache
     return SEED_BOMS;
   }
 
@@ -56,7 +58,9 @@ export class BomService {
         .or(`id.eq.${code},bom_code.eq.${code},parent_part_code.eq.${code}`)
         .maybeSingle();
 
-      if (!bomErr && b) {
+      // DB success wins: a missing row means "not found" (never fall back to the cache here)
+      if (!bomErr) {
+        if (!b) return null;
         const { data: itemsData } = await this.db.from('bom_items').select('*').eq('bom_id', b.id);
 
         return {
@@ -244,6 +248,10 @@ export class BomService {
       const { error: itemErr } = await this.db.from('bom_items').delete().eq('bom_id', bomCode);
       const { error: bomErr } = await this.db.from('bill_of_materials').delete().or(`bom_code.eq.${bomCode},id.eq.${bomCode}`);
       if (bomErr) throw bomErr;
+
+      // Keep the offline in-memory cache consistent with the database
+      const cacheIdx = SEED_BOMS.findIndex(b => b.bomCode === bomCode || b.id === bomCode || b.parentPartCode === bomCode);
+      if (cacheIdx >= 0) SEED_BOMS.splice(cacheIdx, 1);
     } catch (err: any) {
       console.warn('Database deleteBOM exception:', err);
       throw new Error(`Failed to delete BOM ${bomCode}: ${err.message}`);

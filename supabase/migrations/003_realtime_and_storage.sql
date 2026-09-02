@@ -2,25 +2,30 @@
 -- Migration 003: Supabase Realtime & Storage Setup
 -- ===================================================
 
--- Add Business Tables to Realtime Publication
+-- Add Business Tables to Realtime Publication safely
 DO $$
+DECLARE
+  tbl TEXT;
+  tbls TEXT[] := ARRAY[
+    'customer_orders', 'stock_items', 'job_cards', 'production_logs',
+    'qc_inspections', 'pdi_inspections', 'dispatch_challans',
+    'customer_invoices', 'vendor_bills', 'audit_logs',
+    'pending_approvals', 'finished_goods', 'notifications', 'profiles'
+  ];
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
-    ALTER PUBLICATION supabase_realtime ADD TABLE 
-      public.customer_orders,
-      public.stock_items,
-      public.job_cards,
-      public.production_logs,
-      public.qc_inspections,
-      public.pdi_inspections,
-      public.dispatch_challans,
-      public.customer_invoices,
-      public.vendor_bills,
-      public.audit_logs,
-      public.pending_approvals,
-      public.finished_goods,
-      public.notifications,
-      public.profiles;
+    FOREACH tbl IN ARRAY tbls LOOP
+      IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = tbl) THEN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_publication_tables 
+          WHERE pubname = 'supabase_realtime' 
+          AND schemaname = 'public' 
+          AND tablename = tbl
+        ) THEN
+          EXECUTE 'ALTER PUBLICATION supabase_realtime ADD TABLE public.' || quote_ident(tbl);
+        END IF;
+      END IF;
+    END LOOP;
   END IF;
 EXCEPTION WHEN OTHERS THEN
   NULL;

@@ -75,113 +75,7 @@ import { triggerMachineDowntime } from '../../../services/notificationService';
 import { MachineDowntimeLog } from '../../../types/console';
 import { useUrlModal } from '../../../hooks/useUrlModal';
 
-export const DEFAULT_ROUTE_CARDS: RouteCard[] = [
-  {
-    id: 'rc-00000001',
-    routeCode: 'RC-00000001',
-    partCode: '00000001',
-    partDescription: 'MAIN SPINDLE HOUSING 120MM',
-    revision: 'REV-A',
-    status: 'ACTIVE',
-    totalStandardTimeMinutes: 140,
-    notes: 'Multi-stage CNC turning, boring, induction hardening & precision grinding route',
-    operations: [
-      { id: 'op-001-10', partCode: '00000001', partDescription: 'MAIN SPINDLE HOUSING 120MM', sequenceNo: 10, operationName: 'Raw Material Saw Cutting', workCenter: 'BANDSAW-01', standardTimeMinutes: 10, inspectionRequired: false, requiredCertification: 'Operator Lv1' },
-      { id: 'op-001-20', partCode: '00000001', partDescription: 'MAIN SPINDLE HOUSING 120MM', sequenceNo: 20, operationName: 'CNC Rough Turning & Facing', workCenter: 'CNC-LATHE-01', standardTimeMinutes: 25, inspectionRequired: false, requiredCertification: 'CNC Certified' },
-      { id: 'op-001-30', partCode: '00000001', partDescription: 'MAIN SPINDLE HOUSING 120MM', sequenceNo: 30, operationName: 'VMC Boring & Keyway Milling', workCenter: 'VMC-01', standardTimeMinutes: 35, inspectionRequired: false, requiredCertification: 'VMC Machinist' },
-      { id: 'op-001-40', partCode: '00000001', partDescription: 'MAIN SPINDLE HOUSING 120MM', sequenceNo: 40, operationName: 'Induction Hardening & Case Depth Check', workCenter: 'HT-FURNACE-01', standardTimeMinutes: 30, inspectionRequired: true, requiredCertification: 'Heat Treatment Tech' },
-      { id: 'op-001-50', partCode: '00000001', partDescription: 'MAIN SPINDLE HOUSING 120MM', sequenceNo: 50, operationName: 'Precision Cylindrical OD Grinding', workCenter: 'GRIND-01', standardTimeMinutes: 20, inspectionRequired: true, requiredCertification: 'Grinding Specialist' },
-      { id: 'op-001-60', partCode: '00000001', partDescription: 'MAIN SPINDLE HOUSING 120MM', sequenceNo: 60, operationName: 'Final Dimensional & Runout Inspection', workCenter: 'QC-LAB', standardTimeMinutes: 15, inspectionRequired: true, requiredCertification: 'QC Inspector Lv2' },
-      { id: 'op-001-70', partCode: '00000001', partDescription: 'MAIN SPINDLE HOUSING 120MM', sequenceNo: 70, operationName: 'Ultrasonic Cleaning & Protective Packing', workCenter: 'PACK-01', standardTimeMinutes: 5, inspectionRequired: false, requiredCertification: 'Packing Clerk' }
-    ]
-  },
-  {
-    id: 'rc-00000002',
-    routeCode: 'RC-00000002',
-    partCode: '00000002',
-    partDescription: 'Boom Bracket Sub-assembly',
-    revision: 'REV-A',
-    status: 'ACTIVE',
-    totalStandardTimeMinutes: 95,
-    notes: 'Structural fabrication, welding, coordinate milling and CMM verification',
-    operations: [
-      { id: 'op-002-10', partCode: '00000002', partDescription: 'Boom Bracket Sub-assembly', sequenceNo: 10, operationName: 'Profile Saw & Plate Cutting', workCenter: 'CUT-01', standardTimeMinutes: 12, inspectionRequired: false, requiredCertification: 'Operator Lv1' },
-      { id: 'op-002-20', partCode: '00000002', partDescription: 'Boom Bracket Sub-assembly', sequenceNo: 20, operationName: 'MIG/TIG Structural Welding', workCenter: 'WELD-01', standardTimeMinutes: 25, inspectionRequired: false, requiredCertification: 'Certified Welder' },
-      { id: 'op-002-30', partCode: '00000002', partDescription: 'Boom Bracket Sub-assembly', sequenceNo: 30, operationName: 'CNC Coordinate Milling', workCenter: 'VMC-01', standardTimeMinutes: 40, inspectionRequired: true, requiredCertification: 'VMC Machinist' },
-      { id: 'op-002-40', partCode: '00000002', partDescription: 'Boom Bracket Sub-assembly', sequenceNo: 40, operationName: 'CMM Dimensional Inspection', workCenter: 'CMM-01', standardTimeMinutes: 10, inspectionRequired: true, requiredCertification: 'Quality Inspector' },
-      { id: 'op-002-50', partCode: '00000002', partDescription: 'Boom Bracket Sub-assembly', sequenceNo: 50, operationName: 'Surface Powder Coating & Packing', workCenter: 'PACK-01', standardTimeMinutes: 8, inspectionRequired: false, requiredCertification: 'None' }
-    ]
-  },
-  {
-    id: 'rc-00000003',
-    routeCode: 'RC-00000003',
-    partCode: '00000003',
-    partDescription: 'Control Panel Assembly',
-    revision: 'REV-B',
-    status: 'ACTIVE',
-    totalStandardTimeMinutes: 90,
-    notes: 'Electrical enclosure laser cutting, bending, assembly and dielectric testing',
-    operations: [
-      { id: 'op-003-10', partCode: '00000003', partDescription: 'Control Panel Assembly', sequenceNo: 10, operationName: 'Sheet Metal Laser Cutting', workCenter: 'CUT-01', standardTimeMinutes: 15, inspectionRequired: false, requiredCertification: 'Laser Op' },
-      { id: 'op-003-20', partCode: '00000003', partDescription: 'Control Panel Assembly', sequenceNo: 20, operationName: 'CNC Turret Punching & Bending', workCenter: 'BEND-01', standardTimeMinutes: 20, inspectionRequired: false, requiredCertification: 'Bending Op' },
-      { id: 'op-003-30', partCode: '00000003', partDescription: 'Control Panel Assembly', sequenceNo: 30, operationName: 'Electrical Busbar & Component Mounting', workCenter: 'ELEC-01', standardTimeMinutes: 30, inspectionRequired: false, requiredCertification: 'Electrician Lv2' },
-      { id: 'op-003-40', partCode: '00000003', partDescription: 'Control Panel Assembly', sequenceNo: 40, operationName: 'High-Voltage Insulation & Continuity Testing', workCenter: 'TEST-BAY', standardTimeMinutes: 15, inspectionRequired: true, requiredCertification: 'QC Electrical' },
-      { id: 'op-003-50', partCode: '00000003', partDescription: 'Control Panel Assembly', sequenceNo: 50, operationName: 'Protective Packaging & Labeling', workCenter: 'PACK-01', standardTimeMinutes: 10, inspectionRequired: false, requiredCertification: 'None' }
-    ]
-  },
-  {
-    id: 'rc-00000004',
-    routeCode: 'RC-00000004',
-    partCode: '00000004',
-    partDescription: 'Hydraulic Cylinder Mount',
-    revision: 'REV-A',
-    status: 'ACTIVE',
-    totalStandardTimeMinutes: 90,
-    notes: 'Heavy bore roughing, 4-axis milling and magnetic particle testing',
-    operations: [
-      { id: 'op-004-10', partCode: '00000004', partDescription: 'Hydraulic Cylinder Mount', sequenceNo: 10, operationName: 'Round Billet Saw Cutting', workCenter: 'BANDSAW-01', standardTimeMinutes: 10, inspectionRequired: false, requiredCertification: 'Operator Lv1' },
-      { id: 'op-004-20', partCode: '00000004', partDescription: 'Hydraulic Cylinder Mount', sequenceNo: 20, operationName: 'Heavy Turning & Bore Roughing', workCenter: 'CNC-LATHE-02', standardTimeMinutes: 30, inspectionRequired: false, requiredCertification: 'CNC Certified' },
-      { id: 'op-004-30', partCode: '00000004', partDescription: 'Hydraulic Cylinder Mount', sequenceNo: 30, operationName: '4-Axis Milling & Pin Hole Reaming', workCenter: 'VMC-02', standardTimeMinutes: 25, inspectionRequired: false, requiredCertification: 'VMC Machinist' },
-      { id: 'op-004-40', partCode: '00000004', partDescription: 'Hydraulic Cylinder Mount', sequenceNo: 40, operationName: 'Magnetic Particle Non-Destructive Testing', workCenter: 'NDT-01', standardTimeMinutes: 15, inspectionRequired: true, requiredCertification: 'NDT Level II' },
-      { id: 'op-004-50', partCode: '00000004', partDescription: 'Hydraulic Cylinder Mount', sequenceNo: 50, operationName: 'Anti-Corrosion Phosphate Coating', workCenter: 'COAT-01', standardTimeMinutes: 10, inspectionRequired: false, requiredCertification: 'None' }
-    ]
-  },
-  {
-    id: 'rc-00000005',
-    routeCode: 'RC-00000005',
-    partCode: '00000005',
-    partDescription: 'Precision Machined Flange 100mm',
-    revision: 'REV-A',
-    status: 'ACTIVE',
-    totalStandardTimeMinutes: 58,
-    notes: 'Facing, turning, PCD hole pattern drilling and flatness inspection',
-    operations: [
-      { id: 'op-005-10', partCode: '00000005', partDescription: 'Precision Machined Flange 100mm', sequenceNo: 10, operationName: 'Billet Saw Cutting', workCenter: 'BANDSAW-01', standardTimeMinutes: 8, inspectionRequired: false, requiredCertification: 'Operator Lv1' },
-      { id: 'op-005-20', partCode: '00000005', partDescription: 'Precision Machined Flange 100mm', sequenceNo: 20, operationName: 'CNC Facing, Turning & Grooving', workCenter: 'CNC-LATHE-01', standardTimeMinutes: 20, inspectionRequired: false, requiredCertification: 'CNC Certified' },
-      { id: 'op-005-30', partCode: '00000005', partDescription: 'Precision Machined Flange 100mm', sequenceNo: 30, operationName: 'PCD Hole Pattern Drilling & Tapping', workCenter: 'RADIAL-DRILL-01', standardTimeMinutes: 15, inspectionRequired: false, requiredCertification: 'Machinist' },
-      { id: 'op-005-40', partCode: '00000005', partDescription: 'Precision Machined Flange 100mm', sequenceNo: 40, operationName: 'Surface Flatness & Dimensional QC', workCenter: 'QC-LAB', standardTimeMinutes: 10, inspectionRequired: true, requiredCertification: 'QC Inspector' },
-      { id: 'op-005-50', partCode: '00000005', partDescription: 'Precision Machined Flange 100mm', sequenceNo: 50, operationName: 'Rust Preventive Dipping & Wrapping', workCenter: 'PACK-01', standardTimeMinutes: 5, inspectionRequired: false, requiredCertification: 'None' }
-    ]
-  },
-  {
-    id: 'rc-00000006',
-    routeCode: 'RC-00000006',
-    partCode: '00000006',
-    partDescription: 'Pinion Gear Shaft EN24',
-    revision: 'REV-A',
-    status: 'ACTIVE',
-    totalStandardTimeMinutes: 150,
-    notes: 'Gear tooth hobbing, vacuum carburizing and spline precision grinding',
-    operations: [
-      { id: 'op-006-10', partCode: '00000006', partDescription: 'Pinion Gear Shaft EN24', sequenceNo: 10, operationName: 'Bar Stock Sawing', workCenter: 'BANDSAW-01', standardTimeMinutes: 10, inspectionRequired: false, requiredCertification: 'Operator Lv1' },
-      { id: 'op-006-20', partCode: '00000006', partDescription: 'Pinion Gear Shaft EN24', sequenceNo: 20, operationName: 'CNC Step Turning & Centering', workCenter: 'CNC-LATHE-01', standardTimeMinutes: 25, inspectionRequired: false, requiredCertification: 'CNC Certified' },
-      { id: 'op-006-30', partCode: '00000006', partDescription: 'Pinion Gear Shaft EN24', sequenceNo: 30, operationName: 'Gear Hobbing & Tooth Generation', workCenter: 'HOBBING-01', standardTimeMinutes: 35, inspectionRequired: false, requiredCertification: 'Gear Specialist' },
-      { id: 'op-006-40', partCode: '00000006', partDescription: 'Pinion Gear Shaft EN24', sequenceNo: 40, operationName: 'Vacuum Carburizing & Quenching', workCenter: 'HT-FURNACE-01', standardTimeMinutes: 45, inspectionRequired: true, requiredCertification: 'Heat Treatment Tech' },
-      { id: 'op-006-50', partCode: '00000006', partDescription: 'Pinion Gear Shaft EN24', sequenceNo: 50, operationName: 'Spline & Journal Precision Grinding', workCenter: 'GRIND-01', standardTimeMinutes: 20, inspectionRequired: true, requiredCertification: 'Grinding Specialist' },
-      { id: 'op-006-60', partCode: '00000006', partDescription: 'Pinion Gear Shaft EN24', sequenceNo: 60, operationName: 'Gear Profile & Lead Pitch Inspection', workCenter: 'QC-LAB', standardTimeMinutes: 15, inspectionRequired: true, requiredCertification: 'QC Inspector Lv2' }
-    ]
-  }
-];
+export const DEFAULT_ROUTE_CARDS: RouteCard[] = [];
 
 export type ProductionSection = 'job-cards' | 'route-cards' | 'bom' | 'matrix';
 
@@ -303,7 +197,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
 
   // BOM & Route Card Async Records
   const [boms, setBoms] = useState<BillOfMaterials[]>([]);
-  const [routeCards, setRouteCards] = useState<RouteCard[]>(DEFAULT_ROUTE_CARDS);
+  const [routeCards, setRouteCards] = useState<RouteCard[]>([]);
   const [isLoadingAsyncData, setIsLoadingAsyncData] = useState(false);
   const [expandedBomCode, setExpandedBomCode] = useState<string | null>(null);
   const [expandedRoutePart, setExpandedRoutePart] = useState<string | null>(null);
@@ -317,20 +211,10 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
         fetchGroupedRouteCards()
       ]);
       setBoms(bomData || []);
-      
-      // Merge fetched route cards with default route cards
-      if (routeData && routeData.length > 0) {
-        const fetchedPartCodes = new Set(routeData.map(r => r.partCode?.toLowerCase().trim()));
-        const nonDuplicateDefaults = DEFAULT_ROUTE_CARDS.filter(
-          def => !fetchedPartCodes.has(def.partCode?.toLowerCase().trim())
-        );
-        setRouteCards([...routeData, ...nonDuplicateDefaults]);
-      } else {
-        setRouteCards(DEFAULT_ROUTE_CARDS);
-      }
+      setRouteCards(routeData || []);
     } catch (err: any) {
       console.warn('Error loading manufacturing data:', err);
-      setRouteCards(DEFAULT_ROUTE_CARDS);
+      setRouteCards([]);
     } finally {
       setIsLoadingAsyncData(false);
     }
@@ -702,8 +586,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
       })).sort((a: any, b: any) => Number(a.sequenceNo) - Number(b.sequenceNo));
     }
 
-    // Fallback to the first available Route Card
-    const defaultRoute = routeCards[0] || DEFAULT_ROUTE_CARDS[0];
+    const defaultRoute = routeCards[0];
     if (defaultRoute && defaultRoute.operations && defaultRoute.operations.length > 0) {
       return defaultRoute.operations.map((op: any) => ({
         id: `op-${activeJobCard.jobNo}-${op.sequenceNo}`,
@@ -1107,10 +990,10 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
     if (!deleteConfirmBom) return;
     try {
       await deleteBOM(deleteConfirmBom.bomCode);
+      setBoms(prev => prev.filter(b => b.bomCode !== deleteConfirmBom.bomCode));
       setDeleteConfirmBom(null);
       deleteBomModal.close();
       setActionSuccess(`BOM ${deleteConfirmBom.bomCode} deleted.`);
-      await loadManufacturingData();
     } catch (err: any) {
       setActionError(err.message || 'Failed to delete BOM.');
     }
@@ -2159,7 +2042,10 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                         <Copy className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={() => setDeleteConfirmRoute(route)}
+                        onClick={() => {
+                          setDeleteConfirmRoute(route);
+                          deleteRouteModal.open({ routeCode: route.routeCode || route.partCode });
+                        }}
                         title="Delete Route Card"
                         className="p-2 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 shadow-xs text-xs font-mono font-bold cursor-pointer transition-ui hover:scale-105 active:scale-[0.96]"
                       >
@@ -2365,7 +2251,10 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                         <RefreshCw className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={() => setDeleteConfirmBom(bom)}
+                        onClick={() => {
+                          setDeleteConfirmBom(bom);
+                          deleteBomModal.open({ bomCode: bom.bomCode });
+                        }}
                         title="Delete BOM"
                         className="p-2 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 text-xs font-mono font-bold cursor-pointer transition-ui hover:scale-105 active:scale-[0.96]"
                       >
@@ -3348,6 +3237,8 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
               onClick={() => {
                 setDeleteConfirmBom(null);
                 setDeleteConfirmRoute(null);
+                deleteBomModal.close();
+                deleteRouteModal.close();
               }}
               className={`px-4 py-2 rounded-xl border text-xs font-bold transition-ui cursor-pointer ${
                 isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'

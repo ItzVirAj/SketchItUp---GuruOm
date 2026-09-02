@@ -97,8 +97,22 @@ CREATE POLICY "Public notifications read" ON public.notifications FOR SELECT USI
 DROP POLICY IF EXISTS "Public notifications modify" ON public.notifications;
 CREATE POLICY "Public notifications modify" ON public.notifications FOR ALL USING (true);
 
--- Enable Realtime publication on notifications
-ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
+-- Enable Realtime publication on notifications safely
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_publication_tables 
+      WHERE pubname = 'supabase_realtime' 
+      AND schemaname = 'public' 
+      AND tablename = 'notifications'
+    ) THEN
+      ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
+    END IF;
+  END IF;
+EXCEPTION WHEN OTHERS THEN
+  NULL;
+END $$;
 
 -- 7. SEED DEFAULT GURUOM NOTIFICATION RULES
 INSERT INTO public.notification_rules (id, name, description, enabled, severity) VALUES

@@ -65,6 +65,8 @@ import {
   insertCustomerInvoice,
   issueCustomerInvoice,
   payInvoice,
+  deleteCustomerInvoice,
+  clearAllCustomerInvoices,
   completePdiInspectionForOrder,
   generateInvoiceForOrder,
   generateChallanForOrder,
@@ -1022,6 +1024,28 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     }
   };
 
+  const handleDeleteInvoice = async (invoiceNo: string) => {
+    try {
+      setInvoices(prev => prev.filter(inv => inv.id !== invoiceNo && inv.invoiceNo !== invoiceNo));
+      await deleteCustomerInvoice(invoiceNo);
+      await addAuditLog('invoice', 'delete', `Deleted invoice #${invoiceNo}`);
+      toast.success(`Deleted invoice #${invoiceNo}`, 'Invoice Deleted');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to delete invoice', 'Delete Error');
+    }
+  };
+
+  const handleClearAllInvoices = async () => {
+    try {
+      setInvoices([]);
+      await clearAllCustomerInvoices();
+      await addAuditLog('invoice', 'clear_all', 'Cleared all customer invoices from table');
+      toast.success('All customer invoices deleted from table', 'Invoices Cleared');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to clear invoices', 'Clear Error');
+    }
+  };
+
   const handleRecordPayablePayment = async (billNo: string) => {
     try {
       setPayables(prev => prev.map(bill => {
@@ -1604,6 +1628,8 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     handleRecordInvoicePayment,
     handleCreateInvoice,
     handleIssueInvoice,
+    handleDeleteInvoice,
+    handleClearAllInvoices,
     handleRecordPayablePayment,
     handleCreateVendorBill,
     handleCreateOutwork,

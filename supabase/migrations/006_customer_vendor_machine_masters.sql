@@ -88,14 +88,25 @@ CREATE POLICY "Vendor masters access" ON public.vendor_masters FOR ALL USING (tr
 DROP POLICY IF EXISTS "Machine masters access" ON public.machine_masters;
 CREATE POLICY "Machine masters access" ON public.machine_masters FOR ALL USING (true);
 
--- Realtime Publication
+-- Realtime Publication safely
 DO $$
+DECLARE
+  tbl TEXT;
+  tbls TEXT[] := ARRAY['customer_masters', 'vendor_masters', 'machine_masters'];
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
-    ALTER PUBLICATION supabase_realtime ADD TABLE 
-      public.customer_masters,
-      public.vendor_masters,
-      public.machine_masters;
+    FOREACH tbl IN ARRAY tbls LOOP
+      IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = tbl) THEN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_publication_tables 
+          WHERE pubname = 'supabase_realtime' 
+          AND schemaname = 'public' 
+          AND tablename = tbl
+        ) THEN
+          EXECUTE 'ALTER PUBLICATION supabase_realtime ADD TABLE public.' || quote_ident(tbl);
+        END IF;
+      END IF;
+    END LOOP;
   END IF;
 EXCEPTION WHEN OTHERS THEN
   NULL;

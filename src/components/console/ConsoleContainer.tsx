@@ -209,6 +209,8 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
     handleRecordInvoicePayment,
     handleCreateInvoice,
     handleIssueInvoice,
+    handleDeleteInvoice,
+    handleClearAllInvoices,
     handleRecordPayablePayment,
     handleCreateVendorBill,
     handleCreateOutwork,
@@ -898,6 +900,8 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
               onCreateInvoice={handleCreateInvoice}
               onIssueInvoice={handleIssueInvoice}
               onRecordPayment={handleRecordInvoicePayment}
+              onDeleteInvoice={handleDeleteInvoice}
+              onClearAllInvoices={handleClearAllInvoices}
               onViewOrder={(orderId) => {
                 const target = orders.find(o => o.id === orderId || o.poNo === orderId);
                 if (target) {

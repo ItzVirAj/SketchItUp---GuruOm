@@ -117,6 +117,28 @@ export class InvoicesController {
       return res.status(400).json({ error: 'InvoiceIssueError', message: err.message });
     }
   }
+
+  async deleteInvoice(req: Request, res: Response) {
+    try {
+      const actorEmail = (req as any).user?.email;
+      const actorRole = (req as any).user?.role;
+      const data = await invoicesService.deleteInvoice(req.params.invoiceNo, actorEmail, actorRole);
+      return res.json({ message: 'Invoice deleted successfully', data });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'DeleteError', message: err.message });
+    }
+  }
+
+  async clearAllInvoices(req: Request, res: Response) {
+    try {
+      const actorEmail = (req as any).user?.email;
+      const actorRole = (req as any).user?.role;
+      const data = await invoicesService.clearAllInvoices(actorEmail, actorRole);
+      return res.json({ message: 'All invoices cleared successfully', data });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'ClearError', message: err.message });
+    }
+  }
 }
 
 export const invoicesController = new InvoicesController();

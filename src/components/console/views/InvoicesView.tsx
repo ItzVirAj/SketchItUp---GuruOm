@@ -27,7 +27,8 @@ import {
   PackageCheck,
   Hash,
   Landmark,
-  BadgePercent
+  BadgePercent,
+  Trash2
 } from 'lucide-react';
 import { 
   CustomerInvoice, 
@@ -56,6 +57,8 @@ interface InvoicesViewProps {
   onCreateInvoice?: (invoice: any) => Promise<void> | void;
   onIssueInvoice?: (invoiceNo: string) => Promise<void> | void;
   onRecordPayment?: (invoiceNo: string, paymentData: any) => void;
+  onDeleteInvoice?: (invoiceNo: string) => Promise<void> | void;
+  onClearAllInvoices?: () => Promise<void> | void;
   onViewOrder?: (orderId: string) => void;
   preselectedDispatchNo?: string | null;
   preselectedOrderPo?: string | null;
@@ -73,6 +76,8 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
   onCreateInvoice,
   onIssueInvoice,
   onRecordPayment,
+  onDeleteInvoice,
+  onClearAllInvoices,
   onViewOrder,
   preselectedDispatchNo,
   preselectedOrderPo,
@@ -877,6 +882,23 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                       <span>Fully Settled & Paid</span>
                     </div>
                   )}
+
+                  {onDeleteInvoice && (
+                    <button
+                      onClick={async () => {
+                        if (window.confirm(`Delete invoice ${inv.invoiceNo}?`)) {
+                          await onDeleteInvoice(inv.invoiceNo);
+                          setActionSuccessMsg(`Invoice ${inv.invoiceNo} deleted.`);
+                          setTimeout(() => setActionSuccessMsg(null), 4000);
+                        }
+                      }}
+                      className="p-2.5 rounded-xl border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 font-mono text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-transform duration-150 ease-out active:scale-[0.96]"
+                      title={`Delete invoice ${inv.invoiceNo}`}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete</span>
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -895,7 +917,25 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
             <div className="text-xs font-extrabold text-slate-900 dark:text-white">Customer Invoicing Ledger</div>
             <div className="mt-0.5 text-[10px] text-slate-400">GST tax invoices, statutory splits, collections, and outstanding receivable balances</div>
           </div>
-          <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>{filteredInvoices.length} invoices</span>
+          <div className="flex items-center gap-2">
+            {filteredInvoices.length > 0 && onClearAllInvoices && (
+              <button
+                onClick={async () => {
+                  if (window.confirm('Are you sure you want to delete ALL customer invoices from the table?')) {
+                    await onClearAllInvoices();
+                    setActionSuccessMsg('All customer invoices deleted successfully.');
+                    setTimeout(() => setActionSuccessMsg(null), 4000);
+                  }
+                }}
+                className="px-2.5 py-1 rounded-lg border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-mono text-[10px] font-bold uppercase transition-ui flex items-center gap-1 cursor-pointer active:scale-95"
+                title="Delete all invoices from table"
+              >
+                <Trash2 className="w-3 h-3" />
+                <span>Delete All Entries</span>
+              </button>
+            )}
+            <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>{filteredInvoices.length} invoices</span>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -1021,6 +1061,21 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                           >
                             <CreditCard className="w-3.5 h-3.5" />
                             <span>Record Payment</span>
+                          </button>
+                        )}
+                        {onDeleteInvoice && (
+                          <button
+                            onClick={async () => {
+                              if (window.confirm(`Delete invoice ${inv.invoiceNo}?`)) {
+                                await onDeleteInvoice(inv.invoiceNo);
+                                setActionSuccessMsg(`Invoice ${inv.invoiceNo} deleted.`);
+                                setTimeout(() => setActionSuccessMsg(null), 4000);
+                              }
+                            }}
+                            className="p-1.5 rounded-lg border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 transition-ui cursor-pointer"
+                            title={`Delete invoice ${inv.invoiceNo}`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         )}
                       </div>

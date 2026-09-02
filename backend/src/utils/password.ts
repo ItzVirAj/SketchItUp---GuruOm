@@ -1,7 +1,5 @@
 import argon2 from 'argon2';
 
-const DEMO_ARGON2_HASH = '$argon2id$v=19$m=65536,p=4,t=3$VgHcmjAIFdBPsWEkHYiakw$b10tFs2HPJOw+wKzZHy9zmayWA34zywOYLZOiqCIqcI';
-
 /**
  * Password hashing utility using Argon2id for Owner OS custom authentication.
  */
@@ -16,22 +14,18 @@ export async function hashPassword(password: string): Promise<string> {
 
 /**
  * Verifies a plaintext password against an Argon2id hash.
+ * NOTE: There are intentionally NO demo/fallback passwords.
+ * Every account must have a real stored hash to authenticate.
  */
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
   if (!password || !hash) return false;
-  
+
   if (hash.startsWith('$argon2id$') || hash.startsWith('$argon2i$') || hash.startsWith('$argon2d$')) {
     try {
-      const match = await argon2.verify(hash, password);
-      if (match) return true;
+      return await argon2.verify(hash, password);
     } catch (err) {
-      // ignore
+      return false;
     }
-  }
-
-  // Demo fallback check
-  if (password === '1234567890') {
-    return true;
   }
 
   return false;

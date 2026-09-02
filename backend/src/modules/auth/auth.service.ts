@@ -103,96 +103,7 @@ export interface PasswordResetToken {
 const IN_MEMORY_RESET_TOKENS: PasswordResetToken[] = [];
 
 // In-Memory Seed Directory for instant offline support and zero-latency access
-const SEED_USERS: UserRecord[] = [
-  {
-    id: 'usr-1',
-    email: 'owner@guruom.in',
-    password_hash: '$argon2id$v=19$m=65536,p=4,t=3$VgHcmjAIFdBPsWEkHYiakw$b10tFs2HPJOw+wKzZHy9zmayWA34zywOYLZOiqCIqcI',
-    full_name: 'Sachin Gharbude (Founder & CEO)',
-    role: 'SUPER ADMIN',
-    department: 'Executive Management',
-    phone: '+91 98250 12345',
-    status: 'ACTIVE',
-    is_temporary_password: true
-  },
-  {
-    id: 'usr-2',
-    email: 'admin@guruom.in',
-    password_hash: '$argon2id$v=19$m=65536,p=4,t=3$VgHcmjAIFdBPsWEkHYiakw$b10tFs2HPJOw+wKzZHy9zmayWA34zywOYLZOiqCIqcI',
-    full_name: 'System Super Admin',
-    role: 'SUPER ADMIN',
-    department: 'Executive Management',
-    phone: '+91 98250 12345',
-    status: 'ACTIVE',
-    is_temporary_password: true
-  },
-  {
-    id: 'usr-3',
-    email: 'rohan.deshpande@example.com',
-    password_hash: '$argon2id$v=19$m=65536,p=4,t=3$VgHcmjAIFdBPsWEkHYiakw$b10tFs2HPJOw+wKzZHy9zmayWA34zywOYLZOiqCIqcI',
-    full_name: 'Rohan Deshpande',
-    role: 'SUPER ADMIN',
-    department: 'Executive Management',
-    phone: '+91 98220 99001',
-    status: 'ACTIVE',
-    is_temporary_password: true
-  },
-  {
-    id: 'usr-4',
-    email: 'operator@guruom.in',
-    password_hash: '$argon2id$v=19$m=65536,p=4,t=3$VgHcmjAIFdBPsWEkHYiakw$b10tFs2HPJOw+wKzZHy9zmayWA34zywOYLZOiqCIqcI',
-    full_name: 'Rajesh Sharma',
-    role: 'OPERATOR',
-    department: 'CNC Operations',
-    phone: '+91 98250 23456',
-    status: 'ACTIVE',
-    is_temporary_password: true
-  },
-  {
-    id: 'usr-5',
-    email: 'qc@guruom.in',
-    password_hash: '$argon2id$v=19$m=65536,p=4,t=3$VgHcmjAIFdBPsWEkHYiakw$b10tFs2HPJOw+wKzZHy9zmayWA34zywOYLZOiqCIqcI',
-    full_name: 'Anita Patel',
-    role: 'QC_MANAGER',
-    department: 'Quality Assurance',
-    phone: '+91 98250 34567',
-    status: 'ACTIVE',
-    is_temporary_password: true
-  },
-  {
-    id: 'usr-6',
-    email: 'dispatch@guruom.in',
-    password_hash: '$argon2id$v=19$m=65536,p=4,t=3$VgHcmjAIFdBPsWEkHYiakw$b10tFs2HPJOw+wKzZHy9zmayWA34zywOYLZOiqCIqcI',
-    full_name: 'Vikram Singh',
-    role: 'DISPATCH_CLERK',
-    department: 'Logistics & Dispatch',
-    phone: '+91 98250 45678',
-    status: 'ACTIVE',
-    is_temporary_password: true
-  },
-  {
-    id: 'usr-7',
-    email: 'finance@guruom.in',
-    password_hash: '$argon2id$v=19$m=65536,p=4,t=3$VgHcmjAIFdBPsWEkHYiakw$b10tFs2HPJOw+wKzZHy9zmayWA34zywOYLZOiqCIqcI',
-    full_name: 'Suresh Mehta',
-    role: 'FINANCE_MANAGER',
-    department: 'Accounts & Finance',
-    phone: '+91 98250 56789',
-    status: 'ACTIVE',
-    is_temporary_password: true
-  },
-  {
-    id: 'usr-8',
-    email: 'pramod@guruom.in',
-    password_hash: '$argon2id$v=19$m=65536,p=4,t=3$VgHcmjAIFdBPsWEkHYiakw$b10tFs2HPJOw+wKzZHy9zmayWA34zywOYLZOiqCIqcI',
-    full_name: 'Pramod Parshi',
-    role: 'SUPER ADMIN',
-    department: 'Plant Operations Admin',
-    phone: '+91 98250 12345',
-    status: 'ACTIVE',
-    is_temporary_password: true
-  }
-];
+const SEED_USERS: UserRecord[] = [];
 
 // Resilient memory cache for sessions and security events
 const IN_MEMORY_SESSIONS: SessionRecord[] = [];
@@ -236,7 +147,7 @@ export class AuthService {
         return {
           id: data.id,
           email: data.email,
-          password_hash: data.password_hash || '$argon2id$v=19$m=65536,p=4,t=3$VgHcmjAIFdBPsWEkHYiakw$b10tFs2HPJOw+wKzZHy9zmayWA34zywOYLZOiqCIqcI',
+          password_hash: data.password_hash,
           full_name: data.full_name,
           role: data.role,
           department: data.department,
@@ -264,14 +175,6 @@ export class AuthService {
       console.warn('Database user lookup fallback:', err);
     }
 
-    // 3. Check seed accounts (support both new owner@guruom.in and legacy user@guruom.in alias for usr-1)
-    if (cleanEmail === 'user@guruom.in') {
-      const ownerSeed = SEED_USERS.find(u => u.id === 'usr-1');
-      if (ownerSeed) return ownerSeed;
-    }
-    const seed = SEED_USERS.find(u => u.email.toLowerCase() === cleanEmail);
-    if (seed) return seed;
-
     return null;
   }
 
@@ -291,7 +194,7 @@ export class AuthService {
         return {
           id: data.id,
           email: data.email,
-          password_hash: data.password_hash || '$argon2id$v=19$m=65536,p=4,t=3$VgHcmjAIFdBPsWEkHYiakw$b10tFs2HPJOw+wKzZHy9zmayWA34zywOYLZOiqCIqcI',
+          password_hash: data.password_hash,
           full_name: data.full_name,
           role: data.role,
           department: data.department,
@@ -318,9 +221,6 @@ export class AuthService {
     } catch (err) {
       console.warn('Database user lookup fallback:', err);
     }
-
-    const seed = SEED_USERS.find(u => u.id === id);
-    if (seed) return seed;
 
     return null;
   }

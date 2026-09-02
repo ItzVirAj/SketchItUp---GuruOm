@@ -112,6 +112,21 @@ CREATE TABLE IF NOT EXISTS public.masters (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Ensure extended columns exist if masters table was created in an earlier migration
+ALTER TABLE public.masters ADD COLUMN IF NOT EXISTS name TEXT;
+ALTER TABLE public.masters ADD COLUMN IF NOT EXISTS item_type TEXT DEFAULT 'Raw Material';
+ALTER TABLE public.masters ADD COLUMN IF NOT EXISTS category TEXT;
+ALTER TABLE public.masters ADD COLUMN IF NOT EXISTS uom TEXT DEFAULT 'Nos';
+ALTER TABLE public.masters ADD COLUMN IF NOT EXISTS gst_rate NUMERIC DEFAULT 18;
+ALTER TABLE public.masters ADD COLUMN IF NOT EXISTS standard_cost NUMERIC DEFAULT 0;
+ALTER TABLE public.masters ADD COLUMN IF NOT EXISTS selling_price NUMERIC DEFAULT 0;
+ALTER TABLE public.masters ADD COLUMN IF NOT EXISTS min_stock NUMERIC DEFAULT 0;
+ALTER TABLE public.masters ADD COLUMN IF NOT EXISTS max_stock NUMERIC DEFAULT 0;
+ALTER TABLE public.masters ADD COLUMN IF NOT EXISTS lead_time_days NUMERIC DEFAULT 0;
+ALTER TABLE public.masters ADD COLUMN IF NOT EXISTS preferred_vendor TEXT;
+ALTER TABLE public.masters ADD COLUMN IF NOT EXISTS default_warehouse TEXT DEFAULT 'Main Raw Material Store';
+ALTER TABLE public.masters ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Active';
+
 CREATE INDEX IF NOT EXISTS idx_masters_code ON public.masters(code);
 CREATE INDEX IF NOT EXISTS idx_masters_item_type ON public.masters(item_type);
 CREATE INDEX IF NOT EXISTS idx_masters_status ON public.masters(status);
@@ -213,16 +228,25 @@ CREATE POLICY "Machine masters open access" ON public.machine_masters FOR ALL US
 DROP POLICY IF EXISTS "Users master open access" ON public.users;
 CREATE POLICY "Users master open access" ON public.users FOR ALL USING (true);
 
--- 7. Realtime Publication
+-- 7. Realtime Publication safely
 DO $$
+DECLARE
+  tbl TEXT;
+  tbls TEXT[] := ARRAY['customer_masters', 'vendor_masters', 'masters', 'machine_masters', 'users'];
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
-    ALTER PUBLICATION supabase_realtime ADD TABLE 
-      public.customer_masters,
-      public.vendor_masters,
-      public.masters,
-      public.machine_masters,
-      public.users;
+    FOREACH tbl IN ARRAY tbls LOOP
+      IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = tbl) THEN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_publication_tables 
+          WHERE pubname = 'supabase_realtime' 
+          AND schemaname = 'public' 
+          AND tablename = tbl
+        ) THEN
+          EXECUTE 'ALTER PUBLICATION supabase_realtime ADD TABLE public.' || quote_ident(tbl);
+        END IF;
+      END IF;
+    END LOOP;
   END IF;
 EXCEPTION WHEN OTHERS THEN
   NULL;

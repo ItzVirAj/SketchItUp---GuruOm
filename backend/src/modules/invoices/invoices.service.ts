@@ -772,6 +772,55 @@ export class InvoicesService {
       overheadPercentage
     });
   }
+
+  /**
+   * Deletes a specific customer invoice
+   */
+  async deleteInvoice(invoiceNo: string, actorEmail?: string, actorRole?: string) {
+    try {
+      await this.db.from('customer_invoices').delete().or(`invoice_no.eq.${invoiceNo},id.eq.${invoiceNo}`);
+    } catch (err: any) {
+      console.warn('Database deleteInvoice exception:', err);
+      throw new Error(`Failed to delete invoice ${invoiceNo}: ${err.message}`);
+    }
+
+    await auditService.recordAuditLog({
+      actorEmail: actorEmail || 'accounts@guruom.in',
+      actorRole: actorRole || 'Finance Manager',
+      action: 'INVOICE_DELETED',
+      entityType: 'customer_invoices',
+      entityId: invoiceNo,
+      afterState: null,
+      metadata: { details: `Invoice ${invoiceNo} deleted from system.` }
+    }).catch(() => {});
+
+    notificationsService.broadcastEvent('invoice_deleted', { invoiceNo });
+    return { success: true, invoiceNo };
+  }
+
+  /**
+   * Deletes all customer invoices
+   */
+  async clearAllInvoices(actorEmail?: string, actorRole?: string) {
+    try {
+      await this.db.from('customer_invoices').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    } catch (err: any) {
+      console.warn('Database clearAllInvoices exception:', err);
+    }
+
+    await auditService.recordAuditLog({
+      actorEmail: actorEmail || 'accounts@guruom.in',
+      actorRole: actorRole || 'Finance Manager',
+      action: 'ALL_INVOICES_CLEARED',
+      entityType: 'customer_invoices',
+      entityId: 'ALL',
+      afterState: null,
+      metadata: { details: `All customer invoices cleared from table.` }
+    }).catch(() => {});
+
+    notificationsService.broadcastEvent('invoices_cleared', {});
+    return { success: true, message: 'All invoices cleared successfully' };
+  }
 }
 
 export const invoicesService = new InvoicesService();

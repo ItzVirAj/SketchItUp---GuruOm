@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Activity,
   AlertCircle,
@@ -6,7 +6,6 @@ import {
   Boxes,
   Building2,
   CheckCircle2,
-  ChevronDown,
   ChevronRight,
   CircleCheck,
   Clock3,
@@ -21,67 +20,13 @@ import {
   Moon,
   Route,
   ShieldCheck,
-  Sparkles,
   Sun,
   X,
   Zap
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useAuth } from '../../context/AuthContext';
-import { fetchProfiles } from '../../services/supabaseServices';
-import type { SystemUser } from '../../types/console';
-
-export const DEV_ACCOUNTS = [
-  {
-    email: 'owner@guruom.in',
-    password: '1234567890',
-    label: 'Executive Owner',
-    role: 'SUPER ADMIN',
-    name: 'Sachin Gharbude',
-  },
-  {
-    email: 'ppc@guruom.in',
-    password: '1234567890',
-    label: 'Production Planner',
-    role: 'PLANNER',
-    name: 'PPC Lead',
-  },
-  {
-    email: 'operator@guruom.in',
-    password: '1234567890',
-    label: 'Machine Operator',
-    role: 'OPERATOR',
-    name: 'CNC Machinist',
-  },
-  {
-    email: 'qc@guruom.in',
-    password: '1234567890',
-    label: 'Quality Inspector',
-    role: 'QUALITY_INSPECTOR',
-    name: 'Quality Lead',
-  },
-  {
-    email: 'stores@guruom.in',
-    password: '1234567890',
-    label: 'Store Keeper',
-    role: 'STORE_KEEPER',
-    name: 'Inventory Manager',
-  },
-  {
-    email: 'dispatch@guruom.in',
-    password: '1234567890',
-    label: 'Dispatch Lead',
-    role: 'DISPATCH_OFFICER',
-    name: 'Logistics Supervisor',
-  },
-  {
-    email: 'accounts@guruom.in',
-    password: '1234567890',
-    label: 'Finance / Accounts',
-    role: 'ACCOUNTS',
-    name: 'Commercial Lead',
-  },
-];
+import { ApiError } from '../../lib/apiClient';
 
 interface LoginPageProps {
   onLoginSuccess?: (email: string) => void;
@@ -106,28 +51,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   const [forgotEmail, setForgotEmail] = useState('');
   const [isResetting, setIsResetting] = useState(false);
   const [isSignUpModalOpen, setIsSignUpModalOpen] = useState(false);
-  const [isDevLoginOpen, setIsDevLoginOpen] = useState(false);
-  const [demoUsers, setDemoUsers] = useState<SystemUser[]>([]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    fetchProfiles()
-      .then((users) => {
-        if (!cancelled && users && users.length > 0) {
-          setDemoUsers(users);
-
-          try {
-            localStorage.setItem('stratum_demo_users', JSON.stringify(users));
-          } catch (_) { }
-        }
-      })
-      .catch(() => { });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const [pwErrorModal, setPwErrorModal] = useState<{ title: string; message: string } | null>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,10 +70,42 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       const { error: authError } = await signIn(trimmedEmail, password);
 
       if (authError) {
-        setLocalError(
-          authError.message ||
-          'Invalid email or password. Please verify your credentials.',
-        );
+        const status = authError instanceof ApiError ? authError.statusCode : undefined;
+
+        if (status === 401) {
+          // Wrong email or password -> native browser alert popup (unmissable)
+          setLocalError(null);
+          setPassword('');
+          window.alert(
+            '⚠️ Incorrect Email or Password!\n\n' +
+            'The credentials you entered do not match our records.\n' +
+            'Please check your email and password, then try again.'
+          );
+          setPwErrorModal({
+            title: 'Incorrect Email or Password',
+            message:
+              authError.message ||
+              'The credentials you entered are incorrect. Please check your email and password, then try again.',
+          });
+        } else if (status === 429) {
+          // Rate limited -> native browser alert popup (unmissable)
+          setLocalError(null);
+          window.alert(
+            '⏳ Too Many Attempts!\n\n' +
+            'Too many failed login attempts. Please wait a moment before trying again.'
+          );
+          setPwErrorModal({
+            title: 'Too Many Attempts',
+            message:
+              authError.message ||
+              'Too many failed login attempts. Please wait a moment before trying again.',
+          });
+        } else {
+          setLocalError(
+            authError.message ||
+            'Invalid email or password. Please verify your credentials.',
+          );
+        }
       } else if (onLoginSuccess) {
         onLoginSuccess(trimmedEmail);
       }
@@ -157,31 +113,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       setLocalError(
         err.message || 'An unexpected error occurred during login.',
       );
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDevQuickLogin = async (
-    devEmail: string,
-    devPass: string,
-  ) => {
-    setEmail(devEmail);
-    setPassword(devPass);
-    setLocalError(null);
-    setSuccessMsg(null);
-    setIsLoading(true);
-
-    try {
-      const { error: authError } = await signIn(devEmail, devPass);
-
-      if (authError) {
-        setLocalError(`Login failed: ${authError.message}`);
-      } else if (onLoginSuccess) {
-        onLoginSuccess(devEmail);
-      }
-    } catch (err: any) {
-      setLocalError(err.message || 'Dev login error');
     } finally {
       setIsLoading(false);
     }
@@ -219,19 +150,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       setIsResetting(false);
     }
   };
-
-  const effectiveDevAccounts = DEV_ACCOUNTS.map((account) => {
-    const matched = demoUsers.find(
-      (user) =>
-        user.email?.toLowerCase() === account.email.toLowerCase(),
-    );
-
-    return {
-      ...account,
-      name: matched?.name || account.name,
-      role: matched?.role || account.role,
-    };
-  });
 
   const inputClassName = `h-13 w-full rounded-2xl border pl-12 pr-4 text-sm font-semibold outline-none transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-200 focus:border-[var(--accent-primary)] focus:ring-4 focus:ring-[var(--accent-ring)] ${
     isDarkMode
@@ -725,105 +643,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     Request access
                   </button>
                 </div>
-
-                {/* Developer Role Quick Login Drawer */}
-                <div
-                  className={`mt-4 overflow-hidden rounded-2xl border transition-colors ${
-                    isDarkMode
-                      ? 'border-white/[0.07] bg-white/[0.025]'
-                      : 'border-slate-200 bg-white'
-                  }`}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setIsDevLoginOpen(!isDevLoginOpen)}
-                    aria-expanded={isDevLoginOpen}
-                    className={`flex min-h-12 w-full cursor-pointer items-center justify-between gap-3 px-4 text-left transition-colors ${
-                      isDarkMode ? 'hover:bg-white/[0.04]' : 'hover:bg-slate-50'
-                    }`}
-                  >
-                    <span className="flex min-w-0 items-center gap-2.5">
-                      <span
-                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
-                          isDarkMode ? 'bg-amber-400/10' : 'bg-amber-50'
-                        }`}
-                      >
-                        <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-                      </span>
-
-                      <span className="min-w-0">
-                        <span
-                          className={`block text-xs font-black ${
-                            isDarkMode ? 'text-slate-200' : 'text-slate-800'
-                          }`}
-                        >
-                          Developer Quick Login
-                        </span>
-                        <span
-                          className={`block text-[9px] font-bold uppercase tracking-[0.1em] ${
-                            isDarkMode ? 'text-slate-500' : 'text-slate-400'
-                          }`}
-                        >
-                          Testing & QA Persona Switching
-                        </span>
-                      </span>
-                    </span>
-
-                    <ChevronDown
-                      className={`h-4 w-4 shrink-0 transition-transform duration-200 ${
-                        isDevLoginOpen ? 'rotate-180' : ''
-                      } ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}
-                    />
-                  </button>
-
-                  {isDevLoginOpen && (
-                    <div
-                      className={`border-t p-3 ${
-                        isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'
-                      }`}
-                    >
-                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                        {effectiveDevAccounts.map((account) => (
-                          <button
-                            key={account.email}
-                            type="button"
-                            onClick={() =>
-                              handleDevQuickLogin(
-                                account.email,
-                                account.password,
-                              )
-                            }
-                            disabled={isLoading}
-                            className={`group flex min-h-[62px] cursor-pointer items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-left transition-ui disabled:cursor-wait disabled:opacity-50 ${
-                              isDarkMode
-                                ? 'border-white/[0.07] bg-[#09090B] hover:border-[var(--accent-primary)] hover:bg-white/[0.04]'
-                                : 'border-slate-200 bg-slate-50 hover:border-[var(--accent-primary)] hover:bg-white hover:shadow-xs'
-                            }`}
-                          >
-                            <span className="min-w-0">
-                              <span
-                                className={`block truncate text-xs font-black ${
-                                  isDarkMode ? 'text-slate-200' : 'text-slate-800'
-                                }`}
-                              >
-                                {account.label}
-                              </span>
-                              <span
-                                className={`mt-0.5 block truncate text-[9px] font-bold uppercase tracking-[0.08em] ${
-                                  isDarkMode ? 'text-slate-500' : 'text-slate-400'
-                                }`}
-                              >
-                                {account.role}
-                              </span>
-                            </span>
-
-                            <ChevronRight className="h-4 w-4 shrink-0 text-[var(--accent-primary)] transition-transform group-hover:translate-x-0.5" />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
               </div>
             </section>
           </div>
@@ -1022,10 +841,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               >
                 <div
                   className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${
-                    isDarkMode ? 'bg-amber-400/10' : 'bg-amber-100'
+                    isDarkMode ? 'bg-[var(--accent-ring)]' : 'bg-slate-100'
                   }`}
                 >
-                  <Sparkles className="h-4 w-4 text-amber-400" />
+                  <ShieldCheck className="h-4 w-4 text-[var(--accent-primary)]" />
                 </div>
 
                 <div>
@@ -1034,14 +853,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       isDarkMode ? 'text-white' : 'text-slate-900'
                     }`}
                   >
-                    Testing Access
+                    Enterprise Access Control
                   </p>
                   <p
                     className={`mt-1 text-xs font-medium leading-5 ${
                       isDarkMode ? 'text-slate-400' : 'text-slate-600'
                     }`}
                   >
-                    Use a configured role from the Developer Quick Login section on the sign-in panel.
+                    Please contact your system administrator or plant management to receive your credentials.
                   </p>
                 </div>
               </div>
@@ -1052,6 +871,79 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 className="mt-5 h-12 w-full cursor-pointer rounded-2xl bg-[var(--accent-primary)] text-sm font-black text-white shadow-lg shadow-[var(--accent-shadow)] transition-ui hover:brightness-110"
               >
                 Understood
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Wrong Credentials Popup */}
+      {pwErrorModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#000000]/80 p-4 backdrop-blur-md"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="wrong-password-title"
+        >
+          <div
+            className={`w-full max-w-md overflow-hidden rounded-[26px] border shadow-2xl animate-in fade-in zoom-in-95 duration-200 ${
+              isDarkMode
+                ? 'border-white/10 bg-[#121215] text-white shadow-black/50'
+                : 'border-white bg-white text-slate-950 shadow-slate-900/20'
+            }`}
+          >
+            <div className="relative overflow-hidden px-6 pb-2 pt-8 text-center sm:px-8">
+              <div
+                aria-hidden="true"
+                className="absolute left-1/2 top-0 h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full bg-rose-500 opacity-10 blur-3xl"
+              />
+
+              <div className="relative mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-500/15 ring-1 ring-rose-500/40">
+                <AlertCircle className="h-6 w-6 text-rose-500" />
+              </div>
+
+              <h2
+                id="wrong-password-title"
+                className="mt-5 text-2xl font-black tracking-tight"
+              >
+                {pwErrorModal.title}
+              </h2>
+
+              <p
+                className={`mx-auto mt-3 max-w-sm text-sm font-medium leading-6 ${
+                  isDarkMode ? 'text-slate-400' : 'text-slate-600'
+                }`}
+              >
+                {pwErrorModal.message}
+              </p>
+            </div>
+
+            <div className="px-6 pb-7 pt-4 sm:px-8">
+              <button
+                type="button"
+                onClick={() => {
+                  setPwErrorModal(null);
+                  document.getElementById('login-password')?.focus();
+                }}
+                className="h-12 w-full cursor-pointer rounded-2xl bg-[var(--accent-primary)] text-sm font-black text-white shadow-lg shadow-[var(--accent-shadow)] transition-ui hover:brightness-110"
+              >
+                Try Again
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setPwErrorModal(null);
+                  setForgotEmail(email);
+                  setIsForgotOpen(true);
+                }}
+                className={`mt-3 h-12 w-full cursor-pointer rounded-2xl border text-sm font-black transition-colors ${
+                  isDarkMode
+                    ? 'border-white/10 text-slate-300 hover:bg-white/[0.06]'
+                    : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                Forgot Password?
               </button>
             </div>
           </div>

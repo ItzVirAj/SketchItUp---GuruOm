@@ -15,12 +15,7 @@ router.patch('/:invoiceNo/issue', requireRole(['SUPER ADMIN', 'FINANCE_MANAGER',
 router.post('/:invoiceNo/retry-processing', requireRole(['SUPER ADMIN', 'FINANCE_MANAGER', 'ACCOUNTANT', 'OWNER']), (req, res) => invoicesController.retryInvoiceProcessing(req, res));
 router.post('/:invoiceNo/pay', requireRole(['SUPER ADMIN', 'FINANCE_MANAGER', 'ACCOUNTANT', 'OWNER', 'Accounts / Finance']), (req, res) => invoicesController.recordPayment(req, res));
 
-// Step 7: No Deletes on Transactional Records
-router.delete('/:id', (req, res) => {
-  return res.status(405).json({
-    error: 'ERR_TRANSACTION_DELETE_FORBIDDEN',
-    message: 'Transactional records cannot be deleted. Invoices must be corrected via Credit Notes or Cancellation workflows.'
-  });
-});
+router.delete('/clear-all', requireRole(['SUPER ADMIN', 'FINANCE_MANAGER', 'ACCOUNTANT', 'OWNER', 'Accounts / Finance']), (req, res) => invoicesController.clearAllInvoices(req, res));
+router.delete('/:invoiceNo', requireRole(['SUPER ADMIN', 'FINANCE_MANAGER', 'ACCOUNTANT', 'OWNER', 'Accounts / Finance']), (req, res) => invoicesController.deleteInvoice(req, res));
 
 export default router;

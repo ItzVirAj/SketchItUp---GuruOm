@@ -700,6 +700,19 @@ body.modal-open, html.modal-open {
     overflow: visible !important;
   }
 
+  #job-card-print-container {
+    position: static !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
   .print-clean-box {
     border: 1.5pt solid #000000 !important;
     border-radius: 0 !important;

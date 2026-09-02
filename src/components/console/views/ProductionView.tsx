@@ -44,8 +44,11 @@ import {
   CheckSquare,
   Sparkle,
   FastForward,
-  CheckCheck
+  CheckCheck,
+  Printer,
+  ExternalLink
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { 
   JobCard, 
   ProductionLogReport, 
@@ -55,7 +58,8 @@ import {
   RouteCard,
   RouteCardTemplateStep,
   StockItem,
-  MasterItem
+  MasterItem,
+  CompanyProfile
 } from '../../../types/console';
 import {
   fetchBOMs,
@@ -86,6 +90,7 @@ interface ProductionViewProps {
   qcItems?: QCInspection[];
   stock?: StockItem[];
   masters?: MasterItem[];
+  companyProfile?: CompanyProfile | null;
   isDarkMode: boolean;
   initialSection?: ProductionSection;
   onCreateJobCard: (newCard: Partial<JobCard>) => void;
@@ -105,6 +110,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
   qcItems = [],
   stock = [],
   masters = [],
+  companyProfile,
   isDarkMode,
   initialSection = 'job-cards',
   onCreateJobCard,
@@ -116,6 +122,8 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
   preselectedOrderPo,
   onJobCardModalOpened
 }) => {
+  const navigate = useNavigate();
+
   // Top-level Navigation Sections
   const [activeSection, setActiveSection] = useState<ProductionSection>(initialSection);
   
@@ -147,7 +155,6 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
   const [actionError, setActionError] = useState<string | null>(null);
 
   // Job Cards Modal States
-  const [showNewJobModal, setShowNewJobModal] = useState(false);
   const [orderSearchQuery, setOrderSearchQuery] = useState('');
   const [orderDropdownOpen, setOrderDropdownOpen] = useState(false);
   const [fgSearchQuery, setFgSearchQuery] = useState('');
@@ -158,7 +165,6 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
   const [selectedOpSequence, setSelectedOpSequence] = useState<number | null>(null);
 
   // Machine Breakdown Reporting Modal State
-  const [showBreakdownModal, setShowBreakdownModal] = useState(false);
   const [breakdownMachine, setBreakdownMachine] = useState('CNC-LATHE-01');
   const [breakdownReason, setBreakdownReason] = useState('Spindle Overheat & Axis Servo Error');
   const [breakdownOperator, setBreakdownOperator] = useState('Sachin G. (Lead Machinist)');
@@ -482,7 +488,6 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
         status: 'SCHEDULED',
         operations: operationsToAttach as any
       });
-      setShowNewJobModal(false);
       createJobModal.close();
       setActionSuccess(`Job Card ${newJobNo} created with ${operationsToAttach?.length || 0} routed operations.`);
     } catch (err: any) {
@@ -805,11 +810,32 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
   // ----------------------------------------------------------------
   // BOM MODAL STATES & HANDLERS
   // ----------------------------------------------------------------
-  const [isCreateBomOpen, setIsCreateBomOpen] = useState(false);
   const [editingBom, setEditingBom] = useState<BillOfMaterials | null>(null);
   const [duplicatingBom, setDuplicatingBom] = useState<BillOfMaterials | null>(null);
   const [revisionBom, setRevisionBom] = useState<BillOfMaterials | null>(null);
   const [deleteConfirmBom, setDeleteConfirmBom] = useState<BillOfMaterials | null>(null);
+
+  // Controlled Parent Part Code & Name for BOM Modal
+  const [bomFormParentCode, setBomFormParentCode] = useState<string>('');
+  const [bomFormParentName, setBomFormParentName] = useState<string>('');
+
+  // Finished Goods filtered from Items Master for BOM & Route Card configuration
+  const fgMasters = useMemo(() => {
+    return (masters || [])
+      .filter(m => m.itemType === 'Finished Good' || m.isFinishedGoods === true)
+      .sort((a, b) => (a.code || '').localeCompare(b.code || ''));
+  }, [masters]);
+
+  // Non-finished-goods categorized items for BOM Component Rows
+  const bomComponentMasters = useMemo(() => {
+    const list = masters || [];
+    const rm = list.filter(m => m.itemType === 'Raw Material').sort((a, b) => (a.code || '').localeCompare(b.code || ''));
+    const sf = list.filter(m => m.itemType === 'Semi-Finished').sort((a, b) => (a.code || '').localeCompare(b.code || ''));
+    const bo = list.filter(m => m.itemType === 'Bought-Out').sort((a, b) => (a.code || '').localeCompare(b.code || ''));
+    const co = list.filter(m => m.itemType === 'Consumable').sort((a, b) => (a.code || '').localeCompare(b.code || ''));
+    const totalCount = rm.length + sf.length + bo.length + co.length;
+    return { rm, sf, bo, co, totalCount };
+  }, [masters]);
 
   // Dynamic component items for BOM modal
   const [bomFormComponents, setBomFormComponents] = useState<Array<{
@@ -836,6 +862,10 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
 
   const handleOpenCreateBom = () => {
     setEditingBom(null);
+    const initialCode = fgMasters[0]?.code || '';
+    setBomFormParentCode(initialCode);
+    const matched = masters.find(m => m.code === initialCode);
+    setBomFormParentName(matched?.name || matched?.description || '');
     setBomFormComponents([
       {
         componentCode: 'RAW-EN8-BAR-32MM',
@@ -853,6 +883,8 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
 
   const handleOpenEditBom = (bom: BillOfMaterials) => {
     setEditingBom(bom);
+    setBomFormParentCode(bom.parentPartCode || '');
+    setBomFormParentName(bom.parentPartName || '');
     setBomFormComponents(
       bom.components?.length > 0 
         ? bom.components.map(c => ({
@@ -903,13 +935,14 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
     setBomFormComponents(prev => {
       const copy = [...prev];
       copy[index] = { ...copy[index], [field]: value };
-      // Auto-fill component name from masters if componentCode matches
+      // Auto-fill component name, unit, and cost from masters if componentCode matches
       if (field === 'componentCode') {
         const found = masters.find(m => m.code.toLowerCase() === String(value).toLowerCase());
         if (found) {
-          copy[index].componentName = found.name;
-          if (found.uom) copy[index].unit = found.uom;
-          if (found.rate) copy[index].unitCost = found.rate;
+          copy[index].componentName = found.name || found.description || copy[index].componentName;
+          if (found.unit) copy[index].unit = found.unit;
+          if (found.standardCost) copy[index].unitCost = found.standardCost;
+          else if (found.purchaseRate) copy[index].unitCost = found.purchaseRate;
         }
       }
       return copy;
@@ -1002,10 +1035,16 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
   // ----------------------------------------------------------------
   // ROUTE CARD MODAL STATES & HANDLERS
   // ----------------------------------------------------------------
-  const [isCreateRouteOpen, setIsCreateRouteOpen] = useState(false);
   const [editingRoute, setEditingRoute] = useState<RouteCard | null>(null);
   const [duplicatingRoute, setDuplicatingRoute] = useState<RouteCard | null>(null);
   const [deleteConfirmRoute, setDeleteConfirmRoute] = useState<RouteCard | null>(null);
+
+  // Controlled Part Code & Description for Route Card Modal
+  const [routeFormPartCode, setRouteFormPartCode] = useState<string>('');
+  const [routeFormPartDescription, setRouteFormPartDescription] = useState<string>('');
+
+  // Finished Goods filtered from Items Master for Route Card configuration
+  const routeFgMasters = fgMasters;
 
   // Standard Presets for Quick Route Card construction
   const standardRoutePreset: Array<{
@@ -1038,11 +1077,17 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
   const handleOpenCreateRoute = () => {
     setEditingRoute(null);
     setRouteFormSteps(standardRoutePreset);
+    const initialCode = routeFgMasters[0]?.code || '';
+    setRouteFormPartCode(initialCode);
+    const matched = masters.find(m => m.code === initialCode);
+    setRouteFormPartDescription(matched?.description || matched?.name || '');
     createRouteModal.open();
   };
 
   const handleOpenEditRoute = (route: RouteCard) => {
     setEditingRoute(route);
+    setRouteFormPartCode(route.partCode || '');
+    setRouteFormPartDescription(route.partDescription || '');
     setRouteFormSteps(
       route.operations?.length > 0
         ? route.operations.map(op => ({
@@ -1167,8 +1212,13 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
     if (createBomModal.isOpen && createBomModal.params.bomCode && !editingBom) {
       const found = boms.find(b => b.bomCode === createBomModal.params.bomCode);
       if (found) handleOpenEditBom(found);
+    } else if (createBomModal.isOpen && !editingBom && !bomFormParentCode) {
+      const initialCode = fgMasters[0]?.code || '';
+      setBomFormParentCode(initialCode);
+      const matched = masters.find(m => m.code === initialCode);
+      setBomFormParentName(matched?.name || matched?.description || '');
     }
-  }, [createBomModal.isOpen, createBomModal.params.bomCode, boms, editingBom]);
+  }, [createBomModal.isOpen, createBomModal.params.bomCode, boms, editingBom, fgMasters, masters, bomFormParentCode]);
 
   useEffect(() => {
     if (duplicateBomModal.isOpen && duplicateBomModal.params.bomCode && !duplicatingBom) {
@@ -1195,8 +1245,13 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
     if (createRouteModal.isOpen && createRouteModal.params.routeCode && !editingRoute) {
       const found = routeCards.find(r => r.routeCode === createRouteModal.params.routeCode || r.partCode === createRouteModal.params.routeCode);
       if (found) handleOpenEditRoute(found);
+    } else if (createRouteModal.isOpen && !editingRoute && !routeFormPartCode) {
+      const initialCode = routeFgMasters[0]?.code || '';
+      setRouteFormPartCode(initialCode);
+      const matched = masters.find(m => m.code === initialCode);
+      setRouteFormPartDescription(matched?.description || matched?.name || '');
     }
-  }, [createRouteModal.isOpen, createRouteModal.params.routeCode, routeCards, editingRoute]);
+  }, [createRouteModal.isOpen, createRouteModal.params.routeCode, routeCards, editingRoute, routeFgMasters, masters, routeFormPartCode]);
 
   useEffect(() => {
     if (duplicateRouteModal.isOpen && duplicateRouteModal.params.routeCode && !duplicatingRoute) {
@@ -1316,7 +1371,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
               </button>
             )}
             <button
-              onClick={() => setShowBreakdownModal(true)}
+              onClick={() => breakdownModal.open()}
               className="min-h-[44px] px-3 py-2 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-500 font-bold text-xs flex items-center gap-1.5 cursor-pointer active:scale-[0.96] transition-transform"
             >
               <AlertTriangle className="w-4 h-4" />
@@ -1728,16 +1783,30 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                     </div>
 
                     {/* Touch Action Buttons */}
-                    <div className="pt-1" onClick={(e) => e.stopPropagation()}>
+                    <div className="pt-1 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => {
                           setSelectedJobForDetail(jc);
                           jobDetailModal.open({ jobNo: jc.jobNo });
                         }}
-                        className="w-full py-2 px-3 rounded-xl font-mono text-xs font-bold bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-500 hover:to-[#5B75F8] text-white border border-[#7B92FF]/30 shadow-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.96] transition-ui"
+                        className="flex-1 py-2 px-3 rounded-xl font-mono text-xs font-bold bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-500 hover:to-[#5B75F8] text-white border border-[#7B92FF]/30 shadow-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.96] transition-ui"
                       >
                         <Route className="w-3.5 h-3.5 text-white" />
                         <span>View Card</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedJobForDetail(jc);
+                          jobDetailModal.open({ jobNo: jc.jobNo });
+                        }}
+                        title="Print Route Card"
+                        className={`p-2 rounded-xl border flex items-center justify-center font-mono text-xs transition-ui cursor-pointer ${
+                          isDarkMode
+                            ? 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white'
+                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        <Printer className="w-4 h-4 text-emerald-400" />
                       </button>
                     </div>
                   </div>
@@ -1864,18 +1933,34 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                             </span>
                           </td>
                           <td className="py-3 px-5 text-center" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              onClick={() => {
-                                setSelectedJobForDetail(jc);
-                                jobDetailModal.open({ jobNo: jc.jobNo });
-                              }}
-                              className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-ui cursor-pointer ${
-                                isDarkMode ? 'bg-[var(--accent-soft-dark)] text-[var(--accent-text-dark)] hover:brightness-125 border border-[var(--accent-border-dark)]' : 'bg-[var(--accent-soft-light)] text-[var(--accent-text-light)] hover:brightness-95 border border-[var(--accent-border-light)]'
-                              }`}
-                              title="Open Full Job Card Detail View"
-                            >
-                              View Card
-                            </button>
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                onClick={() => {
+                                  setSelectedJobForDetail(jc);
+                                  jobDetailModal.open({ jobNo: jc.jobNo });
+                                }}
+                                className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-ui cursor-pointer ${
+                                  isDarkMode ? 'bg-[var(--accent-soft-dark)] text-[var(--accent-text-dark)] hover:brightness-125 border border-[var(--accent-border-dark)]' : 'bg-[var(--accent-soft-light)] text-[var(--accent-text-light)] hover:brightness-95 border border-[var(--accent-border-light)]'
+                                }`}
+                                title="Open Full Job Card Detail View"
+                              >
+                                View Card
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedJobForDetail(jc);
+                                  jobDetailModal.open({ jobNo: jc.jobNo });
+                                }}
+                                className={`p-1.5 rounded-xl border flex items-center justify-center font-mono text-xs transition-ui cursor-pointer ${
+                                  isDarkMode
+                                    ? 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white'
+                                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
+                                }`}
+                                title="Print Route Card"
+                              >
+                                <Printer className="w-3.5 h-3.5 text-emerald-400" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -2581,19 +2666,73 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
         <form onSubmit={handleSaveRouteSubmit} className="space-y-4 text-xs font-sans">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                Part Code *
-              </label>
-              <input
-                name="partCode"
-                required
-                defaultValue={editingRoute?.partCode || '00000001'}
-                placeholder="e.g. 00000001"
-                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
-                  isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
-                }`}
-              />
+              <div className="flex items-center justify-between mb-1.5">
+                <label className={`block text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Part Code *
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    createRouteModal.close();
+                    navigate('/masters/items');
+                    if (onNavigate) onNavigate('masters');
+                  }}
+                  className="text-[10px] font-mono font-medium text-emerald-500 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer transition-ui"
+                  title="Manage Items in Items Master"
+                >
+                  <span>Manage Items Master</span>
+                  <ExternalLink className="w-3 h-3" />
+                </button>
+              </div>
+
+              {routeFgMasters.length > 0 ? (
+                <select
+                  name="partCode"
+                  required
+                  value={routeFormPartCode}
+                  onChange={(e) => {
+                    const newCode = e.target.value;
+                    setRouteFormPartCode(newCode);
+                    const matched = masters.find(m => m.code === newCode);
+                    if (matched) {
+                      setRouteFormPartDescription(matched.description || matched.name || '');
+                    }
+                  }}
+                  className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui cursor-pointer ${
+                    isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
+                  }`}
+                >
+                  {/* When editing an existing route card whose partCode is not in routeFgMasters, keep it as an option */}
+                  {editingRoute?.partCode && !routeFgMasters.some(m => m.code === editingRoute.partCode) && (
+                    <option value={editingRoute.partCode}>
+                      {editingRoute.partCode} — {editingRoute.partDescription || 'Existing Part (Unlisted FG)'}
+                    </option>
+                  )}
+                  {routeFgMasters.map(m => (
+                    <option key={m.code} value={m.code}>
+                      {m.code} — {m.name || m.description}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <>
+                  <input
+                    name="partCode"
+                    required
+                    value={routeFormPartCode}
+                    onChange={(e) => setRouteFormPartCode(e.target.value)}
+                    placeholder="e.g. FG-0001"
+                    className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
+                      isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
+                    }`}
+                  />
+                  <p className="text-[10px] text-amber-500 dark:text-amber-400 mt-1 font-mono">
+                    No finished-goods items found in Items Master — showing manual entry
+                  </p>
+                </>
+              )}
             </div>
+
             <div className="md:col-span-2">
               <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                 Part Description *
@@ -2601,7 +2740,8 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
               <input
                 name="partDescription"
                 required
-                defaultValue={editingRoute?.partDescription || 'MAIN SPINDLE HOUSING 120MM'}
+                value={routeFormPartDescription}
+                onChange={(e) => setRouteFormPartDescription(e.target.value)}
                 placeholder="e.g. Precision Shaft"
                 className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-ui ${
                   isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500 shadow-xs'
@@ -2782,7 +2922,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
           <div className={`pt-4 border-t flex justify-end gap-3 font-sans ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
             <button
               type="button"
-              onClick={() => setIsCreateRouteOpen(false)}
+              onClick={() => createRouteModal.close()}
               className={`px-4 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-ui ${
                 isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
               }`}
@@ -2828,17 +2968,71 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
               />
             </div>
             <div>
-              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                Parent Part Code *
-              </label>
-              <input
-                name="parentCode"
-                required
-                defaultValue={editingBom?.parentPartCode || '00000001'}
-                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
-                  isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
-                }`}
-              />
+              <div className="flex items-center justify-between mb-1.5">
+                <label className={`block text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Parent Part Code *
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    createBomModal.close();
+                    navigate('/masters/items');
+                    if (onNavigate) onNavigate('masters');
+                  }}
+                  className="text-[10px] font-mono font-medium text-emerald-500 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer transition-ui"
+                  title="Manage Items in Items Master"
+                >
+                  <span>Manage Items Master</span>
+                  <ExternalLink className="w-3 h-3" />
+                </button>
+              </div>
+
+              {fgMasters.length > 0 ? (
+                <select
+                  name="parentCode"
+                  required
+                  value={bomFormParentCode}
+                  onChange={(e) => {
+                    const newCode = e.target.value;
+                    setBomFormParentCode(newCode);
+                    const matched = masters.find(m => m.code === newCode);
+                    if (matched) {
+                      setBomFormParentName(matched.name || matched.description || '');
+                    }
+                  }}
+                  className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui cursor-pointer ${
+                    isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                  }`}
+                >
+                  {/* When editing an existing BOM whose parentPartCode is not in fgMasters, keep it as an option */}
+                  {editingBom?.parentPartCode && !fgMasters.some(m => m.code === editingBom.parentPartCode) && (
+                    <option value={editingBom.parentPartCode}>
+                      {editingBom.parentPartCode} — {editingBom.parentPartName || 'Existing Part (Unlisted FG)'}
+                    </option>
+                  )}
+                  {fgMasters.map(m => (
+                    <option key={m.code} value={m.code}>
+                      {m.code} — {m.name || m.description}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <>
+                  <input
+                    name="parentCode"
+                    required
+                    value={bomFormParentCode}
+                    onChange={(e) => setBomFormParentCode(e.target.value)}
+                    placeholder="e.g. FG-0001"
+                    className={`h-11 w-full rounded-xl border px-3 text-xs font-mono outline-none transition-ui ${
+                      isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                    }`}
+                  />
+                  <p className="text-[10px] text-amber-500 dark:text-amber-400 mt-1 font-mono">
+                    No finished-goods items found in Items Master — showing manual entry
+                  </p>
+                </>
+              )}
             </div>
             <div>
               <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
@@ -2847,7 +3041,9 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
               <input
                 name="parentName"
                 required
-                defaultValue={editingBom?.parentPartName || 'MAIN SPINDLE HOUSING 120MM'}
+                value={bomFormParentName}
+                onChange={(e) => setBomFormParentName(e.target.value)}
+                placeholder="e.g. Precision Shaft"
                 className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-ui ${
                   isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
                 }`}
@@ -2921,16 +3117,77 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                     isDarkMode ? 'bg-[#09090B] border-slate-800' : 'bg-slate-50 border-slate-200'
                   }`}
                 >
-                  <div className="w-40">
-                    <input
-                      value={comp.componentCode}
-                      onChange={(e) => handleBomComponentChange(idx, 'componentCode', e.target.value)}
-                      placeholder="SKU (e.g. RAW-EN8)"
-                      required
-                      className={`w-full rounded-xl border p-2 text-xs font-mono outline-none focus:border-[var(--accent-primary)] ${
-                        isDarkMode ? 'border-slate-700/80 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-900 shadow-2xs'
-                      }`}
-                    />
+                  <div className="w-40 sm:w-48">
+                    {bomComponentMasters.totalCount > 0 ? (
+                      <select
+                        value={comp.componentCode}
+                        onChange={(e) => handleBomComponentChange(idx, 'componentCode', e.target.value)}
+                        required
+                        className={`w-full rounded-xl border p-2 text-xs font-mono outline-none cursor-pointer focus:border-[var(--accent-primary)] ${
+                          isDarkMode ? 'border-slate-700/80 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-900 shadow-2xs'
+                        }`}
+                      >
+                        <option value="" disabled>Select Component...</option>
+                        {/* Preserve existing/custom code if not in any optgroup */}
+                        {comp.componentCode &&
+                          !masters.some(m => m.code === comp.componentCode && (m.itemType === 'Raw Material' || m.itemType === 'Semi-Finished' || m.itemType === 'Bought-Out' || m.itemType === 'Consumable')) && (
+                            <option value={comp.componentCode}>
+                              {comp.componentCode} — {comp.componentName || 'Custom / Existing Component'}
+                            </option>
+                        )}
+                        {bomComponentMasters.rm.length > 0 && (
+                          <optgroup label="Raw Material">
+                            {bomComponentMasters.rm.map(m => (
+                              <option key={m.code} value={m.code}>
+                                {m.code} — {m.name || m.description}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                        {bomComponentMasters.sf.length > 0 && (
+                          <optgroup label="Semi-Finished">
+                            {bomComponentMasters.sf.map(m => (
+                              <option key={m.code} value={m.code}>
+                                {m.code} — {m.name || m.description}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                        {bomComponentMasters.bo.length > 0 && (
+                          <optgroup label="Bought-Out">
+                            {bomComponentMasters.bo.map(m => (
+                              <option key={m.code} value={m.code}>
+                                {m.code} — {m.name || m.description}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                        {bomComponentMasters.co.length > 0 && (
+                          <optgroup label="Consumable">
+                            {bomComponentMasters.co.map(m => (
+                              <option key={m.code} value={m.code}>
+                                {m.code} — {m.name || m.description}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                      </select>
+                    ) : (
+                      <>
+                        <input
+                          value={comp.componentCode}
+                          onChange={(e) => handleBomComponentChange(idx, 'componentCode', e.target.value)}
+                          placeholder="SKU (e.g. RAW-EN8)"
+                          required
+                          className={`w-full rounded-xl border p-2 text-xs font-mono outline-none focus:border-[var(--accent-primary)] ${
+                            isDarkMode ? 'border-slate-700/80 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-900 shadow-2xs'
+                          }`}
+                        />
+                        <p className="text-[10px] text-amber-500 dark:text-amber-400 mt-1 font-mono">
+                          No component items found in Items Master — showing manual entry
+                        </p>
+                      </>
+                    )}
                   </div>
 
                   <div className="flex-1 min-w-[140px]">
@@ -3023,7 +3280,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
           <div className={`pt-4 border-t flex justify-end gap-3 font-sans ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
             <button
               type="button"
-              onClick={() => setIsCreateBomOpen(false)}
+              onClick={() => createBomModal.close()}
               className={`px-4 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-ui ${
                 isDarkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
               }`}
@@ -3658,7 +3915,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
           <div className={`pt-4 border-t flex items-center justify-end gap-3 font-sans ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
             <button 
               type="button" 
-              onClick={() => setShowNewJobModal(false)} 
+              onClick={() => createJobModal.close()} 
               className={`px-4 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-ui ${
                 isDarkMode 
                   ? 'border-slate-700 text-slate-300 hover:bg-slate-800' 
@@ -4536,6 +4793,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
         stock={stock}
         masters={masters}
         productionLogs={productionLogs}
+        companyProfile={companyProfile}
         isDarkMode={isDarkMode}
         onLogProduction={onLogProduction}
         onStartOperation={onStartOperation}
@@ -4624,7 +4882,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
           <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
             <button
               type="button"
-              onClick={() => setShowBreakdownModal(false)}
+              onClick={() => breakdownModal.close()}
               className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
             >
               Cancel

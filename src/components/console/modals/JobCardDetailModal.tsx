@@ -22,7 +22,9 @@ import {
   ChevronRight,
   Sparkles,
   Play,
-  CheckSquare
+  CheckSquare,
+  Printer,
+  Download
 } from 'lucide-react';
 import {
   JobCard,
@@ -33,9 +35,11 @@ import {
   BillOfMaterials,
   RouteCard,
   QCInspection,
-  PDIInspection
+  PDIInspection,
+  CompanyProfile
 } from '../../../types/console';
 import { recordInventoryMovement } from '../../../services/supabaseServices';
+import { RouteCardTravelerPrint } from '../shared/RouteCardTravelerPrint';
 
 export interface MaterialConsumptionRecord {
   id: string;
@@ -64,6 +68,7 @@ interface JobCardDetailModalProps {
   stock?: StockItem[];
   masters?: MasterItem[];
   productionLogs?: ProductionLogReport[];
+  companyProfile?: CompanyProfile | null;
   isDarkMode?: boolean;
   onLogProduction?: (log: Partial<ProductionLogReport>) => void | Promise<any>;
   onStartOperation?: (jobNo: string, payload: any) => Promise<any>;
@@ -82,6 +87,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
   stock = [],
   masters = [],
   productionLogs = [],
+  companyProfile,
   isDarkMode = true,
   onLogProduction,
   onStartOperation,
@@ -92,7 +98,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
   // Local reactive logs and consumptions for immediate UI feedback without page refresh
   const [localLogs, setLocalLogs] = useState<ProductionLogReport[]>([]);
   const [localConsumptions, setLocalConsumptions] = useState<MaterialConsumptionRecord[]>([]);
-  const [activeMobileSection, setActiveMobileSection] = useState<'routes' | 'materials' | 'logs' | 'history'>('routes');
+  const [activeMobileSection, setActiveMobileSection] = useState<'routes' | 'materials' | 'logs' | 'shifts' | 'history' | 'traveler'>('routes');
 
   // Action status messages
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -628,7 +634,9 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-slate-950/85 backdrop-blur-md font-sans overflow-y-auto">
-      <div className={`relative w-full max-w-5xl h-[100dvh] sm:h-auto sm:max-h-[92vh] flex flex-col rounded-none sm:rounded-3xl border shadow-2xl transition-ui overflow-hidden ${
+      <div 
+        id="job-card-print-container" 
+        className={`relative w-full max-w-5xl h-[100dvh] sm:h-auto sm:max-h-[92vh] flex flex-col rounded-none sm:rounded-3xl border shadow-2xl transition-ui overflow-hidden ${
         isDarkMode 
           ? 'bg-slate-900/95 border-slate-800 text-white backdrop-blur-2xl shadow-[#5B75F8]/10' 
           : 'bg-white border-slate-200 text-slate-900 shadow-2xl'
@@ -637,7 +645,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
         {/* ========================================================================= */}
         {/* 1. HEADER BLOCK */}
         {/* ========================================================================= */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-200 dark:border-slate-800/90 bg-slate-50/80 dark:bg-slate-950/60 shrink-0">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-200 dark:border-slate-800/90 bg-slate-50/80 dark:bg-slate-950/60 shrink-0 no-print">
           <div className="flex items-start sm:items-center gap-3">
             <div className="p-2.5 sm:p-3 rounded-2xl bg-gradient-to-tr from-[#5B75F8] to-indigo-600 text-white shadow-md shadow-[#5B75F8]/20 shrink-0">
               <Factory className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -730,6 +738,36 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                 <span>Log Production</span>
               </button>
             )}
+            {/* Print Action */}
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className={`p-2 rounded-xl border flex items-center gap-1.5 text-xs font-mono font-semibold transition-ui cursor-pointer ${
+                isDarkMode 
+                  ? 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white' 
+                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
+              }`}
+              title="Print Route Card Traveler"
+            >
+              <Printer className="w-4 h-4 text-emerald-400" />
+              <span className="hidden sm:inline">Print</span>
+            </button>
+
+            {/* Download PDF Action */}
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className={`p-2 rounded-xl border flex items-center gap-1.5 text-xs font-mono font-semibold transition-ui cursor-pointer ${
+                isDarkMode 
+                  ? 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white' 
+                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
+              }`}
+              title="Use 'Save as PDF' in the print dialog"
+            >
+              <Download className="w-4 h-4 text-indigo-400" />
+              <span className="hidden sm:inline">PDF</span>
+            </button>
+
             <button
               onClick={onClose}
               className={`p-2 rounded-2xl border transition-ui cursor-pointer ${
@@ -746,7 +784,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
         {/* ========================================================================= */}
         {/* SUMMARY KPI CARDS (Both Mobile & PC View) */}
         {/* ========================================================================= */}
-        <div className={`p-3.5 sm:p-5 border-b shrink-0 transition-ui ${
+        <div className={`p-3.5 sm:p-5 border-b shrink-0 transition-ui no-print ${
           isDarkMode 
             ? 'bg-slate-950/40 border-slate-800/80 backdrop-blur-xl' 
             : 'bg-slate-50/70 border-slate-200'
@@ -861,11 +899,12 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
         {/* ========================================================================= */}
         {/* MOBILE SECTION NAVIGATION BAR (Viewport < md) */}
         {/* ========================================================================= */}
-        <div className={`flex md:hidden items-center gap-1.5 p-2.5 border-b overflow-x-auto scrollbar-none shrink-0 ${
+        <div className={`flex md:hidden items-center gap-1.5 p-2.5 border-b overflow-x-auto scrollbar-none shrink-0 no-print ${
           isDarkMode ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-100/90 border-slate-200'
         }`}>
           {[
             { id: 'routes', label: 'Route Steps', icon: Route, count: `${completedStepsCount}/${totalStepsCount}` },
+            { id: 'traveler', label: 'Traveler', icon: Printer, count: 'Print' },
             { id: 'materials', label: 'BOM Materials', icon: Layers, count: allMaterialRows.length },
             { id: 'logs', label: 'Shift Logs', icon: Activity, count: allJobLogs.length },
             { id: 'history', label: 'History', icon: History, count: localConsumptions.length },
@@ -905,13 +944,13 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
           
           {/* Feedback alerts */}
           {errorMsg && (
-            <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-mono flex items-center gap-2">
+            <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-mono flex items-center gap-2 no-print">
               <AlertTriangle className="w-4 h-4 shrink-0" />
               <span>{errorMsg}</span>
             </div>
           )}
           {successMsg && (
-            <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono flex items-center gap-2">
+            <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono flex items-center gap-2 no-print">
               <CheckCircle2 className="w-4 h-4 shrink-0" />
               <span>{successMsg}</span>
             </div>
@@ -920,7 +959,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
           {/* ========================================================================= */}
           {/* 2. ROUTE STEPS SECTION (Desktop Table + Mobile Stepper Cards) */}
           {/* ========================================================================= */}
-          <div className={`space-y-3 ${activeMobileSection === 'routes' ? 'block' : 'hidden md:block'}`}>
+          <div className={`space-y-3 no-print ${activeMobileSection === 'routes' ? 'block' : 'hidden md:block'}`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Route className="w-4 h-4 text-[#5B75F8]" />
@@ -1140,9 +1179,44 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
           </div>
 
           {/* ========================================================================= */}
-          {/* 3. MATERIAL CONSUMPTION SECTION (Desktop Table + Mobile Cards) */}
+          {/* 3. PRINTABLE ROUTE CARD / JOB TRAVELER (PRINT-READY DOCUMENT) */}
           {/* ========================================================================= */}
-          <div className={`space-y-3 ${activeMobileSection === 'materials' ? 'block' : 'hidden md:block'}`}>
+          <div className={`space-y-3 ${activeMobileSection === 'traveler' ? 'block' : 'hidden md:block'}`}>
+            <div className="flex items-center justify-between no-print">
+              <div className="flex items-center gap-2">
+                <Printer className="w-4 h-4 text-emerald-400" />
+                <h3 className={`font-bold text-sm font-mono tracking-tight ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+                  Shopfloor Route Card / Job Traveler (Print Preview)
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className={`px-3 py-1.5 rounded-xl border flex items-center gap-1.5 text-xs font-mono font-bold transition-ui cursor-pointer ${
+                  isDarkMode
+                    ? 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white'
+                    : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+                title="Print Traveler Sheet"
+              >
+                <Printer className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Print Sheet</span>
+              </button>
+            </div>
+
+            <RouteCardTravelerPrint
+              jobCard={jobCard}
+              order={orders.find(o => o.poNo === jobCard.orderPo || o.id === jobCard.orderPo)}
+              routeCard={routeCards.find(rc => rc.partCode === jobCard.partCode)}
+              companyProfile={companyProfile}
+              isDarkMode={isDarkMode}
+            />
+          </div>
+
+          {/* ========================================================================= */}
+          {/* 4. MATERIAL CONSUMPTION SECTION (Desktop Table + Mobile Cards) */}
+          {/* ========================================================================= */}
+          <div className={`space-y-3 no-print ${activeMobileSection === 'materials' ? 'block' : 'hidden md:block'}`}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <div className="flex items-center gap-2">
@@ -1252,9 +1326,9 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
           </div>
 
           {/* ========================================================================= */}
-          {/* 4. PRODUCTION LOGS / SHIFTS SECTION (Desktop Table + Mobile Cards) */}
+          {/* 5. PRODUCTION LOGS / SHIFTS SECTION (Desktop Table + Mobile Cards) */}
           {/* ========================================================================= */}
-          <div className={`space-y-3 ${activeMobileSection === 'shifts' ? 'block' : 'hidden md:block'}`}>
+          <div className={`space-y-3 no-print ${(activeMobileSection === 'shifts' || activeMobileSection === 'logs') ? 'block' : 'hidden md:block'}`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Activity className="w-4 h-4 text-[#5B75F8]" />
@@ -1352,9 +1426,9 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
           </div>
 
           {/* ========================================================================= */}
-          {/* 5. CONSUMPTION HISTORY SECTION (Desktop Table + Mobile Cards) */}
+          {/* 6. CONSUMPTION HISTORY SECTION (Desktop Table + Mobile Cards) */}
           {/* ========================================================================= */}
-          <div className={`space-y-3 ${activeMobileSection === 'history' ? 'block' : 'hidden md:block'}`}>
+          <div className={`space-y-3 no-print ${activeMobileSection === 'history' ? 'block' : 'hidden md:block'}`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <History className="w-4 h-4 text-[#5B75F8]" />
@@ -1466,7 +1540,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-t border-slate-200 dark:border-slate-800/90 bg-slate-50/50 dark:bg-slate-950/40 flex items-center justify-between font-mono text-xs shrink-0">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-t border-slate-200 dark:border-slate-800/90 bg-slate-50/50 dark:bg-slate-950/40 flex items-center justify-between font-mono text-xs shrink-0 no-print">
           <div className="text-slate-400 flex items-center gap-2 text-[11px]">
             <span>Job: <strong>{jobCard.jobNo}</strong></span>
             <span>•</span>
@@ -1489,7 +1563,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
       {/* SUB-MODAL 1: ADD UNPLANNED MATERIAL */}
       {/* ========================================================================= */}
       {showAddMaterialModal && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans no-print">
           <div className={`w-full max-w-md rounded-3xl border p-6 space-y-4 shadow-2xl transition-ui ${
             isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
           }`}>
@@ -1656,7 +1730,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
       {/* SUB-MODAL 2: QUICK LOG PRODUCTION SHIFT OUTPUT */}
       {/* ========================================================================= */}
       {showLogProductionModal && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans no-print">
           <div className={`w-full max-w-md rounded-3xl border p-6 space-y-4 shadow-2xl transition-ui ${
             isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
           }`}>

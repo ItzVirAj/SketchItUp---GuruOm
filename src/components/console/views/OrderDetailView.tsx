@@ -1827,6 +1827,14 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               renderActions: () => (
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
                   <button
+                    disabled={isRunningMaterialCheck}
+                    onClick={handleMaterialCheckAction}
+                    className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold shadow-md shadow-[#5B75F8]/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${isRunningMaterialCheck ? 'animate-spin' : ''}`} />
+                    <span>{isRunningMaterialCheck ? 'Checking...' : 'Re-check Material'}</span>
+                  </button>
+                  <button
                     onClick={() => onNavigate?.('inventory')}
                     className="px-3.5 py-2 rounded-xl bg-amber-500/20 text-amber-500 dark:text-amber-300 border border-amber-500/40 text-xs font-bold cursor-pointer hover:bg-amber-500/30 flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
                   >

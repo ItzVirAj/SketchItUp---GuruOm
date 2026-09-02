@@ -727,6 +727,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
               qcItems={qcQueue}
               stock={stock}
               masters={masters}
+              companyProfile={companyProfile}
               isDarkMode={isDarkMode}
               initialSection={currentView === 'bom' ? 'bom' : currentView === 'route-cards' ? 'route-cards' : 'job-cards'}
               onCreateJobCard={handleCreateJobCard}

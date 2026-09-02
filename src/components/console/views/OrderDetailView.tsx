@@ -49,6 +49,7 @@ import { getCurrentFinancialYear, formatDocumentNumber } from '../../../utils/st
 import { ChallanDetailModal } from '../modals/ChallanDetailModal';
 import { useUrlModal } from '../../../hooks/useUrlModal';
 import { LineItemProgressBadge } from '../LineItemProgressBadge';
+import { OrderClosureSummaryCard } from '../OrderClosureSummaryCard';
 
 interface OrderDetailViewProps {
   order: CustomerOrder;
@@ -2623,6 +2624,22 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           </table>
         </div>
       </div>
+
+      {/* Closure Summary — shown only for settled orders */}
+      {['COMPLETED', 'CLOSED', 'PAID'].includes((order.status || order.stage || '').toUpperCase()) && (
+        <OrderClosureSummaryCard
+          isDarkMode={isDarkMode}
+          closedAt={order.closedAt}
+          closedBy={order.closedBy}
+          paymentStatus={order.paymentStatus}
+          podReceivedDate={order.podReceivedDate}
+          podReceivedBy={order.podReceivedBy}
+          invoiceNo={order.invoiceNo}
+          totalJobCards={order.jobCards?.length || 0}
+          completedJobCards={(order.jobCards || []).filter(j => (j.status || '').toUpperCase() === 'COMPLETED').length}
+          onNavigateToProduction={onNavigateToCreateJobCard ? () => onNavigateToCreateJobCard(order.poNo || order.id) : undefined}
+        />
+      )}
 
       {/* Upload Modal */}
       {uploadPoModal.isOpen && (

@@ -136,6 +136,8 @@ export class OrdersService {
             podDocumentUrl: o.pod_document_url || undefined,
             podReceivedDate: o.pod_received_date || undefined,
             podReceivedBy: o.pod_received_by || undefined,
+            closedAt: o.closed_at || undefined,
+            closedBy: o.closed_by || undefined,
             delayedReason: o.delayed_reason || undefined,
             delayedFollowUpDate: o.delayed_follow_up_date || undefined,
             taxCategory: o.tax_category || 'GST 18%',

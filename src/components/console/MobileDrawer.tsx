@@ -336,12 +336,14 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
                     onClose();
                   }
                 }}
-                className={`p-2.5 rounded-xl border flex items-center justify-between gap-2.5 transition-colors cursor-pointer ${
+                className={`p-2.5 rounded-xl border flex items-center justify-between gap-2.5 transition-colors ${
+                  onOpenSwitchUser ? 'cursor-pointer' : ''
+                } ${
                   isDarkMode 
                     ? 'bg-[#09090B] border-[#2E2E34] hover:border-slate-700' 
                     : 'bg-white border-[#E2EAE5] hover:border-slate-300'
                 }`}
-                title="Tap to switch user role"
+                title={onOpenSwitchUser ? "Tap to switch user role" : undefined}
               >
                 <div className="flex items-center gap-2.5 overflow-hidden">
                   <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] flex items-center justify-center text-white font-black text-xs shadow-xs shrink-0">

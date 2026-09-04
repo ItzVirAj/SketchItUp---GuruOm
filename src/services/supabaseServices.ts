@@ -44,10 +44,28 @@ export async function fetchCompanyProfile(): Promise<CompanyProfile> {
   try {
     const res = await apiClient.get<{ data: CompanyProfile }>('/masters/company-profile');
     if (res?.data && res.data.legalName) {
+      let data = res.data;
+      if (
+        data.address?.includes('Metoda') ||
+        data.address?.includes('Rajkot') ||
+        data.address?.includes('Bhosari') ||
+        data.address?.includes('123 Test St') ||
+        data.legalName === 'Test Tech Ltd'
+      ) {
+        data = {
+          ...data,
+          legalName: 'GuruOm Industries LLP',
+          address: 'Sr No 15/2, Mataji Logistic Park, Behind Tilakraj CNG Pump, Urali Devachi, Pune 412308, India',
+          phone: '+91 9763 969 798',
+          email: 'contact@guruom.in',
+          state: 'Maharashtra',
+          stateCode: '27'
+        };
+      }
       try {
-        localStorage.setItem('stratum_company_profile', JSON.stringify(res.data));
-      } catch (_) {}
-      return res.data;
+        localStorage.setItem('stratum_company_profile', JSON.stringify(data));
+      } catch (_) { }
+      return data;
     }
   } catch (err) {
     console.warn('fetchCompanyProfile REST error, falling back:', err);
@@ -57,26 +75,49 @@ export async function fetchCompanyProfile(): Promise<CompanyProfile> {
     const saved = localStorage.getItem('stratum_company_profile');
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (parsed && parsed.legalName) return parsed;
+      if (parsed && parsed.legalName) {
+        if (
+          parsed.address?.includes('Metoda') ||
+          parsed.address?.includes('Rajkot') ||
+          parsed.address?.includes('Bhosari') ||
+          parsed.address?.includes('123 Test St') ||
+          parsed.legalName === 'Test Tech Ltd'
+        ) {
+          const updated: CompanyProfile = {
+            ...parsed,
+            legalName: 'GuruOm Industries LLP',
+            address: 'Sr No 15/2, Mataji Logistic Park, Behind Tilakraj CNG Pump, Urali Devachi, Pune 412308, India',
+            phone: '+91 9763 969 798',
+            email: 'contact@guruom.in',
+            state: 'Maharashtra',
+            stateCode: '27'
+          };
+          try {
+            localStorage.setItem('stratum_company_profile', JSON.stringify(updated));
+          } catch (_) { }
+          return updated;
+        }
+        return parsed;
+      }
     }
-  } catch (_) {}
+  } catch (_) { }
 
   return {
-    legalName: '',
-    address: '',
-    phone: '',
-    email: '',
-    gstin: '',
-    pan: '',
-    state: '',
-    stateCode: ''
+    legalName: 'GuruOm Industries LLP',
+    address: 'Sr No 15/2, Mataji Logistic Park, Behind Tilakraj CNG Pump, Urali Devachi, Pune 412308, India',
+    phone: '+91 9763 969 798',
+    email: 'contact@guruom.in',
+    gstin: '27AABCG1234F1Z5',
+    pan: 'AABCG1234F',
+    state: 'Maharashtra',
+    stateCode: '27'
   };
 }
 
 export async function updateCompanyProfile(profile: CompanyProfile): Promise<void> {
   try {
     localStorage.setItem('stratum_company_profile', JSON.stringify(profile));
-  } catch (_) {}
+  } catch (_) { }
 
   try {
     await apiClient.put('/masters/company-profile', profile);
@@ -189,7 +230,7 @@ export async function fetchMasters(): Promise<MasterItem[]> {
 export async function insertMaster(item: Partial<MasterItem>): Promise<MasterItem> {
   const payload: MasterItem = {
     id: item.code ? `m-${item.code}` : `m-${Date.now()}`,
-    code: item.code || `RM-${Math.floor(1000 + Math.random() * 9000)}`,
+    code: item.code || '',
     name: item.name || item.description || 'New Item',
     itemType: item.itemType || (item.isFinishedGoods ? 'Finished Good' : 'Raw Material'),
     category: item.category || '',
@@ -213,35 +254,29 @@ export async function insertMaster(item: Partial<MasterItem>): Promise<MasterIte
     status: item.status || 'Active'
   };
 
-  try {
-    const res = await apiClient.post<{ message: string; data: MasterItem }>('/masters', payload);
-    if (res?.data) return res.data;
-  } catch (err) {
-    console.warn('Backend insertMaster fallback:', err);
-  }
-  return payload;
+  const res = await apiClient.post<{ message: string; data: MasterItem }>('/masters', payload);
+  if (res?.data) return res.data;
+  throw new Error('Failed to create master item: server did not return item data');
 }
 
 export async function updateMasterItem(code: string, item: Partial<MasterItem>): Promise<MasterItem> {
-  try {
-    const saved = localStorage.getItem('stratum_custom_masters');
-    if (saved) {
-      const current: MasterItem[] = JSON.parse(saved);
-      const updated = current.map(m => m.code === code ? { ...m, ...item } : m);
-      localStorage.setItem('stratum_custom_masters', JSON.stringify(updated));
-    }
-  } catch (e) {}
-
-  try {
-    const res = await apiClient.put<{ message: string; data: MasterItem }>(`/masters/${encodeURIComponent(code)}`, item);
-    if (res?.data) return res.data;
-  } catch (err) {
-    console.warn(`Backend updateMasterItem(${code}) fallback:`, err);
+  const res = await apiClient.put<{ message: string; data: MasterItem }>(`/masters/${encodeURIComponent(code)}`, item);
+  if (res?.data) {
+    try {
+      const saved = localStorage.getItem('stratum_custom_masters');
+      if (saved) {
+        const current: MasterItem[] = JSON.parse(saved);
+        const updated = current.map(m => m.code === code ? { ...m, ...res.data } : m);
+        localStorage.setItem('stratum_custom_masters', JSON.stringify(updated));
+      }
+    } catch (e) { }
+    return res.data;
   }
-  return { code, ...item } as MasterItem;
+  throw new Error(`Failed to update master item ${code}: server did not return item data`);
 }
 
 export async function deleteMasterItem(code: string): Promise<void> {
+  await apiClient.delete(`/masters/${encodeURIComponent(code)}`);
   try {
     const saved = localStorage.getItem('stratum_custom_masters');
     if (saved) {
@@ -249,13 +284,7 @@ export async function deleteMasterItem(code: string): Promise<void> {
       const updated = current.filter(m => m.code !== code);
       localStorage.setItem('stratum_custom_masters', JSON.stringify(updated));
     }
-  } catch (e) {}
-
-  try {
-    await apiClient.delete(`/masters/${encodeURIComponent(code)}`);
-  } catch (err) {
-    console.warn(`Backend deleteMasterItem(${code}) fallback:`, err);
-  }
+  } catch (e) { }
 }
 
 // ----------------------------------------------------
@@ -508,7 +537,7 @@ const getSavedCustomCustomers = (): CustomerMaster[] => {
   try {
     const saved = localStorage.getItem('stratum_custom_customers');
     if (saved) return JSON.parse(saved);
-  } catch (e) {}
+  } catch (e) { }
   return [];
 };
 
@@ -517,14 +546,14 @@ export const saveCustomCustomerToLocal = (c: CustomerMaster) => {
     const current = getSavedCustomCustomers();
     const updated = [c, ...current.filter(item => item.code !== c.code)];
     localStorage.setItem('stratum_custom_customers', JSON.stringify(updated));
-  } catch (e) {}
+  } catch (e) { }
 };
 
 const getSavedCustomVendors = (): VendorMaster[] => {
   try {
     const saved = localStorage.getItem('stratum_custom_vendors');
     if (saved) return JSON.parse(saved);
-  } catch (e) {}
+  } catch (e) { }
   return [];
 };
 
@@ -533,14 +562,14 @@ export const saveCustomVendorToLocal = (v: VendorMaster) => {
     const current = getSavedCustomVendors();
     const updated = [v, ...current.filter(item => item.code !== v.code)];
     localStorage.setItem('stratum_custom_vendors', JSON.stringify(updated));
-  } catch (e) {}
+  } catch (e) { }
 };
 
 const getSavedCustomMachines = (): MachineMaster[] => {
   try {
     const saved = localStorage.getItem('stratum_custom_machines');
     if (saved) return JSON.parse(saved);
-  } catch (e) {}
+  } catch (e) { }
   return [];
 };
 
@@ -549,7 +578,7 @@ export const saveCustomMachineToLocal = (m: MachineMaster) => {
     const current = getSavedCustomMachines();
     const updated = [m, ...current.filter(item => item.code !== m.code)];
     localStorage.setItem('stratum_custom_machines', JSON.stringify(updated));
-  } catch (e) {}
+  } catch (e) { }
 };
 
 export async function fetchCustomers(): Promise<CustomerMaster[]> {
@@ -576,41 +605,30 @@ export async function fetchCustomers(): Promise<CustomerMaster[]> {
 }
 
 export async function insertCustomer(c: CustomerMaster): Promise<CustomerMaster> {
-  saveCustomCustomerToLocal(c);
-
-  try {
-    const res = await apiClient.post<{ message: string; data: CustomerMaster }>('/masters/customers', c);
-    if (res?.data) return res.data;
-  } catch (err) {
-    console.warn('Backend insertCustomer fallback:', err);
+  const res = await apiClient.post<{ message: string; data: CustomerMaster }>('/masters/customers', c);
+  if (res?.data) {
+    saveCustomCustomerToLocal(res.data);
+    return res.data;
   }
-  return c;
+  throw new Error('Failed to create customer: server did not return customer data');
 }
 
 export async function updateCustomer(code: string, c: CustomerMaster): Promise<CustomerMaster> {
-  saveCustomCustomerToLocal(c);
-
-  try {
-    const res = await apiClient.put<{ message: string; data: CustomerMaster }>(`/masters/customers/${encodeURIComponent(code)}`, c);
-    if (res?.data) return res.data;
-  } catch (err) {
-    console.warn(`Backend updateCustomer(${code}) fallback:`, err);
+  const res = await apiClient.put<{ message: string; data: CustomerMaster }>(`/masters/customers/${encodeURIComponent(code)}`, c);
+  if (res?.data) {
+    saveCustomCustomerToLocal(res.data);
+    return res.data;
   }
-  return c;
+  throw new Error(`Failed to update customer ${code}: server did not return customer data`);
 }
 
 export async function deleteCustomer(code: string): Promise<void> {
+  await apiClient.delete(`/masters/customers/${encodeURIComponent(code)}`);
   try {
     const current = getSavedCustomCustomers();
     const updated = current.filter(item => item.code !== code);
     localStorage.setItem('stratum_custom_customers', JSON.stringify(updated));
-  } catch (e) {}
-
-  try {
-    await apiClient.delete(`/masters/customers/${encodeURIComponent(code)}`);
-  } catch (err) {
-    console.warn(`Backend deleteCustomer(${code}) fallback:`, err);
-  }
+  } catch (e) { }
 }
 
 export async function fetchVendors(): Promise<VendorMaster[]> {
@@ -637,41 +655,30 @@ export async function fetchVendors(): Promise<VendorMaster[]> {
 }
 
 export async function insertVendor(v: VendorMaster): Promise<VendorMaster> {
-  saveCustomVendorToLocal(v);
-
-  try {
-    const res = await apiClient.post<{ message: string; data: VendorMaster }>('/masters/vendors', v);
-    if (res?.data) return res.data;
-  } catch (err) {
-    console.warn('Backend insertVendor fallback:', err);
+  const res = await apiClient.post<{ message: string; data: VendorMaster }>('/masters/vendors', v);
+  if (res?.data) {
+    saveCustomVendorToLocal(res.data);
+    return res.data;
   }
-  return v;
+  throw new Error('Failed to create vendor: server did not return vendor data');
 }
 
 export async function updateVendor(code: string, v: VendorMaster): Promise<VendorMaster> {
-  saveCustomVendorToLocal(v);
-
-  try {
-    const res = await apiClient.put<{ message: string; data: VendorMaster }>(`/masters/vendors/${encodeURIComponent(code)}`, v);
-    if (res?.data) return res.data;
-  } catch (err) {
-    console.warn(`Backend updateVendor(${code}) fallback:`, err);
+  const res = await apiClient.put<{ message: string; data: VendorMaster }>(`/masters/vendors/${encodeURIComponent(code)}`, v);
+  if (res?.data) {
+    saveCustomVendorToLocal(res.data);
+    return res.data;
   }
-  return v;
+  throw new Error(`Failed to update vendor ${code}: server did not return vendor data`);
 }
 
 export async function deleteVendor(code: string): Promise<void> {
+  await apiClient.delete(`/masters/vendors/${encodeURIComponent(code)}`);
   try {
     const current = getSavedCustomVendors();
     const updated = current.filter(item => item.code !== code);
     localStorage.setItem('stratum_custom_vendors', JSON.stringify(updated));
-  } catch (e) {}
-
-  try {
-    await apiClient.delete(`/masters/vendors/${encodeURIComponent(code)}`);
-  } catch (err) {
-    console.warn(`Backend deleteVendor(${code}) fallback:`, err);
-  }
+  } catch (e) { }
 }
 
 export async function fetchMachines(): Promise<MachineMaster[]> {
@@ -698,41 +705,30 @@ export async function fetchMachines(): Promise<MachineMaster[]> {
 }
 
 export async function insertMachine(m: MachineMaster): Promise<MachineMaster> {
-  saveCustomMachineToLocal(m);
-
-  try {
-    const res = await apiClient.post<{ message: string; data: MachineMaster }>('/masters/machines', m);
-    if (res?.data) return res.data;
-  } catch (err) {
-    console.warn('Backend insertMachine fallback:', err);
+  const res = await apiClient.post<{ message: string; data: MachineMaster }>('/masters/machines', m);
+  if (res?.data) {
+    saveCustomMachineToLocal(res.data);
+    return res.data;
   }
-  return m;
+  throw new Error('Failed to create machine: server did not return machine data');
 }
 
 export async function updateMachine(code: string, m: MachineMaster): Promise<MachineMaster> {
-  saveCustomMachineToLocal(m);
-
-  try {
-    const res = await apiClient.put<{ message: string; data: MachineMaster }>(`/masters/machines/${encodeURIComponent(code)}`, m);
-    if (res?.data) return res.data;
-  } catch (err) {
-    console.warn(`Backend updateMachine(${code}) fallback:`, err);
+  const res = await apiClient.put<{ message: string; data: MachineMaster }>(`/masters/machines/${encodeURIComponent(code)}`, m);
+  if (res?.data) {
+    saveCustomMachineToLocal(res.data);
+    return res.data;
   }
-  return m;
+  throw new Error(`Failed to update machine ${code}: server did not return machine data`);
 }
 
 export async function deleteMachine(code: string): Promise<void> {
+  await apiClient.delete(`/masters/machines/${encodeURIComponent(code)}`);
   try {
     const current = getSavedCustomMachines();
     const updated = current.filter(item => item.code !== code);
     localStorage.setItem('stratum_custom_machines', JSON.stringify(updated));
-  } catch (e) {}
-
-  try {
-    await apiClient.delete(`/masters/machines/${encodeURIComponent(code)}`);
-  } catch (err) {
-    console.warn(`Backend deleteMachine(${code}) fallback:`, err);
-  }
+  } catch (e) { }
 }
 
 // ----------------------------------------------------
@@ -825,9 +821,24 @@ export async function recordInventoryMovement(payload: {
   }
 }
 
-export async function fetchStockReconciliation(): Promise<any[]> {
+export async function fetchStockReconciliation(filters?: {
+  itemCode?: string;
+  search?: string;
+  status?: string;
+  category?: string;
+  includeInactive?: boolean;
+}): Promise<any[]> {
   try {
-    const res = await apiClient.get<{ report: any[] }>('/inventory/reconciliation');
+    const params = new URLSearchParams();
+    if (filters?.itemCode) params.set('itemCode', filters.itemCode);
+    if (filters?.search) params.set('search', filters.search);
+    if (filters?.status) params.set('status', filters.status);
+    if (filters?.category) params.set('category', filters.category);
+    if (filters?.includeInactive) params.set('includeInactive', 'true');
+    const qs = params.toString();
+    const endpoint = qs ? `/inventory/reconciliation?${qs}` : '/inventory/reconciliation';
+
+    const res = await apiClient.get<{ report: any[] }>(endpoint);
     if (res?.report) {
       return res.report;
     }
@@ -1149,25 +1160,25 @@ export async function receiveOutworkReturn(
   try {
     const payload = typeof gatePassNoOrPayload === 'string'
       ? {
-          gatePassNo: gatePassNoOrPayload,
-          receivedQty: Number(receivedQty),
-          rejectedQty: Number(rejectedQty || 0),
-          actualReturnDate: new Date().toISOString().split('T')[0],
-          qcStatus: (Number(rejectedQty) > 0 && Number(receivedQty) === 0 ? 'INSPECTED_REJECTED' : 'INSPECTED_ACCEPTED') as any,
-          qcInspector: 'Quality Inspector',
-          notes
-        }
+        gatePassNo: gatePassNoOrPayload,
+        receivedQty: Number(receivedQty),
+        rejectedQty: Number(rejectedQty || 0),
+        actualReturnDate: new Date().toISOString().split('T')[0],
+        qcStatus: (Number(rejectedQty) > 0 && Number(receivedQty) === 0 ? 'INSPECTED_REJECTED' : 'INSPECTED_ACCEPTED') as any,
+        qcInspector: 'Quality Inspector',
+        notes
+      }
       : {
-          gatePassNo: gatePassNoOrPayload.gatePassNo,
-          gateInPassNo: gatePassNoOrPayload.gateInPassNo,
-          receivedQty: Number(gatePassNoOrPayload.receivedQty),
-          rejectedQty: Number(gatePassNoOrPayload.rejectedQty || 0),
-          actualReturnDate: gatePassNoOrPayload.actualReturnDate || new Date().toISOString().split('T')[0],
-          qcStatus: gatePassNoOrPayload.qcStatus || 'INSPECTED_ACCEPTED',
-          qcInspector: gatePassNoOrPayload.qcInspector || 'Quality Inspector',
-          inspectionNotes: gatePassNoOrPayload.inspectionNotes,
-          notes: gatePassNoOrPayload.notes
-        };
+        gatePassNo: gatePassNoOrPayload.gatePassNo,
+        gateInPassNo: gatePassNoOrPayload.gateInPassNo,
+        receivedQty: Number(gatePassNoOrPayload.receivedQty),
+        rejectedQty: Number(gatePassNoOrPayload.rejectedQty || 0),
+        actualReturnDate: gatePassNoOrPayload.actualReturnDate || new Date().toISOString().split('T')[0],
+        qcStatus: gatePassNoOrPayload.qcStatus || 'INSPECTED_ACCEPTED',
+        qcInspector: gatePassNoOrPayload.qcInspector || 'Quality Inspector',
+        inspectionNotes: gatePassNoOrPayload.inspectionNotes,
+        notes: gatePassNoOrPayload.notes
+      };
 
     await apiClient.post('/outwork/gate-in', payload);
   } catch (err) {
@@ -1258,7 +1269,7 @@ export async function fetchInvoices(): Promise<CustomerInvoice[]> {
   try {
     const raw = localStorage.getItem('stratum_custom_invoices');
     if (raw) savedLocal = JSON.parse(raw);
-  } catch (_) {}
+  } catch (_) { }
 
   let dbInvoices: CustomerInvoice[] = [];
   try {
@@ -1286,7 +1297,7 @@ export async function insertCustomerInvoice(inv: CustomerInvoice): Promise<any> 
     const list: CustomerInvoice[] = raw ? JSON.parse(raw) : [];
     const updated = [inv, ...list.filter(i => i.invoiceNo !== inv.invoiceNo)];
     localStorage.setItem('stratum_custom_invoices', JSON.stringify(updated));
-  } catch (_) {}
+  } catch (_) { }
 
   try {
     const res = await apiClient.post<{ data: any }>('/invoices', {
@@ -1330,7 +1341,7 @@ export async function issueCustomerInvoice(invoiceNo: string): Promise<any> {
       const updated = list.map(i => i.invoiceNo === invoiceNo ? { ...i, status: 'ISSUED' as const } : i);
       localStorage.setItem('stratum_custom_invoices', JSON.stringify(updated));
     }
-  } catch (_) {}
+  } catch (_) { }
 
   try {
     const res = await apiClient.post<{ data: any }>(`/invoices/${encodeURIComponent(invoiceNo)}/issue`);
@@ -1368,7 +1379,7 @@ export async function payInvoice(invoiceNo: string, paymentData?: any): Promise<
       });
       localStorage.setItem('stratum_custom_invoices', JSON.stringify(updated));
     }
-  } catch (_) {}
+  } catch (_) { }
 
   try {
     await apiClient.post(`/invoices/${encodeURIComponent(invoiceNo)}/pay`, {
@@ -1391,7 +1402,7 @@ export async function deleteCustomerInvoice(invoiceNo: string): Promise<any> {
       const updated = list.filter(i => i.invoiceNo !== invoiceNo && i.id !== invoiceNo);
       localStorage.setItem('stratum_custom_invoices', JSON.stringify(updated));
     }
-  } catch (_) {}
+  } catch (_) { }
 
   try {
     const res = await apiClient.delete<{ data: any }>(`/invoices/${encodeURIComponent(invoiceNo)}`);
@@ -1405,7 +1416,7 @@ export async function deleteCustomerInvoice(invoiceNo: string): Promise<any> {
 export async function clearAllCustomerInvoices(): Promise<any> {
   try {
     localStorage.removeItem('stratum_custom_invoices');
-  } catch (_) {}
+  } catch (_) { }
 
   try {
     const res = await apiClient.delete<{ data: any }>('/invoices/clear-all');

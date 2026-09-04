@@ -36,14 +36,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Real-time inline field & auth state alerts
   const [inlineAlert, setInlineAlert] = useState<{
     type: 'error' | 'warning' | 'success';
     title: string;
     message: string;
   } | null>(null);
-  
+
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
   const [isForgotOpen, setIsForgotOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
@@ -179,44 +179,39 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   };
 
   return (
-    <div className={`relative min-h-screen w-full overflow-x-hidden font-sans transition-colors duration-300 ${
-      isDarkMode ? 'bg-[#09090C] text-slate-100' : 'bg-[#EAEAEE] text-slate-900'
-    }`}>
-      
+    <div className={`relative min-h-screen w-full overflow-x-hidden font-sans transition-colors duration-300 ${isDarkMode ? 'bg-[#09090C] text-slate-100' : 'bg-[#EAEAEE] text-slate-900'
+      }`}>
+
       {/* ========================================================================= */}
       {/* ── ATMOSPHERIC APPLE BACKGROUND GLOWS ──                                 */}
       {/* ========================================================================= */}
       <div aria-hidden="true" className="pointer-events-none fixed inset-0 overflow-hidden select-none">
         {/* Deep top-left blue atmospheric glow */}
-        <div className={`absolute -top-40 -left-40 h-[640px] w-[640px] rounded-full blur-[160px] ${
-          isDarkMode ? 'bg-[#007AFF]/18' : 'bg-[#007AFF]/12'
-        }`} />
-        
+        <div className={`absolute -top-40 -left-40 h-[640px] w-[640px] rounded-full blur-[160px] ${isDarkMode ? 'bg-[#007AFF]/18' : 'bg-[#007AFF]/12'
+          }`} />
+
         {/* Center-right indigo/violet flare */}
-        <div className={`absolute top-1/3 -right-40 h-[680px] w-[680px] rounded-full blur-[180px] ${
-          isDarkMode ? 'bg-[#5856D6]/14' : 'bg-[#5856D6]/10'
-        }`} />
-        
+        <div className={`absolute top-1/3 -right-40 h-[680px] w-[680px] rounded-full blur-[180px] ${isDarkMode ? 'bg-[#5856D6]/14' : 'bg-[#5856D6]/10'
+          }`} />
+
         {/* Bottom subtle emerald operational glow */}
-        <div className={`absolute -bottom-40 left-1/3 h-[580px] w-[580px] rounded-full blur-[160px] ${
-          isDarkMode ? 'bg-[#34C759]/10' : 'bg-[#34C759]/8'
-        }`} />
-        
+        <div className={`absolute -bottom-40 left-1/3 h-[580px] w-[580px] rounded-full blur-[160px] ${isDarkMode ? 'bg-[#34C759]/10' : 'bg-[#34C759]/8'
+          }`} />
+
         {/* Specular noise & dot matrix */}
-        <div className={`absolute inset-0 ${
-          isDarkMode 
-            ? 'opacity-[0.035] bg-[radial-gradient(rgba(255,255,255,0.7)_1px,transparent_1px)]' 
+        <div className={`absolute inset-0 ${isDarkMode
+            ? 'opacity-[0.035] bg-[radial-gradient(rgba(255,255,255,0.7)_1px,transparent_1px)]'
             : 'opacity-[0.035] bg-[radial-gradient(rgba(0,0,0,0.6)_1px,transparent_1px)]'
-        } [background-size:28px_28px]`} />
+          } [background-size:28px_28px]`} />
       </div>
 
       <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1520px] flex-col justify-between px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-        
+
         {/* ========================================================================= */}
         {/* ── MAIN CONTENT: CENTERED FLOATING FROSTED AUTH CARD ──                   */}
         {/* ========================================================================= */}
         <main className="my-auto flex flex-1 items-center justify-center py-6 sm:py-10">
-          <div 
+          <div
             className="relative w-full max-w-[540px] overflow-hidden rounded-[32px] border p-8 sm:p-11 transition-all backdrop-blur-3xl"
             style={{
               backgroundColor: isDarkMode ? 'rgba(12, 12, 16, 0.94)' : '#FFFFFF',
@@ -226,7 +221,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 : 'inset 0 1.5px 0 0 rgba(255, 255, 255, 1), 0 25px 60px -10px rgba(15, 23, 42, 0.18), 0 10px 25px -5px rgba(15, 23, 42, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.04)'
             }}
           >
-            
+
             {/* Top Brand Identity & Appearance Switcher */}
             <div className="mb-6 flex items-center justify-between gap-4">
               <div className="flex items-center gap-3.5">
@@ -250,11 +245,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   type="button"
                   onClick={onToggleTheme}
                   aria-label="Toggle visual appearance"
-                  className={`flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl border transition-all active:scale-95 shadow-2xs ${
-                    isDarkMode
+                  className={`flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl border transition-all active:scale-95 shadow-2xs ${isDarkMode
                       ? 'border-white/15 bg-white/[0.06] text-slate-200 hover:bg-white/10 hover:border-white/25'
                       : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 shadow-xs'
-                  }`}
+                    }`}
                   title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
                 >
                   <AnimatePresence mode="popLayout" initial={false}>
@@ -279,15 +273,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             {/* Form Title & Context */}
             <div className="mb-6 flex items-start justify-between">
               <div>
-                <h2 className={`text-2xl font-black tracking-tight sm:text-3xl ${
-                  isDarkMode ? 'text-white' : 'text-slate-900'
-                }`}>
+                <h2 className={`text-2xl font-black tracking-tight sm:text-3xl ${isDarkMode ? 'text-white' : 'text-slate-900'
+                  }`}>
                   Sign in to OwnerOS
                 </h2>
 
-                <p className={`mt-1.5 text-xs font-normal leading-relaxed ${
-                  isDarkMode ? 'text-slate-300' : 'text-slate-600'
-                }`}>
+                <p className={`mt-1.5 text-xs font-normal leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-600'
+                  }`}>
                   Authorized portal for <strong className="font-semibold text-[#007AFF]">GuruOm OS</strong> team members.
                 </p>
               </div>
@@ -309,21 +301,19 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   exit={{ opacity: 0, y: -8, scale: 0.97 }}
                   transition={{ duration: 0.18 }}
                   role="alert"
-                  className={`mb-5 flex items-start gap-3 rounded-2xl border p-4 shadow-lg backdrop-blur-xl ${
-                    inlineAlert.type === 'error'
+                  className={`mb-5 flex items-start gap-3 rounded-2xl border p-4 shadow-lg backdrop-blur-xl ${inlineAlert.type === 'error'
                       ? 'border-rose-500/30 bg-rose-500/15 text-rose-200'
                       : inlineAlert.type === 'warning'
                         ? 'border-amber-500/30 bg-amber-500/15 text-amber-200'
                         : 'border-emerald-500/30 bg-emerald-500/15 text-emerald-200'
-                  }`}
+                    }`}
                 >
-                  <div className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl ${
-                    inlineAlert.type === 'error'
+                  <div className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl ${inlineAlert.type === 'error'
                       ? 'bg-rose-500/20 text-rose-400'
                       : inlineAlert.type === 'warning'
                         ? 'bg-amber-500/20 text-amber-400'
                         : 'bg-emerald-500/20 text-emerald-400'
-                  }`}>
+                    }`}>
                     {inlineAlert.type === 'error' ? (
                       <AlertCircle className="h-4 w-4" />
                     ) : inlineAlert.type === 'warning' ? (
@@ -358,15 +348,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             {/* ── CREDENTIAL INPUT FORM ──                                      */}
             {/* ───────────────────────────────────────────────────────────────── */}
             <form onSubmit={handleLogin} className="space-y-4.5" noValidate>
-              
+
               {/* 1. Work Email */}
               <div>
                 <div className="mb-1.5 flex items-center justify-between">
                   <label
                     htmlFor="auth-email"
-                    className={`block text-xs font-bold ${
-                      isDarkMode ? 'text-slate-200' : 'text-slate-700'
-                    }`}
+                    className={`block text-xs font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-700'
+                      }`}
                   >
                     Enterprise Work Email
                   </label>
@@ -392,14 +381,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       setEmail(e.target.value);
                       if (fieldErrors.email) setFieldErrors(prev => ({ ...prev, email: undefined }));
                     }}
-                    placeholder="name@guruom.in or name@sketchitup.com"
-                    className={`h-12 w-full rounded-2xl border pl-10 pr-4 text-xs font-medium outline-none transition-all duration-150 ${
-                      fieldErrors.email
+                    placeholder="Enter Account Email"
+                    className={`h-12 w-full rounded-2xl border pl-10 pr-4 text-xs font-medium outline-none transition-all duration-150 ${fieldErrors.email
                         ? 'border-rose-500/70 bg-rose-500/10 text-rose-100 ring-2 ring-rose-500/20'
                         : isDarkMode
                           ? 'border-white/15 bg-[#0C0C10] text-white placeholder:text-slate-500 hover:border-white/25 focus:border-[#007AFF] focus:bg-[#111116] focus:ring-4 focus:ring-[#007AFF]/15'
                           : 'border-slate-300 bg-slate-50 text-slate-900 placeholder:text-slate-400 hover:border-slate-400 focus:border-[#007AFF] focus:bg-white focus:ring-4 focus:ring-[#007AFF]/15'
-                    }`}
+                      }`}
                   />
                 </div>
               </div>
@@ -409,9 +397,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 <div className="mb-1.5 flex items-center justify-between">
                   <label
                     htmlFor="auth-password"
-                    className={`block text-xs font-bold ${
-                      isDarkMode ? 'text-slate-200' : 'text-slate-700'
-                    }`}
+                    className={`block text-xs font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-700'
+                      }`}
                   >
                     Security Password
                   </label>
@@ -443,14 +430,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       setPassword(e.target.value);
                       if (fieldErrors.password) setFieldErrors(prev => ({ ...prev, password: undefined }));
                     }}
-                    placeholder="Enter account security key"
-                    className={`h-12 w-full rounded-2xl border pl-10 pr-11 text-xs font-medium outline-none transition-all duration-150 ${
-                      fieldErrors.password
+                    placeholder="Enter Account Password"
+                    className={`h-12 w-full rounded-2xl border pl-10 pr-11 text-xs font-medium outline-none transition-all duration-150 ${fieldErrors.password
                         ? 'border-rose-500/70 bg-rose-500/10 text-rose-100 ring-2 ring-rose-500/20'
                         : isDarkMode
                           ? 'border-white/15 bg-[#0C0C10] text-white placeholder:text-slate-500 hover:border-white/25 focus:border-[#007AFF] focus:bg-[#111116] focus:ring-4 focus:ring-[#007AFF]/15'
                           : 'border-slate-300 bg-slate-50 text-slate-900 placeholder:text-slate-400 hover:border-slate-400 focus:border-[#007AFF] focus:bg-white focus:ring-4 focus:ring-[#007AFF]/15'
-                    }`}
+                      }`}
                   />
 
                   <button
@@ -493,11 +479,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             {/* ───────────────────────────────────────────────────────────────── */}
             {/* ── REQUEST ACCESS & SUPPORT CALLOUT ──                           */}
             {/* ───────────────────────────────────────────────────────────────── */}
-            <div className={`mt-6 flex items-center justify-between rounded-2xl border p-3.5 transition-all ${
-              isDarkMode 
-                ? 'border-white/15 bg-white/[0.04] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]' 
+            <div className={`mt-6 flex items-center justify-between rounded-2xl border p-3.5 transition-all ${isDarkMode
+                ? 'border-white/15 bg-white/[0.04] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]'
                 : 'border-slate-200 bg-slate-100/80'
-            }`}>
+              }`}>
               <div className="min-w-0 pr-2">
                 <div className={`text-xs font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                   Need an account?
@@ -532,9 +517,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         {/* ========================================================================= */}
         {/* ── FOOTER: SYSTEM & BRAND CREDENTIALS ──                                 */}
         {/* ========================================================================= */}
-        <footer className={`flex shrink-0 flex-col gap-2 px-2 sm:px-4 py-3.5 text-[11.5px] font-medium transition-all sm:flex-row sm:items-center sm:justify-between ${
-          isDarkMode ? 'text-slate-400' : 'text-slate-600'
-        }`}>
+        <footer className={`flex shrink-0 flex-col gap-2 px-2 sm:px-4 py-3.5 text-[11.5px] font-medium transition-all sm:flex-row sm:items-center sm:justify-between ${isDarkMode ? 'text-slate-400' : 'text-slate-600'
+          }`}>
           <div className="flex flex-wrap items-center gap-2">
             <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>OwnerOS Enterprise</span>
             <span>·</span>
@@ -564,15 +548,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className={`w-full max-w-md overflow-hidden rounded-3xl border shadow-2xl ${
-              isDarkMode
+            className={`w-full max-w-md overflow-hidden rounded-3xl border shadow-2xl ${isDarkMode
                 ? 'border-white/15 bg-[#141419]/95 text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.15),0_30px_70px_rgba(0,0,0,0.85)] backdrop-blur-3xl'
                 : 'border-slate-200 bg-white text-slate-900 shadow-2xl'
-            }`}
+              }`}
           >
-            <div className={`flex items-start justify-between border-b p-6 ${
-              isDarkMode ? 'border-white/15 bg-black/40' : 'border-slate-200 bg-slate-50'
-            }`}>
+            <div className={`flex items-start justify-between border-b p-6 ${isDarkMode ? 'border-white/15 bg-black/40' : 'border-slate-200 bg-slate-50'
+              }`}>
               <div className="flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#007AFF]/15 text-[#007AFF] border border-[#007AFF]/30">
                   <Mail className="h-5 w-5" />
@@ -606,9 +588,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 <div>
                   <label
                     htmlFor="forgot-email"
-                    className={`mb-1.5 block text-xs font-bold ${
-                      isDarkMode ? 'text-slate-200' : 'text-slate-700'
-                    }`}
+                    className={`mb-1.5 block text-xs font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-700'
+                      }`}
                   >
                     Enterprise Work Email
                   </label>
@@ -623,11 +604,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       value={forgotEmail}
                       onChange={(e) => setForgotEmail(e.target.value)}
                       placeholder="name@guruom.in"
-                      className={`h-12 w-full rounded-2xl border pl-10 pr-4 text-xs font-medium outline-none ${
-                        isDarkMode
+                      className={`h-12 w-full rounded-2xl border pl-10 pr-4 text-xs font-medium outline-none ${isDarkMode
                           ? 'border-white/15 bg-[#0C0C10] text-white focus:border-[#007AFF]'
                           : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-[#007AFF]'
-                      }`}
+                        }`}
                     />
                   </div>
                 </div>
@@ -636,11 +616,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsForgotOpen(false)}
-                    className={`h-11 cursor-pointer rounded-2xl border text-xs font-semibold transition-colors ${
-                      isDarkMode
+                    className={`h-11 cursor-pointer rounded-2xl border text-xs font-semibold transition-colors ${isDarkMode
                         ? 'border-white/15 text-slate-300 hover:bg-white/10'
                         : 'border-slate-200 text-slate-700 hover:bg-slate-100'
-                    }`}
+                      }`}
                   >
                     Cancel
                   </button>
@@ -676,11 +655,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className={`w-full max-w-md overflow-hidden rounded-3xl border shadow-2xl ${
-              isDarkMode
+            className={`w-full max-w-md overflow-hidden rounded-3xl border shadow-2xl ${isDarkMode
                 ? 'border-white/15 bg-[#141419]/95 text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.15),0_30px_70px_rgba(0,0,0,0.85)] backdrop-blur-3xl'
                 : 'border-slate-200 bg-white text-slate-900 shadow-2xl'
-            }`}
+              }`}
           >
             <div className="relative px-6 pb-4 pt-7 text-center sm:px-8">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#007AFF]/15 text-[#007AFF] border border-[#007AFF]/30">
@@ -691,17 +669,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 Request Account Provisioning
               </h2>
 
-              <p className={`mx-auto mt-2 max-w-sm text-xs leading-relaxed ${
-                isDarkMode ? 'text-slate-300' : 'text-slate-600'
-              }`}>
+              <p className={`mx-auto mt-2 max-w-sm text-xs leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-600'
+                }`}>
                 GuruOm OwnerOS is a private enterprise platform architected by <strong>SketchItUp Solutions</strong>. Access is restricted to authenticated plant personnel.
               </p>
             </div>
 
             <div className="px-6 pb-6 sm:px-8 space-y-4">
-              <div className={`flex items-start gap-3 rounded-2xl border p-4 text-left ${
-                isDarkMode ? 'border-white/15 bg-white/[0.04]' : 'border-slate-200 bg-slate-50'
-              }`}>
+              <div className={`flex items-start gap-3 rounded-2xl border p-4 text-left ${isDarkMode ? 'border-white/15 bg-white/[0.04]' : 'border-slate-200 bg-slate-50'
+                }`}>
                 <ShieldCheck className="h-5 w-5 shrink-0 text-[#007AFF] mt-0.5" />
                 <div>
                   <p className={`text-xs font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>

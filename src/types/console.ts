@@ -230,6 +230,11 @@ export interface StockReconciliationReport {
   cachedOnHand: number;
   discrepancy: number;
   status: 'MATCHED' | 'DISCREPANCY';
+  category?: string;
+  reserved?: number;
+  available?: number;
+  unit?: string;
+  itemStatus?: string;
   lastMovementAt?: string;
 }
 

@@ -28,16 +28,72 @@ interface SectionConfig {
   shortLabel: string;
   icon: React.ComponentType<{ className?: string }>;
   color: string;
+  colorLight?: string;
   badgeBg: string;
+  badgeBgLight?: string;
 }
 
 const SECTIONS_CONFIG: SectionConfig[] = [
-  { key: 'all', label: 'All Updates', shortLabel: 'All', icon: Layers, color: 'text-slate-300', badgeBg: 'bg-white/[0.08] text-slate-300 border-white/15' },
-  { key: 'critical', label: 'Critical & High Alerts', shortLabel: 'Critical', icon: AlertOctagon, color: 'text-rose-400', badgeBg: 'bg-rose-500/15 text-rose-300 border-rose-500/30' },
-  { key: 'production', label: 'Production & Shopfloor', shortLabel: 'Production', icon: Cpu, color: 'text-amber-400', badgeBg: 'bg-amber-500/15 text-amber-300 border-amber-500/30' },
-  { key: 'quality', label: 'Quality (QC & PDI)', shortLabel: 'Quality', icon: ShieldCheck, color: 'text-emerald-400', badgeBg: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' },
-  { key: 'logistics', label: 'Orders & Logistics', shortLabel: 'Logistics', icon: Truck, color: 'text-blue-400', badgeBg: 'bg-blue-500/15 text-blue-300 border-blue-500/30' },
-  { key: 'finance', label: 'Finance & Billing', shortLabel: 'Finance', icon: Receipt, color: 'text-purple-400', badgeBg: 'bg-purple-500/15 text-purple-300 border-purple-500/30' },
+  { 
+    key: 'all', 
+    label: 'All Updates', 
+    shortLabel: 'All', 
+    icon: Layers, 
+    color: 'text-slate-300', 
+    colorLight: 'text-slate-600',
+    badgeBg: 'bg-white/[0.08] text-slate-300 border-white/15',
+    badgeBgLight: 'bg-slate-100 text-slate-700 border-slate-200'
+  },
+  { 
+    key: 'critical', 
+    label: 'Critical & High Alerts', 
+    shortLabel: 'Critical', 
+    icon: AlertOctagon, 
+    color: 'text-rose-400', 
+    colorLight: 'text-rose-600',
+    badgeBg: 'bg-rose-500/15 text-rose-300 border-rose-500/30',
+    badgeBgLight: 'bg-rose-50 text-rose-700 border-rose-200'
+  },
+  { 
+    key: 'production', 
+    label: 'Production & Shopfloor', 
+    shortLabel: 'Production', 
+    icon: Cpu, 
+    color: 'text-amber-400', 
+    colorLight: 'text-amber-700',
+    badgeBg: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+    badgeBgLight: 'bg-amber-50 text-amber-800 border-amber-200'
+  },
+  { 
+    key: 'quality', 
+    label: 'Quality (QC & PDI)', 
+    shortLabel: 'Quality', 
+    icon: ShieldCheck, 
+    color: 'text-emerald-400', 
+    colorLight: 'text-emerald-700',
+    badgeBg: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+    badgeBgLight: 'bg-emerald-50 text-emerald-800 border-emerald-200'
+  },
+  { 
+    key: 'logistics', 
+    label: 'Orders & Logistics', 
+    shortLabel: 'Logistics', 
+    icon: Truck, 
+    color: 'text-blue-400', 
+    colorLight: 'text-blue-700',
+    badgeBg: 'bg-blue-500/15 text-blue-300 border-blue-500/30',
+    badgeBgLight: 'bg-blue-50 text-blue-700 border-blue-200'
+  },
+  { 
+    key: 'finance', 
+    label: 'Finance & Billing', 
+    shortLabel: 'Finance', 
+    icon: Receipt, 
+    color: 'text-purple-400', 
+    colorLight: 'text-purple-700',
+    badgeBg: 'bg-purple-500/15 text-purple-300 border-purple-500/30',
+    badgeBgLight: 'bg-purple-50 text-purple-700 border-purple-200'
+  },
 ];
 
 function classifyNotification(notif: InAppNotification): 'critical' | 'production' | 'quality' | 'logistics' | 'finance' | 'system' {
@@ -233,14 +289,18 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
         <div className="pointer-events-none absolute top-1/2 -left-24 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(147,51,234,0.12),transparent_70%)] blur-3xl" />
 
         {/* ── Apple HIG Drawer Header ── */}
-        <div className="relative px-5 sm:px-6 py-4.5 flex items-center justify-between border-b border-white/10 dark:border-white/10 shrink-0">
+        <div className={`relative px-5 sm:px-6 py-4.5 flex items-center justify-between border-b shrink-0 ${
+          isDarkMode ? 'border-white/10' : 'border-slate-200'
+        }`}>
           <div className="flex items-center gap-3 min-w-0">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] text-white shadow-md shadow-[var(--accent-shadow)]">
               <Bell className="h-5 w-5" strokeWidth={2.2} />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h2 className="text-sm font-bold tracking-tight text-white dark:text-white truncate">
+                <h2 className={`text-sm font-bold tracking-tight truncate ${
+                  isDarkMode ? 'text-white' : 'text-slate-900'
+                }`}>
                   Operations Alerts
                 </h2>
                 {unreadCount > 0 && (
@@ -249,7 +309,9 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-400 font-medium truncate">
+              <p className={`text-xs font-medium truncate ${
+                isDarkMode ? 'text-slate-400' : 'text-slate-500'
+              }`}>
                 Real-time factory & shopfloor event stream
               </p>
             </div>
@@ -259,15 +321,23 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
             <button
               type="button"
               onClick={onToggleSound}
-              className="flex h-8.5 w-8.5 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] text-slate-300 hover:text-white hover:bg-white/[0.12] hover:border-white/25 active:scale-95 cursor-pointer transition-all shadow-2xs"
+              className={`flex h-8.5 w-8.5 items-center justify-center rounded-full border active:scale-95 cursor-pointer transition-all shadow-2xs ${
+                isDarkMode 
+                  ? 'border-white/15 bg-white/[0.06] text-slate-300 hover:text-white hover:bg-white/[0.12] hover:border-white/25' 
+                  : 'border-slate-200 bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200 hover:border-slate-300'
+              }`}
               title={isSoundEnabled ? 'Audio alerts active (Click to mute)' : 'Audio alerts muted (Click to enable)'}
             >
-              {isSoundEnabled ? <Volume2 className="h-4 w-4 text-[#007AFF] dark:text-[#0A84FF]" /> : <VolumeX className="h-4 w-4 text-slate-500" />}
+              {isSoundEnabled ? <Volume2 className="h-4 w-4 text-[#007AFF] dark:text-[#0A84FF]" /> : <VolumeX className="h-4 w-4 text-slate-400" />}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="flex h-8.5 w-8.5 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] text-slate-300 hover:text-white hover:bg-white/[0.12] hover:border-white/25 active:scale-95 cursor-pointer transition-all shadow-2xs"
+              className={`flex h-8.5 w-8.5 items-center justify-center rounded-full border active:scale-95 cursor-pointer transition-all shadow-2xs ${
+                isDarkMode 
+                  ? 'border-white/15 bg-white/[0.06] text-slate-300 hover:text-white hover:bg-white/[0.12] hover:border-white/25' 
+                  : 'border-slate-200 bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200 hover:border-slate-300'
+              }`}
               title="Close drawer"
             >
               <X className="h-4 w-4" />
@@ -279,7 +349,9 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
         <div 
           ref={tabsContainerRef}
           data-lenis-prevent="true"
-          className="relative px-4 py-2.5 border-b border-white/10 dark:border-white/10 shrink-0 flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth cursor-grab active:cursor-grabbing"
+          className={`relative px-4 py-2.5 border-b shrink-0 flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth cursor-grab active:cursor-grabbing ${
+            isDarkMode ? 'border-white/10' : 'border-slate-200'
+          }`}
         >
           {SECTIONS_CONFIG.map((sec) => {
             const count = sectionCounts[sec.key] || 0;
@@ -296,10 +368,10 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                     ? 'bg-[#007AFF] text-white shadow-sm shadow-blue-500/30'
                     : isDarkMode
                       ? 'border border-white/10 bg-white/[0.04] text-slate-300 hover:text-white hover:bg-white/[0.08] hover:border-white/20'
-                      : 'border border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      : 'border border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900'
                 }`}
               >
-                <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-white' : sec.color}`} />
+                <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-white' : (isDarkMode ? sec.color : sec.colorLight || sec.color)}`} />
                 <span>{sec.shortLabel}</span>
                 {count > 0 && (
                   <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
@@ -315,13 +387,15 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
 
         {/* ── Action Deck Bar ── */}
         {notifications.length > 0 && (
-          <div className="relative px-5 py-2.5 border-b border-white/10 dark:border-white/10 shrink-0 flex items-center justify-between">
+          <div className={`relative px-5 py-2.5 border-b shrink-0 flex items-center justify-between ${
+            isDarkMode ? 'border-white/10' : 'border-slate-200'
+          }`}>
             <div className="flex items-center gap-2">
               {unreadCount > 0 && (
                 <button
                   type="button"
                   onClick={onMarkAllAsRead}
-                  className="px-3 py-1 rounded-full border border-[#007AFF]/30 bg-[#007AFF]/15 text-[#007AFF] dark:text-[#0A84FF] hover:bg-[#007AFF]/25 text-xs font-semibold flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-2xs"
+                  className="px-3 py-1 rounded-full border border-[#007AFF]/30 bg-[#007AFF]/15 text-[#007AFF] hover:bg-[#007AFF]/25 text-xs font-semibold flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-2xs"
                 >
                   <CheckCheck className="h-3.5 w-3.5" />
                   <span>Mark all read</span>
@@ -331,7 +405,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                 <button
                   type="button"
                   onClick={onClearAll}
-                  className="px-3 py-1 rounded-full border border-rose-500/30 bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 text-xs font-semibold flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-2xs"
+                  className="px-3 py-1 rounded-full border border-rose-500/30 bg-rose-500/15 text-rose-500 hover:bg-rose-500/25 text-xs font-semibold flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-2xs"
                   title="Clear all notifications in database"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -339,7 +413,9 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                 </button>
               )}
             </div>
-            <span className="text-[11px] text-slate-400 font-mono">
+            <span className={`text-[11px] font-mono ${
+              isDarkMode ? 'text-slate-400' : 'text-slate-500'
+            }`}>
               {displayedNotifications.length} alerts
             </span>
           </div>
@@ -355,14 +431,22 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
             className="absolute inset-0 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-3"
           >
             {displayedNotifications.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full min-h-[320px] text-slate-400 p-8 text-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-3xl border border-white/15 bg-white/[0.04] mb-3.5 shadow-2xs">
+              <div className={`flex flex-col items-center justify-center h-full min-h-[320px] p-8 text-center ${
+                isDarkMode ? 'text-slate-400' : 'text-slate-500'
+              }`}>
+                <div className={`flex h-14 w-14 items-center justify-center rounded-3xl border mb-3.5 shadow-2xs ${
+                  isDarkMode ? 'border-white/15 bg-white/[0.04]' : 'border-slate-200 bg-slate-100'
+                }`}>
                   <Sparkles className="h-6 w-6 text-[#007AFF] opacity-80" />
                 </div>
-                <p className="text-sm font-bold text-white dark:text-white tracking-tight">
+                <p className={`text-sm font-bold tracking-tight ${
+                  isDarkMode ? 'text-white' : 'text-slate-900'
+                }`}>
                   {activeTab === 'all' ? 'All Clear — No Notifications' : `No ${SECTIONS_CONFIG.find(s => s.key === activeTab)?.label || 'Section'} Alerts`}
                 </p>
-                <p className="text-xs text-slate-400 mt-1 max-w-[260px] leading-relaxed">
+                <p className={`text-xs mt-1 max-w-[260px] leading-relaxed ${
+                  isDarkMode ? 'text-slate-400' : 'text-slate-500'
+                }`}>
                   Real-time shopfloor events will stream in automatically as production runs.
                 </p>
               </div>
@@ -379,7 +463,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                         notif.is_read 
                           ? isDarkMode
                             ? 'bg-white/[0.03] border-white/10 hover:bg-white/[0.06] hover:border-white/20 shadow-2xs' 
-                            : 'bg-slate-50/70 border-slate-200/80 hover:bg-white hover:shadow-xs'
+                            : 'bg-slate-50/90 border-slate-200/90 hover:bg-white hover:border-slate-300 hover:shadow-xs'
                           : isDarkMode
                             ? 'bg-white/[0.07] border-white/15 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1),0_8px_20px_rgba(0,0,0,0.4)] hover:bg-white/[0.1] hover:border-white/25' 
                             : 'bg-white border-[#007AFF]/30 shadow-sm ring-1 ring-[#007AFF]/20'
@@ -392,7 +476,9 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2 mb-1.5">
                             <span className={`text-[10px] font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
-                              secConfig ? secConfig.badgeBg : 'bg-white/[0.06] text-slate-300 border-white/15'
+                              secConfig 
+                                ? (isDarkMode ? secConfig.badgeBg : secConfig.badgeBgLight || secConfig.badgeBg)
+                                : (isDarkMode ? 'bg-white/[0.06] text-slate-300 border-white/15' : 'bg-slate-100 text-slate-700 border-slate-200')
                             }`}>
                               {secConfig?.shortLabel || 'Update'}
                             </span>
@@ -404,22 +490,34 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                             )}
                           </div>
 
-                          <p className="text-xs font-bold leading-snug text-white dark:text-white tracking-tight">
+                          <p className={`text-xs font-bold leading-snug tracking-tight ${
+                            isDarkMode ? 'text-white' : 'text-slate-900'
+                          }`}>
                             {notif.title}
                           </p>
-                          <p className="text-xs mt-1 leading-relaxed text-slate-300 dark:text-slate-300">
+                          <p className={`text-xs mt-1 leading-relaxed ${
+                            isDarkMode ? 'text-slate-300' : 'text-slate-600'
+                          }`}>
                             {notif.message}
                           </p>
 
-                          <div className="mt-3 flex items-center justify-between pt-2 border-t border-white/10">
-                            <span className="text-[10.5px] font-mono text-slate-400">
+                          <div className={`mt-3 flex items-center justify-between pt-2 border-t ${
+                            isDarkMode ? 'border-white/10' : 'border-slate-100'
+                          }`}>
+                            <span className={`text-[10.5px] font-mono ${
+                              isDarkMode ? 'text-slate-400' : 'text-slate-500'
+                            }`}>
                               {formatDate(notif.created_at)}
                             </span>
                             {!notif.is_read && (
                               <button
                                 type="button"
                                 onClick={() => onMarkAsRead(notif.id)}
-                                className="text-[10.5px] font-semibold px-3 py-1 rounded-full border border-white/15 bg-white/[0.06] hover:bg-white/[0.14] hover:border-white/25 text-slate-200 transition-all cursor-pointer active:scale-95 shadow-2xs"
+                                className={`text-[10.5px] font-semibold px-3 py-1 rounded-full border transition-all cursor-pointer active:scale-95 shadow-2xs ${
+                                  isDarkMode
+                                    ? 'border-white/15 bg-white/[0.06] hover:bg-white/[0.14] hover:border-white/25 text-slate-200'
+                                    : 'border-slate-200 bg-slate-100 hover:bg-slate-200 hover:border-slate-300 text-slate-700'
+                                }`}
                               >
                                 Mark read
                               </button>

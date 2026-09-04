@@ -29,7 +29,7 @@ async function runBusinessApiTests() {
     const adminLoginRes = await fetch(`${BASE_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'owner@guruom.in', password: '1234567890' })
+      body: JSON.stringify({ email: 'owner@guruom.in', password: 'Pass@123' })
     });
     const adminData = await adminLoginRes.json();
     const adminToken = adminData.access_token;

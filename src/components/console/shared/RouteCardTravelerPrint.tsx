@@ -75,11 +75,36 @@ export const RouteCardTravelerPrint: React.FC<RouteCardTravelerPrintProps> = ({
   };
 
   // Company Information
-  const legalName = companyProfile?.legalName || 'GuruOm Industries LLP';
-  const companyAddress = companyProfile?.address || 'Plot No. 42, MIDC Industrial Area, Bhosari, Pune, Maharashtra - 411026';
-  const companyPhone = companyProfile?.phone || '+91 20 2712 3456';
-  const companyEmail = companyProfile?.email || 'operations@guruom.in';
-  const companyGstin = companyProfile?.gstin || '27AABCG1234F1Z5';
+  const legalName = (!companyProfile?.legalName || companyProfile.legalName === 'Test Tech Ltd')
+    ? 'GuruOm Industries LLP'
+    : companyProfile.legalName;
+
+  const isOldAddress = !companyProfile?.address ||
+    companyProfile.address.includes('Metoda') ||
+    companyProfile.address.includes('Rajkot') ||
+    companyProfile.address.includes('Bhosari') ||
+    companyProfile.address.includes('123 Test St');
+
+  const companyAddress = isOldAddress
+    ? 'Sr No 15/2, Mataji Logistic Park, Behind Tilakraj CNG Pump, Urali Devachi, Pune 412308, India'
+    : companyProfile.address;
+
+  const isOldPhone = !companyProfile?.phone ||
+    companyProfile.phone.includes('98250') ||
+    companyProfile.phone.includes('2712 3456') ||
+    companyProfile.phone === '1234567890';
+
+  const companyPhone = isOldPhone
+    ? '+91 9763 969 798'
+    : companyProfile.phone;
+
+  const isOldEmail = !companyProfile?.email ||
+    companyProfile.email === 'operations@guruom.in' ||
+    companyProfile.email === 'test@example.com';
+
+  const companyEmail = isOldEmail
+    ? 'contact@guruom.in'
+    : companyProfile.email;
 
   // Raw Material Spec from BOM or JobCard
   const primaryMaterial = bom?.components?.[0];
@@ -118,9 +143,8 @@ export const RouteCardTravelerPrint: React.FC<RouteCardTravelerPrintProps> = ({
             {companyAddress}
           </p>
           <div className="flex flex-wrap gap-x-4 text-[10px] text-slate-600 font-mono mt-0.5">
-            <span><strong>GSTIN:</strong> {companyGstin}</span>
-            <span><strong>Phone:</strong> {companyPhone}</span>
-            <span><strong>Email:</strong> {companyEmail}</span>
+            <span>{companyPhone}</span>
+            <span>Email: {companyEmail}</span>
           </div>
         </div>
 
@@ -237,14 +261,14 @@ export const RouteCardTravelerPrint: React.FC<RouteCardTravelerPrintProps> = ({
                 const startTimeDisplay = actualOp?.actualStartTime
                   ? formatTimeOnly(actualOp.actualStartTime)
                   : matchedLog?.loggedTimestamp
-                  ? formatTimeOnly(matchedLog.loggedTimestamp)
-                  : '____:____';
+                    ? formatTimeOnly(matchedLog.loggedTimestamp)
+                    : '____:____';
 
                 const endTimeDisplay = actualOp?.actualEndTime
                   ? formatTimeOnly(actualOp.actualEndTime)
                   : actualOp?.opStatus === 'COMPLETED' && matchedLog?.loggedTimestamp
-                  ? formatTimeOnly(matchedLog.loggedTimestamp)
-                  : '____:____';
+                    ? formatTimeOnly(matchedLog.loggedTimestamp)
+                    : '____:____';
 
                 const actualDurationDisplay = actualOp?.actualTimeMinutes != null
                   ? `${actualOp.actualTimeMinutes} m`
@@ -253,8 +277,8 @@ export const RouteCardTravelerPrint: React.FC<RouteCardTravelerPrintProps> = ({
                 const qtyOkDisplay = actualOp?.qtyProcessed != null
                   ? actualOp.qtyProcessed
                   : matchedLog?.qtyDone != null
-                  ? matchedLog.qtyDone
-                  : '____';
+                    ? matchedLog.qtyDone
+                    : '____';
 
                 const qtyScrapDisplay = actualOp?.qtyRejected != null
                   ? actualOp.qtyRejected
@@ -264,8 +288,8 @@ export const RouteCardTravelerPrint: React.FC<RouteCardTravelerPrintProps> = ({
                 const qcDisplay = actualOp?.inspectionPassed
                   ? 'PASS ✓'
                   : actualOp?.inspectionRequired
-                  ? 'REQ'
-                  : 'N/A';
+                    ? 'REQ'
+                    : 'N/A';
 
                 return (
                   <tr key={op.id || idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>

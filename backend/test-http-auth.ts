@@ -22,7 +22,7 @@ async function runHttpTests() {
     const loginRes = await fetch(`${BASE_URL}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'owner@guruom.in', password: '1234567890' })
+      body: JSON.stringify({ email: 'owner@guruom.in', password: 'Pass@123' })
     });
 
     const cookies = loginRes.headers.get('set-cookie');

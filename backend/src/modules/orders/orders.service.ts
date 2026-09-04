@@ -16,6 +16,7 @@ import { notificationsService } from '../notifications/notifications.service';
 import { bomService } from '../bom/bom.service';
 import { inventoryService } from '../inventory/inventory.service';
 import { inventoryMovementsService } from '../inventory/inventory_movements.service';
+import { inventoryReservationsService } from '../inventory/inventory_reservations.service';
 import { LockService } from '../../lib/lock';
 import { logAudit } from '../../services/auditLog';
 
@@ -342,6 +343,7 @@ export class OrdersService {
 
   /**
    * Automatically executes BOM explosion & material availability check for an order against live stock.
+   * Concurrency Safe & Idempotent: Accounts for this order's existing reservations and only reserves missing deltas.
    */
   async checkAndReserveMaterialsForOrder(order: any, actorName = 'System Material Auto-Checker'): Promise<{ ready: boolean; shortages?: any[] }> {
     let hasShortage = false;
@@ -352,6 +354,13 @@ export class OrdersService {
       { itemCode: order.partCode || 'PART-001', itemDescription: 'Manufactured Item', orderQty: 1 }
     ];
 
+    // Fetch existing active reservations for this order to ensure repeated verification is idempotent
+    const existingReservations = await inventoryReservationsService.getActiveReservations(order.id || order.poNo);
+    const existingResMap = new Map<string, number>();
+    for (const r of existingReservations) {
+      existingResMap.set(r.item_code, (existingResMap.get(r.item_code) || 0) + r.reserved_qty);
+    }
+
     for (const line of lines) {
       const itemCode = line.itemCode || line.code || 'PART-001';
       const orderQty = Number(line.orderQty || 1);
@@ -361,16 +370,18 @@ export class OrdersService {
         for (const comp of bom.components) {
           const requiredQty = Number(comp.qtyPerUnit || 1) * orderQty;
           const stockItem = await inventoryService.getStockItem(comp.componentCode);
-          const available = Number(stockItem.available ?? stockItem.onHand ?? 0);
+          const currentAvailable = Number(stockItem.available ?? stockItem.onHand ?? 0);
+          const alreadyReserved = existingResMap.get(comp.componentCode) || 0;
+          const availableToThisOrder = currentAvailable + alreadyReserved;
 
-          if (available < requiredQty) {
+          if (availableToThisOrder < requiredQty) {
             hasShortage = true;
             shortagesList.push({
               componentCode: comp.componentCode,
               componentName: comp.componentName,
               requiredQty,
-              available,
-              deficit: requiredQty - available
+              available: availableToThisOrder,
+              deficit: requiredQty - availableToThisOrder
             });
           } else {
             requiredStockAllocations.push({ code: comp.componentCode, qty: requiredQty });
@@ -379,16 +390,18 @@ export class OrdersService {
       } else {
         // Direct stock item check
         const stockItem = await inventoryService.getStockItem(itemCode);
-        const available = Number(stockItem.available ?? stockItem.onHand ?? 0);
+        const currentAvailable = Number(stockItem.available ?? stockItem.onHand ?? 0);
+        const alreadyReserved = existingResMap.get(itemCode) || 0;
+        const availableToThisOrder = currentAvailable + alreadyReserved;
 
-        if (available < orderQty) {
+        if (availableToThisOrder < orderQty) {
           hasShortage = true;
           shortagesList.push({
             componentCode: itemCode,
             componentName: line.itemDescription || itemCode,
             requiredQty: orderQty,
-            available,
-            deficit: orderQty - available
+            available: availableToThisOrder,
+            deficit: orderQty - availableToThisOrder
           });
         } else {
           requiredStockAllocations.push({ code: itemCode, qty: orderQty });
@@ -416,18 +429,27 @@ export class OrdersService {
       }
       return { ready: false, shortages: shortagesList };
     } else {
-      // Stock is available -> reserve stock for order
-      for (const alloc of requiredStockAllocations) {
-        await inventoryService.reserveStock(alloc.code, alloc.qty);
+      // Stock is available -> atomically and idempotently reserve stock via InventoryReservationsService
+      const reservationRes = await inventoryReservationsService.reserveOrderMaterials(
+        order.id || order.poNo,
+        order.poNo || order.id,
+        requiredStockAllocations
+      );
+
+      if (!reservationRes.success) {
+        return { ready: false, shortages: reservationRes.shortages || [] };
       }
+
       return { ready: true };
     }
   }
 
   /**
    * Consumes raw materials from inventory ledger when an order reaches MATERIAL_ISSUED.
-   * Performs BOM explosion and writes PRODUCTION_CONSUMPTION movements.
-   * BLOCKS transition (throws 400) if no BOM is found for any line item.
+   * Performs BOM explosion, verifies all required stock atomically, and writes PRODUCTION_CONSUMPTION movements.
+   * Idempotent & Concurrency-Safe: Retries do not double-consume, and competing orders cannot drive on_hand < 0.
+   * Reconciles and releases reserved stock so available inventory is not doubly deducted.
+   * BLOCKS transition (throws 400) if no BOM is found or if physical stock is insufficient.
    */
   async consumeMaterialsForOrder(order: any, actorName = 'Stores'): Promise<void> {
     const lines = order.lines && order.lines.length > 0
@@ -435,7 +457,9 @@ export class OrdersService {
       : [{ itemCode: order.partCode || 'PART-001', orderQty: 1 }];
 
     const missingBom: string[] = [];
+    const requiredAllocations: Array<{ itemCode: string; description?: string; qty: number }> = [];
 
+    // 1. Upfront BOM explosion and validation for ALL line items
     for (const line of lines) {
       const itemCode = line.itemCode || line.code || 'PART-001';
       const orderQty = Number(line.orderQty || 1);
@@ -448,14 +472,10 @@ export class OrdersService {
 
       for (const comp of bom.components) {
         const requiredQty = Number(comp.qtyPerUnit || 1) * orderQty;
-        await inventoryMovementsService.recordMovement({
+        requiredAllocations.push({
           itemCode: comp.componentCode,
-          quantityChange: -requiredQty,
-          movementType: 'PRODUCTION_CONSUMPTION',
-          referenceId: order.poNo,
-          referenceType: 'order',
-          actorEmail: `${actorName.toLowerCase().replace(/\s+/g, '.')}@guruom.in`,
-          notes: `Material issued for PO ${order.poNo} — ${comp.componentName} × ${requiredQty} (BOM of ${itemCode})`
+          description: comp.componentName || comp.componentCode,
+          qty: requiredQty
         });
       }
     }
@@ -469,6 +489,15 @@ export class OrdersService {
       err.errorCode = 'ERR_BOM_NOT_FOUND';
       throw err;
     }
+
+    // 2. Atomic, all-or-nothing stock deduction and reservation reconciliation
+    const actorEmail = `${actorName.toLowerCase().replace(/\s+/g, '.')}@guruom.in`;
+    await inventoryMovementsService.consumeOrderMaterialsAtomic(
+      order.id || order.poNo,
+      order.poNo || order.id,
+      actorEmail,
+      requiredAllocations
+    );
   }
 
   /**
@@ -764,6 +793,20 @@ export class OrdersService {
         });
       }
 
+      // AUTOMATED SYSTEM TRIGGER: CANCELLED -> Release any active material reservations back to stock
+      if (resolvedTargetStage === 'CANCELLED') {
+        await inventoryReservationsService.releaseOrderReservations(
+          order.id || order.poNo,
+          order.poNo || order.id,
+          (payload as any)?.reason || 'Order Cancelled'
+        );
+        notificationsService.broadcastEvent('stock_updated', {
+          orderPo: order.poNo,
+          status: 'RELEASED',
+          trigger: 'ORDER_CANCELLED'
+        });
+      }
+
       const updatedAt = new Date().toISOString();
 
       try {
@@ -1018,6 +1061,22 @@ export class OrdersService {
       orderId: order.id,
       amendment
     };
+  }
+
+  /**
+   * Directly updates or transitions order status with audit context (used by approval workflows and direct status callers).
+   */
+  async updateOrderStatus(
+    orderId: string, 
+    payload: { status: string; stage?: string; progressStep?: number; reason?: string }, 
+    actorName?: string
+  ) {
+    return this.transitionOrderStage(
+      orderId,
+      payload.status as OrderStage,
+      payload,
+      { name: actorName || 'System', role: 'Admin' }
+    );
   }
 }
 

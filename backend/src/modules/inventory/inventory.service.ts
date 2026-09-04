@@ -2,6 +2,8 @@ import { getDbClient } from '../../config/database';
 import { z } from 'zod';
 import { AdjustStockSchema } from './inventory.schema';
 import { inventoryMovementsService } from './inventory_movements.service';
+import { inventoryReservationsService } from './inventory_reservations.service';
+import { LockService } from '../../lib/lock';
 import { notificationsService } from '../notifications/notifications.service';
 import { logAudit } from '../../services/auditLog';
 
@@ -88,7 +90,8 @@ export class InventoryService {
       notes: `Manual stock adjustment to ${newOnHand} (Delta: ${delta > 0 ? '+' : ''}${delta})${reason ? ` — ${reason}` : ''}`
     });
 
-    const reserved = 0;
+    const currentStock = await this.getStockItem(code);
+    const reserved = currentStock.reserved;
     const available = movement.balance_after - reserved;
 
     // Record audit log for the adjustment
@@ -136,7 +139,7 @@ export class InventoryService {
     try {
       const { data } = await this.db.from('stock_items').select('*').eq('code', code).maybeSingle();
       if (data) {
-        if (onHand === 0 && data.on_hand !== undefined && data.on_hand !== null) {
+        if (data.on_hand !== undefined && data.on_hand !== null) {
           onHand = Number(data.on_hand || 0);
         }
         reserved = Number(data.reserved || 0);
@@ -163,33 +166,94 @@ export class InventoryService {
 
   /**
    * Reserves stock quantity for production job card.
+   * Concurrency Safe: Uses LockService to serialize concurrent reservations.
+   * Idempotent & Lifecycle Aware: Integrates with InventoryReservationsService when orderId is provided.
    */
-  async reserveStock(code: string, qty: number, orderPo?: string) {
-    try {
-      const current = await this.getStockItem(code);
-      if (current) {
-        const newReserved = (current.reserved || 0) + qty;
-        const newAvailable = (current.onHand || 0) - newReserved;
-        const status = newAvailable < 0 ? 'CRITICAL' : newAvailable < current.reorderLevel ? 'SHORTAGE' : 'OK';
+  async reserveStock(code: string, qty: number, orderId?: string, orderPo?: string) {
+    if (orderId) {
+      const res = await inventoryReservationsService.reserveOrderMaterials(orderId, orderPo || orderId, [{ code, qty }]);
+      if (!res.success) {
+        const shortage = res.shortages?.[0];
+        throw new Error(`Insufficient stock to reserve ${qty} of ${code}. Available: ${shortage?.available ?? 0}`);
+      }
+      return;
+    }
 
+    // Standalone / Test allocation without order linkage
+    const lockKey = LockService.buildKey('t_default', 'stock_material', code);
+    await LockService.withLock(lockKey, 5000, async () => {
+      const current = await this.getStockItem(code);
+      if (current.available < qty) {
+        throw new Error(`Insufficient stock to reserve ${qty} of ${code}. Available: ${current.available}`);
+      }
+
+      const newReserved = (current.reserved || 0) + qty;
+      const newAvailable = (current.onHand || 0) - newReserved;
+      const status = newAvailable < 0 ? 'CRITICAL' : newAvailable < current.reorderLevel ? 'SHORTAGE' : 'OK';
+
+      try {
         await this.db.from('stock_items').update({
           reserved: newReserved,
           available: newAvailable,
           status,
           updated_at: new Date().toISOString()
         }).eq('code', code);
+      } catch (err) {
+        console.warn(`Database reserveStock(${code}) error:`, err);
       }
-    } catch (err) {
-      console.warn(`Database reserveStock(${code}) error:`, err);
+
+      await logAudit({
+        actorEmail: 'inventory@guruom.in',
+        action: 'RESERVE_MATERIAL',
+        entityType: 'order',
+        entityId: orderPo || code,
+        afterState: { code, reservedQty: qty }
+      }).catch(() => {});
+    });
+  }
+
+  /**
+   * Releases reserved stock quantity without touching physical on-hand balance.
+   */
+  async releaseStock(code: string, qty: number, orderId?: string, orderPo?: string, reason = 'Reservation Released') {
+    if (orderId) {
+      return await inventoryReservationsService.releaseOrderReservations(orderId, orderPo, reason);
     }
 
-    await logAudit({
-      actorEmail: 'inventory@guruom.in',
-      action: 'RESERVE_MATERIAL',
-      entityType: 'order',
-      entityId: orderPo || code,
-      afterState: { code, reservedQty: qty }
-    }).catch(() => {});
+    const lockKey = LockService.buildKey('t_default', 'stock_material', code);
+    return await LockService.withLock(lockKey, 5000, async () => {
+      const current = await this.getStockItem(code);
+      const newReserved = Math.max(0, (current.reserved || 0) - qty);
+      const newAvailable = (current.onHand || 0) - newReserved;
+      const status = newAvailable < 0 ? 'CRITICAL' : newAvailable < current.reorderLevel ? 'SHORTAGE' : 'OK';
+
+      try {
+        await this.db.from('stock_items').update({
+          reserved: newReserved,
+          available: newAvailable,
+          status,
+          updated_at: new Date().toISOString()
+        }).eq('code', code);
+      } catch (err) {
+        console.warn(`Database releaseStock(${code}) error:`, err);
+      }
+
+      notificationsService.broadcastEvent('stock_updated', {
+        itemCode: code,
+        onHand: current.onHand,
+        reserved: newReserved,
+        available: newAvailable,
+        reason
+      });
+
+      await logAudit({
+        actorEmail: 'inventory@guruom.in',
+        action: 'RELEASE_MATERIAL',
+        entityType: 'order',
+        entityId: orderPo || code,
+        afterState: { code, releasedQty: qty }
+      }).catch(() => {});
+    });
   }
 
 

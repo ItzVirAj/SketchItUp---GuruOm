@@ -32,7 +32,7 @@ export class MastersController {
       await CacheService.invalidatePattern(`cache:${tenant}:masters:*`);
       return res.status(201).json({ message: 'Master item saved successfully', data: result });
     } catch (err: any) {
-      return res.status(400).json({ error: 'ValidationError', message: err.message });
+      return res.status(err.statusCode || 400).json({ error: err.errorCode || err.name || 'MasterError', message: err.message });
     }
   }
 
@@ -44,7 +44,7 @@ export class MastersController {
       await CacheService.invalidatePattern(`cache:${tenant}:masters:*`);
       return res.json({ message: 'Master item updated successfully', data: result });
     } catch (err: any) {
-      return res.status(400).json({ error: 'ValidationError', message: err.message });
+      return res.status(err.statusCode || 400).json({ error: err.errorCode || err.name || 'MasterError', message: err.message });
     }
   }
 
@@ -56,7 +56,7 @@ export class MastersController {
       await CacheService.invalidatePattern(`cache:${tenant}:masters:*`);
       return res.json({ message: 'Master item deleted successfully', data: result });
     } catch (err: any) {
-      return res.status(400).json({ error: 'ValidationError', message: err.message });
+      return res.status(err.statusCode || 400).json({ error: err.errorCode || err.name || 'MasterError', message: err.message });
     }
   }
 
@@ -86,7 +86,7 @@ export class MastersController {
       await CacheService.invalidatePattern(`cache:${tenant}:masters:*`);
       return res.status(201).json({ message: 'Customer saved successfully', data: result });
     } catch (err: any) {
-      return res.status(400).json({ error: 'ValidationError', message: err.message });
+      return res.status(err.statusCode || 400).json({ error: err.errorCode || err.name || 'MasterError', message: err.message });
     }
   }
 
@@ -98,7 +98,7 @@ export class MastersController {
       await CacheService.invalidatePattern(`cache:${tenant}:masters:*`);
       return res.json({ message: 'Customer updated successfully', data: result });
     } catch (err: any) {
-      return res.status(400).json({ error: 'ValidationError', message: err.message });
+      return res.status(err.statusCode || 400).json({ error: err.errorCode || err.name || 'MasterError', message: err.message });
     }
   }
 
@@ -110,7 +110,7 @@ export class MastersController {
       await CacheService.invalidatePattern(`cache:${tenant}:masters:*`);
       return res.json({ message: 'Customer deleted successfully', data: result });
     } catch (err: any) {
-      return res.status(400).json({ error: 'ValidationError', message: err.message });
+      return res.status(err.statusCode || 400).json({ error: err.errorCode || err.name || 'MasterError', message: err.message });
     }
   }
 
@@ -141,7 +141,7 @@ export class MastersController {
       await CacheService.invalidatePattern(`cache:${tenant}:masters:*`);
       return res.status(201).json({ message: 'Vendor saved successfully', data: result });
     } catch (err: any) {
-      return res.status(400).json({ error: 'ValidationError', message: err.message });
+      return res.status(err.statusCode || 400).json({ error: err.errorCode || err.name || 'MasterError', message: err.message });
     }
   }
 
@@ -153,7 +153,7 @@ export class MastersController {
       await CacheService.invalidatePattern(`cache:${tenant}:masters:*`);
       return res.json({ message: 'Vendor updated successfully', data: result });
     } catch (err: any) {
-      return res.status(400).json({ error: 'ValidationError', message: err.message });
+      return res.status(err.statusCode || 400).json({ error: err.errorCode || err.name || 'MasterError', message: err.message });
     }
   }
 
@@ -165,7 +165,7 @@ export class MastersController {
       await CacheService.invalidatePattern(`cache:${tenant}:masters:*`);
       return res.json({ message: 'Vendor deleted successfully', data: result });
     } catch (err: any) {
-      return res.status(400).json({ error: 'ValidationError', message: err.message });
+      return res.status(err.statusCode || 400).json({ error: err.errorCode || err.name || 'MasterError', message: err.message });
     }
   }
 
@@ -205,7 +205,7 @@ export class MastersController {
       await CacheService.invalidatePattern(`cache:${tenant}:masters:*`);
       return res.status(201).json({ message: 'Machine saved successfully', data: result });
     } catch (err: any) {
-      return res.status(400).json({ error: 'ValidationError', message: err.message });
+      return res.status(err.statusCode || 400).json({ error: err.errorCode || err.name || 'MasterError', message: err.message });
     }
   }
 
@@ -217,7 +217,7 @@ export class MastersController {
       await CacheService.invalidatePattern(`cache:${tenant}:masters:*`);
       return res.json({ message: 'Machine updated successfully', data: result });
     } catch (err: any) {
-      return res.status(400).json({ error: 'ValidationError', message: err.message });
+      return res.status(err.statusCode || 400).json({ error: err.errorCode || err.name || 'MasterError', message: err.message });
     }
   }
 
@@ -229,7 +229,7 @@ export class MastersController {
       await CacheService.invalidatePattern(`cache:${tenant}:masters:*`);
       return res.json({ message: 'Machine deleted successfully', data: result });
     } catch (err: any) {
-      return res.status(400).json({ error: 'ValidationError', message: err.message });
+      return res.status(err.statusCode || 400).json({ error: err.errorCode || err.name || 'MasterError', message: err.message });
     }
   }
 
@@ -259,7 +259,7 @@ export class MastersController {
       await CacheService.invalidatePattern(`cache:${tenant}:masters:*`);
       return res.status(201).json({ message: 'User saved successfully', data: result });
     } catch (err: any) {
-      return res.status(400).json({ error: 'ValidationError', message: err.message });
+      return res.status(err.statusCode || 400).json({ error: err.errorCode || err.name || 'MasterError', message: err.message });
     }
   }
 

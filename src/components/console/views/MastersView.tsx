@@ -675,7 +675,8 @@ export const MastersView: React.FC<MastersViewProps> = ({
     if (editingCustomer && onUpdateCustomer) {
       onUpdateCustomer(cCode, newCust);
     } else if (onAddCustomer) {
-      onAddCustomer(newCust);
+      const { code, ...restCust } = newCust;
+      onAddCustomer(restCust as any);
     }
 
     setEditingCustomer(null);
@@ -762,7 +763,8 @@ export const MastersView: React.FC<MastersViewProps> = ({
     if (editingVendor && onUpdateVendor) {
       onUpdateVendor(vCode, newVend);
     } else if (onAddVendor) {
-      onAddVendor(newVend);
+      const { code, ...restVend } = newVend;
+      onAddVendor(restVend as any);
     }
 
     setEditingVendor(null);
@@ -826,9 +828,11 @@ export const MastersView: React.FC<MastersViewProps> = ({
     if (editingItem && onUpdateMaster) {
       onUpdateMaster(iCode, newItem);
     } else if (onAddMasterItem) {
-      onAddMasterItem(newItem);
+      const { code, ...restItem } = newItem;
+      onAddMasterItem(restItem as any);
     } else if (onAddMaster) {
-      onAddMaster(newItem);
+      const { code, ...restItem } = newItem;
+      onAddMaster(restItem as any);
     }
 
     setEditingItem(null);
@@ -884,7 +888,8 @@ export const MastersView: React.FC<MastersViewProps> = ({
     if (editingMachine && onUpdateMachine) {
       onUpdateMachine(mCode, newMachine);
     } else if (onAddMachine) {
-      onAddMachine(newMachine);
+      const { code, ...restMachine } = newMachine;
+      onAddMachine(restMachine as any);
     }
 
     setEditingMachine(null);

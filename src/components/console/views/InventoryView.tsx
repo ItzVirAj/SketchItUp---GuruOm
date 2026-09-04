@@ -316,6 +316,17 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
     });
   }, [stockMasterRows, selectedCategory, searchQuery]);
 
+  // Filtered reconciliation based on search query
+  const filteredReconciliation = useMemo(() => {
+    if (!searchQuery.trim()) return reconciliationReport;
+    const q = searchQuery.toLowerCase().trim();
+    return (reconciliationReport || []).filter(
+      r => r.itemCode.toLowerCase().includes(q) ||
+           r.description.toLowerCase().includes(q) ||
+           (r.category && r.category.toLowerCase().includes(q))
+    );
+  }, [reconciliationReport, searchQuery]);
+
   // Sync adjust modal from URL params if reloaded or deep linked
   useEffect(() => {
     if (adjustStockModal.isOpen && adjustStockModal.params.itemId) {
@@ -710,7 +721,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
           </div>
 
           <div className="mt-2.5 flex items-center justify-between px-1 font-mono text-[9px] font-semibold uppercase tracking-wider text-slate-400">
-            <span>Showing {subTab === 'stock' ? filteredStock.length : (subTab === 'shortages' ? shortages.length : (subTab === 'purchases' ? purchaseOrders.length : (subTab === 'grn' ? grnList.length : (subTab === 'movements' ? movements.length : reconciliationReport.length))))} records</span>
+            <span>Showing {subTab === 'stock' ? filteredStock.length : (subTab === 'shortages' ? shortages.length : (subTab === 'purchases' ? purchaseOrders.length : (subTab === 'grn' ? grnList.length : (subTab === 'movements' ? movements.length : filteredReconciliation.length))))} records</span>
             <span>Physical Store & Append-Only Ledger Control</span>
           </div>
         </div>
@@ -1419,18 +1430,18 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className={`p-4 rounded-2xl border ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
               <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">Audited Items</div>
-              <div className="text-2xl font-extrabold font-mono mt-1 text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{(reconciliationReport || []).length}</div>
+              <div className="text-2xl font-extrabold font-mono mt-1 text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{(filteredReconciliation || []).length}</div>
             </div>
             <div className={`p-4 rounded-2xl border ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
               <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">100% Ledger Matched</div>
               <div className="text-2xl font-extrabold font-mono mt-1 text-emerald-400">
-                {(reconciliationReport || []).filter(r => r.status === 'MATCHED').length}
+                {(filteredReconciliation || []).filter(r => r.status === 'MATCHED').length}
               </div>
             </div>
             <div className={`p-4 rounded-2xl border ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
               <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">Discrepancies Flagged</div>
               <div className="text-2xl font-extrabold font-mono mt-1 text-rose-400">
-                {(reconciliationReport || []).filter(r => r.status === 'DISCREPANCY').length}
+                {(filteredReconciliation || []).filter(r => r.status === 'DISCREPANCY').length}
               </div>
             </div>
           </div>
@@ -1443,7 +1454,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 <div className="text-xs font-extrabold text-slate-900 dark:text-white">Physical vs. Derived Ledger Reconciliation</div>
                 <div className="mt-0.5 text-[10px] text-slate-400">Audit report comparing fast cache count against immutable ledger transaction sum</div>
               </div>
-              <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>{reconciliationReport.length} items</span>
+              <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>{filteredReconciliation.length} items</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse font-mono">
@@ -1461,42 +1472,56 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   </tr>
                 </thead>
                 <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
-                  {(reconciliationReport || []).map((rec) => {
-                    const isDiscrepancy = rec.status === 'DISCREPANCY';
-                    return (
-                      <tr key={rec.itemCode} className={`transition-colors ${isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'}`}>
-                        <td className="py-4 px-5 font-bold text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{rec.itemCode}</td>
-                        <td className="py-4 px-5 text-slate-200 font-sans font-medium">{rec.description}</td>
-                        <td className="py-4 px-5 text-right font-bold text-emerald-400">{formatDecimal(rec.ledgerBalance)}</td>
-                        <td className={`py-4 px-5 text-right font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{formatDecimal(rec.cachedOnHand)}</td>
-                        <td className={`py-4 px-5 text-right font-bold ${isDiscrepancy ? 'text-rose-400' : 'text-emerald-400'}`}>
-                          {rec.discrepancy > 0 ? `+${formatDecimal(rec.discrepancy)}` : formatDecimal(rec.discrepancy)}
-                        </td>
-                        <td className="py-4 px-5 text-center">
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-bold uppercase border ${
-                            isDiscrepancy
-                              ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-                              : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                          }`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${isDiscrepancy ? 'bg-rose-500' : 'bg-emerald-500'}`} />
-                            <span>{rec.status}</span>
+                  {filteredReconciliation.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center text-slate-400 font-mono text-xs">
+                        <div className="flex flex-col items-center justify-center gap-2">
+                          <Boxes className="w-8 h-8 text-slate-500/40" />
+                          <span className="font-semibold text-slate-300">No reconciliation records found</span>
+                          <span className="text-[10px] text-slate-500">
+                            {searchQuery ? `No items matching "${searchQuery}"` : 'Zero inventory items found in database.'}
                           </span>
-                        </td>
-                        <td className="py-4 px-5 text-center">
-                          <button
-                            onClick={() => {
-                              onAdjustStock(rec.itemCode, rec.discrepancy, 'Reconciliation Correction');
-                            }}
-                            className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-ui cursor-pointer ${
-                              isDarkMode ? 'bg-[var(--accent-soft-dark)] text-[var(--accent-text-dark)] hover:brightness-125 border border-[var(--accent-border-dark)]' : 'bg-[var(--accent-soft-light)] text-[var(--accent-text-light)] hover:brightness-95 border border-[var(--accent-border-light)]'
-                            }`}
-                          >
-                            Reconcile
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredReconciliation.map((rec) => {
+                      const isDiscrepancy = rec.status === 'DISCREPANCY';
+                      return (
+                        <tr key={rec.itemCode} className={`transition-colors ${isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'}`}>
+                          <td className="py-4 px-5 font-bold text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{rec.itemCode}</td>
+                          <td className="py-4 px-5 text-slate-200 font-sans font-medium">{rec.description}</td>
+                          <td className="py-4 px-5 text-right font-bold text-emerald-400">{formatDecimal(rec.ledgerBalance)}</td>
+                          <td className={`py-4 px-5 text-right font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{formatDecimal(rec.cachedOnHand)}</td>
+                          <td className={`py-4 px-5 text-right font-bold ${isDiscrepancy ? 'text-rose-400' : 'text-emerald-400'}`}>
+                            {rec.discrepancy > 0 ? `+${formatDecimal(rec.discrepancy)}` : formatDecimal(rec.discrepancy)}
+                          </td>
+                          <td className="py-4 px-5 text-center">
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-bold uppercase border ${
+                              isDiscrepancy
+                                ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                                : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                            }`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${isDiscrepancy ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+                              <span>{rec.status}</span>
+                            </span>
+                          </td>
+                          <td className="py-4 px-5 text-center">
+                            <button
+                              onClick={() => {
+                                onAdjustStock(rec.itemCode, rec.discrepancy, 'Reconciliation Correction');
+                              }}
+                              className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-ui cursor-pointer ${
+                                isDarkMode ? 'bg-[var(--accent-soft-dark)] text-[var(--accent-text-dark)] hover:brightness-125 border border-[var(--accent-border-dark)]' : 'bg-[var(--accent-soft-light)] text-[var(--accent-text-light)] hover:brightness-95 border border-[var(--accent-border-light)]'
+                              }`}
+                            >
+                              Reconcile
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>

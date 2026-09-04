@@ -610,19 +610,21 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
             </motion.div>
           </button>
 
-          {/* User Profile Pill */}
-          <button
-            type="button"
-            onClick={onOpenSwitchUser}
-            className={`hidden h-9 w-9 items-center justify-center rounded-full border transition-all active:scale-95 cursor-pointer xl:flex shadow-2xs ${
-              isDarkMode 
-                ? 'border-white/15 bg-white/[0.06] text-slate-200 hover:bg-white/[0.1] hover:border-white/25' 
-                : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
-            }`}
-            title={`Switch user: ${currentUser?.name || userName} (${currentRole})`}
-          >
-            <UserRound className="h-4 w-4" />
-          </button>
+          {/* User Profile Pill (Only available to authorized administrators) */}
+          {onOpenSwitchUser && (
+            <button
+              type="button"
+              onClick={onOpenSwitchUser}
+              className={`hidden h-9 w-9 items-center justify-center rounded-full border transition-all active:scale-95 cursor-pointer xl:flex shadow-2xs ${
+                isDarkMode 
+                  ? 'border-white/15 bg-white/[0.06] text-slate-200 hover:bg-white/[0.1] hover:border-white/25' 
+                  : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
+              }`}
+              title={`Switch user: ${currentUser?.name || userName} (${currentRole})`}
+            >
+              <UserRound className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </div>
 

@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Truck, 
-  X, 
-  Printer, 
-  Download, 
-  Edit3, 
-  Save, 
-  CheckCircle2, 
-  AlertTriangle, 
-  FileText, 
-  ArrowUpRight, 
-  ShieldCheck, 
+import {
+  Truck,
+  X,
+  Printer,
+  Download,
+  Edit3,
+  Save,
+  CheckCircle2,
+  AlertTriangle,
+  FileText,
+  ArrowUpRight,
+  ShieldCheck,
   Lock,
   Building2,
   Calendar,
@@ -238,18 +238,16 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md font-sans overflow-y-auto">
       {/* Printable Area Wrapper */}
-      <div 
-        id="challan-print-container" 
-        className={`relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-3xl border shadow-2xl transition-ui overflow-hidden ${
-          isDarkMode 
-            ? 'bg-[#09090B] border-white/10 text-white shadow-[0_24px_60px_rgba(0,0,0,0.8)]' 
+      <div
+        id="challan-print-container"
+        className={`relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-3xl border shadow-2xl transition-ui overflow-hidden ${isDarkMode
+            ? 'bg-[#09090B] border-white/10 text-white shadow-[0_24px_60px_rgba(0,0,0,0.8)]'
             : 'bg-white border-slate-200 text-slate-900 shadow-2xl'
-        }`}
+          }`}
       >
         {/* Modal Header */}
-        <div className={`flex items-center justify-between px-6 py-4 border-b ${
-          isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200 bg-slate-50'
-        } no-print`}>
+        <div className={`flex items-center justify-between px-6 py-4 border-b ${isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200 bg-slate-50'
+          } no-print`}>
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-2xl bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">
               <Truck className="w-5 h-5" />
@@ -259,18 +257,16 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
                 <h3 className="font-bold text-base font-mono tracking-tight text-cyan-400">
                   {challan.challanNo}
                 </h3>
-                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase border ${
-                  isDraft 
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase border ${isDraft
                     ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                    : isDispatched 
+                    : isDispatched
                       ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30'
-                      : isDelivered 
+                      : isDelivered
                         ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
                         : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-                }`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${
-                    isDraft ? 'bg-amber-400' : isDispatched ? 'bg-cyan-400' : isDelivered ? 'bg-emerald-400' : 'bg-rose-400'
-                  }`} />
+                  }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${isDraft ? 'bg-amber-400' : isDispatched ? 'bg-cyan-400' : isDelivered ? 'bg-emerald-400' : 'bg-rose-400'
+                    }`} />
                   <span>{effectiveStatus}</span>
                 </span>
               </div>
@@ -295,11 +291,10 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
             <button
               type="button"
               onClick={handlePrint}
-              className={`p-2 rounded-xl border flex items-center gap-1.5 text-xs font-mono font-semibold transition-ui cursor-pointer ${
-                isDarkMode 
-                  ? 'border-white/10 bg-black/60 text-slate-200 hover:bg-white/10 hover:text-white' 
+              className={`p-2 rounded-xl border flex items-center gap-1.5 text-xs font-mono font-semibold transition-ui cursor-pointer ${isDarkMode
+                  ? 'border-white/10 bg-black/60 text-slate-200 hover:bg-white/10 hover:text-white'
                   : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
-              }`}
+                }`}
               title="Print Delivery Challan"
             >
               <Printer className="w-4 h-4 text-cyan-400" />
@@ -310,11 +305,10 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
             <button
               type="button"
               onClick={handleDownloadPdf}
-              className={`p-2 rounded-xl border flex items-center gap-1.5 text-xs font-mono font-semibold transition-ui cursor-pointer ${
-                isDarkMode 
-                  ? 'border-white/10 bg-black/60 text-slate-200 hover:bg-white/10 hover:text-white' 
+              className={`p-2 rounded-xl border flex items-center gap-1.5 text-xs font-mono font-semibold transition-ui cursor-pointer ${isDarkMode
+                  ? 'border-white/10 bg-black/60 text-slate-200 hover:bg-white/10 hover:text-white'
                   : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
-              }`}
+                }`}
               title="Download PDF"
             >
               <Download className="w-4 h-4 text-indigo-400" />
@@ -333,13 +327,12 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
               </button>
             )}
 
-            <button 
-              onClick={onClose} 
-              className={`p-2 rounded-xl border transition-ui cursor-pointer ${
-                isDarkMode 
-                  ? 'border-white/10 bg-black/60 text-slate-400 hover:text-white hover:bg-white/10' 
+            <button
+              onClick={onClose}
+              className={`p-2 rounded-xl border transition-ui cursor-pointer ${isDarkMode
+                  ? 'border-white/10 bg-black/60 text-slate-400 hover:text-white hover:bg-white/10'
                   : 'border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
-              }`}
+                }`}
             >
               <X className="w-4 h-4" />
             </button>
@@ -388,11 +381,10 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
                     value={editTransporter}
                     onChange={(e) => setEditTransporter(e.target.value)}
                     placeholder="e.g. VRL Logistics, SafeXpress, Self Pick-up"
-                    className={`w-full rounded-2xl border px-3.5 py-2.5 text-xs outline-none ${
-                      isDarkMode 
-                        ? 'bg-black/60 border-white/10 text-white focus:border-[#007AFF]' 
+                    className={`w-full rounded-2xl border px-3.5 py-2.5 text-xs outline-none ${isDarkMode
+                        ? 'bg-black/60 border-white/10 text-white focus:border-[#007AFF]'
                         : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
-                    }`}
+                      }`}
                   />
                 </div>
 
@@ -406,11 +398,10 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
                     value={editVehicleNo}
                     onChange={(e) => setEditVehicleNo(e.target.value)}
                     placeholder="e.g. MH 12 AB 4589"
-                    className={`w-full rounded-2xl border px-3.5 py-2.5 text-xs font-mono outline-none ${
-                      isDarkMode 
-                        ? 'bg-black/60 border-white/10 text-white focus:border-[#007AFF]' 
+                    className={`w-full rounded-2xl border px-3.5 py-2.5 text-xs font-mono outline-none ${isDarkMode
+                        ? 'bg-black/60 border-white/10 text-white focus:border-[#007AFF]'
                         : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
-                    }`}
+                      }`}
                   />
                 </div>
 
@@ -423,11 +414,10 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
                     value={editLrNo}
                     onChange={(e) => setEditLrNo(e.target.value)}
                     placeholder="e.g. VRL-DOC-98762"
-                    className={`w-full rounded-2xl border px-3.5 py-2.5 text-xs font-mono outline-none ${
-                      isDarkMode 
-                        ? 'bg-black/60 border-white/10 text-white focus:border-[#007AFF]' 
+                    className={`w-full rounded-2xl border px-3.5 py-2.5 text-xs font-mono outline-none ${isDarkMode
+                        ? 'bg-black/60 border-white/10 text-white focus:border-[#007AFF]'
                         : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
-                    }`}
+                      }`}
                   />
                 </div>
 
@@ -440,11 +430,10 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
                     value={editEWayBillNo}
                     onChange={(e) => setEditEWayBillNo(e.target.value)}
                     placeholder="e.g. 2710 9821 4455"
-                    className={`w-full rounded-2xl border px-3.5 py-2.5 text-xs font-mono outline-none ${
-                      isDarkMode 
-                        ? 'bg-black/60 border-white/10 text-white focus:border-[#007AFF]' 
+                    className={`w-full rounded-2xl border px-3.5 py-2.5 text-xs font-mono outline-none ${isDarkMode
+                        ? 'bg-black/60 border-white/10 text-white focus:border-[#007AFF]'
                         : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
-                    }`}
+                      }`}
                   />
                 </div>
 
@@ -457,11 +446,10 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
                     value={editDriverContact}
                     onChange={(e) => setEditDriverContact(e.target.value)}
                     placeholder="e.g. +91 98765 43210"
-                    className={`w-full rounded-2xl border px-3.5 py-2.5 text-xs font-mono outline-none ${
-                      isDarkMode 
-                        ? 'bg-black/60 border-white/10 text-white focus:border-[#007AFF]' 
+                    className={`w-full rounded-2xl border px-3.5 py-2.5 text-xs font-mono outline-none ${isDarkMode
+                        ? 'bg-black/60 border-white/10 text-white focus:border-[#007AFF]'
                         : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
-                    }`}
+                      }`}
                   />
                 </div>
 
@@ -473,11 +461,10 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
                     type="date"
                     value={editDate}
                     onChange={(e) => setEditDate(e.target.value)}
-                    className={`w-full rounded-2xl border px-3.5 py-2.5 text-xs font-mono outline-none ${
-                      isDarkMode 
-                        ? 'bg-black/60 border-white/10 text-white focus:border-[#007AFF]' 
+                    className={`w-full rounded-2xl border px-3.5 py-2.5 text-xs font-mono outline-none ${isDarkMode
+                        ? 'bg-black/60 border-white/10 text-white focus:border-[#007AFF]'
                         : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
-                    }`}
+                      }`}
                   />
                 </div>
               </div>
@@ -491,11 +478,10 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
                   value={editRemarks}
                   onChange={(e) => setEditRemarks(e.target.value)}
                   placeholder="e.g. Goods packed in sealed wooden crates with rust-proof VCI covers"
-                  className={`w-full rounded-2xl border px-3.5 py-2.5 text-xs outline-none ${
-                    isDarkMode 
-                      ? 'bg-black/60 border-white/10 text-white focus:border-[#007AFF]' 
+                  className={`w-full rounded-2xl border px-3.5 py-2.5 text-xs outline-none ${isDarkMode
+                      ? 'bg-black/60 border-white/10 text-white focus:border-[#007AFF]'
                       : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
-                  }`}
+                    }`}
                 />
               </div>
 
@@ -504,9 +490,8 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
                 <label className="block text-[11px] font-mono uppercase font-bold text-slate-400">
                   Consignment Line Quantities (Pre-Dispatch Pool)
                 </label>
-                <div className={`rounded-2xl border overflow-hidden ${
-                  isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200 bg-slate-50'
-                }`}>
+                <div className={`rounded-2xl border overflow-hidden ${isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200 bg-slate-50'
+                  }`}>
                   <table className="w-full text-left text-xs">
                     <thead>
                       <tr className={`border-b ${isDarkMode ? 'border-white/10 text-slate-400' : 'border-slate-200 text-slate-600'}`}>
@@ -529,9 +514,8 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
                               min="1"
                               value={line.qty}
                               onChange={(e) => handleUpdateQuantity(idx, Number(e.target.value))}
-                              className={`w-24 text-right font-mono font-bold px-2 py-1 rounded-xl border outline-none ${
-                                isDarkMode ? 'bg-black/60 border-white/10 text-white' : 'bg-white border-slate-300 text-slate-900'
-                              }`}
+                              className={`w-24 text-right font-mono font-bold px-2 py-1 rounded-xl border outline-none ${isDarkMode ? 'bg-black/60 border-white/10 text-white' : 'bg-white border-slate-300 text-slate-900'
+                                }`}
                             />
                           </td>
                           <td className="py-2.5 px-4 font-mono text-slate-400">{line.unit || 'NOS'}</td>
@@ -546,9 +530,8 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsEditing(false)}
-                  className={`px-4 py-2 rounded-xl border text-xs font-mono font-bold cursor-pointer transition-ui ${
-                    isDarkMode ? 'border-white/10 text-slate-400 hover:text-white hover:bg-white/10' : 'border-slate-200 text-slate-600 hover:bg-slate-100'
-                  }`}
+                  className={`px-4 py-2 rounded-xl border text-xs font-mono font-bold cursor-pointer transition-ui ${isDarkMode ? 'border-white/10 text-slate-400 hover:text-white hover:bg-white/10' : 'border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
                 >
                   Cancel
                 </button>
@@ -568,13 +551,12 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
             <div id="challan-printable-document" ref={printableRef} className="space-y-6 printable-document">
               {/* Statutory Notice Banner (Screen Only) */}
               {!isDraft && (
-                <div className={`p-3.5 rounded-2xl border flex items-center justify-between no-print ${
-                  isDispatched 
+                <div className={`p-3.5 rounded-2xl border flex items-center justify-between no-print ${isDispatched
                     ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300'
-                    : isDelivered 
+                    : isDelivered
                       ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
                       : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
-                }`}>
+                  }`}>
                   <div className="flex items-center gap-2.5">
                     <Lock className="w-4 h-4 shrink-0" />
                     <span className="text-xs font-mono">
@@ -590,11 +572,10 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
               )}
 
               {/* Delivery Challan Document Template (Matches Indian Statutory Standards) */}
-              <div className={`p-6 sm:p-8 rounded-3xl border space-y-6 print-clean-box ${
-                isDarkMode 
-                  ? 'bg-black/60 border-white/10 text-white' 
+              <div className={`p-6 sm:p-8 rounded-3xl border space-y-6 print-clean-box ${isDarkMode
+                  ? 'bg-black/60 border-white/10 text-white'
                   : 'bg-white border-slate-200 text-slate-900 shadow-sm'
-              }`}>
+                }`}>
                 {/* 1. Company Legal Header */}
                 <div className="border-b border-slate-200 dark:border-white/10 pb-5">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -606,7 +587,7 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
                         GuruOm Industries LLP
                       </h2>
                       <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xl">
-                        Plot No. 42, MIDC Industrial Area, Bhosari, Pune, Maharashtra - 411026
+                        Sr No 15/2, Mataji Logistic Park, Behind Tilakraj CNG Pump, Urali Devachi, Pune 412308, India
                       </p>
                       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs font-mono mt-1.5 text-slate-600 dark:text-slate-400">
                         <span><strong>GSTIN:</strong> 27AABCG1234F1Z5</span>
@@ -635,9 +616,8 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
                 {/* 2. Consignee & Transport Reference Block */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Consignee Info */}
-                  <div className={`p-4 rounded-2xl border space-y-2 ${
-                    isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-50 border-slate-200'
-                  }`}>
+                  <div className={`p-4 rounded-2xl border space-y-2 ${isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-50 border-slate-200'
+                    }`}>
                     <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase text-slate-400">
                       <Building2 className="w-3.5 h-3.5 text-indigo-400" />
                       <span>Consignee (Deliver To)</span>
@@ -659,9 +639,8 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
                   </div>
 
                   {/* Transport & Order Details */}
-                  <div className={`p-4 rounded-2xl border space-y-2 ${
-                    isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-50 border-slate-200'
-                  }`}>
+                  <div className={`p-4 rounded-2xl border space-y-2 ${isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-50 border-slate-200'
+                    }`}>
                     <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase text-slate-400">
                       <Truck className="w-3.5 h-3.5 text-cyan-400" />
                       <span>Transport & Reference Meta</span>
@@ -706,9 +685,8 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
                     </span>
                   </div>
 
-                  <div className={`rounded-2xl border overflow-hidden ${
-                    isDarkMode ? 'border-white/10' : 'border-slate-200'
-                  }`}>
+                  <div className={`rounded-2xl border overflow-hidden ${isDarkMode ? 'border-white/10' : 'border-slate-200'
+                    }`}>
                     <table className="w-full text-left text-xs">
                       <thead>
                         <tr className={`border-b ${isDarkMode ? 'bg-black/60 border-white/10 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>
@@ -743,9 +721,8 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
 
                 {/* Remarks Block */}
                 {challan.remarks && (
-                  <div className={`p-3 rounded-xl border text-xs ${
-                    isDarkMode ? 'bg-black/40 border-white/10 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
-                  }`}>
+                  <div className={`p-3 rounded-xl border text-xs ${isDarkMode ? 'bg-black/40 border-white/10 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+                    }`}>
                     <strong>Delivery Notes:</strong> {challan.remarks}
                   </div>
                 )}
@@ -753,7 +730,7 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
                 {/* Statutory Terms & Declaration */}
                 <div className="border-t border-slate-200 dark:border-white/10 pt-4 space-y-3">
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed italic">
-                    <strong>Declaration:</strong> Goods dispatched in sound condition for industrial manufacturing delivery. 
+                    <strong>Declaration:</strong> Goods dispatched in sound condition for industrial manufacturing delivery.
                     This is a Delivery Challan issued under Rule 55 of CGST Rules, 2017 for movement of goods, and does NOT constitute a Tax Invoice.
                   </p>
 
@@ -819,9 +796,8 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
         </div>
 
         {/* Modal Footer Actions */}
-        <div className={`px-6 py-4 border-t flex flex-wrap items-center justify-between gap-3 no-print ${
-          isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200 bg-slate-50'
-        }`}>
+        <div className={`px-6 py-4 border-t flex flex-wrap items-center justify-between gap-3 no-print ${isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200 bg-slate-50'
+          }`}>
           <div>
             {isDraft && !showCancelConfirm && (
               <button
@@ -838,9 +814,8 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className={`px-4 py-2 rounded-xl border text-xs font-mono font-bold cursor-pointer transition-ui ${
-                isDarkMode ? 'border-white/10 text-slate-300 hover:bg-white/10' : 'border-slate-200 text-slate-700 hover:bg-slate-100'
-              }`}
+              className={`px-4 py-2 rounded-xl border text-xs font-mono font-bold cursor-pointer transition-ui ${isDarkMode ? 'border-white/10 text-slate-300 hover:bg-white/10' : 'border-slate-200 text-slate-700 hover:bg-slate-100'
+                }`}
             >
               Close
             </button>

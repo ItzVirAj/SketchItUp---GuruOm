@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { BillOfMaterialsSchema } from './bom.schema';
 import { logAudit } from '../../services/auditLog';
 import { auditService } from '../audit/audit.service';
+import { LockService } from '../../lib/lock';
 
 const SEED_BOMS: any[] = [];
 
@@ -114,6 +115,60 @@ export class BomService {
 
     if (!bomId) {
       bomId = `bom-${Date.now()}`;
+    }
+
+    // 1. Authoritative Validation: Parent Part MUST exist and be Active in Items Master
+    const { data: parentItem, error: parentErr } = await this.db
+      .from('masters')
+      .select('code, name, description, item_type, status')
+      .eq('code', validated.parentPartCode)
+      .maybeSingle();
+
+    if (parentErr) {
+      console.error('Error validating parent item in masters:', parentErr);
+      throw parentErr;
+    }
+
+    if (!parentItem) {
+      const err: any = new Error(`Parent item '${validated.parentPartCode}' does not exist in Items Master.`);
+      err.statusCode = 400;
+      throw err;
+    }
+
+    if (parentItem.status === 'Inactive') {
+      const err: any = new Error(`Parent item '${validated.parentPartCode}' is Inactive in Items Master.`);
+      err.statusCode = 400;
+      throw err;
+    }
+
+    // 2. Authoritative Validation: Every Component MUST exist and be Active in Items Master
+    if (validated.components && validated.components.length > 0) {
+      const compCodes = Array.from(new Set(validated.components.map(c => c.componentCode)));
+      const { data: foundItems, error: compErr } = await this.db
+        .from('masters')
+        .select('code, name, description, item_type, status')
+        .in('code', compCodes);
+
+      if (compErr) {
+        console.error('Error validating component items in masters:', compErr);
+        throw compErr;
+      }
+
+      const foundMap = new Map((foundItems || []).map(i => [i.code, i]));
+
+      for (const comp of validated.components) {
+        const masterItem = foundMap.get(comp.componentCode);
+        if (!masterItem) {
+          const err: any = new Error(`Component item '${comp.componentCode}' does not exist in Items Master.`);
+          err.statusCode = 400;
+          throw err;
+        }
+        if (masterItem.status === 'Inactive') {
+          const err: any = new Error(`Component item '${comp.componentCode}' is Inactive in Items Master.`);
+          err.statusCode = 400;
+          throw err;
+        }
+      }
     }
 
     try {
@@ -293,34 +348,190 @@ export class BomService {
   }
 
   async deleteBOM(bomCode: string, actorEmail?: string, actorRole?: string) {
-    // Check if BOM has open customer orders / job cards before deleting
-    try {
-      const { error: itemErr } = await this.db.from('bom_items').delete().eq('bom_id', bomCode);
-      const { error: bomErr } = await this.db.from('bill_of_materials').delete().or(`bom_code.eq.${bomCode},id.eq.${bomCode}`);
-      if (bomErr) throw bomErr;
+    // 1. Locate the target BOM
+    const { data: b, error: fetchErr } = await this.db
+      .from('bill_of_materials')
+      .select('*')
+      .or(`bom_code.eq.${bomCode},id.eq.${bomCode}`)
+      .maybeSingle();
 
-      // Keep the offline in-memory cache consistent with the database
-      const cacheIdx = SEED_BOMS.findIndex(b => b.bomCode === bomCode || b.id === bomCode || b.parentPartCode === bomCode);
-      if (cacheIdx >= 0) SEED_BOMS.splice(cacheIdx, 1);
-    } catch (err: any) {
-      console.warn('Database deleteBOM exception:', err);
-      throw new Error(`Failed to delete BOM ${bomCode}: ${err.message}`);
+    let targetBom = b;
+    if (!targetBom) {
+      // Check in-memory seed cache if offline/fallback
+      const cacheBom = SEED_BOMS.find(s => s.bomCode === bomCode || s.id === bomCode);
+      if (!cacheBom) {
+        const err: any = new Error(`BOM '${bomCode}' not found.`);
+        err.statusCode = 404;
+        throw err;
+      }
+      targetBom = {
+        id: cacheBom.id,
+        bom_code: cacheBom.bomCode,
+        parent_part_code: cacheBom.parentPartCode,
+        revision: cacheBom.revision,
+        status: cacheBom.status
+      };
     }
 
-    const effectiveEmail = (actorEmail && actorEmail.includes('@')) ? actorEmail : (actorEmail || 'engineering@guruom.in');
-    const effectiveRole = actorRole || 'Manufacturing Engineer';
+    const parentPartCode = targetBom.parent_part_code;
+    const isBomActive = (targetBom.status || 'ACTIVE').toUpperCase() === 'ACTIVE';
+    const bomRevision = targetBom.revision || 'v1.0';
 
-    await auditService.recordAuditLog({
-      actorEmail: effectiveEmail,
-      actorRole: effectiveRole,
-      action: 'BOM_DELETED',
-      entityType: 'bill_of_materials',
-      entityId: bomCode,
-      afterState: null,
-      metadata: { details: `BOM ${bomCode} deleted from system.` }
-    }).catch(() => {});
+    // 2. Authoritative Dependency Checks:
+    // A. Check Active Customer Orders
+    // Terminal states that do NOT block deletion: COMPLETED, CANCELLED, CLOSED
+    const TERMINAL_ORDER_STATES = ['COMPLETED', 'CANCELLED', 'CLOSED'];
+    const { data: orderLines } = await this.db
+      .from('order_line_items')
+      .select('order_id, item_code, order_qty')
+      .eq('item_code', parentPartCode);
 
-    return { success: true, bomCode };
+    const activeOrders: Array<{ id: string; poNo: string; status: string }> = [];
+    if (orderLines && orderLines.length > 0 && isBomActive) {
+      const orderIds = Array.from(new Set(orderLines.map(l => l.order_id).filter(Boolean)));
+      if (orderIds.length > 0) {
+        const { data: orders } = await this.db
+          .from('customer_orders')
+          .select('id, po_no, status')
+          .in('id', orderIds);
+
+        for (const ord of (orders || [])) {
+          const st = (ord.status || '').toUpperCase();
+          if (!TERMINAL_ORDER_STATES.includes(st)) {
+            activeOrders.push({ id: ord.id, poNo: ord.po_no || ord.id, status: ord.status });
+          }
+        }
+      }
+    }
+
+    // B. Check Active Job Cards
+    // Terminal states that do NOT block deletion: COMPLETED, CANCELLED, CLOSED
+    const TERMINAL_JOB_STATES = ['COMPLETED', 'CANCELLED', 'CLOSED'];
+    const { data: jobCards } = await this.db
+      .from('job_cards')
+      .select('id, job_no, part_code, drawing_revision, job_status')
+      .eq('part_code', parentPartCode);
+
+    const activeJobCards: Array<{ id: string; jobNo: string; status: string; revision?: string }> = [];
+    for (const jc of (jobCards || [])) {
+      const jStatus = (jc.job_status || 'NOT_STARTED').toUpperCase();
+      if (!TERMINAL_JOB_STATES.includes(jStatus)) {
+        // If this BOM is the active BOM, or if the job card explicitly matches this revision:
+        if (isBomActive || jc.drawing_revision === bomRevision) {
+          activeJobCards.push({
+            id: jc.id,
+            jobNo: jc.job_no,
+            status: jc.job_status || 'NOT_STARTED',
+            revision: jc.drawing_revision
+          });
+        }
+      }
+    }
+
+    // C. Check Active Material Reservations
+    const { data: activeRes } = await this.db
+      .from('order_material_reservations')
+      .select('order_id, order_po, item_code, reserved_qty, status')
+      .eq('status', 'ACTIVE');
+
+    const activeOrderIds = new Set(activeOrders.map(o => o.id));
+    const activeOrderPos = new Set(activeOrders.map(o => o.poNo));
+    const activeReservations = (activeRes || []).filter(r =>
+      activeOrderIds.has(r.order_id) || activeOrderPos.has(r.order_po)
+    );
+
+    // 3. Block Deletion if Any Active Dependencies Exist
+    if (activeOrders.length > 0 || activeJobCards.length > 0 || activeReservations.length > 0) {
+      const reasons: string[] = [];
+      if (activeOrders.length > 0) {
+        const orderSummary = activeOrders.map(o => `${o.poNo} [${o.status}]`).slice(0, 3).join(', ') +
+          (activeOrders.length > 3 ? ` and ${activeOrders.length - 3} more` : '');
+        reasons.push(`${activeOrders.length} active customer order(s) (${orderSummary})`);
+      }
+      if (activeJobCards.length > 0) {
+        const jobSummary = activeJobCards.map(j => `${j.jobNo} [${j.status}]`).slice(0, 3).join(', ') +
+          (activeJobCards.length > 3 ? ` and ${activeJobCards.length - 3} more` : '');
+        reasons.push(`${activeJobCards.length} active job card(s) (${jobSummary})`);
+      }
+      if (activeReservations.length > 0) {
+        reasons.push(`${activeReservations.length} active material reservation(s)`);
+      }
+
+      const conflictErr: any = new Error(
+        `Cannot delete BOM '${targetBom.bom_code}': ${reasons.join(' and ')} currently depend on it.`
+      );
+      conflictErr.statusCode = 409;
+      conflictErr.code = 'BOM_IN_USE';
+      conflictErr.details = {
+        bomCode: targetBom.bom_code,
+        parentPartCode,
+        activeOrders,
+        activeJobCards,
+        activeReservationsCount: activeReservations.length
+      };
+      throw conflictErr;
+    }
+
+    // 4. Concurrency Lock & Atomic Deletion
+    return await LockService.withLock(`bom:${parentPartCode}`, 5000, async () => {
+      // Double-check existence inside lock to prevent concurrent double-delete race
+      const { data: stillExists } = await this.db
+        .from('bill_of_materials')
+        .select('id')
+        .eq('id', targetBom.id)
+        .maybeSingle();
+
+      if (!stillExists) {
+        const notFoundErr: any = new Error(`BOM '${bomCode}' has already been deleted or does not exist.`);
+        notFoundErr.statusCode = 404;
+        throw notFoundErr;
+      }
+
+      try {
+        // Delete parent bill_of_materials row (PostgreSQL cascades to bom_items via foreign key)
+        const { error: bomErr } = await this.db
+          .from('bill_of_materials')
+          .delete()
+          .eq('id', targetBom.id);
+
+        if (bomErr) {
+          // If DB trigger or FK failed, rethrow with business conflict code
+          if (bomErr.code === '23503' || bomErr.message?.includes('BOM_IN_USE')) {
+            const conflictErr: any = new Error(`Cannot delete BOM '${targetBom.bom_code}': ${bomErr.message}`);
+            conflictErr.statusCode = 409;
+            conflictErr.code = 'BOM_IN_USE';
+            throw conflictErr;
+          }
+          throw bomErr;
+        }
+
+        // Also ensure bom_items are cleaned up if cascading is not active
+        await this.db.from('bom_items').delete().eq('bom_id', targetBom.id);
+
+        // Keep the offline in-memory cache consistent
+        const cacheIdx = SEED_BOMS.findIndex(b => b.bomCode === targetBom.bom_code || b.id === targetBom.id);
+        if (cacheIdx >= 0) SEED_BOMS.splice(cacheIdx, 1);
+      } catch (err: any) {
+        if (err.statusCode === 409 || err.code === 'BOM_IN_USE') throw err;
+        console.warn('Database deleteBOM exception:', err);
+        throw new Error(`Failed to delete BOM ${bomCode}: ${err.message}`);
+      }
+
+      const effectiveEmail = (actorEmail && actorEmail.includes('@')) ? actorEmail : (actorEmail || 'engineering@guruom.in');
+      const effectiveRole = actorRole || 'Manufacturing Engineer';
+
+      await auditService.recordAuditLog({
+        actorEmail: effectiveEmail,
+        actorRole: effectiveRole,
+        action: 'BOM_DELETED',
+        entityType: 'bill_of_materials',
+        entityId: targetBom.bom_code,
+        afterState: null,
+        metadata: { details: `BOM ${targetBom.bom_code} deleted from system.` }
+      }).catch(() => {});
+
+      return { success: true, bomCode: targetBom.bom_code };
+    });
   }
 }
 

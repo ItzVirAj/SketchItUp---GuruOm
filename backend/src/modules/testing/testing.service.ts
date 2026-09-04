@@ -230,6 +230,50 @@ export class TestingWorkflowService {
 
           // STAGE 3: CREATE BOM
           case 3: {
+            // Ensure test items exist in Items Master so referential integrity is preserved
+            try {
+              await db.from('masters').upsert([
+                {
+                  id: `m-${ctx.partCode}`,
+                  code: ctx.partCode!,
+                  name: ctx.partDescription!,
+                  description: ctx.partDescription!,
+                  part_no: ctx.partCode!,
+                  hsn_code: '8483',
+                  reorder_level: 10,
+                  store_location: 'Finished Goods Store',
+                  default_warehouse: 'Finished Goods Store',
+                  is_finished_goods: true,
+                  sale_rate: ctx.unitRate,
+                  purchase_rate: 0,
+                  item_type: 'Finished Good',
+                  unit: 'NOS',
+                  uom: 'NOS',
+                  status: 'Active',
+                  updated_at: new Date().toISOString()
+                },
+                {
+                  id: `m-${ctx.rawMaterialCode}`,
+                  code: ctx.rawMaterialCode!,
+                  name: ctx.rawMaterialDesc!,
+                  description: ctx.rawMaterialDesc!,
+                  part_no: ctx.rawMaterialCode!,
+                  hsn_code: '8483',
+                  reorder_level: 10,
+                  store_location: 'Main Raw Material Store',
+                  default_warehouse: 'Main Raw Material Store',
+                  is_finished_goods: false,
+                  sale_rate: 0,
+                  purchase_rate: ctx.rawMaterialUnitPrice,
+                  item_type: 'Raw Material',
+                  unit: 'KG',
+                  uom: 'KG',
+                  status: 'Active',
+                  updated_at: new Date().toISOString()
+                }
+              ], { onConflict: 'code' });
+            } catch (_) {}
+
             const createdBom = await bomService.createOrUpdateBOM({
               id: `bom-${runState.runId}`,
               bomCode: ctx.bomCode!,

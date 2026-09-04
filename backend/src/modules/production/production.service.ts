@@ -108,6 +108,30 @@ export class ProductionService {
     const { partCode, partDescription = '', operations = [] } = payload;
     if (!partCode) throw new Error('partCode is required for Route Card');
 
+    // Authoritative Validation: Part MUST exist and be Active in Items Master
+    const { data: partItem, error: partErr } = await this.db
+      .from('masters')
+      .select('code, name, description, status')
+      .eq('code', partCode)
+      .maybeSingle();
+
+    if (partErr) {
+      console.error('Error validating part item in masters:', partErr);
+      throw partErr;
+    }
+
+    if (!partItem) {
+      const err: any = new Error(`Part item '${partCode}' does not exist in Items Master.`);
+      err.statusCode = 400;
+      throw err;
+    }
+
+    if (partItem.status === 'Inactive') {
+      const err: any = new Error(`Part item '${partCode}' is Inactive in Items Master.`);
+      err.statusCode = 400;
+      throw err;
+    }
+
     try {
       // 1. Delete existing route steps for this part
       await this.db.from('route_card_templates').delete().eq('part_code', partCode);
@@ -288,6 +312,19 @@ export class ProductionService {
     };
     const validated = JobCardCreateSchema.parse(normalizedData);
     
+    // Authoritative Validation: Part MUST exist in Items Master
+    const { data: partItem } = await this.db
+      .from('masters')
+      .select('code, name, description, status')
+      .eq('code', validated.partCode)
+      .maybeSingle();
+
+    if (!partItem) {
+      const err: any = new Error(`Part item '${validated.partCode}' does not exist in Items Master.`);
+      err.statusCode = 400;
+      throw err;
+    }
+
     // Query ALL existing job numbers directly from database to guarantee absolute uniqueness
     const { data: dbCards } = await this.db.from('job_cards').select('job_no');
     const existingJobNos = new Set<string>((dbCards || []).map((c: any) => c.job_no).filter(Boolean));

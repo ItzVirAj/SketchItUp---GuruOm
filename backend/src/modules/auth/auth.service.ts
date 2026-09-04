@@ -135,7 +135,22 @@ export class AuthService {
   private async findUserByEmail(email: string): Promise<UserRecord | null> {
     const cleanEmail = email.trim().toLowerCase();
 
-    // 1. Try profiles table in Supabase DB
+    // 1. Try users table in Supabase DB (primary authoritative user table with password_hash)
+    try {
+      const { data, error } = await this.db
+        .from('users')
+        .select('*')
+        .eq('email', cleanEmail)
+        .maybeSingle();
+
+      if (data && !error) {
+        return data as UserRecord;
+      }
+    } catch (err) {
+      console.warn('Database user lookup fallback:', err);
+    }
+
+    // 2. Try profiles table in Supabase DB (legacy fallback)
     try {
       const { data, error } = await this.db
         .from('profiles')
@@ -147,7 +162,7 @@ export class AuthService {
         return {
           id: data.id,
           email: data.email,
-          password_hash: data.password_hash,
+          password_hash: data.password_hash || '',
           full_name: data.full_name,
           role: data.role,
           department: data.department,
@@ -160,21 +175,6 @@ export class AuthService {
       console.warn('Database profiles lookup fallback:', err);
     }
 
-    // 2. Try users table in Supabase DB
-    try {
-      const { data, error } = await this.db
-        .from('users')
-        .select('*')
-        .eq('email', cleanEmail)
-        .maybeSingle();
-
-      if (data && !error) {
-        return data as UserRecord;
-      }
-    } catch (err) {
-      console.warn('Database user lookup fallback:', err);
-    }
-
     return null;
   }
 
@@ -182,7 +182,22 @@ export class AuthService {
    * Finds a user record by ID.
    */
   private async findUserById(id: string): Promise<UserRecord | null> {
-    // 1. Try profiles table
+    // 1. Try users table (primary authoritative user table)
+    try {
+      const { data, error } = await this.db
+        .from('users')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (data && !error) {
+        return data as UserRecord;
+      }
+    } catch (err) {
+      console.warn('Database user findUserById fallback:', err);
+    }
+
+    // 2. Try profiles table
     try {
       const { data, error } = await this.db
         .from('profiles')
@@ -194,7 +209,7 @@ export class AuthService {
         return {
           id: data.id,
           email: data.email,
-          password_hash: data.password_hash,
+          password_hash: data.password_hash || '',
           full_name: data.full_name,
           role: data.role,
           department: data.department,
@@ -207,27 +222,9 @@ export class AuthService {
       console.warn('Database profiles findUserById fallback:', err);
     }
 
-    // 2. Try users table
-    try {
-      const { data, error } = await this.db
-        .from('users')
-        .select('*')
-        .eq('id', id)
-        .maybeSingle();
-
-      if (data && !error) {
-        return data as UserRecord;
-      }
-    } catch (err) {
-      console.warn('Database user lookup fallback:', err);
-    }
-
     return null;
   }
 
-  /**
-   * Records a security event to both database and in-memory audit store.
-   */
   async logSecurityEvent(event: Omit<SecurityEventRecord, 'id' | 'created_at'>): Promise<SecurityEventRecord> {
     const newEvent: SecurityEventRecord = {
       id: crypto.randomUUID(),
@@ -1429,41 +1426,59 @@ export class AuthService {
 
   async getAllUsers() {
     try {
+      const { data, error } = await this.db.from('users').select('*').order('created_at', { ascending: false });
+      if (data && !error && data.length > 0) {
+        return data.map((u: any) => ({
+          id: u.id,
+          userId: u.employee_code || u.user_id || u.id,
+          code: u.employee_code || u.user_id || u.id,
+          name: u.full_name || u.name,
+          fullName: u.full_name || u.name,
+          email: u.email,
+          role: u.role,
+          userRole: u.user_role || u.role,
+          department: u.department || 'Executive Management',
+          phone: u.phone || u.mobile || '',
+          mobile: u.mobile || u.phone || '',
+          status: u.status || 'ACTIVE',
+          accessLevel: u.access_level || 'Full Access',
+          modulesAccess: u.modules_access || [],
+          reportingManager: u.reporting_manager || undefined,
+          shift: u.shift || 'General-Day',
+          isTemporaryPassword: u.is_temporary_password || false,
+          lastLogin: u.last_login_at || (u.last_login ? new Date(u.last_login).toLocaleString('en-IN') : 'Never')
+        }));
+      }
+    } catch (err) {
+      console.warn('Database getAllUsers fallback:', err);
+    }
+
+    try {
       const { data, error } = await this.db.from('profiles').select('*').order('created_at', { ascending: false });
       if (data && !error && data.length > 0) {
         return data.map((u: any) => ({
           id: u.id,
-          name: u.full_name,
+          userId: u.id,
+          code: u.id,
+          name: u.full_name || u.name,
+          fullName: u.full_name || u.name,
           email: u.email,
           role: u.role,
-          department: u.department,
-          phone: u.phone,
-          status: u.status,
+          userRole: u.role,
+          department: u.department || 'Operations',
+          phone: u.phone || '',
+          mobile: u.phone || '',
+          status: u.status || 'ACTIVE',
+          accessLevel: 'Full Access',
+          modulesAccess: [],
+          reportingManager: undefined,
+          shift: 'General-Day',
           isTemporaryPassword: u.is_temporary_password || false,
           lastLogin: u.last_login ? new Date(u.last_login).toLocaleString('en-IN') : 'Recently'
         }));
       }
     } catch (err) {
       console.warn('Database getAllUsers profiles fallback:', err);
-    }
-
-    try {
-      const { data, error } = await this.db.from('users').select('*').order('created_at', { ascending: false });
-      if (data && !error && data.length > 0) {
-        return data.map((u: any) => ({
-          id: u.id,
-          name: u.full_name,
-          email: u.email,
-          role: u.role,
-          department: u.department,
-          phone: u.phone,
-          status: u.status,
-          isTemporaryPassword: u.is_temporary_password || false,
-          lastLogin: u.last_login_at || 'Never'
-        }));
-      }
-    } catch (err) {
-      console.warn('Database getAllUsers fallback:', err);
     }
 
     return SEED_USERS.map(u => ({

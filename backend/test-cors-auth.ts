@@ -63,7 +63,7 @@ async function runCorsVerificationTests() {
     const loginRes = await fetch(`${BASE_URL}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Origin': 'http://localhost:5173' },
-      body: JSON.stringify({ email: 'owner@guruom.in', password: '1234567890' })
+      body: JSON.stringify({ email: 'owner@guruom.in', password: 'Pass@123' })
     });
 
     console.log('✓ Login HTTP Status:', loginRes.status);

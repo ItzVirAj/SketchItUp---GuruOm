@@ -429,14 +429,22 @@ INSERT INTO public.company_profile (id, legal_name, address, phone, email, gstin
 VALUES (
   'main',
   'GuruOm Industries LLP',
-  'Plot 42, GIDC Industrial Estate, Metoda, Rajkot, Gujarat - 360021',
-  '+91 98250 12345',
+  'Sr No 15/2, Mataji Logistic Park, Behind Tilakraj CNG Pump, Urali Devachi, Pune 412308, India',
+  '+91 9763 969 798',
   'contact@guruom.in',
-  '24AAAFG1234C1Z9',
-  'AAAFG1234C',
-  'Gujarat',
-  '24'
-) ON CONFLICT (id) DO NOTHING;
+  '27AABCG1234F1Z5',
+  'AABCG1234F',
+  'Maharashtra',
+  '27'
+) ON CONFLICT (id) DO UPDATE SET
+  legal_name = EXCLUDED.legal_name,
+  address = EXCLUDED.address,
+  phone = EXCLUDED.phone,
+  email = EXCLUDED.email,
+  gstin = EXCLUDED.gstin,
+  pan = EXCLUDED.pan,
+  state = EXCLUDED.state,
+  state_code = EXCLUDED.state_code;
 
 -- Initial Profiles (Matching System Users)
 INSERT INTO public.profiles (full_name, email, role, department, phone, status, last_login)
@@ -5091,3 +5099,511 @@ JOIN public.permissions p ON (
 )
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
+-- ============================================================================
+-- Migration: 026_concurrency_safe_master_sequences.sql
+-- Description: Concurrency-Safe Master Code Counter Table, Atomic Allocation
+--              Function, and Safe Sequence Initialization for Masters
+--              (Items, Customers, Vendors, Machines, Users).
+-- ============================================================================
+
+-- 1. Create Atomic Master Code Counters Table
+CREATE TABLE IF NOT EXISTS public.master_code_counters (
+    entity_type VARCHAR(50) NOT NULL,
+    prefix VARCHAR(20) NOT NULL,
+    current_value BIGINT NOT NULL DEFAULT 0,
+    padding_digits INT NOT NULL DEFAULT 4,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (entity_type, prefix)
+);
+
+-- Enable RLS and establish open policy for service role access
+ALTER TABLE public.master_code_counters ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Master code counters service access" ON public.master_code_counters;
+CREATE POLICY "Master code counters service access" ON public.master_code_counters FOR ALL USING (true);
+
+-- 2. Concurrency-Safe Atomic Code Generator Function
+-- Uses row-level lock on the counter row via INSERT ... ON CONFLICT DO UPDATE RETURNING
+CREATE OR REPLACE FUNCTION public.get_next_master_code(p_entity_type VARCHAR, p_prefix VARCHAR)
+RETURNS VARCHAR
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_next_num BIGINT;
+  v_padded VARCHAR;
+  v_clean_prefix VARCHAR;
+  v_clean_entity VARCHAR;
+BEGIN
+  v_clean_prefix := UPPER(TRIM(p_prefix));
+  v_clean_entity := UPPER(TRIM(p_entity_type));
+
+  INSERT INTO public.master_code_counters (entity_type, prefix, current_value, padding_digits, updated_at)
+  VALUES (v_clean_entity, v_clean_prefix, 1, 4, NOW())
+  ON CONFLICT (entity_type, prefix)
+  DO UPDATE SET
+    current_value = public.master_code_counters.current_value + 1,
+    updated_at = NOW()
+  RETURNING current_value INTO v_next_num;
+
+  v_padded := LPAD(v_next_num::TEXT, 4, '0');
+  RETURN v_clean_prefix || '-' || v_padded;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 3. Seed Existing Max Sequence Values from Database Tables
+-- Safely extracts existing numeric suffixes without overwriting or decrementing
+
+-- A. Customer Masters (CUST-####)
+INSERT INTO public.master_code_counters (entity_type, prefix, current_value, padding_digits, updated_at)
+SELECT 'CUSTOMER', 'CUST', COALESCE(MAX(NULLIF(regexp_replace(code, '^CUST-', ''), '')::BIGINT), 0), 4, NOW()
+FROM public.customer_masters
+WHERE code ~ '^CUST-[0-9]+$'
+ON CONFLICT (entity_type, prefix)
+DO UPDATE SET current_value = GREATEST(public.master_code_counters.current_value, EXCLUDED.current_value);
+
+-- B. Vendor Masters (VEND-####)
+INSERT INTO public.master_code_counters (entity_type, prefix, current_value, padding_digits, updated_at)
+SELECT 'VENDOR', 'VEND', COALESCE(MAX(NULLIF(regexp_replace(code, '^VEND-', ''), '')::BIGINT), 0), 4, NOW()
+FROM public.vendor_masters
+WHERE code ~ '^VEND-[0-9]+$'
+ON CONFLICT (entity_type, prefix)
+DO UPDATE SET current_value = GREATEST(public.master_code_counters.current_value, EXCLUDED.current_value);
+
+-- C. Machine Masters (MCH-####)
+INSERT INTO public.master_code_counters (entity_type, prefix, current_value, padding_digits, updated_at)
+SELECT 'MACHINE', 'MCH', COALESCE(MAX(NULLIF(regexp_replace(code, '^MCH-', ''), '')::BIGINT), 0), 4, NOW()
+FROM public.machine_masters
+WHERE code ~ '^MCH-[0-9]+$'
+ON CONFLICT (entity_type, prefix)
+DO UPDATE SET current_value = GREATEST(public.master_code_counters.current_value, EXCLUDED.current_value);
+
+-- D. Item Masters (masters table)
+-- Finished Goods (FG-####)
+INSERT INTO public.master_code_counters (entity_type, prefix, current_value, padding_digits, updated_at)
+SELECT 'ITEM', 'FG', COALESCE(MAX(NULLIF(regexp_replace(code, '^FG-', ''), '')::BIGINT), 0), 4, NOW()
+FROM public.masters
+WHERE code ~ '^FG-[0-9]+$'
+ON CONFLICT (entity_type, prefix)
+DO UPDATE SET current_value = GREATEST(public.master_code_counters.current_value, EXCLUDED.current_value);
+
+-- Raw Materials (RM-####)
+INSERT INTO public.master_code_counters (entity_type, prefix, current_value, padding_digits, updated_at)
+SELECT 'ITEM', 'RM', COALESCE(MAX(NULLIF(regexp_replace(code, '^RM-', ''), '')::BIGINT), 0), 4, NOW()
+FROM public.masters
+WHERE code ~ '^RM-[0-9]+$'
+ON CONFLICT (entity_type, prefix)
+DO UPDATE SET current_value = GREATEST(public.master_code_counters.current_value, EXCLUDED.current_value);
+
+-- Legacy Items (ITEM-####)
+INSERT INTO public.master_code_counters (entity_type, prefix, current_value, padding_digits, updated_at)
+SELECT 'ITEM', 'ITEM', COALESCE(MAX(NULLIF(regexp_replace(code, '^ITEM-', ''), '')::BIGINT), 0), 4, NOW()
+FROM public.masters
+WHERE code ~ '^ITEM-[0-9]+$'
+ON CONFLICT (entity_type, prefix)
+DO UPDATE SET current_value = GREATEST(public.master_code_counters.current_value, EXCLUDED.current_value);
+
+-- Semi-Finished (SF-####), Consumables (CO-####), Bought-Out (BO-####), Other (ITM-####)
+INSERT INTO public.master_code_counters (entity_type, prefix, current_value, padding_digits, updated_at)
+VALUES
+  ('ITEM', 'SF', 0, 4, NOW()),
+  ('ITEM', 'CO', 0, 4, NOW()),
+  ('ITEM', 'BO', 0, 4, NOW()),
+  ('ITEM', 'ITM', 0, 4, NOW()),
+  ('USER', 'USR', 0, 4, NOW())
+ON CONFLICT (entity_type, prefix) DO NOTHING;
+
+-- ==============================================================================
+-- Migration 027: Inventory Reservations Lifecycle, Idempotency & Safety
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS public.order_material_reservations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    order_id TEXT NOT NULL,
+    order_po TEXT NOT NULL,
+    item_code TEXT NOT NULL,
+    reserved_qty NUMERIC(12, 4) NOT NULL CHECK (reserved_qty >= 0),
+    status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'CONSUMED', 'RELEASED')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_order_res_order ON public.order_material_reservations (order_id, status);
+CREATE INDEX IF NOT EXISTS idx_order_res_item ON public.order_material_reservations (item_code, status);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_active_order_item_reservation 
+ON public.order_material_reservations (order_id, item_code) 
+WHERE status = 'ACTIVE';
+
+ALTER TABLE public.order_material_reservations ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Order material reservations service access" ON public.order_material_reservations;
+CREATE POLICY "Order material reservations service access" 
+ON public.order_material_reservations 
+FOR ALL 
+USING (true);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chk_stock_items_reserved_non_negative'
+  ) THEN
+    ALTER TABLE public.stock_items 
+    ADD CONSTRAINT chk_stock_items_reserved_non_negative CHECK (reserved >= 0);
+  END IF;
+END $$;
+
+-- ==============================================================================
+-- Migration 028: Atomic Inventory Consumption & Non-Negative Stock Floor
+-- ==============================================================================
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chk_stock_items_on_hand_non_negative'
+  ) THEN
+    ALTER TABLE public.stock_items 
+    ADD CONSTRAINT chk_stock_items_on_hand_non_negative CHECK (on_hand >= 0) NOT VALID;
+  END IF;
+END $$;
+
+CREATE OR REPLACE FUNCTION public.consume_order_materials_atomic(
+    p_order_id TEXT,
+    p_order_po TEXT,
+    p_actor_email TEXT,
+    p_allocations JSONB
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_item RECORD;
+    v_stock RECORD;
+    v_existing_movement_count INT;
+    v_order_reserved NUMERIC := 0;
+    v_now TIMESTAMPTZ := NOW();
+BEGIN
+    SELECT COUNT(*) INTO v_existing_movement_count
+    FROM public.inventory_movements
+    WHERE reference_id = p_order_po
+      AND movement_type = 'PRODUCTION_CONSUMPTION';
+
+    IF v_existing_movement_count > 0 THEN
+        RETURN jsonb_build_object(
+            'success', true,
+            'already_consumed', true,
+            'message', 'Materials for order ' || p_order_po || ' have already been consumed.'
+        );
+    END IF;
+
+    FOR v_item IN 
+        SELECT 
+            elem->>'item_code' AS item_code, 
+            (elem->>'qty')::NUMERIC AS qty,
+            elem->>'description' AS description
+        FROM jsonb_array_elements(p_allocations) elem
+        ORDER BY elem->>'item_code' ASC
+    LOOP
+        SELECT * INTO v_stock
+        FROM public.stock_items
+        WHERE code = v_item.item_code
+        FOR UPDATE;
+
+        IF NOT FOUND THEN
+            RETURN jsonb_build_object(
+                'success', false,
+                'error_code', 'ERR_STOCK_ITEM_NOT_FOUND',
+                'item_code', v_item.item_code,
+                'message', 'Stock item not found: ' || v_item.item_code
+            );
+        END IF;
+
+        IF v_stock.on_hand < v_item.qty THEN
+            RETURN jsonb_build_object(
+                'success', false,
+                'error_code', 'ERR_INSUFFICIENT_STOCK',
+                'item_code', v_item.item_code,
+                'required_qty', v_item.qty,
+                'on_hand', v_stock.on_hand,
+                'deficit', (v_item.qty - v_stock.on_hand),
+                'message', 'Insufficient stock for ' || v_item.item_code || '. Required: ' || v_item.qty || ', On-hand: ' || v_stock.on_hand
+            );
+        END IF;
+    END LOOP;
+
+    FOR v_item IN 
+        SELECT 
+            elem->>'item_code' AS item_code, 
+            (elem->>'qty')::NUMERIC AS qty,
+            elem->>'description' AS description
+        FROM jsonb_array_elements(p_allocations) elem
+        ORDER BY elem->>'item_code' ASC
+    LOOP
+        SELECT * INTO v_stock
+        FROM public.stock_items
+        WHERE code = v_item.item_code;
+
+        SELECT COALESCE(SUM(reserved_qty), 0) INTO v_order_reserved
+        FROM public.order_material_reservations
+        WHERE (order_id = p_order_id OR order_po = p_order_po)
+          AND item_code = v_item.item_code
+          AND status = 'ACTIVE';
+
+        UPDATE public.stock_items
+        SET 
+            on_hand = on_hand - v_item.qty,
+            reserved = GREATEST(0, reserved - v_order_reserved),
+            available = (on_hand - v_item.qty) - GREATEST(0, reserved - v_order_reserved),
+            status = CASE 
+                WHEN ((on_hand - v_item.qty) - GREATEST(0, reserved - v_order_reserved)) < 0 THEN 'CRITICAL'
+                WHEN ((on_hand - v_item.qty) - GREATEST(0, reserved - v_order_reserved)) < reorder_level THEN 'SHORTAGE'
+                ELSE 'OK'
+            END,
+            updated_at = v_now
+        WHERE code = v_item.item_code;
+
+        INSERT INTO public.inventory_movements (
+            id,
+            item_code,
+            location,
+            quantity_change,
+            movement_type,
+            reference_id,
+            reference_type,
+            balance_after,
+            actor_email,
+            notes,
+            created_at
+        ) VALUES (
+            'mov-' || floor(extract(epoch from v_now) * 1000)::text || '-' || substr(md5(random()::text), 1, 6),
+            v_item.item_code,
+            'MAIN-WAREHOUSE',
+            -v_item.qty,
+            'PRODUCTION_CONSUMPTION',
+            p_order_po,
+            'order',
+            v_stock.on_hand - v_item.qty,
+            p_actor_email,
+            'Material issued for PO ' || p_order_po || ' — ' || COALESCE(v_item.description, v_item.item_code) || ' × ' || v_item.qty,
+            v_now
+        );
+
+        UPDATE public.order_material_reservations
+        SET 
+            status = 'CONSUMED',
+            updated_at = v_now
+        WHERE (order_id = p_order_id OR order_po = p_order_po)
+          AND item_code = v_item.item_code
+          AND status = 'ACTIVE';
+    END LOOP;
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'already_consumed', false,
+        'message', 'Materials consumed and reservations reconciled successfully.'
+    );
+END;
+$$;
+
+-- ============================================================
+-- 029: BOM AND ROUTE CARDS REFERENTIAL INTEGRITY TO ITEMS MASTER
+-- Ensures that:
+-- 1. bill_of_materials.parent_part_code REFERENCES masters(code)
+-- 2. bom_items.component_code REFERENCES masters(code)
+-- 3. route_card_templates.part_code REFERENCES masters(code)
+-- ON UPDATE CASCADE, ON DELETE RESTRICT
+-- ============================================================
+
+-- Step 1: Reconcile legacy seed items in masters before adding constraints
+INSERT INTO public.masters (
+    code, name, description, part_no, hsn_code, reorder_level, 
+    store_location, default_warehouse, is_finished_goods, sale_rate, 
+    purchase_rate, item_type, unit, uom, status
+)
+VALUES 
+  ('00000001', 'MAIN SPINDLE HOUSING 120MM', 'Main spindle housing 120mm per drawing', '00000001', '8483', 10, 'Finished Goods Store', 'Finished Goods Store', true, 0, 0, 'Finished Good', 'Nos', 'Nos', 'Active'),
+  ('00000002', 'HARDENED BUSH 45X60X80', 'Hardened bush 45x60x80 per drawing', '00000002', '8483', 10, 'Finished Goods Store', 'Finished Goods Store', false, 0, 0, 'Semi-Finished', 'Nos', 'Nos', 'Active')
+ON CONFLICT (code) DO NOTHING;
+
+-- Step 2: Auto-backfill any missing legacy BOM parent part codes into masters
+INSERT INTO public.masters (
+    code, name, description, part_no, hsn_code, reorder_level, 
+    store_location, default_warehouse, is_finished_goods, sale_rate, 
+    purchase_rate, item_type, unit, uom, status
+)
+SELECT DISTINCT 
+    b.parent_part_code, 
+    b.parent_part_name, 
+    b.parent_part_name, 
+    b.parent_part_code,
+    '8483',
+    10,
+    'Finished Goods Store',
+    'Finished Goods Store',
+    true,
+    0,
+    0,
+    'Finished Good', 
+    'Nos', 
+    'Nos',
+    'Active'
+FROM public.bill_of_materials b
+WHERE NOT EXISTS (SELECT 1 FROM public.masters m WHERE m.code = b.parent_part_code)
+ON CONFLICT (code) DO NOTHING;
+
+-- Step 3: Auto-backfill any missing legacy BOM component codes into masters
+INSERT INTO public.masters (
+    code, name, description, part_no, hsn_code, reorder_level, 
+    store_location, default_warehouse, is_finished_goods, sale_rate, 
+    purchase_rate, item_type, unit, uom, status
+)
+SELECT DISTINCT 
+    bi.component_code, 
+    bi.component_name, 
+    bi.component_name, 
+    bi.component_code,
+    '8483',
+    10,
+    'Main Raw Material Store',
+    'Main Raw Material Store',
+    false,
+    0,
+    0,
+    'Raw Material', 
+    bi.unit, 
+    bi.unit,
+    'Active'
+FROM public.bom_items bi
+WHERE NOT EXISTS (SELECT 1 FROM public.masters m WHERE m.code = bi.component_code)
+ON CONFLICT (code) DO NOTHING;
+
+-- Step 4: Auto-backfill any missing legacy Route Card part codes into masters
+INSERT INTO public.masters (
+    code, name, description, part_no, hsn_code, reorder_level, 
+    store_location, default_warehouse, is_finished_goods, sale_rate, 
+    purchase_rate, item_type, unit, uom, status
+)
+SELECT DISTINCT 
+    rc.part_code, 
+    rc.part_description, 
+    rc.part_description, 
+    rc.part_code,
+    '8483',
+    10,
+    'Finished Goods Store',
+    'Finished Goods Store',
+    true,
+    0,
+    0,
+    'Finished Good', 
+    'Nos', 
+    'Nos',
+    'Active'
+FROM public.route_card_templates rc
+WHERE NOT EXISTS (SELECT 1 FROM public.masters m WHERE m.code = rc.part_code)
+ON CONFLICT (code) DO NOTHING;
+
+-- Step 5: Add Foreign Key on bill_of_materials(parent_part_code) -> masters(code)
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'fk_bom_parent_item'
+  ) THEN
+    ALTER TABLE public.bill_of_materials
+    ADD CONSTRAINT fk_bom_parent_item
+    FOREIGN KEY (parent_part_code)
+    REFERENCES public.masters(code)
+    ON UPDATE CASCADE
+    ON DELETE RESTRICT;
+  END IF;
+END $$;
+
+-- Step 6: Add Foreign Key on bom_items(component_code) -> masters(code)
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'fk_bom_item_component'
+  ) THEN
+    ALTER TABLE public.bom_items
+    ADD CONSTRAINT fk_bom_item_component
+    FOREIGN KEY (component_code)
+    REFERENCES public.masters(code)
+    ON UPDATE CASCADE
+    ON DELETE RESTRICT;
+  END IF;
+END $$;
+
+-- Step 7: Add Foreign Key on route_card_templates(part_code) -> masters(code)
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'fk_route_card_part_item'
+  ) THEN
+    ALTER TABLE public.route_card_templates
+    ADD CONSTRAINT fk_route_card_part_item
+    FOREIGN KEY (part_code)
+    REFERENCES public.masters(code)
+    ON UPDATE CASCADE
+    ON DELETE RESTRICT;
+  END IF;
+END $$;
+
+-- Step 8: Ensure supporting indexes for foreign keys
+CREATE INDEX IF NOT EXISTS idx_bom_items_component_code ON public.bom_items(component_code);
+CREATE INDEX IF NOT EXISTS idx_route_card_templates_part_code ON public.route_card_templates(part_code);
+
+-- ============================================================
+-- 030: PREVENT DELETION OF IN-USE BILL OF MATERIALS (BOM)
+-- Protects BOMs from deletion when:
+-- 1. Active customer orders depend on the BOM's parent part code
+-- 2. Active job cards depend on the BOM's parent part code / revision
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION public.check_bom_deletion_safety()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_active_order_count INT := 0;
+    v_active_job_count INT := 0;
+    v_order_po TEXT;
+    v_job_no TEXT;
+BEGIN
+    -- 1. Check active customer orders referencing this BOM's parent part code
+    -- Terminal order states ('COMPLETED', 'CANCELLED', 'CLOSED') do not block deletion
+    IF OLD.status = 'ACTIVE' THEN
+        SELECT COUNT(DISTINCT o.id), MIN(o.po_no)
+        INTO v_active_order_count, v_order_po
+        FROM public.customer_orders o
+        JOIN public.order_line_items li ON li.order_id = o.id
+        WHERE li.item_code = OLD.parent_part_code
+          AND UPPER(o.status) NOT IN ('COMPLETED', 'CANCELLED', 'CLOSED');
+
+        IF v_active_order_count > 0 THEN
+            RAISE EXCEPTION 'BOM_IN_USE: Cannot delete BOM % because % active customer order(s) (e.g. %) currently depend on it.',
+                OLD.bom_code, v_active_order_count, v_order_po
+                USING ERRCODE = '23503';
+        END IF;
+    END IF;
+
+    -- 2. Check active job cards referencing this BOM's parent part code / revision
+    -- Terminal job states ('COMPLETED', 'CANCELLED', 'CLOSED') do not block deletion
+    SELECT COUNT(*), MIN(jc.job_no)
+    INTO v_active_job_count, v_job_no
+    FROM public.job_cards jc
+    WHERE jc.part_code = OLD.parent_part_code
+      AND UPPER(COALESCE(jc.job_status, 'NOT_STARTED')) NOT IN ('COMPLETED', 'CANCELLED', 'CLOSED')
+      AND (OLD.status = 'ACTIVE' OR jc.drawing_revision = OLD.revision);
+
+    IF v_active_job_count > 0 THEN
+        RAISE EXCEPTION 'BOM_IN_USE: Cannot delete BOM % because % active job card(s) (e.g. %) currently depend on it.',
+            OLD.bom_code, v_active_job_count, v_job_no
+            USING ERRCODE = '23503';
+    END IF;
+
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Apply trigger before delete on bill_of_materials
+DROP TRIGGER IF EXISTS trg_prevent_in_use_bom_deletion ON public.bill_of_materials;
+CREATE TRIGGER trg_prevent_in_use_bom_deletion
+BEFORE DELETE ON public.bill_of_materials
+FOR EACH ROW
+EXECUTE FUNCTION public.check_bom_deletion_safety();

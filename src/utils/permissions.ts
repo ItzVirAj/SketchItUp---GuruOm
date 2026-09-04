@@ -259,6 +259,12 @@ export function getRoleColor(role: string): { bg: string; text: string; border: 
   const normRole = normalizeRole(role);
 
   switch (normRole) {
+    case 'ServerAdmin':
+      return {
+        bg: 'bg-violet-50 dark:bg-violet-500/15',
+        text: 'text-violet-700 dark:text-violet-300',
+        border: 'border-violet-200 dark:border-violet-500/30'
+      };
     case 'Owner':
     case 'Admin (System)':
     case 'SUPER ADMIN':

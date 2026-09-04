@@ -1,24 +1,24 @@
-import { 
-  CustomerOrder, 
-  StockItem, 
-  ShortageItem, 
-  JobCard, 
-  FinishedGoodsItem, 
-  OutworkSendOut, 
-  ProductionLogReport, 
-  QCInspection, 
-  PDIInspection, 
-  DispatchChallan, 
-  PendingApproval, 
-  CustomerInvoice, 
-  VendorBill, 
-  MasterItem, 
+import {
+  CustomerOrder,
+  StockItem,
+  ShortageItem,
+  JobCard,
+  FinishedGoodsItem,
+  OutworkSendOut,
+  ProductionLogReport,
+  QCInspection,
+  PDIInspection,
+  DispatchChallan,
+  PendingApproval,
+  CustomerInvoice,
+  VendorBill,
+  MasterItem,
   CustomerMaster,
   VendorMaster,
   MachineMaster,
-  SystemUser, 
-  AuditLogEntry, 
-  CompanyProfile 
+  SystemUser,
+  AuditLogEntry,
+  CompanyProfile
 } from '../types/console';
 
 export const initialOrders: CustomerOrder[] = [];
@@ -43,9 +43,9 @@ export const initialApprovals: PendingApproval[] = [];
 
 export const initialCompanyProfile: CompanyProfile = {
   legalName: 'GuruOm Industries LLP',
-  address: 'Plot No. 42, MIDC Industrial Area, Bhosari, Pune, Maharashtra - 411026',
-  phone: '+91 20 2712 3456',
-  email: 'operations@guruom.in',
+  address: 'Sr No 15/2, Mataji Logistic Park, Behind Tilakraj CNG Pump, Urali Devachi, Pune 412308, India',
+  phone: '+91 9763 969 798',
+  email: 'contact@guruom.in',
   gstin: '27AABCG1234F1Z5',
   pan: 'AABCG1234F',
   state: 'Maharashtra',

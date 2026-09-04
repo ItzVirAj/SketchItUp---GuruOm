@@ -67,7 +67,12 @@ export class BomController {
       const data = await bomService.deleteBOM(req.params.code);
       return res.json({ message: 'BOM deleted successfully', data });
     } catch (err: any) {
-      return res.status(400).json({ error: 'ValidationError', message: err.message });
+      const statusCode = err.statusCode || (err.code === 'BOM_IN_USE' ? 409 : 400);
+      return res.status(statusCode).json({
+        error: err.code || 'ValidationError',
+        message: err.message,
+        details: err.details
+      });
     }
   }
 }

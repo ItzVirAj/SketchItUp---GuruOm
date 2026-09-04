@@ -41,7 +41,8 @@ export type CanonicalOrderState =
   | 'DELIVERED'
   | 'PAYMENT_PENDING'
   | 'INVOICED'
-  | 'COMPLETED';
+  | 'COMPLETED'
+  | 'CANCELLED';
 
 export type OrderSubType = 'FRESH_PO' | 'BLANKET_CALLOFF' | 'AMENDMENT';
 
@@ -69,21 +70,21 @@ export type OrderStage =
  * Any transition not explicitly in this graph MUST be rejected.
  */
 export const ALLOWED_TRANSITIONS: Record<CanonicalOrderState, CanonicalOrderState[]> = {
-  'DRAFT': ['SUBMITTED', 'APPROVED'],
-  'SUBMITTED': ['APPROVED', 'DRAFT'],
-  'APPROVED': ['RELEASED', 'PENDING_VERIFICATION', 'MATERIAL_CHECK', 'MATERIAL_READY', 'JOB_RELEASED', 'IN_PRODUCTION', 'DRAFT'],
-  'RELEASED': ['PENDING_VERIFICATION', 'MATERIAL_CHECK', 'MATERIAL_READY', 'JOB_RELEASED', 'IN_PRODUCTION'],
-  'PENDING_VERIFICATION': ['MATERIAL_READY', 'MATERIAL_SHORT', 'MATERIAL_CHECK', 'PROCUREMENT_PENDING'],
-  'MATERIAL_CHECK': ['MATERIAL_READY', 'MATERIAL_SHORT', 'PROCUREMENT_PENDING'],
-  'MATERIAL_SHORT': ['PROCUREMENT_PENDING'],
-  'PROCUREMENT_PENDING': ['GRN'],
-  'GRN': ['MATERIAL_READY', 'PENDING_VERIFICATION', 'MATERIAL_CHECK'],
-  'MATERIAL_READY': ['JOB_RELEASED', 'IN_PRODUCTION'],
-  'JOB_RELEASED': ['IN_PRODUCTION'],
-  'IN_PRODUCTION': ['QC', 'QC_REPORT_UPLOADED', 'PDI', 'PDI_COMPLETE', 'READY_FOR_DISPATCH', 'REWORK'],
-  'REWORK': ['IN_PRODUCTION', 'JOB_RELEASED'],        // NCR loop-back
-  'QC': ['QC_HOLD', 'QC_REPORT_UPLOADED', 'PDI', 'PDI_COMPLETE', 'READY_FOR_DISPATCH'],
-  'QC_HOLD': ['QC', 'REWORK'],                        // Cleared via NCR Disposition or Rework
+  'DRAFT': ['SUBMITTED', 'APPROVED', 'CANCELLED'],
+  'SUBMITTED': ['APPROVED', 'DRAFT', 'CANCELLED'],
+  'APPROVED': ['RELEASED', 'PENDING_VERIFICATION', 'MATERIAL_CHECK', 'MATERIAL_READY', 'JOB_RELEASED', 'IN_PRODUCTION', 'DRAFT', 'CANCELLED'],
+  'RELEASED': ['PENDING_VERIFICATION', 'MATERIAL_CHECK', 'MATERIAL_READY', 'JOB_RELEASED', 'IN_PRODUCTION', 'CANCELLED'],
+  'PENDING_VERIFICATION': ['MATERIAL_READY', 'MATERIAL_SHORT', 'MATERIAL_CHECK', 'PROCUREMENT_PENDING', 'CANCELLED'],
+  'MATERIAL_CHECK': ['MATERIAL_READY', 'MATERIAL_SHORT', 'PROCUREMENT_PENDING', 'CANCELLED'],
+  'MATERIAL_SHORT': ['PROCUREMENT_PENDING', 'CANCELLED'],
+  'PROCUREMENT_PENDING': ['GRN', 'CANCELLED'],
+  'GRN': ['MATERIAL_READY', 'PENDING_VERIFICATION', 'MATERIAL_CHECK', 'CANCELLED'],
+  'MATERIAL_READY': ['JOB_RELEASED', 'IN_PRODUCTION', 'CANCELLED'],
+  'JOB_RELEASED': ['IN_PRODUCTION', 'CANCELLED'],
+  'IN_PRODUCTION': ['QC', 'QC_REPORT_UPLOADED', 'PDI', 'PDI_COMPLETE', 'READY_FOR_DISPATCH', 'REWORK', 'CANCELLED'],
+  'REWORK': ['IN_PRODUCTION', 'JOB_RELEASED', 'CANCELLED'],        // NCR loop-back
+  'QC': ['QC_HOLD', 'QC_REPORT_UPLOADED', 'PDI', 'PDI_COMPLETE', 'READY_FOR_DISPATCH', 'CANCELLED'],
+  'QC_HOLD': ['QC', 'REWORK', 'CANCELLED'],                        // Cleared via NCR Disposition or Rework
   'QC_REPORT_UPLOADED': ['PDI', 'PDI_COMPLETE', 'READY_FOR_DISPATCH'],
   'PDI': ['PDI_HOLD', 'PDI_COMPLETE', 'READY_FOR_DISPATCH', 'REWORK'],
   'PDI_HOLD': ['PDI', 'REWORK'],                      // Cleared via Re-inspection or Rework
@@ -97,7 +98,8 @@ export const ALLOWED_TRANSITIONS: Record<CanonicalOrderState, CanonicalOrderStat
   'DELIVERED': ['PAYMENT_PENDING', 'INVOICED', 'COMPLETED'],
   'PAYMENT_PENDING': ['COMPLETED'],
   'INVOICED': ['COMPLETED', 'DELIVERED', 'PAYMENT_PENDING'],
-  'COMPLETED': []
+  'COMPLETED': [],
+  'CANCELLED': []
 };
 
 /**
@@ -139,6 +141,8 @@ export function normalizeOrderState(stage: any): CanonicalOrderState {
     case 'CLOSED':
     case 'PAID':
       return 'COMPLETED';
+    case 'CANCELLED':
+      return 'CANCELLED';
     default:
       if (s in ALLOWED_TRANSITIONS) {
         return s as CanonicalOrderState;
@@ -200,7 +204,8 @@ export const ORDER_STAGE_STEPS: Record<OrderStage, number> = {
   'INVOICED': 10,
   'COMPLETED': 11,
   'CLOSED': 11,
-  'PAID': 11
+  'PAID': 11,
+  'CANCELLED': 0
 };
 
 export const ORDER_STAGE_LABELS: Record<OrderStage, string> = {
@@ -248,7 +253,8 @@ export const ORDER_STAGE_LABELS: Record<OrderStage, string> = {
   'INVOICED': '10. Invoiced (Finance)',
   'COMPLETED': '11. Order Closed',
   'CLOSED': '11. Closed',
-  'PAID': '11. Closed & Paid'
+  'PAID': '11. Closed & Paid',
+  'CANCELLED': 'Cancelled'
 };
 
 export const ORDER_ERROR_CODES = {

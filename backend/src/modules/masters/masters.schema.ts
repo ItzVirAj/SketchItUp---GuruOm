@@ -19,7 +19,7 @@ const isGstExemptValue = (val?: string | null) => {
 // ============================================================================
 // 1. CUSTOMER MASTER SCHEMA
 // ============================================================================
-export const CustomerMasterSchema = z.object({
+export const CustomerMasterBaseSchema = z.object({
   id: z.string().optional(),
   code: z.string().min(1, 'Customer ID code is required'),
   name: z.string().min(1, 'Customer name is required'),
@@ -66,7 +66,9 @@ export const CustomerMasterSchema = z.object({
   salesperson: z.string().optional().default(''),
   status: z.enum(['Active', 'Inactive']).default('Active'),
   notes: z.string().optional().default('')
-}).refine((data) => {
+});
+
+export const CustomerMasterSchema = CustomerMasterBaseSchema.refine((data) => {
   // If payment terms is Net, credit days must be > 0 and credit limit > 0
   if (data.paymentTerms && data.paymentTerms.startsWith('Net')) {
     return data.creditDays > 0 && data.creditLimit > 0;
@@ -89,7 +91,7 @@ export const CustomerMasterSchema = z.object({
 // ============================================================================
 // 2. VENDOR MASTER SCHEMA
 // ============================================================================
-export const VendorMasterSchema = z.object({
+export const VendorMasterBaseSchema = z.object({
   id: z.string().optional(),
   code: z.string().min(1, 'Vendor ID code is required'),
   name: z.string().min(1, 'Vendor name is required'),
@@ -153,7 +155,9 @@ export const VendorMasterSchema = z.object({
   turnaroundTimeDays: z.coerce.number().min(0).optional().default(0),
   status: z.enum(['Active', 'Inactive']).default('Active'),
   notes: z.string().optional().default('')
-}).refine((data) => {
+});
+
+export const VendorMasterSchema = VendorMasterBaseSchema.refine((data) => {
   // If subcontractor, prompt processType and turnaroundTimeDays
   if (data.vendorType === 'Subcontractor / Job Worker') {
     return data.processType && data.processType.trim().length > 0;
@@ -167,7 +171,7 @@ export const VendorMasterSchema = z.object({
 // ============================================================================
 // 3. ITEM MASTER SCHEMA
 // ============================================================================
-export const MasterItemSchema = z.object({
+export const MasterItemBaseSchema = z.object({
   id: z.string().optional(),
   code: z.string().min(1, 'Item code is required'),
   name: z.string().min(1, 'Item name is required'),
@@ -201,7 +205,9 @@ export const MasterItemSchema = z.object({
   storeLocation: z.string().optional().default('A1-RACK-1'),
   isFinishedGoods: z.boolean().optional().default(false),
   status: z.enum(['Active', 'Inactive']).default('Active')
-}).refine((data) => {
+});
+
+export const MasterItemSchema = MasterItemBaseSchema.refine((data) => {
   // If Raw Material, Consumable, Bought-Out: standard_cost is required (> 0) and preferred_vendor is required
   if (['Raw Material', 'Consumable', 'Bought-Out'].includes(data.itemType)) {
     return (data.standardCost !== undefined && data.standardCost > 0) &&
@@ -225,7 +231,7 @@ export const MasterItemSchema = z.object({
 // ============================================================================
 // 4. MACHINE MASTER SCHEMA
 // ============================================================================
-export const MachineMasterSchema = z.object({
+export const MachineMasterBaseSchema = z.object({
   id: z.string().optional(),
   code: z.string().min(1, 'Machine ID code is required'),
   name: z.string().min(1, 'Machine name is required (e.g. VMC-01)'),
@@ -253,7 +259,9 @@ export const MachineMasterSchema = z.object({
   responsiblePerson: z.string().optional().default(''),
   hourlyCost: z.coerce.number().min(0).optional().default(500),
   active: z.boolean().optional().default(true)
-}).refine((data) => {
+});
+
+export const MachineMasterSchema = MachineMasterBaseSchema.refine((data) => {
   // If capacity is filled, capacity_uom is required
   if (data.capacity !== undefined && data.capacity > 0) {
     return data.capacityUom && data.capacityUom.trim().length > 0;

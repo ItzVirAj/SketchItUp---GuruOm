@@ -37,11 +37,23 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
   isDarkMode = true,
   onSaveProfile,
 }) => {
-  const [legalName, setLegalName] = useState(profile?.legalName || 'GuruOm Industries LLP');
-  const [address, setAddress] = useState(profile?.address || 'Plot No. 42, MIDC Industrial Area, Bhosari, Pune, Maharashtra - 411026');
-  const [phone, setPhone] = useState(profile?.phone || '+91 20 2712 3456');
-  const [email, setEmail] = useState(profile?.email || 'operations@guruom.in');
-  const [gstin, setGstin] = useState(profile?.gstin || '27AABCG1234F1Z5');
+  const [legalName, setLegalName] = useState(profile?.legalName && profile.legalName !== 'Test Tech Ltd' ? profile.legalName : 'GuruOm Industries LLP');
+  const [address, setAddress] = useState(
+    !profile?.address || profile.address.includes('MIDC') || profile.address.includes('Metoda') || profile.address.includes('Rajkot') || profile.address.includes('123 Test St')
+      ? 'Sr No 15/2, Mataji Logistic Park, Behind Tilakraj CNG Pump, Urali Devachi, Pune 412308, India'
+      : profile.address
+  );
+  const [phone, setPhone] = useState(
+    !profile?.phone || profile.phone.includes('2712 3456') || profile.phone.includes('98250') || profile.phone === '1234567890'
+      ? '+91 9763 969 798'
+      : profile.phone
+  );
+  const [email, setEmail] = useState(
+    !profile?.email || profile.email === 'operations@guruom.in' || profile.email === 'test@example.com'
+      ? 'contact@guruom.in'
+      : profile.email
+  );
+  const [gstin, setGstin] = useState(profile?.gstin && !profile.gstin.startsWith('24') ? profile.gstin : '27AABCG1234F1Z5');
   const [pan, setPan] = useState(profile?.pan || 'AABCG1234F');
   const [state, setState] = useState(profile?.state || 'Maharashtra');
   const [stateCode, setStateCode] = useState(profile?.stateCode || '27');
@@ -54,11 +66,23 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
   // Synchronize local form when backend profile updates
   useEffect(() => {
     if (profile) {
-      setLegalName(profile.legalName || 'GuruOm Industries LLP');
-      setAddress(profile.address || 'Plot No. 42, MIDC Industrial Area, Bhosari, Pune, Maharashtra - 411026');
-      setPhone(profile.phone || '+91 20 2712 3456');
-      setEmail(profile.email || 'operations@guruom.in');
-      setGstin(profile.gstin || '27AABCG1234F1Z5');
+      setLegalName(profile.legalName && profile.legalName !== 'Test Tech Ltd' ? profile.legalName : 'GuruOm Industries LLP');
+      setAddress(
+        !profile.address || profile.address.includes('MIDC') || profile.address.includes('Metoda') || profile.address.includes('Rajkot') || profile.address.includes('123 Test St')
+          ? 'Sr No 15/2, Mataji Logistic Park, Behind Tilakraj CNG Pump, Urali Devachi, Pune 412308, India'
+          : profile.address
+      );
+      setPhone(
+        !profile.phone || profile.phone.includes('2712 3456') || profile.phone.includes('98250') || profile.phone === '1234567890'
+          ? '+91 9763 969 798'
+          : profile.phone
+      );
+      setEmail(
+        !profile.email || profile.email === 'operations@guruom.in' || profile.email === 'test@example.com'
+          ? 'contact@guruom.in'
+          : profile.email
+      );
+      setGstin(profile.gstin && !profile.gstin.startsWith('24') ? profile.gstin : '27AABCG1234F1Z5');
       setPan(profile.pan || 'AABCG1234F');
       setState(profile.state || 'Maharashtra');
       setStateCode(profile.stateCode || '27');
@@ -107,9 +131,9 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
 
     const updated: CompanyProfile = {
       legalName: (legalName || 'GuruOm Industries LLP').trim(),
-      address: (address || 'Plot No. 42, MIDC Industrial Area, Bhosari, Pune, Maharashtra - 411026').trim(),
-      phone: (phone || '+91 20 2712 3456').trim(),
-      email: (email || 'operations@guruom.in').trim(),
+      address: (address || 'Sr No 15/2, Mataji Logistic Park, Behind Tilakraj CNG Pump, Urali Devachi, Pune 412308, India').trim(),
+      phone: (phone || '+91 9763 969 798').trim(),
+      email: (email || 'contact@guruom.in').trim(),
       gstin: (gstin || '27AABCG1234F1Z5').trim().toUpperCase(),
       pan: (pan || 'AABCG1234F').trim().toUpperCase(),
       state: (state || 'Maharashtra').trim(),
@@ -131,20 +155,32 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
 
   const handleResetToCurrent = () => {
     if (profile) {
-      setLegalName(profile.legalName || 'GuruOm Industries LLP');
-      setAddress(profile.address || 'Plot No. 42, MIDC Industrial Area, Bhosari, Pune, Maharashtra - 411026');
-      setPhone(profile.phone || '+91 20 2712 3456');
-      setEmail(profile.email || 'operations@guruom.in');
-      setGstin(profile.gstin || '27AABCG1234F1Z5');
+      setLegalName(profile.legalName && profile.legalName !== 'Test Tech Ltd' ? profile.legalName : 'GuruOm Industries LLP');
+      setAddress(
+        !profile.address || profile.address.includes('MIDC') || profile.address.includes('Metoda') || profile.address.includes('Rajkot') || profile.address.includes('123 Test St')
+          ? 'Sr No 15/2, Mataji Logistic Park, Behind Tilakraj CNG Pump, Urali Devachi, Pune 412308, India'
+          : profile.address
+      );
+      setPhone(
+        !profile.phone || profile.phone.includes('2712 3456') || profile.phone.includes('98250') || profile.phone === '1234567890'
+          ? '+91 9763 969 798'
+          : profile.phone
+      );
+      setEmail(
+        !profile.email || profile.email === 'operations@guruom.in' || profile.email === 'test@example.com'
+          ? 'contact@guruom.in'
+          : profile.email
+      );
+      setGstin(profile.gstin && !profile.gstin.startsWith('24') ? profile.gstin : '27AABCG1234F1Z5');
       setPan(profile.pan || 'AABCG1234F');
       setState(profile.state || 'Maharashtra');
       setStateCode(profile.stateCode || '27');
       setSaveError(null);
     } else {
       setLegalName('GuruOm Industries LLP');
-      setAddress('Plot No. 42, MIDC Industrial Area, Bhosari, Pune, Maharashtra - 411026');
-      setPhone('+91 20 2712 3456');
-      setEmail('operations@guruom.in');
+      setAddress('Sr No 15/2, Mataji Logistic Park, Behind Tilakraj CNG Pump, Urali Devachi, Pune 412308, India');
+      setPhone('+91 9763 969 798');
+      setEmail('contact@guruom.in');
       setGstin('27AABCG1234F1Z5');
       setPan('AABCG1234F');
       setState('Maharashtra');
@@ -280,7 +316,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                 </span>
                 <p className={`text-xs leading-relaxed flex items-start gap-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
                   <MapPin className="w-3.5 h-3.5 text-[#007AFF] shrink-0 mt-0.5" />
-                  <span>{address || 'Plot No. 42, MIDC Industrial Area, Bhosari, Pune, Maharashtra - 411026'}</span>
+                  <span>{address || 'Sr No 15/2, Mataji Logistic Park, Behind Tilakraj CNG Pump, Urali Devachi, Pune 412308, India'}</span>
                 </p>
               </div>
 
@@ -344,7 +380,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                     onClick={() => handleCopy(pan, 'pan')}
                     title="Copy PAN"
                     className={`p-1.5 rounded-lg border text-xs cursor-pointer transition-colors ${isDarkMode ? 'border-white/10 text-slate-400 hover:text-white hover:bg-white/10' : 'border-slate-200 text-slate-600 hover:bg-slate-200'
-                    }`}
+                      }`}
                   >
                     {copiedField === 'pan' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                   </button>
@@ -395,7 +431,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                 {legalName || 'GuruOm Industries LLP'}
               </h4>
               <p className="text-[11px] text-slate-400 leading-relaxed">
-                {address || 'Plot No. 42, MIDC Industrial Area, Bhosari, Pune, Maharashtra - 411026'}
+                {address || 'Sr No 15/2, Mataji Logistic Park, Behind Tilakraj CNG Pump, Urali Devachi, Pune 412308, India'}
               </p>
               <div className="flex flex-wrap gap-x-3 gap-y-1 font-mono text-[10px] text-slate-400 pt-1 border-t border-white/10">
                 <span><strong>GSTIN:</strong> {gstin || '27AABCG1234F1Z5'}</span>
@@ -468,7 +504,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                           type="text"
                           value={phone}
                           onChange={(e) => setPhone(e.target.value)}
-                          placeholder="e.g. +91 240 2554123"
+                          placeholder="e.g. +91 9763 969 798"
                           className={`${inputClass} pl-10 font-mono`}
                         />
                       </div>
@@ -484,7 +520,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                           type="email"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          placeholder="e.g. operations@guruom.in"
+                          placeholder="e.g. contact@guruom.in"
                           className={`${inputClass} pl-10 font-mono`}
                         />
                       </div>

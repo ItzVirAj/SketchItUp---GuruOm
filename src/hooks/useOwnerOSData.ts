@@ -131,9 +131,32 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       const saved = localStorage.getItem('stratum_company_profile');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed && parsed.legalName) return parsed;
+        if (parsed && parsed.legalName) {
+          if (
+            parsed.address?.includes('Metoda') ||
+            parsed.address?.includes('Rajkot') ||
+            parsed.address?.includes('Bhosari') ||
+            parsed.address?.includes('123 Test St') ||
+            parsed.legalName === 'Test Tech Ltd'
+          ) {
+            const updated: CompanyProfile = {
+              ...parsed,
+              legalName: 'GuruOm Industries LLP',
+              address: 'Sr No 15/2, Mataji Logistic Park, Behind Tilakraj CNG Pump, Urali Devachi, Pune 412308, India',
+              phone: '+91 9763 969 798',
+              email: 'contact@guruom.in',
+              state: 'Maharashtra',
+              stateCode: '27'
+            };
+            try {
+              localStorage.setItem('stratum_company_profile', JSON.stringify(updated));
+            } catch (_) { }
+            return updated;
+          }
+          return parsed;
+        }
       }
-    } catch (_) {}
+    } catch (_) { }
     return initialCompanyProfile;
   });
   const [approvals, setApprovals] = useState<PendingApproval[]>([]);
@@ -244,21 +267,21 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         try {
           const newUser = JSON.parse(event.data);
           setUsers(prev => [newUser, ...prev.filter(u => u.id !== newUser.id && u.email !== newUser.email)]);
-        } catch (_) {}
+        } catch (_) { }
       });
 
       eventSource.addEventListener('user_updated', (event: MessageEvent) => {
         try {
           const updated = JSON.parse(event.data);
           setUsers(prev => prev.map(u => u.id === updated.id ? { ...u, ...updated } : u));
-        } catch (_) {}
+        } catch (_) { }
       });
 
       eventSource.addEventListener('user_deleted', (event: MessageEvent) => {
         try {
           const deleted = JSON.parse(event.data);
           setUsers(prev => prev.filter(u => u.id !== deleted.id));
-        } catch (_) {}
+        } catch (_) { }
       });
 
       // Company profile event
@@ -269,9 +292,9 @@ export function useOwnerOSData(currentUser?: SystemUser) {
             setCompanyProfile(updated);
             try {
               localStorage.setItem('stratum_company_profile', JSON.stringify(updated));
-            } catch (_) {}
+            } catch (_) { }
           }
-        } catch (_) {}
+        } catch (_) { }
       });
 
       // Order events
@@ -286,7 +309,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
             }
             return [newOrder, ...prev.filter(o => o.id !== newOrder.id)];
           });
-        } catch (_) {}
+        } catch (_) { }
       });
 
       eventSource.addEventListener('order_updated', (event: MessageEvent) => {
@@ -294,11 +317,11 @@ export function useOwnerOSData(currentUser?: SystemUser) {
           const updated = JSON.parse(event.data);
           const targetKey = updated.id || updated.poNo || updated.orderId;
           setOrders(prev => prev.map(o => {
-            const isMatch = o.id === updated.id || 
-                            o.poNo === updated.poNo || 
-                            o.id === updated.poNo || 
-                            o.poNo === updated.id || 
-                            (updated.orderId && (o.id === updated.orderId || o.poNo === updated.orderId));
+            const isMatch = o.id === updated.id ||
+              o.poNo === updated.poNo ||
+              o.id === updated.poNo ||
+              o.poNo === updated.id ||
+              (updated.orderId && (o.id === updated.orderId || o.poNo === updated.orderId));
             if (isMatch) {
               return {
                 ...o,
@@ -312,19 +335,19 @@ export function useOwnerOSData(currentUser?: SystemUser) {
             }
             return o;
           }));
-        } catch (_) {}
+        } catch (_) { }
       });
 
       eventSource.addEventListener('order_transitioned', (event: MessageEvent) => {
         try {
           const payload = JSON.parse(event.data);
           setOrders(prev => prev.map(o => {
-            const isMatch = o.id === payload.orderId || 
-                            o.poNo === payload.poNo || 
-                            o.id === payload.poNo || 
-                            o.poNo === payload.orderId ||
-                            o.id === payload.id ||
-                            o.poNo === payload.id;
+            const isMatch = o.id === payload.orderId ||
+              o.poNo === payload.poNo ||
+              o.id === payload.poNo ||
+              o.poNo === payload.orderId ||
+              o.id === payload.id ||
+              o.poNo === payload.id;
             if (isMatch) {
               return {
                 ...o,
@@ -336,26 +359,26 @@ export function useOwnerOSData(currentUser?: SystemUser) {
             }
             return o;
           }));
-        } catch (_) {}
+        } catch (_) { }
       });
 
       // Inventory & Shortage events
       eventSource.addEventListener('stock_updated', () => {
-        if (isAllowed('inventory')) fetchStock().then(setStock).catch(() => {});
+        if (isAllowed('inventory')) fetchStock().then(setStock).catch(() => { });
       });
 
       eventSource.addEventListener('shortage_updated', () => {
-        if (isAllowed('inventory')) fetchShortages().then(setShortages).catch(() => {});
+        if (isAllowed('inventory')) fetchShortages().then(setShortages).catch(() => { });
       });
 
       eventSource.addEventListener('finished_goods_updated', () => {
-        if (isAllowed('finished-goods')) fetchFinishedGoods().then(setFinishedGoods).catch(() => {});
+        if (isAllowed('finished-goods')) fetchFinishedGoods().then(setFinishedGoods).catch(() => { });
       });
 
       // GRN events
       eventSource.addEventListener('grn_created', () => {
-        if (isAllowed('inventory')) fetchStock().then(setStock).catch(() => {});
-        if (isAllowed('orders')) fetchOrders().then(setOrders).catch(() => {});
+        if (isAllowed('inventory')) fetchStock().then(setStock).catch(() => { });
+        if (isAllowed('orders')) fetchOrders().then(setOrders).catch(() => { });
       });
 
       // Item Catalog events — Stock Master mirrors the Masters catalog in realtime
@@ -363,8 +386,8 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         try {
           const newItem = JSON.parse(event.data);
           setMasters(prev => prev.some(m => m.code === newItem.code) ? prev : [newItem, ...prev]);
-        } catch (_) {}
-        fetchMasters().then(setMasters).catch(() => {});
+        } catch (_) { }
+        fetchMasters().then(setMasters).catch(() => { });
       });
 
       // Audit trail events — every backend-recorded system change streams in realtime
@@ -391,11 +414,11 @@ export function useOwnerOSData(currentUser?: SystemUser) {
             createdAt: record.created_at
           };
           setAuditLogs(prev => prev.some(l => l.id === entry.id) ? prev : [entry, ...prev]);
-        } catch (_) {}
+        } catch (_) { }
       });
 
       eventSource.addEventListener('grn_updated', () => {
-        if (isAllowed('inventory')) fetchStock().then(setStock).catch(() => {});
+        if (isAllowed('inventory')) fetchStock().then(setStock).catch(() => { });
       });
 
       // Production & Job Card events
@@ -404,7 +427,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         try {
           const newJob = JSON.parse(event.data);
           setJobCards(prev => [newJob, ...prev.filter(j => j.id !== newJob.id && j.jobNo !== newJob.jobNo)]);
-        } catch (_) {}
+        } catch (_) { }
       });
 
       eventSource.addEventListener('job_card_updated', (event: MessageEvent) => {
@@ -412,7 +435,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         try {
           const updatedJob = JSON.parse(event.data);
           setJobCards(prev => prev.map(j => (j.id === updatedJob.id || j.jobNo === updatedJob.jobNo) ? { ...j, ...updatedJob } : j));
-        } catch (_) {}
+        } catch (_) { }
       });
 
       eventSource.addEventListener('operation_completed', (event: MessageEvent) => {
@@ -433,10 +456,10 @@ export function useOwnerOSData(currentUser?: SystemUser) {
               return o;
             }));
           }
-        } catch (_) {}
-        if (isAllowed('production')) fetchJobCards().then(setJobCards).catch(() => {});
-        if (isAllowed('orders')) fetchOrders().then(setOrders).catch(() => {});
-        if (isAllowed('qc')) fetchQCQueue().then(setQcQueue).catch(() => {});
+        } catch (_) { }
+        if (isAllowed('production')) fetchJobCards().then(setJobCards).catch(() => { });
+        if (isAllowed('orders')) fetchOrders().then(setOrders).catch(() => { });
+        if (isAllowed('qc')) fetchQCQueue().then(setQcQueue).catch(() => { });
       });
 
       // QC & PDI events
@@ -445,7 +468,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         try {
           const newQc = JSON.parse(event.data);
           setQcQueue(prev => [newQc, ...prev.filter(q => q.id !== newQc.id && q.jobNo !== newQc.jobNo)]);
-        } catch (_) {}
+        } catch (_) { }
       });
 
       eventSource.addEventListener('qc_updated', (event: MessageEvent) => {
@@ -453,7 +476,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         try {
           const updatedQc = JSON.parse(event.data);
           setQcQueue(prev => prev.map(q => q.id === updatedQc.id ? { ...q, ...updatedQc } : q));
-        } catch (_) {}
+        } catch (_) { }
       });
 
       eventSource.addEventListener('pdi_created', (event: MessageEvent) => {
@@ -461,7 +484,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         try {
           const newPdi = JSON.parse(event.data);
           setPdiQueue(prev => [newPdi, ...prev.filter(p => p.id !== newPdi.id && !(p.orderPo === newPdi.orderPo && p.jobNo === newPdi.jobNo))]);
-        } catch (_) {}
+        } catch (_) { }
       });
 
       eventSource.addEventListener('pdi_updated', (event: MessageEvent) => {
@@ -469,7 +492,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         try {
           const updatedPdi = JSON.parse(event.data);
           setPdiQueue(prev => prev.map(p => p.id === updatedPdi.id ? { ...p, ...updatedPdi } : p));
-        } catch (_) {}
+        } catch (_) { }
       });
 
       // Dispatch events
@@ -478,7 +501,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         try {
           const newDispatch = JSON.parse(event.data);
           setDispatches(prev => [newDispatch, ...prev.filter(d => d.id !== newDispatch.id && d.challanNo !== newDispatch.challanNo)]);
-        } catch (_) {}
+        } catch (_) { }
       });
 
       // Invoice & Payment events
@@ -487,7 +510,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         try {
           const newInvoice = JSON.parse(event.data);
           setInvoices(prev => [newInvoice, ...prev.filter(i => i.id !== newInvoice.id && i.invoiceNo !== newInvoice.invoiceNo)]);
-        } catch (_) {}
+        } catch (_) { }
       });
 
       eventSource.addEventListener('invoice_updated', (event: MessageEvent) => {
@@ -495,12 +518,12 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         try {
           const updatedInv = JSON.parse(event.data);
           setInvoices(prev => prev.map(i => (i.id === updatedInv.id || i.invoiceNo === updatedInv.invoiceNo) ? { ...i, ...updatedInv } : i));
-        } catch (_) {}
+        } catch (_) { }
       });
 
       eventSource.addEventListener('payment_recorded', () => {
-        if (isAllowed('invoices')) fetchInvoices().then(setInvoices).catch(() => {});
-        if (isAllowed('orders')) fetchOrders().then(setOrders).catch(() => {});
+        if (isAllowed('invoices')) fetchInvoices().then(setInvoices).catch(() => { });
+        if (isAllowed('orders')) fetchOrders().then(setOrders).catch(() => { });
       });
 
       // Vendor Bills
@@ -509,7 +532,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         try {
           const newBill = JSON.parse(event.data);
           setPayables(prev => [newBill, ...prev.filter(b => b.id !== newBill.id && b.billNo !== newBill.billNo)]);
-        } catch (_) {}
+        } catch (_) { }
       });
 
       eventSource.addEventListener('vendor_bill_disbursed', (event: MessageEvent) => {
@@ -517,22 +540,22 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         try {
           const disbursed = JSON.parse(event.data);
           setPayables(prev => prev.map(b => (b.id === disbursed.billNo || b.billNo === disbursed.billNo) ? { ...b, ...disbursed } : b));
-        } catch (_) {}
+        } catch (_) { }
       });
 
       // Approvals
       eventSource.addEventListener('approval_created', () => {
-        if (isAllowed('approvals')) fetchApprovals().then(setApprovals).catch(() => {});
+        if (isAllowed('approvals')) fetchApprovals().then(setApprovals).catch(() => { });
       });
 
       eventSource.addEventListener('approval_updated', () => {
-        if (isAllowed('approvals')) fetchApprovals().then(setApprovals).catch(() => {});
+        if (isAllowed('approvals')) fetchApprovals().then(setApprovals).catch(() => { });
       });
 
       eventSource.onerror = () => {
         // SSE automatic reconnection will retry silently
       };
-    } catch (_) {}
+    } catch (_) { }
 
     return () => {
       clearInterval(reconciliationInterval);
@@ -554,7 +577,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       setCompanyProfile(profile);
       try {
         localStorage.setItem('stratum_company_profile', JSON.stringify(profile));
-      } catch (_) {}
+      } catch (_) { }
       await updateCompanyProfile(profile);
       await addAuditLog('company', 'update', `Updated company profile details: ${profile.legalName} (${profile.gstin})`);
       toast.success(`Company Profile updated successfully`, 'Profile Saved');
@@ -832,9 +855,9 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       // Synchronize all QC entries for this order/job to prevent conflicting statuses
       setQcQueue(prev => prev.map(q => {
         if (q.id === id || (targetOrderPo && q.orderPo === targetOrderPo)) {
-          return { 
-            ...q, 
-            qcStatus, 
+          return {
+            ...q,
+            qcStatus,
             inspectorNotes: notes || q.inspectorNotes,
             inspectedAt: new Date().toISOString()
           };
@@ -871,7 +894,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
 
       await updateQCInspection(id, qcStatus, notes);
       await addAuditLog('qc', 'inspect', `QC status updated to ${qcStatus} for inspection #${id} (PO: ${targetOrderPo || 'N/A'})`);
-      
+
       if (qcStatus === 'PASS') {
         toast.success(`QC Inspection Passed for #${targetOrderPo || id}`, 'QC Passed');
       } else if (qcStatus === 'REJECTED') {
@@ -928,7 +951,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
             stage: 'READY_TO_DISPATCH' as any,
             status: 'READY_TO_DISPATCH' as any,
             progressStep: 7
-          }).catch(() => {});
+          }).catch(() => { });
         }
       }
 
@@ -1152,7 +1175,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     // Instant optimistic update for dispatches
     if (dispatchData.challanNo) {
       setDispatches(prev => prev.map(d => (d.challanNo === dispatchData.challanNo || d.id === dispatchData.challanNo) ? { ...d, status: 'DISPATCHED' as any } : d));
-      await updateDispatchChallan(dispatchData.challanNo, { status: 'DISPATCHED' }).catch(() => {});
+      await updateDispatchChallan(dispatchData.challanNo, { status: 'DISPATCHED' }).catch(() => { });
     }
     // Instant optimistic update for orders
     setOrders(prev => prev.map(ord => {
@@ -1240,9 +1263,9 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     setInvoices(prev => prev.map(inv => {
       const order = orders.find(o => o.id === orderId || o.poNo === orderId);
       const isMatch = (targetInvNo && (inv.invoiceNo === targetInvNo || inv.id === targetInvNo)) ||
-                      (order && order.invoiceNo && (inv.invoiceNo === order.invoiceNo || inv.id === order.invoiceNo)) ||
-                      (order && inv.orderPo && (inv.orderPo.trim().toUpperCase() === order.poNo?.trim().toUpperCase() || inv.orderPo.trim().toUpperCase() === order.id.trim().toUpperCase())) ||
-                      (inv.id === orderId || inv.invoiceNo === orderId);
+        (order && order.invoiceNo && (inv.invoiceNo === order.invoiceNo || inv.id === order.invoiceNo)) ||
+        (order && inv.orderPo && (inv.orderPo.trim().toUpperCase() === order.poNo?.trim().toUpperCase() || inv.orderPo.trim().toUpperCase() === order.id.trim().toUpperCase())) ||
+        (inv.id === orderId || inv.invoiceNo === orderId);
       if (isMatch) {
         const total = Number(inv.totalAmount || 0);
         const newPaid = Math.min(total, Number(inv.paidAmount || 0) + payAmt);
@@ -1316,7 +1339,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         if (parsed.id === userId || parsed.email === users.find(u => u.id === userId)?.email) {
           localStorage.setItem('stratum_user', JSON.stringify({ ...parsed, role: newRole }));
         }
-      } catch (_) {}
+      } catch (_) { }
     }
     await updateProfileRole(userId, newRole);
     await addAuditLog('users', 'update_role', `Updated role to ${newRole} for user #${userId}`);
@@ -1332,7 +1355,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         if (parsed.id === userId || parsed.email === users.find(u => u.id === userId)?.email) {
           localStorage.setItem('stratum_user', JSON.stringify({ ...parsed, ...updates }));
         }
-      } catch (_) {}
+      } catch (_) { }
     }
     await updateProfile(userId, updates);
     await addAuditLog('users', 'update_user', `Updated user record #${userId} [Name: ${updates.name || '—'}, Email: ${updates.email || '—'}, Role: ${updates.role || '—'}]`);
@@ -1420,161 +1443,178 @@ export function useOwnerOSData(currentUser?: SystemUser) {
   };
 
   const handleDeleteMasterItem = async (code: string) => {
-    setMasters(prev => prev.filter(m => m.code !== code));
     try {
       await deleteMasterItem(code);
+      setMasters(prev => prev.filter(m => m.code !== code));
+      await addAuditLog('masters', 'delete_master', `Deleted item master ${code}`);
       toast.info(`Deleted item master ${code}`, 'Item Master Deleted');
     } catch (err: any) {
       console.warn('handleDeleteMasterItem error:', err);
       toast.error(err?.message || 'Failed to delete item master', 'Delete Error');
     }
-    await addAuditLog('masters', 'delete_master', `Deleted item master ${code}`);
     await loadAllData();
   };
 
   const handleAddCustomer = async (c: CustomerMaster) => {
-    setCustomers(prev => [c, ...prev.filter(item => item.code !== c.code)]);
     try {
-      await insertCustomer(c);
-      toast.success(`Saved customer ${c.name} (${c.code})`, 'Customer Saved');
+      const created = await insertCustomer(c);
+      setCustomers(prev => [created, ...prev.filter(item => item.code !== created.code)]);
+      await addAuditLog('masters', 'add_customer', `Added/updated customer master ${created.code} (${created.name})`);
+      toast.success(`Saved customer ${created.name} (${created.code})`, 'Customer Saved');
     } catch (err: any) {
       console.warn('Realtime Supabase customer insert error:', err);
       toast.error(err?.message || 'Failed to save customer', 'Customer Error');
     }
-    await addAuditLog('masters', 'add_customer', `Added/updated customer master ${c.code} (${c.name})`);
     await loadAllData();
   };
 
   const handleUpdateCustomer = async (code: string, c: CustomerMaster) => {
-    setCustomers(prev => prev.map(item => item.code === code ? { ...item, ...c } : item));
     try {
-      await updateCustomer(code, c);
+      const updated = await updateCustomer(code, c);
+      setCustomers(prev => prev.map(item => item.code === code ? { ...item, ...updated } : item));
+      await addAuditLog('masters', 'update_customer', `Updated customer master ${code} (${c.name})`);
       toast.success(`Updated customer ${c.name}`, 'Customer Updated');
     } catch (err: any) {
       console.warn('Realtime Supabase customer update error:', err);
       toast.error(err?.message || 'Failed to update customer', 'Update Error');
     }
-    await addAuditLog('masters', 'update_customer', `Updated customer master ${code} (${c.name})`);
     await loadAllData();
   };
 
   const handleDeleteCustomer = async (code: string) => {
-    setCustomers(prev => prev.filter(item => item.code !== code));
     try {
       await deleteCustomer(code);
+      setCustomers(prev => prev.filter(item => item.code !== code));
+      await addAuditLog('masters', 'delete_customer', `Deleted customer master ${code}`);
       toast.info(`Deleted customer ${code}`, 'Customer Deleted');
     } catch (err: any) {
       console.warn('Realtime Supabase customer delete error:', err);
       toast.error(err?.message || 'Failed to delete customer', 'Delete Error');
     }
-    await addAuditLog('masters', 'delete_customer', `Deleted customer master ${code}`);
     await loadAllData();
   };
 
   const handleAddVendor = async (v: VendorMaster) => {
-    setVendors(prev => [v, ...prev.filter(item => item.code !== v.code)]);
     try {
-      await insertVendor(v);
-      toast.success(`Saved vendor ${v.name} (${v.code})`, 'Vendor Saved');
+      const created = await insertVendor(v);
+      setVendors(prev => [created, ...prev.filter(item => item.code !== created.code)]);
+      await addAuditLog('masters', 'add_vendor', `Added/updated vendor master ${created.code} (${created.name})`);
+      toast.success(`Saved vendor ${created.name} (${created.code})`, 'Vendor Saved');
     } catch (err: any) {
       console.warn('Realtime Supabase vendor insert error:', err);
       toast.error(err?.message || 'Failed to save vendor', 'Vendor Error');
     }
-    await addAuditLog('masters', 'add_vendor', `Added/updated vendor master ${v.code} (${v.name})`);
     await loadAllData();
   };
 
   const handleUpdateVendor = async (code: string, v: VendorMaster) => {
-    setVendors(prev => prev.map(item => item.code === code ? { ...item, ...v } : item));
     try {
-      await updateVendor(code, v);
+      const updated = await updateVendor(code, v);
+      setVendors(prev => prev.map(item => item.code === code ? { ...item, ...updated } : item));
+      await addAuditLog('masters', 'update_vendor', `Updated vendor master ${code} (${v.name})`);
       toast.success(`Updated vendor ${v.name}`, 'Vendor Updated');
     } catch (err: any) {
       console.warn('Realtime Supabase vendor update error:', err);
       toast.error(err?.message || 'Failed to update vendor', 'Update Error');
     }
-    await addAuditLog('masters', 'update_vendor', `Updated vendor master ${code} (${v.name})`);
     await loadAllData();
   };
 
   const handleDeleteVendor = async (code: string) => {
-    setVendors(prev => prev.filter(item => item.code !== code));
     try {
       await deleteVendor(code);
+      setVendors(prev => prev.filter(item => item.code !== code));
+      await addAuditLog('masters', 'delete_vendor', `Deleted vendor master ${code}`);
       toast.info(`Deleted vendor ${code}`, 'Vendor Deleted');
     } catch (err: any) {
       console.warn('Realtime Supabase vendor delete error:', err);
       toast.error(err?.message || 'Failed to delete vendor', 'Delete Error');
     }
-    await addAuditLog('masters', 'delete_vendor', `Deleted vendor master ${code}`);
     await loadAllData();
   };
 
   const handleAddMachine = async (m: MachineMaster) => {
-    setMachines(prev => [m, ...prev.filter(item => item.code !== m.code)]);
     try {
-      await insertMachine(m);
-      toast.success(`Saved machine ${m.name} (${m.code})`, 'Machine Saved');
+      const created = await insertMachine(m);
+      setMachines(prev => [created, ...prev.filter(item => item.code !== created.code)]);
+      await addAuditLog('masters', 'add_machine', `Added/updated machine master ${created.code} (${created.name})`);
+      toast.success(`Saved machine ${created.name} (${created.code})`, 'Machine Saved');
     } catch (err: any) {
       console.warn('Realtime Supabase machine insert error:', err);
       toast.error(err?.message || 'Failed to save machine', 'Machine Error');
     }
-    await addAuditLog('masters', 'add_machine', `Added/updated machine master ${m.code} (${m.name})`);
     await loadAllData();
   };
 
   const handleUpdateMachine = async (code: string, m: MachineMaster) => {
-    setMachines(prev => prev.map(item => item.code === code ? { ...item, ...m } : item));
     try {
-      await updateMachine(code, m);
+      const updated = await updateMachine(code, m);
+      setMachines(prev => prev.map(item => item.code === code ? { ...item, ...updated } : item));
+      await addAuditLog('masters', 'update_machine', `Updated machine master ${code} (${m.name})`);
       toast.success(`Updated machine ${m.name}`, 'Machine Updated');
     } catch (err: any) {
       console.warn('Realtime Supabase machine update error:', err);
       toast.error(err?.message || 'Failed to update machine', 'Update Error');
     }
-    await addAuditLog('masters', 'update_machine', `Updated machine master ${code} (${m.name})`);
     await loadAllData();
   };
 
   const handleDeleteMachine = async (code: string) => {
-    setMachines(prev => prev.filter(item => item.code !== code));
     try {
       await deleteMachine(code);
+      setMachines(prev => prev.filter(item => item.code !== code));
+      await addAuditLog('masters', 'delete_machine', `Deleted machine master ${code}`);
       toast.info(`Deleted machine ${code}`, 'Machine Deleted');
     } catch (err: any) {
       console.warn('Realtime Supabase machine delete error:', err);
       toast.error(err?.message || 'Failed to delete machine', 'Delete Error');
     }
-    await addAuditLog('masters', 'delete_machine', `Deleted machine master ${code}`);
     await loadAllData();
   };
 
   const handleImportOMGST = async (importedData: { customers?: CustomerMaster[]; vendors?: VendorMaster[]; machines?: MachineMaster[]; items?: MasterItem[] }) => {
+    let importedCount = 0;
     if (importedData.customers?.length) {
-      setCustomers(prev => [...importedData.customers!, ...prev]);
       for (const c of importedData.customers) {
-        await insertCustomer(c);
+        try {
+          await insertCustomer(c);
+          importedCount++;
+        } catch (e) {
+          console.warn('Import customer error:', e);
+        }
       }
     }
     if (importedData.vendors?.length) {
-      setVendors(prev => [...importedData.vendors!, ...prev]);
       for (const v of importedData.vendors) {
-        await insertVendor(v);
+        try {
+          await insertVendor(v);
+          importedCount++;
+        } catch (e) {
+          console.warn('Import vendor error:', e);
+        }
       }
     }
     if (importedData.machines?.length) {
-      setMachines(prev => [...importedData.machines!, ...prev]);
       for (const m of importedData.machines) {
-        await insertMachine(m);
+        try {
+          await insertMachine(m);
+          importedCount++;
+        } catch (e) {
+          console.warn('Import machine error:', e);
+        }
       }
     }
     if (importedData.items?.length) {
-      setMasters(prev => [...importedData.items!, ...prev]);
       for (const it of importedData.items) {
-        await insertMaster(it);
+        try {
+          await insertMaster(it);
+          importedCount++;
+        } catch (e) {
+          console.warn('Import item master error:', e);
+        }
       }
     }
-    await addAuditLog('masters', 'import_omgst', `Imported OMGST master data tables in real-time.`);
+    await addAuditLog('masters', 'import_omgst', `Imported ${importedCount} OMGST master data tables in real-time.`);
     await loadAllData();
   };
 

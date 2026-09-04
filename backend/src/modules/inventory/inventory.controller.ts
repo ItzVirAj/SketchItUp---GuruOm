@@ -142,7 +142,14 @@ export class InventoryController {
    */
   async getReconciliation(req: Request, res: Response) {
     try {
-      const report = await inventoryMovementsService.getStockReconciliation();
+      const filters = {
+        itemCode: req.query.itemCode as string | undefined,
+        search: (req.query.search || req.query.q) as string | undefined,
+        status: req.query.status as string | undefined,
+        category: req.query.category as string | undefined,
+        includeInactive: req.query.includeInactive === 'true'
+      };
+      const report = await inventoryMovementsService.getStockReconciliation(filters);
       return res.json({ report });
     } catch (err: any) {
       return res.status(500).json({ error: 'InternalServerError', message: err.message });

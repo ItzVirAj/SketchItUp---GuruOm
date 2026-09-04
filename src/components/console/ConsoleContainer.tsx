@@ -257,6 +257,14 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
 
   const currentRole: UserRole = currentUser?.role || authProfile?.role || 'SUPER ADMIN';
 
+  // Fast User Switching is exclusively restricted to the Owner and Server Admin
+  const isSwitchUserAllowed = Boolean(
+    currentUser?.email?.toLowerCase() === 'owner@guruom.in' ||
+    currentUser?.email?.toLowerCase() === 'serveradmin@guruom.in' ||
+    authProfile?.email?.toLowerCase() === 'owner@guruom.in' ||
+    authProfile?.email?.toLowerCase() === 'serveradmin@guruom.in'
+  );
+
   const [dynamicFetchedOrder, setDynamicFetchedOrder] = useState<CustomerOrder | null>(null);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 
@@ -474,7 +482,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
         setCurrentRole={(role) => handleUpdateUserRole(currentUserId, role)}
         userName={currentUser ? currentUser.name : "Sachin Gharbude"}
         currentUser={currentUser}
-        onOpenSwitchUser={() => setIsSwitchUserOpen(true)}
+        onOpenSwitchUser={isSwitchUserAllowed ? () => setIsSwitchUserOpen(true) : undefined}
         onSync={handleSync}
         lastSynced={lastSynced}
         onToggleMobileMenu={() => setIsOpenMobile(!isOpenMobile)}
@@ -517,7 +525,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
           isDarkMode={isDarkMode}
           onSignOut={onSignOut}
           onOpenSecurityModal={() => setIsSecurityModalOpen(true)}
-          onOpenSwitchUser={() => setIsSwitchUserOpen(true)}
+          onOpenSwitchUser={isSwitchUserAllowed ? () => setIsSwitchUserOpen(true) : undefined}
           pendingApprovalsCount={pendingApprovalsCount}
         />
 
@@ -1009,17 +1017,18 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
       />
 
       {/* Switch User / Role Modal */}
-      <SwitchUserModal
-        isOpen={isSwitchUserOpen}
-        onClose={() => setIsSwitchUserOpen(false)}
-        users={users}
-        currentUserId={currentUserId}
-        onSwitchUser={handleSwitchUser}
-        onRevokeUser={handleRevokeUser}
-        onRestoreUser={handleRestoreUser}
-        onAddUser={handleAddUser}
-        isDarkMode={isDarkMode}
-      />
+      {isSwitchUserAllowed && (
+        <SwitchUserModal
+          isOpen={isSwitchUserOpen}
+          onClose={() => setIsSwitchUserOpen(false)}
+          users={users}
+          currentUserId={currentUserId}
+          onSwitchUser={handleSwitchUser}
+          onRevokeUser={handleRevokeUser}
+          onRestoreUser={handleRestoreUser}
+          isDarkMode={isDarkMode}
+        />
+      )}
 
       {/* Active Sessions & Suspicious Login Security Center Modal */}
       <SecuritySessionsModal

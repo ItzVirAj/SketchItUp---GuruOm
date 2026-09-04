@@ -42,15 +42,15 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
   const [statusTab, setStatusTab] = useState<'ALL' | 'WIP' | 'OVERDUE' | 'COMPLETED'>('ALL');
   
   // Gate-Out Form State
-  const [jobNo, setJobNo] = useState('JC/0001/26-27');
-  const [itemCode, setItemCode] = useState('00000001');
-  const [itemDesc, setItemDesc] = useState('MAIN SPINDLE HOUSING 120MM');
-  const [vendorName, setVendorName] = useState('Apex Heat Treaters Ltd');
+  const [jobNo, setJobNo] = useState('');
+  const [itemCode, setItemCode] = useState('');
+  const [itemDesc, setItemDesc] = useState('');
+  const [vendorName, setVendorName] = useState('');
   const [process, setProcess] = useState('HEAT_TREATMENT');
-  const [sentQty, setSentQty] = useState(60);
-  const [expectedDate, setExpectedDate] = useState('2026-08-25');
-  const [transporter, setTransporter] = useState('Shree Logistics');
-  const [vehicleNo, setVehicleNo] = useState('MH-12-QW-4011');
+  const [sentQty, setSentQty] = useState(0);
+  const [expectedDate, setExpectedDate] = useState('');
+  const [transporter, setTransporter] = useState('');
+  const [vehicleNo, setVehicleNo] = useState('');
 
   // Gate-In Receive Form State
   const [receiveModalItem, setReceiveModalItem] = useState<any | null>(null);
@@ -141,6 +141,10 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!jobNo.trim() || !itemCode.trim() || !vendorName.trim() || sentQty <= 0) {
+      alert('Please provide a valid Job No, Item Code, Vendor, and Quantity (> 0).');
+      return;
+    }
     const gatePassNo = `GP-OUT-2026-${String(activeSendOuts.length + 80).padStart(4, '0')}`;
     const handleCreate = onCreateSendOut || onSendOut;
     if (handleCreate) {

@@ -230,10 +230,13 @@ export class OrdersService {
     };
     if (payload.followUpDate) delayPayload.delayed_follow_up_date = payload.followUpDate;
 
-    try {
-      await this.db.from('customer_orders').update(delayPayload).or(`id.eq.${orderIdOrPo},po_no.eq.${orderIdOrPo}`);
-    } catch (err) {
-      console.warn('Database markOrderDelayed error:', err);
+    const { error: upErr } = await this.db.from('customer_orders').update(delayPayload).or(`id.eq.${orderIdOrPo},po_no.eq.${orderIdOrPo}`);
+    if (upErr) {
+      console.error('Database markOrderDelayed error:', upErr);
+      const err: any = new Error(`Failed to mark order delayed: ${upErr.message}`);
+      err.code = upErr.code;
+      err.statusCode = 400;
+      throw err;
     }
 
     notificationsService.broadcastEvent('order_transitioned', {

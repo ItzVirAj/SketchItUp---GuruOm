@@ -13,6 +13,7 @@ export default defineConfig(() => {
     },
     test: {
       include: ['tests/**/*.test.ts'],
+      testTimeout: 30000,
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.

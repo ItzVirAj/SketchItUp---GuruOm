@@ -262,14 +262,6 @@ export async function insertMaster(item: Partial<MasterItem>): Promise<MasterIte
 export async function updateMasterItem(code: string, item: Partial<MasterItem>): Promise<MasterItem> {
   const res = await apiClient.put<{ message: string; data: MasterItem }>(`/masters/${encodeURIComponent(code)}`, item);
   if (res?.data) {
-    try {
-      const saved = localStorage.getItem('stratum_custom_masters');
-      if (saved) {
-        const current: MasterItem[] = JSON.parse(saved);
-        const updated = current.map(m => m.code === code ? { ...m, ...res.data } : m);
-        localStorage.setItem('stratum_custom_masters', JSON.stringify(updated));
-      }
-    } catch (e) { }
     return res.data;
   }
   throw new Error(`Failed to update master item ${code}: server did not return item data`);
@@ -277,14 +269,6 @@ export async function updateMasterItem(code: string, item: Partial<MasterItem>):
 
 export async function deleteMasterItem(code: string): Promise<void> {
   await apiClient.delete(`/masters/${encodeURIComponent(code)}`);
-  try {
-    const saved = localStorage.getItem('stratum_custom_masters');
-    if (saved) {
-      const current: MasterItem[] = JSON.parse(saved);
-      const updated = current.filter(m => m.code !== code);
-      localStorage.setItem('stratum_custom_masters', JSON.stringify(updated));
-    }
-  } catch (e) { }
 }
 
 // ----------------------------------------------------
@@ -532,82 +516,21 @@ export async function overrideMaterialCheckForOrder(orderId: string, reason: str
   return res.data;
 }
 
-// Local Storage Fallback Helpers for Masters
-const getSavedCustomCustomers = (): CustomerMaster[] => {
-  try {
-    const saved = localStorage.getItem('stratum_custom_customers');
-    if (saved) return JSON.parse(saved);
-  } catch (e) { }
-  return [];
-};
-
-export const saveCustomCustomerToLocal = (c: CustomerMaster) => {
-  try {
-    const current = getSavedCustomCustomers();
-    const updated = [c, ...current.filter(item => item.code !== c.code)];
-    localStorage.setItem('stratum_custom_customers', JSON.stringify(updated));
-  } catch (e) { }
-};
-
-const getSavedCustomVendors = (): VendorMaster[] => {
-  try {
-    const saved = localStorage.getItem('stratum_custom_vendors');
-    if (saved) return JSON.parse(saved);
-  } catch (e) { }
-  return [];
-};
-
-export const saveCustomVendorToLocal = (v: VendorMaster) => {
-  try {
-    const current = getSavedCustomVendors();
-    const updated = [v, ...current.filter(item => item.code !== v.code)];
-    localStorage.setItem('stratum_custom_vendors', JSON.stringify(updated));
-  } catch (e) { }
-};
-
-const getSavedCustomMachines = (): MachineMaster[] => {
-  try {
-    const saved = localStorage.getItem('stratum_custom_machines');
-    if (saved) return JSON.parse(saved);
-  } catch (e) { }
-  return [];
-};
-
-export const saveCustomMachineToLocal = (m: MachineMaster) => {
-  try {
-    const current = getSavedCustomMachines();
-    const updated = [m, ...current.filter(item => item.code !== m.code)];
-    localStorage.setItem('stratum_custom_machines', JSON.stringify(updated));
-  } catch (e) { }
-};
-
 export async function fetchCustomers(): Promise<CustomerMaster[]> {
-  const localCustom = getSavedCustomCustomers();
-  let dbCustomers: CustomerMaster[] = [];
-
   try {
     const res = await apiClient.get<{ data: CustomerMaster[] }>('/masters/customers');
     if (res?.data && res.data.length > 0) {
-      dbCustomers = res.data;
+      return res.data;
     }
   } catch (err) {
-    console.warn('Backend fetchCustomers fallback:', err);
+    console.warn('Backend fetchCustomers error:', err);
   }
-
-  const map = new Map<string, CustomerMaster>();
-  [...localCustom, ...dbCustomers].forEach(item => {
-    if (item.code && !map.has(item.code)) {
-      map.set(item.code, item);
-    }
-  });
-
-  return Array.from(map.values());
+  return [];
 }
 
 export async function insertCustomer(c: CustomerMaster): Promise<CustomerMaster> {
   const res = await apiClient.post<{ message: string; data: CustomerMaster }>('/masters/customers', c);
   if (res?.data) {
-    saveCustomCustomerToLocal(res.data);
     return res.data;
   }
   throw new Error('Failed to create customer: server did not return customer data');
@@ -616,7 +539,6 @@ export async function insertCustomer(c: CustomerMaster): Promise<CustomerMaster>
 export async function updateCustomer(code: string, c: CustomerMaster): Promise<CustomerMaster> {
   const res = await apiClient.put<{ message: string; data: CustomerMaster }>(`/masters/customers/${encodeURIComponent(code)}`, c);
   if (res?.data) {
-    saveCustomCustomerToLocal(res.data);
     return res.data;
   }
   throw new Error(`Failed to update customer ${code}: server did not return customer data`);
@@ -624,40 +546,23 @@ export async function updateCustomer(code: string, c: CustomerMaster): Promise<C
 
 export async function deleteCustomer(code: string): Promise<void> {
   await apiClient.delete(`/masters/customers/${encodeURIComponent(code)}`);
-  try {
-    const current = getSavedCustomCustomers();
-    const updated = current.filter(item => item.code !== code);
-    localStorage.setItem('stratum_custom_customers', JSON.stringify(updated));
-  } catch (e) { }
 }
 
 export async function fetchVendors(): Promise<VendorMaster[]> {
-  const localCustom = getSavedCustomVendors();
-  let dbVendors: VendorMaster[] = [];
-
   try {
     const res = await apiClient.get<{ data: VendorMaster[] }>('/masters/vendors');
     if (res?.data && res.data.length > 0) {
-      dbVendors = res.data;
+      return res.data;
     }
   } catch (err) {
-    console.warn('Backend fetchVendors fallback:', err);
+    console.warn('Backend fetchVendors error:', err);
   }
-
-  const map = new Map<string, VendorMaster>();
-  [...localCustom, ...dbVendors].forEach(item => {
-    if (item.code && !map.has(item.code)) {
-      map.set(item.code, item);
-    }
-  });
-
-  return Array.from(map.values());
+  return [];
 }
 
 export async function insertVendor(v: VendorMaster): Promise<VendorMaster> {
   const res = await apiClient.post<{ message: string; data: VendorMaster }>('/masters/vendors', v);
   if (res?.data) {
-    saveCustomVendorToLocal(res.data);
     return res.data;
   }
   throw new Error('Failed to create vendor: server did not return vendor data');
@@ -666,7 +571,6 @@ export async function insertVendor(v: VendorMaster): Promise<VendorMaster> {
 export async function updateVendor(code: string, v: VendorMaster): Promise<VendorMaster> {
   const res = await apiClient.put<{ message: string; data: VendorMaster }>(`/masters/vendors/${encodeURIComponent(code)}`, v);
   if (res?.data) {
-    saveCustomVendorToLocal(res.data);
     return res.data;
   }
   throw new Error(`Failed to update vendor ${code}: server did not return vendor data`);
@@ -674,40 +578,23 @@ export async function updateVendor(code: string, v: VendorMaster): Promise<Vendo
 
 export async function deleteVendor(code: string): Promise<void> {
   await apiClient.delete(`/masters/vendors/${encodeURIComponent(code)}`);
-  try {
-    const current = getSavedCustomVendors();
-    const updated = current.filter(item => item.code !== code);
-    localStorage.setItem('stratum_custom_vendors', JSON.stringify(updated));
-  } catch (e) { }
 }
 
 export async function fetchMachines(): Promise<MachineMaster[]> {
-  const localCustom = getSavedCustomMachines();
-  let dbMachines: MachineMaster[] = [];
-
   try {
     const res = await apiClient.get<{ data: MachineMaster[] }>('/masters/machines');
     if (res?.data && res.data.length > 0) {
-      dbMachines = res.data;
+      return res.data;
     }
   } catch (err) {
-    console.warn('Backend fetchMachines fallback:', err);
+    console.warn('Backend fetchMachines error:', err);
   }
-
-  const map = new Map<string, MachineMaster>();
-  [...localCustom, ...dbMachines].forEach(item => {
-    if (item.code && !map.has(item.code)) {
-      map.set(item.code, item);
-    }
-  });
-
-  return Array.from(map.values());
+  return [];
 }
 
 export async function insertMachine(m: MachineMaster): Promise<MachineMaster> {
   const res = await apiClient.post<{ message: string; data: MachineMaster }>('/masters/machines', m);
   if (res?.data) {
-    saveCustomMachineToLocal(res.data);
     return res.data;
   }
   throw new Error('Failed to create machine: server did not return machine data');
@@ -716,7 +603,6 @@ export async function insertMachine(m: MachineMaster): Promise<MachineMaster> {
 export async function updateMachine(code: string, m: MachineMaster): Promise<MachineMaster> {
   const res = await apiClient.put<{ message: string; data: MachineMaster }>(`/masters/machines/${encodeURIComponent(code)}`, m);
   if (res?.data) {
-    saveCustomMachineToLocal(res.data);
     return res.data;
   }
   throw new Error(`Failed to update machine ${code}: server did not return machine data`);
@@ -724,11 +610,6 @@ export async function updateMachine(code: string, m: MachineMaster): Promise<Mac
 
 export async function deleteMachine(code: string): Promise<void> {
   await apiClient.delete(`/masters/machines/${encodeURIComponent(code)}`);
-  try {
-    const current = getSavedCustomMachines();
-    const updated = current.filter(item => item.code !== code);
-    localStorage.setItem('stratum_custom_machines', JSON.stringify(updated));
-  } catch (e) { }
 }
 
 // ----------------------------------------------------
@@ -874,11 +755,9 @@ export async function fetchJobCards(): Promise<JobCard[]> {
 }
 
 export async function insertJobCard(job: JobCard): Promise<void> {
-  try {
-    await apiClient.post('/production/job-cards', job);
-  } catch (err) {
-    console.warn('insertJobCard REST API error:', err);
-  }
+  // CRITICAL ISSUE #8: errors must propagate — a rejected Job Card release
+  // must never be treated as a success by callers.
+  await apiClient.post('/production/job-cards', job);
 }
 
 // Creates a job card against the backend Job Card release API (one per order line item)
@@ -903,6 +782,15 @@ export async function createJobCardForOrder(payload: {
     ...payload
   };
   const res = await apiClient.post<{ data: any }>('/production/job-cards', body);
+  return res.data;
+}
+
+// CRITICAL ISSUE #9: Issues & consumes the BOM-derived material requirement for a
+// single Job Card. The consumed quantity corresponds to the Job Card target
+// quantity (× BOM qty-per-unit + scrap allowance), NOT the commercial order qty.
+export async function consumeJobCardMaterials(jobNo: string): Promise<any> {
+  const encodedJobNo = encodeURIComponent(jobNo);
+  const res = await apiClient.post<{ data: any }>(`/production/job-cards/${encodedJobNo}/consume-materials`);
   return res.data;
 }
 
@@ -1265,91 +1153,40 @@ export async function fetchDispatchByNo(challanNo: string): Promise<DispatchChal
 // Invoices & Payables Services (via REST API)
 // ----------------------------------------------------
 export async function fetchInvoices(): Promise<CustomerInvoice[]> {
-  let savedLocal: CustomerInvoice[] = [];
-  try {
-    const raw = localStorage.getItem('stratum_custom_invoices');
-    if (raw) savedLocal = JSON.parse(raw);
-  } catch (_) { }
-
-  let dbInvoices: CustomerInvoice[] = [];
   try {
     const res = await apiClient.get<{ data: CustomerInvoice[] }>('/invoices');
     if (res?.data && res.data.length > 0) {
-      dbInvoices = res.data;
+      return res.data;
     }
   } catch (err) {
     console.warn('fetchInvoices REST API error:', err);
   }
-
-  const map = new Map<string, CustomerInvoice>();
-  [...savedLocal, ...dbInvoices].forEach(item => {
-    if (item.invoiceNo) {
-      map.set(item.invoiceNo, item);
-    }
-  });
-
-  return Array.from(map.values());
+  return [];
 }
 
 export async function insertCustomerInvoice(inv: CustomerInvoice): Promise<any> {
-  try {
-    const raw = localStorage.getItem('stratum_custom_invoices');
-    const list: CustomerInvoice[] = raw ? JSON.parse(raw) : [];
-    const updated = [inv, ...list.filter(i => i.invoiceNo !== inv.invoiceNo)];
-    localStorage.setItem('stratum_custom_invoices', JSON.stringify(updated));
-  } catch (_) { }
-
-  try {
-    const res = await apiClient.post<{ data: any }>('/invoices', {
-      invoiceNo: inv.invoiceNo,
-      customerId: inv.customerId,
-      customerName: inv.customerName,
-      customerGstin: inv.customerGstin || '27AABCG1234F1Z5',
-      orderPo: inv.orderPo,
-      challanNo: inv.challanNo,
-      status: inv.status || 'DRAFT',
-      date: inv.date || new Date().toISOString().split('T')[0],
-      dueDate: inv.dueDate,
-      items: inv.items || [
-        {
-          itemCode: 'ITEM-001',
-          itemDescription: 'Precision Machined Component',
-          hsnCode: '84834000',
-          qty: 1,
-          unitPrice: inv.totalAmount || 1000,
-          taxableValue: inv.totalAmount || 1000,
-          gstRate: 18
-        }
-      ],
-      totalAmount: inv.totalAmount,
-      paidAmount: inv.paidAmount || 0,
-      balanceAmount: inv.balanceAmount ?? inv.totalAmount,
-      idempotencyKey: (inv as any).idempotencyKey
-    });
-    return res?.data;
-  } catch (err) {
-    console.warn('insertCustomerInvoice REST API error:', err);
-    return inv;
-  }
+  const res = await apiClient.post<{ data: any }>('/invoices', {
+    invoiceNo: inv.invoiceNo,
+    customerId: inv.customerId,
+    customerName: inv.customerName,
+    customerGstin: inv.customerGstin || '27AABCG1234F1Z5',
+    orderPo: inv.orderPo,
+    challanNo: inv.challanNo,
+    status: inv.status || 'DRAFT',
+    date: inv.date || new Date().toISOString().split('T')[0],
+    dueDate: inv.dueDate,
+    items: inv.items || [],
+    totalAmount: inv.totalAmount,
+    paidAmount: inv.paidAmount || 0,
+    balanceAmount: inv.balanceAmount ?? inv.totalAmount,
+    idempotencyKey: (inv as any).idempotencyKey
+  });
+  return res?.data;
 }
 
 export async function issueCustomerInvoice(invoiceNo: string): Promise<any> {
-  try {
-    const raw = localStorage.getItem('stratum_custom_invoices');
-    if (raw) {
-      const list: CustomerInvoice[] = JSON.parse(raw);
-      const updated = list.map(i => i.invoiceNo === invoiceNo ? { ...i, status: 'ISSUED' as const } : i);
-      localStorage.setItem('stratum_custom_invoices', JSON.stringify(updated));
-    }
-  } catch (_) { }
-
-  try {
-    const res = await apiClient.post<{ data: any }>(`/invoices/${encodeURIComponent(invoiceNo)}/issue`);
-    return res?.data;
-  } catch (err) {
-    console.warn(`issueCustomerInvoice(${invoiceNo}) REST API error:`, err);
-    return { invoiceNo, status: 'ISSUED' };
-  }
+  const res = await apiClient.post<{ data: any }>(`/invoices/${encodeURIComponent(invoiceNo)}/issue`);
+  return res?.data;
 }
 
 export async function payInvoice(invoiceNo: string, paymentData?: any): Promise<void> {
@@ -1359,72 +1196,23 @@ export async function payInvoice(invoiceNo: string, paymentData?: any): Promise<
   const payDate = typeof paymentData === 'object' && paymentData?.paymentDate ? paymentData.paymentDate : new Date().toISOString().split('T')[0];
   const notes = typeof paymentData === 'object' && paymentData?.notes ? paymentData.notes : undefined;
 
-  try {
-    const raw = localStorage.getItem('stratum_custom_invoices');
-    if (raw) {
-      const list: CustomerInvoice[] = JSON.parse(raw);
-      const updated = list.map(i => {
-        if (i.invoiceNo === invoiceNo) {
-          const amt = payAmt !== undefined ? payAmt : Number(i.balanceAmount || i.totalAmount);
-          const newPaid = Math.min(Number(i.totalAmount || 0), Number(i.paidAmount || 0) + amt);
-          const newBalance = Math.max(0, Number(i.totalAmount || 0) - newPaid);
-          return {
-            ...i,
-            paidAmount: newPaid,
-            balanceAmount: newBalance,
-            status: newBalance <= 0 ? 'PAID' as const : 'PARTIAL' as const
-          };
-        }
-        return i;
-      });
-      localStorage.setItem('stratum_custom_invoices', JSON.stringify(updated));
-    }
-  } catch (_) { }
-
-  try {
-    await apiClient.post(`/invoices/${encodeURIComponent(invoiceNo)}/pay`, {
-      paymentAmount: payAmt,
-      paymentMode: payMode,
-      referenceNo: refNo,
-      paymentDate: payDate,
-      notes
-    });
-  } catch (err) {
-    console.warn(`payInvoice(${invoiceNo}) REST API error:`, err);
-  }
+  await apiClient.post(`/invoices/${encodeURIComponent(invoiceNo)}/pay`, {
+    paymentAmount: payAmt,
+    paymentMode: payMode,
+    referenceNo: refNo,
+    paymentDate: payDate,
+    notes
+  });
 }
 
 export async function deleteCustomerInvoice(invoiceNo: string): Promise<any> {
-  try {
-    const raw = localStorage.getItem('stratum_custom_invoices');
-    if (raw) {
-      const list: CustomerInvoice[] = JSON.parse(raw);
-      const updated = list.filter(i => i.invoiceNo !== invoiceNo && i.id !== invoiceNo);
-      localStorage.setItem('stratum_custom_invoices', JSON.stringify(updated));
-    }
-  } catch (_) { }
-
-  try {
-    const res = await apiClient.delete<{ data: any }>(`/invoices/${encodeURIComponent(invoiceNo)}`);
-    return res?.data;
-  } catch (err) {
-    console.warn(`deleteCustomerInvoice(${invoiceNo}) REST API error:`, err);
-    return { success: true };
-  }
+  const res = await apiClient.delete<{ data: any }>(`/invoices/${encodeURIComponent(invoiceNo)}`);
+  return res?.data;
 }
 
 export async function clearAllCustomerInvoices(): Promise<any> {
-  try {
-    localStorage.removeItem('stratum_custom_invoices');
-  } catch (_) { }
-
-  try {
-    const res = await apiClient.delete<{ data: any }>('/invoices/clear-all');
-    return res?.data;
-  } catch (err) {
-    console.warn('clearAllCustomerInvoices REST API error:', err);
-    return { success: true };
-  }
+  const res = await apiClient.delete<{ data: any }>('/invoices/clear-all');
+  return res?.data;
 }
 
 export async function fetchPayables(): Promise<VendorBill[]> {
@@ -1913,11 +1701,11 @@ export async function generateInvoiceForOrder(
       newInvoice.id = created.id || newInvoice.id;
     }
   } catch (err: any) {
-    console.warn('insertCustomerInvoice fallback:', err);
-    // Surface duplicate-generation rejection clearly to the UI (Part 2)
+    console.warn('insertCustomerInvoice error in completePdiInspectionForOrder:', err);
     if (err && (err.response?.status === 409 || err.statusCode === 409 || /already exists/i.test(err.message || ''))) {
       throw new Error(err.message || 'An invoice already exists for this order.');
     }
+    throw err;
   }
 
   // NOTE: the order's status + invoiceNo are now persisted + broadcast by the backend

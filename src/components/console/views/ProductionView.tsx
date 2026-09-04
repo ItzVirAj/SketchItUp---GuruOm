@@ -324,13 +324,13 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
   // New Job Form State (Integrated with BOM + Route Card)
   // ----------------------------------------------------------------
   const [newOrderPo, setNewOrderPo] = useState('');
-  const [newPartCode, setNewPartCode] = useState('00000001');
-  const [newPartDesc, setNewPartDesc] = useState('MAIN SPINDLE HOUSING 120MM');
+  const [newPartCode, setNewPartCode] = useState('');
+  const [newPartDesc, setNewPartDesc] = useState('');
   const [newDrawingRev, setNewDrawingRev] = useState('REV-A');
   const [newHeatLot, setNewHeatLot] = useState(''); // Optional!
   const [newQty, setNewQty] = useState(100);
   const [newMachine, setNewMachine] = useState('');
-  const [newTargetDate, setNewTargetDate] = useState('2026-08-20');
+  const [newTargetDate, setNewTargetDate] = useState(() => new Date(Date.now() + 86400000 * 7).toISOString().split('T')[0]);
 
   // Computed linked BOM and Route Card for selected Part Code
   const linkedBOMForNewJob = useMemo(() => {
@@ -355,7 +355,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
     if (ord) {
       const primaryLine = ord.lines?.[0];
       if (primaryLine) {
-        setNewPartCode(primaryLine.itemCode || '00000001');
+        setNewPartCode(primaryLine.itemCode || '');
         setNewPartDesc(primaryLine.itemDescription || 'MANUFACTURED COMPONENT');
         setNewQty(Number(primaryLine.pendingQty ?? primaryLine.orderQty ?? 100));
         setNewDrawingRev(primaryLine.drawingRevision || ord.drawingRevision || 'REV-A');
@@ -372,9 +372,10 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
       handleSelectOrder(first.poNo);
       createJobModal.open({ orderPo: first.poNo });
     } else {
+      const defaultFg = fgMasters[0];
       setNewOrderPo('');
-      setNewPartCode('00000001');
-      setNewPartDesc('Precision Machined Component');
+      setNewPartCode(defaultFg?.code || '');
+      setNewPartDesc(defaultFg?.name || defaultFg?.description || '');
       setNewHeatLot('');
       createJobModal.open();
     }
@@ -1362,8 +1363,14 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
   // ----------------------------------------------------------------
   // MATRIX & EXPLOSION CALCULATOR STATE
   // ----------------------------------------------------------------
-  const [matrixSelectedPart, setMatrixSelectedPart] = useState<string>('00000001');
+  const [matrixSelectedPart, setMatrixSelectedPart] = useState<string>('');
   const [matrixBatchQty, setMatrixBatchQty] = useState<number>(250);
+
+  useEffect(() => {
+    if (!matrixSelectedPart && (fgMasters.length > 0 || boms.length > 0)) {
+      setMatrixSelectedPart(fgMasters[0]?.code || boms[0]?.parentPartCode || '');
+    }
+  }, [fgMasters, boms, matrixSelectedPart]);
 
   const selectedMatrixItem = useMemo(() => {
     return masters.find(m => m.code === matrixSelectedPart) || {
@@ -3762,9 +3769,24 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
       >
         <form onSubmit={handleCreateJobSubmit} className="space-y-4 text-xs font-sans">
           {actionError && (
-            <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-500 dark:text-rose-400 text-xs font-mono flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 shrink-0" />
-              <span>{actionError}</span>
+            <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-500 dark:text-rose-400 text-xs font-mono flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{actionError}</span>
+              </div>
+              {(actionError.toLowerCase().includes('route card') || actionError.includes('ROUTE_CARD')) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    createJobModal.close();
+                    setActiveSection('route-cards');
+                    onNavigate?.('route-cards');
+                  }}
+                  className="px-2.5 py-1 text-[10px] font-bold uppercase rounded-lg bg-rose-500/20 text-rose-600 dark:text-rose-300 hover:bg-rose-500/30 shrink-0 cursor-pointer"
+                >
+                  Configure Route Card →
+                </button>
+              )}
             </div>
           )}
           {/* Order PO Selector — Combobox (hides after selection, click to reopen) */}
@@ -4097,7 +4119,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
               </div>
 
               <div className={`p-2.5 rounded-xl border ${
-                linkedRouteForNewJob ? (isDarkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white') : 'border-amber-500/30 bg-amber-500/10'
+                linkedRouteForNewJob ? (isDarkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white') : 'border-rose-500/30 bg-rose-500/10'
               }`}>
                 <div className={`text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>HOW Sequence (Route Card):</div>
                 {linkedRouteForNewJob ? (
@@ -4105,8 +4127,21 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                     {linkedRouteForNewJob.operations?.length} Stages ({linkedRouteForNewJob.totalStandardTimeMinutes || 45} mins total)
                   </div>
                 ) : (
-                  <div className="text-amber-600 dark:text-amber-400 text-[11px] font-bold mt-0.5">
-                    Standard Single-Stage Machining
+                  <div className="mt-1 space-y-1">
+                    <div className="text-rose-500 dark:text-rose-400 text-[11px] font-bold">
+                      No Route Card configured (Release blocked)
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        createJobModal.close();
+                        setActiveSection('route-cards');
+                        onNavigate?.('route-cards');
+                      }}
+                      className="text-[10px] font-semibold text-rose-600 dark:text-rose-300 hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      Configure Route Card →
+                    </button>
                   </div>
                 )}
               </div>

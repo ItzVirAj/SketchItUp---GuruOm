@@ -10,6 +10,9 @@ import {
   CustomerMasterBaseSchema,
   VendorMasterSchema,
   VendorMasterBaseSchema,
+  BANK_ACCOUNT_REGEX,
+  isMaskedAccountNumber,
+  isValidMaskedFormat,
   MachineMasterSchema,
   MachineMasterBaseSchema,
   UserMasterSchema
@@ -829,8 +832,27 @@ export class MastersService {
     if (validated.gstin !== undefined) updateRecord.gstin = validated.gstin;
     if (validated.pan !== undefined) updateRecord.pan = validated.pan;
     if (validated.bankAccountName !== undefined) updateRecord.bank_account_name = validated.bankAccountName;
-    if (validated.bankAccountNumber !== undefined && !validated.bankAccountNumber.includes('•')) {
-      updateRecord.bank_account_number = encryptField(validated.bankAccountNumber);
+    if (validated.bankAccountNumber !== undefined) {
+      const rawBankAcc = String(validated.bankAccountNumber).trim();
+      if (rawBankAcc !== '') {
+        if (isMaskedAccountNumber(rawBankAcc)) {
+          if (!isValidMaskedFormat(rawBankAcc)) {
+            const err: any = new Error('Invalid masked bank account number format: malformed masked value');
+            err.statusCode = 400;
+            throw err;
+          }
+          // Valid masked representation provided — explicitly preserve existing DB ciphertext (do not re-encrypt)
+        } else {
+          // Plaintext replacement: validate against bank account regex
+          if (!BANK_ACCOUNT_REGEX.test(rawBankAcc)) {
+            const err: any = new Error('Invalid bank account number: must be 6-24 alphanumeric characters');
+            err.statusCode = 400;
+            throw err;
+          }
+          updateRecord.bank_account_number = encryptField(rawBankAcc);
+        }
+      }
+      // If empty string, preserve existing DB ciphertext
     }
     if (validated.ifsc !== undefined) updateRecord.ifsc = validated.ifsc;
     if (validated.paymentTerms !== undefined) updateRecord.payment_terms = validated.paymentTerms;
@@ -852,7 +874,10 @@ export class MastersService {
     }).catch(() => {});
 
     notificationsService.broadcastEvent('vendor_updated', updated);
-    return updated;
+    return {
+      ...updated,
+      bankAccountNumber: maskAccountNumber(decryptField(updated.bank_account_number || ''))
+    };
   }
 
   async deleteVendor(code: string, actorEmail?: string, actorRole?: string) {

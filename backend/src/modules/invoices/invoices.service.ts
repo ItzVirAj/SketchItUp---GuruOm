@@ -287,59 +287,71 @@ export class InvoicesService {
     const isEInvoice = settings.isApplicable;
     const irnNumber = isEInvoice ? `IRN-MOCK-${Date.now()}-GSTN` : undefined;
 
-    try {
-      await this.db.from('customer_invoices').insert({
-        id: invoiceId,
-        invoice_no: invoiceNo,
-        customer_id: validated.customerId,
-        customer_name: validated.customerName,
-        customer_gstin: validated.customerGstin,
-        order_po: validated.orderPo,
-        challan_no: validated.challanNo,
-        status: invoiceStatus,
-        date: validated.date,
-        due_date: validated.dueDate,
-        taxable_amount: totalTaxable,
-        cgst_amount: totalCgst,
-        sgst_amount: totalSgst,
-        igst_amount: totalIgst,
-        total_amount: totalInvoiceAmount,
-        paid_amount: (data as any).paidAmount || 0,
-        balance_amount: balanceAmount,
-        is_einvoice_applicable: isEInvoice,
-        irn_number: irnNumber,
-        idempotency_key: validated.idempotencyKey || null
-      });
+    const { error: invErr } = await this.db.from('customer_invoices').insert({
+      id: invoiceId,
+      invoice_no: invoiceNo,
+      customer_id: validated.customerId,
+      customer_name: validated.customerName,
+      customer_gstin: validated.customerGstin,
+      order_po: validated.orderPo,
+      challan_no: validated.challanNo,
+      status: invoiceStatus,
+      date: validated.date,
+      due_date: validated.dueDate,
+      taxable_amount: totalTaxable,
+      cgst_amount: totalCgst,
+      sgst_amount: totalSgst,
+      igst_amount: totalIgst,
+      total_amount: totalInvoiceAmount,
+      paid_amount: (data as any).paidAmount || 0,
+      balance_amount: balanceAmount,
+      is_einvoice_applicable: isEInvoice,
+      irn_number: irnNumber,
+      idempotency_key: validated.idempotencyKey || null
+    });
 
-      if (validated.items && validated.items.length > 0) {
-        const itemPayloads = validated.items.map((it, idx) => {
-          const taxable = it.qty * it.unitPrice;
-          const gstAmt = (taxable * it.gstRate) / 100;
-          return {
-            id: it.id || `inv-item-${Date.now()}-${idx}`,
-            invoice_id: invoiceId,
-            invoice_no: invoiceNo,
-            item_code: it.itemCode,
-            item_description: it.itemDescription,
-            hsn_code: it.hsnCode,
-            qty: it.qty,
-            unit_price: it.unitPrice,
-            taxable_value: taxable,
-            gst_rate: it.gstRate,
-            cgst_rate: isIntraState ? it.gstRate / 2 : 0,
-            sgst_rate: isIntraState ? it.gstRate / 2 : 0,
-            igst_rate: isIntraState ? 0 : it.gstRate,
-            cgst_amount: isIntraState ? gstAmt / 2 : 0,
-            sgst_amount: isIntraState ? gstAmt / 2 : 0,
-            igst_amount: isIntraState ? 0 : gstAmt,
-            total_item_amount: taxable + gstAmt,
-            gst_override_reason: it.gstOverrideReason
-          };
-        });
-        await this.db.from('customer_invoice_items').insert(itemPayloads);
+    if (invErr) {
+      console.error('Database createInvoice error:', invErr);
+      const err: any = new Error(`Failed to create customer invoice: ${invErr.message}`);
+      err.code = invErr.code;
+      err.statusCode = invErr.code === '23505' ? 409 : 400;
+      throw err;
+    }
+
+    if (validated.items && validated.items.length > 0) {
+      const itemPayloads = validated.items.map((it, idx) => {
+        const taxable = it.qty * it.unitPrice;
+        const gstAmt = (taxable * it.gstRate) / 100;
+        return {
+          id: it.id || `inv-item-${Date.now()}-${idx}`,
+          invoice_id: invoiceId,
+          invoice_no: invoiceNo,
+          item_code: it.itemCode,
+          item_description: it.itemDescription,
+          hsn_code: it.hsnCode,
+          qty: it.qty,
+          unit_price: it.unitPrice,
+          taxable_value: taxable,
+          gst_rate: it.gstRate,
+          cgst_rate: isIntraState ? it.gstRate / 2 : 0,
+          sgst_rate: isIntraState ? it.gstRate / 2 : 0,
+          igst_rate: isIntraState ? 0 : it.gstRate,
+          cgst_amount: isIntraState ? gstAmt / 2 : 0,
+          sgst_amount: isIntraState ? gstAmt / 2 : 0,
+          igst_amount: isIntraState ? 0 : gstAmt,
+          total_item_amount: taxable + gstAmt,
+          gst_override_reason: it.gstOverrideReason
+        };
+      });
+      const { error: itemErr } = await this.db.from('customer_invoice_items').insert(itemPayloads);
+      if (itemErr) {
+        console.error('Database customer_invoice_items insert error:', itemErr);
+        await this.db.from('customer_invoices').delete().eq('id', invoiceId);
+        const err: any = new Error(`Failed to create invoice items: ${itemErr.message}`);
+        err.code = itemErr.code;
+        err.statusCode = 400;
+        throw err;
       }
-    } catch (err) {
-      console.warn('DB createInvoice fallback:', err);
     }
 
     await auditService.recordAuditLog({
@@ -438,16 +450,20 @@ export class InvoicesService {
       throw err;
     }
 
-    try {
-      await this.db
-        .from('customer_invoices')
-        .update({
-          status: 'ISSUED',
-          updated_at: new Date().toISOString()
-        })
-        .or(`id.eq.${invoiceNo},invoice_no.eq.${invoiceNo}`);
-    } catch (err) {
-      console.warn('DB issueInvoice fallback:', err);
+    const { error: upErr } = await this.db
+      .from('customer_invoices')
+      .update({
+        status: 'ISSUED',
+        updated_at: new Date().toISOString()
+      })
+      .or(`id.eq.${invoiceNo},invoice_no.eq.${invoiceNo}`);
+
+    if (upErr) {
+      console.error('Database issueInvoice error:', upErr);
+      const err: any = new Error(`Failed to issue invoice: ${upErr.message}`);
+      err.code = upErr.code;
+      err.statusCode = 400;
+      throw err;
     }
 
     const seedIdx = SEED_INVOICES.findIndex(i => i.id === invoice.id || i.invoiceNo === invoice.invoiceNo);
@@ -611,18 +627,22 @@ export class InvoicesService {
     const newBalance = Math.max(0, Number(invoice.totalAmount) - newPaid);
     const newStatus = newBalance <= 0 ? 'PAID' : 'PARTIALLY_PAID';
 
-    try {
-      await this.db
-        .from('customer_invoices')
-        .update({
-          paid_amount: newPaid,
-          balance_amount: newBalance,
-          status: newStatus,
-          payment_received_date: new Date().toISOString()
-        })
-        .or(`id.eq.${invoiceNo},invoice_no.eq.${invoiceNo}`);
-    } catch (err) {
-      console.warn('DB recordPayment fallback:', err);
+    const { error: upErr } = await this.db
+      .from('customer_invoices')
+      .update({
+        paid_amount: newPaid,
+        balance_amount: newBalance,
+        status: newStatus,
+        payment_received_date: new Date().toISOString()
+      })
+      .or(`id.eq.${invoiceNo},invoice_no.eq.${invoiceNo}`);
+
+    if (upErr) {
+      console.error('Database recordPayment error:', upErr);
+      const err: any = new Error(`Failed to record invoice payment: ${upErr.message}`);
+      err.code = upErr.code;
+      err.statusCode = 400;
+      throw err;
     }
 
     const seedIdx = SEED_INVOICES.findIndex(i => i.id === invoice.id || i.invoiceNo === invoice.invoiceNo);

@@ -38,7 +38,7 @@ import {
   PDIInspection,
   CompanyProfile
 } from '../../../types/console';
-import { recordInventoryMovement } from '../../../services/supabaseServices';
+import { recordInventoryMovement, consumeJobCardMaterials } from '../../../services/supabaseServices';
 import { RouteCardTravelerPrint } from '../shared/RouteCardTravelerPrint';
 import { printElementById } from '../../../utils/printDocument';
 
@@ -108,6 +108,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
   // Material booking row state (mapped by componentCode)
   const [toBookInputs, setToBookInputs] = useState<Record<string, { qty: string; scrap: string; heatLot: string }>>({});
   const [isBookingMaterial, setIsBookingMaterial] = useState<string | null>(null);
+  const [isIssuingBomMaterials, setIsIssuingBomMaterials] = useState(false);
 
   // Add Unplanned Material Modal / Form state
   const [showAddMaterialModal, setShowAddMaterialModal] = useState(false);
@@ -138,30 +139,10 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
         if (stored) {
           setLocalConsumptions(JSON.parse(stored));
         } else {
-          // Initialize mock initial consumption if already in progress
-          if (jobCard.status === 'IN_PROGRESS' || jobCard.status === 'COMPLETED' || jobCard.jobStatus === 'IN_PROGRESS' || jobCard.jobStatus === 'COMPLETED') {
-            const initial: MaterialConsumptionRecord[] = [
-              {
-                id: `mc-${jobCard.jobNo}-01`,
-                jobNo: jobCard.jobNo,
-                itemCode: 'RM-EN24-RND-50',
-                itemName: 'EN24 Alloy Steel Round Bar 50mm Dia',
-                operationSeq: 10,
-                operationName: 'Billet Saw Cutting',
-                plannedQty: (jobCard.targetQty || jobCard.qty || 100) * 1.05,
-                actualQty: (jobCard.targetQty || jobCard.qty || 100) * 1.02,
-                scrapQty: 2.5,
-                unit: 'Kg',
-                heatLotNumber: jobCard.materialIssuedLot || 'HT-2026-9921',
-                bookedAt: new Date(Date.now() - 3600000 * 4).toISOString(),
-                bookedBy: 'Store Supervisor / PPC'
-              }
-            ];
-            setLocalConsumptions(initial);
-            localStorage.setItem(storageKey, JSON.stringify(initial));
-          } else {
-            setLocalConsumptions([]);
-          }
+          // CRITICAL ISSUE #9: never initialise fabricated consumption records —
+          // materials shown derive from the REAL BOM for this Job Card, empty by
+          // default until the operator books / issues actual material.
+          setLocalConsumptions([]);
         }
       } catch (_) {
         setLocalConsumptions([]);
@@ -186,16 +167,20 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
   const cleanPartCode = (jobCard?.partCode || '').toLowerCase().trim();
   const cleanPartDesc = (jobCard?.partDescription || '').toLowerCase().trim();
 
+  // CRITICAL ISSUE #9: never substitute an unrelated part's BOM — match
+  // strictly on the Job Card's own part code / description.
   const matchedBOM = boms.find(b => 
     (cleanPartCode && b.parentPartCode?.toLowerCase().trim() === cleanPartCode) ||
     (cleanPartDesc && b.parentPartName?.toLowerCase().trim() === cleanPartDesc)
-  ) || boms[0] || null;
+  ) || null;
 
+  // CRITICAL ISSUE #8: never substitute an unrelated part's Route Card — match
+  // strictly on the Job Card's own part code / description.
   const matchedRoute = routeCards.find(r => 
     (cleanPartCode && r.partCode?.toLowerCase().trim() === cleanPartCode) ||
     (cleanPartCode && r.routeCode?.toLowerCase().trim() === cleanPartCode) ||
     (cleanPartDesc && r.partDescription?.toLowerCase().trim() === cleanPartDesc)
-  ) || routeCards[0] || null;
+  ) || null;
 
   // Target Quantity resolved from Job Card or matched Customer PO
   const targetQuantity = Number(
@@ -207,7 +192,9 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
     100
   );
 
-  // Operations defined on Route Card or fallback standard sequence
+  // Operations shown on the Route Traveler. CRITICAL ISSUE #8: no fabricated
+  // fallback sequence — if neither the Job Card nor its matched Route Card
+  // carries operations, the UI shows an explicit "not configured" empty state.
   const routeOperations = useMemo(() => {
     if (jobCard?.operations && jobCard.operations.length > 0) {
       return jobCard.operations.map(op => ({
@@ -227,13 +214,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
         inspectionRequired: Boolean(op.inspectionRequired)
       })).sort((a, b) => a.sequenceNo - b.sequenceNo);
     }
-    return [
-      { sequenceNo: 10, operationName: 'Raw Material Saw Cutting', workCenter: 'BANDSAW-01', standardTimeMinutes: 8, inspectionRequired: false },
-      { sequenceNo: 20, operationName: 'CNC Facing, Turning & Grooving', workCenter: 'CNC-LATHE-01', standardTimeMinutes: 20, inspectionRequired: false },
-      { sequenceNo: 30, operationName: 'PCD Hole Pattern Drilling & Tapping', workCenter: 'RADIAL-DRILL-01', standardTimeMinutes: 15, inspectionRequired: false },
-      { sequenceNo: 40, operationName: 'Surface Flatness & Dimensional QC', workCenter: 'QC-LAB', standardTimeMinutes: 10, inspectionRequired: true },
-      { sequenceNo: 50, operationName: 'Rust Preventive Dipping & Wrapping', workCenter: 'PACK-01', standardTimeMinutes: 5, inspectionRequired: false }
-    ];
+    return [];
   }, [jobCard, matchedRoute]);
 
   // Merge all Production Logs for this Job Card (global + local reactive entries)
@@ -318,24 +299,10 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
 
   // Derive BOM planned components and live consumed quantities
   const rawMaterialRequirements = useMemo(() => {
-    const components = matchedBOM?.components && matchedBOM.components.length > 0 ? matchedBOM.components : [
-      {
-        componentCode: 'RM-EN24-RND-50',
-        componentName: 'EN24 Alloy Steel Round Bar 50mm Dia',
-        qtyPerUnit: 1.2,
-        uom: 'Kg',
-        scrapAllowancePct: 5,
-        unitCost: 145
-      },
-      {
-        componentCode: 'RM-COOLANT-SYNTH',
-        componentName: 'Synthetic Soluble Cutting Oil 5L',
-        qtyPerUnit: 0.05,
-        uom: 'Litre',
-        scrapAllowancePct: 2,
-        unitCost: 320
-      }
-    ];
+    // CRITICAL ISSUE #9: never fabricate a demo BOM — the materials shown derive
+    // from the REAL Bill of Materials for this Job Card's part. Empty until a BOM
+    // is configured.
+    const components = matchedBOM?.components && matchedBOM.components.length > 0 ? matchedBOM.components : [];
 
     return components.map((comp, idx) => {
       const plannedTotal = Number((comp.qtyPerUnit * targetQuantity * (1 + (comp.scrapAllowancePct || 0) / 100)).toFixed(2));
@@ -554,6 +521,29 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
       setErrorMsg(err?.message || 'Failed to add custom material.');
     } finally {
       setIsAddingCustomMaterial(false);
+    }
+  };
+
+  // ----------------------------------------------------------------
+  // CRITICAL ISSUE #9: ISSUE BOM MATERIAL FROM THE JOB-CARD ENTITY
+  // ----------------------------------------------------------------
+  // Issues & consumes the BOM-derived material requirement for THIS Job Card's
+  // target quantity (× qty-per-unit + scrap allowance) through the atomic,
+  // idempotent, ledger-backed consumption path. The consumed quantity corresponds
+  // to the manufacturing entity, NOT the commercial order quantity.
+  const handleIssueBOMMaterials = async () => {
+    if (!jobCard?.jobNo) return;
+    try {
+      setIsIssuingBomMaterials(true);
+      setErrorMsg(null);
+      setSuccessMsg(null);
+      const res = await consumeJobCardMaterials(jobCard.jobNo);
+      const message = (res && res.message) || `BOM materials issued for Job ${jobCard.jobNo} • the order reservation pool is partially reconciled.`;
+      setSuccessMsg(message);
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Failed to issue Job Card BOM materials.');
+    } finally {
+      setIsIssuingBomMaterials(false);
     }
   };
 
@@ -991,6 +981,21 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                    {stepProgressList.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="py-8 px-4 text-center">
+                          <div className="flex flex-col items-center gap-1.5">
+                            <Route className={`w-5 h-5 ${isDarkMode ? 'text-amber-400' : 'text-amber-600'}`} />
+                            <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                              No Route Card operations configured for this part
+                            </span>
+                            <span className={`text-[11px] ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>
+                              Configure a Route Card in Production → Route Cards before executing this Job Card.
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
                     {stepProgressList.map((step) => {
                       const mats = materialNeededPerStep[step.sequenceNo] || [];
 
@@ -1066,6 +1071,18 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
 
             {/* Mobile Stepper Cards (Viewport < md) */}
             <div className="block md:hidden space-y-3">
+              {stepProgressList.length === 0 && (
+                <div className={`p-4 rounded-2xl border text-center space-y-1 ${
+                  isDarkMode ? 'bg-amber-500/5 border-amber-500/20' : 'bg-amber-50/60 border-amber-200'
+                }`}>
+                  <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                    No Route Card operations configured for this part
+                  </span>
+                  <span className={`block text-[11px] ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>
+                    Configure a Route Card in Production → Route Cards before executing this Job Card.
+                  </span>
+                </div>
+              )}
               {stepProgressList.map((step) => {
                 const mats = materialNeededPerStep[step.sequenceNo] || [];
                 const pct = Math.min(100, Math.round(((step.loggedQty || 0) / (targetQuantity || 1)) * 100));
@@ -1240,6 +1257,20 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
 
               <button
                 type="button"
+                onClick={() => handleIssueBOMMaterials()}
+                disabled={isIssuingBomMaterials}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all disabled:opacity-50 ${
+                  isDarkMode 
+                    ? 'bg-slate-800/80 text-slate-200 hover:bg-slate-700' 
+                    : 'bg-slate-100/80 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isIssuingBomMaterials ? 'animate-spin' : ''}`} />
+                <span>{isIssuingBomMaterials ? 'Issuing...' : 'Issue BOM Material'}</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setShowAddMaterialModal(true)}
                 className={`px-3.5 py-1.5 rounded-full border text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all ${
                   isDarkMode 
@@ -1270,6 +1301,21 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                    {allMaterialRows.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="py-8 px-4 text-center">
+                          <div className="flex flex-col items-center gap-1.5">
+                            <Layers className={`w-5 h-5 ${isDarkMode ? 'text-amber-400' : 'text-amber-600'}`} />
+                            <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                              No BOM configured for {jobCard?.partCode || 'this part'}
+                            </span>
+                            <span className={`text-[11px] ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>
+                              Configure a Bill of Materials before issuing material for this Job Card.
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
                     {allMaterialRows.map((mat) => {
                       const inputVal = toBookInputs[mat.componentCode]?.qty ?? '';
                       const isBooking = isBookingMaterial === mat.componentCode;

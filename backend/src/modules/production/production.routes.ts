@@ -19,6 +19,7 @@ router.get('/job-cards', requirePermission('production', 'VIEW_ONLY'), (req, res
 router.get('/job-cards/:jobNo', requirePermission('production', 'VIEW_ONLY'), (req, res) => productionController.getJobCardByJobNo(req, res));
 router.post('/job-cards', requirePermission('production', 'CREATE_EDIT'), (req, res) => productionController.createJobCard(req, res));
 router.post('/job-cards/:jobNo/start-op', requirePermission('production', 'CREATE_EDIT'), (req, res) => productionController.startOperation(req, res));
+router.post('/job-cards/:jobNo/consume-materials', requirePermission('production', 'CREATE_EDIT'), (req, res) => productionController.consumeJobCardMaterials(req, res));
 router.post('/job-cards/:jobNo/complete-op', requirePermission('production', 'CREATE_EDIT'), (req, res) => productionController.completeOperation(req, res));
 
 // Production Logs (qty-based per-route-step logging / auto-completion & order advance)

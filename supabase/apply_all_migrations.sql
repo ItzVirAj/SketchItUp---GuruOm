@@ -1,12 +1,12 @@
 -- ============================================================================
 -- GuruOm Owner OS (Stratum) — Consolidated Complete Database Migrations
--- Generated from supabase/migrations (001 through 025)
--- Total Migration Files: 27
+-- Generated from supabase/migrations (001 through 031)
+-- Total Migration Files: 33
 -- ============================================================================
 
 
 -- ============================================================================
--- Migration 01/27: 001_initial_schema.sql
+-- Migration 01/33: 001_initial_schema.sql
 -- ============================================================================
 
 -- ===================================================
@@ -297,9 +297,8 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-
 -- ============================================================================
--- Migration 02/27: 002_rls_and_policies.sql
+-- Migration 02/33: 002_rls_and_policies.sql
 -- ============================================================================
 
 -- ===================================================
@@ -364,9 +363,8 @@ CREATE POLICY "Vendor bills access" ON public.vendor_bills FOR ALL USING (true);
 CREATE POLICY "Notifications access" ON public.notifications FOR ALL USING (true);
 CREATE POLICY "Audit logs access" ON public.audit_logs FOR ALL USING (true);
 
-
 -- ============================================================================
--- Migration 03/27: 003_realtime_and_storage.sql
+-- Migration 03/33: 003_realtime_and_storage.sql
 -- ============================================================================
 
 -- ===================================================
@@ -415,9 +413,8 @@ CREATE POLICY "Public Insert Access for owner-os-documents"
 ON storage.objects FOR INSERT
 WITH CHECK (bucket_id = 'owner-os-documents');
 
-
 -- ============================================================================
--- Migration 04/27: 004_seed_data.sql
+-- Migration 04/33: 004_seed_data.sql
 -- ============================================================================
 
 -- ===================================================
@@ -567,9 +564,8 @@ VALUES
   ('log-3', '22/07/2026, 05:10:00 pm', 'Vikram Singh', 'dispatch', 'issue_challan', 'Challan #CHL/0002/26-27 issued for PO neo123')
 ON CONFLICT (id) DO NOTHING;
 
-
 -- ============================================================================
--- Migration 05/27: 005_notification_system.sql
+-- Migration 05/33: 005_notification_system.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -740,9 +736,8 @@ INSERT INTO public.notification_recipients (notification_rule_id, recipient_type
 ('approval_required', 'ROLE', 'SUPER ADMIN', 'admin@guruom.in', 'Super Admin', true)
 ON CONFLICT DO NOTHING;
 
-
 -- ============================================================================
--- Migration 06/27: 006_customer_vendor_machine_masters.sql
+-- Migration 06/33: 006_customer_vendor_machine_masters.sql
 -- ============================================================================
 
 -- ===================================================
@@ -859,9 +854,8 @@ EXCEPTION WHEN OTHERS THEN
   NULL;
 END $$;
 
-
 -- ============================================================================
--- Migration 07/27: 007_custom_auth_users_and_sessions.sql
+-- Migration 07/33: 007_custom_auth_users_and_sessions.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -989,9 +983,8 @@ BEGIN
         updated_at = NOW();
 END $$;
 
-
 -- ============================================================================
--- Migration 08/27: 008_active_sessions_and_security_events.sql
+-- Migration 08/33: 008_active_sessions_and_security_events.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -1059,9 +1052,8 @@ ALTER TABLE public.security_events ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Service role full access on security_events" ON public.security_events;
 CREATE POLICY "Service role full access on security_events" ON public.security_events FOR ALL USING (true);
 
-
 -- ============================================================================
--- Migration 09/27: 008_grn_bom_purchasing.sql
+-- Migration 09/33: 008_grn_bom_purchasing.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -1188,9 +1180,8 @@ CREATE POLICY "Service role full access on bom_items" ON public.bom_items FOR AL
 CREATE POLICY "Service role full access on purchase_orders" ON public.purchase_orders FOR ALL USING (true);
 CREATE POLICY "Service role full access on purchase_order_items" ON public.purchase_order_items FOR ALL USING (true);
 
-
 -- ============================================================================
--- Migration 10/27: 009_attachments_and_storage.sql
+-- Migration 10/33: 009_attachments_and_storage.sql
 -- ============================================================================
 
 -- ===================================================
@@ -1259,9 +1250,8 @@ ALTER TABLE public.customer_invoices
 ADD COLUMN IF NOT EXISTS pdf_status TEXT DEFAULT 'pending_pdf',
 ADD COLUMN IF NOT EXISTS attachment_id UUID REFERENCES public.attachments(id) ON DELETE SET NULL;
 
-
 -- ============================================================================
--- Migration 11/27: 010_append_only_audit_logs.sql
+-- Migration 11/33: 010_append_only_audit_logs.sql
 -- ============================================================================
 
 -- ===================================================
@@ -1322,9 +1312,8 @@ WITH CHECK (true);
 
 -- No UPDATE or DELETE policies exist — with RLS enabled and no matching policy, updates and deletes are denied by default.
 
-
 -- ============================================================================
--- Migration 12/27: 011_ledger_inventory_movements.sql
+-- Migration 12/33: 011_ledger_inventory_movements.sql
 -- ============================================================================
 
 -- ===================================================
@@ -1428,9 +1417,8 @@ WHERE NOT EXISTS (
   SELECT 1 FROM public.inventory_movements im WHERE im.item_code = s.code
 );
 
-
 -- ============================================================================
--- Migration 13/27: 012_master_modules_specification.sql
+-- Migration 13/33: 012_master_modules_specification.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -1687,9 +1675,8 @@ EXCEPTION WHEN OTHERS THEN
   NULL;
 END $$;
 
-
 -- ============================================================================
--- Migration 14/27: 013_rbac_matrix_and_escalation.sql
+-- Migration 14/33: 013_rbac_matrix_and_escalation.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -1932,9 +1919,8 @@ DROP POLICY IF EXISTS "pending_approvals_all_policy" ON public.pending_approvals
 CREATE POLICY "pending_approvals_all_policy" ON public.pending_approvals
     FOR ALL TO authenticated, anon USING (true);
 
-
 -- ============================================================================
--- Migration 15/27: 014_order_state_machine_and_gates.sql
+-- Migration 15/33: 014_order_state_machine_and_gates.sql
 -- ============================================================================
 
 -- Migration 014: Sales & Order Management State Machine, Hard Gates, and Preconditions
@@ -2038,9 +2024,8 @@ ON CONFLICT (id) DO UPDATE SET
   status = EXCLUDED.status,
   defect_description = EXCLUDED.defect_description;
 
-
 -- ============================================================================
--- Migration 16/27: 015_procurement_subcontracting_ledger.sql
+-- Migration 16/33: 015_procurement_subcontracting_ledger.sql
 -- ============================================================================
 
 -- Migration 015: Standard Procurement and Job-Work Subcontracting with 3-Way Match & Vendor Scorecards
@@ -2215,9 +2200,8 @@ VALUES
   ('sub-02', 'GP-OUT-2026-092', 'JC/0002/26-27', '00000002', 'HARDENED BUSH 45X60X80', 'Bright Electroplaters Ltd', 'ZINC_PLATING', 150, 'NOS', '2026-08-12', '2026-08-18', 'OUT_FOR_JOBWORK', false, 0, 'MH-14-AB-9821', 'Direct Pickup', 'PPC Planner Suresh')
 ON CONFLICT (id) DO NOTHING;
 
-
 -- ============================================================================
--- Migration 17/27: 016_production_job_cards_route_cards.sql
+-- Migration 17/33: 016_production_job_cards_route_cards.sql
 -- ============================================================================
 
 -- Migration 016: Route Card Templates, Job Card Operations, Mandatory QC Material Issue, Operator Certifications, and NCR Disposition System
@@ -2322,9 +2306,8 @@ VALUES
   ('ec-05', 'Quality Inspector Rajesh', 'EMP-005', 'Quality Inspector Level 2', '2028-12-31')
 ON CONFLICT (id) DO NOTHING;
 
-
 -- ============================================================================
--- Migration 18/27: 017_statutory_accounting_invoicing_costing.sql
+-- Migration 18/33: 017_statutory_accounting_invoicing_costing.sql
 -- ============================================================================
 
 -- Migration 017: Statutory Invoicing, GSTIN/HSN Validation, Dynamic E-Invoicing Threshold, TDS Sections (194C/194Q), Atomic Document Sequences, and Order-Wise Costing
@@ -2418,9 +2401,8 @@ VALUES
   ('JC', 'JC', '2526', 110)
 ON CONFLICT (series_code, financial_year) DO NOTHING;
 
-
 -- ============================================================================
--- Migration 19/27: 018_master_tables_complete.sql
+-- Migration 19/33: 018_master_tables_complete.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -2739,9 +2721,8 @@ EXCEPTION WHEN OTHERS THEN
   NULL;
 END $$;
 
-
 -- ============================================================================
--- Migration 20/27: 018_persistence_convergence.sql
+-- Migration 20/33: 018_persistence_convergence.sql
 -- ============================================================================
 
 -- Owner OS: persistence convergence (generated from migrations 001-017)
@@ -4384,9 +4365,8 @@ ALTER TABLE public.finished_goods ADD COLUMN IF NOT EXISTS created_at TIMESTAMPT
 -- Refresh the PostgREST schema cache so new columns are visible immediately
 NOTIFY pgrst, 'reload schema';
 
-
 -- ============================================================================
--- Migration 21/27: 019_bom_grn_purchasing_route_cards.sql
+-- Migration 21/33: 019_bom_grn_purchasing_route_cards.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -4626,9 +4606,8 @@ CREATE POLICY "Open access on employee_certifications" ON public.employee_certif
 CREATE POLICY "Open access on job_cards"               ON public.job_cards               FOR ALL USING (true);
 CREATE POLICY "Open access on job_card_operations"     ON public.job_card_operations     FOR ALL USING (true);
 
-
 -- ============================================================================
--- Migration 22/27: 020_customer_orders_lifecycle_fields.sql
+-- Migration 22/33: 020_customer_orders_lifecycle_fields.sql
 -- ============================================================================
 
 -- ===================================================
@@ -4687,9 +4666,8 @@ ALTER TABLE public.customer_orders ADD COLUMN IF NOT EXISTS dispatched_at TEXT;
 -- Reload PostgREST schema cache so all new columns are immediately visible
 NOTIFY pgrst, 'reload schema';
 
-
 -- ============================================================================
--- Migration 23/27: 021_relax_user_role_check.sql
+-- Migration 23/33: 021_relax_user_role_check.sql
 -- ============================================================================
 
 -- Relax the role check constraint on users table to allow canonical roles from RBAC_ROLE_MATRIX
@@ -4709,9 +4687,8 @@ BEGIN
     END LOOP;
 END $$;
 
-
 -- ============================================================================
--- Migration 24/27: 022_orders_fixes.sql
+-- Migration 24/33: 022_orders_fixes.sql
 -- ============================================================================
 
 -- 1. Add is_test column
@@ -4785,9 +4762,8 @@ BEGIN
 END;
 $$;
 
-
 -- ============================================================================
--- Migration 25/27: 023_remove_test_orders.sql
+-- Migration 25/33: 023_remove_test_orders.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -4863,9 +4839,8 @@ BEGIN
 END;
 $$;
 
-
 -- ============================================================================
--- Migration 26/27: 024_fix_security_definer_view.sql
+-- Migration 26/33: 024_fix_security_definer_view.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -4876,9 +4851,8 @@ $$;
 
 ALTER VIEW public.customer_overdue_summary SET (security_invoker = true);
 
-
 -- ============================================================================
--- Migration 27/27: 025_server_admin_and_granular_rbac.sql
+-- Migration 27/33: 025_server_admin_and_granular_rbac.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -5100,6 +5074,10 @@ JOIN public.permissions p ON (
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- ============================================================================
+-- Migration 28/33: 026_concurrency_safe_master_sequences.sql
+-- ============================================================================
+
+-- ============================================================================
 -- Migration: 026_concurrency_safe_master_sequences.sql
 -- Description: Concurrency-Safe Master Code Counter Table, Atomic Allocation
 --              Function, and Safe Sequence Initialization for Masters
@@ -5212,9 +5190,21 @@ VALUES
   ('USER', 'USR', 0, 4, NOW())
 ON CONFLICT (entity_type, prefix) DO NOTHING;
 
+-- ============================================================================
+-- Migration 29/33: 027_inventory_reservations_lifecycle.sql
+-- ============================================================================
+
 -- ==============================================================================
 -- Migration 027: Inventory Reservations Lifecycle, Idempotency & Safety
 -- ==============================================================================
+-- Tracks per-order, per-material stock reservations to guarantee:
+-- 1. Idempotency: repeated checks do not duplicate reserved amounts.
+-- 2. Lifecycle reconciliation: reservations are marked CONSUMED upon material issue.
+-- 3. Cancellation safety: cancelled orders release reservations back to available pool.
+-- 4. Invariant: stock_items.reserved cannot become negative.
+-- ==============================================================================
+
+-- 1. Create order_material_reservations table
 CREATE TABLE IF NOT EXISTS public.order_material_reservations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     order_id TEXT NOT NULL,
@@ -5226,13 +5216,18 @@ CREATE TABLE IF NOT EXISTS public.order_material_reservations (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Index for querying active reservations by order
 CREATE INDEX IF NOT EXISTS idx_order_res_order ON public.order_material_reservations (order_id, status);
+
+-- Index for querying active reservations by stock item
 CREATE INDEX IF NOT EXISTS idx_order_res_item ON public.order_material_reservations (item_code, status);
 
+-- Partial Unique Index: At most ONE active reservation per order and material item
 CREATE UNIQUE INDEX IF NOT EXISTS idx_active_order_item_reservation 
 ON public.order_material_reservations (order_id, item_code) 
 WHERE status = 'ACTIVE';
 
+-- Enable RLS & service access policy
 ALTER TABLE public.order_material_reservations ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Order material reservations service access" ON public.order_material_reservations;
@@ -5241,6 +5236,7 @@ ON public.order_material_reservations
 FOR ALL 
 USING (true);
 
+-- 2. Add non-negative constraint on stock_items.reserved if not present
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -5251,9 +5247,21 @@ BEGIN
   END IF;
 END $$;
 
+-- ============================================================================
+-- Migration 30/33: 028_atomic_inventory_consumption.sql
+-- ============================================================================
+
 -- ==============================================================================
 -- Migration 028: Atomic Inventory Consumption & Non-Negative Stock Floor
 -- ==============================================================================
+-- 1. Adds non-negative check constraint on stock_items.on_hand
+--    (Uses NOT VALID so legacy mock row 'BUSH-01' doesn't block migration,
+--     while strictly enforcing on_hand >= 0 for all future transactions).
+-- 2. Creates atomic stored procedure consume_order_materials_atomic to execute
+--    idempotent, all-or-nothing, concurrency-safe material consumption.
+-- ==============================================================================
+
+-- 1. Add non-negative constraint on stock_items.on_hand
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -5264,11 +5272,12 @@ BEGIN
   END IF;
 END $$;
 
+-- 2. Atomic Order Material Consumption Stored Function
 CREATE OR REPLACE FUNCTION public.consume_order_materials_atomic(
     p_order_id TEXT,
     p_order_po TEXT,
     p_actor_email TEXT,
-    p_allocations JSONB
+    p_allocations JSONB -- Array of { item_code: TEXT, qty: NUMERIC, description: TEXT }
 )
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -5281,6 +5290,8 @@ DECLARE
     v_order_reserved NUMERIC := 0;
     v_now TIMESTAMPTZ := NOW();
 BEGIN
+    -- 1. Idempotency Check:
+    -- Check if PRODUCTION_CONSUMPTION movements already exist for this order_po
     SELECT COUNT(*) INTO v_existing_movement_count
     FROM public.inventory_movements
     WHERE reference_id = p_order_po
@@ -5294,6 +5305,7 @@ BEGIN
         );
     END IF;
 
+    -- 2. Multi-component lock & sufficiency check in alphabetical order to prevent deadlocks
     FOR v_item IN 
         SELECT 
             elem->>'item_code' AS item_code, 
@@ -5302,6 +5314,7 @@ BEGIN
         FROM jsonb_array_elements(p_allocations) elem
         ORDER BY elem->>'item_code' ASC
     LOOP
+        -- Row-level lock on stock_items
         SELECT * INTO v_stock
         FROM public.stock_items
         WHERE code = v_item.item_code
@@ -5316,6 +5329,7 @@ BEGIN
             );
         END IF;
 
+        -- Verify sufficient physical on_hand
         IF v_stock.on_hand < v_item.qty THEN
             RETURN jsonb_build_object(
                 'success', false,
@@ -5329,6 +5343,7 @@ BEGIN
         END IF;
     END LOOP;
 
+    -- 3. All items have sufficient stock -> Deduct stock, insert movements, and reconcile reservations
     FOR v_item IN 
         SELECT 
             elem->>'item_code' AS item_code, 
@@ -5341,12 +5356,14 @@ BEGIN
         FROM public.stock_items
         WHERE code = v_item.item_code;
 
+        -- Only decrement reserved by the quantity actually reserved by THIS order
         SELECT COALESCE(SUM(reserved_qty), 0) INTO v_order_reserved
         FROM public.order_material_reservations
         WHERE (order_id = p_order_id OR order_po = p_order_po)
           AND item_code = v_item.item_code
           AND status = 'ACTIVE';
 
+        -- Deduct from stock_items
         UPDATE public.stock_items
         SET 
             on_hand = on_hand - v_item.qty,
@@ -5360,6 +5377,7 @@ BEGIN
             updated_at = v_now
         WHERE code = v_item.item_code;
 
+        -- Insert append-only ledger movement
         INSERT INTO public.inventory_movements (
             id,
             item_code,
@@ -5386,6 +5404,7 @@ BEGIN
             v_now
         );
 
+        -- Reconcile order_material_reservations
         UPDATE public.order_material_reservations
         SET 
             status = 'CONSUMED',
@@ -5402,6 +5421,12 @@ BEGIN
     );
 END;
 $$;
+
+
+
+-- ============================================================================
+-- Migration 31/33: 029_bom_route_card_item_foreign_keys.sql
+-- ============================================================================
 
 -- ============================================================
 -- 029: BOM AND ROUTE CARDS REFERENTIAL INTEGRITY TO ITEMS MASTER
@@ -5550,6 +5575,10 @@ END $$;
 CREATE INDEX IF NOT EXISTS idx_bom_items_component_code ON public.bom_items(component_code);
 CREATE INDEX IF NOT EXISTS idx_route_card_templates_part_code ON public.route_card_templates(part_code);
 
+-- ============================================================================
+-- Migration 32/33: 030_prevent_in_use_bom_deletion.sql
+-- ============================================================================
+
 -- ============================================================
 -- 030: PREVENT DELETION OF IN-USE BILL OF MATERIALS (BOM)
 -- Protects BOMs from deletion when:
@@ -5607,3 +5636,434 @@ CREATE TRIGGER trg_prevent_in_use_bom_deletion
 BEFORE DELETE ON public.bill_of_materials
 FOR EACH ROW
 EXECUTE FUNCTION public.check_bom_deletion_safety();
+
+-- ============================================================================
+-- Migration 33/33: 031_job_card_material_consumption.sql
+-- ============================================================================
+
+-- ==============================================================================
+-- Migration 031: Job-Card-Level Atomic Material Consumption (Critical Issue #9)
+-- ==============================================================================
+-- Material consumption must correspond to the manufacturing entity (the Job Card
+-- and its target quantity), not blindly to the commercial order quantity.
+--
+-- 1. Adds atomic stored procedure consume_job_card_materials_atomic:
+--    - Idempotency identity = job_no (unique per Job Card): repeated execution
+--      never double-deducts, while DIFFERENT Job Cards of the same order consume
+--      independently and legitimately.
+--    - Double-count guard: blocked if materials for the parent order were already
+--      consumed at ORDER level (PRODUCTION_CONSUMPTION / reference_type 'order').
+--    - All-or-nothing multi-component sufficiency with row-level FOR UPDATE locks.
+--    - Append-only ledger rows: movement_type 'PRODUCTION_CONSUMPTION',
+--      reference_type 'job_card', reference_id = job_no.
+--    - PARTIAL order-reservation reconciliation: the order's reservation pool is
+--      decremented by the quantity actually consumed; residual stays ACTIVE
+--      (cancellation later releases only the outstanding remainder).
+--
+-- 2. Recreates consume_order_materials_atomic with an additive guard: order-level
+--    bulk issue is blocked when Job-Card-level consumption already exists for the
+--    order (prevents double counting across the two models). Existing behaviour is
+--    otherwise unchanged.
+-- ==============================================================================
+
+-- 1. Job-Card-Level Atomic Consumption Stored Function
+CREATE OR REPLACE FUNCTION public.consume_job_card_materials_atomic(
+    p_order_id TEXT,
+    p_order_po TEXT,
+    p_job_no TEXT,
+    p_actor_email TEXT,
+    p_allocations JSONB -- Array of { item_code: TEXT, qty: NUMERIC, description: TEXT }
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_item RECORD;
+    v_stock RECORD;
+    v_existing_movement_count INT;
+    v_order_consumed_count INT;
+    v_reservation_qty NUMERIC;
+    v_consumed_from_reservation NUMERIC;
+    v_now TIMESTAMPTZ := NOW();
+BEGIN
+    -- 1. Idempotency Check: Job-Card-level consumption already posted for this job_no?
+    SELECT COUNT(*) INTO v_existing_movement_count
+    FROM public.inventory_movements
+    WHERE reference_id = p_job_no
+      AND reference_type = 'job_card'
+      AND movement_type = 'PRODUCTION_CONSUMPTION';
+
+    IF v_existing_movement_count > 0 THEN
+        RETURN jsonb_build_object(
+            'success', true,
+            'already_consumed', true,
+            'message', 'Materials for Job Card ' || p_job_no || ' have already been consumed.'
+        );
+    END IF;
+
+    -- 2. Double-count guard: order-level bulk issue already done for this order?
+    SELECT COUNT(*) INTO v_order_consumed_count
+    FROM public.inventory_movements
+    WHERE reference_id = p_order_po
+      AND reference_type = 'order'
+      AND movement_type = 'PRODUCTION_CONSUMPTION';
+
+    IF v_order_consumed_count > 0 THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error_code', 'ERR_ORDER_MATERIALS_ALREADY_CONSUMED',
+            'message', 'Job Card material issue blocked for ' || p_job_no || ': materials for order ' || p_order_po || ' have already been consumed at order level.'
+        );
+    END IF;
+
+    -- 3. Multi-component lock & sufficiency check in alphabetical order (deadlock-free)
+    FOR v_item IN
+        SELECT
+            elem->>'item_code' AS item_code,
+            (elem->>'qty')::NUMERIC AS qty,
+            elem->>'description' AS description
+        FROM jsonb_array_elements(p_allocations) elem
+        ORDER BY elem->>'item_code' ASC
+    LOOP
+        SELECT * INTO v_stock
+        FROM public.stock_items
+        WHERE code = v_item.item_code
+        FOR UPDATE;
+
+        IF NOT FOUND THEN
+            RETURN jsonb_build_object(
+                'success', false,
+                'error_code', 'ERR_STOCK_ITEM_NOT_FOUND',
+                'item_code', v_item.item_code,
+                'message', 'Stock item not found: ' || v_item.item_code
+            );
+        END IF;
+
+        IF v_stock.on_hand < v_item.qty THEN
+            RETURN jsonb_build_object(
+                'success', false,
+                'error_code', 'ERR_INSUFFICIENT_STOCK',
+                'item_code', v_item.item_code,
+                'required_qty', v_item.qty,
+                'on_hand', v_stock.on_hand,
+                'deficit', (v_item.qty - v_stock.on_hand),
+                'message', 'Insufficient stock for ' || v_item.item_code || '. Required: ' || v_item.qty || ', On-hand: ' || v_stock.on_hand
+            );
+        END IF;
+    END LOOP;
+
+    -- 4. All components sufficient -> deduct stock, append ledger rows, partially reconcile reservations
+    FOR v_item IN
+        SELECT
+            elem->>'item_code' AS item_code,
+            (elem->>'qty')::NUMERIC AS qty,
+            elem->>'description' AS description
+        FROM jsonb_array_elements(p_allocations) elem
+        ORDER BY elem->>'item_code' ASC
+    LOOP
+        SELECT * INTO v_stock
+        FROM public.stock_items
+        WHERE code = v_item.item_code;
+
+        -- This order's ACTIVE reservation for this item (pool shared by its Job Cards)
+        SELECT COALESCE(SUM(reserved_qty), 0) INTO v_reservation_qty
+        FROM public.order_material_reservations
+        WHERE (order_id = p_order_id OR order_po = p_order_po)
+          AND item_code = v_item.item_code
+          AND status = 'ACTIVE';
+
+        -- Consume from the reservation pool only what it can cover (PARTIAL-aware)
+        v_consumed_from_reservation := LEAST(v_reservation_qty, v_item.qty);
+
+        -- Deduct stock; reserved drops only by the consumed-from-reservation amount
+        UPDATE public.stock_items
+        SET
+            on_hand = on_hand - v_item.qty,
+            reserved = GREATEST(0, reserved - v_consumed_from_reservation),
+            available = (on_hand - v_item.qty) - GREATEST(0, reserved - v_consumed_from_reservation),
+            status = CASE
+                WHEN ((on_hand - v_item.qty) - GREATEST(0, reserved - v_consumed_from_reservation)) < 0 THEN 'CRITICAL'
+                WHEN ((on_hand - v_item.qty) - GREATEST(0, reserved - v_consumed_from_reservation)) < reorder_level THEN 'SHORTAGE'
+                ELSE 'OK'
+            END,
+            updated_at = v_now
+        WHERE code = v_item.item_code;
+
+        -- Append append-only ledger movement (Job-Card identity)
+        INSERT INTO public.inventory_movements (
+            id,
+            item_code,
+            location,
+            quantity_change,
+            movement_type,
+            reference_id,
+            reference_type,
+            balance_after,
+            actor_email,
+            notes,
+            metadata,
+            created_at
+        ) VALUES (
+            'mov-' || floor(extract(epoch from v_now) * 1000)::text || '-' || substr(md5(random()::text), 1, 6),
+            v_item.item_code,
+            'MAIN-WAREHOUSE',
+            -v_item.qty,
+            'PRODUCTION_CONSUMPTION',
+            p_job_no,
+            'job_card',
+            v_stock.on_hand - v_item.qty,
+            p_actor_email,
+            'Material issued for Job Card ' || p_job_no || ' (PO ' || p_order_po || ') — ' || COALESCE(v_item.description, v_item.item_code) || ' × ' || v_item.qty,
+            jsonb_build_object('orderId', p_order_id, 'orderPo', p_order_po, 'jobNo', p_job_no),
+            v_now
+        );
+
+        -- PARTIAL reservation reconciliation: decrement pool, keep residual ACTIVE
+        UPDATE public.order_material_reservations
+        SET
+            reserved_qty = GREATEST(0, reserved_qty - v_consumed_from_reservation),
+            status = CASE WHEN GREATEST(0, reserved_qty - v_consumed_from_reservation) <= 0 THEN 'CONSUMED' ELSE 'ACTIVE' END,
+            updated_at = v_now
+        WHERE (order_id = p_order_id OR order_po = p_order_po)
+          AND item_code = v_item.item_code
+          AND status = 'ACTIVE'
+          AND reserved_qty > 0;
+    END LOOP;
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'already_consumed', false,
+        'message', 'Job Card materials consumed atomically and order reservations partially reconciled.'
+    );
+END;
+$$;
+
+-- 2. Order-level consumption: add Job-Card double-count guard (behaviour otherwise unchanged)
+CREATE OR REPLACE FUNCTION public.consume_order_materials_atomic(
+    p_order_id TEXT,
+    p_order_po TEXT,
+    p_actor_email TEXT,
+    p_allocations JSONB
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_item RECORD;
+    v_stock RECORD;
+    v_existing_movement_count INT;
+    v_job_card_consumed_count INT;
+    v_order_reserved NUMERIC := 0;
+    v_now TIMESTAMPTZ := NOW();
+BEGIN
+    -- 1. Idempotency Check (unchanged): order-level consumption already posted?
+    SELECT COUNT(*) INTO v_existing_movement_count
+    FROM public.inventory_movements
+    WHERE reference_id = p_order_po
+      AND movement_type = 'PRODUCTION_CONSUMPTION';
+
+    IF v_existing_movement_count > 0 THEN
+        RETURN jsonb_build_object(
+            'success', true,
+            'already_consumed', true,
+            'message', 'Materials for order ' || p_order_po || ' have already been consumed.'
+        );
+    END IF;
+
+    -- 1b. CRITICAL ISSUE #9 guard: Job-Card-level consumption already exists for
+    -- this order -> order-level bulk issue would double-count the same demand.
+    SELECT COUNT(*) INTO v_job_card_consumed_count
+    FROM public.inventory_movements
+    WHERE movement_type = 'PRODUCTION_CONSUMPTION'
+      AND reference_type = 'job_card'
+      AND metadata->>'orderPo' = p_order_po;
+
+    IF v_job_card_consumed_count > 0 THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error_code', 'ERR_ORDER_MATERIALS_ALREADY_CONSUMED',
+            'message', 'Order-level material issue blocked for PO ' || p_order_po || ': materials have already been issued at Job Card level.'
+        );
+    END IF;
+
+    -- 2. Multi-component lock & sufficiency check in alphabetical order to prevent deadlocks
+    FOR v_item IN
+        SELECT
+            elem->>'item_code' AS item_code,
+            (elem->>'qty')::NUMERIC AS qty,
+            elem->>'description' AS description
+        FROM jsonb_array_elements(p_allocations) elem
+        ORDER BY elem->>'item_code' ASC
+    LOOP
+        SELECT * INTO v_stock
+        FROM public.stock_items
+        WHERE code = v_item.item_code
+        FOR UPDATE;
+
+        IF NOT FOUND THEN
+            RETURN jsonb_build_object(
+                'success', false,
+                'error_code', 'ERR_STOCK_ITEM_NOT_FOUND',
+                'item_code', v_item.item_code,
+                'message', 'Stock item not found: ' || v_item.item_code
+            );
+        END IF;
+
+        IF v_stock.on_hand < v_item.qty THEN
+            RETURN jsonb_build_object(
+                'success', false,
+                'error_code', 'ERR_INSUFFICIENT_STOCK',
+                'item_code', v_item.item_code,
+                'required_qty', v_item.qty,
+                'on_hand', v_stock.on_hand,
+                'deficit', (v_item.qty - v_stock.on_hand),
+                'message', 'Insufficient stock for ' || v_item.item_code || '. Required: ' || v_item.qty || ', On-hand: ' || v_stock.on_hand
+            );
+        END IF;
+    END LOOP;
+
+    -- 3. All items have sufficient stock -> Deduct stock, insert movements, and reconcile reservations
+    FOR v_item IN
+        SELECT
+            elem->>'item_code' AS item_code,
+            (elem->>'qty')::NUMERIC AS qty,
+            elem->>'description' AS description
+        FROM jsonb_array_elements(p_allocations) elem
+        ORDER BY elem->>'item_code' ASC
+    LOOP
+        SELECT * INTO v_stock
+        FROM public.stock_items
+        WHERE code = v_item.item_code;
+
+        -- Only decrement reserved by the quantity actually reserved by THIS order
+        SELECT COALESCE(SUM(reserved_qty), 0) INTO v_order_reserved
+        FROM public.order_material_reservations
+        WHERE (order_id = p_order_id OR order_po = p_order_po)
+          AND item_code = v_item.item_code
+          AND status = 'ACTIVE';
+
+        -- Deduct from stock_items
+        UPDATE public.stock_items
+        SET
+            on_hand = on_hand - v_item.qty,
+            reserved = GREATEST(0, reserved - v_order_reserved),
+            available = (on_hand - v_item.qty) - GREATEST(0, reserved - v_order_reserved),
+            status = CASE
+                WHEN ((on_hand - v_item.qty) - GREATEST(0, reserved - v_order_reserved)) < 0 THEN 'CRITICAL'
+                WHEN ((on_hand - v_item.qty) - GREATEST(0, reserved - v_order_reserved)) < reorder_level THEN 'SHORTAGE'
+                ELSE 'OK'
+            END,
+            updated_at = v_now
+        WHERE code = v_item.item_code;
+
+        -- Insert append-only ledger movement
+        INSERT INTO public.inventory_movements (
+            id,
+            item_code,
+            location,
+            quantity_change,
+            movement_type,
+            reference_id,
+            reference_type,
+            balance_after,
+            actor_email,
+            notes,
+            created_at
+        ) VALUES (
+            'mov-' || floor(extract(epoch from v_now) * 1000)::text || '-' || substr(md5(random()::text), 1, 6),
+            v_item.item_code,
+            'MAIN-WAREHOUSE',
+            -v_item.qty,
+            'PRODUCTION_CONSUMPTION',
+            p_order_po,
+            'order',
+            v_stock.on_hand - v_item.qty,
+            p_actor_email,
+            'Material issued for PO ' || p_order_po || ' — ' || COALESCE(v_item.description, v_item.item_code) || ' × ' || v_item.qty,
+            v_now
+        );
+
+        -- Reconcile order_material_reservations
+        UPDATE public.order_material_reservations
+        SET
+            status = 'CONSUMED',
+            updated_at = v_now
+        WHERE (order_id = p_order_id OR order_po = p_order_po)
+          AND item_code = v_item.item_code
+          AND status = 'ACTIVE';
+    END LOOP;
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'already_consumed', false,
+        'message', 'Materials consumed and reservations reconciled successfully.'
+    );
+END;
+$$;
+
+-- ============================================================================
+-- Migration: 032_job_number_concurrency.sql
+-- Description: Concurrency-Safe Job Number Counter Table, Atomic Allocation
+--              Function, and Safe Sequence Initialization for Job Cards.
+-- ============================================================================
+
+-- 1. Create Atomic Job Number Counters Table
+CREATE TABLE IF NOT EXISTS public.job_number_counters (
+    prefix VARCHAR(20) NOT NULL DEFAULT 'JC',
+    fiscal_year VARCHAR(20) NOT NULL DEFAULT '26-27',
+    current_value BIGINT NOT NULL DEFAULT 0,
+    padding_digits INT NOT NULL DEFAULT 4,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (prefix, fiscal_year)
+);
+
+-- Enable RLS and establish open policy for service role access
+ALTER TABLE public.job_number_counters ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Job number counters service access" ON public.job_number_counters;
+CREATE POLICY "Job number counters service access" ON public.job_number_counters FOR ALL USING (true);
+
+-- 2. Concurrency-Safe Atomic Job Number Generator Function
+-- Uses row-level lock on the counter row via INSERT ... ON CONFLICT DO UPDATE RETURNING
+CREATE OR REPLACE FUNCTION public.get_next_job_number(p_prefix VARCHAR DEFAULT 'JC', p_fiscal_year VARCHAR DEFAULT '26-27')
+RETURNS VARCHAR
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_next_num BIGINT;
+  v_padded VARCHAR;
+  v_clean_prefix VARCHAR;
+  v_clean_fy VARCHAR;
+BEGIN
+  v_clean_prefix := COALESCE(NULLIF(UPPER(TRIM(p_prefix)), ''), 'JC');
+  v_clean_fy := COALESCE(NULLIF(TRIM(p_fiscal_year), ''), '26-27');
+
+  INSERT INTO public.job_number_counters (prefix, fiscal_year, current_value, padding_digits, updated_at)
+  VALUES (v_clean_prefix, v_clean_fy, 1, 4, NOW())
+  ON CONFLICT (prefix, fiscal_year)
+  DO UPDATE SET
+    current_value = public.job_number_counters.current_value + 1,
+    updated_at = NOW()
+  RETURNING current_value INTO v_next_num;
+
+  v_padded := LPAD(v_next_num::TEXT, 4, '0');
+  RETURN v_clean_prefix || '/' || v_padded || '/' || v_clean_fy;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 3. Seed Existing Max Sequence Values from Database Table `job_cards`
+-- Safely extracts existing numeric sequences without overwriting or decrementing.
+-- Note: Accounts for historical jump numbers up to 979168 so zero collisions occur.
+INSERT INTO public.job_number_counters (prefix, fiscal_year, current_value, padding_digits, updated_at)
+SELECT 
+    'JC', 
+    '26-27', 
+    COALESCE(MAX(NULLIF(regexp_replace(job_no, '^JC/([0-9]+)/.*$', '\1'), '')::BIGINT), 979168), 
+    4, 
+    NOW()
+FROM public.job_cards
+WHERE job_no ~ '^JC/[0-9]+/'
+ON CONFLICT (prefix, fiscal_year)
+DO UPDATE SET current_value = GREATEST(public.job_number_counters.current_value, EXCLUDED.current_value);

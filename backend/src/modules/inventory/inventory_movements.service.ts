@@ -567,6 +567,37 @@ export class InventoryMovementsService {
       return { success: true };
     }
 
+    // CRITICAL ISSUE #9: Order-level double-count guard (deployment-independent —
+    // runs BEFORE the RPC attempt). If any Job-Card-level consumption has already
+    // been posted for this order (reference_type 'job_card' movements tagged with
+    // this orderPo), an order-level bulk issue would double-count the same demand.
+    try {
+      const { data: jcConsumed } = await this.db
+        .from('inventory_movements')
+        .select('id')
+        .eq('movement_type', 'PRODUCTION_CONSUMPTION')
+        .eq('reference_type', 'job_card')
+        .contains('metadata', { orderPo })
+        .limit(1);
+      const jcConsumedInMem = IN_MEMORY_MOVEMENTS.some(
+        m => m.movement_type === 'PRODUCTION_CONSUMPTION' &&
+             m.reference_type === 'job_card' &&
+             (m.metadata as any)?.orderPo === orderPo
+      );
+      if ((jcConsumed && jcConsumed.length > 0) || jcConsumedInMem) {
+        const err: any = new Error(
+          `Order-level material issue blocked for PO ${orderPo}: materials have already been issued at Job Card level. Reconcile Job Card consumption instead of re-issuing the full order quantity.`
+        );
+        err.statusCode = 409;
+        err.errorCode = 'ERR_ORDER_MATERIALS_ALREADY_CONSUMED';
+        throw err;
+      }
+    } catch (guardErr: any) {
+      if (guardErr.errorCode === 'ERR_ORDER_MATERIALS_ALREADY_CONSUMED') throw guardErr;
+      // Guard lookup failure must neither silently allow nor break the order path
+      console.warn('Job-card consumption guard lookup warning:', guardErr?.message);
+    }
+
     // 1. Try PostgreSQL atomic RPC if available in Supabase
     try {
       const { data, error } = await this.db.rpc('consume_order_materials_atomic', {
@@ -716,6 +747,222 @@ export class InventoryMovementsService {
         success: true,
         alreadyConsumed: false,
         message: 'Materials consumed and reservations reconciled successfully.'
+      };
+    });
+  }
+
+  /**
+   * CRITICAL ISSUE #9: Atomically consumes materials for a SINGLE Job Card across
+   * all required BOM components.
+   *
+   * Material quantities correspond to the manufacturing entity (the Job Card and
+   * its target quantity), not the commercial order quantity. Enforces:
+   * 1. Idempotency: identity = jobNo (unique per Job Card). Repeated execution never
+   *    double-deducts, while DIFFERENT Job Cards of the same order consume
+   *    independently and legitimately.
+   * 2. Double-count guard: blocked if materials for the parent order were already
+   *    consumed at ORDER level (and the mirror guard blocks order-level issue once
+   *    Job-Card-level consumption exists).
+   * 3. Multi-component atomicity: if ANY component has insufficient on-hand stock,
+   *    nothing is consumed.
+   * 4. Concurrency safety: sorted material locks (fallback) / row-level FOR UPDATE
+   *    locks (RPC), non-negative stock floor.
+   * 5. Three-way consistency: stock_items deduction + append-only ledger movement
+   *    (reference_type 'job_card', reference_id jobNo) + PARTIAL order-reservation
+   *    reconciliation (residual stays ACTIVE for the remaining Job Cards).
+   */
+  async consumeJobCardMaterialsAtomic(
+    orderId: string,
+    orderPo: string,
+    jobNo: string,
+    actorEmail: string,
+    allocations: Array<{ itemCode: string; description?: string; qty: number }>
+  ): Promise<{ success: boolean; alreadyConsumed?: boolean; message?: string }> {
+    if (!allocations || allocations.length === 0) {
+      return { success: true };
+    }
+
+    // 0. Double-count guard: if materials for the parent order were already issued
+    // at ORDER level, a Job-Card issue would double-count the same demand.
+    try {
+      const { data: orderConsumed } = await this.db
+        .from('inventory_movements')
+        .select('id')
+        .eq('movement_type', 'PRODUCTION_CONSUMPTION')
+        .eq('reference_type', 'order')
+        .eq('reference_id', orderPo)
+        .limit(1);
+      const orderConsumedInMem = IN_MEMORY_MOVEMENTS.some(
+        m => m.movement_type === 'PRODUCTION_CONSUMPTION' &&
+             m.reference_type === 'order' &&
+             m.reference_id === orderPo
+      );
+      if ((orderConsumed && orderConsumed.length > 0) || orderConsumedInMem) {
+        const err: any = new Error(
+          `Job Card material issue blocked for ${jobNo}: materials for order ${orderPo} have already been consumed at order level.`
+        );
+        err.statusCode = 409;
+        err.errorCode = 'ERR_ORDER_MATERIALS_ALREADY_CONSUMED';
+        throw err;
+      }
+    } catch (guardErr: any) {
+      if (guardErr.errorCode === 'ERR_ORDER_MATERIALS_ALREADY_CONSUMED') throw guardErr;
+      console.warn('Order-level consumption guard lookup warning:', guardErr?.message);
+    }
+
+    // 1. Try PostgreSQL atomic RPC if available (migration 031)
+    try {
+      const { data, error } = await this.db.rpc('consume_job_card_materials_atomic', {
+        p_order_id: orderId,
+        p_order_po: orderPo,
+        p_job_no: jobNo,
+        p_actor_email: actorEmail,
+        p_allocations: allocations.map(a => ({
+          item_code: a.itemCode,
+          qty: a.qty,
+          description: a.description || a.itemCode
+        }))
+      });
+
+      if (!error && data) {
+        if (data.success === false) {
+          const err: any = new Error(data.message || `Insufficient stock for ${data.item_code}`);
+          err.statusCode = data.error_code === 'ERR_ORDER_MATERIALS_ALREADY_CONSUMED' ? 409 : 400;
+          err.errorCode = data.error_code || 'ERR_INSUFFICIENT_STOCK';
+          err.itemCode = data.item_code;
+          err.deficit = data.deficit;
+          throw err;
+        }
+        return data;
+      }
+    } catch (rpcErr: any) {
+      if (
+        rpcErr.errorCode === 'ERR_INSUFFICIENT_STOCK' ||
+        rpcErr.errorCode === 'ERR_ORDER_MATERIALS_ALREADY_CONSUMED' ||
+        rpcErr.statusCode === 400 ||
+        rpcErr.statusCode === 409
+      ) {
+        throw rpcErr;
+      }
+      // RPC not yet deployed or failed — proceed with application-level atomic implementation
+    }
+
+    // 2. Application-level atomic transaction with material locks
+    const sortedCodes = Array.from(new Set(allocations.map(a => a.itemCode))).sort();
+    const lockKeys = sortedCodes.map(c => LockService.buildKey('t_default', 'stock_material', c));
+
+    return await LockService.withLock(lockKeys, 5000, async () => {
+      // 2a. Idempotency Check: Has this Job Card already consumed its materials?
+      let alreadyConsumed = false;
+      try {
+        const { data: existing } = await this.db
+          .from('inventory_movements')
+          .select('id')
+          .eq('reference_id', jobNo)
+          .eq('reference_type', 'job_card')
+          .eq('movement_type', 'PRODUCTION_CONSUMPTION')
+          .limit(1);
+        if (existing && existing.length > 0) alreadyConsumed = true;
+      } catch (idemErr: any) {
+        console.warn('Job Card consumption idempotency lookup warning:', idemErr?.message);
+      }
+      if (!alreadyConsumed) {
+        const inMemExisting = IN_MEMORY_MOVEMENTS.find(
+          m => m.reference_id === jobNo && m.reference_type === 'job_card' && m.movement_type === 'PRODUCTION_CONSUMPTION'
+        );
+        if (inMemExisting) alreadyConsumed = true;
+      }
+      if (alreadyConsumed) {
+        return {
+          success: true,
+          alreadyConsumed: true,
+          message: `Materials for Job Card ${jobNo} have already been consumed.`
+        };
+      }
+
+      // 2b. Multi-component sufficiency pre-check (All-or-Nothing)
+      for (const alloc of allocations) {
+        const currentBalance = await this.getCurrentBalance(alloc.itemCode, 'MAIN-WAREHOUSE');
+        if (currentBalance < alloc.qty) {
+          const err: any = new Error(
+            `Insufficient stock for component "${alloc.itemCode}". Available on-hand: ${currentBalance}, required: ${alloc.qty}, deficit: ${alloc.qty - currentBalance}.`
+          );
+          err.statusCode = 400;
+          err.errorCode = 'ERR_INSUFFICIENT_STOCK';
+          err.itemCode = alloc.itemCode;
+          err.requiredQty = alloc.qty;
+          err.onHand = currentBalance;
+          err.deficit = alloc.qty - currentBalance;
+          throw err;
+        }
+      }
+
+      // 2c. All components confirmed sufficient -> apply deductions and record movements
+      const nowIso = new Date().toISOString();
+      const consumedAllocations: Array<{ itemCode: string; qty: number }> = [];
+
+      for (const alloc of allocations) {
+        const currentBalance = await this.getCurrentBalance(alloc.itemCode, 'MAIN-WAREHOUSE');
+        const balanceAfter = currentBalance - alloc.qty;
+        const movementId = randomUUID();
+
+        const record: InventoryMovementRecord = {
+          id: movementId,
+          item_code: alloc.itemCode,
+          location: 'MAIN-WAREHOUSE',
+          quantity_change: -alloc.qty,
+          movement_type: 'PRODUCTION_CONSUMPTION',
+          reference_id: jobNo,
+          reference_type: 'job_card',
+          balance_after: balanceAfter,
+          actor_email: actorEmail,
+          notes: `Material issued for Job Card ${jobNo} (PO ${orderPo}) — ${alloc.description || alloc.itemCode} × ${alloc.qty}`,
+          metadata: { orderId, orderPo, jobNo },
+          created_at: nowIso
+        };
+
+        // Insert into DB (append-only ledger)
+        try {
+          await this.db.from('inventory_movements').insert(record);
+        } catch (err: any) {
+          console.warn('Database recordMovement insert warning:', err.message);
+        }
+
+        IN_MEMORY_MOVEMENTS.unshift(Object.freeze({ ...record }));
+
+        // Update stock_items read model
+        try {
+          const { data: stockRow } = await this.db
+            .from('stock_items')
+            .select('*')
+            .eq('code', alloc.itemCode)
+            .maybeSingle();
+
+          const currentReserved = Number(stockRow?.reserved || 0);
+          const reorderLevel = Number(stockRow?.reorder_level || 25);
+          const available = balanceAfter - currentReserved;
+          const status = available < 0 ? 'CRITICAL' : available < reorderLevel ? 'SHORTAGE' : 'OK';
+
+          await this.db.from('stock_items').update({
+            on_hand: balanceAfter,
+            available,
+            status,
+            updated_at: nowIso
+          }).eq('code', alloc.itemCode);
+        } catch (err: any) {
+          console.warn('Database stock_items sync warning:', err.message);
+        }
+
+        consumedAllocations.push({ itemCode: alloc.itemCode, qty: alloc.qty });
+      }
+
+      // 2d. PARTIAL-aware reservation reconciliation (skipLock = true as outer lock already held)
+      await inventoryReservationsService.reconcileOrderReservationsPartial(orderId, consumedAllocations, true);
+
+      return {
+        success: true,
+        alreadyConsumed: false,
+        message: 'Job Card materials consumed atomically and order reservations partially reconciled.'
       };
     });
   }

@@ -314,20 +314,30 @@ export class BomService {
     const existing = await this.getBOMByCode(bomCode);
     const oldStatus = existing?.status || 'UNKNOWN';
 
-    try {
-      const { error } = await this.db
-        .from('bill_of_materials')
-        .update({ status, updated_at: new Date().toISOString() })
-        .eq('bom_code', bomCode);
+    if (!existing) {
+      const err: any = new Error(`BOM '${bomCode}' not found.`);
+      err.statusCode = 404;
+      throw err;
+    }
 
-      if (error) console.error('Database setBOMStatus error:', error);
-    } catch (err) {
-      console.warn('Database setBOMStatus exception:', err);
+    const { error } = await this.db
+      .from('bill_of_materials')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('bom_code', bomCode);
+
+    if (error) {
+      console.error('Database setBOMStatus error:', error);
+      const err: any = new Error(`Failed to update BOM status for '${bomCode}': ${error.message}`);
+      err.code = error.code;
+      err.statusCode = error.code === '23505' ? 409 : 500;
+      throw err;
     }
 
     const bom = await this.getBOMByCode(bomCode);
-    if (bom) {
-      bom.status = status;
+    if (!bom) {
+      const err: any = new Error(`BOM '${bomCode}' could not be retrieved after status update`);
+      err.statusCode = 500;
+      throw err;
     }
 
     const effectiveEmail = (actorEmail && actorEmail.includes('@')) ? actorEmail : (actorEmail || 'engineering@guruom.in');

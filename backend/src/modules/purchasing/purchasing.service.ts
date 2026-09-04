@@ -69,26 +69,30 @@ export class PurchasingService {
     const prId = validated.id || `pr-${Date.now()}`;
     const reqNumber = validated.reqNumber || `PR-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
 
-    try {
-      await this.db.from('purchase_requisitions').insert({
-        id: prId,
-        req_number: reqNumber,
-        source: validated.source,
-        order_id: validated.orderId,
-        order_po: validated.orderPo,
-        item_code: validated.itemCode,
-        item_description: validated.itemDescription,
-        required_qty: validated.requiredQty,
-        available_stock: validated.availableStock,
-        deficit_qty: validated.deficitQty,
-        unit: validated.unit,
-        urgency: validated.urgency,
-        status: 'PENDING_APPROVAL',
-        requested_by: requestedBy,
-        created_at: new Date().toISOString()
-      });
-    } catch (err) {
-      console.warn('DB createPurchaseRequisition fallback:', err);
+    const { error: insErr } = await this.db.from('purchase_requisitions').insert({
+      id: prId,
+      req_number: reqNumber,
+      source: validated.source,
+      order_id: validated.orderId,
+      order_po: validated.orderPo,
+      item_code: validated.itemCode,
+      item_description: validated.itemDescription,
+      required_qty: validated.requiredQty,
+      available_stock: validated.availableStock,
+      deficit_qty: validated.deficitQty,
+      unit: validated.unit,
+      urgency: validated.urgency,
+      status: 'PENDING_APPROVAL',
+      requested_by: requestedBy,
+      created_at: new Date().toISOString()
+    });
+
+    if (insErr) {
+      console.error('Database createPurchaseRequisition error:', insErr);
+      const err: any = new Error(`Failed to create purchase requisition: ${insErr.message}`);
+      err.code = insErr.code;
+      err.statusCode = insErr.code === '23505' ? 409 : 400;
+      throw err;
     }
 
     await auditService.recordAuditLog({
@@ -112,18 +116,22 @@ export class PurchasingService {
   async approvePurchaseRequisition(prId: string, decision: { decision: 'APPROVE' | 'REJECT'; reason?: string }, approverName: string) {
     const newStatus = decision.decision === 'APPROVE' ? 'APPROVED' : 'REJECTED';
 
-    try {
-      await this.db
-        .from('purchase_requisitions')
-        .update({
-          status: newStatus,
-          approved_by: approverName,
-          approved_at: new Date().toISOString(),
-          rejection_reason: decision.reason
-        })
-        .or(`id.eq.${prId},req_number.eq.${prId}`);
-    } catch (err) {
-      console.warn('DB approvePurchaseRequisition fallback:', err);
+    const { error: upErr } = await this.db
+      .from('purchase_requisitions')
+      .update({
+        status: newStatus,
+        approved_by: approverName,
+        approved_at: new Date().toISOString(),
+        rejection_reason: decision.reason
+      })
+      .or(`id.eq.${prId},req_number.eq.${prId}`);
+
+    if (upErr) {
+      console.error('Database approvePurchaseRequisition error:', upErr);
+      const err: any = new Error(`Failed to update purchase requisition: ${upErr.message}`);
+      err.code = upErr.code;
+      err.statusCode = 400;
+      throw err;
     }
 
     await auditService.recordAuditLog({
@@ -209,42 +217,54 @@ export class PurchasingService {
     const poId = validated.id || `po-pur-${Date.now()}`;
     const poNo = validated.poNo;
 
-    try {
-      await this.db.from('purchase_orders').insert({
-        id: poId,
-        po_no: poNo,
-        supplier_code: validated.supplierCode,
-        supplier_name: validated.supplierName,
-        order_date: validated.orderDate,
-        expected_delivery_date: validated.expectedDeliveryDate,
-        payment_terms: validated.paymentTerms,
-        tax_rate: validated.taxRate,
-        gross_amount: validated.grossAmount,
-        tax_amount: validated.taxAmount,
-        total_amount: validated.totalAmount,
-        status: validated.status || 'DRAFT',
-        approval_status: validated.totalAmount > 100000 ? 'PENDING_OWNER_APPROVAL' : 'APPROVED',
-        created_by: createdBy,
-        notes: validated.notes
-      });
+    const { error: poErr } = await this.db.from('purchase_orders').insert({
+      id: poId,
+      po_no: poNo,
+      supplier_code: validated.supplierCode,
+      supplier_name: validated.supplierName,
+      order_date: validated.orderDate,
+      expected_delivery_date: validated.expectedDeliveryDate,
+      payment_terms: validated.paymentTerms,
+      tax_rate: validated.taxRate,
+      gross_amount: validated.grossAmount,
+      tax_amount: validated.taxAmount,
+      total_amount: validated.totalAmount,
+      status: validated.status || 'DRAFT',
+      approval_status: validated.totalAmount > 100000 ? 'PENDING_OWNER_APPROVAL' : 'APPROVED',
+      created_by: createdBy,
+      notes: validated.notes
+    });
 
-      if (validated.items && validated.items.length > 0) {
-        const itemPayloads = validated.items.map((it, idx) => ({
-          id: it.id || `poi-${Date.now()}-${idx}`,
-          po_id: poId,
-          po_no: poNo,
-          item_code: it.itemCode,
-          item_description: it.itemDescription,
-          order_qty: it.orderQty,
-          received_qty: 0,
-          unit: it.unit,
-          unit_price: it.unitPrice,
-          line_total: it.lineTotal
-        }));
-        await this.db.from('purchase_order_items').insert(itemPayloads);
+    if (poErr) {
+      console.error('Database createPurchaseOrder error:', poErr);
+      const err: any = new Error(`Failed to create purchase order: ${poErr.message}`);
+      err.code = poErr.code;
+      err.statusCode = poErr.code === '23505' ? 409 : 400;
+      throw err;
+    }
+
+    if (validated.items && validated.items.length > 0) {
+      const itemPayloads = validated.items.map((it, idx) => ({
+        id: it.id || `poi-${Date.now()}-${idx}`,
+        po_id: poId,
+        po_no: poNo,
+        item_code: it.itemCode,
+        item_description: it.itemDescription,
+        order_qty: it.orderQty,
+        received_qty: 0,
+        unit: it.unit,
+        unit_price: it.unitPrice,
+        line_total: it.lineTotal
+      }));
+      const { error: itemErr } = await this.db.from('purchase_order_items').insert(itemPayloads);
+      if (itemErr) {
+        console.error('Database purchase_order_items insert error:', itemErr);
+        await this.db.from('purchase_orders').delete().eq('id', poId);
+        const err: any = new Error(`Failed to create purchase order items: ${itemErr.message}`);
+        err.code = itemErr.code;
+        err.statusCode = 400;
+        throw err;
       }
-    } catch (err) {
-      console.warn('DB createPurchaseOrder fallback:', err);
     }
 
     return {
@@ -455,19 +475,23 @@ export class PurchasingService {
   }
 
   async approveVendorReturn(returnId: string, approverName: string) {
-    try {
-      const debitNote = `DN-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
-      await this.db
-        .from('vendor_returns')
-        .update({
-          status: 'APPROVED',
-          approved_by: approverName,
-          approved_at: new Date().toISOString(),
-          debit_note_number: debitNote
-        })
-        .or(`id.eq.${returnId},return_no.eq.${returnId}`);
-    } catch (err) {
-      console.warn('DB approveVendorReturn fallback:', err);
+    const debitNote = `DN-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
+    const { error: upErr } = await this.db
+      .from('vendor_returns')
+      .update({
+        status: 'APPROVED',
+        approved_by: approverName,
+        approved_at: new Date().toISOString(),
+        debit_note_number: debitNote
+      })
+      .or(`id.eq.${returnId},return_no.eq.${returnId}`);
+
+    if (upErr) {
+      console.error('Database approveVendorReturn error:', upErr);
+      const err: any = new Error(`Failed to approve vendor return: ${upErr.message}`);
+      err.code = upErr.code;
+      err.statusCode = 400;
+      throw err;
     }
 
     await auditService.recordAuditLog({

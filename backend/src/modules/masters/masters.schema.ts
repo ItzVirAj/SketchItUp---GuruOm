@@ -9,6 +9,21 @@ export const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i;
 export const PINCODE_REGEX = /^\d{6}$/;
 export const HSN_CODE_REGEX = /^\d{4,8}$/;
 export const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/i;
+export const BANK_ACCOUNT_REGEX = /^[0-9A-Za-z]{6,24}$/;
+
+export function isMaskedAccountNumber(val?: string | null): boolean {
+  if (!val) return false;
+  const trimmed = val.trim();
+  return trimmed.includes('•') || trimmed.includes('*') || trimmed.includes('#') || /[Xx]{2,}/.test(trimmed);
+}
+
+export function isValidMaskedFormat(val?: string | null): boolean {
+  if (!val) return false;
+  const trimmed = val.trim();
+  // Valid masked representations: starts with mask symbols and optional ending suffix of 2-4 chars, or all mask symbols
+  // e.g. "••••••••1234", "********1234", "XXXXXX1234", "•••• •••• •••• 1234", "********", "XXXXXXXX"
+  return /^(?:[•*#Xx\s]{4,}[0-9A-Za-z]{0,4}|[•*#Xx\s]+)$/.test(trimmed);
+}
 
 const isGstExemptValue = (val?: string | null) => {
   if (!val) return false;
@@ -166,6 +181,14 @@ export const VendorMasterSchema = VendorMasterBaseSchema.refine((data) => {
 }, {
   message: 'Process type is required for Subcontractor / Job Worker vendors',
   path: ['processType']
+}).refine((data) => {
+  if (!data.bankAccountNumber) return false;
+  const trimmed = data.bankAccountNumber.trim();
+  if (isMaskedAccountNumber(trimmed)) return false;
+  return BANK_ACCOUNT_REGEX.test(trimmed);
+}, {
+  message: 'Valid plaintext bank account number (6-24 alphanumeric characters, unmasked) is required for new vendors',
+  path: ['bankAccountNumber']
 });
 
 // ============================================================================

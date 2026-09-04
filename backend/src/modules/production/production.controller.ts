@@ -75,7 +75,21 @@ export class ProductionController {
       const data = await productionService.createJobCard(req.body, plannerName);
       return res.status(201).json({ message: 'Job Card released successfully with locked drawing revision', data });
     } catch (err: any) {
-      return res.status(400).json({ error: 'ValidationError', message: err.message });
+      // CRITICAL ISSUE #8: business conflicts (e.g. ROUTE_CARD_REQUIRED) surface with
+      // their explicit statusCode/errorCode; everything else keeps the 400 convention.
+      const statusCode = err.statusCode || 400;
+      return res.status(statusCode).json({ error: err.code || 'ValidationError', message: err.message });
+    }
+  }
+
+  async consumeJobCardMaterials(req: Request, res: Response) {
+    try {
+      const actorName = req.rbacScope?.userName || req.user?.name || 'Stores';
+      const data = await productionService.consumeJobCardMaterials(req.params.jobNo, actorName);
+      return res.json({ message: 'Job Card BOM materials issued & consumed atomically (order reservation pool partially reconciled)', data });
+    } catch (err: any) {
+      const statusCode = err.statusCode || 400;
+      return res.status(statusCode).json({ error: err.errorCode || err.code || 'ValidationError', message: err.message });
     }
   }
 

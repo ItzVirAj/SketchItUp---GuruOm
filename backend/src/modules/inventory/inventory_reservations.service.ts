@@ -278,6 +278,109 @@ export class InventoryReservationsService {
   }
 
   /**
+   * CRITICAL ISSUE #9: Partial-aware reservation reconciliation for Job-Card-level
+   * material consumption.
+   *
+   * Unlike consumeOrderReservations (which marks the ENTIRE order pool CONSUMED),
+   * this decrements each order+item ACTIVE reservation only by the quantity actually
+   * consumed by one Job Card:
+   *   - Reservation stays ACTIVE with a residual qty while demand remains outstanding
+   *     (so order cancellation later releases ONLY the outstanding remainder).
+   *   - Reservation flips to CONSUMED only when its reserved_qty reaches zero.
+   *   - stock_items.reserved is decremented by exactly the consumed-from-reservation
+   *     amount (never below zero), preserving the Critical #3 invariants.
+   *
+   * Reuses the same sorted-lock discipline as the existing reservation lifecycle.
+   */
+  async reconcileOrderReservationsPartial(
+    orderIdOrPo: string,
+    consumedItems: { itemCode: string; qty: number }[],
+    skipLock = false
+  ): Promise<{ reconciledCount: number; consumedFromReservations: number }> {
+    if (!consumedItems || consumedItems.length === 0) {
+      return { reconciledCount: 0, consumedFromReservations: 0 };
+    }
+
+    const activeReservations = await this.getActiveReservations(orderIdOrPo);
+    if (activeReservations.length === 0) {
+      return { reconciledCount: 0, consumedFromReservations: 0 };
+    }
+
+    const executePartialReconciliation = async () => {
+      const nowIso = new Date().toISOString();
+      let reconciledCount = 0;
+      let totalConsumedFromReservations = 0;
+
+      for (const consumed of consumedItems) {
+        const qtyToReconcile = Number(consumed.qty || 0);
+        if (!(qtyToReconcile > 0)) continue;
+
+        const res = activeReservations.find(r => r.item_code === consumed.itemCode);
+        if (!res) continue; // No active reservation for this item — nothing to reconcile
+
+        const consumedFromReservation = Math.min(res.reserved_qty, qtyToReconcile);
+        if (!(consumedFromReservation > 0)) continue;
+
+        const remainingQty = Math.max(0, Number((res.reserved_qty - consumedFromReservation).toFixed(6)));
+        const nextStatus = remainingQty <= 0 ? 'CONSUMED' : 'ACTIVE';
+
+        // 1. Update the reservation row (partial decrement, lifecycle status)
+        try {
+          await this.db
+            .from('order_material_reservations')
+            .update({ reserved_qty: remainingQty, status: nextStatus, updated_at: nowIso })
+            .eq('id', res.id);
+        } catch {}
+
+        if (IN_MEMORY_RESERVATIONS.has(res.id)) {
+          const mem = IN_MEMORY_RESERVATIONS.get(res.id)!;
+          mem.reserved_qty = remainingQty;
+          mem.status = nextStatus;
+          mem.updated_at = nowIso;
+        }
+
+        // 2. Decrement stock_items.reserved by exactly the consumed-from-reservation amount
+        let currentStock: any = null;
+        try {
+          const { data } = await this.db.from('stock_items').select('*').eq('code', res.item_code).maybeSingle();
+          if (data) currentStock = data;
+        } catch {}
+
+        if (currentStock) {
+          const currentReserved = Number(currentStock.reserved || 0);
+          const newReserved = Math.max(0, currentReserved - consumedFromReservation);
+          const onHand = Number(currentStock.on_hand || 0);
+          const newAvailable = onHand - newReserved;
+          const reorderLevel = Number(currentStock.reorder_level || 25);
+          const status = newAvailable < 0 ? 'CRITICAL' : newAvailable < reorderLevel ? 'SHORTAGE' : 'OK';
+
+          try {
+            await this.db.from('stock_items').update({
+              reserved: newReserved,
+              available: newAvailable,
+              status,
+              updated_at: nowIso
+            }).eq('code', res.item_code);
+          } catch {}
+        }
+
+        reconciledCount++;
+        totalConsumedFromReservations += consumedFromReservation;
+      }
+
+      return { reconciledCount, consumedFromReservations: totalConsumedFromReservations };
+    };
+
+    if (skipLock) {
+      return await executePartialReconciliation();
+    } else {
+      const itemCodes = Array.from(new Set(consumedItems.map(i => i.itemCode))).sort();
+      const lockKeys = itemCodes.map(c => LockService.buildKey('t_default', 'stock_material', c));
+      return await LockService.withLock(lockKeys, 5000, executePartialReconciliation);
+    }
+  }
+
+  /**
    * Releases active reservations for an order upon order cancellation or termination.
    * Decrements stock_items.reserved without touching on_hand.
    * Marks reservations as RELEASED.

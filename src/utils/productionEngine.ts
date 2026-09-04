@@ -13,6 +13,7 @@
  */
 
 export const PRODUCTION_ERROR_CODES = {
+  ERR_ROUTE_CARD_REQUIRED: 'ERR_ROUTE_CARD_REQUIRED',
   ERR_MATERIAL_NOT_ACCEPTED_QC: 'ERR_MATERIAL_NOT_ACCEPTED_QC',
   ERR_REVISION_LOCKED: 'ERR_REVISION_LOCKED',
   ERR_OPERATOR_CERTIFICATION_REQUIRED: 'ERR_OPERATOR_CERTIFICATION_REQUIRED',
@@ -185,6 +186,18 @@ export function generateJobCardFromRouteCard(params: {
   targetDate: string;
   routeSteps: RouteCardTemplateStep[];
 }): { jobCard?: JobCard; error?: { code: ProductionErrorCode; message: string } } {
+  // Fail-Closed Gate 0 (CRITICAL ISSUE #8): a Job Card must NEVER be generated
+  // from an empty or missing Route Card. Absence of a configured manufacturing
+  // sequence is an explicit business error, never a generic-process fallback.
+  if (!params.routeSteps || params.routeSteps.length === 0) {
+    return {
+      error: {
+        code: PRODUCTION_ERROR_CODES.ERR_ROUTE_CARD_REQUIRED,
+        message: `Job Card release blocked for part '${params.partCode}': no Route Card operations are configured. Configure a valid Route Card for this part before releasing a Job Card.`
+      }
+    };
+  }
+
   // Validate Material QC Gate
   const materialCheck = validateMaterialIssueForJobCard(params.materialIssuedLot, params.materialQcStatus);
   if (!materialCheck.valid) {

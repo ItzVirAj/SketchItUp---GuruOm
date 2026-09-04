@@ -7,22 +7,14 @@ INSERT INTO public.company_profile (id, legal_name, address, phone, email, gstin
 VALUES (
   'main',
   'GuruOm Industries LLP',
-  'Sr No 15/2, Mataji Logistic Park, Behind Tilakraj CNG Pump, Urali Devachi, Pune 412308, India',
-  '+91 9763 969 798',
+  'Plot 42, GIDC Industrial Estate, Metoda, Rajkot, Gujarat - 360021',
+  '+91 98250 12345',
   'contact@guruom.in',
-  '27AABCG1234F1Z5',
-  'AABCG1234F',
-  'Maharashtra',
-  '27'
-) ON CONFLICT (id) DO UPDATE SET
-  legal_name = EXCLUDED.legal_name,
-  address = EXCLUDED.address,
-  phone = EXCLUDED.phone,
-  email = EXCLUDED.email,
-  gstin = EXCLUDED.gstin,
-  pan = EXCLUDED.pan,
-  state = EXCLUDED.state,
-  state_code = EXCLUDED.state_code;
+  '24AAAFG1234C1Z9',
+  'AAAFG1234C',
+  'Gujarat',
+  '24'
+) ON CONFLICT (id) DO NOTHING;
 
 -- Initial Profiles (Matching System Users)
 INSERT INTO public.profiles (full_name, email, role, department, phone, status, last_login)

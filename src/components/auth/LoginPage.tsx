@@ -200,8 +200,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
         {/* Specular noise & dot matrix */}
         <div className={`absolute inset-0 ${isDarkMode
-            ? 'opacity-[0.035] bg-[radial-gradient(rgba(255,255,255,0.7)_1px,transparent_1px)]'
-            : 'opacity-[0.035] bg-[radial-gradient(rgba(0,0,0,0.6)_1px,transparent_1px)]'
+          ? 'opacity-[0.035] bg-[radial-gradient(rgba(255,255,255,0.7)_1px,transparent_1px)]'
+          : 'opacity-[0.035] bg-[radial-gradient(rgba(0,0,0,0.6)_1px,transparent_1px)]'
           } [background-size:28px_28px]`} />
       </div>
 
@@ -246,8 +246,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   onClick={onToggleTheme}
                   aria-label="Toggle visual appearance"
                   className={`flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl border transition-all active:scale-95 shadow-2xs ${isDarkMode
-                      ? 'border-white/15 bg-white/[0.06] text-slate-200 hover:bg-white/10 hover:border-white/25'
-                      : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 shadow-xs'
+                    ? 'border-white/15 bg-white/[0.06] text-slate-200 hover:bg-white/10 hover:border-white/25'
+                    : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 shadow-xs'
                     }`}
                   title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
                 >
@@ -302,17 +302,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   transition={{ duration: 0.18 }}
                   role="alert"
                   className={`mb-5 flex items-start gap-3 rounded-2xl border p-4 shadow-lg backdrop-blur-xl ${inlineAlert.type === 'error'
-                      ? 'border-rose-500/30 bg-rose-500/15 text-rose-200'
-                      : inlineAlert.type === 'warning'
-                        ? 'border-amber-500/30 bg-amber-500/15 text-amber-200'
-                        : 'border-emerald-500/30 bg-emerald-500/15 text-emerald-200'
+                    ? 'border-rose-500/30 bg-rose-500/15 text-rose-200'
+                    : inlineAlert.type === 'warning'
+                      ? 'border-amber-500/30 bg-amber-500/15 text-amber-200'
+                      : 'border-emerald-500/30 bg-emerald-500/15 text-emerald-200'
                     }`}
                 >
                   <div className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl ${inlineAlert.type === 'error'
-                      ? 'bg-rose-500/20 text-rose-400'
-                      : inlineAlert.type === 'warning'
-                        ? 'bg-amber-500/20 text-amber-400'
-                        : 'bg-emerald-500/20 text-emerald-400'
+                    ? 'bg-rose-500/20 text-rose-400'
+                    : inlineAlert.type === 'warning'
+                      ? 'bg-amber-500/20 text-amber-400'
+                      : 'bg-emerald-500/20 text-emerald-400'
                     }`}>
                     {inlineAlert.type === 'error' ? (
                       <AlertCircle className="h-4 w-4" />
@@ -383,10 +383,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     }}
                     placeholder="Enter Account Email"
                     className={`h-12 w-full rounded-2xl border pl-10 pr-4 text-xs font-medium outline-none transition-all duration-150 ${fieldErrors.email
-                        ? 'border-rose-500/70 bg-rose-500/10 text-rose-100 ring-2 ring-rose-500/20'
-                        : isDarkMode
-                          ? 'border-white/15 bg-[#0C0C10] text-white placeholder:text-slate-500 hover:border-white/25 focus:border-[#007AFF] focus:bg-[#111116] focus:ring-4 focus:ring-[#007AFF]/15'
-                          : 'border-slate-300 bg-slate-50 text-slate-900 placeholder:text-slate-400 hover:border-slate-400 focus:border-[#007AFF] focus:bg-white focus:ring-4 focus:ring-[#007AFF]/15'
+                      ? 'border-rose-500/70 bg-rose-500/10 text-rose-100 ring-2 ring-rose-500/20'
+                      : isDarkMode
+                        ? 'border-white/15 bg-[#0C0C10] text-white placeholder:text-slate-500 hover:border-white/25 focus:border-[#007AFF] focus:bg-[#111116] focus:ring-4 focus:ring-[#007AFF]/15'
+                        : 'border-slate-300 bg-slate-50 text-slate-900 placeholder:text-slate-400 hover:border-slate-400 focus:border-[#007AFF] focus:bg-white focus:ring-4 focus:ring-[#007AFF]/15'
                       }`}
                   />
                 </div>
@@ -432,10 +432,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     }}
                     placeholder="Enter Account Password"
                     className={`h-12 w-full rounded-2xl border pl-10 pr-11 text-xs font-medium outline-none transition-all duration-150 ${fieldErrors.password
-                        ? 'border-rose-500/70 bg-rose-500/10 text-rose-100 ring-2 ring-rose-500/20'
-                        : isDarkMode
-                          ? 'border-white/15 bg-[#0C0C10] text-white placeholder:text-slate-500 hover:border-white/25 focus:border-[#007AFF] focus:bg-[#111116] focus:ring-4 focus:ring-[#007AFF]/15'
-                          : 'border-slate-300 bg-slate-50 text-slate-900 placeholder:text-slate-400 hover:border-slate-400 focus:border-[#007AFF] focus:bg-white focus:ring-4 focus:ring-[#007AFF]/15'
+                      ? 'border-rose-500/70 bg-rose-500/10 text-rose-100 ring-2 ring-rose-500/20'
+                      : isDarkMode
+                        ? 'border-white/15 bg-[#0C0C10] text-white placeholder:text-slate-500 hover:border-white/25 focus:border-[#007AFF] focus:bg-[#111116] focus:ring-4 focus:ring-[#007AFF]/15'
+                        : 'border-slate-300 bg-slate-50 text-slate-900 placeholder:text-slate-400 hover:border-slate-400 focus:border-[#007AFF] focus:bg-white focus:ring-4 focus:ring-[#007AFF]/15'
                       }`}
                   />
 
@@ -480,8 +480,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             {/* ── REQUEST ACCESS & SUPPORT CALLOUT ──                           */}
             {/* ───────────────────────────────────────────────────────────────── */}
             <div className={`mt-6 flex items-center justify-between rounded-2xl border p-3.5 transition-all ${isDarkMode
-                ? 'border-white/15 bg-white/[0.04] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]'
-                : 'border-slate-200 bg-slate-100/80'
+              ? 'border-white/15 bg-white/[0.04] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]'
+              : 'border-slate-200 bg-slate-100/80'
               }`}>
               <div className="min-w-0 pr-2">
                 <div className={`text-xs font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
@@ -549,8 +549,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             className={`w-full max-w-md overflow-hidden rounded-3xl border shadow-2xl ${isDarkMode
-                ? 'border-white/15 bg-[#141419]/95 text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.15),0_30px_70px_rgba(0,0,0,0.85)] backdrop-blur-3xl'
-                : 'border-slate-200 bg-white text-slate-900 shadow-2xl'
+              ? 'border-white/15 bg-[#141419]/95 text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.15),0_30px_70px_rgba(0,0,0,0.85)] backdrop-blur-3xl'
+              : 'border-slate-200 bg-white text-slate-900 shadow-2xl'
               }`}
           >
             <div className={`flex items-start justify-between border-b p-6 ${isDarkMode ? 'border-white/15 bg-black/40' : 'border-slate-200 bg-slate-50'
@@ -605,8 +605,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       onChange={(e) => setForgotEmail(e.target.value)}
                       placeholder="name@guruom.in"
                       className={`h-12 w-full rounded-2xl border pl-10 pr-4 text-xs font-medium outline-none ${isDarkMode
-                          ? 'border-white/15 bg-[#0C0C10] text-white focus:border-[#007AFF]'
-                          : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-[#007AFF]'
+                        ? 'border-white/15 bg-[#0C0C10] text-white focus:border-[#007AFF]'
+                        : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-[#007AFF]'
                         }`}
                     />
                   </div>
@@ -617,8 +617,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     type="button"
                     onClick={() => setIsForgotOpen(false)}
                     className={`h-11 cursor-pointer rounded-2xl border text-xs font-semibold transition-colors ${isDarkMode
-                        ? 'border-white/15 text-slate-300 hover:bg-white/10'
-                        : 'border-slate-200 text-slate-700 hover:bg-slate-100'
+                      ? 'border-white/15 text-slate-300 hover:bg-white/10'
+                      : 'border-slate-200 text-slate-700 hover:bg-slate-100'
                       }`}
                   >
                     Cancel
@@ -656,8 +656,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             className={`w-full max-w-md overflow-hidden rounded-3xl border shadow-2xl ${isDarkMode
-                ? 'border-white/15 bg-[#141419]/95 text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.15),0_30px_70px_rgba(0,0,0,0.85)] backdrop-blur-3xl'
-                : 'border-slate-200 bg-white text-slate-900 shadow-2xl'
+              ? 'border-white/15 bg-[#141419]/95 text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.15),0_30px_70px_rgba(0,0,0,0.85)] backdrop-blur-3xl'
+              : 'border-slate-200 bg-white text-slate-900 shadow-2xl'
               }`}
           >
             <div className="relative px-6 pb-4 pt-7 text-center sm:px-8">

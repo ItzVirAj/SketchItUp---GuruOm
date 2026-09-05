@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { 
   AccessLevel, 
   SystemModule, 
+  ACCESS_LEVEL_RANK,
   normalizeRole, 
   getRoleModulePermission, 
   hasMinimumAccess,
@@ -11,6 +12,111 @@ import {
 } from '../../../src/utils/rbacMatrix';
 import { auditService } from '../modules/audit/audit.service';
 import { getDbClient } from '../config/database';
+
+/**
+ * Maps each granular `permissions.key` (as edited from the ServerAdminVault UI /
+ * stored in `user_permission_overrides`) to the SystemModule + AccessLevel tier
+ * it corresponds to. This lets requirePermission() resolve per-user overrides
+ * on top of the static role matrix, instead of ignoring them entirely.
+ *
+ * NOTE: keep this in sync with `SECTION_GROUPS` in
+ * src/components/admin/ServerAdminVault.tsx and the seed list in
+ * supabase/migrations/025_server_admin_and_granular_rbac.sql.
+ */
+const PERMISSION_KEY_TIER: Record<string, { module: SystemModule; tier: AccessLevel }> = {
+  'orders:view': { module: 'orders', tier: 'VIEW_ONLY' },
+  'orders:create_draft': { module: 'orders', tier: 'CREATE_EDIT' },
+  'orders:edit_commercials': { module: 'orders', tier: 'CREATE_EDIT' },
+  'orders:confirm': { module: 'orders', tier: 'FULL_APPROVE' },
+  'orders:cancel': { module: 'orders', tier: 'FULL_APPROVE' },
+
+  'inventory:view': { module: 'inventory', tier: 'VIEW_ONLY' },
+  'inventory:create_grn': { module: 'inventory', tier: 'CREATE_EDIT' },
+  'inventory:adjust_stock': { module: 'inventory', tier: 'FULL_APPROVE' },
+
+  'production:view': { module: 'production', tier: 'VIEW_ONLY' },
+  'production:create_job_card': { module: 'production', tier: 'CREATE_EDIT' },
+  'production:log_output': { module: 'production', tier: 'CREATE_EDIT' },
+
+  'procurement:view': { module: 'procurement', tier: 'VIEW_ONLY' },
+  'procurement:create_po': { module: 'procurement', tier: 'CREATE_EDIT' },
+  'procurement:approve_high_value': { module: 'procurement', tier: 'FULL_APPROVE' },
+
+  'qc:view': { module: 'qc', tier: 'VIEW_ONLY' },
+  'qc:log_inspection': { module: 'qc', tier: 'CREATE_EDIT' },
+  'qc:place_hold': { module: 'qc', tier: 'FULL_APPROVE' },
+  'qc:release_hold': { module: 'qc', tier: 'FULL_APPROVE' },
+
+  'dispatch:view': { module: 'dispatch', tier: 'VIEW_ONLY' },
+  'dispatch:create_challan': { module: 'dispatch', tier: 'CREATE_EDIT' },
+  'dispatch:confirm_delivery': { module: 'dispatch', tier: 'FULL_APPROVE' },
+
+  // 'finance' category in the permissions catalog maps to the 'accounting' SystemModule.
+  'finance:view': { module: 'accounting', tier: 'VIEW_ONLY' },
+  'finance:generate_invoice': { module: 'accounting', tier: 'CREATE_EDIT' },
+  'finance:record_payment': { module: 'accounting', tier: 'CREATE_EDIT' },
+  'finance:approve_high_value': { module: 'accounting', tier: 'FULL_APPROVE' },
+
+  // No dedicated masters:view key exists yet in the catalog — this is the only
+  // lever the vault currently exposes for the masters module.
+  'admin:manage_masters': { module: 'masters', tier: 'CREATE_EDIT' }
+};
+
+/**
+ * Resolves the effective AccessLevel for a module by layering this user's
+ * `user_permission_overrides` on top of the role-derived baseline.
+ *
+ * Policy: if the vault has written ANY override for this module (it always
+ * writes a full set per section — see setSectionAccessLevel in
+ * ServerAdminVault.tsx), those overrides fully determine the effective tier
+ * for that module, superseding the role default. If no overrides exist for
+ * the module, the role-based baseline is returned unchanged (today's
+ * behavior, zero regression risk for users who've never been overridden).
+ */
+async function resolveEffectiveAccessLevel(
+  userId: string,
+  module: SystemModule,
+  baseline: AccessLevel
+): Promise<AccessLevel> {
+  try {
+    const db = getDbClient();
+    const { data: overrides, error } = await db
+      .from('user_permission_overrides')
+      .select('permission_key, effect')
+      .eq('user_id', userId);
+
+    if (error || !overrides || overrides.length === 0) {
+      return baseline;
+    }
+
+    const moduleOverrides = overrides.filter(
+      (o: { permission_key: string }) => PERMISSION_KEY_TIER[o.permission_key]?.module === module
+    );
+
+    if (moduleOverrides.length === 0) {
+      return baseline;
+    }
+
+    const grantedRanks = moduleOverrides
+      .filter((o: { effect: string }) => o.effect === 'GRANTED')
+      .map((o: { permission_key: string }) => ACCESS_LEVEL_RANK[PERMISSION_KEY_TIER[o.permission_key].tier]);
+
+    if (grantedRanks.length > 0) {
+      const maxRank = Math.max(...grantedRanks);
+      const resolved = (Object.keys(ACCESS_LEVEL_RANK) as AccessLevel[]).find(
+        (level) => ACCESS_LEVEL_RANK[level] === maxRank
+      );
+      return resolved ?? baseline;
+    }
+
+    // Every relevant key is explicitly REVOKED and nothing is GRANTED
+    // (e.g. the vault set this section to HIDDEN) → block the module entirely.
+    return 'NO_ACCESS';
+  } catch (err) {
+    console.warn('[RBAC] Failed to resolve permission overrides, falling back to role default:', err);
+    return baseline;
+  }
+}
 
 export interface RbacScopeContext {
   role: string;
@@ -59,7 +165,19 @@ export function requirePermission(
 
     const rawRole = req.user.role || (req.user as any).userRole;
     const normRole = normalizeRole(rawRole);
-    const perm = getRoleModulePermission(normRole, module);
+    // IMPORTANT: getRoleModulePermission() returns a direct reference into the
+    // shared static RBAC_ROLE_MATRIX object, not a copy. We must shallow-copy
+    // it before mutating accessLevel below, otherwise applying one user's
+    // override would permanently corrupt that role's permissions in memory
+    // for every other user sharing the role, until the process restarts.
+    const perm = { ...getRoleModulePermission(normRole, module) };
+
+    // ServerAdmin/Owner override enforcement: layer this user's per-user
+    // permission overrides (set via the ServerAdmin Vault) on top of the
+    // role-based default before enforcing access. Without this, overrides
+    // are persisted to the DB but silently have no effect on any module
+    // guarded by requirePermission().
+    perm.accessLevel = await resolveEffectiveAccessLevel(req.user.userId, module, perm.accessLevel);
 
     // Attach scope context for controllers/services
     req.rbacScope = {

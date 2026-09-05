@@ -8,6 +8,7 @@ export interface AuditLogInput {
   action: string;
   entityType: string;
   entityId: string;
+  details?: string;
   beforeState?: Record<string, unknown> | null;
   afterState?: Record<string, unknown> | null;
   ipAddress?: string;
@@ -118,6 +119,7 @@ export async function logAudit(
     action: input.action,
     entityType: input.entityType,
     entityId: input.entityId,
+    details: input.details,
     beforeState: input.beforeState ?? null,
     afterState: input.afterState ?? null,
     ipAddress: input.ipAddress ?? null,
@@ -136,7 +138,7 @@ export async function logAudit(
       entity_type: record.entityType || null,
       entity_id: record.entityId || null,
       action: record.action || 'LOG',
-      details: (record.metadata?.details as string) || `${record.action} on ${record.entityType || 'item'}`,
+      details: record.details || (record.metadata?.details as string) || `${record.action} on ${record.entityType || 'item'}`,
       before_state: record.beforeState || null,
       after_state: record.afterState || null,
       ip_address: record.ipAddress || null,
@@ -156,7 +158,7 @@ export async function logAudit(
             entity: record.entityType || 'General',
             entity_id: record.entityId || null,
             action: record.action || 'LOG',
-            details: (record.metadata?.details as string) || `${record.action} on ${record.entityType || 'item'}`,
+            details: record.details || (record.metadata?.details as string) || `${record.action} on ${record.entityType || 'item'}`,
             created_at: record.created_at
           });
         } catch {
@@ -166,7 +168,7 @@ export async function logAudit(
               user_name: record.actorEmail || 'System User',
               entity: record.entityType || 'General',
               action: record.action || 'LOG',
-              details: (record.metadata?.details as string) || `${record.action} on ${record.entityType || 'item'}`,
+              details: record.details || (record.metadata?.details as string) || `${record.action} on ${record.entityType || 'item'}`,
               created_at: record.created_at
             });
           } catch {

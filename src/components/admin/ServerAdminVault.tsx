@@ -10,7 +10,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { apiClient } from '../../lib/apiClient';
-import { normalizeRole } from '../../utils/rbacMatrix';
+import { normalizeRole, RBAC_ROLE_MATRIX, CTA_PERMISSION_TABLE, CtaId } from '../../utils/rbacMatrix';
 import {
   Shield,
   ShieldAlert,
@@ -189,6 +189,72 @@ const SECTION_GROUPS: SectionGroup[] = [
       { key: 'admin:manage_masters', name: 'Master Catalogs Management', description: 'Manage item specs, machines, approved vendors, and client profiles', isEdit: true },
       { key: 'system:view_immutable_audit', name: 'Immutable Audit Vault', description: 'Inspect full append-only system and security event journals', isView: true }
     ]
+  },
+  {
+    id: 'bom',
+    name: 'BOM & Engineering',
+    icon: Layers,
+    color: 'text-amber-400 bg-amber-500/10 border-amber-500/30',
+    description: 'Bill of materials, routing sequences & engineering specifications',
+    subsections: [
+      { key: 'bom:view', name: 'View BOM', description: 'Inspect engineering bill of materials and component trees', isView: true },
+      { key: 'bom:create_edit', name: 'Create/Edit BOM', description: 'Create and revise item BOM structures and routing steps', isEdit: true }
+    ]
+  },
+  {
+    id: 'transport',
+    name: 'Transport & Logistics',
+    icon: Truck,
+    color: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30',
+    description: 'Vehicle tracking, freight partners & transport movement',
+    subsections: [
+      { key: 'transport:view', name: 'View Transport', description: 'Inspect vehicle dispatches, trip logs, and carrier records', isView: true },
+      { key: 'transport:manage', name: 'Manage Transport', description: 'Assign freight carriers, create vehicle runs, and update logs', isEdit: true }
+    ]
+  },
+  {
+    id: 'subcontracting',
+    name: 'Subcontracting',
+    icon: RefreshCw,
+    color: 'text-orange-400 bg-orange-500/10 border-orange-500/30',
+    description: 'External vendor processing, job allocation & material movement',
+    subsections: [
+      { key: 'subcontracting:view', name: 'View Subcontract Jobs', description: 'View external subcontract challans and vendor processing status', isView: true },
+      { key: 'subcontracting:issue_receive', name: 'Issue & Receive Material', description: 'Issue raw stock to job-workers and receive processed items', isEdit: true }
+    ]
+  },
+  {
+    id: 'reports',
+    name: 'Reports & Analytics',
+    icon: FileText,
+    color: 'text-blue-400 bg-blue-500/10 border-blue-500/30',
+    description: 'Operational insights, audit summaries & metric exports',
+    subsections: [
+      { key: 'reports:view', name: 'View Standard Reports', description: 'Access operational dashboards and performance analytics', isView: true },
+      { key: 'reports:export', name: 'Export Reports', description: 'Export tabular reports to CSV, Excel, and PDF formats', isEdit: true }
+    ]
+  },
+  {
+    id: 'settings',
+    name: 'System Settings',
+    icon: Sliders,
+    color: 'text-slate-400 bg-slate-500/10 border-slate-500/30',
+    description: 'System configurations, tenant rules & governance parameters',
+    subsections: [
+      { key: 'settings:view', name: 'View Settings', description: 'Inspect system settings and environment configuration', isView: true },
+      { key: 'settings:edit_config', name: 'Edit System Configuration', description: 'Update system rules, company profiles, and preferences', isApprove: true }
+    ]
+  },
+  {
+    id: 'approvals',
+    name: 'Approval Workflows',
+    icon: CheckCircle2,
+    color: 'text-rose-400 bg-rose-500/10 border-rose-500/30',
+    description: 'Multi-stage authorization requests & hold resolutions',
+    subsections: [
+      { key: 'approvals:view', name: 'View Approvals Queue', description: 'Inspect pending approval requests across departments', isView: true },
+      { key: 'approvals:action', name: 'Action Approvals', description: 'Approve or reject commercial and operational escalations', isApprove: true }
+    ]
   }
 ];
 
@@ -200,6 +266,64 @@ const DEFAULT_PERMISSIONS: PermissionDefinition[] = SECTION_GROUPS.flatMap(s =>
     description: sub.description
   }))
 );
+
+interface CtaGroupDefinition {
+  name: string;
+  icon: any;
+  color: string;
+  ctaIds: CtaId[];
+}
+
+const CTA_GROUPS: CtaGroupDefinition[] = [
+  {
+    name: 'Commercial & Orders',
+    icon: ShoppingBag,
+    color: 'text-sky-400 bg-sky-500/10 border-sky-500/30',
+    ctaIds: ['CREATE_ORDER_DRAFT', 'CONFIRM_ORDER', 'REQUEST_REVISION', 'RAISE_CHANGE_ORDER']
+  },
+  {
+    name: 'Inventory & Stores',
+    icon: Box,
+    color: 'text-amber-400 bg-amber-500/10 border-amber-500/30',
+    ctaIds: ['VERIFY_MATERIAL_AVAILABILITY', 'RECORD_GRN']
+  },
+  {
+    name: 'Production & Shopfloor',
+    icon: Activity,
+    color: 'text-violet-400 bg-violet-500/10 border-violet-500/30',
+    ctaIds: ['CREATE_JOB_CARD', 'START_MANUFACTURING', 'COMPLETE_STEP', 'MARK_MANUFACTURING_COMPLETE']
+  },
+  {
+    name: 'Procurement & Purchasing',
+    icon: ShoppingCart,
+    color: 'text-teal-400 bg-teal-500/10 border-teal-500/30',
+    ctaIds: ['CREATE_PURCHASE_ORDER']
+  },
+  {
+    name: 'Subcontracting',
+    icon: RefreshCw,
+    color: 'text-orange-400 bg-orange-500/10 border-orange-500/30',
+    ctaIds: ['ISSUE_TO_SUBCONTRACTOR', 'RECEIVE_FROM_SUBCONTRACTOR']
+  },
+  {
+    name: 'Quality Assurance & PDI',
+    icon: ShieldCheck,
+    color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
+    ctaIds: ['UPLOAD_QC_REPORT', 'UPLOAD_PDI_REPORT', 'MARK_READY_TO_DISPATCH', 'RAISE_NCR_REWORK']
+  },
+  {
+    name: 'Dispatch & Logistics',
+    icon: Truck,
+    color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/30',
+    ctaIds: ['GENERATE_DELIVERY_CHALLAN', 'MARK_IN_TRANSIT', 'MARK_DELIVERED', 'ORDER_RECEIVED', 'MARK_DELAYED']
+  },
+  {
+    name: 'Finance & Invoicing',
+    icon: CircleDollarSign,
+    color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
+    ctaIds: ['GENERATE_INVOICE', 'RECORD_PAYMENT', 'MARK_ORDER_CLOSED']
+  }
+];
 
 interface AdminUserRecord {
   id: string;
@@ -272,10 +396,14 @@ export function ServerAdminVault({ onSignOut }: Props) {
   const [selectedUserForRole, setSelectedUserForRole] = useState<AdminUserRecord | null>(null);
   const [newRoleValue, setNewRoleValue] = useState<string>('');
   const [roleChangeReason, setRoleChangeReason] = useState<string>('');
+  const [isRoleModalCurrentStateOpen, setIsRoleModalCurrentStateOpen] = useState(true);
 
   const [selectedUserForPerms, setSelectedUserForPerms] = useState<AdminUserRecord | null>(null);
   const [pendingOverrides, setPendingOverrides] = useState<Record<string, 'DEFAULT' | 'GRANTED' | 'REVOKED'>>({});
+  const [savedOverridesSnapshot, setSavedOverridesSnapshot] = useState<Array<{ permission_key: string; effect: 'GRANTED' | 'REVOKED'; reason?: string }>>([]);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ orders: true, inventory: true });
+  const [overridesModalTab, setOverridesModalTab] = useState<'sections' | 'cta'>('sections');
+  const [expandedCtaGroups, setExpandedCtaGroups] = useState<Record<string, boolean>>({});
   const [selectedUserForReset, setSelectedUserForReset] = useState<AdminUserRecord | null>(null);
   const [resetTokenResult, setResetTokenResult] = useState<{ token: string; email: string; expiresAt: string } | null>(null);
   const [copiedToken, setCopiedToken] = useState(false);
@@ -473,7 +601,9 @@ export function ServerAdminVault({ onSignOut }: Props) {
       map[o.permission_key] = o.effect;
     });
     setPendingOverrides(map);
+    setSavedOverridesSnapshot([...(u.permissionOverrides || [])]);
     setSelectedUserForPerms(u);
+    setOverridesModalTab('sections');
   };
 
   // Update Pending Override Locally (Instant click with no password prompt)
@@ -762,13 +892,42 @@ export function ServerAdminVault({ onSignOut }: Props) {
                             </span>
                           </td>
                           <td className="px-4 py-3">
-                            {u.permissionOverrides && u.permissionOverrides.length > 0 ? (
-                              <span className="px-2 py-0.5 rounded text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                                {u.permissionOverrides.length} Override{u.permissionOverrides.length > 1 ? 's' : ''}
-                              </span>
-                            ) : (
-                              <span className="text-slate-500 text-[11px]">Role Defaults</span>
-                            )}
+                            {u.permissionOverrides && u.permissionOverrides.length > 0 ? (() => {
+                              const ctaCount = u.permissionOverrides.filter(o => o.permission_key.startsWith('cta:')).length;
+                              const moduleCount = u.permissionOverrides.length - ctaCount;
+                              const granted = u.permissionOverrides.filter(o => o.effect === 'GRANTED').map(o => o.permission_key);
+                              const revoked = u.permissionOverrides.filter(o => o.effect === 'REVOKED').map(o => o.permission_key);
+                              const tooltipParts: string[] = [];
+                              if (granted.length > 0) {
+                                tooltipParts.push(`Granted:\n${granted.map(k => `• ${k}`).join('\n')}`);
+                              }
+                              if (revoked.length > 0) {
+                                tooltipParts.push(`Revoked:\n${revoked.map(k => `• ${k}`).join('\n')}`);
+                              }
+                              const tooltipText = tooltipParts.join('\n\n');
+
+                              return (
+                                <div className="flex flex-col items-start gap-1" title={tooltipText}>
+                                  <span className="px-2 py-0.5 rounded text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/30 font-medium">
+                                    {u.permissionOverrides.length} Override{u.permissionOverrides.length > 1 ? 's' : ''}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400">
+                                    {moduleCount} Module / {ctaCount} CTA overrides
+                                  </span>
+                                </div>
+                              );
+                            })() : (() => {
+                              const matrixPerms = RBAC_ROLE_MATRIX[normalizeRole(u.role)]?.permissions;
+                              const defaultModuleCount = matrixPerms ? Object.keys(matrixPerms).length : 0;
+                              return (
+                                <div className="flex flex-col items-start gap-1">
+                                  <span className="text-slate-500 text-[11px]">Role Defaults</span>
+                                  <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400 border border-slate-700">
+                                    {defaultModuleCount} modules at default
+                                  </span>
+                                </div>
+                              );
+                            })()}
                           </td>
                           <td className="px-4 py-3 text-slate-400 text-[11px]">
                             {u.last_login_at ? new Date(u.last_login_at).toLocaleString() : 'Never logged in'}
@@ -779,7 +938,9 @@ export function ServerAdminVault({ onSignOut }: Props) {
                               <button
                                 onClick={() => {
                                   setSelectedUserForRole(u);
-                                  setNewRoleValue(u.role);
+                                  setNewRoleValue(
+                                    ASSIGNABLE_ROLES.find(r => normalizeRole(r) === normalizeRole(u.role)) || u.role
+                                  );
                                 }}
                                 disabled={u.normalizedRole === 'ServerAdmin'}
                                 className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:hover:bg-slate-800 text-slate-200 rounded border border-slate-700 transition"
@@ -937,7 +1098,7 @@ export function ServerAdminVault({ onSignOut }: Props) {
       {/* MODAL 1: ROLE CHANGE DIALOG */}
       {selectedUserForRole && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-center text-amber-400">
                 <Sliders className="w-5 h-5" />
@@ -948,14 +1109,117 @@ export function ServerAdminVault({ onSignOut }: Props) {
               </div>
             </div>
 
+            {/* Collapsible Current State Card */}
+            <div className="border border-slate-800 rounded-xl bg-slate-950/50 overflow-hidden text-xs">
+              <button
+                type="button"
+                onClick={() => setIsRoleModalCurrentStateOpen(prev => !prev)}
+                className="w-full px-3.5 py-2.5 flex items-center justify-between bg-slate-900/60 hover:bg-slate-800/40 text-slate-200 transition font-medium"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-slate-200">Current State</span>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                    selectedUserForRole.normalizedRole === 'ServerAdmin'
+                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30 font-mono'
+                      : selectedUserForRole.normalizedRole === 'Owner'
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                      : 'bg-slate-800 text-slate-300 border border-slate-700'
+                  }`}>
+                    {selectedUserForRole.role}
+                  </span>
+                </div>
+                {isRoleModalCurrentStateOpen ? (
+                  <ChevronDown className="w-4 h-4 text-slate-400" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-slate-400" />
+                )}
+              </button>
+
+              {isRoleModalCurrentStateOpen && (
+                <div className="p-3 border-t border-slate-800 space-y-2.5">
+                  <div className="flex items-center justify-between py-0.5">
+                    <span className="text-slate-400 font-medium">Current Role:</span>
+                    <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+                      selectedUserForRole.normalizedRole === 'ServerAdmin'
+                        ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30 font-mono'
+                        : selectedUserForRole.normalizedRole === 'Owner'
+                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                        : 'bg-slate-800 text-slate-300 border border-slate-700'
+                    }`}>
+                      {selectedUserForRole.role}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-0.5">
+                    <span className="text-slate-400 font-medium">Tier:</span>
+                    <span className="text-slate-200 font-mono font-medium">{selectedUserForRole.tier}</span>
+                  </div>
+
+                  {(() => {
+                    const matrixPerms = RBAC_ROLE_MATRIX[normalizeRole(selectedUserForRole.role)]?.permissions;
+                    if (!matrixPerms) {
+                      return <p className="text-[11px] text-slate-500 italic mt-1">No standard matrix permissions found for this role.</p>;
+                    }
+                    return (
+                      <div className="pt-1">
+                        <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-1.5">
+                          Module Access Summary
+                        </span>
+                        <div className="max-h-36 overflow-y-auto border border-slate-800 rounded-lg">
+                          <table className="w-full text-[11px] text-left">
+                            <thead className="bg-slate-950/80 text-slate-400 border-b border-slate-800 font-medium sticky top-0">
+                              <tr>
+                                <th className="px-2.5 py-1">Module</th>
+                                <th className="px-2.5 py-1 text-right">Access Level</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-800/50 text-slate-300">
+                              {Object.entries(matrixPerms).map(([mod, rule]) => (
+                                <tr key={mod} className="hover:bg-slate-800/20">
+                                  <td className="px-2.5 py-1 capitalize font-medium">{mod}</td>
+                                  <td className="px-2.5 py-1 text-right">
+                                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
+                                      rule.accessLevel === 'FULL_APPROVE'
+                                        ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/20'
+                                        : rule.accessLevel === 'CREATE_EDIT'
+                                        ? 'bg-purple-500/15 text-purple-300 border-purple-500/20'
+                                        : rule.accessLevel === 'VIEW_ONLY'
+                                        ? 'bg-sky-500/15 text-sky-300 border-sky-500/20'
+                                        : 'bg-slate-800 text-slate-500 border-slate-700'
+                                    }`}>
+                                      {rule.accessLevel}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+
             <div className="space-y-3 text-xs">
               <div>
-                <label className="block text-slate-400 font-medium mb-1">Target Role (Sub-Tier Only):</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-slate-400 font-medium">Target Role (Sub-Tier Only):</label>
+                  {!ASSIGNABLE_ROLES.includes(newRoleValue) && (
+                    <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30 inline-flex items-center gap-1">
+                      Current role is non-standard
+                    </span>
+                  )}
+                </div>
                 <select
                   value={newRoleValue}
                   onChange={e => setNewRoleValue(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-amber-500"
                 >
+                  {!ASSIGNABLE_ROLES.includes(newRoleValue) && (
+                    <option value={newRoleValue}>{newRoleValue}</option>
+                  )}
                   {ASSIGNABLE_ROLES.map(r => (
                     <option key={r} value={r}>{r}</option>
                   ))}
@@ -1027,247 +1291,502 @@ export function ServerAdminVault({ onSignOut }: Props) {
               </button>
             </div>
 
-            {/* Quick Action Toolbar & Search */}
-            <div className="px-5 py-3 border-b border-slate-800/80 bg-slate-900/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs">
-              <div className="relative flex-1 max-w-md">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                <input
-                  type="text"
-                  placeholder="Search sections or capabilities..."
-                  value={permSearch}
-                  onChange={e => setPermSearch(e.target.value)}
-                  className="w-full pl-9 pr-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500"
-                />
+            {/* Saved Overrides (Current) Fixed Band */}
+            <div className="px-5 py-3 border-b border-slate-800 bg-slate-950/40 shrink-0">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                  Saved Overrides (Current)
+                </span>
+                {savedOverridesSnapshot.length > 0 && (
+                  <span className="px-1.5 py-0.2 rounded text-[10px] font-mono text-slate-400 bg-slate-800 border border-slate-700">
+                    {savedOverridesSnapshot.length}
+                  </span>
+                )}
               </div>
-
-              {/* Global Preset Buttons */}
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[11px] text-slate-400 mr-1 font-semibold uppercase tracking-wider">Presets:</span>
-                <button
-                  type="button"
-                  onClick={() => applyGlobalPreset('DEFAULT')}
-                  className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md transition text-[11px] flex items-center gap-1"
-                  title="Revert all sections to standard role defaults"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  <span>Role Default</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => applyGlobalPreset('VIEW_ONLY')}
-                  className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-sky-300 rounded-md transition text-[11px] flex items-center gap-1"
-                  title="Make all sections read-only"
-                >
-                  <Eye className="w-3 h-3" />
-                  <span>View Only All</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => applyGlobalPreset('FULL_APPROVE')}
-                  className="px-2.5 py-1 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 rounded-md transition text-[11px] flex items-center gap-1 font-semibold"
-                  title="Grant full approval rights across all sections"
-                >
-                  <Sparkles className="w-3 h-3" />
-                  <span>Grant All</span>
-                </button>
-              </div>
+              {savedOverridesSnapshot.length === 0 ? (
+                <p className="text-xs text-slate-400 italic">No overrides — running on role defaults.</p>
+              ) : (
+                <div className="flex items-center gap-2 flex-wrap max-h-24 overflow-y-auto pr-1">
+                  {savedOverridesSnapshot.map(o => (
+                    <span
+                      key={o.permission_key}
+                      className={`px-2 py-0.5 rounded text-[11px] font-mono font-medium border inline-flex items-center gap-1 ${
+                        o.effect === 'GRANTED'
+                          ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                          : 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+                      }`}
+                    >
+                      <span>{o.permission_key}</span>
+                      <span className="text-slate-500">→</span>
+                      <span className="font-bold">{o.effect}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Sections & Subsections Accordion List */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-4">
-              {SECTION_GROUPS
-                .filter(sec =>
-                  !permSearch ||
-                  sec.name.toLowerCase().includes(permSearch.toLowerCase()) ||
-                  sec.subsections.some(sub =>
-                    sub.name.toLowerCase().includes(permSearch.toLowerCase()) ||
-                    sub.key.toLowerCase().includes(permSearch.toLowerCase()) ||
-                    sub.description.toLowerCase().includes(permSearch.toLowerCase())
-                  )
-                )
-                .map(sec => {
-                  const Icon = sec.icon;
-                  const compState = getSectionCompositeState(sec);
-                  const isExpanded = expandedSections[sec.id] !== false || Boolean(permSearch);
-                  const isSectionVisible = compState !== 'HIDDEN';
+            {/* Tab Switcher */}
+            <div className="flex items-center gap-2 px-5 pt-3 pb-2 border-b border-slate-800 bg-slate-950/60 shrink-0">
+              <button
+                type="button"
+                onClick={() => setOverridesModalTab('sections')}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
+                  overridesModalTab === 'sections'
+                    ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 border border-transparent'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Module & Section Access</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setOverridesModalTab('cta')}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
+                  overridesModalTab === 'cta'
+                    ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 border border-transparent'
+                }`}
+              >
+                <Activity className="w-3.5 h-3.5" />
+                <span>Pipeline CTA Visibility</span>
+              </button>
+            </div>
 
-                  return (
-                    <div
-                      key={sec.id}
-                      className="bg-slate-950/80 border border-slate-800 rounded-xl overflow-hidden shadow-sm transition hover:border-slate-700/80"
+            {/* TAB 1: MODULE & SECTION ACCESS */}
+            {overridesModalTab === 'sections' && (
+              <>
+                {/* Quick Action Toolbar & Search */}
+                <div className="px-5 py-3 border-b border-slate-800/80 bg-slate-900/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs shrink-0">
+                  <div className="relative flex-1 max-w-md">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                    <input
+                      type="text"
+                      placeholder="Search sections or capabilities..."
+                      value={permSearch}
+                      onChange={e => setPermSearch(e.target.value)}
+                      className="w-full pl-9 pr-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  {/* Global Preset Buttons */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[11px] text-slate-400 mr-1 font-semibold uppercase tracking-wider">Presets:</span>
+                    <button
+                      type="button"
+                      onClick={() => applyGlobalPreset('DEFAULT')}
+                      className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md transition text-[11px] flex items-center gap-1"
+                      title="Revert all sections to standard role defaults"
                     >
-                      {/* Section Header Card */}
-                      <div className="p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-slate-900/40 border-b border-slate-800/60">
-                        <div className="flex items-center gap-3">
-                          <button
-                            type="button"
-                            onClick={() => toggleSectionExpanded(sec.id)}
-                            className="p-1 text-slate-400 hover:text-slate-200"
-                            title={isExpanded ? 'Collapse section' : 'Expand section'}
-                          >
-                            {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                          </button>
+                      <RotateCcw className="w-3 h-3" />
+                      <span>Role Default</span>
+                    </button>
 
-                          <div className={`w-9 h-9 rounded-lg border flex items-center justify-center ${sec.color}`}>
-                            <Icon className="w-4 h-4" />
-                          </div>
+                    <button
+                      type="button"
+                      onClick={() => applyGlobalPreset('VIEW_ONLY')}
+                      className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-sky-300 rounded-md transition text-[11px] flex items-center gap-1"
+                      title="Make all sections read-only"
+                    >
+                      <Eye className="w-3 h-3" />
+                      <span>View Only All</span>
+                    </button>
 
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-slate-100 text-sm">{sec.name}</span>
-                              <span
-                                className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                                  compState === 'HIDDEN'
-                                    ? 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
-                                    : compState === 'FULL_APPROVE'
-                                    ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
-                                    : compState === 'VIEW_ONLY'
-                                    ? 'bg-sky-500/15 text-sky-300 border border-sky-500/30'
-                                    : compState === 'CREATE_EDIT'
-                                    ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
-                                    : compState === 'CUSTOM'
-                                    ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
-                                    : 'bg-slate-800 text-slate-400'
-                                }`}
+                    <button
+                      type="button"
+                      onClick={() => applyGlobalPreset('FULL_APPROVE')}
+                      className="px-2.5 py-1 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 rounded-md transition text-[11px] flex items-center gap-1 font-semibold"
+                      title="Grant full approval rights across all sections"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>Grant All</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Sections & Subsections Accordion List */}
+                <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                  <div className="flex items-center justify-between pb-1 border-b border-slate-800/60">
+                    <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <Sliders className="w-3.5 h-3.5 text-blue-400" />
+                      Edit Overrides (Pending)
+                    </span>
+                  </div>
+                  {SECTION_GROUPS
+                    .filter(sec =>
+                      !permSearch ||
+                      sec.name.toLowerCase().includes(permSearch.toLowerCase()) ||
+                      sec.subsections.some(sub =>
+                        sub.name.toLowerCase().includes(permSearch.toLowerCase()) ||
+                        sub.key.toLowerCase().includes(permSearch.toLowerCase()) ||
+                        sub.description.toLowerCase().includes(permSearch.toLowerCase())
+                      )
+                    )
+                    .map(sec => {
+                      const Icon = sec.icon;
+                      const compState = getSectionCompositeState(sec);
+                      const isExpanded = expandedSections[sec.id] !== false || Boolean(permSearch);
+                      const isSectionVisible = compState !== 'HIDDEN';
+
+                      return (
+                        <div
+                          key={sec.id}
+                          className="bg-slate-950/80 border border-slate-800 rounded-xl overflow-hidden shadow-sm transition hover:border-slate-700/80"
+                        >
+                          {/* Section Header Card */}
+                          <div className="p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-slate-900/40 border-b border-slate-800/60">
+                            <div className="flex items-center gap-3">
+                              <button
+                                type="button"
+                                onClick={() => toggleSectionExpanded(sec.id)}
+                                className="p-1 text-slate-400 hover:text-slate-200"
+                                title={isExpanded ? 'Collapse section' : 'Expand section'}
                               >
-                                {compState === 'HIDDEN' ? 'Hidden' : compState === 'DEFAULT' ? 'Role Default' : compState}
-                              </span>
-                            </div>
-                            <p className="text-[11px] text-slate-400">{sec.description}</p>
-                          </div>
-                        </div>
+                                {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                              </button>
 
-                        {/* Section Level Controls (Visibility Switch + Access Level Pill) */}
-                        <div className="flex items-center gap-2.5 self-end lg:self-auto flex-wrap">
-                          {/* Visibility Toggle Switch */}
-                          <button
-                            type="button"
-                            onClick={() => setSectionAccessLevel(sec, isSectionVisible ? 'HIDDEN' : 'DEFAULT')}
-                            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition ${
-                              isSectionVisible
-                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
-                                : 'bg-rose-500/10 text-rose-400 border-rose-500/30 hover:bg-rose-500/20'
-                            }`}
-                            title={isSectionVisible ? 'Hide this section from user navigation' : 'Make section accessible'}
-                          >
-                            {isSectionVisible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                            <span>{isSectionVisible ? 'Section Visible' : 'Section Hidden'}</span>
-                          </button>
+                              <div className={`w-9 h-9 rounded-lg border flex items-center justify-center ${sec.color}`}>
+                                <Icon className="w-4 h-4" />
+                              </div>
 
-                          {/* Access Level Presets Pill */}
-                          <div className="flex items-center bg-slate-900 border border-slate-800 p-0.5 rounded-lg text-[11px] font-semibold">
-                            <button
-                              type="button"
-                              onClick={() => setSectionAccessLevel(sec, 'VIEW_ONLY')}
-                              className={`px-2.5 py-1 rounded transition ${
-                                compState === 'VIEW_ONLY'
-                                  ? 'bg-sky-600 text-white shadow-sm'
-                                  : 'text-slate-400 hover:text-sky-300'
-                              }`}
-                            >
-                              View Only
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => setSectionAccessLevel(sec, 'CREATE_EDIT')}
-                              className={`px-2.5 py-1 rounded transition ${
-                                compState === 'CREATE_EDIT'
-                                  ? 'bg-purple-600 text-white shadow-sm'
-                                  : 'text-slate-400 hover:text-purple-300'
-                              }`}
-                            >
-                              Edit & View
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => setSectionAccessLevel(sec, 'FULL_APPROVE')}
-                              className={`px-2.5 py-1 rounded transition ${
-                                compState === 'FULL_APPROVE'
-                                  ? 'bg-emerald-600 text-white shadow-sm font-bold'
-                                  : 'text-slate-400 hover:text-emerald-300'
-                              }`}
-                            >
-                              Full Approve
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Subsections & Granular Capability Toggles */}
-                      {isExpanded && (
-                        <div className="p-3 divide-y divide-slate-800/40 bg-slate-950/40">
-                          {sec.subsections.map(sub => {
-                            const currentStatus = pendingOverrides[sub.key] || 'DEFAULT';
-
-                            return (
-                              <div
-                                key={sub.key}
-                                className="py-2.5 px-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-slate-900/30 rounded-lg transition"
-                              >
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-semibold text-slate-200 text-xs">{sub.name}</span>
-                                    <span className="font-mono text-[10px] text-slate-500">({sub.key})</span>
-                                  </div>
-                                  <p className="text-[11px] text-slate-400 mt-0.5">{sub.description}</p>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-slate-100 text-sm">{sec.name}</span>
+                                  <span
+                                    className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                                      compState === 'HIDDEN'
+                                        ? 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
+                                        : compState === 'FULL_APPROVE'
+                                        ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                                        : compState === 'VIEW_ONLY'
+                                        ? 'bg-sky-500/15 text-sky-300 border border-sky-500/30'
+                                        : compState === 'CREATE_EDIT'
+                                        ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
+                                        : compState === 'CUSTOM'
+                                        ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                                        : 'bg-slate-800 text-slate-400'
+                                    }`}
+                                  >
+                                    {compState === 'HIDDEN' ? 'Hidden' : compState === 'DEFAULT' ? 'Role Default' : compState}
+                                  </span>
                                 </div>
+                                <p className="text-[11px] text-slate-400">{sec.description}</p>
+                              </div>
+                            </div>
 
-                                {/* 3-State Capability Switch */}
-                                <div className="flex items-center bg-slate-900 border border-slate-800/90 p-0.5 rounded-lg shrink-0 self-start sm:self-auto text-[11px] font-semibold">
-                                  <button
-                                    type="button"
-                                    onClick={() => setLocalOverride(sub.key, 'DEFAULT')}
-                                    className={`px-2 py-0.5 rounded transition ${
-                                      currentStatus === 'DEFAULT'
-                                        ? 'bg-slate-700 text-slate-100 shadow-sm'
-                                        : 'text-slate-400 hover:text-slate-200'
-                                    }`}
-                                    title="Inherit role default"
-                                  >
-                                    Auto
-                                  </button>
+                            {/* Section Level Controls (Visibility Switch + Access Level Pill) */}
+                            <div className="flex items-center gap-2.5 self-end lg:self-auto flex-wrap">
+                              {/* Visibility Toggle Switch */}
+                              <button
+                                type="button"
+                                onClick={() => setSectionAccessLevel(sec, isSectionVisible ? 'HIDDEN' : 'DEFAULT')}
+                                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition ${
+                                  isSectionVisible
+                                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
+                                    : 'bg-rose-500/10 text-rose-400 border-rose-500/30 hover:bg-rose-500/20'
+                                }`}
+                                title={isSectionVisible ? 'Hide this section from user navigation' : 'Make section accessible'}
+                              >
+                                {isSectionVisible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                                <span>{isSectionVisible ? 'Section Visible' : 'Section Hidden'}</span>
+                              </button>
 
-                                  <button
-                                    type="button"
-                                    onClick={() => setLocalOverride(sub.key, 'GRANTED')}
-                                    className={`px-2 py-0.5 rounded transition flex items-center gap-1 ${
-                                      currentStatus === 'GRANTED'
-                                        ? 'bg-emerald-500 text-slate-950 font-bold shadow-sm'
-                                        : 'text-slate-400 hover:text-emerald-300'
-                                    }`}
-                                    title="Force Allow capability"
-                                  >
-                                    <Check className="w-3 h-3" />
-                                    <span>Allow</span>
-                                  </button>
+                              {/* Access Level Presets Pill */}
+                              <div className="flex items-center bg-slate-900 border border-slate-800 p-0.5 rounded-lg text-[11px] font-semibold">
+                                <button
+                                  type="button"
+                                  onClick={() => setSectionAccessLevel(sec, 'VIEW_ONLY')}
+                                  className={`px-2.5 py-1 rounded transition ${
+                                    compState === 'VIEW_ONLY'
+                                      ? 'bg-sky-600 text-white shadow-sm'
+                                      : 'text-slate-400 hover:text-sky-300'
+                                  }`}
+                                >
+                                  View Only
+                                </button>
 
-                                  <button
-                                    type="button"
-                                    onClick={() => setLocalOverride(sub.key, 'REVOKED')}
-                                    className={`px-2 py-0.5 rounded transition flex items-center gap-1 ${
-                                      currentStatus === 'REVOKED'
-                                        ? 'bg-rose-500 text-white font-bold shadow-sm'
-                                        : 'text-slate-400 hover:text-rose-300'
-                                    }`}
-                                    title="Force Deny capability"
+                                <button
+                                  type="button"
+                                  onClick={() => setSectionAccessLevel(sec, 'CREATE_EDIT')}
+                                  className={`px-2.5 py-1 rounded transition ${
+                                    compState === 'CREATE_EDIT'
+                                      ? 'bg-purple-600 text-white shadow-sm'
+                                      : 'text-slate-400 hover:text-purple-300'
+                                  }`}
+                                >
+                                  Edit & View
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => setSectionAccessLevel(sec, 'FULL_APPROVE')}
+                                  className={`px-2.5 py-1 rounded transition ${
+                                    compState === 'FULL_APPROVE'
+                                      ? 'bg-emerald-600 text-white shadow-sm font-bold'
+                                      : 'text-slate-400 hover:text-emerald-300'
+                                  }`}
+                                >
+                                  Full Approve
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Subsections & Granular Capability Toggles */}
+                          {isExpanded && (
+                            <div className="p-3 divide-y divide-slate-800/40 bg-slate-950/40">
+                              {sec.subsections.map(sub => {
+                                const currentStatus = pendingOverrides[sub.key] || 'DEFAULT';
+
+                                return (
+                                  <div
+                                    key={sub.key}
+                                    className="py-2.5 px-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-slate-900/30 rounded-lg transition"
                                   >
-                                    <X className="w-3 h-3" />
-                                    <span>Deny</span>
-                                  </button>
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-semibold text-slate-200 text-xs">{sub.name}</span>
+                                        <span className="font-mono text-[10px] text-slate-500">({sub.key})</span>
+                                      </div>
+                                      <p className="text-[11px] text-slate-400 mt-0.5">{sub.description}</p>
+                                    </div>
+
+                                    {/* 3-State Capability Switch */}
+                                    <div className="flex items-center bg-slate-900 border border-slate-800/90 p-0.5 rounded-lg shrink-0 self-start sm:self-auto text-[11px] font-semibold">
+                                      <button
+                                        type="button"
+                                        onClick={() => setLocalOverride(sub.key, 'DEFAULT')}
+                                        className={`px-2 py-0.5 rounded transition ${
+                                          currentStatus === 'DEFAULT'
+                                            ? 'bg-slate-700 text-slate-100 shadow-sm'
+                                            : 'text-slate-400 hover:text-slate-200'
+                                        }`}
+                                        title="Inherit role default"
+                                      >
+                                        Auto
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => setLocalOverride(sub.key, 'GRANTED')}
+                                        className={`px-2 py-0.5 rounded transition flex items-center gap-1 ${
+                                          currentStatus === 'GRANTED'
+                                            ? 'bg-emerald-500 text-slate-950 font-bold shadow-sm'
+                                            : 'text-slate-400 hover:text-emerald-300'
+                                        }`}
+                                        title="Force Allow capability"
+                                      >
+                                        <Check className="w-3 h-3" />
+                                        <span>Allow</span>
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => setLocalOverride(sub.key, 'REVOKED')}
+                                        className={`px-2 py-0.5 rounded transition flex items-center gap-1 ${
+                                          currentStatus === 'REVOKED'
+                                            ? 'bg-rose-500 text-white font-bold shadow-sm'
+                                            : 'text-slate-400 hover:text-rose-300'
+                                        }`}
+                                        title="Force Deny capability"
+                                      >
+                                        <X className="w-3 h-3" />
+                                        <span>Deny</span>
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              </>
+            )}
+
+            {/* TAB 2: PIPELINE CTA VISIBILITY */}
+            {overridesModalTab === 'cta' && (
+              <>
+                {/* Tab 2 Search Bar */}
+                <div className="px-5 py-3 border-b border-slate-800/80 bg-slate-900/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs shrink-0">
+                  <div className="relative flex-1 max-w-md">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                    <input
+                      type="text"
+                      placeholder="Search CTAs, stages, or authorized roles..."
+                      value={permSearch}
+                      onChange={e => setPermSearch(e.target.value)}
+                      className="w-full pl-9 pr-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-400 text-xs">
+                    <span>25 Pipeline Action Gates</span>
+                  </div>
+                </div>
+
+                {/* Tab 2 Functional Groups List */}
+                <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                  <div className="flex items-center justify-between pb-1 border-b border-slate-800/60">
+                    <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <Activity className="w-3.5 h-3.5 text-amber-400" />
+                      Pipeline CTA Visibility Overrides (Pending)
+                    </span>
+                  </div>
+
+                  {CTA_GROUPS
+                    .filter(group => {
+                      if (!permSearch) return true;
+                      const q = permSearch.toLowerCase();
+                      if (group.name.toLowerCase().includes(q)) return true;
+                      return group.ctaIds.some(ctaId => {
+                        const c = CTA_PERMISSION_TABLE.find(tbl => tbl.ctaId === ctaId);
+                        if (!c) return false;
+                        return (
+                          c.label.toLowerCase().includes(q) ||
+                          c.ctaId.toLowerCase().includes(q) ||
+                          c.stage.toLowerCase().includes(q) ||
+                          c.authorizedRoles.some(r => r.toLowerCase().includes(q))
+                        );
+                      });
+                    })
+                    .map(group => {
+                      const Icon = group.icon;
+                      const isExpanded = expandedCtaGroups[group.name] !== false || Boolean(permSearch);
+                      const matchingCtas = group.ctaIds.filter(ctaId => {
+                        if (!permSearch) return true;
+                        const c = CTA_PERMISSION_TABLE.find(tbl => tbl.ctaId === ctaId);
+                        if (!c) return false;
+                        const q = permSearch.toLowerCase();
+                        return (
+                          group.name.toLowerCase().includes(q) ||
+                          c.label.toLowerCase().includes(q) ||
+                          c.ctaId.toLowerCase().includes(q) ||
+                          c.stage.toLowerCase().includes(q) ||
+                          c.authorizedRoles.some(r => r.toLowerCase().includes(q))
+                        );
+                      });
+
+                      return (
+                        <div
+                          key={group.name}
+                          className="bg-slate-950/80 border border-slate-800 rounded-xl overflow-hidden shadow-sm transition hover:border-slate-700/80"
+                        >
+                          <div className="p-4 flex items-center justify-between gap-3 bg-slate-900/40 border-b border-slate-800/60">
+                            <div className="flex items-center gap-3">
+                              <button
+                                type="button"
+                                onClick={() => setExpandedCtaGroups(prev => ({ ...prev, [group.name]: !isExpanded }))}
+                                className="p-1 text-slate-400 hover:text-slate-200"
+                                title={isExpanded ? 'Collapse group' : 'Expand group'}
+                              >
+                                {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                              </button>
+
+                              <div className={`w-9 h-9 rounded-lg border flex items-center justify-center ${group.color}`}>
+                                <Icon className="w-4 h-4" />
+                              </div>
+
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-slate-100 text-sm">{group.name}</span>
+                                  <span className="text-[10px] font-mono text-slate-500">
+                                    ({matchingCtas.length} CTA{matchingCtas.length !== 1 ? 's' : ''})
+                                  </span>
                                 </div>
                               </div>
-                            );
-                          })}
+                            </div>
+                          </div>
+
+                          {isExpanded && (
+                            <div className="p-3 divide-y divide-slate-800/40 bg-slate-950/40">
+                              {matchingCtas.map(ctaId => {
+                                const ctaDef = CTA_PERMISSION_TABLE.find(c => c.ctaId === ctaId);
+                                if (!ctaDef) return null;
+                                const overrideKey = `cta:${ctaDef.ctaId}`;
+                                const currentStatus = pendingOverrides[overrideKey] || 'DEFAULT';
+
+                                return (
+                                  <div
+                                    key={ctaDef.ctaId}
+                                    className="py-2.5 px-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-slate-900/30 rounded-lg transition"
+                                  >
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="font-semibold text-slate-200 text-xs">{ctaDef.label}</span>
+                                        <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                                          {ctaDef.stage}
+                                        </span>
+                                        <span className="font-mono text-[10px] text-slate-500">({overrideKey})</span>
+                                      </div>
+                                      <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                                        <span className="text-[10px] text-slate-500 font-medium">Default Authorized:</span>
+                                        {ctaDef.authorizedRoles.map(role => (
+                                          <span
+                                            key={role}
+                                            className="px-1.5 py-0.5 rounded text-[10px] bg-slate-800/90 text-slate-400 border border-slate-700/60 font-medium"
+                                          >
+                                            {role}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+
+                                    {/* 3-State Capability Switch */}
+                                    <div className="flex items-center bg-slate-900 border border-slate-800/90 p-0.5 rounded-lg shrink-0 self-start sm:self-auto text-[11px] font-semibold">
+                                      <button
+                                        type="button"
+                                        onClick={() => setLocalOverride(overrideKey, 'DEFAULT')}
+                                        className={`px-2 py-0.5 rounded transition ${
+                                          currentStatus === 'DEFAULT'
+                                            ? 'bg-slate-700 text-slate-100 shadow-sm'
+                                            : 'text-slate-400 hover:text-slate-200'
+                                        }`}
+                                        title="Inherit role default"
+                                      >
+                                        Auto
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => setLocalOverride(overrideKey, 'GRANTED')}
+                                        className={`px-2 py-0.5 rounded transition flex items-center gap-1 ${
+                                          currentStatus === 'GRANTED'
+                                            ? 'bg-emerald-500 text-slate-950 font-bold shadow-sm'
+                                            : 'text-slate-400 hover:text-emerald-300'
+                                        }`}
+                                        title="Force Allow capability"
+                                      >
+                                        <Check className="w-3 h-3" />
+                                        <span>Allow</span>
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => setLocalOverride(overrideKey, 'REVOKED')}
+                                        className={`px-2 py-0.5 rounded transition flex items-center gap-1 ${
+                                          currentStatus === 'REVOKED'
+                                            ? 'bg-rose-500 text-white font-bold shadow-sm'
+                                            : 'text-slate-400 hover:text-rose-300'
+                                        }`}
+                                        title="Force Deny capability"
+                                      >
+                                        <X className="w-3 h-3" />
+                                        <span>Deny</span>
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
-            </div>
+                      );
+                    })}
+                </div>
+              </>
+            )}
 
             {/* Modal Footer with Summary and Batch Apply */}
             <div className="p-4 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between gap-3 text-xs">

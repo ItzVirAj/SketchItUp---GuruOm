@@ -1,12 +1,12 @@
 -- ============================================================================
 -- GuruOm Owner OS (Stratum) — Consolidated Complete Database Migrations
--- Generated from supabase/migrations (001 through 031)
--- Total Migration Files: 33
+-- Generated from supabase/migrations (001 through 034)
+-- Total Migration Files: 34
 -- ============================================================================
 
 
 -- ============================================================================
--- Migration 01/33: 001_initial_schema.sql
+-- Migration 01/34: 001_initial_schema.sql
 -- ============================================================================
 
 -- ===================================================
@@ -297,8 +297,9 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+
 -- ============================================================================
--- Migration 02/33: 002_rls_and_policies.sql
+-- Migration 02/34: 002_rls_and_policies.sql
 -- ============================================================================
 
 -- ===================================================
@@ -363,8 +364,9 @@ CREATE POLICY "Vendor bills access" ON public.vendor_bills FOR ALL USING (true);
 CREATE POLICY "Notifications access" ON public.notifications FOR ALL USING (true);
 CREATE POLICY "Audit logs access" ON public.audit_logs FOR ALL USING (true);
 
+
 -- ============================================================================
--- Migration 03/33: 003_realtime_and_storage.sql
+-- Migration 03/34: 003_realtime_and_storage.sql
 -- ============================================================================
 
 -- ===================================================
@@ -413,159 +415,24 @@ CREATE POLICY "Public Insert Access for owner-os-documents"
 ON storage.objects FOR INSERT
 WITH CHECK (bucket_id = 'owner-os-documents');
 
+
 -- ============================================================================
--- Migration 04/33: 004_seed_data.sql
+-- Migration 04/34: 004_seed_data.sql
 -- ============================================================================
 
 -- ===================================================
 -- Migration 004: Default Initial Seed Data
 -- ===================================================
+-- Intentionally empty. This previously seeded dummy/demo business
+-- records (fake orders, job cards, invoices, etc.) into every fresh
+-- database. Removed so production and client deployments start clean.
+-- The frontend already falls back to a default company profile label
+-- ("GuruOm Industries LLP") when none exists in the DB, so no seed
+-- row is required for that either.
 
--- Company Profile
-INSERT INTO public.company_profile (id, legal_name, address, phone, email, gstin, pan, state, state_code)
-VALUES (
-  'main',
-  'GuruOm Industries LLP',
-  'Sr No 15/2, Mataji Logistic Park, Behind Tilakraj CNG Pump, Urali Devachi, Pune 412308, India',
-  '+91 9763 969 798',
-  'contact@guruom.in',
-  '27AABCG1234F1Z5',
-  'AABCG1234F',
-  'Maharashtra',
-  '27'
-) ON CONFLICT (id) DO UPDATE SET
-  legal_name = EXCLUDED.legal_name,
-  address = EXCLUDED.address,
-  phone = EXCLUDED.phone,
-  email = EXCLUDED.email,
-  gstin = EXCLUDED.gstin,
-  pan = EXCLUDED.pan,
-  state = EXCLUDED.state,
-  state_code = EXCLUDED.state_code;
-
--- Initial Profiles (Matching System Users)
-INSERT INTO public.profiles (full_name, email, role, department, phone, status, last_login)
-VALUES 
-  ('Pramod Parshi', 'user@guruom.in', 'SUPER ADMIN', 'Executive Management', '+91 98250 12345', 'ACTIVE', NOW()::text),
-  ('Rajesh Sharma', 'operator@guruom.in', 'OPERATOR', 'CNC Operations', '+91 98250 23456', 'ACTIVE', NOW()::text),
-  ('Anita Patel', 'qc@guruom.in', 'QC_MANAGER', 'Quality Assurance', '+91 98250 34567', 'ACTIVE', NOW()::text),
-  ('Vikram Singh', 'dispatch@guruom.in', 'DISPATCH_CLERK', 'Logistics & Dispatch', '+91 98250 45678', 'ACTIVE', NOW()::text),
-  ('Suresh Mehta', 'finance@guruom.in', 'FINANCE_MANAGER', 'Accounts & Finance', '+91 98250 56789', 'ACTIVE', NOW()::text)
-ON CONFLICT (email) DO NOTHING;
-
--- Initial Masters Items
-INSERT INTO public.masters (id, code, part_no, description, unit, hsn_code, reorder_level, store_location, is_finished_goods, sale_rate, purchase_rate)
-VALUES
-  ('m-1', '00000001', '90812440', 'LOWER HOUSING FLANGE', 'NOS', '8483', 25, 'BAY-A1', true, 240, 180),
-  ('m-2', '00000002', '94900181', 'UPPER BLOCK', 'NOS', '8483', 50, 'BAY-A2', true, 123, 90),
-  ('m-3', '00000003', '90812450', 'TOWER PIVOTING SECTION', 'NOS', '8483', 30, 'BAY-B1', true, 123, 85),
-  ('m-4', '00000004', '90812460', 'ROTARY GEAR ADAPTER', 'NOS', '8483', 15, 'BAY-C1', true, 450, 320)
-ON CONFLICT (code) DO NOTHING;
-
--- Initial Stock Items
-INSERT INTO public.stock_items (id, code, description, on_hand, reserved, available, demand, reorder_level, shortage, unit, status)
-VALUES
-  ('stk-1', '00000001', 'LOWER HOUSING FLANGE', 150, 40, 110, 50, 25, 0, 'NOS', 'OK'),
-  ('stk-2', '00000002', 'UPPER BLOCK', 80, 80, 0, 123, 50, 43, 'NOS', 'SHORTAGE'),
-  ('stk-3', '00000003', 'TOWER PIVOTING SECTION', 200, 120, 80, 123, 30, 0, 'NOS', 'OK'),
-  ('stk-4', '00000004', 'ROTARY GEAR ADAPTER', 10, 10, 0, 35, 15, 25, 'NOS', 'CRITICAL')
-ON CONFLICT (code) DO NOTHING;
-
--- Initial Shortage Items
-INSERT INTO public.shortage_items (id, code, description, required_qty, available_qty, deficit, unit)
-VALUES
-  ('short-1', '00000002', 'UPPER BLOCK', 123, 80, 43, 'NOS'),
-  ('short-2', '00000004', 'ROTARY GEAR ADAPTER', 35, 10, 25, 'NOS')
-ON CONFLICT (id) DO NOTHING;
-
--- Initial Customer Orders
-INSERT INTO public.customer_orders (id, po_no, customer_name, po_date, delivery_date, status, progress_step, gross_amount, tax_category, remark)
-VALUES
-  ('ord-1', 'neo123', 'Cust', '2026-07-23', '2026-07-25', 'PARTIALLY_DISPATCHED', 3, 15129.00, 'GST 18%', 'Priority dispatch requested for Tower Pivoting Section batch'),
-  ('ord-2', 'asdads123123', 'Cust', '2026-07-22', '2026-07-25', 'CLOSED', 6, 15129.00, 'GST 18%', 'Annual contract order fulfilled')
-ON CONFLICT (id) DO NOTHING;
-
--- Initial Order Line Items
-INSERT INTO public.order_line_items (id, order_id, item_code, item_description, cust_part_no, order_qty, unit, dispatched_qty, pending_qty, rate)
-VALUES
-  ('line-1', 'ord-1', '00000003', 'TOWER PIVOTING SECTION', '90812450', 123, 'NOS', 3, 120, 123),
-  ('line-2', 'ord-2', '00000002', 'UPPER BLOCK', '94900181', 123, 'NOS', 123, 0, 123)
-ON CONFLICT (id) DO NOTHING;
-
--- Initial Job Cards
-INSERT INTO public.job_cards (id, job_no, order_po, part_code, part_description, order_status, qty, machine, target_date, status)
-VALUES
-  ('jc-1', 'JC/0002/26-27', 'neo123', '00000003', 'TOWER PIVOTING SECTION', 'PARTIALLY_DISPATCHED', 123.00, 'VMC-01 CNC CENTRE', '2026-07-23', 'COMPLETED'),
-  ('jc-2', 'JC/0001/26-27', 'asdads123123', '00000002', 'UPPER BLOCK', 'CLOSED', 123.00, 'LMW VMC 850', '2026-07-25', 'COMPLETED')
-ON CONFLICT (id) DO NOTHING;
-
--- Initial Finished Goods
-INSERT INTO public.finished_goods (id, order_po, part_code, part_description, pdi_passed_qty, physically_held_qty, dispatched_qty, variance)
-VALUES
-  ('fg-1', 'neo123', '00000003', 'TOWER PIVOTING SECTION', 123, 120, 3, 0),
-  ('fg-2', 'asdads123123', '00000002', 'UPPER BLOCK', 123, 0, 123, 0)
-ON CONFLICT (id) DO NOTHING;
-
--- Initial Outwork Sendouts
-INSERT INTO public.outwork_sendouts (id, send_out_id, vendor_name, process, sent_qty, received_qty, rejected_qty, expected_date, status)
-VALUES
-  ('ow-1', 'OW-2026-001', 'Maruti Plating Works', 'Zinc Nickel Plating 12 Micron', 120, 120, 0, '2026-07-21', 'COMPLETED')
-ON CONFLICT (id) DO NOTHING;
-
--- Initial Production Logs
-INSERT INTO public.production_logs (id, item_code, description, job_no, step_no, operation_name, qty_done, logged_timestamp)
-VALUES
-  ('pl-1', '00000003', 'TOWER PIVOTING SECTION', 'JC/0002/26-27', 1, 'CNC Turning & Facing', 123, '22/07/2026, 04:30:00 pm')
-ON CONFLICT (id) DO NOTHING;
-
--- Initial QC Inspections
-INSERT INTO public.qc_inspections (id, job_no, order_po, part_code, part_description, qty, job_status, qc_status, inspector_notes, inspected_at)
-VALUES
-  ('qc-1', 'JC/0002/26-27', 'neo123', '00000003', 'TOWER PIVOTING SECTION', 123, 'COMPLETED', 'PASS', '100% CMM dimensional check verified within tolerance limits.', '2026-07-22T10:00:00Z')
-ON CONFLICT (id) DO NOTHING;
-
--- Initial PDI Inspections
-INSERT INTO public.pdi_inspections (id, job_no, order_po, part_code, part_description, qty, pdi_status, certificate_no, report_date)
-VALUES
-  ('pdi-1', 'JC/0002/26-27', 'neo123', '00000003', 'TOWER PIVOTING SECTION', 123, 'PASS', 'PDI-2026-9012', '2026-07-22')
-ON CONFLICT (id) DO NOTHING;
-
--- Initial Dispatch Challans
-INSERT INTO public.dispatch_challans (id, challan_no, order_po, status, date, transporter, vehicle_no, lines_count)
-VALUES
-  ('chl-1', 'CHL/0002/26-27', 'neo123', 'DELIVERED', '2026-07-22', 'VRL Logistics', 'GJ-03-BW-9912', 1),
-  ('chl-2', 'CHL/0001/26-27', 'asdads123123', 'DELIVERED', '2026-07-20', 'TCI Express', 'GJ-03-AX-1024', 1)
-ON CONFLICT (id) DO NOTHING;
-
--- Initial Customer Invoices
-INSERT INTO public.customer_invoices (id, invoice_no, customer_name, order_po, challan_no, status, date, due_date, total_amount, paid_amount, balance_amount)
-VALUES
-  ('inv-1', 'INV/2026/0042', 'Cust', 'neo123', 'CHL/0002/26-27', 'PARTIAL', '2026-07-22', '2026-08-22', 17852.22, 5000.00, 12852.22),
-  ('inv-2', 'INV/2026/0039', 'Cust', 'asdads123123', 'CHL/0001/26-27', 'PAID', '2026-07-20', '2026-08-20', 17852.22, 17852.22, 0.00)
-ON CONFLICT (id) DO NOTHING;
-
--- Initial Vendor Bills
-INSERT INTO public.vendor_bills (id, bill_no, vendor_name, po_no, status, date, due_date, amount, paid_amount, balance_amount)
-VALUES
-  ('vb-1', 'BILL-2026-881', 'Maruti Plating Works', 'PO-OUT-009', 'OPEN', '2026-07-21', '2026-08-21', 14400.00, 0.00, 14400.00)
-ON CONFLICT (id) DO NOTHING;
-
--- Initial Pending Approvals
-INSERT INTO public.pending_approvals (id, title, type, requested_by, timestamp, amount, details)
-VALUES
-  ('app-1', 'Discount Override PO #neo123', 'DISCOUNT_OVERRIDE', 'Sales Manager', '2026-07-23 11:20 AM', 2500, 'Special 5% strategic discount requested for bulk batch order')
-ON CONFLICT (id) DO NOTHING;
-
--- Initial Audit Logs
-INSERT INTO public.audit_logs (id, when_time, user_name, entity, action, details)
-VALUES
-  ('log-1', '23/07/2026, 11:30:00 am', 'Pramod Parshi', 'order', 'create', 'Created PO neo123 for customer Cust'),
-  ('log-2', '22/07/2026, 04:35:00 pm', 'Anita Patel', 'qc_inspection', 'update', 'QC #qc-1 • Status: PASS'),
-  ('log-3', '22/07/2026, 05:10:00 pm', 'Vikram Singh', 'dispatch', 'issue_challan', 'Challan #CHL/0002/26-27 issued for PO neo123')
-ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
--- Migration 05/33: 005_notification_system.sql
+-- Migration 05/34: 005_notification_system.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -736,8 +603,9 @@ INSERT INTO public.notification_recipients (notification_rule_id, recipient_type
 ('approval_required', 'ROLE', 'SUPER ADMIN', 'admin@guruom.in', 'Super Admin', true)
 ON CONFLICT DO NOTHING;
 
+
 -- ============================================================================
--- Migration 06/33: 006_customer_vendor_machine_masters.sql
+-- Migration 06/34: 006_customer_vendor_machine_masters.sql
 -- ============================================================================
 
 -- ===================================================
@@ -854,8 +722,9 @@ EXCEPTION WHEN OTHERS THEN
   NULL;
 END $$;
 
+
 -- ============================================================================
--- Migration 07/33: 007_custom_auth_users_and_sessions.sql
+-- Migration 07/34: 007_custom_auth_users_and_sessions.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -913,15 +782,11 @@ CREATE POLICY "Service role full access on users" ON public.users FOR ALL USING 
 DROP POLICY IF EXISTS "Service role full access on sessions" ON public.sessions;
 CREATE POLICY "Service role full access on sessions" ON public.sessions FOR ALL USING (true);
 
--- 5. BACKFILL USERS FROM EXISTING PROFILES & SEED DEMO ACCOUNTS
--- Note: Standard temporary password hash for demo accounts ('1234567890')
--- Generated via Argon2id: $argon2id$v=19$m=65536,t=3,p=4$ZGVtb19zYWx0XzEyMzQ1Ng$kU096h4VfW9P3B3F+n1X9V3E2B6Q9J1X0E2B6Q9J1X0
--- is_temporary_password = true flags accounts for password change on production launch.
+-- 5. BACKFILL USERS FROM EXISTING PROFILES
+-- No hardcoded accounts are seeded here. Real users must be created explicitly
+-- (via an admin-invite flow / seed script that is NOT committed to the repo).
 
 DO $$
-DECLARE
-    -- Standard demo password hash for '1234567890' (argon2id)
-    v_demo_hash TEXT := '$argon2id$v=19$m=65536,p=4,t=3$VgHcmjAIFdBPsWEkHYiakw$b10tFs2HPJOw+wKzZHy9zmayWA34zywOYLZOiqCIqcI';
 BEGIN
     -- Backfill from public.profiles if exists
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'profiles') THEN
@@ -941,13 +806,15 @@ BEGIN
         SELECT 
             COALESCE(p.id, gen_random_uuid()),
             LOWER(p.email),
-            v_demo_hash,
+            -- No password is known for pre-existing profiles rows; force a reset
+            -- instead of assigning a shared/guessable hash.
+            '!' || encode(gen_random_bytes(32), 'hex'),
             COALESCE(p.full_name, split_part(p.email, '@', 1)),
             COALESCE(p.role, 'OPERATOR'),
             p.department,
             p.phone,
             COALESCE(p.status, 'ACTIVE'),
-            true, -- Flagged as temporary password
+            true, -- Flagged as temporary password -> must reset before login
             COALESCE(p.created_at, NOW()),
             COALESCE(p.updated_at, NOW())
         FROM public.profiles p
@@ -959,32 +826,11 @@ BEGIN
             status = EXCLUDED.status,
             updated_at = NOW();
     END IF;
-
-    -- Guarantee baseline demo users exist with accurate roles
-    INSERT INTO public.users (email, password_hash, full_name, role, department, phone, status, is_temporary_password) VALUES
-    ('user@guruom.in', v_demo_hash, 'Pramod Parshi (Founder & CEO)', 'SUPER ADMIN', 'Executive Management', '+91 98250 12345', 'ACTIVE', true),
-    ('admin@guruom.in', v_demo_hash, 'System Super Admin', 'SUPER ADMIN', 'Executive Management', '+91 98250 12345', 'ACTIVE', true),
-    ('rohan.deshpande@example.com', v_demo_hash, 'Rohan Deshpande', 'SUPER ADMIN', 'Executive Management', '+91 98220 99001', 'ACTIVE', true),
-    ('sachin@example.com', v_demo_hash, 'Sachin Gharbude', 'SUPER ADMIN', 'Plant Operations Admin', '+91 98220 99010', 'ACTIVE', true),
-    ('operator@guruom.in', v_demo_hash, 'Rajesh Sharma', 'OPERATOR', 'CNC Operations', '+91 98250 23456', 'ACTIVE', true),
-    ('suresh.yadav@example.com', v_demo_hash, 'Suresh Yadav', 'OPERATOR', 'Shop Floor Production', '+91 98220 99003', 'ACTIVE', true),
-    ('qc@guruom.in', v_demo_hash, 'Anita Patel', 'QC_MANAGER', 'Quality Assurance', '+91 98250 34567', 'ACTIVE', true),
-    ('snehal.bhosale@example.com', v_demo_hash, 'Snehal Bhosale', 'QC_MANAGER', 'Quality Inspection', '+91 98220 99006', 'ACTIVE', true),
-    ('dispatch@guruom.in', v_demo_hash, 'Vikram Singh', 'DISPATCH_CLERK', 'Logistics & Dispatch', '+91 98250 45678', 'ACTIVE', true),
-    ('amit.salunkhe@example.com', v_demo_hash, 'Amit Salunkhe', 'DISPATCH_CLERK', 'Logistics & Dispatch', '+91 98220 99007', 'ACTIVE', true),
-    ('finance@guruom.in', v_demo_hash, 'Suresh Mehta', 'FINANCE_MANAGER', 'Accounts & Finance', '+91 98250 56789', 'ACTIVE', true),
-    ('meenal.joshi@example.com', v_demo_hash, 'Meenal Joshi', 'FINANCE_MANAGER', 'Accounts & Billing', '+91 98220 99009', 'ACTIVE', true)
-    ON CONFLICT (email) DO UPDATE SET
-        full_name = EXCLUDED.full_name,
-        role = EXCLUDED.role,
-        department = EXCLUDED.department,
-        phone = EXCLUDED.phone,
-        status = EXCLUDED.status,
-        updated_at = NOW();
 END $$;
 
+
 -- ============================================================================
--- Migration 08/33: 008_active_sessions_and_security_events.sql
+-- Migration 08/34: 008_active_sessions_and_security_events.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -1052,8 +898,9 @@ ALTER TABLE public.security_events ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Service role full access on security_events" ON public.security_events;
 CREATE POLICY "Service role full access on security_events" ON public.security_events FOR ALL USING (true);
 
+
 -- ============================================================================
--- Migration 09/33: 008_grn_bom_purchasing.sql
+-- Migration 09/34: 009_grn_bom_purchasing.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -1180,8 +1027,9 @@ CREATE POLICY "Service role full access on bom_items" ON public.bom_items FOR AL
 CREATE POLICY "Service role full access on purchase_orders" ON public.purchase_orders FOR ALL USING (true);
 CREATE POLICY "Service role full access on purchase_order_items" ON public.purchase_order_items FOR ALL USING (true);
 
+
 -- ============================================================================
--- Migration 10/33: 009_attachments_and_storage.sql
+-- Migration 10/34: 010_attachments_and_storage.sql
 -- ============================================================================
 
 -- ===================================================
@@ -1250,8 +1098,9 @@ ALTER TABLE public.customer_invoices
 ADD COLUMN IF NOT EXISTS pdf_status TEXT DEFAULT 'pending_pdf',
 ADD COLUMN IF NOT EXISTS attachment_id UUID REFERENCES public.attachments(id) ON DELETE SET NULL;
 
+
 -- ============================================================================
--- Migration 11/33: 010_append_only_audit_logs.sql
+-- Migration 11/34: 011_append_only_audit_logs.sql
 -- ============================================================================
 
 -- ===================================================
@@ -1312,8 +1161,9 @@ WITH CHECK (true);
 
 -- No UPDATE or DELETE policies exist — with RLS enabled and no matching policy, updates and deletes are denied by default.
 
+
 -- ============================================================================
--- Migration 12/33: 011_ledger_inventory_movements.sql
+-- Migration 12/34: 012_ledger_inventory_movements.sql
 -- ============================================================================
 
 -- ===================================================
@@ -1417,8 +1267,9 @@ WHERE NOT EXISTS (
   SELECT 1 FROM public.inventory_movements im WHERE im.item_code = s.code
 );
 
+
 -- ============================================================================
--- Migration 13/33: 012_master_modules_specification.sql
+-- Migration 13/34: 013_master_modules_specification.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -1675,8 +1526,9 @@ EXCEPTION WHEN OTHERS THEN
   NULL;
 END $$;
 
+
 -- ============================================================================
--- Migration 14/33: 013_rbac_matrix_and_escalation.sql
+-- Migration 14/34: 014_rbac_matrix_and_escalation.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -1919,8 +1771,9 @@ DROP POLICY IF EXISTS "pending_approvals_all_policy" ON public.pending_approvals
 CREATE POLICY "pending_approvals_all_policy" ON public.pending_approvals
     FOR ALL TO authenticated, anon USING (true);
 
+
 -- ============================================================================
--- Migration 15/33: 014_order_state_machine_and_gates.sql
+-- Migration 15/34: 015_order_state_machine_and_gates.sql
 -- ============================================================================
 
 -- Migration 014: Sales & Order Management State Machine, Hard Gates, and Preconditions
@@ -2024,8 +1877,9 @@ ON CONFLICT (id) DO UPDATE SET
   status = EXCLUDED.status,
   defect_description = EXCLUDED.defect_description;
 
+
 -- ============================================================================
--- Migration 16/33: 015_procurement_subcontracting_ledger.sql
+-- Migration 16/34: 016_procurement_subcontracting_ledger.sql
 -- ============================================================================
 
 -- Migration 015: Standard Procurement and Job-Work Subcontracting with 3-Way Match & Vendor Scorecards
@@ -2200,8 +2054,9 @@ VALUES
   ('sub-02', 'GP-OUT-2026-092', 'JC/0002/26-27', '00000002', 'HARDENED BUSH 45X60X80', 'Bright Electroplaters Ltd', 'ZINC_PLATING', 150, 'NOS', '2026-08-12', '2026-08-18', 'OUT_FOR_JOBWORK', false, 0, 'MH-14-AB-9821', 'Direct Pickup', 'PPC Planner Suresh')
 ON CONFLICT (id) DO NOTHING;
 
+
 -- ============================================================================
--- Migration 17/33: 016_production_job_cards_route_cards.sql
+-- Migration 17/34: 017_production_job_cards_route_cards.sql
 -- ============================================================================
 
 -- Migration 016: Route Card Templates, Job Card Operations, Mandatory QC Material Issue, Operator Certifications, and NCR Disposition System
@@ -2306,8 +2161,9 @@ VALUES
   ('ec-05', 'Quality Inspector Rajesh', 'EMP-005', 'Quality Inspector Level 2', '2028-12-31')
 ON CONFLICT (id) DO NOTHING;
 
+
 -- ============================================================================
--- Migration 18/33: 017_statutory_accounting_invoicing_costing.sql
+-- Migration 18/34: 018_statutory_accounting_invoicing_costing.sql
 -- ============================================================================
 
 -- Migration 017: Statutory Invoicing, GSTIN/HSN Validation, Dynamic E-Invoicing Threshold, TDS Sections (194C/194Q), Atomic Document Sequences, and Order-Wise Costing
@@ -2401,8 +2257,9 @@ VALUES
   ('JC', 'JC', '2526', 110)
 ON CONFLICT (series_code, financial_year) DO NOTHING;
 
+
 -- ============================================================================
--- Migration 19/33: 018_master_tables_complete.sql
+-- Migration 19/34: 019_master_tables_complete.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -2721,8 +2578,9 @@ EXCEPTION WHEN OTHERS THEN
   NULL;
 END $$;
 
+
 -- ============================================================================
--- Migration 20/33: 018_persistence_convergence.sql
+-- Migration 20/34: 020_persistence_convergence.sql
 -- ============================================================================
 
 -- Owner OS: persistence convergence (generated from migrations 001-017)
@@ -4365,8 +4223,9 @@ ALTER TABLE public.finished_goods ADD COLUMN IF NOT EXISTS created_at TIMESTAMPT
 -- Refresh the PostgREST schema cache so new columns are visible immediately
 NOTIFY pgrst, 'reload schema';
 
+
 -- ============================================================================
--- Migration 21/33: 019_bom_grn_purchasing_route_cards.sql
+-- Migration 21/34: 021_bom_grn_purchasing_route_cards.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -4606,8 +4465,9 @@ CREATE POLICY "Open access on employee_certifications" ON public.employee_certif
 CREATE POLICY "Open access on job_cards"               ON public.job_cards               FOR ALL USING (true);
 CREATE POLICY "Open access on job_card_operations"     ON public.job_card_operations     FOR ALL USING (true);
 
+
 -- ============================================================================
--- Migration 22/33: 020_customer_orders_lifecycle_fields.sql
+-- Migration 22/34: 022_customer_orders_lifecycle_fields.sql
 -- ============================================================================
 
 -- ===================================================
@@ -4666,8 +4526,9 @@ ALTER TABLE public.customer_orders ADD COLUMN IF NOT EXISTS dispatched_at TEXT;
 -- Reload PostgREST schema cache so all new columns are immediately visible
 NOTIFY pgrst, 'reload schema';
 
+
 -- ============================================================================
--- Migration 23/33: 021_relax_user_role_check.sql
+-- Migration 23/34: 023_relax_user_role_check.sql
 -- ============================================================================
 
 -- Relax the role check constraint on users table to allow canonical roles from RBAC_ROLE_MATRIX
@@ -4687,8 +4548,9 @@ BEGIN
     END LOOP;
 END $$;
 
+
 -- ============================================================================
--- Migration 24/33: 022_orders_fixes.sql
+-- Migration 24/34: 024_orders_fixes.sql
 -- ============================================================================
 
 -- 1. Add is_test column
@@ -4762,8 +4624,9 @@ BEGIN
 END;
 $$;
 
+
 -- ============================================================================
--- Migration 25/33: 023_remove_test_orders.sql
+-- Migration 25/34: 025_remove_test_orders.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -4839,8 +4702,9 @@ BEGIN
 END;
 $$;
 
+
 -- ============================================================================
--- Migration 26/33: 024_fix_security_definer_view.sql
+-- Migration 26/34: 026_fix_security_definer_view.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -4851,8 +4715,9 @@ $$;
 
 ALTER VIEW public.customer_overdue_summary SET (security_invoker = true);
 
+
 -- ============================================================================
--- Migration 27/33: 025_server_admin_and_granular_rbac.sql
+-- Migration 27/34: 027_server_admin_and_granular_rbac.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -5073,8 +4938,9 @@ JOIN public.permissions p ON (
 )
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
+
 -- ============================================================================
--- Migration 28/33: 026_concurrency_safe_master_sequences.sql
+-- Migration 28/34: 028_concurrency_safe_master_sequences.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -5190,8 +5056,9 @@ VALUES
   ('USER', 'USR', 0, 4, NOW())
 ON CONFLICT (entity_type, prefix) DO NOTHING;
 
+
 -- ============================================================================
--- Migration 29/33: 027_inventory_reservations_lifecycle.sql
+-- Migration 29/34: 029_inventory_reservations_lifecycle.sql
 -- ============================================================================
 
 -- ==============================================================================
@@ -5247,8 +5114,9 @@ BEGIN
   END IF;
 END $$;
 
+
 -- ============================================================================
--- Migration 30/33: 028_atomic_inventory_consumption.sql
+-- Migration 30/34: 030_atomic_inventory_consumption.sql
 -- ============================================================================
 
 -- ==============================================================================
@@ -5423,9 +5291,8 @@ END;
 $$;
 
 
-
 -- ============================================================================
--- Migration 31/33: 029_bom_route_card_item_foreign_keys.sql
+-- Migration 31/34: 031_bom_route_card_item_foreign_keys.sql
 -- ============================================================================
 
 -- ============================================================
@@ -5439,13 +5306,14 @@ $$;
 
 -- Step 1: Reconcile legacy seed items in masters before adding constraints
 INSERT INTO public.masters (
+    id,
     code, name, description, part_no, hsn_code, reorder_level, 
     store_location, default_warehouse, is_finished_goods, sale_rate, 
     purchase_rate, item_type, unit, uom, status
 )
 VALUES 
-  ('00000001', 'MAIN SPINDLE HOUSING 120MM', 'Main spindle housing 120mm per drawing', '00000001', '8483', 10, 'Finished Goods Store', 'Finished Goods Store', true, 0, 0, 'Finished Good', 'Nos', 'Nos', 'Active'),
-  ('00000002', 'HARDENED BUSH 45X60X80', 'Hardened bush 45x60x80 per drawing', '00000002', '8483', 10, 'Finished Goods Store', 'Finished Goods Store', false, 0, 0, 'Semi-Finished', 'Nos', 'Nos', 'Active')
+  (gen_random_uuid(),'00000001', 'MAIN SPINDLE HOUSING 120MM', 'Main spindle housing 120mm per drawing', '00000001', '8483', 10, 'Finished Goods Store', 'Finished Goods Store', true, 0, 0, 'Finished Good', 'Nos', 'Nos', 'Active'),
+  (gen_random_uuid(),'00000002', 'HARDENED BUSH 45X60X80', 'Hardened bush 45x60x80 per drawing', '00000002', '8483', 10, 'Finished Goods Store', 'Finished Goods Store', false, 0, 0, 'Semi-Finished', 'Nos', 'Nos', 'Active')
 ON CONFLICT (code) DO NOTHING;
 
 -- Step 2: Auto-backfill any missing legacy BOM parent part codes into masters
@@ -5575,8 +5443,9 @@ END $$;
 CREATE INDEX IF NOT EXISTS idx_bom_items_component_code ON public.bom_items(component_code);
 CREATE INDEX IF NOT EXISTS idx_route_card_templates_part_code ON public.route_card_templates(part_code);
 
+
 -- ============================================================================
--- Migration 32/33: 030_prevent_in_use_bom_deletion.sql
+-- Migration 32/34: 032_prevent_in_use_bom_deletion.sql
 -- ============================================================================
 
 -- ============================================================
@@ -5637,8 +5506,9 @@ BEFORE DELETE ON public.bill_of_materials
 FOR EACH ROW
 EXECUTE FUNCTION public.check_bom_deletion_safety();
 
+
 -- ============================================================================
--- Migration 33/33: 031_job_card_material_consumption.sql
+-- Migration 33/34: 033_job_card_material_consumption.sql
 -- ============================================================================
 
 -- ==============================================================================
@@ -6004,6 +5874,10 @@ END;
 $$;
 
 -- ============================================================================
+-- Migration 34/34: 034_job_number_concurrency.sql
+-- ============================================================================
+
+-- ============================================================================
 -- Migration: 032_job_number_concurrency.sql
 -- Description: Concurrency-Safe Job Number Counter Table, Atomic Allocation
 --              Function, and Safe Sequence Initialization for Job Cards.
@@ -6048,7 +5922,7 @@ BEGIN
     updated_at = NOW()
   RETURNING current_value INTO v_next_num;
 
-  v_padded := LPAD(v_next_num::TEXT, 4, '0');
+  v_padded := CASE WHEN LENGTH(v_next_num::TEXT) < 4 THEN LPAD(v_next_num::TEXT, 4, '0') ELSE v_next_num::TEXT END;
   RETURN v_clean_prefix || '/' || v_padded || '/' || v_clean_fy;
 END;
 $$ LANGUAGE plpgsql;
@@ -6067,3 +5941,4 @@ FROM public.job_cards
 WHERE job_no ~ '^JC/[0-9]+/'
 ON CONFLICT (prefix, fiscal_year)
 DO UPDATE SET current_value = GREATEST(public.job_number_counters.current_value, EXCLUDED.current_value);
+

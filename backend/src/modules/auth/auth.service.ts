@@ -8,6 +8,8 @@ import { RiskService, RiskEvaluationResult, PriorSessionData } from './risk.serv
 import { notificationsService } from '../notifications/notifications.service';
 import { logAudit } from '../../services/auditLog';
 import { permissionService } from '../../services/permission.service';
+import { normalizeRole } from '../../../../src/utils/rbacMatrix';
+import { auditService } from '../audit/audit.service';
 
 export interface UserRecord {
   id: string;
@@ -1373,6 +1375,10 @@ export class AuthService {
     if (normRole === 'ServerAdmin' || (params.role && params.role.trim().toLowerCase() === 'serveradmin')) {
       throw new Error('The ServerAdmin role cannot be created via the user API. It is strictly provisionable via CLI seed script only.');
     }
+
+    const userId = crypto.randomUUID();
+    const passwordHash = await hashPassword(rawPassword);
+    const isTemp = params.requirePasswordChangeFirstLogin ?? false;
 
     const newUser: UserRecord = {
       id: userId,

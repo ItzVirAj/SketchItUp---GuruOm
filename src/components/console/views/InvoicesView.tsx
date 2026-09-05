@@ -38,6 +38,7 @@ import {
   CustomerMaster, 
   MasterItem 
 } from '../../../types/console';
+import { useCtaPermission } from '../../../hooks/useCtaPermission';
 import { 
   calculateGstTaxSplit, 
   getCurrentFinancialYear, 
@@ -519,7 +520,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
             </div>
           </div>
 
-          {canCreateInvoice && (
+          {useCtaPermission('GENERATE_INVOICE') && (
             <button
               type="button"
               onClick={() => {
@@ -779,7 +780,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                     </button>
                   )}
 
-                  {inv.status !== 'PAID' && inv.status !== 'DRAFT' && Number(inv.balanceAmount || inv.totalAmount) > 0 && (
+                  {inv.status !== 'PAID' && inv.status !== 'DRAFT' && Number(inv.balanceAmount || inv.totalAmount) > 0 && useCtaPermission('RECORD_PAYMENT') && (
                     <button
                       onClick={() => handleOpenPaymentModal(inv)}
                       className="flex-1 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20 cursor-pointer active:scale-[0.98]"
@@ -960,7 +961,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                             <span>Issue</span>
                           </button>
                         )}
-                        {inv.status !== 'PAID' && inv.status !== 'DRAFT' && Number(inv.balanceAmount || inv.totalAmount) > 0 && (
+                        {inv.status !== 'PAID' && inv.status !== 'DRAFT' && Number(inv.balanceAmount || inv.totalAmount) > 0 && useCtaPermission('RECORD_PAYMENT') && (
                           <button
                             onClick={() => handleOpenPaymentModal(inv)}
                             className="px-3.5 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-emerald-500/20 active:scale-95"
@@ -1458,15 +1459,17 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  form="payment-form"
-                  disabled={isSubmittingPayment || payAmount <= 0 || payAmount > balance}
-                  className="px-6 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-emerald-500/25 disabled:opacity-50 transition-all"
-                >
-                  <CreditCard className="w-4 h-4" />
-                  <span>{isSubmittingPayment ? 'Recording...' : `Settle ₹${payAmount.toLocaleString('en-IN')}`}</span>
-                </button>
+                {useCtaPermission('RECORD_PAYMENT') && (
+                  <button
+                    type="submit"
+                    form="payment-form"
+                    disabled={isSubmittingPayment || payAmount <= 0 || payAmount > balance}
+                    className="px-6 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-emerald-500/25 disabled:opacity-50 transition-all"
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    <span>{isSubmittingPayment ? 'Recording...' : `Settle ₹${payAmount.toLocaleString('en-IN')}`}</span>
+                  </button>
+                )}
               </div>
             </div>
           );

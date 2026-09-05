@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { DispatchChallan, CustomerOrder, DispatchChallanLine } from '../../../types/console';
 import { printElementById } from '../../../utils/printDocument';
+import { useCtaPermission } from '../../../hooks/useCtaPermission';
 
 interface ChallanDetailModalProps {
   isOpen: boolean;
@@ -56,6 +57,7 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
   onMarkDelivered,
   onNavigateToOrder
 }) => {
+  const canMarkInTransit = useCtaPermission('MARK_IN_TRANSIT');
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -821,15 +823,17 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
             </button>
 
             {isDraft ? (
-              <button
-                type="button"
-                disabled={isSaving}
-                onClick={handleAuthorizeDispatch}
-                className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-blue-600 hover:to-cyan-600 text-white font-bold text-xs font-mono flex items-center gap-1.5 shadow-lg shadow-cyan-500/25 cursor-pointer disabled:opacity-50"
-              >
-                <Truck className="w-4 h-4" />
-                <span>{isSaving ? 'Processing...' : 'Authorize & Mark In-Transit'}</span>
-              </button>
+              canMarkInTransit && (
+                <button
+                  type="button"
+                  disabled={isSaving}
+                  onClick={handleAuthorizeDispatch}
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-blue-600 hover:to-cyan-600 text-white font-bold text-xs font-mono flex items-center gap-1.5 shadow-lg shadow-cyan-500/25 cursor-pointer disabled:opacity-50"
+                >
+                  <Truck className="w-4 h-4" />
+                  <span>{isSaving ? 'Processing...' : 'Authorize & Mark In-Transit'}</span>
+                </button>
+              )
             ) : isDispatched ? (
               <div className="flex items-center gap-2">
                 <button

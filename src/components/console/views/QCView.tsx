@@ -21,6 +21,7 @@ import {
 import { QCInspection } from '../../../types/console';
 import { triggerQCFailure } from '../../../services/notificationService';
 import { useUrlModal } from '../../../hooks/useUrlModal';
+import { useCtaPermission } from '../../../hooks/useCtaPermission';
 
 interface QCViewProps {
   qcItems?: QCInspection[];
@@ -224,7 +225,7 @@ export const QCView: React.FC<QCViewProps> = ({
             </button>
 
             {/* Quick First Pending CTA */}
-            {pendingCount > 0 && (
+            {pendingCount > 0 && useCtaPermission('UPLOAD_QC_REPORT') && (
               <button
                 type="button"
                 onClick={() => {
@@ -600,17 +601,19 @@ export const QCView: React.FC<QCViewProps> = ({
                 )}
 
                 {/* Action CTA Button */}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openInspection(qc);
-                  }}
-                  className="w-full py-2 rounded-full bg-[#007AFF] hover:bg-[#0071E3] text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition-all active:scale-[0.98]"
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Audit QC Decision</span>
-                </button>
+                {useCtaPermission('UPLOAD_QC_REPORT') && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openInspection(qc);
+                    }}
+                    className="w-full py-2 rounded-full bg-[#007AFF] hover:bg-[#0071E3] text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition-all active:scale-[0.98]"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Audit QC Decision</span>
+                  </button>
+                )}
               </div>
             );
           })
@@ -702,14 +705,16 @@ export const QCView: React.FC<QCViewProps> = ({
                           {qc.inspectorNotes || <span className="text-slate-400/60 italic">Awaiting audit notes</span>}
                         </td>
                         <td className="py-3.5 px-5 text-right" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            type="button"
-                            onClick={() => openInspection(qc)}
-                            className="px-3.5 py-1 rounded-full bg-[#007AFF] hover:bg-[#0071E3] text-white text-xs font-semibold shadow-xs flex items-center gap-1 ml-auto transition-all active:scale-[0.98] cursor-pointer"
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>Audit Decision</span>
-                          </button>
+                          {useCtaPermission('UPLOAD_QC_REPORT') && (
+                            <button
+                              type="button"
+                              onClick={() => openInspection(qc)}
+                              className="px-3.5 py-1 rounded-full bg-[#007AFF] hover:bg-[#0071E3] text-white text-xs font-semibold shadow-xs flex items-center gap-1 ml-auto transition-all active:scale-[0.98] cursor-pointer"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Audit Decision</span>
+                            </button>
+                          )}
                         </td>
                       </tr>
                     );
@@ -803,14 +808,16 @@ export const QCView: React.FC<QCViewProps> = ({
 
                   <div className="pt-2 border-t border-slate-100 dark:border-white/5 flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
                     <span className="text-[11px] text-slate-400 font-medium">Click to audit</span>
-                    <button
-                      type="button"
-                      onClick={() => openInspection(qc)}
-                      className="px-3.5 py-1.5 rounded-full bg-[#007AFF] hover:bg-[#0071E3] text-white text-xs font-semibold shadow-xs flex items-center gap-1 transition-all active:scale-[0.98]"
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Audit QC</span>
-                    </button>
+                    {useCtaPermission('UPLOAD_QC_REPORT') && (
+                      <button
+                        type="button"
+                        onClick={() => openInspection(qc)}
+                        className="px-3.5 py-1.5 rounded-full bg-[#007AFF] hover:bg-[#0071E3] text-white text-xs font-semibold shadow-xs flex items-center gap-1 transition-all active:scale-[0.98]"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Audit QC</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -906,19 +913,21 @@ export const QCView: React.FC<QCViewProps> = ({
                 </label>
                 <div className="grid grid-cols-3 gap-2.5 text-xs">
                   {/* PASS */}
-                  <button
-                    type="button"
-                    onClick={() => setQcDecision('PASS')}
-                    className={`p-3 rounded-2xl border transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer ${
-                      qcDecision === 'PASS' 
-                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/40 shadow-xs ring-1 ring-emerald-500/30' 
-                        : isDarkMode ? 'bg-black/40 border-white/10 text-slate-400 hover:text-white hover:bg-white/5' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                    }`}
-                  >
-                    <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 stroke-[2]" />
-                    <span className="font-semibold text-xs">Pass QC</span>
-                    <span className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80 font-medium">Approved</span>
-                  </button>
+                  {useCtaPermission('MARK_READY_TO_DISPATCH') && (
+                    <button
+                      type="button"
+                      onClick={() => setQcDecision('PASS')}
+                      className={`p-3 rounded-2xl border transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer ${
+                        qcDecision === 'PASS' 
+                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/40 shadow-xs ring-1 ring-emerald-500/30' 
+                          : isDarkMode ? 'bg-black/40 border-white/10 text-slate-400 hover:text-white hover:bg-white/5' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 stroke-[2]" />
+                      <span className="font-semibold text-xs">Pass QC</span>
+                      <span className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80 font-medium">Approved</span>
+                    </button>
+                  )}
 
                   {/* QC HOLD */}
                   <button
@@ -936,19 +945,21 @@ export const QCView: React.FC<QCViewProps> = ({
                   </button>
 
                   {/* REJECT */}
-                  <button
-                    type="button"
-                    onClick={() => setQcDecision('REJECTED')}
-                    className={`p-3 rounded-2xl border transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer ${
-                      qcDecision === 'REJECTED' 
-                        ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/40 shadow-xs ring-1 ring-rose-500/30' 
-                        : isDarkMode ? 'bg-black/40 border-white/10 text-slate-400 hover:text-white hover:bg-white/5' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                    }`}
-                  >
-                    <XCircle className="w-5 h-5 text-rose-600 dark:text-rose-400 stroke-[2]" />
-                    <span className="font-semibold text-xs">Reject</span>
-                    <span className="text-[10px] text-rose-600/80 dark:text-rose-400/80 font-medium">Defect</span>
-                  </button>
+                  {useCtaPermission('RAISE_NCR_REWORK') && (
+                    <button
+                      type="button"
+                      onClick={() => setQcDecision('REJECTED')}
+                      className={`p-3 rounded-2xl border transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer ${
+                        qcDecision === 'REJECTED' 
+                          ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/40 shadow-xs ring-1 ring-rose-500/30' 
+                          : isDarkMode ? 'bg-black/40 border-white/10 text-slate-400 hover:text-white hover:bg-white/5' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <XCircle className="w-5 h-5 text-rose-600 dark:text-rose-400 stroke-[2]" />
+                      <span className="font-semibold text-xs">Reject</span>
+                      <span className="text-[10px] text-rose-600/80 dark:text-rose-400/80 font-medium">Defect</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -1021,18 +1032,20 @@ export const QCView: React.FC<QCViewProps> = ({
                 >
                   Cancel
                 </button>
-                <button 
-                  type="submit" 
-                  className={`flex-1 sm:flex-initial px-6 py-2 rounded-full text-white font-semibold text-xs cursor-pointer shadow-xs transition-all active:scale-[0.98] ${
-                    qcDecision === 'PASS'
-                      ? 'bg-emerald-600 hover:bg-emerald-500'
-                      : qcDecision === 'QC_HOLD'
-                      ? 'bg-amber-600 hover:bg-amber-500'
-                      : 'bg-rose-600 hover:bg-rose-500'
-                  }`}
-                >
-                  Save QC Audit ({qcDecision})
-                </button>
+                {useCtaPermission('UPLOAD_QC_REPORT') && (
+                  <button 
+                    type="submit" 
+                    className={`flex-1 sm:flex-initial px-6 py-2 rounded-full text-white font-semibold text-xs cursor-pointer shadow-xs transition-all active:scale-[0.98] ${
+                      qcDecision === 'PASS'
+                        ? 'bg-emerald-600 hover:bg-emerald-500'
+                        : qcDecision === 'QC_HOLD'
+                        ? 'bg-amber-600 hover:bg-amber-500'
+                        : 'bg-rose-600 hover:bg-rose-500'
+                    }`}
+                  >
+                    Save QC Audit ({qcDecision})
+                  </button>
+                )}
               </div>
             </form>
           </div>

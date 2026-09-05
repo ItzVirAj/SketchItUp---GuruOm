@@ -1,14 +1,16 @@
-import { Request, Response, NextFunction } from 'express';
-import { 
-  AccessLevel, 
-  SystemModule, 
+import { Request, Response, NextFunction, RequestHandler } from 'express';
+import {
+  AccessLevel,
+  SystemModule,
   ACCESS_LEVEL_RANK,
-  normalizeRole, 
-  getRoleModulePermission, 
+  normalizeRole,
+  getRoleModulePermission,
   hasMinimumAccess,
   isWithinApprovalLimit,
   isScopeRestrictedToEmployeeMaster,
-  isScopeRestrictedToOwnRecords
+  isScopeRestrictedToOwnRecords,
+  isRoleAuthorizedForCta,
+  CtaId
 } from '../../../src/utils/rbacMatrix';
 import { auditService } from '../modules/audit/audit.service';
 import { getDbClient } from '../config/database';
@@ -63,6 +65,29 @@ const PERMISSION_KEY_TIER: Record<string, { module: SystemModule; tier: AccessLe
 };
 
 /**
+ * Fetches user permission overrides from the database.
+ */
+export async function getUserPermissionOverrides(
+  userId: string
+): Promise<Array<{ permission_key: string; effect: string }>> {
+  try {
+    const db = getDbClient();
+    const { data: overrides, error } = await db
+      .from('user_permission_overrides')
+      .select('permission_key, effect')
+      .eq('user_id', userId);
+
+    if (error || !overrides) {
+      return [];
+    }
+    return overrides;
+  } catch (err) {
+    console.warn('[RBAC] Failed to fetch permission overrides:', err);
+    return [];
+  }
+}
+
+/**
  * Resolves the effective AccessLevel for a module by layering this user's
  * `user_permission_overrides` on top of the role-derived baseline.
  *
@@ -79,13 +104,9 @@ async function resolveEffectiveAccessLevel(
   baseline: AccessLevel
 ): Promise<AccessLevel> {
   try {
-    const db = getDbClient();
-    const { data: overrides, error } = await db
-      .from('user_permission_overrides')
-      .select('permission_key, effect')
-      .eq('user_id', userId);
+    const overrides = await getUserPermissionOverrides(userId);
 
-    if (error || !overrides || overrides.length === 0) {
+    if (overrides.length === 0) {
       return baseline;
     }
 
@@ -177,7 +198,8 @@ export function requirePermission(
     // role-based default before enforcing access. Without this, overrides
     // are persisted to the DB but silently have no effect on any module
     // guarded by requirePermission().
-    perm.accessLevel = await resolveEffectiveAccessLevel(req.user.userId, module, perm.accessLevel);
+    const userId = req.user.id || (req.user as any).userId;
+    perm.accessLevel = await resolveEffectiveAccessLevel(userId, module, perm.accessLevel);
 
     // Attach scope context for controllers/services
     req.rbacScope = {
@@ -188,7 +210,7 @@ export function requirePermission(
       isEmployeeOnly: perm.scopeRule === 'EMPLOYEE_MASTER_ONLY',
       canEditCommercial: perm.scopeRule !== 'NO_COMMERCIAL_EDIT',
       canPlaceClearQcHold: normRole === 'ServerAdmin' || normRole === 'Owner' || normRole === 'Admin (System)' || normRole === 'Quality Inspector',
-      userId: req.user.userId,
+      userId: userId,
       userName: (req.user as any).name || req.user.email
     };
 
@@ -241,7 +263,7 @@ export function requirePermission(
     if (perm.scopeRule === 'NO_COMMERCIAL_EDIT' && (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH')) {
       const body = req.body || {};
       const attemptedCommercialFields = ['totalAmount', 'unitPrice', 'discount', 'paymentTerms', 'creditDays', 'price', 'rate'].filter(f => body[f] !== undefined);
-      
+
       if (attemptedCommercialFields.length > 0) {
         await auditService.recordAuditLog({
           actorEmail: req.user.email,
@@ -261,7 +283,7 @@ export function requirePermission(
     }
 
     // 5. Monetary Approval Limit Check & Auto-Escalation Engine
-    const isApprovalAction = 
+    const isApprovalAction =
       options.checkApprovalLimit ||
       req.path.includes('/approve') ||
       req.body.status === 'APPROVED' ||
@@ -347,7 +369,7 @@ export function requirePermission(
         scopeRule: perm.scopeRule,
         approvalLimit: perm.approvalLimit
       }
-    }).catch(() => {});
+    }).catch(() => { });
 
     return next();
   };
@@ -374,6 +396,90 @@ export function requireRole(allowedRoles: string[]) {
       return res.status(403).json({
         error: 'Forbidden',
         message: `Access denied. Role "${normRole}" lacks permission for this endpoint. Required: [${allowedRoles.join(', ')}]`
+      });
+    }
+
+    return next();
+  };
+}
+
+/**
+ * CTA-level Permission Middleware Factory.
+ * Enforces per-CTA authorization checks supporting granular per-user overrides.
+ */
+export function requireCtaPermission(ctaId: CtaId): RequestHandler {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    // 1. Ensure user is authenticated & extract role and userId
+    if (!req.user) {
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Authentication required prior to permission verification.'
+      });
+    }
+
+    const rawRole = req.user.role || (req.user as any).userRole;
+    const normRole = normalizeRole(rawRole);
+    const userId = req.user.id || (req.user as any).userId;
+
+    // 2. Fetch user's permission overrides
+    const overrides = await getUserPermissionOverrides(userId);
+
+    // 3 & 4. Check for explicit CTA override: `cta:{ctaId}`
+    const ctaOverrideKey = `cta:${ctaId}`;
+    const override = overrides.find(o => o.permission_key === ctaOverrideKey);
+
+    if (override) {
+      // 3. Explicitly REVOKED → 403 Forbidden
+      if (override.effect === 'REVOKED') {
+        await auditService.recordAuditLog({
+          actorEmail: req.user.email,
+          actorRole: normRole,
+          action: 'RBAC_CTA_ACCESS_DENIED',
+          entityType: 'CTA',
+          entityId: ctaId,
+          details: `Access Denied: Action "${ctaId}" is explicitly revoked by user override.`,
+          metadata: { path: req.originalUrl, method: req.method, ctaId, effect: 'REVOKED' }
+        }).catch(err => console.warn('Audit logging error:', err));
+
+        return res.status(403).json({
+          error: 'Forbidden',
+          message: `Access denied. Action "${ctaId}" is revoked for this account.`
+        });
+      }
+
+      // 4. Explicitly GRANTED → next()
+      if (override.effect === 'GRANTED') {
+        await auditService.recordAuditLog({
+          actorEmail: req.user.email,
+          actorRole: normRole,
+          action: 'RBAC_CTA_OVERRIDE_GRANTED',
+          entityType: 'CTA',
+          entityId: ctaId,
+          details: `Authorized: Action "${ctaId}" permitted via user override.`,
+          metadata: { path: req.originalUrl, method: req.method, ctaId }
+        }).catch(() => {});
+
+        return next();
+      }
+    }
+
+    // 5. Fallback: Role matrix authorization check
+    const isAuthorized = isRoleAuthorizedForCta(normRole, ctaId);
+
+    if (!isAuthorized) {
+      await auditService.recordAuditLog({
+        actorEmail: req.user.email,
+        actorRole: normRole,
+        action: 'RBAC_CTA_ACCESS_DENIED',
+        entityType: 'CTA',
+        entityId: ctaId,
+        details: `Access Denied: Role "${normRole}" is not authorized for action "${ctaId}".`,
+        metadata: { path: req.originalUrl, method: req.method, ctaId, role: normRole }
+      }).catch(err => console.warn('Audit logging error:', err));
+
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: `Access denied. Role "${normRole}" lacks permission to perform action "${ctaId}".`
       });
     }
 

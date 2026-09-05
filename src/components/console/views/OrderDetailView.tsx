@@ -43,6 +43,7 @@ import {
 } from 'lucide-react';
 import { CustomerOrder, OrderStatus, QCInspection, PDIInspection, OrderLineItem, UserRole, VendorMaster, DispatchChallan, CustomerInvoice, OrderLineProgress } from '../../../types/console';
 import { isRoleAuthorizedForCta, getCtaPermission, CtaId, normalizeRole } from '../../../utils/rbacMatrix';
+import { useCtaPermission } from '../../../hooks/useCtaPermission';
 import { executeOrderStageTransition, validatePodRequired, validateOrderClosure, normalizeOrderState, CanonicalOrderState } from '../../../utils/orderStateMachine';
 import { runMaterialCheckForOrder, overrideMaterialCheckForOrder } from '../../../services/supabaseServices';
 import { getCurrentFinancialYear, formatDocumentNumber } from '../../../utils/statutoryAccountingEngine';
@@ -123,6 +124,12 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   const delayedModal = useUrlModal('mark-delayed');
   const challanDetailModal = useUrlModal('challan-detail');
   const overrideModal = useUrlModal('material-override');
+
+  // Permissions for CTAs (rules-of-hooks: declared unconditionally at top level)
+  const allowedDelivered = useCtaPermission('MARK_DELIVERED') || useCtaPermission('ORDER_RECEIVED');
+  const canMarkDelayed = useCtaPermission('MARK_DELAYED');
+  const canMarkOrderClosed = useCtaPermission('MARK_ORDER_CLOSED');
+  const canUploadPdiReport = useCtaPermission('UPLOAD_PDI_REPORT');
 
   const [selectedChallanDetail, setSelectedChallanDetail] = useState<DispatchChallan | null>(null);
 
@@ -1344,14 +1351,13 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           ownerRole: 'Lifecycle Complete'
         };
       } else {
-        const allowed = isRoleAuthorizedForCta(currentRole, 'MARK_ORDER_CLOSED');
+        if (!canMarkOrderClosed) return null;
         return {
           label: isConfirming ? 'Closing...' : 'Mark Order Closed (Stage 11a)',
           icon: CheckCircle2,
           buttonClass: 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white shadow-emerald-500/25',
           handler: handleCloseOrderAction,
-          disabled: isConfirming || !allowed,
-          disabledReason: !allowed ? 'Only Accounts/Finance or Owner can close orders' : undefined,
+          disabled: isConfirming,
           ownerRole: 'Finance Controller / Owner'
         };
       }
@@ -1675,24 +1681,28 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 const allowed = isRoleAuthorizedForCta(currentRole, 'CONFIRM_ORDER');
                 return (
                   <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
-                    <button
-                      onClick={openEditModal}
-                      className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-ui cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${isDarkMode
-                        ? 'border-indigo-500/40 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20'
-                        : 'border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
-                        }`}
-                    >
-                      <Edit3 className="w-3.5 h-3.5 shrink-0" />
-                      <span>Request Revision / Edit</span>
-                    </button>
-                    <button
-                      disabled={isConfirming || !allowed}
-                      onClick={handleConfirmAction}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white text-xs font-bold shadow-lg shadow-emerald-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                      <span>{isConfirming ? 'Confirming...' : 'Confirm Order'}</span>
-                    </button>
+                    {useCtaPermission('REQUEST_REVISION') && (
+                      <button
+                        onClick={openEditModal}
+                        className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-ui cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${isDarkMode
+                          ? 'border-indigo-500/40 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20'
+                          : 'border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
+                          }`}
+                      >
+                        <Edit3 className="w-3.5 h-3.5 shrink-0" />
+                        <span>Request Revision / Edit</span>
+                      </button>
+                    )}
+                    {useCtaPermission('CONFIRM_ORDER') && (
+                      <button
+                        disabled={isConfirming || !allowed}
+                        onClick={handleConfirmAction}
+                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white text-xs font-bold shadow-lg shadow-emerald-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                        <span>{isConfirming ? 'Confirming...' : 'Confirm Order'}</span>
+                      </button>
+                    )}
                     <button
                       onClick={() => onCancelOrder?.(order.id)}
                       className="px-3 py-2 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 text-xs font-bold cursor-pointer transition-ui flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
@@ -1715,24 +1725,28 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 n === 'APPROVED' || ['CONFIRMED', 'APPROVED', 'PO_APPROVED'].includes((o.status || '').toUpperCase()),
               renderActions: () => (
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
-                  <button
-                    onClick={openEditModal}
-                    className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-ui cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${isDarkMode
-                      ? 'border-purple-500/40 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20'
-                      : 'border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100'
-                      }`}
-                  >
-                    <Edit3 className="w-3.5 h-3.5 shrink-0" />
-                    <span>Raise Change Order</span>
-                  </button>
-                  <button
-                    disabled={isRunningMaterialCheck}
-                    onClick={handleMaterialCheckAction}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold shadow-lg shadow-[#5B75F8]/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${isRunningMaterialCheck ? 'animate-spin' : ''}`} />
-                    <span>{isRunningMaterialCheck ? 'Checking Material...' : 'Proceed to Material Check'}</span>
-                  </button>
+                  {useCtaPermission('RAISE_CHANGE_ORDER') && (
+                    <button
+                      onClick={openEditModal}
+                      className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-ui cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${isDarkMode
+                        ? 'border-purple-500/40 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20'
+                        : 'border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100'
+                        }`}
+                    >
+                      <Edit3 className="w-3.5 h-3.5 shrink-0" />
+                      <span>Raise Change Order</span>
+                    </button>
+                  )}
+                  {useCtaPermission('VERIFY_MATERIAL_AVAILABILITY') && (
+                    <button
+                      disabled={isRunningMaterialCheck}
+                      onClick={handleMaterialCheckAction}
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold shadow-lg shadow-[#5B75F8]/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${isRunningMaterialCheck ? 'animate-spin' : ''}`} />
+                      <span>{isRunningMaterialCheck ? 'Checking Material...' : 'Proceed to Material Check'}</span>
+                    </button>
+                  )}
                 </div>
               )
             },
@@ -1747,14 +1761,16 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 ['RELEASED', 'PENDING_VERIFICATION', 'MATERIAL_CHECK'].includes(n) || ['MATERIAL_CHECK', 'PENDING_VERIFICATION'].includes((o.status || '').toUpperCase()),
               renderActions: () => (
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
-                  <button
-                    disabled={isRunningMaterialCheck}
-                    onClick={handleMaterialCheckAction}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold shadow-md shadow-[#5B75F8]/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${isRunningMaterialCheck ? 'animate-spin' : ''}`} />
-                    <span>{isRunningMaterialCheck ? 'Checking...' : 'Re-run Material Check'}</span>
-                  </button>
+                  {useCtaPermission('VERIFY_MATERIAL_AVAILABILITY') && (
+                    <button
+                      disabled={isRunningMaterialCheck}
+                      onClick={handleMaterialCheckAction}
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold shadow-md shadow-[#5B75F8]/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${isRunningMaterialCheck ? 'animate-spin' : ''}`} />
+                      <span>{isRunningMaterialCheck ? 'Checking...' : 'Re-run Material Check'}</span>
+                    </button>
+                  )}
                   {isOwner && (
                     <button
                       onClick={() => setShowOverrideModal(true)}
@@ -1781,14 +1797,16 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 n === 'MATERIAL_SHORT' || ['MATERIAL_SHORT', 'MATERIAL_SHORTAGE'].includes((o.status || o.stage || '').toUpperCase()),
               renderActions: () => (
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
-                  <button
-                    disabled={isRunningMaterialCheck}
-                    onClick={handleMaterialCheckAction}
-                    className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold shadow-md shadow-[#5B75F8]/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${isRunningMaterialCheck ? 'animate-spin' : ''}`} />
-                    <span>{isRunningMaterialCheck ? 'Checking...' : 'Re-check Material'}</span>
-                  </button>
+                  {useCtaPermission('VERIFY_MATERIAL_AVAILABILITY') && (
+                    <button
+                      disabled={isRunningMaterialCheck}
+                      onClick={handleMaterialCheckAction}
+                      className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold shadow-md shadow-[#5B75F8]/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${isRunningMaterialCheck ? 'animate-spin' : ''}`} />
+                      <span>{isRunningMaterialCheck ? 'Checking...' : 'Re-check Material'}</span>
+                    </button>
+                  )}
                   <button
                     onClick={() => onNavigate?.('inventory')}
                     className="px-3.5 py-2 rounded-xl bg-amber-500/20 text-amber-500 dark:text-amber-300 border border-amber-500/40 text-xs font-bold cursor-pointer hover:bg-amber-500/30 flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
@@ -1811,13 +1829,15 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 n === 'PROCUREMENT_PENDING' || ['PROCUREMENT_PENDING', 'PO_SENT', 'UNDER_PROCUREMENT'].includes((o.status || '').toUpperCase()),
               renderActions: () => (
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
-                  <button
-                    onClick={() => onNavigate?.('inventory')}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-500 text-white text-xs font-bold cursor-pointer shadow-md shadow-amber-500/20 hover:from-orange-500 hover:to-amber-600 flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
-                  >
-                    <Building className="w-3.5 h-3.5 shrink-0" />
-                    <span>Create Purchase Order</span>
-                  </button>
+                  {useCtaPermission('CREATE_PURCHASE_ORDER') && (
+                    <button
+                      onClick={() => onNavigate?.('inventory')}
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-500 text-white text-xs font-bold cursor-pointer shadow-md shadow-amber-500/20 hover:from-orange-500 hover:to-amber-600 flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
+                    >
+                      <Building className="w-3.5 h-3.5 shrink-0" />
+                      <span>Create Purchase Order</span>
+                    </button>
+                  )}
                 </div>
               )
             },
@@ -1833,13 +1853,15 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 n === 'GRN' || ['GRN', 'GRN_PENDING', 'AWAITING_GRN'].includes((o.status || '').toUpperCase()),
               renderActions: () => (
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
-                  <button
-                    onClick={() => onNavigate?.('inventory')}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 text-white text-xs font-bold cursor-pointer shadow-md shadow-teal-500/20 hover:from-emerald-600 hover:to-teal-600 flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
-                  >
-                    <Package className="w-3.5 h-3.5 shrink-0" />
-                    <span>Record GRN</span>
-                  </button>
+                  {useCtaPermission('RECORD_GRN') && (
+                    <button
+                      onClick={() => onNavigate?.('inventory')}
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 text-white text-xs font-bold cursor-pointer shadow-md shadow-teal-500/20 hover:from-emerald-600 hover:to-teal-600 flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
+                    >
+                      <Package className="w-3.5 h-3.5 shrink-0" />
+                      <span>Record GRN</span>
+                    </button>
+                  )}
                 </div>
               )
             },
@@ -1868,14 +1890,16 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 const lineCount = (order.lines || []).length;
                 return (
                   <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
-                    <button
-                      disabled={!allowed || lineCount === 0}
-                      onClick={handleGoToCreateJobCard}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-500 hover:from-orange-500 hover:to-amber-600 text-white text-xs font-bold shadow-md shadow-amber-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
-                    >
-                      <RefreshCw className="w-3.5 h-3.5 shrink-0" />
-                      <span>Create Job Card ({lineCount} item{lineCount === 1 ? '' : 's'})</span>
-                    </button>
+                    {useCtaPermission('CREATE_JOB_CARD') && (
+                      <button
+                        disabled={!allowed || lineCount === 0}
+                        onClick={handleGoToCreateJobCard}
+                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-500 hover:from-orange-500 hover:to-amber-600 text-white text-xs font-bold shadow-md shadow-amber-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5 shrink-0" />
+                        <span>Create Job Card ({lineCount} item{lineCount === 1 ? '' : 's'})</span>
+                      </button>
+                    )}
                   </div>
                 );
               }
@@ -1892,13 +1916,15 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 ['WITH_SUBCONTRACTOR', 'OUTWORK_DISPATCHED', 'OUTWORK_RECEIVED'].includes((o.status || '').toUpperCase()),
               renderActions: () => (
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
-                  <button
-                    onClick={() => onNavigate?.('production')}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-indigo-600 hover:to-purple-600 text-white text-xs font-bold shadow-md shadow-purple-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5 shrink-0" />
-                    <span>Issue / Receive Subcontractor Outwork</span>
-                  </button>
+                  {(useCtaPermission('ISSUE_TO_SUBCONTRACTOR') || useCtaPermission('RECEIVE_FROM_SUBCONTRACTOR')) && (
+                    <button
+                      onClick={() => onNavigate?.('production')}
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-indigo-600 hover:to-purple-600 text-white text-xs font-bold shadow-md shadow-purple-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5 shrink-0" />
+                      <span>Issue / Receive Subcontractor Outwork</span>
+                    </button>
+                  )}
                 </div>
               )
             },
@@ -1913,13 +1939,15 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 n === 'IN_PRODUCTION' || ['IN_PRODUCTION', 'IN_PROGRESS', 'MANUFACTURING'].includes((o.status || '').toUpperCase()),
               renderActions: () => (
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
-                  <button
-                    onClick={() => onNavigate?.('production')}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-indigo-600 hover:to-purple-600 text-white text-xs font-bold shadow-md shadow-purple-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
-                  >
-                    <Flame className="w-3.5 h-3.5 shrink-0" />
-                    <span>Log Production / Start Operations</span>
-                  </button>
+                  {(useCtaPermission('START_MANUFACTURING') || useCtaPermission('COMPLETE_STEP')) && (
+                    <button
+                      onClick={() => onNavigate?.('production')}
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-indigo-600 hover:to-purple-600 text-white text-xs font-bold shadow-md shadow-purple-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
+                    >
+                      <Flame className="w-3.5 h-3.5 shrink-0" />
+                      <span>Log Production / Start Operations</span>
+                    </button>
+                  )}
                 </div>
               )
             },
@@ -1934,12 +1962,14 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 !allQcPassed && !isPdiPassed && ['MANUFACTURING_COMPLETED', 'READY_FOR_QC'].includes((o.status || o.stage || '').toUpperCase()),
               renderActions: () => (
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
-                  <button
-                    onClick={() => onNavigate?.('qc')}
-                    className="px-3.5 py-2 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 text-xs font-bold cursor-pointer hover:bg-indigo-500/30 flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
-                  >
-                    <span>Proceed to QC Queue ➔</span>
-                  </button>
+                  {useCtaPermission('MARK_MANUFACTURING_COMPLETE') && (
+                    <button
+                      onClick={() => onNavigate?.('qc')}
+                      className="px-3.5 py-2 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 text-xs font-bold cursor-pointer hover:bg-indigo-500/30 flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
+                    >
+                      <span>Proceed to QC Queue ➔</span>
+                    </button>
+                  )}
                 </div>
               )
             },
@@ -2125,8 +2155,6 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 !['DELIVERED', 'COMPLETED', 'CLOSED'].includes((o.status || '').toUpperCase()) &&
                 !Boolean(o.podDocumentUrl || o.podReceivedDate),
               renderActions: () => {
-                const allowedDelivered = isRoleAuthorizedForCta(currentRole, 'MARK_DELIVERED') || isRoleAuthorizedForCta(currentRole, 'ORDER_RECEIVED');
-                const allowedDelayed = isRoleAuthorizedForCta(currentRole, 'MARK_DELAYED');
                 const isDelayed = (order.status || order.stage || '').toUpperCase() === 'DELIVERY_DELAYED';
 
                 return (
@@ -2137,20 +2165,20 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                         <span>Delivery Delayed {order.delayedReason ? `(${order.delayedReason})` : ''}</span>
                       </span>
                     )}
-                    <button
-                      disabled={isConfirming || !allowedDelivered}
-                      onClick={() => deliveryModal.open()}
-                      title={!allowedDelivered ? 'Only Dispatch Clerk or Owner can confirm delivery' : undefined}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-emerald-600 hover:to-blue-600 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                      <span>Mark Delivered (POD)</span>
-                    </button>
-                    {!isDelayed && (
+                    {allowedDelivered && (
                       <button
-                        disabled={isConfirming || !allowedDelayed}
+                        disabled={isConfirming}
+                        onClick={() => deliveryModal.open()}
+                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-emerald-600 hover:to-blue-600 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                        <span>Mark Delivered (POD)</span>
+                      </button>
+                    )}
+                    {!isDelayed && canMarkDelayed && (
+                      <button
+                        disabled={isConfirming}
                         onClick={() => delayedModal.open()}
-                        title={!allowedDelayed ? 'Only Dispatch Clerk or Owner can mark delayed' : undefined}
                         className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-bold shadow-md shadow-amber-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
                       >
                         <Clock className="w-3.5 h-3.5 shrink-0" />
@@ -2222,7 +2250,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
                 return (
                   <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
-                    {!isClosed ? (
+                    {!isClosed && canMarkOrderClosed && (
                       <button
                         disabled={isConfirming || !canClose}
                         onClick={handleCloseOrderAction}
@@ -2232,7 +2260,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                         <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                         <span>Mark Order Closed</span>
                       </button>
-                    ) : (
+                    )}
+                    {isClosed && (
                       <span className="px-3 py-1.5 rounded-xl text-xs font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5 whitespace-nowrap shrink-0">
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         <span>Order Closed & Locked</span>
@@ -3129,15 +3158,17 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 >
                   Cancel
                 </button>
-                <button
-                  type="button"
-                  onClick={() => handlePdiDecisionSubmit('PASS')}
-                  disabled={isConfirming || pdiAcceptedQty <= 0}
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-500/25 disabled:opacity-50 transition-ui"
-                >
-                  <ShieldCheck className="w-4 h-4" />
-                  <span>{isConfirming ? 'Processing...' : 'Complete PDI (Pass & Release)'}</span>
-                </button>
+                {canUploadPdiReport && (
+                  <button
+                    type="button"
+                    onClick={() => handlePdiDecisionSubmit('PASS')}
+                    disabled={isConfirming || pdiAcceptedQty <= 0}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-500/25 disabled:opacity-50 transition-ui"
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>{isConfirming ? 'Processing...' : 'Complete PDI (Pass & Release)'}</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>

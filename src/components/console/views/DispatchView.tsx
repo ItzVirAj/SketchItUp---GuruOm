@@ -30,6 +30,7 @@ import { getCurrentFinancialYear, formatDocumentNumber } from '../../../utils/st
 import { ChallanDetailModal } from '../modals/ChallanDetailModal';
 import { Modal } from '../../common/Modal';
 import { useUrlModal } from '../../../hooks/useUrlModal';
+import { useCtaPermission } from '../../../hooks/useCtaPermission';
 
 interface DispatchViewProps {
   dispatches?: DispatchChallan[];
@@ -355,14 +356,16 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
               <span>Export CSV</span>
             </button>
 
-            <button
-              type="button"
-              onClick={handleOpenCreateModal}
-              className="flex items-center justify-center gap-2 px-5 py-2 rounded-full bg-[#007AFF] hover:bg-[#0071E3] text-white text-xs font-semibold shadow-xs cursor-pointer transition-all active:scale-[0.98]"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Issue Delivery Challan</span>
-            </button>
+            {useCtaPermission('GENERATE_DELIVERY_CHALLAN') && (
+              <button
+                type="button"
+                onClick={handleOpenCreateModal}
+                className="flex items-center justify-center gap-2 px-5 py-2 rounded-full bg-[#007AFF] hover:bg-[#0071E3] text-white text-xs font-semibold shadow-xs cursor-pointer transition-all active:scale-[0.98]"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Issue Delivery Challan</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -802,7 +805,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                               <CheckCircle2 className="w-3 h-3" />
                               <span>POD</span>
                             </span>
-                          ) : (
+                          ) : useCtaPermission('MARK_DELIVERED') ? (
                             <button
                               type="button"
                               onClick={(e) => handleOpenDeliveryModal(disp, e)}
@@ -811,7 +814,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                               <CheckCircle2 className="w-3 h-3" />
                               <span>Delivered</span>
                             </button>
-                          )}
+                          ) : null}
                           <button
                             type="button"
                             onClick={() => handleRowClick(disp)}
@@ -907,7 +910,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           <span>POD Verified</span>
                         </span>
-                      ) : (
+                      ) : useCtaPermission('MARK_DELIVERED') ? (
                         <button
                           type="button"
                           onClick={(e) => handleOpenDeliveryModal(disp, e)}
@@ -916,7 +919,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           <span>Delivered</span>
                         </button>
-                      )}
+                      ) : null}
                       <button
                         type="button"
                         onClick={() => handleRowClick(disp)}
@@ -1068,23 +1071,25 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
               >
                 Cancel
               </button>
-              <button
-                type="submit"
-                disabled={isDelivering}
-                className="px-6 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs cursor-pointer shadow-xs flex items-center gap-1.5 transition-all active:scale-[0.98] disabled:opacity-50"
-              >
-                {isDelivering ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>Confirming POD...</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Confirm Delivery</span>
-                  </>
-                )}
-              </button>
+              {useCtaPermission('MARK_DELIVERED') && (
+                <button
+                  type="submit"
+                  disabled={isDelivering}
+                  className="px-6 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs cursor-pointer shadow-xs flex items-center gap-1.5 transition-all active:scale-[0.98] disabled:opacity-50"
+                >
+                  {isDelivering ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Confirming POD...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Confirm Delivery</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </form>
         )}
@@ -1334,23 +1339,25 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
             >
               Cancel
             </button>
-            <button 
-              type="submit" 
-              disabled={isSubmitting || !vehicleNo.trim()}
-              className="px-6 py-2 rounded-full bg-[#007AFF] hover:bg-[#0071E3] text-white font-semibold text-xs cursor-pointer shadow-xs transition-all active:scale-[0.98] disabled:opacity-50 flex items-center gap-2"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Issuing Challan...</span>
-                </>
-              ) : (
-                <>
-                  <Truck className="w-3.5 h-3.5" />
-                  <span>Issue Delivery Challan</span>
-                </>
-              )}
-            </button>
+            {useCtaPermission('GENERATE_DELIVERY_CHALLAN') && (
+              <button 
+                type="submit" 
+                disabled={isSubmitting || !vehicleNo.trim()}
+                className="px-6 py-2 rounded-full bg-[#007AFF] hover:bg-[#0071E3] text-white font-semibold text-xs cursor-pointer shadow-xs transition-all active:scale-[0.98] disabled:opacity-50 flex items-center gap-2"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Issuing Challan...</span>
+                  </>
+                ) : (
+                  <>
+                    <Truck className="w-3.5 h-3.5" />
+                    <span>Issue Delivery Challan</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </form>
       </Modal>

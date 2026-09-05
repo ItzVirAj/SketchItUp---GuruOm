@@ -364,7 +364,10 @@ export function useOwnerOSData(currentUser?: SystemUser) {
 
       // Inventory & Shortage events
       eventSource.addEventListener('stock_updated', () => {
-        if (isAllowed('inventory')) fetchStock().then(setStock).catch(() => { });
+        if (isAllowed('inventory')) {
+          fetchStock().then(setStock).catch(() => { });
+          fetchShortages().then(setShortages).catch(() => { });
+        }
       });
 
       eventSource.addEventListener('shortage_updated', () => {

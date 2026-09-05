@@ -389,7 +389,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-10 sm:pt-16 px-4 font-sans select-none animate-in fade-in duration-150">
-      
+
       {/* Dim Backdrop */}
       <div
         onClick={onClose}
@@ -398,11 +398,10 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
 
       {/* Main Command Modal Card - Matching GuruOm OS Modal Standard */}
       <div
-        className={`relative w-full max-w-3xl rounded-2xl border shadow-2xl overflow-hidden flex flex-col max-h-[85vh] transition-ui ${
-          isDarkMode 
-            ? 'bg-[#18181B] border-[#2E2E34] text-slate-200' 
-            : 'bg-white border-[#d8dde8] text-slate-900'
-        }`}
+        className={`relative w-full max-w-3xl rounded-2xl border shadow-2xl overflow-hidden flex flex-col max-h-[85vh] transition-ui ${isDarkMode
+          ? 'bg-[#18181B] border-[#2E2E34] text-slate-200'
+          : 'bg-white border-[#d8dde8] text-slate-900'
+          }`}
       >
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-[#d8dde8] dark:border-[#2E2E34] flex items-center justify-between gap-4 bg-slate-50/40 dark:bg-[#18181B]">
@@ -473,11 +472,10 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
                 key={cat.key}
                 type="button"
                 onClick={() => { setActiveCategory(cat.key); inputRef.current?.focus(); }}
-                className={`pb-2.5 px-3 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-ui cursor-pointer shrink-0 ${
-                  isActive
-                    ? 'border-[#5B75F8] text-[#5B75F8] dark:text-[#7B92FF]'
-                    : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
-                }`}
+                className={`pb-2.5 px-3 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-ui cursor-pointer shrink-0 ${isActive
+                  ? 'border-[#5B75F8] text-[#5B75F8] dark:text-[#7B92FF]'
+                  : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
               >
                 <CatIcon className="w-3.5 h-3.5" />
                 <span>{cat.label}</span>
@@ -518,11 +516,10 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
                         key={item.id}
                         data-index={item.flatIndex}
                         onClick={item.onSelect}
-                        className={`group relative flex items-center justify-between p-3 rounded-xl cursor-pointer transition-ui border ${
-                          isSelected
-                            ? 'bg-[#5B75F8]/10 border-[#5B75F8]/40 dark:bg-[#5B75F8]/15 text-slate-900 dark:text-white shadow-xs'
-                            : 'border-slate-100 dark:border-[#2E2E34]/60 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-800 dark:text-slate-200'
-                        }`}
+                        className={`group relative flex items-center justify-between p-3 rounded-xl cursor-pointer transition-ui border ${isSelected
+                          ? 'bg-[#5B75F8]/10 border-[#5B75F8]/40 dark:bg-[#5B75F8]/15 text-slate-900 dark:text-white shadow-xs'
+                          : 'border-slate-100 dark:border-[#2E2E34]/60 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-800 dark:text-slate-200'
+                          }`}
                       >
                         {isSelected && (
                           <span className="absolute left-0 top-2.5 bottom-2.5 w-1 rounded-r-full bg-[#5B75F8]" />
@@ -540,17 +537,16 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
                               </span>
 
                               {item.badge && (
-                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider shrink-0 border ${
-                                  item.badgeType === 'success'
-                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                                    : item.badgeType === 'warning'
-                                      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
-                                      : item.badgeType === 'rose'
-                                        ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
-                                        : item.badgeType === 'purple'
-                                          ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
-                                          : 'bg-[#5B75F8]/10 text-[#5B75F8] dark:text-[#7B92FF] border-[#5B75F8]/20'
-                                }`}>
+                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider shrink-0 border ${item.badgeType === 'success'
+                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                  : item.badgeType === 'warning'
+                                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                                    : item.badgeType === 'rose'
+                                      ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                                      : item.badgeType === 'purple'
+                                        ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
+                                        : 'bg-[#5B75F8]/10 text-[#5B75F8] dark:text-[#7B92FF] border-[#5B75F8]/20'
+                                  }`}>
                                   {item.badge}
                                 </span>
                               )}
@@ -568,11 +564,10 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
                               {item.meta}
                             </span>
                           )}
-                          <div className={`p-1.5 rounded-lg border transition-ui ${
-                            isSelected 
-                              ? 'bg-[#5B75F8] border-transparent text-white shadow-xs' 
-                              : 'opacity-0 group-hover:opacity-100 border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-500'
-                          }`}>
+                          <div className={`p-1.5 rounded-lg border transition-ui ${isSelected
+                            ? 'bg-[#5B75F8] border-transparent text-white shadow-xs'
+                            : 'opacity-0 group-hover:opacity-100 border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-500'
+                            }`}>
                             <CornerDownLeft className="w-3.5 h-3.5" />
                           </div>
                         </div>

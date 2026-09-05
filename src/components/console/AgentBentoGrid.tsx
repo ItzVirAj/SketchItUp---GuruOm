@@ -20,12 +20,26 @@ import {
   Factory,
   Truck,
   Package,
-  Cpu
+  Cpu,
+  Warning,
+  WarningOctagon,
+  ArrowRight,
+  CheckCircle,
+  ShoppingCart,
+  Receipt,
+  CreditCard,
+  Wallet,
+  FileText,
+  TrendUp,
+  TrendDown,
+  CaretRight,
+  Gear
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import {
   CustomerOrder,
   StockItem,
+  ShortageItem,
   QCInspection,
   JobCard,
   DispatchChallan,
@@ -42,7 +56,9 @@ import {
 export interface AgentBentoGridProps {
   orders?: CustomerOrder[];
   stock?: StockItem[];
+  shortages?: ShortageItem[];
   qcItems?: QCInspection[];
+  pdiQueue?: any[];
   jobCards?: JobCard[];
   dispatches?: DispatchChallan[];
   invoices?: CustomerInvoice[];
@@ -109,744 +125,854 @@ export function FeatCard({
 }
 
 /* ─────────────────────────────────────────────
-   Card 1 – Realtime Autonomous ERP Pipeline
-   Interactive node graph wired to active POs and Job Cards
-   ───────────────────────────────────────────── */
+   Card 1 – Standard Order Pipeline Flow
+   Static visual blueprint showing how orders flow on a usual basis
+   from customer purchase order to shopfloor production, QC, and invoice.
+───────────────────────────────────────────── */
 
-type ActiveStep = 'request' | 'router' | 'agent' | 'memory' | 'tools' | 'response';
-
-const VW = 320;
-const VH = 240;
-
-interface NodeConfig {
-  id: string;
-  x: number;
-  y: number;
-  icon?: any;
-  label?: string;
-  type: 'box' | 'circle';
+interface PipelineStageDef {
+  step: string;
+  code: string;
+  name: string;
+  role: string;
+  action: string;
+  gate: string;
+  icon: any;
+  targetView: string;
+  badgeBg: string;
+  badgeText: string;
+  badgeBorder: string;
+  dotColor: string;
 }
 
-const NODES: NodeConfig[] = [
-  { id: 'A', x: 50, y: 120, icon: ChatCircle, label: "PO INGEST", type: 'box' },
-  { id: 'Router', x: 125, y: 120, type: 'circle' },
-  { id: 'C', x: 200, y: 120, icon: Brain, label: "PLANNER", type: 'box' },
-  { id: 'B', x: 280, y: 50, icon: Database, label: "BOM / SPEC", type: 'box' },
-  { id: 'D', x: 280, y: 190, icon: TerminalWindow, label: "CNC I/O", type: 'box' },
+const PIPELINE_STAGES: PipelineStageDef[] = [
+  {
+    step: "01",
+    code: "PO",
+    name: "PO Ingestion",
+    role: "Sales / Order Desk",
+    action: "Specs, drawings & delivery schedule validated",
+    gate: "Commercial Sign-Off",
+    icon: FileText,
+    targetView: "orders",
+    badgeBg: "bg-blue-500/10",
+    badgeText: "text-blue-600 dark:text-blue-400",
+    badgeBorder: "border-blue-500/20",
+    dotColor: "bg-blue-500",
+  },
+  {
+    step: "02",
+    code: "MAT",
+    name: "Material Check",
+    role: "Stores & Planning",
+    action: "BOM exploded & raw materials allocated",
+    gate: "BOM Stock Allocated",
+    icon: Package,
+    targetView: "inventory",
+    badgeBg: "bg-amber-500/10",
+    badgeText: "text-amber-600 dark:text-amber-400",
+    badgeBorder: "border-amber-500/20",
+    dotColor: "bg-amber-500",
+  },
+  {
+    step: "03",
+    code: "PROD",
+    name: "Shopfloor Machining",
+    role: "CNC / Machine Floor",
+    action: "Job Cards released & operations clocked",
+    gate: "100% Routing Clocked",
+    icon: Gear,
+    targetView: "production",
+    badgeBg: "bg-cyan-500/10",
+    badgeText: "text-cyan-600 dark:text-cyan-400",
+    badgeBorder: "border-cyan-500/20",
+    dotColor: "bg-cyan-500",
+  },
+  {
+    step: "04",
+    code: "QC",
+    name: "QC & PDI Gate",
+    role: "Quality Assurance",
+    action: "Stage dimensional inspection & CoC sign-off",
+    gate: "Zero NCR / PDI Pass",
+    icon: ShieldCheck,
+    targetView: "qc",
+    badgeBg: "bg-purple-500/10",
+    badgeText: "text-purple-600 dark:text-purple-400",
+    badgeBorder: "border-purple-500/20",
+    dotColor: "bg-purple-500",
+  },
+  {
+    step: "05",
+    code: "DISP",
+    name: "Outward Dispatch",
+    role: "Logistics & Stores",
+    action: "Delivery Challan made & carrier dispatched",
+    gate: "DC & Transit Booked",
+    icon: Truck,
+    targetView: "dispatch",
+    badgeBg: "bg-emerald-500/10",
+    badgeText: "text-emerald-600 dark:text-emerald-400",
+    badgeBorder: "border-emerald-500/20",
+    dotColor: "bg-emerald-500",
+  },
+  {
+    step: "06",
+    code: "INV",
+    name: "GST Invoice & POD",
+    role: "Finance & Accounts",
+    action: "GST Tax Invoice issued & payment reconciled",
+    gate: "Reconciled & Closed",
+    icon: Receipt,
+    targetView: "invoices",
+    badgeBg: "bg-teal-500/10",
+    badgeText: "text-teal-600 dark:text-teal-400",
+    badgeBorder: "border-teal-500/20",
+    dotColor: "bg-teal-500",
+  },
 ];
 
-interface FlowPath {
-  id: string;
-  d: string;
-  activeSteps: ActiveStep[];
-  flowDirection: 'forward' | 'backward' | 'both';
-  colorClass: string;
+function StageTile({
+  stage,
+  count = 0,
+  onNavigate,
+}: {
+  stage: PipelineStageDef;
+  count: number;
+  onNavigate?: (view: string) => void;
+}) {
+  const Icon = stage.icon;
+  return (
+    <div
+      onClick={() => onNavigate?.(stage.targetView)}
+      title={`${stage.name} (${stage.role}): ${stage.action}. Click to open ${stage.targetView}.`}
+      className={cn(
+        "group relative flex flex-col justify-between p-2 rounded-xl border transition-all cursor-pointer select-none",
+        "bg-white/90 dark:bg-[#18181B]/95",
+        "border-slate-200/80 dark:border-white/10",
+        "hover:shadow-md hover:border-slate-300 dark:hover:border-white/25 hover:-translate-y-0.5",
+        "min-h-[82px]"
+      )}
+    >
+      {/* Top row: step number + icon + live count */}
+      <div className="flex items-center justify-between gap-1">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[9px] font-mono font-bold px-1 rounded bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400">
+            {stage.step}
+          </span>
+          <div className={cn("w-5 h-5 rounded-md flex items-center justify-center border", stage.badgeBg, stage.badgeBorder, stage.badgeText)}>
+            <Icon weight="bold" className="w-3 h-3" />
+          </div>
+        </div>
+        {count > 0 ? (
+          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 tabular-nums">
+            {count} {count === 1 ? 'PO' : 'POs'}
+          </span>
+        ) : (
+          <span className="w-1.5 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700" />
+        )}
+      </div>
+
+      {/* Middle: Stage Title & Subtitle */}
+      <div className="mt-1">
+        <div className="text-[11px] font-bold text-slate-800 dark:text-slate-100 leading-tight truncate group-hover:text-[#5B75F8] dark:group-hover:text-[#7B92FF] transition-colors">
+          {stage.name}
+        </div>
+        <div className="text-[9px] text-slate-400 dark:text-slate-500 truncate leading-tight mt-0.5 font-medium">
+          {stage.role}
+        </div>
+      </div>
+
+      {/* Bottom Gate Indicator */}
+      <div className="mt-1 pt-1 border-t border-slate-100 dark:border-white/5 flex items-center gap-1">
+        <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", stage.dotColor)} />
+        <span className="text-[8px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate">
+          {stage.gate}
+        </span>
+      </div>
+    </div>
+  );
 }
 
-const PATHS: FlowPath[] = [
-  {
-    id: "a-to-router",
-    d: "M 78 120 L 113 120",
-    activeSteps: ["request"],
-    flowDirection: "forward",
-    colorClass: "text-cyan-500 dark:text-cyan-400",
-  },
-  {
-    id: "router-to-agent",
-    d: "M 137 120 L 172 120",
-    activeSteps: ["agent"],
-    flowDirection: "forward",
-    colorClass: "text-violet-500 dark:text-violet-400",
-  },
-  {
-    id: "agent-to-memory",
-    d: "M 200 92 L 200 50 L 252 50",
-    activeSteps: ["memory"],
-    flowDirection: "both",
-    colorClass: "text-fuchsia-500 dark:text-fuchsia-400",
-  },
-  {
-    id: "agent-to-tools",
-    d: "M 200 148 L 200 190 L 252 190",
-    activeSteps: ["tools"],
-    flowDirection: "both",
-    colorClass: "text-emerald-500 dark:text-emerald-400",
-  },
-  {
-    id: "response-flow-1",
-    d: "M 172 120 L 137 120",
-    activeSteps: ["response"],
-    flowDirection: "forward",
-    colorClass: "text-cyan-500 dark:text-cyan-400",
-  },
-  {
-    id: "response-flow-2",
-    d: "M 113 120 L 78 120",
-    activeSteps: ["response"],
-    flowDirection: "forward",
-    colorClass: "text-cyan-500 dark:text-cyan-400",
-  },
-];
-
-const NODE_COLORS: Record<string, { bg: string; border: string; text: string; buttonBg: string; buttonBorder: string }> = {
-  A: {
-    bg: "bg-cyan-500/10 dark:bg-cyan-500/5",
-    border: "border-cyan-500/60 dark:border-cyan-400/50",
-    text: "text-cyan-600 dark:text-cyan-400",
-    buttonBg: "bg-cyan-600 dark:bg-cyan-500",
-    buttonBorder: "border-cyan-500",
-  },
-  Router: {
-    bg: "bg-amber-500/10 dark:bg-amber-500/5",
-    border: "border-amber-500/60 dark:border-amber-400/50",
-    text: "text-amber-600 dark:text-amber-400",
-    buttonBg: "bg-amber-500",
-    buttonBorder: "border-amber-600",
-  },
-  C: {
-    bg: "bg-violet-500/10 dark:bg-violet-500/5",
-    border: "border-violet-500/60 dark:border-violet-400/50",
-    text: "text-violet-600 dark:text-violet-400",
-    buttonBg: "bg-violet-600 dark:bg-violet-500",
-    buttonBorder: "border-violet-500",
-  },
-  B: {
-    bg: "bg-fuchsia-500/10 dark:bg-fuchsia-500/5",
-    border: "border-fuchsia-500/60 dark:border-fuchsia-400/50",
-    text: "text-fuchsia-600 dark:text-fuchsia-400",
-    buttonBg: "bg-fuchsia-600 dark:bg-fuchsia-500",
-    buttonBorder: "border-fuchsia-500",
-  },
-  D: {
-    bg: "bg-emerald-500/10 dark:bg-emerald-500/5",
-    border: "border-emerald-500/60 dark:border-emerald-400/50",
-    text: "text-emerald-600 dark:text-emerald-400",
-    buttonBg: "bg-emerald-600 dark:bg-emerald-500",
-    buttonBorder: "border-emerald-500",
-  },
-};
-
-export function Card1({
+export function CardOrderPipeline({
   orders = [],
-  jobCards = [],
-  isRealtime = true
+  onNavigateView,
 }: {
   orders?: CustomerOrder[];
   jobCards?: JobCard[];
+  qcItems?: QCInspection[];
+  dispatches?: DispatchChallan[];
+  invoices?: CustomerInvoice[];
   isRealtime?: boolean;
+  onNavigateView?: (view: string) => void;
 }) {
-  const [step, setStep] = useState<ActiveStep>("request");
+  // Compute distribution of active orders across the 6 standard stages
+  const stageCounts = useMemo(() => {
+    const counts: Record<string, number> = { PO: 0, MAT: 0, PROD: 0, QC: 0, DISP: 0, INV: 0 };
+    (orders || []).forEach(o => {
+      const st = String(o.status || o.stage || '').toUpperCase();
+      if (['CLOSED', 'COMPLETED', 'PAID', 'INVOICED', 'INVOICE_GENERATED'].includes(st)) {
+        counts.INV++;
+      } else if (['DISPATCHED', 'PARTIALLY_DISPATCHED', 'IN_TRANSIT', 'DELIVERED', 'READY_FOR_DISPATCH', 'DISPATCH_READY'].includes(st)) {
+        counts.DISP++;
+      } else if (['QC_PENDING', 'QC_HOLD', 'QC_REJECTED', 'INSPECTION', 'PDI_PENDING', 'PDI_HOLD'].includes(st)) {
+        counts.QC++;
+      } else if (['IN_PRODUCTION', 'PRODUCTION', 'MACHINING', 'ASSEMBLY', 'JOB_CARD_ISSUED'].includes(st)) {
+        counts.PROD++;
+      } else if (['MATERIAL_CHECK', 'MATERIAL_PENDING', 'MATERIAL_SHORTAGE', 'PROCUREMENT_PENDING', 'GRN_PENDING', 'PO_SENT'].includes(st)) {
+        counts.MAT++;
+      } else {
+        // Default / PO received
+        counts.PO++;
+      }
+    });
+    return counts;
+  }, [orders]);
 
-  useEffect(() => {
-    const steps: ActiveStep[] = ["request", "router", "agent", "memory", "tools", "response"];
-    let idx = 0;
-    const interval = setInterval(() => {
-      idx = (idx + 1) % steps.length;
-      setStep(steps[idx]);
-    }, isRealtime ? 2200 : 4000);
-    return () => clearInterval(interval);
-  }, [isRealtime]);
-
-  // Derive real active order & job card data
-  const sampleOrder = orders[0] || null;
-  const sampleJobCard = jobCards[0] || null;
   const activeOrdersCount = orders.filter(o => o.status !== 'CLOSED' && o.status !== 'CANCELLED').length;
 
-  const stepStatusText = useMemo(() => {
-    switch (step) {
-      case "request":
-        return sampleOrder 
-          ? `Ingesting ${sampleOrder.poNo} from ${sampleOrder.customerName} (${activeOrdersCount} active POs)`
-          : `Listening for new customer purchase orders...`;
-      case "router":
-        return `Routing to CNC Machining Cell & Raw Material Allocation`;
-      case "agent":
-        return sampleJobCard 
-          ? `Gemini Planner scheduling ${sampleJobCard.jobNo} with BOM parameters`
-          : `Autonomous scheduler standby — ready for incoming jobs`;
-      case "memory":
-        return `Retrieving CAD drawings & ISO-9001 quality tolerance limits`;
-      case "tools":
-        return `Writing Supabase records & streaming telemetry to shopfloor`;
-      case "response":
-        return `Autonomous ERP swarm standing by for operational events`;
-      default:
-        return "Autonomous ERP swarm active";
-    }
-  }, [step, sampleOrder, sampleJobCard, activeOrdersCount]);
-
-  const isNodeActive = (nodeId: string) => {
-    switch (step) {
-      case 'request':
-        return nodeId === 'A';
-      case 'router':
-        return nodeId === 'Router';
-      case 'agent':
-        return nodeId === 'C';
-      case 'memory':
-        return nodeId === 'C' || nodeId === 'B';
-      case 'tools':
-        return nodeId === 'C' || nodeId === 'D';
-      case 'response':
-        return nodeId === 'C' || nodeId === 'Router' || nodeId === 'A';
-      default:
-        return false;
-    }
-  };
-
   return (
-    <div className="w-full h-full relative overflow-hidden select-none bg-slate-50/70 dark:bg-[#18181B] rounded-xl flex flex-col items-center justify-between p-2 font-sans">
-      {/* ── Layer 1: Dotted grid ── */}
-      <svg className="absolute inset-0 w-full h-full pointer-events-none" aria-hidden>
-        <defs>
-          <pattern id="clean-grid" width="16" height="16" patternUnits="userSpaceOnUse">
-            <circle cx="1.5" cy="1.5" r="0.75" fill="currentColor" className="text-slate-200 dark:text-slate-800/60" />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#clean-grid)" />
-      </svg>
-
-      {/* Top micro badge */}
-      <div className="w-full flex items-center justify-between z-10 px-2 pt-1">
-        <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="uppercase tracking-wider">Live Pipeline</span>
+    <div className="w-full h-full flex flex-col justify-between p-1 select-none font-sans">
+      {/* Top Header Strip */}
+      <div className="flex items-center justify-between px-1 mb-1 text-[11px]">
+        <div className="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-200">
+          <span className="w-2 h-2 rounded-full bg-blue-500" />
+          <span className="uppercase tracking-wider">Order Execution Lifecycle</span>
         </div>
-        <span className="text-xs font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-wider">{step}</span>
+        <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500">
+          6 Standard SOP Gates • {activeOrdersCount} Total Active
+        </span>
       </div>
 
-      {/* ── Layer 2: Connector SVG & Nodes ── */}
-      <div className="relative w-full flex-1 max-h-[190px] flex items-center justify-center">
-        <svg
-          className="w-full h-full"
-          viewBox={`0 0 ${VW} ${VH}`}
-          preserveAspectRatio="xMidYMid meet"
-          aria-hidden
-        >
-          {/* Base Static Connection Paths */}
-          <path d="M 78 120 L 113 120" fill="none" stroke="currentColor" className="text-slate-300 dark:text-slate-800" strokeWidth="1.5" strokeDasharray="3 3" />
-          <path d="M 137 120 L 172 120" fill="none" stroke="currentColor" className="text-slate-300 dark:text-slate-800" strokeWidth="1.5" strokeDasharray="3 3" />
-          <path d="M 200 92 L 200 50 L 252 50" fill="none" stroke="currentColor" className="text-slate-300 dark:text-slate-800" strokeWidth="1.5" strokeDasharray="3 3" />
-          <path d="M 200 148 L 200 190 L 252 190" fill="none" stroke="currentColor" className="text-slate-300 dark:text-slate-800" strokeWidth="1.5" strokeDasharray="3 3" />
+      {/* Pipeline Grid: 2 rows of 3 stages with connecting chevrons */}
+      <div className="space-y-1.5 my-auto">
+        {/* Row 1: Steps 1 -> 2 -> 3 */}
+        <div className="grid grid-cols-[1fr,auto,1fr,auto,1fr] items-center gap-1">
+          <StageTile stage={PIPELINE_STAGES[0]} count={stageCounts.PO} onNavigate={onNavigateView} />
+          <CaretRight weight="bold" className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600 shrink-0" />
+          <StageTile stage={PIPELINE_STAGES[1]} count={stageCounts.MAT} onNavigate={onNavigateView} />
+          <CaretRight weight="bold" className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600 shrink-0" />
+          <StageTile stage={PIPELINE_STAGES[2]} count={stageCounts.PROD} onNavigate={onNavigateView} />
+        </div>
 
-          {/* Animated Flow Overlays */}
-          {PATHS.map((p) => {
-            const isActive = p.activeSteps.includes(step);
-            if (!isActive) return null;
+        {/* Transition bar connecting Row 1 (Machining) to Row 2 (Quality & Dispatch) */}
+        <div className="flex items-center justify-between px-2">
+          <div className="h-px bg-slate-200/80 dark:bg-slate-800 flex-1 mr-2" />
+          <div className="flex items-center gap-1 text-[8.5px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+            <span>Routing to Quality & Outward Transit</span>
+            <CaretRight weight="bold" className="w-3 h-3 text-slate-400 rotate-90" />
+          </div>
+          <div className="h-px bg-slate-200/80 dark:bg-slate-800 w-6 ml-2" />
+        </div>
 
-            return (
-              <g key={p.id}>
-                <motion.path
-                  d={p.d}
-                  fill="none"
-                  stroke="currentColor"
-                  className={p.colorClass}
-                  strokeWidth="4"
-                  strokeOpacity="0.25"
-                  initial={{ pathLength: 0 }}
-                  animate={{ pathLength: 1 }}
-                  transition={{ duration: 0.8, ease: "easeInOut" }}
-                />
-                <motion.path
-                  d={p.d}
-                  fill="none"
-                  stroke="currentColor"
-                  className={p.colorClass}
-                  strokeWidth="2"
-                  initial={{ pathLength: 0 }}
-                  animate={{ pathLength: 1 }}
-                  transition={{ duration: 0.8, ease: "easeInOut" }}
-                />
-              </g>
-            );
-          })}
-
-          {/* ForeignObjects for Nodes */}
-          {NODES.map((node) => {
-            const isBox = node.type === 'box';
-            const w = isBox ? 54 : 24;
-            const h = isBox ? 54 : 24;
-            const isActive = isNodeActive(node.id);
-            const colorStyles = NODE_COLORS[node.id];
-
-            return (
-              <foreignObject
-                key={node.id}
-                x={node.x - w / 2}
-                y={node.y - h / 2}
-                width={w}
-                height={h}
-                className="overflow-visible"
-              >
-                <div className="w-full h-full flex items-center justify-center">
-                  {isBox && node.icon ? (
-                    <div
-                      className={cn(
-                        "w-full h-full rounded-xl border flex flex-col items-center justify-center transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-300 text-white shadow-md font-sans",
-                        colorStyles.buttonBg,
-                        colorStyles.buttonBorder,
-                        isActive ? "scale-105 ring-2 ring-white/50 shadow-lg shadow-[#5B75F8]/20" : "opacity-80"
-                      )}
-                    >
-                      <div className="mb-0.5 flex items-center justify-center">
-                        <node.icon className="w-4.5 h-4.5" weight="fill" />
-                      </div>
-                      <span className="text-[8.5px] font-extrabold tracking-wider select-none text-center leading-tight">
-                        {node.label}
-                      </span>
-                    </div>
-                  ) : (
-                    /* Central Router Node */
-                    <div
-                      className={cn(
-                        "w-6 h-6 rounded-full border-2 flex items-center justify-center shadow-sm transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-300",
-                        isActive
-                          ? "bg-amber-500/20 border-amber-500 ring-2 ring-amber-400/40"
-                          : "bg-white dark:bg-[#121215] border-slate-300 dark:border-slate-700"
-                      )}
-                    >
-                      <motion.div
-                        className={cn(
-                          "w-3 h-3 rounded-full border border-dashed",
-                          isActive ? "border-amber-500" : "border-slate-400 dark:border-slate-600"
-                        )}
-                        animate={{ rotate: 360 }}
-                        transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
-                      />
-                    </div>
-                  )}
-                </div>
-              </foreignObject>
-            );
-          })}
-        </svg>
+        {/* Row 2: Steps 4 -> 5 -> 6 */}
+        <div className="grid grid-cols-[1fr,auto,1fr,auto,1fr] items-center gap-1">
+          <StageTile stage={PIPELINE_STAGES[3]} count={stageCounts.QC} onNavigate={onNavigateView} />
+          <CaretRight weight="bold" className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600 shrink-0" />
+          <StageTile stage={PIPELINE_STAGES[4]} count={stageCounts.DISP} onNavigate={onNavigateView} />
+          <CaretRight weight="bold" className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600 shrink-0" />
+          <StageTile stage={PIPELINE_STAGES[5]} count={stageCounts.INV} onNavigate={onNavigateView} />
+        </div>
       </div>
 
-      {/* Dynamic Action Subtext */}
-      <div className="w-full z-10 px-2.5 py-1.5 bg-white/80 dark:bg-[#121215]/90 backdrop-blur-xs rounded-xl border border-slate-200/80 dark:border-slate-800 flex items-center gap-2 shadow-2xs">
-        <Sparkle className="w-3.5 h-3.5 text-[#5B75F8] dark:text-[#7B92FF] shrink-0" weight="fill" />
-        <span className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">{stepStatusText}</span>
+      {/* Bottom Informative Footer */}
+      <div className="flex items-center justify-between px-2 py-1 mt-1 rounded-lg bg-slate-100/80 dark:bg-white/[0.04] border border-slate-200/60 dark:border-white/5 text-[10px]">
+        <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400 font-medium truncate">
+          <CheckCircle weight="fill" className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+          <span className="truncate">ISO-9001 Traceability: Continuous sign-off at each production gate</span>
+        </div>
+        {onNavigateView && (
+          <button
+            onClick={() => onNavigateView('orders')}
+            className="text-[10px] font-bold text-[#5B75F8] dark:text-[#7B92FF] hover:underline flex items-center gap-0.5 shrink-0 cursor-pointer ml-2"
+          >
+            <span>Orders Desk</span>
+            <ArrowRight className="w-3 h-3" />
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
+// Backward-compatibility alias
+export const Card1 = CardOrderPipeline;
+
 /* ─────────────────────────────────────────────
-   Card 2 – Live Token & Production Run Cost Monitor
-   Real-time stats from actual orders, production logs & currency
+   Card 2 – Real-Time Material Shortages & Deficit Stream
+   Live inventory deficit monitor displaying all real shortages & buffer metrics
 ───────────────────────────────────────────── */
 
-export function Card2({
-  orders = [],
-  productionLogs = [],
-  currencySymbol = "₹"
+export function CardShortages({
+  stock = [],
+  shortages = [],
+  onNavigateView
 }: {
-  orders?: CustomerOrder[];
-  productionLogs?: ProductionLogReport[];
-  currencySymbol?: string;
+  stock?: StockItem[];
+  shortages?: ShortageItem[];
+  onNavigateView?: (view: string) => void;
 }) {
-  const [activeIdx, setActiveIdx] = useState(0);
-  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+  // 1. Combine explicit shortages with any stock items in SHORTAGE/CRITICAL or available < 0
+  const allShortages = useMemo(() => {
+    const list: Array<{
+      code: string;
+      description: string;
+      requiredQty: number;
+      availableQty: number;
+      deficit: number;
+      unit: string;
+      status: 'CRITICAL' | 'SHORTAGE';
+    }> = [];
 
-  const activeOrdersCount = orders.filter(o => o.status !== 'CLOSED' && o.status !== 'CANCELLED').length;
-  const totalProductionDone = productionLogs.reduce((acc, p) => acc + (p.qtyDone || 0), 0);
+    (shortages || []).forEach(sh => {
+      list.push({
+        code: sh.code,
+        description: sh.description,
+        requiredQty: Number(sh.requiredQty || 0),
+        availableQty: Number(sh.availableQty || 0),
+        deficit: Number(sh.deficit || 0),
+        unit: sh.unit || 'NOS',
+        status: (sh.availableQty || 0) < 0 ? 'CRITICAL' : 'SHORTAGE'
+      });
+    });
 
-  // Dynamic real-time calculation based on actual order volume & production throughput
-  const tokensPerMin = useMemo(() => {
-    const base = 14.2 + (activeOrdersCount % 5) * 0.7 + (totalProductionDone > 100 ? 2.1 : 0.6);
-    return `${base.toFixed(1)}k`;
-  }, [activeOrdersCount, totalProductionDone]);
+    (stock || []).forEach(stk => {
+      if (
+        (stk.status === 'SHORTAGE' || stk.status === 'CRITICAL' || stk.available < 0 || (stk.shortage && stk.shortage > 0)) &&
+        !list.some(item => item.code === stk.code)
+      ) {
+        list.push({
+          code: stk.code,
+          description: stk.description,
+          requiredQty: Number(stk.reorderLevel || 0) + Number(stk.reserved || 0),
+          availableQty: Number(stk.available || 0),
+          deficit: Number(stk.shortage || 0) || Math.max(0, -Number(stk.available || 0)) || Math.max(0, Number(stk.reorderLevel || 0) - Number(stk.available || 0)),
+          unit: stk.unit || 'NOS',
+          status: stk.available < 0 ? 'CRITICAL' : 'SHORTAGE'
+        });
+      }
+    });
 
-  const costPerRun = useMemo(() => {
-    if (currencySymbol === '$') return '$0.042';
-    if (currencySymbol === '€') return '€0.038';
-    const computedCost = 3.25 + (activeOrdersCount % 4) * 0.35;
-    return `${currencySymbol}${computedCost.toFixed(2)}`;
-  }, [currencySymbol, activeOrdersCount]);
+    return list;
+  }, [shortages, stock]);
 
-  // Aggregate weekly production volume or fallback to proportional historical trend
-  const weeklyDayBars = useMemo(() => {
-    const dayTotals = [48, 72, 55, 88, 64, 92, 40];
-    if (totalProductionDone > 0) {
-      const factor = Math.min(1.5, Math.max(0.6, totalProductionDone / 250));
-      return dayTotals.map(val => Math.min(95, Math.round(val * factor)));
-    }
-    return dayTotals;
-  }, [totalProductionDone]);
-
-  const days = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveIdx((prev) => (prev === 0 ? 1 : 0));
-    }, 3200);
-    return () => clearInterval(interval);
-  }, []);
-
-  const stats = [
-    { label: "Tokens/min", value: tokensPerMin, trend: "+12.4%", desc: "LLM Throughput" },
-    { label: "Cost/run", value: costPerRun, trend: "-6.1%", desc: "AI Inference Cost" },
-  ];
+  // Real raw materials tracked in system when 0 shortages exist
+  const rawMaterialStocks = useMemo(() => {
+    const rms = stock.filter(s => s.code.startsWith('RM-') || s.category === 'RAW_MATERIAL' || s.categoryLabel?.toLowerCase().includes('raw'));
+    return rms.length > 0 ? rms.slice(0, 5) : stock.slice(0, 5);
+  }, [stock]);
 
   return (
-    <div className="w-full h-full flex flex-col gap-2.5 justify-between font-sans">
-      {/* Stats row */}
-      <div className="flex gap-2.5 pt-1">
-        {stats.map((s, i) => {
-          const isActive = i === activeIdx || hoveredIdx === i;
+    <div className="w-full h-full flex flex-col justify-between font-sans text-left select-none">
+      {/* Top Header Summary Banner */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className={cn(
+            "w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border shadow-2xs",
+            allShortages.length > 0
+              ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30"
+              : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+          )}>
+            {allShortages.length > 0 ? (
+              <WarningOctagon weight="fill" className="w-4 h-4 animate-pulse" />
+            ) : (
+              <CheckCircle weight="fill" className="w-4 h-4" />
+            )}
+          </div>
+          <div className="min-w-0">
+            <span className={cn(
+              "text-xs font-bold leading-tight truncate block",
+              allShortages.length > 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"
+            )}>
+              {allShortages.length > 0 ? `${allShortages.length} SKUs in Deficit` : "All Buffers Healthy"}
+            </span>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 truncate block">
+              {allShortages.length > 0 ? "Active BOM Material Gaps" : "0 Production Bottlenecks"}
+            </span>
+          </div>
+        </div>
 
-          return (
-            <div key={i} className="flex-1 h-[72px] relative select-none">
-              {/* Background Hatched Scale Card */}
-              <div
-                className="absolute inset-0 rounded-xl border border-slate-200/60 dark:border-slate-800/40 bg-slate-100/40 dark:bg-slate-900/40 text-slate-300 dark:text-slate-800"
-                style={{
-                  backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 6px, currentColor 6px, currentColor 7px)",
-                }}
-              />
+        {onNavigateView && (
+          <button
+            type="button"
+            onClick={() => onNavigateView('inventory')}
+            className={cn(
+              "px-2.5 py-1 rounded-lg text-[10.5px] font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1 border shadow-2xs active:scale-95",
+              allShortages.length > 0
+                ? "bg-rose-600 text-white border-rose-600 hover:bg-rose-700"
+                : "bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/15"
+            )}
+          >
+            <span>{allShortages.length > 0 ? "Raise PO" : "Stores"}</span>
+            <ArrowRight weight="bold" className="w-3 h-3" />
+          </button>
+        )}
+      </div>
 
-              {/* Foreground Card */}
-              <motion.div
-                className={cn(
-                  "absolute inset-0 w-full h-full rounded-xl p-2.5 backdrop-blur-xs flex items-center justify-between gap-2 cursor-pointer transition-colors duration-300 border shadow-2xs",
-                  "bg-white/95 dark:bg-[#121215] border-slate-200/90 dark:border-slate-700/80 text-slate-900 dark:text-white",
-                  isActive ? "border-[#5B75F8]/60 shadow-md" : ""
-                )}
-                animate={{
-                  x: isActive ? "0.25rem" : "0rem",
-                  y: isActive ? "-0.25rem" : "0rem",
-                }}
-                transition={{ type: "spring", stiffness: 220, damping: 18 }}
-                onMouseEnter={() => setHoveredIdx(i)}
-                onMouseLeave={() => setHoveredIdx(null)}
-              >
-                {/* Metric details */}
-                <div className="flex flex-col min-w-0">
-                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 leading-none">{s.label}</span>
-                  <span className="text-lg font-extrabold tracking-tight leading-none mt-1.5 text-slate-900 dark:text-white">{s.value}</span>
-                  <div className="flex items-center gap-1.5 mt-1.5">
-                    <span className={cn("text-[10px] font-bold", s.trend.startsWith("+") ? "text-emerald-600 dark:text-emerald-400" : "text-cyan-600 dark:text-cyan-400")}>
-                      {s.trend}
+      {/* Main Content Area */}
+      <div className="my-2 flex-1 min-h-[140px] max-h-[160px] overflow-y-auto no-scrollbar space-y-1.5 pr-0.5">
+        {allShortages.length > 0 ? (
+          allShortages.map((sh) => (
+            <motion.div
+              key={sh.code}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              onClick={() => onNavigateView?.('inventory')}
+              className={cn(
+                "p-2.5 rounded-xl border transition-all cursor-pointer group flex flex-col gap-1.5 shadow-2xs",
+                "bg-white/90 dark:bg-[#121215]/90 border-rose-500/30 hover:border-rose-500/60 hover:bg-rose-500/5 dark:hover:bg-rose-500/10"
+              )}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-mono text-xs font-black text-rose-600 dark:text-rose-400 tracking-tight">
+                  {sh.code}
+                </span>
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-300 border border-rose-500/30 shrink-0">
+                  -{sh.deficit.toLocaleString('en-IN')} {sh.unit}
+                </span>
+              </div>
+              <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+                {sh.description}
+              </div>
+              <div className="flex items-center justify-between text-[10px] text-slate-400 dark:text-slate-500 font-mono pt-0.5 border-t border-slate-100 dark:border-white/5">
+                <span>Avail: <strong className="text-slate-600 dark:text-slate-300">{sh.availableQty} {sh.unit}</strong></span>
+                <span>Req: <strong className="text-amber-500">{sh.requiredQty} {sh.unit}</strong></span>
+              </div>
+            </motion.div>
+          ))
+        ) : (
+          <div className="h-full flex flex-col justify-between py-1">
+            <div className="space-y-1.5">
+              {rawMaterialStocks.map((rm) => (
+                <div
+                  key={rm.code}
+                  onClick={() => onNavigateView?.('inventory')}
+                  className="px-2.5 py-1.5 rounded-xl border border-slate-100 dark:border-white/5 bg-white/70 dark:bg-white/[0.02] hover:bg-white dark:hover:bg-white/[0.05] transition-all flex items-center justify-between gap-2 cursor-pointer group"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-mono text-[11px] font-bold text-slate-500 dark:text-slate-400 group-hover:text-[var(--accent-text-light)] dark:group-hover:text-[var(--accent-text-dark)] transition-colors">
+                      {rm.code}
                     </span>
-                    <span className="text-[10px] text-slate-400 dark:text-slate-500">prev</span>
+                    <span className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate max-w-[120px]">
+                      {rm.description}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0 font-mono text-xs">
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                      {rm.available} {rm.unit}
+                    </span>
+                    <span className="text-[9px] text-slate-400">OK</span>
                   </div>
                 </div>
-
-                {/* High-Precision Sparkline */}
-                <div className="w-10 h-5 flex items-center justify-center shrink-0">
-                  <svg className="w-full h-full overflow-visible" viewBox="0 0 48 24">
-                    <motion.path
-                      d={i === 0
-                        ? "M 0 18 L 16 10 L 32 14 L 48 4"
-                        : "M 0 6 L 16 14 L 32 8 L 48 16"
-                      }
-                      fill="none"
-                      stroke="currentColor"
-                      className="text-[#5B75F8]/70 dark:text-[#7B92FF]/70"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      initial={{ pathLength: 0 }}
-                      animate={{ pathLength: 1 }}
-                      transition={{ duration: 0.8, delay: 0.2 + i * 0.15, ease: "easeOut" }}
-                    />
-                    {(i === 0
-                      ? [{ x: 0, y: 18 }, { x: 16, y: 10 }, { x: 32, y: 14 }, { x: 48, y: 4 }]
-                      : [{ x: 0, y: 6 }, { x: 16, y: 14 }, { x: 32, y: 8 }, { x: 48, y: 16 }]
-                    ).map((pt, idx) => (
-                      <motion.circle
-                        key={idx}
-                        cx={pt.x}
-                        cy={pt.y}
-                        r="1.75"
-                        className="fill-[#5B75F8] stroke-white dark:stroke-[#121215]"
-                        strokeWidth="1"
-                        initial={{ scale: 0, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ delay: 0.4 + idx * 0.08, duration: 0.25 }}
-                      />
-                    ))}
-                  </svg>
-                </div>
-              </motion.div>
+              ))}
             </div>
-          );
-        })}
-      </div>
-
-      {/* Bar chart representing daily production activity */}
-      <div className="flex-1 flex items-end gap-2 px-1 min-h-[90px]">
-        {weeklyDayBars.map((h, i) => (
-          <div
-            key={i}
-            className="flex-1 h-full rounded-lg bg-slate-100/60 dark:bg-[#09090B] border border-slate-200/80 dark:border-slate-800/80 relative overflow-hidden text-slate-300 dark:text-slate-800"
-            style={{
-              backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 5px, currentColor 5px, currentColor 6px)",
-            }}
-          >
-            <motion.div
-              className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#5B75F8] to-blue-400 rounded-t-[6px] shadow-sm"
-              initial={{ height: "0%" }}
-              animate={{
-                height: [
-                  `${h}%`,
-                  `${Math.min(95, h + 10)}%`,
-                  `${Math.max(15, h - 14)}%`,
-                  `${Math.min(90, h + 5)}%`,
-                  `${h}%`
-                ],
-              }}
-              transition={{
-                repeat: Infinity,
-                duration: 3.5 + (i % 3) * 0.8,
-                ease: "easeInOut",
-                delay: i * 0.12,
-              }}
-            />
           </div>
-        ))}
+        )}
       </div>
 
-      {/* X labels */}
-      <div className="flex gap-2 px-1">
-        {days.map((d, i) => (
-          <p key={i} className="flex-1 text-center text-[10px] text-slate-400 dark:text-slate-500 font-semibold uppercase">{d}</p>
-        ))}
+      {/* Footer Subtext */}
+      <div className="pt-1.5 border-t border-slate-100 dark:border-white/10 flex items-center justify-between text-[10.5px]">
+        <span className="text-slate-400 dark:text-slate-500 flex items-center gap-1">
+          <Package className="w-3 h-3 text-[var(--accent-primary)]" />
+          <span>Stores & BOM Sync</span>
+        </span>
+        <button
+          type="button"
+          onClick={() => onNavigateView?.('inventory')}
+          className="font-bold text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)] hover:underline cursor-pointer"
+        >
+          {allShortages.length > 0 ? "Inventory Queue →" : "View Inventory →"}
+        </button>
       </div>
     </div>
   );
 }
 
 /* ─────────────────────────────────────────────
-   Card 3 – Stacked Realtime Activity Feed
-   Dynamic stream constructed from actual Orders, QC Queue, Job Cards & Audit Logs
-   ───────────────────────────────────────────── */
+   Card 3 – Quality & Dispatch Live Operations
+   Real-time Passed & Pending state queues for QC, PDI & Outward Dispatch
+───────────────────────────────────────────── */
 
-const STATUS_ICONS: Record<string, { icon: any; color: string; bg: string; gradient: string; border: string }> = {
-  done: { icon: Check, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20", gradient: "bg-gradient-to-b from-emerald-400 to-emerald-600", border: "border-emerald-600" },
-  running: { icon: CircleNotch, color: "text-cyan-600 dark:text-cyan-400", bg: "bg-cyan-500/10 border-cyan-500/20", gradient: "bg-gradient-to-b from-cyan-400 to-cyan-600", border: "border-cyan-600" },
-  waiting: { icon: Clock, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10 border-amber-500/20", gradient: "bg-gradient-to-b from-amber-400 to-amber-600", border: "border-amber-600" },
-  idle: { icon: Minus, color: "text-slate-500 dark:text-slate-400", bg: "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700", gradient: "bg-gradient-to-b from-slate-400 to-slate-600", border: "border-slate-600" },
-};
-
-export function Card3({
+export function CardQualityAndDispatch({
   orders = [],
   qcItems = [],
-  jobCards = [],
   dispatches = [],
-  auditLogs = []
+  onNavigateView,
 }: {
   orders?: CustomerOrder[];
   qcItems?: QCInspection[];
-  jobCards?: JobCard[];
   dispatches?: DispatchChallan[];
+  pdiQueue?: any[];
+  jobCards?: JobCard[];
   auditLogs?: AuditLogEntry[];
+  onNavigateView?: (view: string) => void;
 }) {
-  // Construct rich dynamic real-time activities from actual database records
-  const dynamicLogs = useMemo(() => {
-    const list = [];
+  const [activeTab, setActiveTab] = useState<'all' | 'quality' | 'dispatch'>('all');
 
-    // Order item
-    if (orders.length > 0) {
-      const topOrd = orders[0];
-      list.push({
-        agent: "Order Planner",
-        action: `Scheduled ${topOrd.poNo} for ${topOrd.customerName}`,
-        status: "done",
-        t: "0.2s"
-      });
-    } else {
-      list.push({
-        agent: "Order Planner",
-        action: "Order ingestion engine standby (0 active POs)",
-        status: "waiting",
-        t: "0.2s"
-      });
-    }
+  // Quality metrics
+  const qcPassed = useMemo(() => qcItems.filter(q => q.qcStatus === 'PASS'), [qcItems]);
+  const qcPending = useMemo(() => qcItems.filter(q => q.qcStatus === 'PENDING' || !q.qcStatus), [qcItems]);
+  const qcHold = useMemo(() => qcItems.filter(q => q.qcStatus === 'QC_HOLD' || q.qcStatus === 'REJECTED'), [qcItems]);
 
-    // QC Item
-    if (qcItems.length > 0) {
-      const q = qcItems[0];
-      const statusStr = q.qcStatus === 'PASS' ? 'PASS' : (q.qcStatus === 'QC_HOLD' ? 'HOLD' : 'INSPECT');
-      list.push({
-        agent: "QC Inspector",
-        action: `Tolerance check on ${q.partDescription || 'Part'} — ${statusStr}`,
-        status: q.qcStatus === 'PASS' ? 'done' : 'running',
-        t: "1.1s"
-      });
-    } else {
-      list.push({
-        agent: "QC Inspector",
-        action: "Quality control queue clear (0 pending inspections)",
-        status: "done",
-        t: "1.1s"
-      });
-    }
+  // Dispatch metrics
+  const dispatchCompleted = useMemo(() => dispatches.filter(d => ['DELIVERED', 'DISPATCHED'].includes(String(d.status || '').toUpperCase())), [dispatches]);
+  const dispatchInTransit = useMemo(() => dispatches.filter(d => String(d.status || '').toUpperCase() === 'IN_TRANSIT'), [dispatches]);
+  const dispatchPending = useMemo(() => dispatches.filter(d => ['PENDING', 'DRAFT', 'GENERATED', 'DISPATCH_READY', 'READY_FOR_DISPATCH'].includes(String(d.status || '').toUpperCase())), [dispatches]);
+  
+  // Orders waiting for dispatch
+  const ordersPendingDispatch = useMemo(() => {
+    return orders.filter(o => {
+      const st = String(o.status || o.stage || '').toUpperCase();
+      return ['READY_FOR_DISPATCH', 'DISPATCH_READY', 'AWAITING_DISPATCH', 'PDI_PASS'].includes(st);
+    });
+  }, [orders]);
 
-    // Job Card / Production item
-    if (jobCards.length > 0) {
-      const jc = jobCards.find(j => j.status === 'IN_PRODUCTION' || j.status === 'SCHEDULED') || jobCards[0];
-      list.push({
-        agent: "Shopfloor I/O",
-        action: `Machining ${jc.jobNo} on ${jc.machine || 'CNC VMC-01'} in progress`,
-        status: "running",
-        t: "2.4s"
-      });
-    } else {
-      list.push({
-        agent: "Shopfloor I/O",
-        action: "Shopfloor CNC machine monitoring active",
-        status: "running",
-        t: "2.4s"
-      });
-    }
-
-    // Dispatch item
-    if (dispatches.length > 0) {
-      const d = dispatches[0];
-      list.push({
-        agent: "Dispatch Router",
-        action: `Issued challan ${d.challanNo} for ${d.orderPo}`,
-        status: "waiting",
-        t: "3.8s"
-      });
-    } else {
-      list.push({
-        agent: "Dispatch Router",
-        action: "Dispatch bay clear (0 pending challans)",
-        status: "waiting",
-        t: "3.8s"
-      });
-    }
-
-    // Audit log or Idle agent
-    if (auditLogs.length > 0) {
-      const a = auditLogs[0];
-      list.push({
-        agent: "Audit Agent",
-        action: `${a.action || 'System health check'}: ${a.details?.slice(0, 38) || 'All operational metrics synced'}`,
-        status: "done",
-        t: "5.0s"
-      });
-    } else {
-      list.push({
-        agent: "BOM Sifter",
-        action: "Idle — waiting next CAD drawing ingestion for CNC",
-        status: "idle",
-        t: "—"
-      });
-    }
-
-    return list;
-  }, [orders, qcItems, jobCards, dispatches, auditLogs]);
-
-  const [activeIdx, setActiveIdx] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveIdx((prev) => (prev + 1) % dynamicLogs.length);
-    }, 2500);
-    return () => clearInterval(interval);
-  }, [dynamicLogs.length]);
-
-  const getSlot = (i: number) => {
-    const N = dynamicLogs.length;
-    let rel = i - activeIdx;
-    if (rel > Math.floor(N / 2)) rel -= N;
-    if (rel < -Math.floor(N / 2)) rel += N;
-    return rel;
-  };
-
-  const Y: Record<string, number> = { "-2": -74, "-1": -40, "0": 0, "1": 40, "2": 74 };
+  const totalDispatchPassed = dispatchCompleted.length + dispatchInTransit.length;
+  const totalDispatchPending = dispatchPending.length + ordersPendingDispatch.filter(o => !dispatchPending.some(d => d.orderPo === o.poNo)).length;
 
   return (
-    <div className="w-full h-full relative flex items-center justify-center overflow-hidden font-sans">
-      {dynamicLogs.map((l, i) => {
-        const slot = getSlot(i);
-        const si = STATUS_ICONS[l.status] || STATUS_ICONS.idle;
-        const abs = Math.abs(slot);
-        const isActive = slot === 0;
-        const isVisible = abs <= 2;
-
-        const yOffset = Y[String(slot)] ?? (slot < 0 ? -120 : 120);
-        const scale = isActive ? 1 : abs === 1 ? 0.93 : 0.86;
-        const opacity = isActive ? 1 : abs === 1 ? 0.65 : 0.35;
-        const zIndex = isActive ? 30 : abs === 1 ? 20 : 10;
-
-        return (
-          <motion.div
-            key={l.agent + i}
-            className="absolute left-0 right-0 mx-auto px-1"
-            style={{ zIndex }}
-            animate={{
-              y: isVisible ? yOffset : slot < 0 ? -140 : 140,
-              scale,
-              opacity: isVisible ? opacity : 0,
-            }}
-            transition={{
-              y: { type: "spring", stiffness: 450, damping: 32 },
-              scale: { type: "spring", stiffness: 450, damping: 32 },
-              opacity: { duration: 0.25, ease: "easeOut" },
-            }}
+    <div className="w-full h-full flex flex-col justify-between select-none font-sans">
+      {/* Top Segmented Tab Switcher */}
+      <div className="flex items-center justify-between gap-1 pb-1 border-b border-slate-100 dark:border-white/10">
+        <div className="flex items-center gap-1 bg-slate-200/60 dark:bg-slate-800/60 p-0.5 rounded-lg text-[10px] font-bold">
+          <button
+            type="button"
+            onClick={() => setActiveTab('all')}
+            className={cn(
+              "px-2 py-0.5 rounded-md transition-all cursor-pointer",
+              activeTab === 'all'
+                ? "bg-white dark:bg-[#18181B] text-slate-900 dark:text-white shadow-2xs"
+                : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+            )}
           >
-            <div className={cn(
-              "w-full rounded-2xl border flex items-center gap-2.5 transition-ui shadow-2xs",
-              isActive
-                ? "px-3.5 py-2.5 bg-white dark:bg-[#121215] border-slate-300 dark:border-slate-700 ring-1 ring-[#5B75F8]/20"
-                : "px-3 py-1.5 bg-slate-50/80 dark:bg-[#18181B] border-slate-200/60 dark:border-slate-800/60"
-            )}>
+            Overview
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('quality')}
+            className={cn(
+              "px-2 py-0.5 rounded-md transition-all cursor-pointer flex items-center gap-1",
+              activeTab === 'quality'
+                ? "bg-white dark:bg-[#18181B] text-slate-900 dark:text-white shadow-2xs"
+                : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+            )}
+          >
+            <span>Quality</span>
+            {qcPending.length > 0 && (
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('dispatch')}
+            className={cn(
+              "px-2 py-0.5 rounded-md transition-all cursor-pointer flex items-center gap-1",
+              activeTab === 'dispatch'
+                ? "bg-white dark:bg-[#18181B] text-slate-900 dark:text-white shadow-2xs"
+                : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+            )}
+          >
+            <span>Dispatch</span>
+            {totalDispatchPending > 0 && (
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+            )}
+          </button>
+        </div>
 
-              {/* Icon badge */}
-              <div className={cn(
-                "shrink-0 rounded-lg flex items-center justify-center font-bold text-white transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-300 border shadow-xs",
-                si.gradient,
-                si.border,
-                isActive ? "w-8 h-8" : "w-5.5 h-5.5"
-              )}>
-                <si.icon weight="bold" className={cn(isActive ? "w-4 h-4" : "w-3 h-3", l.status === "running" ? "animate-spin" : "")} />
-              </div>
+        <div className="flex items-center gap-1 text-[9.5px] font-bold">
+          <span className="text-emerald-600 dark:text-emerald-400">
+            {qcPassed.length + totalDispatchPassed} Passed
+          </span>
+          <span className="text-slate-300 dark:text-slate-700">•</span>
+          <span className="text-amber-600 dark:text-amber-400">
+            {qcPending.length + totalDispatchPending} Pending
+          </span>
+        </div>
+      </div>
 
-              {/* Text */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className={cn("font-bold text-slate-900 dark:text-white leading-none", isActive ? "text-xs" : "text-[11px]")}>
-                    {l.agent}
-                  </span>
-                  <span className={cn("text-[10px] font-bold uppercase tracking-wider rounded-full px-2 py-0.5 border", si.bg, si.color)}>
-                    {l.status}
+      {/* 4-Stat Metric Strip */}
+      <div className="grid grid-cols-4 gap-1.5 my-1.5">
+        {/* QC Passed */}
+        <div
+          onClick={() => onNavigateView?.('qc')}
+          title="Click to view Passed QC records"
+          className="p-1.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-500/10 cursor-pointer hover:border-emerald-500/40 transition-all group flex flex-col justify-between"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[8.5px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 truncate">QC Passed</span>
+            <ShieldCheck weight="bold" className="w-3 h-3 text-emerald-500 shrink-0" />
+          </div>
+          <div className="text-sm font-black text-slate-900 dark:text-white font-mono leading-none mt-1">
+            {qcPassed.length}
+          </div>
+          <div className="text-[8px] text-emerald-600/80 dark:text-emerald-400/80 font-medium truncate mt-0.5">
+            Zero Defects
+          </div>
+        </div>
+
+        {/* QC Pending */}
+        <div
+          onClick={() => onNavigateView?.('qc')}
+          title="Click to inspect Pending QC queue"
+          className={cn(
+            "p-1.5 rounded-xl border cursor-pointer transition-all group flex flex-col justify-between",
+            qcPending.length > 0 || qcHold.length > 0
+              ? "border-amber-500/30 bg-amber-500/5 dark:bg-amber-500/10 hover:border-amber-500/50"
+              : "border-slate-200/60 dark:border-white/5 bg-slate-50 dark:bg-white/[0.02]"
+          )}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[8.5px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 truncate">QC Pending</span>
+            <Clock weight="bold" className={cn("w-3 h-3 shrink-0", qcPending.length > 0 ? "text-amber-500 animate-pulse" : "text-slate-400")} />
+          </div>
+          <div className="text-sm font-black text-slate-900 dark:text-white font-mono leading-none mt-1">
+            {qcPending.length}
+          </div>
+          <div className="text-[8px] text-amber-600/80 dark:text-amber-400/80 font-medium truncate mt-0.5">
+            {qcHold.length > 0 ? `${qcHold.length} Hold` : 'In Queue'}
+          </div>
+        </div>
+
+        {/* Dispatch Dispatched */}
+        <div
+          onClick={() => onNavigateView?.('dispatch')}
+          title="Click to view Dispatched Challans"
+          className="p-1.5 rounded-xl border border-cyan-500/20 bg-cyan-500/5 dark:bg-cyan-500/10 cursor-pointer hover:border-cyan-500/40 transition-all group flex flex-col justify-between"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[8.5px] font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400 truncate">Dispatched</span>
+            <Truck weight="bold" className="w-3 h-3 text-cyan-500 shrink-0" />
+          </div>
+          <div className="text-sm font-black text-slate-900 dark:text-white font-mono leading-none mt-1">
+            {totalDispatchPassed}
+          </div>
+          <div className="text-[8px] text-cyan-600/80 dark:text-cyan-400/80 font-medium truncate mt-0.5">
+            {dispatchInTransit.length > 0 ? `${dispatchInTransit.length} In-Transit` : 'Consigned'}
+          </div>
+        </div>
+
+        {/* Dispatch Pending */}
+        <div
+          onClick={() => onNavigateView?.('dispatch')}
+          title="Click to view Pending Dispatches"
+          className={cn(
+            "p-1.5 rounded-xl border cursor-pointer transition-all group flex flex-col justify-between",
+            totalDispatchPending > 0
+              ? "border-purple-500/30 bg-purple-500/5 dark:bg-purple-500/10 hover:border-purple-500/50"
+              : "border-slate-200/60 dark:border-white/5 bg-slate-50 dark:bg-white/[0.02]"
+          )}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[8.5px] font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400 truncate">Disp. Pending</span>
+            <Package weight="bold" className={cn("w-3 h-3 shrink-0", totalDispatchPending > 0 ? "text-purple-500 animate-pulse" : "text-slate-400")} />
+          </div>
+          <div className="text-sm font-black text-slate-900 dark:text-white font-mono leading-none mt-1">
+            {totalDispatchPending}
+          </div>
+          <div className="text-[8px] text-purple-600/80 dark:text-purple-400/80 font-medium truncate mt-0.5">
+            Bay Ready
+          </div>
+        </div>
+      </div>
+
+      {/* Main List Stream */}
+      <div className="my-1 flex-1 min-h-[105px] max-h-[120px] overflow-y-auto no-scrollbar space-y-1.5 pr-0.5">
+        {activeTab === 'all' && (
+          <div className="space-y-1.5">
+            {/* Top pending/recent QC item */}
+            {qcItems.slice(0, 2).map((q) => {
+              const isPass = q.qcStatus === 'PASS';
+              const isHold = q.qcStatus === 'QC_HOLD' || q.qcStatus === 'REJECTED';
+              return (
+                <div
+                  key={`qc-${q.id || q.jobNo}`}
+                  onClick={() => onNavigateView?.('qc')}
+                  className="p-1.5 rounded-xl border border-slate-200/80 dark:border-white/10 bg-white/90 dark:bg-[#18181B] hover:border-[#5B75F8]/40 transition-all cursor-pointer flex items-center justify-between gap-2 shadow-2xs group"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className={cn(
+                      "w-5 h-5 rounded-lg flex items-center justify-center shrink-0 border",
+                      isPass ? "bg-emerald-500/15 text-emerald-600 border-emerald-500/20" : isHold ? "bg-rose-500/15 text-rose-600 border-rose-500/20" : "bg-amber-500/15 text-amber-600 border-amber-500/20"
+                    )}>
+                      <ShieldCheck weight="bold" className="w-3 h-3" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono text-[10px] font-black text-slate-800 dark:text-slate-200">{q.partCode || q.jobNo}</span>
+                        <span className="text-[9px] text-slate-400 truncate">{q.orderPo}</span>
+                      </div>
+                      <div className="text-[9px] text-slate-500 truncate leading-tight">{q.partDescription || 'Precision Part'} • {q.qty} NOS</div>
+                    </div>
+                  </div>
+                  <span className={cn(
+                    "text-[8.5px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 uppercase tracking-wider",
+                    isPass ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : isHold ? "bg-rose-500/10 text-rose-600 border-rose-500/20" : "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                  )}>
+                    {q.qcStatus || 'PENDING'}
                   </span>
                 </div>
-                {isActive && (
-                  <p className="text-xs text-slate-600 dark:text-slate-300 truncate mt-1 leading-tight">{l.action}</p>
-                )}
+              );
+            })}
+
+            {/* Top pending/recent Dispatch item */}
+            {dispatches.slice(0, 2).map((d) => {
+              const isDelivered = d.status === 'DELIVERED';
+              const isDispatched = d.status === 'DISPATCHED' || d.status === 'IN_TRANSIT';
+              return (
+                <div
+                  key={`disp-${d.challanNo}`}
+                  onClick={() => onNavigateView?.('dispatch')}
+                  className="p-1.5 rounded-xl border border-slate-200/80 dark:border-white/10 bg-white/90 dark:bg-[#18181B] hover:border-[#5B75F8]/40 transition-all cursor-pointer flex items-center justify-between gap-2 shadow-2xs group"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className={cn(
+                      "w-5 h-5 rounded-lg flex items-center justify-center shrink-0 border",
+                      isDelivered ? "bg-emerald-500/15 text-emerald-600 border-emerald-500/20" : isDispatched ? "bg-cyan-500/15 text-cyan-600 border-cyan-500/20" : "bg-purple-500/15 text-purple-600 border-purple-500/20"
+                    )}>
+                      <Truck weight="bold" className="w-3 h-3" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono text-[10px] font-black text-slate-800 dark:text-slate-200">{d.challanNo}</span>
+                        <span className="text-[9px] text-slate-400 truncate">{d.orderPo}</span>
+                      </div>
+                      <div className="text-[9px] text-slate-500 truncate leading-tight">{d.transporter || 'Direct Fleet'} • {d.vehicleNo || 'Vehicle Assigned'}</div>
+                    </div>
+                  </div>
+                  <span className={cn(
+                    "text-[8.5px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 uppercase tracking-wider",
+                    isDelivered ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : isDispatched ? "bg-cyan-500/10 text-cyan-600 border-cyan-500/20" : "bg-purple-500/10 text-purple-600 border-purple-500/20"
+                  )}>
+                    {d.status || 'PENDING'}
+                  </span>
+                </div>
+              );
+            })}
+
+            {qcItems.length === 0 && dispatches.length === 0 && (
+              <div className="h-full flex flex-col items-center justify-center text-center p-2">
+                <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">0 Active Quality or Dispatch Holds</p>
+                <p className="text-[9.5px] text-slate-400 mt-0.5">All parts cleared through stage inspection & dispatched</p>
               </div>
+            )}
+          </div>
+        )}
 
-              {isActive && (
-                <span className="text-[11px] font-mono text-slate-400 shrink-0 font-medium">{l.t}</span>
-              )}
-            </div>
-          </motion.div>
-        );
-      })}
+        {activeTab === 'quality' && (
+          <div className="space-y-1.5">
+            {qcItems.length > 0 ? (
+              qcItems.map((q) => {
+                const isPass = q.qcStatus === 'PASS';
+                const isHold = q.qcStatus === 'QC_HOLD' || q.qcStatus === 'REJECTED';
+                return (
+                  <div
+                    key={`q-full-${q.id || q.jobNo}`}
+                    onClick={() => onNavigateView?.('qc')}
+                    className="p-2 rounded-xl border border-slate-200/80 dark:border-white/10 bg-white/90 dark:bg-[#18181B] hover:border-[#5B75F8]/40 transition-all cursor-pointer flex items-center justify-between gap-2 shadow-2xs"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono text-xs font-black text-slate-800 dark:text-slate-200">{q.partCode}</span>
+                        <span className="text-[10px] text-slate-400">PO: {q.orderPo}</span>
+                      </div>
+                      <div className="text-[10px] text-slate-500 truncate mt-0.5">{q.partDescription}</div>
+                      {q.inspectorNotes && (
+                        <div className="text-[9px] text-slate-400 italic truncate mt-0.5">"{q.inspectorNotes}"</div>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <span className={cn(
+                        "text-[9px] font-bold px-2 py-0.5 rounded-full border uppercase",
+                        isPass ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : isHold ? "bg-rose-500/10 text-rose-600 border-rose-500/20" : "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                      )}>
+                        {q.qcStatus || 'PENDING'}
+                      </span>
+                      <span className="font-mono text-[10px] font-bold text-slate-600 dark:text-slate-300">{q.qty} NOS</span>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-center p-3">
+                <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">QC Queue Clear</p>
+                <p className="text-[9.5px] text-slate-400 mt-0.5">Zero outstanding stage or PDI inspections</p>
+              </div>
+            )}
+          </div>
+        )}
 
-      {/* Progress dots */}
-      <div className="absolute bottom-1 left-0 right-0 flex justify-center gap-1.5">
-        {dynamicLogs.map((_, i) => (
-          <motion.div
-            key={i}
-            className="rounded-full bg-slate-400/40 dark:bg-slate-600/60"
-            animate={{
-              width: i === activeIdx ? 16 : 4,
-              opacity: i === activeIdx ? 0.9 : 0.3,
-            }}
-            style={{ height: 3 }}
-            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-          />
-        ))}
+        {activeTab === 'dispatch' && (
+          <div className="space-y-1.5">
+            {dispatches.length > 0 ? (
+              dispatches.map((d) => {
+                const isDelivered = d.status === 'DELIVERED';
+                const isDispatched = d.status === 'DISPATCHED' || d.status === 'IN_TRANSIT';
+                return (
+                  <div
+                    key={`d-full-${d.challanNo}`}
+                    onClick={() => onNavigateView?.('dispatch')}
+                    className="p-2 rounded-xl border border-slate-200/80 dark:border-white/10 bg-white/90 dark:bg-[#18181B] hover:border-[#5B75F8]/40 transition-all cursor-pointer flex items-center justify-between gap-2 shadow-2xs"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono text-xs font-black text-slate-800 dark:text-slate-200">{d.challanNo}</span>
+                        <span className="text-[10px] text-slate-400">PO: {d.orderPo}</span>
+                      </div>
+                      <div className="text-[10px] text-slate-500 truncate mt-0.5">{d.transporter || 'Direct Delivery'} • {d.vehicleNo || 'Vehicle TBD'}</div>
+                      {d.date && (
+                        <div className="text-[9px] text-slate-400 font-mono mt-0.5">{d.date}</div>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <span className={cn(
+                        "text-[9px] font-bold px-2 py-0.5 rounded-full border uppercase",
+                        isDelivered ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : isDispatched ? "bg-cyan-500/10 text-cyan-600 border-cyan-500/20" : "bg-purple-500/10 text-purple-600 border-purple-500/20"
+                      )}>
+                        {d.status || 'PENDING'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-center p-3">
+                <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">Dispatch Bay Clear</p>
+                <p className="text-[9.5px] text-slate-400 mt-0.5">0 consignments waiting for carrier assignment</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Footer Navigation Strip */}
+      <div className="pt-1.5 border-t border-slate-100 dark:border-white/10 flex items-center justify-between text-[10.5px]">
+        <span className="text-slate-400 dark:text-slate-500 flex items-center gap-1">
+          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+          <span>Real-time Operations Sync</span>
+        </span>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => onNavigateView?.('qc')}
+            className="font-bold text-[#5B75F8] dark:text-[#7B92FF] hover:underline cursor-pointer"
+          >
+            QC Desk →
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigateView?.('dispatch')}
+            className="font-bold text-violet-600 dark:text-violet-400 hover:underline cursor-pointer"
+          >
+            Dispatch Bay →
+          </button>
+        </div>
       </div>
     </div>
   );
 }
+
+// Backward-compatibility alias
+export const Card3 = CardQualityAndDispatch;
 
 /* ─────────────────────────────────────────────
    Card 4 – ERP & Vector Knowledge Base Namespaces
@@ -867,180 +993,287 @@ const NS_COLORS: Record<string, { bar: string; dot: string; badge: string; butto
   telemetry: { bar: "from-amber-600 to-amber-400", dot: "bg-amber-500", badge: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20", buttonBg: "bg-amber-600", buttonBorder: "border-amber-500" },
 };
 
-export function Card4({
+/* ─────────────────────────────────────────────
+   Card 4 – Live Commercial Telemetry: Customer Invoices & Vendor Payables
+   Real-time dual ledger tracking actual accounts receivable and supplier payables
+───────────────────────────────────────────── */
+
+export function CardFinance({
+  invoices = [],
+  payables = [],
   orders = [],
-  stock = [],
-  qcItems = []
+  currencySymbol = "₹",
+  onNavigateView
 }: {
+  invoices?: CustomerInvoice[];
+  payables?: VendorBill[];
   orders?: CustomerOrder[];
-  stock?: StockItem[];
-  qcItems?: QCInspection[];
+  currencySymbol?: string;
+  onNavigateView?: (view: string) => void;
 }) {
-  const namespaces = [
-    { name: "cad_drawings", label: "CAD / BOM", hits: 342 + stock.length * 4, fill: 88 },
-    { name: "qc_standards", label: "QC Specs", hits: 218 + qcItems.length * 5, fill: 64 },
-    { name: "orders_db", label: "Orders DB", hits: 140 + orders.length * 6, fill: 48 },
-    { name: "telemetry", label: "Shopfloor I/O", hits: 96 + stock.length * 2, fill: 32 },
-  ];
+  const totalReceivables = useMemo(() => {
+    return invoices
+      .filter(i => i.status !== 'PAID' && i.status !== 'CANCELLED')
+      .reduce((acc, i) => acc + Number(i.balanceAmount ?? i.totalAmount ?? i.amount ?? 0), 0);
+  }, [invoices]);
 
-  // Derive retrieval queries with real order names, items & parts
-  const dynamicRetrievalQueries = useMemo(() => {
-    const cust1 = orders[0]?.customerName?.split(' ')[0] || "Active Master";
-    const part1 = orders[0]?.lines?.[0]?.itemDescription || stock[0]?.description || "Precision Components";
-    const part2 = stock[0]?.description || "CNC Machining Spec";
-    const po1 = orders[0]?.poNo || "Active PO";
+  const overdueReceivablesCount = useMemo(() => {
+    return invoices.filter(i => {
+      if (i.status === 'PAID' || i.status === 'CANCELLED') return false;
+      if (i.status === 'OVERDUE') return true;
+      return i.dueDate ? new Date(i.dueDate) < new Date() : false;
+    }).length;
+  }, [invoices]);
 
-    return [
-      { ns: "cad_drawings", q: `${part2} CNC program & tooling specs`, t: "0.2s" },
-      { ns: "qc_standards", q: `ISO 9001:2026 tolerance bounds ±0.02mm for ${part1}`, t: "0.9s" },
-      { ns: "orders_db", q: `${po1} (${cust1}) delivery schedule & BOM`, t: "1.8s" },
-      { ns: "telemetry", q: "Spindle load & vibration telemetry CNC-VMC-01", t: "3.2s" },
-      { ns: "cad_drawings", q: "Assembly heat treatment metallurgical spec", t: "4.7s" },
-      { ns: "qc_standards", q: "PDI visual inspection checklist & challan validation", t: "6.1s" },
-    ];
-  }, [orders, stock]);
+  const totalPayables = useMemo(() => {
+    return payables
+      .filter(p => p.status !== 'PAID')
+      .reduce((acc, p) => acc + Number(p.balanceAmount ?? p.amount ?? 0), 0);
+  }, [payables]);
 
-  const [tick, setTick] = useState(0);
+  const overduePayablesCount = useMemo(() => {
+    return payables.filter(p => {
+      if (p.status === 'PAID') return false;
+      if (p.status === 'OVERDUE') return true;
+      return p.dueDate ? new Date(p.dueDate) < new Date() : false;
+    }).length;
+  }, [payables]);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setTick((prev) => (prev + 1) % dynamicRetrievalQueries.length);
-    }, 2200);
-    return () => clearInterval(interval);
-  }, [dynamicRetrievalQueries.length]);
+  const netLiquidity = totalReceivables - totalPayables;
 
-  const activeNs = dynamicRetrievalQueries[tick]?.ns || "cad_drawings";
-  const recentQueries = [0, 1, 2].map(
-    (offset) => dynamicRetrievalQueries[(tick - offset + dynamicRetrievalQueries.length) % dynamicRetrievalQueries.length]
-  );
+  // Active or most recent items to display
+  const displayInvoices = invoices.slice(0, 4);
+  const displayPayables = payables.slice(0, 4);
 
   return (
-    <div className="w-full h-full flex flex-col md:flex-row gap-3 py-1 px-1 font-sans">
-
-      {/* ── Left panel: Namespace bars ── */}
-      <div className="flex-1 flex flex-col justify-between min-w-0 pr-1">
-        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">ERP Knowledge Namespaces</p>
-
-        <div className="flex flex-col gap-2 flex-1 justify-center my-1">
-          {namespaces.map((ns, i) => {
-            const c = NS_COLORS[ns.name] || NS_COLORS.cad_drawings;
-            const isActive = ns.name === activeNs;
-            const Icon = (NS_ICONS[ns.name] || Database) as React.ComponentType<{ size?: number; weight?: string; className?: string }>;
-
-            return (
-              <div key={ns.name} className="flex items-center gap-2.5 group relative">
-
-                {/* Icon Container */}
-                <div
-                  className={cn(
-                    "relative flex shrink-0 items-center justify-center w-7 h-7 rounded-lg border transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-300",
-                    isActive
-                      ? `text-white ${c.buttonBg} ${c.buttonBorder} scale-105 shadow-sm`
-                      : "bg-white dark:bg-[#121215] border-slate-200 dark:border-slate-800 text-slate-400"
-                  )}
-                >
-                  <Icon size={13} weight={isActive ? "fill" : "regular"} className="relative z-10" />
-                </div>
-
-                {/* Name */}
-                <span className={cn(
-                  "text-xs font-bold w-20 shrink-0 transition-colors duration-300 truncate",
-                  isActive ? "text-slate-900 dark:text-white" : "text-slate-600 dark:text-slate-400"
-                )}>
-                  {ns.label}
-                </span>
-
-                {/* Bar track */}
-                <div className="flex-1 h-1.5 bg-slate-200/70 dark:bg-slate-800/70 rounded-full overflow-hidden relative shadow-inner">
-                  <motion.div
-                    className={`absolute left-0 top-0 bottom-0 rounded-full overflow-hidden bg-gradient-to-r ${c.bar}`}
-                    initial={{ width: "0%" }}
-                    animate={{ width: `${ns.fill}%`, opacity: isActive ? 1 : 0.35 }}
-                    transition={{
-                      width: { duration: 1.2, delay: i * 0.1, type: "spring", bounce: 0.2 },
-                      opacity: { duration: 0.4 },
-                    }}
-                  >
-                    {isActive && (
-                      <motion.div
-                        className="absolute inset-y-0 left-0 w-full bg-gradient-to-r from-transparent via-white/60 to-transparent"
-                        initial={{ x: "-100%" }}
-                        animate={{ x: "100%" }}
-                        transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
-                      />
-                    )}
-                  </motion.div>
-                </div>
-
-                {/* Hit count */}
-                <div className={cn(
-                  "flex items-center gap-1.5 w-10 justify-end transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-300",
-                  isActive ? "opacity-100 scale-105" : "opacity-60 scale-100"
-                )}>
-                  <span className={cn("text-xs font-bold font-mono", isActive ? "text-slate-900 dark:text-white" : "text-slate-500")}>
-                    {ns.hits}
-                  </span>
-                  {isActive && (
-                    <motion.div
-                      className={`w-1.5 h-1.5 rounded-full ${c.dot}`}
-                      animate={{ opacity: [1, 0.2, 1], scale: [1, 1.4, 1] }}
-                      transition={{ repeat: Infinity, duration: 1 }}
-                    />
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Live indicator */}
-        <div className="flex items-center gap-2 pt-1.5 mt-auto border-t border-slate-200/50 dark:border-slate-800/50">
-          <div className="relative flex items-center justify-center w-2 h-2">
-            <motion.div
-              className="absolute inset-0 rounded-full bg-[#5B75F8]/40"
-              animate={{ scale: [1, 2.4, 1], opacity: [0.6, 0, 0.6] }}
-              transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-            />
-            <div className="w-1.5 h-1.5 rounded-full bg-[#5B75F8]" />
+    <div className="w-full h-full flex flex-col justify-between font-sans text-left select-none gap-2">
+      {/* Top 3-Stat KPI Header */}
+      <div className="grid grid-cols-3 gap-2 shrink-0">
+        {/* Receivables Tile */}
+        <div 
+          onClick={() => onNavigateView?.('invoices')}
+          className="px-3 py-2 rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white/90 dark:bg-[#121215] flex items-center justify-between gap-2 shadow-2xs hover:border-[#5B75F8]/40 transition-all cursor-pointer group"
+        >
+          <div className="min-w-0">
+            <span className="text-[10.5px] font-semibold text-slate-500 dark:text-slate-400 block truncate">
+              Receivables (A/R)
+            </span>
+            <span className="text-sm font-extrabold font-mono text-slate-900 dark:text-white tracking-tight block">
+              {currencySymbol}{totalReceivables.toLocaleString('en-IN')}
+            </span>
+            <span className="text-[9.5px] text-slate-400 block truncate">
+              {invoices.length} inv • {overdueReceivablesCount} overdue
+            </span>
           </div>
-          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Vector RAG Sync Active (Gemini)</span>
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF] shrink-0 border border-blue-500/20 group-hover:scale-105 transition-transform">
+            <Receipt weight="bold" className="w-3.5 h-3.5" />
+          </div>
+        </div>
+
+        {/* Net Working Capital Position Tile */}
+        <div className="px-3 py-2 rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white/90 dark:bg-[#121215] flex items-center justify-between gap-2 shadow-2xs">
+          <div className="min-w-0">
+            <span className="text-[10.5px] font-semibold text-slate-500 dark:text-slate-400 block truncate">
+              Net Liquidity
+            </span>
+            <span className={cn(
+              "text-sm font-extrabold font-mono tracking-tight block",
+              netLiquidity >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+            )}>
+              {netLiquidity >= 0 ? '+' : ''}{currencySymbol}{netLiquidity.toLocaleString('en-IN')}
+            </span>
+            <span className="text-[9.5px] text-slate-400 block truncate">
+              Cashflow Balance
+            </span>
+          </div>
+          <div className={cn(
+            "w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border",
+            netLiquidity >= 0 
+              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" 
+              : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
+          )}>
+            <Wallet weight="bold" className="w-3.5 h-3.5" />
+          </div>
+        </div>
+
+        {/* Payables Tile */}
+        <div 
+          onClick={() => onNavigateView?.('payables')}
+          className="px-3 py-2 rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white/90 dark:bg-[#121215] flex items-center justify-between gap-2 shadow-2xs hover:border-violet-500/40 transition-all cursor-pointer group"
+        >
+          <div className="min-w-0">
+            <span className="text-[10.5px] font-semibold text-slate-500 dark:text-slate-400 block truncate">
+              Payables (A/P)
+            </span>
+            <span className="text-sm font-extrabold font-mono text-slate-900 dark:text-white tracking-tight block">
+              {currencySymbol}{totalPayables.toLocaleString('en-IN')}
+            </span>
+            <span className="text-[9.5px] text-slate-400 block truncate">
+              {payables.length} bills • {overduePayablesCount} overdue
+            </span>
+          </div>
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-violet-500/10 text-violet-600 dark:text-violet-400 shrink-0 border border-violet-500/20 group-hover:scale-105 transition-transform">
+            <CreditCard weight="bold" className="w-3.5 h-3.5" />
+          </div>
         </div>
       </div>
 
-      {/* Thin divider */}
-      <div className="w-px bg-slate-200/70 dark:bg-slate-800/70 self-stretch shrink-0 hidden md:block" />
-
-      {/* ── Right panel: Retrieval log ── */}
-      <div className="w-full md:w-[220px] shrink-0 flex flex-col justify-between">
-        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Live Retrieval Log</p>
-
-        <div className="flex flex-col gap-2 flex-1 justify-center my-1 overflow-hidden">
-          {recentQueries.map((q, qi) => {
-            const c = NS_COLORS[q.ns] || NS_COLORS.cad_drawings;
-            return (
-              <motion.div
-                key={`${q.ns}-${q.q}-${qi}`}
-                className="rounded-xl border border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-[#121215] px-2.5 py-2 shadow-2xs"
-                initial={{ opacity: 0, y: -6 }}
-                animate={{
-                  opacity: qi === 0 ? 1 : qi === 1 ? 0.75 : 0.45,
-                  y: 0,
-                }}
-                transition={{ type: "spring", stiffness: 450, damping: 30, delay: qi * 0.05 }}
+      {/* Main Dual-Column Split Body */}
+      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-2.5 min-h-[145px] max-h-[160px] overflow-hidden">
+        
+        {/* Column 1: Customer Invoices */}
+        <div className="flex flex-col justify-between rounded-2xl border border-slate-200/80 dark:border-white/10 bg-slate-50/70 dark:bg-black/30 p-2.5 min-w-0">
+          <div className="flex items-center justify-between gap-1 pb-1.5 border-b border-slate-200/60 dark:border-white/5">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Receipt weight="bold" className="w-3.5 h-3.5 text-[#5B75F8] dark:text-[#7B92FF] shrink-0" />
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">Customer Invoices</span>
+            </div>
+            {onNavigateView && (
+              <button
+                type="button"
+                onClick={() => onNavigateView('invoices')}
+                className="text-[10px] font-bold text-[#5B75F8] dark:text-[#7B92FF] hover:underline cursor-pointer flex items-center gap-0.5 shrink-0"
               >
-                <div className="flex items-center gap-1.5 mb-1">
-                  <span className={cn("text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-md border", c.badge)}>
-                    {q.ns}
-                  </span>
-                  <span className="text-[10px] font-mono text-slate-400 ml-auto tabular-nums">{q.t}</span>
+                <span>Ledger</span>
+                <ArrowRight weight="bold" className="w-2.5 h-2.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="my-1.5 flex-1 overflow-y-auto no-scrollbar space-y-1.5 pr-0.5">
+            {displayInvoices.length > 0 ? (
+              displayInvoices.map((inv) => (
+                <div
+                  key={inv.invoiceNo || inv.id}
+                  onClick={() => onNavigateView?.('invoices')}
+                  className="p-2 rounded-xl border border-slate-200/60 dark:border-white/5 bg-white/90 dark:bg-[#18181D] hover:bg-white dark:hover:bg-white/[0.06] transition-all flex items-center justify-between gap-2 cursor-pointer shadow-2xs group"
+                >
+                  <div className="min-w-0 flex flex-col">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono text-[11px] font-bold text-[#5B75F8] dark:text-[#7B92FF] truncate">
+                        {inv.invoiceNo}
+                      </span>
+                      <span className={cn(
+                        "text-[9px] font-bold uppercase px-1.5 py-0.2 rounded-md border",
+                        inv.status === 'PAID' ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" :
+                        inv.status === 'OVERDUE' ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20" :
+                        "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                      )}>
+                        {inv.status || 'ISSUED'}
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-slate-600 dark:text-slate-300 font-medium truncate mt-0.5 max-w-[140px]">
+                      {inv.customerName || 'Customer PO'}
+                    </span>
+                  </div>
+                  <div className="text-right shrink-0 font-mono">
+                    <span className="text-xs font-extrabold text-slate-900 dark:text-white block">
+                      {currencySymbol}{Number(inv.totalAmount || inv.amount || 0).toLocaleString('en-IN')}
+                    </span>
+                    <span className="text-[9px] text-slate-400 block">
+                      {inv.dueDate ? `Due ${inv.dueDate.slice(5)}` : 'On receipt'}
+                    </span>
+                  </div>
                 </div>
-                <p className="text-xs text-slate-700 dark:text-slate-300 font-medium leading-snug line-clamp-2">{q.q}</p>
-              </motion.div>
-            );
-          })}
+              ))
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-center p-2">
+                <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">0 Open Invoices</p>
+                <p className="text-[9.5px] text-slate-400 mt-0.5">Commercial invoices auto-generate upon outbound dispatch</p>
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Column 2: Vendor Bills */}
+        <div className="flex flex-col justify-between rounded-2xl border border-slate-200/80 dark:border-white/10 bg-slate-50/70 dark:bg-black/30 p-2.5 min-w-0">
+          <div className="flex items-center justify-between gap-1 pb-1.5 border-b border-slate-200/60 dark:border-white/5">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <CreditCard weight="bold" className="w-3.5 h-3.5 text-violet-500 dark:text-violet-400 shrink-0" />
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">Vendor Bills</span>
+            </div>
+            {onNavigateView && (
+              <button
+                type="button"
+                onClick={() => onNavigateView('payables')}
+                className="text-[10px] font-bold text-violet-600 dark:text-violet-400 hover:underline cursor-pointer flex items-center gap-0.5 shrink-0"
+              >
+                <span>Register</span>
+                <ArrowRight weight="bold" className="w-2.5 h-2.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="my-1.5 flex-1 overflow-y-auto no-scrollbar space-y-1.5 pr-0.5">
+            {displayPayables.length > 0 ? (
+              displayPayables.map((bill) => (
+                <div
+                  key={bill.billNo || bill.id}
+                  onClick={() => onNavigateView?.('payables')}
+                  className="p-2 rounded-xl border border-slate-200/60 dark:border-white/5 bg-white/90 dark:bg-[#18181D] hover:bg-white dark:hover:bg-white/[0.06] transition-all flex items-center justify-between gap-2 cursor-pointer shadow-2xs group"
+                >
+                  <div className="min-w-0 flex flex-col">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono text-[11px] font-bold text-violet-600 dark:text-violet-400 truncate">
+                        {bill.billNo}
+                      </span>
+                      <span className={cn(
+                        "text-[9px] font-bold uppercase px-1.5 py-0.2 rounded-md border",
+                        bill.status === 'PAID' ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" :
+                        bill.status === 'OVERDUE' ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20" :
+                        "bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20"
+                      )}>
+                        {bill.status || 'OPEN'}
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-slate-600 dark:text-slate-300 font-medium truncate mt-0.5 max-w-[140px]">
+                      {bill.vendorName || 'Supplier'}
+                    </span>
+                  </div>
+                  <div className="text-right shrink-0 font-mono">
+                    <span className="text-xs font-extrabold text-slate-900 dark:text-white block">
+                      {currencySymbol}{Number(bill.amount || 0).toLocaleString('en-IN')}
+                    </span>
+                    <span className="text-[9px] text-slate-400 block">
+                      {bill.dueDate ? `Due ${bill.dueDate.slice(5)}` : 'Net 30'}
+                    </span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-center p-2">
+                <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">0 Outstanding Bills</p>
+                <p className="text-[9.5px] text-slate-400 mt-0.5">Supplier bills 3-way matched against GRN inspection receipts</p>
+              </div>
+            )}
+          </div>
+        </div>
+
       </div>
 
+      {/* Footer Subtext */}
+      <div className="pt-1.5 border-t border-slate-100 dark:border-white/10 flex items-center justify-between text-[10.5px]">
+        <div className="flex items-center gap-1.5 text-slate-400 dark:text-slate-500">
+          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+          <span>Real-time Financial Ledger Synchronized</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => onNavigateView?.('invoices')}
+            className="font-bold text-[#5B75F8] dark:text-[#7B92FF] hover:underline cursor-pointer"
+          >
+            Invoices Ledger →
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigateView?.('payables')}
+            className="font-bold text-violet-600 dark:text-violet-400 hover:underline cursor-pointer"
+          >
+            Vendor Bills →
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1168,7 +1401,9 @@ export function Card5({
 export function AgentBentoGrid({
   orders = [],
   stock = [],
+  shortages = [],
   qcItems = [],
+  pdiQueue = [],
   jobCards = [],
   dispatches = [],
   invoices = [],
@@ -1184,64 +1419,92 @@ export function AgentBentoGrid({
   const activeOrdersCount = orders.filter(o => o.status !== 'CLOSED' && o.status !== 'CANCELLED').length;
   const qcHolds = qcItems.filter(q => q.qcStatus === 'QC_HOLD' || q.jobStatus === 'QC_HOLD').length;
 
+  const totalShortagesCount = useMemo(() => {
+    const fromShortages = (shortages || []).length;
+    const fromStock = (stock || []).filter(
+      s => (s.status === 'SHORTAGE' || s.status === 'CRITICAL' || s.available < 0 || (s.shortage && s.shortage > 0)) &&
+      !(shortages || []).some(sh => sh.code === s.code)
+    ).length;
+    return fromShortages + fromStock;
+  }, [shortages, stock]);
+
+  const totalOperationsPending = useMemo(() => {
+    const qcPend = (qcItems || []).filter(q => q.qcStatus === 'PENDING' || !q.qcStatus).length;
+    const dispPend = (dispatches || []).filter(d => ['PENDING', 'DRAFT', 'GENERATED', 'DISPATCH_READY', 'READY_FOR_DISPATCH'].includes(String(d.status || '').toUpperCase())).length;
+    return qcPend + dispPend;
+  }, [qcItems, dispatches]);
+
   const CARDS = [
     {
-      title: "ERP & Shopfloor Pipeline",
-      description: "Autonomous PO ingestion, machine allocation & dispatch routing in real time.",
-      badge: "ACTIVE SWARM",
-      badgeColor: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20",
+      title: "Order Pipeline Flow",
+      description: "Standard end-to-end lifecycle progression showing how orders flow from customer PO to dispatch and settlement.",
+      badge: "6-STAGE LIFECYCLE",
+      badgeColor: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
       visual: (
-        <Card1
+        <CardOrderPipeline
           orders={orders}
           jobCards={jobCards}
-          isRealtime={isRealtimeStreaming}
-        />
-      ),
-      colSpan: "lg:col-span-1",
-      height: "h-[340px]",
-    },
-    {
-      title: "Token & Compute Cost Monitor",
-      description: "Real-time LLM token throughput and execution cost telemetry per production run.",
-      badge: "LIVE TELEMETRY",
-      badgeColor: "bg-[#5B75F8]/10 text-[#5B75F8] dark:text-[#7B92FF] border-[#5B75F8]/20",
-      visual: (
-        <Card2
-          orders={orders}
-          productionLogs={productionLogs}
-          currencySymbol={currencySymbol}
-        />
-      ),
-      colSpan: "lg:col-span-1",
-      height: "h-[340px]",
-    },
-    {
-      title: "Live Shopfloor Activity Stream",
-      description: "Real-time logs of agent scheduling, QC inspections, and dispatch status.",
-      badge: "STREAMING",
-      badgeColor: "bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20",
-      visual: (
-        <Card3
-          orders={orders}
           qcItems={qcItems}
-          jobCards={jobCards}
           dispatches={dispatches}
-          auditLogs={auditLogs}
+          invoices={invoices}
+          onNavigateView={onNavigateView}
         />
       ),
       colSpan: "lg:col-span-1",
       height: "h-[340px]",
     },
     {
-      title: "ERP & Vector Knowledge Base",
-      description: "Semantic search across CAD drawings, ISO-9001 specs, and customer order books.",
-      badge: "VECTOR RAG",
-      badgeColor: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20",
+      title: "Material Shortages & Deficit Stream",
+      description: "Real-time raw material deficits, store buffers & procurement deficit queue.",
+      badge: totalShortagesCount > 0 ? `${totalShortagesCount} DEFICIT SKUS` : "BUFFERS HEALTHY",
+      badgeColor: totalShortagesCount > 0
+        ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
+        : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
       visual: (
-        <Card4
-          orders={orders}
+        <CardShortages
           stock={stock}
+          shortages={shortages}
+          onNavigateView={onNavigateView}
+        />
+      ),
+      colSpan: "lg:col-span-1",
+      height: "h-[340px]",
+    },
+    {
+      title: "Quality & Dispatch Operations",
+      description: "Live inspection pass/pending queues and outward delivery challan transit states.",
+      badge: totalOperationsPending > 0 ? `${totalOperationsPending} PENDING OPS` : "OPERATIONS CLEAR",
+      badgeColor: totalOperationsPending > 0
+        ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+        : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+      visual: (
+        <CardQualityAndDispatch
+          orders={orders}
           qcItems={qcItems}
+          dispatches={dispatches}
+          pdiQueue={pdiQueue}
+          jobCards={jobCards}
+          auditLogs={auditLogs}
+          onNavigateView={onNavigateView}
+        />
+      ),
+      colSpan: "lg:col-span-1",
+      height: "h-[340px]",
+    },
+    {
+      title: "Commercial Telemetry: Invoices & Vendor Payables",
+      description: "Real-time Accounts Receivable (Customer Invoices) & Accounts Payable (Supplier Bills) synchronization.",
+      badge: (invoices.length > 0 || payables.length > 0) ? `${invoices.length + payables.length} FINANCIAL ENTRIES` : "LEDGER BALANCED",
+      badgeColor: (invoices.length > 0 || payables.length > 0)
+        ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20"
+        : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+      visual: (
+        <CardFinance
+          invoices={invoices}
+          payables={payables}
+          orders={orders}
+          currencySymbol={currencySymbol}
+          onNavigateView={onNavigateView}
         />
       ),
       colSpan: "lg:col-span-2",

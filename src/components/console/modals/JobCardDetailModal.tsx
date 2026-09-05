@@ -642,7 +642,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
         {/* ========================================================================= */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 sm:px-6 py-4 border-b border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-slate-950/40 shrink-0 no-print">
           <div className="flex items-start sm:items-center gap-3.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF] shrink-0">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF] shrink-0">
               <Factory className="w-5 h-5 stroke-[2]" />
             </div>
             <div className="flex-1 min-w-0">
@@ -657,14 +657,14 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                     ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                     : jobCard.jobStatus === 'QC_HOLD' || jobCard.status === 'QC_HOLD'
                     ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
-                    : 'bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF] border-blue-500/20'
+                    : 'bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF] border-blue-500/20'
                 }`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${
                     allStepsDone || jobCard.jobStatus === 'COMPLETED' || jobCard.status === 'COMPLETED'
                       ? 'bg-emerald-500'
                       : jobCard.jobStatus === 'QC_HOLD' || jobCard.status === 'QC_HOLD'
                       ? 'bg-rose-500'
-                      : 'bg-[#007AFF] animate-pulse'
+                      : 'bg-[#5B75F8] animate-pulse'
                   }`} />
                   <span>
                     {allStepsDone ? 'Completed' : (jobCard.jobStatus || jobCard.status || 'Planned')}
@@ -689,7 +689,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                   {allStepsDone ? (
                     <span className="text-emerald-600 dark:text-emerald-400 font-medium">Ready for PDI Inspection</span>
                   ) : (
-                    <span>Next: <strong className="font-semibold text-[#007AFF] dark:text-[#0A84FF]">{nextIncompleteStep ? `Op ${nextIncompleteStep.sequenceNo}` : 'Production'}</strong></span>
+                    <span>Next: <strong className="font-semibold text-[#5B75F8] dark:text-[#7B92FF]">{nextIncompleteStep ? `Op ${nextIncompleteStep.sequenceNo}` : 'Production'}</strong></span>
                   )}
                 </span>
               </div>
@@ -725,7 +725,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                   }
                   setShowLogProductionModal(true);
                 }}
-                className="flex-1 sm:flex-initial px-4 py-2 rounded-full bg-[#007AFF] hover:bg-[#0071E3] active:scale-[0.98] text-white text-xs font-semibold shadow-sm shadow-blue-500/25 flex items-center justify-center gap-1.5 cursor-pointer transition-all"
+                className="flex-1 sm:flex-initial px-4 py-2 rounded-full bg-[#5B75F8] hover:bg-[#435BE8] active:scale-[0.98] text-white text-xs font-semibold shadow-sm shadow-blue-500/25 flex items-center justify-center gap-1.5 cursor-pointer transition-all"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Log Production</span>
@@ -758,7 +758,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
               }`}
               title="Save as PDF via Print dialog"
             >
-              <Download className="w-3.5 h-3.5 text-[#007AFF] dark:text-[#0A84FF]" />
+              <Download className="w-3.5 h-3.5 text-[#5B75F8] dark:text-[#7B92FF]" />
               <span className="hidden sm:inline">PDF</span>
             </button>
 
@@ -838,7 +838,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                 <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
                   Route Execution
                 </span>
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF]">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF]">
                   <Route className="w-4 h-4 stroke-[2]" />
                 </div>
               </div>
@@ -846,7 +846,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                 <span className={`text-xl sm:text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                   {completedStepsCount} / {totalStepsCount}
                 </span>
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF]">
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF]">
                   {Math.round((completedStepsCount / (totalStepsCount || 1)) * 100)}%
                 </span>
               </div>
@@ -874,7 +874,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                 </div>
               </div>
               <div className={`mt-2 font-bold text-xs sm:text-sm truncate ${
-                allStepsDone ? 'text-emerald-600 dark:text-emerald-400' : 'text-[#007AFF] dark:text-[#0A84FF]'
+                allStepsDone ? 'text-emerald-600 dark:text-emerald-400' : 'text-[#5B75F8] dark:text-[#7B92FF]'
               }`}>
                 {allStepsDone ? 'Pre-Dispatch QC (PDI)' : nextIncompleteStep ? `Op ${nextIncompleteStep.sequenceNo}: ${nextIncompleteStep.operationName}` : 'In Production'}
               </div>
@@ -950,7 +950,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
           <div className={`space-y-3 no-print ${activeMobileSection === 'routes' ? 'block' : 'hidden md:block'}`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF]">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF]">
                   <Route className="w-4 h-4 stroke-[2]" />
                 </div>
                 <h3 className={`font-bold text-sm tracking-tight ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
@@ -1106,7 +1106,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                           step.isCompleted
                             ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
                             : step.isNextIncomplete
-                            ? 'bg-blue-500/20 text-[#007AFF] dark:text-[#0A84FF] border-blue-500/30'
+                            ? 'bg-blue-500/20 text-[#5B75F8] dark:text-[#7B92FF] border-blue-500/30'
                             : isDarkMode ? 'bg-slate-800 text-slate-400 border-white/10' : 'bg-slate-100 text-slate-500 border-slate-200'
                         }`}>
                           {step.isCompleted ? <Check className="w-4 h-4 stroke-[3]" /> : step.sequenceNo}
@@ -1132,7 +1132,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                         step.isCompleted
                           ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                           : step.isNextIncomplete
-                          ? 'bg-blue-500/15 text-[#007AFF] dark:text-[#0A84FF] border-blue-500/25'
+                          ? 'bg-blue-500/15 text-[#5B75F8] dark:text-[#7B92FF] border-blue-500/25'
                           : !step.isReachable
                           ? 'bg-slate-800/80 text-slate-400 border-white/5'
                           : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
@@ -1151,7 +1151,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                       <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
                         <div 
                           className={`h-full rounded-full transition-all ${
-                            step.isCompleted ? 'bg-emerald-500' : 'bg-[#007AFF]'
+                            step.isCompleted ? 'bg-emerald-500' : 'bg-[#5B75F8]'
                           }`}
                           style={{ width: `${pct}%` }}
                         />
@@ -1183,7 +1183,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                           setLogQty(rem);
                           setShowLogProductionModal(true);
                         }}
-                        className="w-full py-2 rounded-full bg-[#007AFF] hover:bg-[#0071E3] active:scale-[0.98] text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition-all"
+                        className="w-full py-2 rounded-full bg-[#5B75F8] hover:bg-[#435BE8] active:scale-[0.98] text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition-all"
                       >
                         <Plus className="w-3.5 h-3.5" />
                         <span>Log Output for Op {step.sequenceNo}</span>
@@ -1243,7 +1243,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <div className="flex items-center gap-2.5">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF]">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF]">
                     <Layers className="w-4 h-4 stroke-[2]" />
                   </div>
                   <h3 className={`font-bold text-sm tracking-tight ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
@@ -1352,8 +1352,8 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                                 onChange={(e) => handleInputChange(mat.componentCode, 'qty', e.target.value)}
                                 className={`w-28 rounded-xl border px-3 py-1.5 text-xs text-right outline-none transition-all ${
                                   isDarkMode 
-                                    ? 'bg-slate-900/90 border-white/10 text-white focus:border-[#007AFF]' 
-                                    : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
+                                    ? 'bg-slate-900/90 border-white/10 text-white focus:border-[#5B75F8]' 
+                                    : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#5B75F8]'
                                 }`}
                               />
                               <span className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{mat.uom}</span>
@@ -1385,7 +1385,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
           <div className={`space-y-3 no-print ${(activeMobileSection === 'shifts' || activeMobileSection === 'logs') ? 'block' : 'hidden md:block'}`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF]">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF]">
                   <Activity className="w-4 h-4 stroke-[2]" />
                 </div>
                 <h3 className={`font-bold text-sm tracking-tight ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
@@ -1487,7 +1487,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
           <div className={`space-y-3 no-print ${activeMobileSection === 'history' ? 'block' : 'hidden md:block'}`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF]">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF]">
                   <History className="w-4 h-4 stroke-[2]" />
                 </div>
                 <h3 className={`font-bold text-sm tracking-tight ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
@@ -1579,7 +1579,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold text-[#007AFF] dark:text-[#0A84FF]">{c.itemCode}</span>
+                      <span className="font-semibold text-[#5B75F8] dark:text-[#7B92FF]">{c.itemCode}</span>
                       <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm tabular-nums">
                         {c.actualQty} {c.unit}
                       </span>
@@ -1629,7 +1629,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
           }`}>
             <div className="flex items-center justify-between pb-3.5 border-b border-slate-100 dark:border-white/10">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF]">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF]">
                   <Plus className="w-4 h-4 stroke-[2]" />
                 </div>
                 <h4 className="font-bold text-sm tracking-tight">Add Material / Substitute</h4>
@@ -1659,7 +1659,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                     }
                   }}
                   className={`w-full px-3.5 py-2 rounded-xl text-xs border outline-none transition-all ${
-                    isDarkMode ? 'bg-slate-950/80 border-white/10 text-white focus:border-[#007AFF]' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
+                    isDarkMode ? 'bg-slate-950/80 border-white/10 text-white focus:border-[#5B75F8]' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#5B75F8]'
                   }`}
                 />
               </div>
@@ -1674,7 +1674,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                   value={addMatName}
                   onChange={(e) => setAddMatName(e.target.value)}
                   className={`w-full px-3.5 py-2 rounded-xl text-xs border outline-none transition-all ${
-                    isDarkMode ? 'bg-slate-950/80 border-white/10 text-white focus:border-[#007AFF]' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
+                    isDarkMode ? 'bg-slate-950/80 border-white/10 text-white focus:border-[#5B75F8]' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#5B75F8]'
                   }`}
                 />
               </div>
@@ -1691,7 +1691,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                     value={addMatQty}
                     onChange={(e) => setAddMatQty(e.target.value)}
                     className={`w-full px-3.5 py-2 rounded-xl text-xs border outline-none transition-all ${
-                      isDarkMode ? 'bg-slate-950/80 border-white/10 text-white focus:border-[#007AFF]' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
+                      isDarkMode ? 'bg-slate-950/80 border-white/10 text-white focus:border-[#5B75F8]' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#5B75F8]'
                     }`}
                   />
                 </div>
@@ -1726,7 +1726,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                     value={addMatScrap}
                     onChange={(e) => setAddMatScrap(e.target.value)}
                     className={`w-full px-3.5 py-2 rounded-xl text-xs border outline-none transition-all ${
-                      isDarkMode ? 'bg-slate-950/80 border-white/10 text-white focus:border-[#007AFF]' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
+                      isDarkMode ? 'bg-slate-950/80 border-white/10 text-white focus:border-[#5B75F8]' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#5B75F8]'
                     }`}
                   />
                 </div>
@@ -1740,7 +1740,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                     value={addMatHeatLot}
                     onChange={(e) => setAddMatHeatLot(e.target.value)}
                     className={`w-full px-3.5 py-2 rounded-xl text-xs border outline-none transition-all ${
-                      isDarkMode ? 'bg-slate-950/80 border-white/10 text-white focus:border-[#007AFF]' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
+                      isDarkMode ? 'bg-slate-950/80 border-white/10 text-white focus:border-[#5B75F8]' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#5B75F8]'
                     }`}
                   />
                 </div>
@@ -1776,7 +1776,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                 <button
                   type="submit"
                   disabled={isAddingCustomMaterial}
-                  className="px-5 py-2 rounded-full bg-[#007AFF] hover:bg-[#0071E3] active:scale-[0.98] text-white text-xs font-semibold shadow-xs cursor-pointer disabled:opacity-50 transition-all"
+                  className="px-5 py-2 rounded-full bg-[#5B75F8] hover:bg-[#435BE8] active:scale-[0.98] text-white text-xs font-semibold shadow-xs cursor-pointer disabled:opacity-50 transition-all"
                 >
                   {isAddingCustomMaterial ? 'Booking...' : 'Book & Add Material'}
                 </button>
@@ -1796,7 +1796,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
           }`}>
             <div className="flex items-center justify-between pb-3.5 border-b border-slate-100 dark:border-white/10">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF]">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF]">
                   <Activity className="w-4 h-4 stroke-[2]" />
                 </div>
                 <h4 className="font-bold text-sm tracking-tight">Log Production Shift Output</h4>
@@ -1858,7 +1858,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                     className={`w-full px-3.5 py-2 rounded-xl text-xs font-bold border outline-none transition-all ${
                       logQty > maxLoggableQty
                         ? 'border-rose-500 bg-rose-500/10 text-rose-600 dark:text-rose-300'
-                        : isDarkMode ? 'bg-slate-950/80 border-white/10 text-white focus:border-[#007AFF]' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
+                        : isDarkMode ? 'bg-slate-950/80 border-white/10 text-white focus:border-[#5B75F8]' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#5B75F8]'
                     }`}
                   />
                   <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
@@ -1875,7 +1875,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                     value={logMins}
                     onChange={(e) => setLogMins(Number(e.target.value))}
                     className={`w-full px-3.5 py-2 rounded-xl text-xs border outline-none transition-all ${
-                      isDarkMode ? 'bg-slate-950/80 border-white/10 text-white focus:border-[#007AFF]' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
+                      isDarkMode ? 'bg-slate-950/80 border-white/10 text-white focus:border-[#5B75F8]' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#5B75F8]'
                     }`}
                   />
                 </div>
@@ -1891,7 +1891,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                   value={logNotes}
                   onChange={(e) => setLogNotes(e.target.value)}
                   className={`w-full px-3.5 py-2 rounded-xl text-xs border outline-none transition-all ${
-                    isDarkMode ? 'bg-slate-950/80 border-white/10 text-white focus:border-[#007AFF]' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
+                    isDarkMode ? 'bg-slate-950/80 border-white/10 text-white focus:border-[#5B75F8]' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#5B75F8]'
                   }`}
                 />
               </div>
@@ -1907,7 +1907,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                 <button
                   type="submit"
                   disabled={isSubmittingLog}
-                  className="px-5 py-2 rounded-full bg-[#007AFF] hover:bg-[#0071E3] active:scale-[0.98] text-white text-xs font-semibold shadow-xs cursor-pointer disabled:opacity-50 transition-all"
+                  className="px-5 py-2 rounded-full bg-[#5B75F8] hover:bg-[#435BE8] active:scale-[0.98] text-white text-xs font-semibold shadow-xs cursor-pointer disabled:opacity-50 transition-all"
                 >
                   {isSubmittingLog ? 'Logging...' : 'Save Production Log'}
                 </button>

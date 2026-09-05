@@ -384,8 +384,8 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
                     onChange={(e) => setEditTransporter(e.target.value)}
                     placeholder="e.g. VRL Logistics, SafeXpress, Self Pick-up"
                     className={`w-full rounded-2xl border px-3.5 py-2.5 text-xs outline-none ${isDarkMode
-                        ? 'bg-black/60 border-white/10 text-white focus:border-[#007AFF]'
-                        : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
+                        ? 'bg-black/60 border-white/10 text-white focus:border-[#5B75F8]'
+                        : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#5B75F8]'
                       }`}
                   />
                 </div>
@@ -401,8 +401,8 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
                     onChange={(e) => setEditVehicleNo(e.target.value)}
                     placeholder="e.g. MH 12 AB 4589"
                     className={`w-full rounded-2xl border px-3.5 py-2.5 text-xs font-mono outline-none ${isDarkMode
-                        ? 'bg-black/60 border-white/10 text-white focus:border-[#007AFF]'
-                        : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
+                        ? 'bg-black/60 border-white/10 text-white focus:border-[#5B75F8]'
+                        : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#5B75F8]'
                       }`}
                   />
                 </div>
@@ -417,8 +417,8 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
                     onChange={(e) => setEditLrNo(e.target.value)}
                     placeholder="e.g. VRL-DOC-98762"
                     className={`w-full rounded-2xl border px-3.5 py-2.5 text-xs font-mono outline-none ${isDarkMode
-                        ? 'bg-black/60 border-white/10 text-white focus:border-[#007AFF]'
-                        : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
+                        ? 'bg-black/60 border-white/10 text-white focus:border-[#5B75F8]'
+                        : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#5B75F8]'
                       }`}
                   />
                 </div>
@@ -433,8 +433,8 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
                     onChange={(e) => setEditEWayBillNo(e.target.value)}
                     placeholder="e.g. 2710 9821 4455"
                     className={`w-full rounded-2xl border px-3.5 py-2.5 text-xs font-mono outline-none ${isDarkMode
-                        ? 'bg-black/60 border-white/10 text-white focus:border-[#007AFF]'
-                        : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
+                        ? 'bg-black/60 border-white/10 text-white focus:border-[#5B75F8]'
+                        : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#5B75F8]'
                       }`}
                   />
                 </div>
@@ -449,8 +449,8 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
                     onChange={(e) => setEditDriverContact(e.target.value)}
                     placeholder="e.g. +91 98765 43210"
                     className={`w-full rounded-2xl border px-3.5 py-2.5 text-xs font-mono outline-none ${isDarkMode
-                        ? 'bg-black/60 border-white/10 text-white focus:border-[#007AFF]'
-                        : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
+                        ? 'bg-black/60 border-white/10 text-white focus:border-[#5B75F8]'
+                        : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#5B75F8]'
                       }`}
                   />
                 </div>
@@ -464,8 +464,8 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
                     value={editDate}
                     onChange={(e) => setEditDate(e.target.value)}
                     className={`w-full rounded-2xl border px-3.5 py-2.5 text-xs font-mono outline-none ${isDarkMode
-                        ? 'bg-black/60 border-white/10 text-white focus:border-[#007AFF]'
-                        : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
+                        ? 'bg-black/60 border-white/10 text-white focus:border-[#5B75F8]'
+                        : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#5B75F8]'
                       }`}
                   />
                 </div>
@@ -481,8 +481,8 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
                   onChange={(e) => setEditRemarks(e.target.value)}
                   placeholder="e.g. Goods packed in sealed wooden crates with rust-proof VCI covers"
                   className={`w-full rounded-2xl border px-3.5 py-2.5 text-xs outline-none ${isDarkMode
-                      ? 'bg-black/60 border-white/10 text-white focus:border-[#007AFF]'
-                      : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#007AFF]'
+                      ? 'bg-black/60 border-white/10 text-white focus:border-[#5B75F8]'
+                      : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#5B75F8]'
                     }`}
                 />
               </div>
@@ -582,7 +582,7 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
                 <div className="border-b border-slate-200 dark:border-white/10 pb-5">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
-                      <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase bg-[#007AFF]/15 text-[#007AFF] border border-[#007AFF]/30 mb-1">
+                      <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase bg-[#5B75F8]/15 text-[#5B75F8] border border-[#5B75F8]/30 mb-1">
                         PRECISION MANUFACTURING ENTERPRISE
                       </span>
                       <h2 className="text-lg sm:text-xl font-black uppercase tracking-tight text-slate-900 dark:text-white">
@@ -828,7 +828,7 @@ export const ChallanDetailModal: React.FC<ChallanDetailModalProps> = ({
                   type="button"
                   disabled={isSaving}
                   onClick={handleAuthorizeDispatch}
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-blue-600 hover:to-cyan-600 text-white font-bold text-xs font-mono flex items-center gap-1.5 shadow-lg shadow-cyan-500/25 cursor-pointer disabled:opacity-50"
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs font-mono flex items-center gap-1.5 shadow-lg shadow-[#5B75F8]/20 cursor-pointer disabled:opacity-50"
                 >
                   <Truck className="w-4 h-4" />
                   <span>{isSaving ? 'Processing...' : 'Authorize & Mark In-Transit'}</span>

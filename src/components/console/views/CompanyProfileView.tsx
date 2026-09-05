@@ -189,7 +189,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
     }
   };
 
-  const inputClass = `h-11 w-full rounded-xl border px-3.5 text-xs font-medium outline-none transition-[border-color,box-shadow,background-color] duration-150 focus:border-[#007AFF] focus:ring-4 focus:ring-[#007AFF]/15 ${isDarkMode
+  const inputClass = `h-11 w-full rounded-xl border px-3.5 text-xs font-medium outline-none transition-[border-color,box-shadow,background-color] duration-150 focus:border-[#5B75F8] focus:ring-4 focus:ring-[#5B75F8]/15 ${isDarkMode
     ? 'border-white/10 bg-black/60 text-white placeholder:text-slate-500 hover:border-white/20 focus:bg-black/80'
     : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:bg-white'
     }`;
@@ -204,12 +204,12 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
         }`}>
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
           <div className="flex items-start gap-4">
-            <div className="p-3.5 rounded-2xl bg-[#007AFF]/10 text-[#007AFF] border border-[#007AFF]/20 shrink-0">
+            <div className="p-3.5 rounded-2xl bg-[#5B75F8]/10 text-[#5B75F8] border border-[#5B75F8]/20 shrink-0">
               <Building2 className="w-6 h-6" />
             </div>
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide bg-[#007AFF]/15 text-[#007AFF] border border-[#007AFF]/30">
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide bg-[#5B75F8]/15 text-[#5B75F8] border border-[#5B75F8]/30">
                   Enterprise Registration
                 </span>
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -238,7 +238,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
               type="button"
               onClick={handleResetToCurrent}
               title="Reset fields to current saved profile"
-              className={`px-4 py-2.5 rounded-full border text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 active:scale-[0.98] ${isDarkMode
+              className={`flex h-11 shrink-0 items-center gap-1.5 rounded-xl border px-4 text-xs font-semibold transition-all cursor-pointer active:scale-[0.98] ${isDarkMode
                 ? 'border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/10 hover:text-white'
                 : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100 shadow-xs'
                 }`}
@@ -251,7 +251,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
               type="button"
               onClick={handleSave}
               disabled={isSaving}
-              className="px-5 py-2.5 rounded-full bg-[#007AFF] hover:bg-[#0071E3] active:scale-[0.98] text-white text-xs font-semibold flex items-center gap-2 shadow-md shadow-blue-500/20 cursor-pointer disabled:opacity-50 transition-all"
+              className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer disabled:opacity-50"
             >
               {isSaving ? (
                 <>
@@ -289,11 +289,11 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
             {/* Entity Header */}
             <div className="flex items-start justify-between border-b border-white/10 dark:border-white/10 pb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#007AFF] to-[#5856D6] flex items-center justify-center text-white shadow-md shadow-blue-500/20 font-bold text-sm">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#5B75F8] to-[#5856D6] flex items-center justify-center text-white shadow-md shadow-blue-500/20 font-bold text-sm">
                   GO
                 </div>
                 <div>
-                  <span className="text-[10px] font-mono uppercase font-semibold text-[#007AFF] tracking-wider block">
+                  <span className="text-[10px] font-mono uppercase font-semibold text-[#5B75F8] tracking-wider block">
                     REGISTERED ENTERPRISE
                   </span>
                   <h3 className="text-sm font-bold tracking-tight text-white dark:text-white line-clamp-1">
@@ -315,7 +315,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                   Registered Works Address
                 </span>
                 <p className={`text-xs leading-relaxed flex items-start gap-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                  <MapPin className="w-3.5 h-3.5 text-[#007AFF] shrink-0 mt-0.5" />
+                  <MapPin className="w-3.5 h-3.5 text-[#5B75F8] shrink-0 mt-0.5" />
                   <span>{address || 'Sr No 15/2, Mataji Logistic Park, Behind Tilakraj CNG Pump, Urali Devachi, Pune 412308, India'}</span>
                 </p>
               </div>
@@ -399,7 +399,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
             {/* Rule 55 Statutory Stamp */}
             <div className={`mt-4 p-3 rounded-2xl border flex items-center gap-2.5 text-[11px] ${isDarkMode ? 'bg-blue-500/5 border-blue-500/20 text-slate-300' : 'bg-blue-50 border-blue-200 text-slate-700'
               }`}>
-              <ShieldCheck className="w-4 h-4 text-[#007AFF] shrink-0" />
+              <ShieldCheck className="w-4 h-4 text-[#5B75F8] shrink-0" />
               <span>Registered under GST Section 31 & Rule 55 for manufacturing movement of goods.</span>
             </div>
           </div>
@@ -411,7 +411,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
             }`}>
             <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
               <div className="flex items-center gap-2">
-                <Receipt className="w-4 h-4 text-[#007AFF]" />
+                <Receipt className="w-4 h-4 text-[#5B75F8]" />
                 <span className="text-xs font-semibold">
                   Official Document Header Preview
                 </span>
@@ -424,7 +424,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
             {/* Inset Stationery Template */}
             <div className={`p-4 rounded-2xl border text-xs space-y-2 ${isDarkMode ? 'bg-black/60 border-white/10' : 'bg-slate-50 border-slate-200'
               }`}>
-              <span className="inline-block px-2 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase bg-[#007AFF]/15 text-[#007AFF] border border-[#007AFF]/30">
+              <span className="inline-block px-2 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase bg-[#5B75F8]/15 text-[#5B75F8] border border-[#5B75F8]/30">
                 PRECISION MANUFACTURING ENTERPRISE
               </span>
               <h4 className="font-bold text-sm tracking-tight text-white dark:text-white uppercase">
@@ -464,7 +464,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
               {/* Group 1: Legal Identity & Corporate Details */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2 pb-2 border-b border-white/10">
-                  <div className="p-1.5 rounded-lg bg-[#007AFF]/10 text-[#007AFF]">
+                  <div className="p-1.5 rounded-lg bg-[#5B75F8]/10 text-[#5B75F8]">
                     <Building className="w-4 h-4" />
                   </div>
                   <div>
@@ -553,7 +553,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     placeholder="Full street address, industrial estate, city, state, and pincode"
-                    className={`w-full rounded-xl border p-3.5 text-xs font-medium outline-none transition-[border-color,box-shadow,background-color] duration-150 focus:border-[#007AFF] focus:ring-4 focus:ring-[#007AFF]/15 ${isDarkMode
+                    className={`w-full rounded-xl border p-3.5 text-xs font-medium outline-none transition-[border-color,box-shadow,background-color] duration-150 focus:border-[#5B75F8] focus:ring-4 focus:ring-[#5B75F8]/15 ${isDarkMode
                       ? 'border-white/10 bg-black/60 text-white placeholder:text-slate-500 hover:border-white/20 focus:bg-black/80'
                       : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:bg-white'
                       }`}
@@ -661,7 +661,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                   <button
                     type="button"
                     onClick={handleResetToCurrent}
-                    className={`w-1/2 sm:w-auto px-4 py-2.5 rounded-full border text-xs font-semibold transition-all cursor-pointer ${isDarkMode
+                    className={`w-1/2 sm:w-auto flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border px-5 text-xs font-semibold transition-all cursor-pointer ${isDarkMode
                       ? 'border-white/10 text-slate-300 hover:bg-white/10'
                       : 'border-slate-200 text-slate-700 hover:bg-slate-100'
                       }`}
@@ -672,7 +672,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                   <button
                     type="submit"
                     disabled={isSaving}
-                    className="w-1/2 sm:w-auto px-6 py-2.5 rounded-full bg-[#007AFF] hover:bg-[#0071E3] active:scale-[0.98] text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-500/25 cursor-pointer disabled:opacity-50 transition-all"
+                    className="w-1/2 sm:w-auto flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-6 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer disabled:opacity-50"
                   >
                     {isSaving ? (
                       <>

@@ -186,7 +186,7 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
   const getDeviceIcon = (deviceType: string, browser: string) => {
     if (deviceType === 'mobile') return <Smartphone className="w-5 h-5 text-indigo-400" />;
     if (deviceType === 'tablet') return <Tablet className="w-5 h-5 text-purple-400" />;
-    return <Laptop className="w-5 h-5 text-[#007AFF]" />;
+    return <Laptop className="w-5 h-5 text-[#5B75F8]" />;
   };
 
   const getEventBadge = (type: string, severity: string) => {
@@ -220,7 +220,7 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
 
   const otherSessionsCount = sessions.filter(s => !s.isCurrent).length;
 
-  const inputClass = `h-11 w-full rounded-xl border px-3.5 text-xs font-medium outline-none transition-[border-color,box-shadow,background-color] duration-150 focus:border-[#007AFF] focus:ring-4 focus:ring-[#007AFF]/15 ${
+  const inputClass = `h-11 w-full rounded-xl border px-3.5 text-xs font-medium outline-none transition-[border-color,box-shadow,background-color] duration-150 focus:border-[#5B75F8] focus:ring-4 focus:ring-[#5B75F8]/15 ${
     isDarkMode 
       ? 'border-white/10 bg-black/60 text-white placeholder:text-slate-500 hover:border-white/20 focus:bg-black/80' 
       : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:bg-white'
@@ -236,7 +236,7 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
         {/* Header */}
         <div className="px-6 py-5 border-b border-white/10 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="p-2.5 rounded-2xl bg-[#007AFF]/10 text-[#007AFF] border border-[#007AFF]/20 shrink-0">
+            <div className="p-2.5 rounded-2xl bg-[#5B75F8]/10 text-[#5B75F8] border border-[#5B75F8]/20 shrink-0">
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
@@ -294,7 +294,7 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
                 onClick={() => { setActiveTab(tab.id as any); setActionError(null); setActionSuccess(null); }}
                 className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 active:scale-[0.98] ${
                   isActive
-                    ? 'bg-[#007AFF] text-white shadow-sm'
+                    ? 'bg-[#5B75F8] text-white shadow-sm'
                     : isDarkMode
                     ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -379,7 +379,7 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
 
               {loading ? (
                 <div className="py-12 flex flex-col items-center justify-center text-slate-400 text-xs gap-2">
-                  <RefreshCw className="w-5 h-5 animate-spin text-[#007AFF]" />
+                  <RefreshCw className="w-5 h-5 animate-spin text-[#5B75F8]" />
                   <span>Loading active sessions...</span>
                 </div>
               ) : sessions.length === 0 ? (
@@ -393,14 +393,14 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
                       key={session.id}
                       className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
                         session.isCurrent 
-                          ? 'bg-[#007AFF]/5 border-[#007AFF]/30' 
+                          ? 'bg-[#5B75F8]/5 border-[#5B75F8]/30' 
                           : 'bg-black/60 border-white/10 hover:border-white/20'
                       }`}
                     >
                       <div className="flex items-start gap-3.5 min-w-0">
                         <div className={`p-2.5 rounded-xl border shrink-0 ${
                           session.isCurrent 
-                            ? 'bg-[#007AFF]/15 border-[#007AFF]/30 text-[#007AFF]' 
+                            ? 'bg-[#5B75F8]/15 border-[#5B75F8]/30 text-[#5B75F8]' 
                             : 'bg-white/[0.04] border-white/10 text-slate-400'
                         }`}>
                           {getDeviceIcon(session.deviceType, session.browser)}
@@ -464,7 +464,7 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
 
               {loading ? (
                 <div className="py-12 flex flex-col items-center justify-center text-slate-400 text-xs gap-2">
-                  <RefreshCw className="w-5 h-5 animate-spin text-[#007AFF]" />
+                  <RefreshCw className="w-5 h-5 animate-spin text-[#5B75F8]" />
                   <span>Loading event trail...</span>
                 </div>
               ) : events.length === 0 ? (
@@ -483,7 +483,7 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
                           {ev.severity === 'CRITICAL' || ev.severity === 'HIGH' ? (
                             <ShieldAlert className="w-4 h-4 text-rose-400" />
                           ) : (
-                            <Shield className="w-4 h-4 text-[#007AFF]" />
+                            <Shield className="w-4 h-4 text-[#5B75F8]" />
                           )}
                         </div>
 
@@ -531,7 +531,7 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
             <div className="space-y-5">
               <div>
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-[#007AFF]" />
+                  <Clock className="w-4 h-4 text-[#5B75F8]" />
                   <span>Two-Tier Session & Inactivity Management</span>
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
@@ -550,7 +550,7 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
                       Logs you out <strong className="text-white">only when completely idle</strong>. Active typing, scrolling, and navigation keep your session continuous.
                     </p>
                   </div>
-                  <span className="shrink-0 px-3 py-1 rounded-full text-[10px] font-mono font-bold bg-[#007AFF]/15 text-[#007AFF] border border-[#007AFF]/30">
+                  <span className="shrink-0 px-3 py-1 rounded-full text-[10px] font-mono font-bold bg-[#5B75F8]/15 text-[#5B75F8] border border-[#5B75F8]/30">
                     {tempIdleTimeout === 0 ? 'Disabled' : `${tempIdleTimeout} Minutes`}
                   </span>
                 </div>
@@ -569,7 +569,7 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
                       onClick={() => setTempIdleTimeout(opt.value)}
                       className={`p-2.5 rounded-2xl border text-xs font-semibold transition-all cursor-pointer text-center active:scale-95 ${
                         tempIdleTimeout === opt.value
-                          ? 'bg-[#007AFF] text-white border-[#007AFF] shadow-md shadow-blue-500/25 font-bold'
+                          ? 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-md shadow-blue-500/25 font-bold'
                           : 'bg-black/40 border-white/10 text-slate-300 hover:border-white/20'
                       }`}
                     >
@@ -637,7 +637,7 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
                     onChange={(e) => setTempWarningEnabled(e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#007AFF]"></div>
+                  <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5B75F8]"></div>
                 </label>
               </div>
 
@@ -656,7 +656,7 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
                 </div>
                 <div className="flex items-center justify-between text-[11px]">
                   <span className="text-slate-400">Activity Heartbeat:</span>
-                  <span className="text-[#007AFF] font-bold">Active now</span>
+                  <span className="text-[#5B75F8] font-bold">Active now</span>
                 </div>
               </div>
 
@@ -665,7 +665,7 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
                 <button
                   type="button"
                   onClick={handleSaveTimeouts}
-                  className="px-6 py-2.5 rounded-full bg-[#007AFF] hover:bg-[#0071E3] text-white text-xs font-semibold shadow-md shadow-blue-500/25 transition-all cursor-pointer flex items-center gap-2 active:scale-[0.98]"
+                  className="px-6 py-2.5 rounded-full bg-[#5B75F8] hover:bg-[#435BE8] text-white text-xs font-semibold shadow-md shadow-blue-500/25 transition-all cursor-pointer flex items-center gap-2 active:scale-[0.98]"
                 >
                   <CheckCircle2 className="w-4 h-4" />
                   <span>Save & Apply Session Policy</span>
@@ -734,7 +734,7 @@ export const SecuritySessionsModal: React.FC<SecuritySessionsModalProps> = ({
                 <button
                   type="submit"
                   disabled={isChangingPassword}
-                  className="px-6 py-2.5 rounded-full bg-[#007AFF] hover:bg-[#0071E3] text-white text-xs font-semibold transition-all cursor-pointer flex items-center gap-2 shadow-md shadow-blue-500/25 active:scale-[0.98] disabled:opacity-50"
+                  className="px-6 py-2.5 rounded-full bg-[#5B75F8] hover:bg-[#435BE8] text-white text-xs font-semibold transition-all cursor-pointer flex items-center gap-2 shadow-md shadow-blue-500/25 active:scale-[0.98] disabled:opacity-50"
                 >
                   {isChangingPassword ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5" />}
                   <span>Update Password</span>

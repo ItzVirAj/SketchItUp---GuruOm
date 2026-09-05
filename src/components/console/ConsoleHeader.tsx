@@ -291,7 +291,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
             }`}>
               <span className={`${isDarkMode ? 'text-slate-300' : 'text-slate-600'} font-medium`}>Workspace</span>
               <span className="text-slate-400">/</span>
-              <span className="font-semibold text-[#007AFF] dark:text-[#0A84FF] truncate">{activeTitle}</span>
+              <span className="font-semibold text-[#5B75F8] dark:text-[#7B92FF] truncate">{activeTitle}</span>
             </div>
           </div>
 
@@ -321,7 +321,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
             }`}
           >
             <div className="flex items-center gap-2.5 min-w-0">
-              <Search className="h-3.5 w-3.5 shrink-0 text-slate-400 group-hover:text-[#007AFF] transition-colors" />
+              <Search className="h-3.5 w-3.5 shrink-0 text-slate-400 group-hover:text-[#5B75F8] transition-colors" />
               <span className={`text-xs font-normal truncate ${isDarkMode ? 'text-slate-300' : 'text-slate-500'}`}>
                 Search purchase orders, job cards, parts, invoices, customers...
               </span>
@@ -350,7 +350,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
                 {matchingOrders.map(order => (
                   <button key={order.id} type="button" onClick={() => handleSearchResultClick('order', order.id)} className="flex w-full items-center justify-between gap-3 rounded-2xl p-2.5 text-left transition hover:bg-white/[0.08] cursor-pointer">
                     <span className="flex min-w-0 items-center gap-2.5">
-                      <div className="p-2 rounded-xl bg-[#007AFF]/10 text-[#007AFF]">
+                      <div className="p-2 rounded-xl bg-[#5B75F8]/10 text-[#5B75F8]">
                         <ShoppingCart className="h-3.5 w-3.5 shrink-0" />
                       </div>
                       <span className="min-w-0">
@@ -447,9 +447,9 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
               }`}
               title={`Reporting period: ${fiscalYear}`}
             >
-              <CalendarRange className="h-3.5 w-3.5 text-[#007AFF]" />
+              <CalendarRange className="h-3.5 w-3.5 text-[#5B75F8]" />
               <span>{scope}</span>
-              <ChevronDown className={`h-3 w-3 text-slate-400 transition-transform ${showScopeDropdown ? 'rotate-180 text-[#007AFF]' : ''}`} />
+              <ChevronDown className={`h-3 w-3 text-slate-400 transition-transform ${showScopeDropdown ? 'rotate-180 text-[#5B75F8]' : ''}`} />
             </button>
             
             {showScopeDropdown && (
@@ -467,7 +467,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
                     }}
                     className={`w-full rounded-xl px-3 py-2 text-left font-semibold transition-all cursor-pointer ${
                       scope === sc 
-                        ? 'bg-[#007AFF] text-white shadow-sm' 
+                        ? 'bg-[#5B75F8] text-white shadow-sm' 
                         : isDarkMode ? 'hover:bg-white/[0.08] text-slate-200' : 'hover:bg-slate-100 text-slate-700'
                     }`}
                   >
@@ -485,7 +485,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
               onClick={() => setShowCustomizeMenu(prev => !prev)}
               className={`flex h-9 w-9 items-center justify-center rounded-full border text-xs font-semibold transition-all active:scale-95 cursor-pointer shadow-2xs ${
                 showCustomizeMenu
-                  ? 'border-[#007AFF] bg-[#007AFF]/15 text-[#007AFF]'
+                  ? 'border-[#5B75F8] bg-[#5B75F8]/15 text-[#5B75F8]'
                   : isDarkMode 
                     ? 'border-white/15 bg-white/[0.06] text-slate-200 hover:bg-white/[0.1] hover:border-white/25' 
                     : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
@@ -533,7 +533,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
                 : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
             }`}
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin text-[#007AFF]' : 'text-slate-400'}`} />
+            <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin text-[#5B75F8]' : 'text-slate-400'}`} />
             <span className="hidden sm:inline">{isSyncing ? 'Syncing' : 'Sync'}</span>
           </button>
 
@@ -592,7 +592,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
               layout
               transition={{ type: 'spring', stiffness: 500, damping: 30 }}
               className={`flex h-7 w-7 items-center justify-center rounded-full text-white shadow-sm ${
-                isDarkMode ? 'ml-6 bg-[#007AFF]' : 'ml-0 bg-slate-800'
+                isDarkMode ? 'ml-6 bg-[#5B75F8]' : 'ml-0 bg-slate-800'
               }`}
             >
               <AnimatePresence mode="popLayout" initial={false}>
@@ -644,8 +644,8 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
               placeholder="Search orders, parts, invoices, jobs..."
               className={`w-full rounded-full border py-2 pl-9 pr-9 text-xs font-medium outline-none ${
                 isDarkMode 
-                  ? 'border-white/15 bg-white/[0.06] text-white placeholder:text-slate-400 focus:border-[#007AFF]' 
-                  : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:border-[#007AFF]'
+                  ? 'border-white/15 bg-white/[0.06] text-white placeholder:text-slate-400 focus:border-[#5B75F8]' 
+                  : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:border-[#5B75F8]'
               }`}
             />
             {searchQuery && (

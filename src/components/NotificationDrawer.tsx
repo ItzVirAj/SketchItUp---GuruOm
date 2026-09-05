@@ -235,7 +235,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
         );
       default:
         return (
-          <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-blue-500/15 border border-blue-500/30 text-[#007AFF] shrink-0 shadow-2xs">
+          <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-blue-500/15 border border-blue-500/30 text-[#5B75F8] shrink-0 shadow-2xs">
             <Info className="h-4 w-4" />
           </div>
         );
@@ -328,7 +328,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
               }`}
               title={isSoundEnabled ? 'Audio alerts active (Click to mute)' : 'Audio alerts muted (Click to enable)'}
             >
-              {isSoundEnabled ? <Volume2 className="h-4 w-4 text-[#007AFF] dark:text-[#0A84FF]" /> : <VolumeX className="h-4 w-4 text-slate-400" />}
+              {isSoundEnabled ? <Volume2 className="h-4 w-4 text-[#5B75F8] dark:text-[#7B92FF]" /> : <VolumeX className="h-4 w-4 text-slate-400" />}
             </button>
             <button
               type="button"
@@ -365,7 +365,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                 onClick={() => setActiveTab(sec.key)}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer active:scale-95 ${
                   isActive
-                    ? 'bg-[#007AFF] text-white shadow-sm shadow-blue-500/30'
+                    ? 'bg-[#5B75F8] text-white shadow-sm shadow-blue-500/30'
                     : isDarkMode
                       ? 'border border-white/10 bg-white/[0.04] text-slate-300 hover:text-white hover:bg-white/[0.08] hover:border-white/20'
                       : 'border border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900'
@@ -395,7 +395,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                 <button
                   type="button"
                   onClick={onMarkAllAsRead}
-                  className="px-3 py-1 rounded-full border border-[#007AFF]/30 bg-[#007AFF]/15 text-[#007AFF] hover:bg-[#007AFF]/25 text-xs font-semibold flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-2xs"
+                  className="px-3 py-1 rounded-full border border-[#5B75F8]/30 bg-[#5B75F8]/15 text-[#5B75F8] hover:bg-[#5B75F8]/25 text-xs font-semibold flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-2xs"
                 >
                   <CheckCheck className="h-3.5 w-3.5" />
                   <span>Mark all read</span>
@@ -437,7 +437,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                 <div className={`flex h-14 w-14 items-center justify-center rounded-3xl border mb-3.5 shadow-2xs ${
                   isDarkMode ? 'border-white/15 bg-white/[0.04]' : 'border-slate-200 bg-slate-100'
                 }`}>
-                  <Sparkles className="h-6 w-6 text-[#007AFF] opacity-80" />
+                  <Sparkles className="h-6 w-6 text-[#5B75F8] opacity-80" />
                 </div>
                 <p className={`text-sm font-bold tracking-tight ${
                   isDarkMode ? 'text-white' : 'text-slate-900'
@@ -466,7 +466,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                             : 'bg-slate-50/90 border-slate-200/90 hover:bg-white hover:border-slate-300 hover:shadow-xs'
                           : isDarkMode
                             ? 'bg-white/[0.07] border-white/15 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1),0_8px_20px_rgba(0,0,0,0.4)] hover:bg-white/[0.1] hover:border-white/25' 
-                            : 'bg-white border-[#007AFF]/30 shadow-sm ring-1 ring-[#007AFF]/20'
+                            : 'bg-white border-[#5B75F8]/30 shadow-sm ring-1 ring-[#5B75F8]/20'
                       }`}
                     >
                       <div className="flex items-start gap-3.5">
@@ -484,8 +484,8 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                             </span>
                             {!notif.is_read && (
                               <span className="relative flex h-2 w-2">
-                                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#007AFF] opacity-75" />
-                                <span className="relative inline-flex h-2 w-2 rounded-full bg-[#007AFF]" />
+                                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#5B75F8] opacity-75" />
+                                <span className="relative inline-flex h-2 w-2 rounded-full bg-[#5B75F8]" />
                               </span>
                             )}
                           </div>

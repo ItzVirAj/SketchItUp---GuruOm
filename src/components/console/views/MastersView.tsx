@@ -990,7 +990,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
             {activeTab === 'CUSTOMERS' && (
               <button
                 onClick={openCustomerModal}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-blue-600 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.96] transition-ui"
+                className="w-full sm:w-auto flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>New Customer</span>
@@ -1000,7 +1000,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
             {activeTab === 'VENDORS' && (
               <button
                 onClick={openVendorModal}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.96] transition-ui"
+                className="w-full sm:w-auto flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>New Vendor</span>
@@ -1010,7 +1010,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
             {activeTab === 'ITEMS' && (
               <button
                 onClick={openItemModal}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.96] transition-ui"
+                className="w-full sm:w-auto flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>New Item</span>
@@ -1020,7 +1020,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
             {activeTab === 'MACHINES' && (
               <button
                 onClick={openMachineModal}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-amber-600 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.96] transition-ui"
+                className="w-full sm:w-auto flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>New Machine</span>

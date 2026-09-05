@@ -1287,7 +1287,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         return {
           label: `View / Dispatch Challan (${effectiveChallanNo})`,
           icon: Eye,
-          buttonClass: 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-blue-600 hover:to-cyan-600 text-white shadow-cyan-500/25',
+          buttonClass: 'bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white shadow-[#5B75F8]/20',
           handler: handleOpenChallanDetailModal,
           disabled: isConfirming || hasNcr || !allowed,
           disabledReason: !allowed ? 'Only Dispatch Clerk or Owner can dispatch the order' : hasNcr ? 'Open NCR / QC Hold must be resolved before dispatch' : undefined,
@@ -1494,7 +1494,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 <span>/</span>
                 <span>PO Detail</span>
                 <span>/</span>
-                <span className="text-[#007AFF] dark:text-[#0A84FF] font-semibold">{order.poNo}</span>
+                <span className="text-[#5B75F8] dark:text-[#7B92FF] font-semibold">{order.poNo}</span>
               </div>
 
               <div className="flex flex-wrap items-center gap-2.5">
@@ -1505,7 +1505,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 {order.subType && (
                   <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${order.subType === 'BLANKET_CALLOFF'
                     ? isDarkMode ? 'bg-purple-500/15 text-purple-300 border-purple-500/30' : 'bg-purple-50 text-purple-700 border-purple-200'
-                    : isDarkMode ? 'bg-blue-500/15 text-[#0A84FF] border-blue-500/30' : 'bg-blue-50 text-[#007AFF] border-blue-200'
+                    : isDarkMode ? 'bg-blue-500/15 text-[#7B92FF] border-blue-500/30' : 'bg-blue-50 text-[#5B75F8] border-blue-200'
                     }`}>
                     {order.subType === 'BLANKET_CALLOFF' ? 'Blanket Call-Off' : 'Fresh PO'}
                   </span>
@@ -1515,7 +1515,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   isQcHold || hasNcr ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
                     order.status === 'CANCELLED' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20' :
                       order.status === 'DRAFT' || order.status === 'PO_RECEIVED' || order.status === 'SUBMITTED' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
-                        order.status === 'CONFIRMED' || order.status === 'APPROVED' ? 'bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF] border-blue-500/20' :
+                        order.status === 'CONFIRMED' || order.status === 'APPROVED' ? 'bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF] border-blue-500/20' :
                           order.status === 'MATERIAL_CHECKED' || order.status === 'MATERIAL_CHECK' || order.status === 'MATERIAL_READY' ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20' :
                             order.status === 'IN_PRODUCTION' || order.status === 'JOB_RELEASED' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
                               order.status === 'READY_FOR_QC' || order.status === 'MANUFACTURING_COMPLETED' || order.status === 'QC_INSPECTION' || order.status === 'QC' ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20' :
@@ -1528,7 +1528,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     isQcHold || hasNcr ? 'bg-amber-500 animate-pulse' :
                       order.status === 'CANCELLED' ? 'bg-rose-500' :
                         order.status === 'DRAFT' || order.status === 'PO_RECEIVED' || order.status === 'SUBMITTED' ? 'bg-amber-500 animate-pulse' :
-                          order.status === 'CONFIRMED' || order.status === 'APPROVED' ? 'bg-[#007AFF]' :
+                          order.status === 'CONFIRMED' || order.status === 'APPROVED' ? 'bg-[#5B75F8]' :
                             order.status === 'MATERIAL_CHECKED' || order.status === 'MATERIAL_CHECK' || order.status === 'MATERIAL_READY' ? 'bg-indigo-500' :
                               order.status === 'IN_PRODUCTION' || order.status === 'JOB_RELEASED' ? 'bg-amber-500 animate-pulse' :
                                 order.status === 'READY_FOR_QC' || order.status === 'MANUFACTURING_COMPLETED' ? 'bg-purple-500 animate-pulse' :
@@ -1602,7 +1602,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               Lifecycle Progress
             </span>
           </div>
-          <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${isDarkMode ? 'bg-blue-500/10 border-blue-500/20 text-[#0A84FF]' : 'bg-blue-50 border-blue-100 text-[#007AFF]'
+          <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${isDarkMode ? 'bg-blue-500/10 border-blue-500/20 text-[#7B92FF]' : 'bg-blue-50 border-blue-100 text-[#5B75F8]'
             }`}>
             Phase {activeStepIndex + 1} of {steps.length} • {(order.status || order.stage || 'DRAFT').replace(/_/g, ' ')}
           </span>
@@ -1622,7 +1622,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               <div
                 key={st.name}
                 className={`flex-1 min-w-[110px] sm:min-w-[130px] px-3 py-2 rounded-xl flex items-center gap-2.5 transition-all select-none ${isCurrent
-                  ? 'bg-[#007AFF] text-white shadow-sm shadow-blue-500/25'
+                  ? 'bg-[#5B75F8] text-white shadow-sm shadow-blue-500/25'
                   : isCompleted
                     ? isDarkMode
                       ? 'bg-slate-900/90 text-slate-200 border border-white/5'
@@ -1684,9 +1684,9 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     {useCtaPermission('REQUEST_REVISION') && (
                       <button
                         onClick={openEditModal}
-                        className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-ui cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${isDarkMode
-                          ? 'border-indigo-500/40 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20'
-                          : 'border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
+                        className={`flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border px-3.5 text-xs font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-[0.98] ${isDarkMode
+                          ? 'border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/10 hover:text-white'
+                          : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100 shadow-xs'
                           }`}
                       >
                         <Edit3 className="w-3.5 h-3.5 shrink-0" />
@@ -1697,7 +1697,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                       <button
                         disabled={isConfirming || !allowed}
                         onClick={handleConfirmAction}
-                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white text-xs font-bold shadow-lg shadow-emerald-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
+                        className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer disabled:opacity-50 whitespace-nowrap"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                         <span>{isConfirming ? 'Confirming...' : 'Confirm Order'}</span>
@@ -1705,7 +1705,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     )}
                     <button
                       onClick={() => onCancelOrder?.(order.id)}
-                      className="px-3 py-2 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 text-xs font-bold cursor-pointer transition-ui flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
+                      className="flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 px-3.5 text-xs font-semibold cursor-pointer transition-all active:scale-[0.98] whitespace-nowrap"
                     >
                       <XCircle className="w-3.5 h-3.5 shrink-0" />
                       <span>Cancel</span>
@@ -1728,9 +1728,9 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   {useCtaPermission('RAISE_CHANGE_ORDER') && (
                     <button
                       onClick={openEditModal}
-                      className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-ui cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${isDarkMode
-                        ? 'border-purple-500/40 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20'
-                        : 'border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100'
+                      className={`flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border px-3.5 text-xs font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-[0.98] ${isDarkMode
+                        ? 'border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/10 hover:text-white'
+                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100 shadow-xs'
                         }`}
                     >
                       <Edit3 className="w-3.5 h-3.5 shrink-0" />
@@ -1741,7 +1741,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     <button
                       disabled={isRunningMaterialCheck}
                       onClick={handleMaterialCheckAction}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold shadow-lg shadow-[#5B75F8]/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
+                      className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer disabled:opacity-50 whitespace-nowrap"
                     >
                       <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${isRunningMaterialCheck ? 'animate-spin' : ''}`} />
                       <span>{isRunningMaterialCheck ? 'Checking Material...' : 'Proceed to Material Check'}</span>
@@ -1765,7 +1765,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     <button
                       disabled={isRunningMaterialCheck}
                       onClick={handleMaterialCheckAction}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold shadow-md shadow-[#5B75F8]/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
+                      className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer disabled:opacity-50 whitespace-nowrap"
                     >
                       <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${isRunningMaterialCheck ? 'animate-spin' : ''}`} />
                       <span>{isRunningMaterialCheck ? 'Checking...' : 'Re-run Material Check'}</span>
@@ -1774,8 +1774,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   {isOwner && (
                     <button
                       onClick={() => setShowOverrideModal(true)}
-                      className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-ui cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 ${isDarkMode
-                        ? 'border-purple-500/40 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20'
+                      className={`flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border px-3.5 text-xs font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-[0.98] ${isDarkMode
+                        ? 'border-purple-500/30 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20'
                         : 'border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100'
                         }`}
                     >
@@ -1801,7 +1801,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     <button
                       disabled={isRunningMaterialCheck}
                       onClick={handleMaterialCheckAction}
-                      className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold shadow-md shadow-[#5B75F8]/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
+                      className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer disabled:opacity-50 whitespace-nowrap"
                     >
                       <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${isRunningMaterialCheck ? 'animate-spin' : ''}`} />
                       <span>{isRunningMaterialCheck ? 'Checking...' : 'Re-check Material'}</span>
@@ -1809,7 +1809,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   )}
                   <button
                     onClick={() => onNavigate?.('inventory')}
-                    className="px-3.5 py-2 rounded-xl bg-amber-500/20 text-amber-500 dark:text-amber-300 border border-amber-500/40 text-xs font-bold cursor-pointer hover:bg-amber-500/30 flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
+                    className="flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-500 dark:text-amber-300 hover:bg-amber-500/20 px-3.5 text-xs font-semibold cursor-pointer transition-all active:scale-[0.98] whitespace-nowrap"
                   >
                     <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                     <span>Open Purchase Requisitions ➔</span>
@@ -1832,7 +1832,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   {useCtaPermission('CREATE_PURCHASE_ORDER') && (
                     <button
                       onClick={() => onNavigate?.('inventory')}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-500 text-white text-xs font-bold cursor-pointer shadow-md shadow-amber-500/20 hover:from-orange-500 hover:to-amber-600 flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
+                      className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer whitespace-nowrap"
                     >
                       <Building className="w-3.5 h-3.5 shrink-0" />
                       <span>Create Purchase Order</span>
@@ -1856,7 +1856,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   {useCtaPermission('RECORD_GRN') && (
                     <button
                       onClick={() => onNavigate?.('inventory')}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 text-white text-xs font-bold cursor-pointer shadow-md shadow-teal-500/20 hover:from-emerald-600 hover:to-teal-600 flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
+                      className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer whitespace-nowrap"
                     >
                       <Package className="w-3.5 h-3.5 shrink-0" />
                       <span>Record GRN</span>
@@ -1894,7 +1894,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                       <button
                         disabled={!allowed || lineCount === 0}
                         onClick={handleGoToCreateJobCard}
-                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-500 hover:from-orange-500 hover:to-amber-600 text-white text-xs font-bold shadow-md shadow-amber-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
+                        className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer disabled:opacity-50 whitespace-nowrap"
                       >
                         <RefreshCw className="w-3.5 h-3.5 shrink-0" />
                         <span>Create Job Card ({lineCount} item{lineCount === 1 ? '' : 's'})</span>
@@ -1919,7 +1919,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   {(useCtaPermission('ISSUE_TO_SUBCONTRACTOR') || useCtaPermission('RECEIVE_FROM_SUBCONTRACTOR')) && (
                     <button
                       onClick={() => onNavigate?.('production')}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-indigo-600 hover:to-purple-600 text-white text-xs font-bold shadow-md shadow-purple-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
+                      className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer whitespace-nowrap"
                     >
                       <RefreshCw className="w-3.5 h-3.5 shrink-0" />
                       <span>Issue / Receive Subcontractor Outwork</span>
@@ -1942,7 +1942,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   {(useCtaPermission('START_MANUFACTURING') || useCtaPermission('COMPLETE_STEP')) && (
                     <button
                       onClick={() => onNavigate?.('production')}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-indigo-600 hover:to-purple-600 text-white text-xs font-bold shadow-md shadow-purple-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
+                      className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer whitespace-nowrap"
                     >
                       <Flame className="w-3.5 h-3.5 shrink-0" />
                       <span>Log Production / Start Operations</span>
@@ -1965,7 +1965,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   {useCtaPermission('MARK_MANUFACTURING_COMPLETE') && (
                     <button
                       onClick={() => onNavigate?.('qc')}
-                      className="px-3.5 py-2 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 text-xs font-bold cursor-pointer hover:bg-indigo-500/30 flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
+                      className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer whitespace-nowrap"
                     >
                       <span>Proceed to QC Queue ➔</span>
                     </button>
@@ -1992,7 +1992,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                         else pdiModal.open();
                       }}
                       title={`Inspect PDI for ${order.jobCards?.[0]?.jobNo || 'JC'} (${order.poNo || order.id})`}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
+                      className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer whitespace-nowrap"
                     >
                       <ClipboardCheck className="w-3.5 h-3.5 shrink-0" />
                       <span>Proceed to PDI / Inspect PDI ➔</span>
@@ -2000,7 +2000,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   ) : (
                     <button
                       onClick={() => onNavigate?.('qc')}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white text-xs font-bold shadow-md shadow-indigo-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
+                      className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer whitespace-nowrap"
                     >
                       <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
                       <span>Upload Quality Report / Perform QC</span>
@@ -2027,7 +2027,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                       else pdiModal.open();
                     }}
                     title={`Inspect PDI for ${order.jobCards?.[0]?.jobNo || 'JC'} (${order.poNo || order.id})`}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold shadow-md shadow-[#5B75F8]/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
+                    className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer whitespace-nowrap"
                   >
                     <ClipboardCheck className="w-3.5 h-3.5 shrink-0" />
                     <span>Inspect PDI</span>
@@ -2048,14 +2048,14 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
                   <button
                     onClick={() => pdiModal.open()}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
+                    className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer whitespace-nowrap"
                   >
                     <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
                     <span>Mark Ready to Dispatch</span>
                   </button>
                   <button
                     onClick={() => pdiModal.open()}
-                    className="px-3.5 py-2 rounded-xl bg-rose-500/10 text-rose-500 dark:text-rose-400 border border-rose-500/30 text-xs font-bold cursor-pointer hover:bg-rose-500/20 flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
+                    className="flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 px-3.5 text-xs font-semibold cursor-pointer transition-all active:scale-[0.98] whitespace-nowrap"
                   >
                     <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                     <span>Raise NCR & Send to Rework</span>
@@ -2080,7 +2080,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                       <button
                         disabled={isConfirming || hasNcr || !allowed}
                         onClick={handleGoToCreateChallan}
-                        className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 transition-ui hover:scale-[1.02] active:scale-[0.96] disabled:opacity-50 whitespace-nowrap shrink-0"
+                        className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer disabled:opacity-50 whitespace-nowrap"
                       >
                         <Plus className="w-4 h-4 shrink-0" />
                         <span>Generate Delivery Challan</span>
@@ -2089,7 +2089,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                       <button
                         type="button"
                         onClick={handleOpenChallanDetailModal}
-                        className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-blue-600 hover:to-cyan-600 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-cyan-500/20 transition-ui hover:scale-[1.02] active:scale-[0.96] whitespace-nowrap shrink-0"
+                        className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer whitespace-nowrap"
                       >
                         <Eye className="w-4 h-4 shrink-0" />
                         <span>View / Dispatch Challan ({effectiveChallanNo})</span>
@@ -2120,7 +2120,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                       {onNavigate && (
                         <button
                           onClick={() => onNavigate('invoices')}
-                          className="px-3 py-1.5 rounded-xl bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 border border-indigo-500/30 text-xs font-bold transition-ui cursor-pointer flex items-center gap-1"
+                          className={`flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border px-3.5 text-xs font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-[0.98] ${isDarkMode
+                            ? 'border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/10 hover:text-white'
+                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100 shadow-xs'
+                            }`}
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
                           <span>View in Invoices</span>
@@ -2134,7 +2137,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     <button
                       disabled={isConfirming || !allowed}
                       onClick={handleGoToCreateInvoice}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white text-xs font-bold shadow-md shadow-indigo-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
+                      className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer disabled:opacity-50 whitespace-nowrap"
                     >
                       <Receipt className="w-3.5 h-3.5 shrink-0" />
                       <span>Generate GST Tax Invoice</span>
@@ -2169,7 +2172,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                       <button
                         disabled={isConfirming}
                         onClick={() => deliveryModal.open()}
-                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-emerald-600 hover:to-blue-600 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
+                        className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer disabled:opacity-50 whitespace-nowrap"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                         <span>Mark Delivered (POD)</span>
@@ -2179,7 +2182,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                       <button
                         disabled={isConfirming}
                         onClick={() => delayedModal.open()}
-                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-bold shadow-md shadow-amber-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
+                        className="flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 dark:text-amber-400 px-3.5 text-xs font-semibold cursor-pointer transition-all active:scale-[0.98] disabled:opacity-50 whitespace-nowrap"
                       >
                         <Clock className="w-3.5 h-3.5 shrink-0" />
                         <span>Mark Delayed</span>
@@ -2216,7 +2219,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                       disabled={isConfirming || !allowed}
                       onClick={() => paymentModal.open()}
                       title={!allowed ? 'Only Finance / Accounts or Owner can record payment' : undefined}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
+                      className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer disabled:opacity-50 whitespace-nowrap"
                     >
                       <CreditCard className="w-3.5 h-3.5 shrink-0" />
                       <span>{isPartial ? 'Record Remaining Payment' : 'Record Payment'}</span>
@@ -2255,7 +2258,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                         disabled={isConfirming || !canClose}
                         onClick={handleCloseOrderAction}
                         title={!canClose ? disabledReason : undefined}
-                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-ui cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap shrink-0"
+                        className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer disabled:opacity-50 whitespace-nowrap"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                         <span>Mark Order Closed</span>
@@ -2339,8 +2342,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 w-full relative z-10">
                   <div className="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
                     <div className={`w-10 h-10 rounded-xl shrink-0 flex items-center justify-center transition-all ${isDarkMode
-                      ? 'bg-blue-500/15 text-[#0A84FF] border border-blue-500/20'
-                      : 'bg-blue-50 text-[#007AFF] border border-blue-100 shadow-2xs'
+                      ? 'bg-blue-500/15 text-[#7B92FF] border border-blue-500/20'
+                      : 'bg-blue-50 text-[#5B75F8] border border-blue-100 shadow-2xs'
                       }`}>
                       <StageIcon className="w-5 h-5 stroke-[2]" />
                     </div>
@@ -2348,8 +2351,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className={`text-[11px] font-semibold uppercase px-2 py-0.5 rounded-md shrink-0 ${isDarkMode
-                          ? 'bg-blue-500/15 text-[#0A84FF] border border-blue-500/20'
-                          : 'bg-blue-50 text-[#007AFF] border border-blue-100'
+                          ? 'bg-blue-500/15 text-[#7B92FF] border border-blue-500/20'
+                          : 'bg-blue-50 text-[#5B75F8] border border-blue-100'
                           }`}>
                           {currentStageDef.stageNumber}
                         </span>
@@ -2360,9 +2363,9 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
                         <span className={`text-[11px] font-medium px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shrink-0 ${isClosed
                           ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                          : 'bg-blue-500/10 text-[#007AFF] dark:text-[#0A84FF] border border-blue-500/20'
+                          : 'bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF] border border-blue-500/20'
                           }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${isClosed ? 'bg-emerald-500' : 'bg-[#007AFF] animate-pulse'}`} />
+                          <span className={`w-1.5 h-1.5 rounded-full ${isClosed ? 'bg-emerald-500' : 'bg-[#5B75F8] animate-pulse'}`} />
                           <span>{isClosed ? 'Order Closed' : 'Active Stage'}</span>
                         </span>
 
@@ -3387,7 +3390,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 type="button"
                 onClick={handleGenerateChallanSubmit}
                 disabled={isConfirming || !challanVehicleNo.trim()}
-                className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-blue-600 hover:to-cyan-600 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-lg shadow-cyan-500/25 disabled:opacity-50"
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-lg shadow-[#5B75F8]/20 disabled:opacity-50"
               >
                 {isConfirming ? (
                   <>
@@ -3515,7 +3518,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 type="button"
                 onClick={handleDispatchSubmit}
                 disabled={isConfirming}
-                className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-blue-600 hover:to-cyan-600 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-lg shadow-cyan-500/25"
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-lg shadow-[#5B75F8]/20"
               >
                 <Truck className="w-4 h-4" />
                 <span>{isConfirming ? 'Dispatching...' : 'Confirm Dispatch (Mark In-Transit)'}</span>

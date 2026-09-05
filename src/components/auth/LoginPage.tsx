@@ -187,7 +187,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       {/* ========================================================================= */}
       <div aria-hidden="true" className="pointer-events-none fixed inset-0 overflow-hidden select-none">
         {/* Deep top-left blue atmospheric glow */}
-        <div className={`absolute -top-40 -left-40 h-[640px] w-[640px] rounded-full blur-[160px] ${isDarkMode ? 'bg-[#007AFF]/18' : 'bg-[#007AFF]/12'
+        <div className={`absolute -top-40 -left-40 h-[640px] w-[640px] rounded-full blur-[160px] ${isDarkMode ? 'bg-[#5B75F8]/18' : 'bg-[#5B75F8]/12'
           }`} />
 
         {/* Center-right indigo/violet flare */}
@@ -225,7 +225,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             {/* Top Brand Identity & Appearance Switcher */}
             <div className="mb-6 flex items-center justify-between gap-4">
               <div className="flex items-center gap-3.5">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#007AFF] via-[#0055D4] to-[#5856D6] text-white shadow-lg shadow-[#007AFF]/25">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#5B75F8] via-[#0055D4] to-[#5856D6] text-white shadow-lg shadow-[#5B75F8]/25">
                   <span className="font-mono text-xs font-black tracking-tight">OS</span>
                 </div>
 
@@ -280,11 +280,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
                 <p className={`mt-1.5 text-xs font-normal leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-600'
                   }`}>
-                  Authorized portal for <strong className="font-semibold text-[#007AFF]">GuruOm OS</strong> team members.
+                  Authorized portal for <strong className="font-semibold text-[#5B75F8]">GuruOm OS</strong> team members.
                 </p>
               </div>
 
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#007AFF] to-[#5856D6] text-white shadow-lg shadow-[#007AFF]/25">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#5B75F8] to-[#5856D6] text-white shadow-lg shadow-[#5B75F8]/25">
                 <Lock className="h-5 w-5" />
               </div>
             </div>
@@ -385,8 +385,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     className={`h-12 w-full rounded-2xl border pl-10 pr-4 text-xs font-medium outline-none transition-all duration-150 ${fieldErrors.email
                       ? 'border-rose-500/70 bg-rose-500/10 text-rose-100 ring-2 ring-rose-500/20'
                       : isDarkMode
-                        ? 'border-white/15 bg-[#0C0C10] text-white placeholder:text-slate-500 hover:border-white/25 focus:border-[#007AFF] focus:bg-[#111116] focus:ring-4 focus:ring-[#007AFF]/15'
-                        : 'border-slate-300 bg-slate-50 text-slate-900 placeholder:text-slate-400 hover:border-slate-400 focus:border-[#007AFF] focus:bg-white focus:ring-4 focus:ring-[#007AFF]/15'
+                        ? 'border-white/15 bg-[#0C0C10] text-white placeholder:text-slate-500 hover:border-white/25 focus:border-[#5B75F8] focus:bg-[#111116] focus:ring-4 focus:ring-[#5B75F8]/15'
+                        : 'border-slate-300 bg-slate-50 text-slate-900 placeholder:text-slate-400 hover:border-slate-400 focus:border-[#5B75F8] focus:bg-white focus:ring-4 focus:ring-[#5B75F8]/15'
                       }`}
                   />
                 </div>
@@ -409,7 +409,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       setForgotEmail(email);
                       setIsForgotOpen(true);
                     }}
-                    className="cursor-pointer font-mono text-[11px] font-semibold text-[#007AFF] hover:underline transition-all"
+                    className="cursor-pointer font-mono text-[11px] font-semibold text-[#5B75F8] hover:underline transition-all"
                   >
                     Forgot?
                   </button>
@@ -434,8 +434,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     className={`h-12 w-full rounded-2xl border pl-10 pr-11 text-xs font-medium outline-none transition-all duration-150 ${fieldErrors.password
                       ? 'border-rose-500/70 bg-rose-500/10 text-rose-100 ring-2 ring-rose-500/20'
                       : isDarkMode
-                        ? 'border-white/15 bg-[#0C0C10] text-white placeholder:text-slate-500 hover:border-white/25 focus:border-[#007AFF] focus:bg-[#111116] focus:ring-4 focus:ring-[#007AFF]/15'
-                        : 'border-slate-300 bg-slate-50 text-slate-900 placeholder:text-slate-400 hover:border-slate-400 focus:border-[#007AFF] focus:bg-white focus:ring-4 focus:ring-[#007AFF]/15'
+                        ? 'border-white/15 bg-[#0C0C10] text-white placeholder:text-slate-500 hover:border-white/25 focus:border-[#5B75F8] focus:bg-[#111116] focus:ring-4 focus:ring-[#5B75F8]/15'
+                        : 'border-slate-300 bg-slate-50 text-slate-900 placeholder:text-slate-400 hover:border-slate-400 focus:border-[#5B75F8] focus:bg-white focus:ring-4 focus:ring-[#5B75F8]/15'
                       }`}
                   />
 
@@ -460,7 +460,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               <button
                 type="submit"
                 disabled={isLoading}
-                className="relative mt-2 flex h-13 w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-b from-[#0A84FF] to-[#0071E3] px-6 text-sm font-bold text-white shadow-[0_6px_20px_rgba(0,122,255,0.4),inset_0_1px_0_0_rgba(255,255,255,0.35)] transition-all hover:brightness-110 active:scale-[0.98] disabled:cursor-wait disabled:opacity-60"
+                className="relative mt-2 flex h-13 w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-b from-[#7B92FF] to-[#435BE8] px-6 text-sm font-bold text-white shadow-[0_6px_20px_rgba(0,122,255,0.4),inset_0_1px_0_0_rgba(255,255,255,0.35)] transition-all hover:brightness-110 active:scale-[0.98] disabled:cursor-wait disabled:opacity-60"
               >
                 {isLoading ? (
                   <div className="flex items-center gap-2.5">
@@ -495,7 +495,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               <button
                 type="button"
                 onClick={() => setIsRequestAccessOpen(true)}
-                className="shrink-0 cursor-pointer rounded-xl bg-[#007AFF]/15 border border-[#007AFF]/30 px-3 py-1.5 font-mono text-[11px] font-bold text-[#007AFF] hover:bg-[#007AFF]/25 transition-all"
+                className="shrink-0 cursor-pointer rounded-xl bg-[#5B75F8]/15 border border-[#5B75F8]/30 px-3 py-1.5 font-mono text-[11px] font-bold text-[#5B75F8] hover:bg-[#5B75F8]/25 transition-all"
               >
                 Request Access
               </button>
@@ -522,9 +522,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           <div className="flex flex-wrap items-center gap-2">
             <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>OwnerOS Enterprise</span>
             <span>·</span>
-            <span>Dedicated Client: <strong className="text-[#007AFF]">GuruOm Precision Engineering Pvt. Ltd.</strong></span>
+            <span>Dedicated Client: <strong className="text-[#5B75F8]">GuruOm Precision Engineering Pvt. Ltd.</strong></span>
             <span>·</span>
-            <span>Engineered by: <strong className="text-[#007AFF]">SketchItUp Solutions</strong></span>
+            <span>Engineered by: <strong className="text-[#5B75F8]">SketchItUp Solutions</strong></span>
           </div>
 
           <div className="flex items-center gap-3 font-mono text-[11px]">
@@ -556,7 +556,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             <div className={`flex items-start justify-between border-b p-6 ${isDarkMode ? 'border-white/15 bg-black/40' : 'border-slate-200 bg-slate-50'
               }`}>
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#007AFF]/15 text-[#007AFF] border border-[#007AFF]/30">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#5B75F8]/15 text-[#5B75F8] border border-[#5B75F8]/30">
                   <Mail className="h-5 w-5" />
                 </div>
                 <div>
@@ -605,8 +605,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       onChange={(e) => setForgotEmail(e.target.value)}
                       placeholder="name@guruom.in"
                       className={`h-12 w-full rounded-2xl border pl-10 pr-4 text-xs font-medium outline-none ${isDarkMode
-                        ? 'border-white/15 bg-[#0C0C10] text-white focus:border-[#007AFF]'
-                        : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-[#007AFF]'
+                        ? 'border-white/15 bg-[#0C0C10] text-white focus:border-[#5B75F8]'
+                        : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-[#5B75F8]'
                         }`}
                     />
                   </div>
@@ -627,7 +627,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   <button
                     type="submit"
                     disabled={isResetting}
-                    className="flex h-11 cursor-pointer items-center justify-center rounded-2xl bg-[#007AFF] px-4 text-xs font-semibold text-white shadow-md shadow-[#007AFF]/30 transition-all hover:bg-[#0071E3] active:scale-[0.98] disabled:opacity-60"
+                    className="flex h-11 cursor-pointer items-center justify-center rounded-2xl bg-[#5B75F8] px-4 text-xs font-semibold text-white shadow-md shadow-[#5B75F8]/30 transition-all hover:bg-[#435BE8] active:scale-[0.98] disabled:opacity-60"
                   >
                     {isResetting ? (
                       <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
@@ -661,7 +661,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               }`}
           >
             <div className="relative px-6 pb-4 pt-7 text-center sm:px-8">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#007AFF]/15 text-[#007AFF] border border-[#007AFF]/30">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#5B75F8]/15 text-[#5B75F8] border border-[#5B75F8]/30">
                 <Building2 className="h-6 w-6" />
               </div>
 
@@ -678,7 +678,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             <div className="px-6 pb-6 sm:px-8 space-y-4">
               <div className={`flex items-start gap-3 rounded-2xl border p-4 text-left ${isDarkMode ? 'border-white/15 bg-white/[0.04]' : 'border-slate-200 bg-slate-50'
                 }`}>
-                <ShieldCheck className="h-5 w-5 shrink-0 text-[#007AFF] mt-0.5" />
+                <ShieldCheck className="h-5 w-5 shrink-0 text-[#5B75F8] mt-0.5" />
                 <div>
                   <p className={`text-xs font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                     Role-Based Access Control (RBAC)
@@ -692,7 +692,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               <button
                 type="button"
                 onClick={() => setIsRequestAccessOpen(false)}
-                className="h-11 w-full cursor-pointer rounded-2xl bg-[#007AFF] text-xs font-semibold text-white shadow-md shadow-[#007AFF]/30 transition-all hover:bg-[#0071E3] active:scale-[0.98]"
+                className="h-11 w-full cursor-pointer rounded-2xl bg-[#5B75F8] text-xs font-semibold text-white shadow-md shadow-[#5B75F8]/30 transition-all hover:bg-[#435BE8] active:scale-[0.98]"
               >
                 Understood & Close
               </button>

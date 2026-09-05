@@ -151,8 +151,8 @@ export const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
                 placeholder="Search registered users by name, role, email, or department..."
                 className={`w-full rounded-2xl border pl-10 pr-4 py-2 text-xs font-medium outline-none transition-all ${
                   isDarkMode 
-                    ? 'border-white/15 bg-white/[0.04] text-white placeholder:text-slate-500 focus:border-[#007AFF] focus:ring-2 focus:ring-[#007AFF]/20'
-                    : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:border-[#007AFF] focus:bg-white focus:ring-2 focus:ring-[#007AFF]/20'
+                    ? 'border-white/15 bg-white/[0.04] text-white placeholder:text-slate-500 focus:border-[#5B75F8] focus:ring-2 focus:ring-[#5B75F8]/20'
+                    : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:border-[#5B75F8] focus:bg-white focus:ring-2 focus:ring-[#5B75F8]/20'
                 }`}
               />
             </div>
@@ -188,7 +188,7 @@ export const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
                   key={usr.id}
                   className={`p-4 rounded-3xl border transition-all backdrop-blur-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
                     isCurrent
-                      ? 'border-[#007AFF]/60 bg-[#007AFF]/10 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.15),0_8px_24px_rgba(0,122,255,0.15)] ring-1 ring-[#007AFF]/40'
+                      ? 'border-[#5B75F8]/60 bg-[#5B75F8]/10 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.15),0_8px_24px_rgba(0,122,255,0.15)] ring-1 ring-[#5B75F8]/40'
                       : isRevoked
                         ? 'border-rose-500/25 bg-rose-500/5 opacity-75'
                         : isDarkMode
@@ -275,7 +275,7 @@ export const SwitchUserModal: React.FC<SwitchUserModalProps> = ({
                         className={`px-4 py-2 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer ${
                           isRevoked
                             ? 'border border-slate-200 bg-slate-100 text-slate-400 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-500 cursor-not-allowed'
-                            : 'bg-[#007AFF] hover:bg-[#0071E3] text-white shadow-sm shadow-blue-500/25'
+                            : 'bg-[#5B75F8] hover:bg-[#435BE8] text-white shadow-sm shadow-blue-500/25'
                         }`}
                       >
                         <Key className="w-3.5 h-3.5" />

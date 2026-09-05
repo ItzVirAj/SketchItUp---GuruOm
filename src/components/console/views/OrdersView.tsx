@@ -578,7 +578,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
     const prog = getOrderProgression(ord);
     const stagePct = Math.round(((prog.activeStepIndex + 1) / 8) * 100);
 
-    let progressBg = 'bg-[#007AFF]';
+    let progressBg = 'bg-[#5B75F8]';
     if (prog.isQcRejected) {
       progressBg = 'bg-rose-500';
     } else if (prog.isQcHold || prog.isPdiHold) {
@@ -793,7 +793,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
             </div>
             <button
               onClick={openNewOrderModal}
-              className="flex h-10 shrink-0 items-center gap-2 rounded-full bg-[#007AFF] hover:bg-[#0071E3] active:scale-[0.98] px-4 text-xs font-semibold text-white shadow-sm shadow-blue-500/25 transition-all cursor-pointer"
+              className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer"
             >
               <Plus className="h-4 w-4" />
               <span>New Purchase Order</span>
@@ -802,7 +802,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
 
           <div className={`grid grid-cols-4 border-t ${isDarkMode ? 'border-white/10 bg-slate-950/40' : 'border-slate-100 bg-slate-50/50'}`}>
             {[
-              { label: 'Pipeline Value', value: `₹${totalActiveValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`, detail: `${orders.length} total orders`, icon: TrendingUp, iconColor: 'text-[#007AFF] dark:text-[#0A84FF]', iconBg: 'bg-blue-500/10' },
+              { label: 'Pipeline Value', value: `₹${totalActiveValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`, detail: `${orders.length} total orders`, icon: TrendingUp, iconColor: 'text-[#5B75F8] dark:text-[#7B92FF]', iconBg: 'bg-blue-500/10' },
               { label: 'In Production', value: String(inProdCount), detail: 'Active shop-floor jobs', icon: Package, iconColor: 'text-amber-600 dark:text-amber-400', iconBg: 'bg-amber-500/10' },
               { label: 'Quality Gate', value: String(qcGateCount), detail: 'Under inspection or NCR', icon: ShieldCheck, iconColor: 'text-purple-600 dark:text-purple-400', iconBg: 'bg-purple-500/10' },
               { label: 'Ready for Dispatch', value: String(dispatchReadyCount), detail: 'PDI-cleared shipments', icon: Truck, iconColor: 'text-emerald-600 dark:text-emerald-400', iconBg: 'bg-emerald-500/10' },
@@ -1129,17 +1129,17 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                           setSortDirection('DESC');
                         }
                       }}
-                      className="py-3 px-5 cursor-pointer hover:text-[#007AFF] select-none transition-colors"
+                      className="py-3 px-5 cursor-pointer hover:text-[#5B75F8] select-none transition-colors"
                     >
                       <div className="flex items-center gap-1.5">
                         <span>Purchase Order & Date</span>
                         {sortField === 'RECENCY' && (
-                          <span className="text-[#007AFF] text-[10px] bg-blue-500/10 px-1.5 py-0.5 rounded-full font-medium">
+                          <span className="text-[#5B75F8] text-[10px] bg-blue-500/10 px-1.5 py-0.5 rounded-full font-medium">
                             {sortDirection === 'DESC' ? '↓ Recent' : '↑ Oldest'}
                           </span>
                         )}
                         {sortField === 'PO_NO' && (
-                          <span className="text-[#007AFF]">{sortDirection === 'ASC' ? '↑' : '↓'}</span>
+                          <span className="text-[#5B75F8]">{sortDirection === 'ASC' ? '↑' : '↓'}</span>
                         )}
                       </div>
                     </th>
@@ -1152,11 +1152,11 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                           setSortDirection('ASC');
                         }
                       }}
-                      className="py-3 px-5 cursor-pointer hover:text-[#007AFF] select-none transition-colors"
+                      className="py-3 px-5 cursor-pointer hover:text-[#5B75F8] select-none transition-colors"
                     >
                       <div className="flex items-center gap-1.5">
                         <span>Customer & Credit Status</span>
-                        {sortField === 'CUSTOMER' && <span className="text-[#007AFF]">{sortDirection === 'ASC' ? '↑' : '↓'}</span>}
+                        {sortField === 'CUSTOMER' && <span className="text-[#5B75F8]">{sortDirection === 'ASC' ? '↑' : '↓'}</span>}
                       </div>
                     </th>
                     <th className="py-3 px-5">Lifecycle Progress</th>
@@ -1169,11 +1169,11 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                           setSortDirection('DESC');
                         }
                       }}
-                      className="py-3 px-5 text-right cursor-pointer hover:text-[#007AFF] select-none transition-colors"
+                      className="py-3 px-5 text-right cursor-pointer hover:text-[#5B75F8] select-none transition-colors"
                     >
                       <div className="flex items-center justify-end gap-1.5">
                         <span>Gross Amount</span>
-                        {sortField === 'AMOUNT' && <span className="text-[#007AFF]">{sortDirection === 'ASC' ? '↑' : '↓'}</span>}
+                        {sortField === 'AMOUNT' && <span className="text-[#5B75F8]">{sortDirection === 'ASC' ? '↑' : '↓'}</span>}
                       </div>
                     </th>
                     <th className="py-3 px-5 text-center">Action</th>
@@ -1233,7 +1233,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                               <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${
                                 subType === 'BLANKET_CALLOFF'
                                   ? isDarkMode ? 'bg-purple-500/15 text-purple-300 border border-purple-500/20' : 'bg-purple-50 text-purple-700 border border-purple-100'
-                                  : isDarkMode ? 'bg-blue-500/15 text-[#0A84FF] border border-blue-500/20' : 'bg-blue-50 text-[#007AFF] border border-blue-100'
+                                  : isDarkMode ? 'bg-blue-500/15 text-[#7B92FF] border border-blue-500/20' : 'bg-blue-50 text-[#5B75F8] border border-blue-100'
                               }`}>
                                 <ShoppingCart className="w-4 h-4 stroke-[1.8]" />
                               </div>
@@ -1245,7 +1245,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                                       ? isDarkMode ? 'bg-purple-500/15 text-purple-300 border-purple-500/30' : 'bg-purple-50 text-purple-700 border-purple-200'
                                       : subType === 'AMENDMENT'
                                         ? isDarkMode ? 'bg-amber-500/15 text-amber-300 border-amber-500/30' : 'bg-amber-50 text-amber-700 border-amber-200'
-                                        : isDarkMode ? 'bg-blue-500/15 text-[#0A84FF] border-blue-500/30' : 'bg-blue-50 text-[#007AFF] border-blue-200'
+                                        : isDarkMode ? 'bg-blue-500/15 text-[#7B92FF] border-blue-500/30' : 'bg-blue-50 text-[#5B75F8] border-blue-200'
                                   }`}>
                                     {subType === 'BLANKET_CALLOFF' ? 'Blanket Call-off' : subType === 'AMENDMENT' ? 'Amendment' : 'Fresh PO'}
                                   </span>
@@ -1316,7 +1316,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <div className="font-semibold text-sm text-[#007AFF] dark:text-[#0A84FF]">{ord.poNo}</div>
+                    <div className="font-semibold text-sm text-[#5B75F8] dark:text-[#7B92FF]">{ord.poNo}</div>
                     <div className="text-sm font-semibold text-slate-900 dark:text-white">
                       ₹{ord.grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </div>

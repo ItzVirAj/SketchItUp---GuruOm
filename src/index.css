@@ -121,16 +121,23 @@
 
 /* Multi-Accent System Utility & Direct Color Override Bindings */
 /* All Buttons, Badges and Controls with Primary/Accent Gradients */
+:root .accent-btn,
 [data-accent] .from-\[\#5B75F8\],
+[data-accent] .from-\[\#007AFF\],
 [data-accent] .from-\[\#FF5000\],
 [data-accent] .from-\[\#6C63FF\],
 [data-accent] .bg-gradient-to-r.from-\[\#5B75F8\],
 [data-accent] .bg-gradient-to-tr.from-\[\#5B75F8\],
 [data-accent] .bg-gradient-to-br.from-\[\#5B75F8\],
+[data-accent] .bg-gradient-to-r.from-\[\#007AFF\],
 [data-accent] button.from-\[\#5B75F8\],
+[data-accent] button.from-\[\#007AFF\],
 [data-accent] a.from-\[\#5B75F8\],
+[data-accent] a.from-\[\#007AFF\],
 [data-accent] button[class*="from-[#5B75F8]"],
+[data-accent] button[class*="from-[#007AFF]"],
 [data-accent] button[class*="from-[#FF5000]"],
+[data-accent] button[class*="from-cyan-600"][class*="to-blue-600"],
 [data-accent] .accent-btn {
   background-image: linear-gradient(to right, var(--accent-gradient-from), var(--accent-gradient-to)) !important;
   background-color: var(--accent-primary) !important;
@@ -138,15 +145,23 @@
 }
 
 [data-accent] .from-\[\#5B75F8\]:hover,
+[data-accent] .from-\[\#007AFF\]:hover,
 [data-accent] .from-\[\#FF5000\]:hover,
 [data-accent] .from-\[\#6C63FF\]:hover,
 [data-accent] button.from-\[\#5B75F8\]:hover,
+[data-accent] button.from-\[\#007AFF\]:hover,
 [data-accent] a.from-\[\#5B75F8\]:hover,
+[data-accent] a.from-\[\#007AFF\]:hover,
 [data-accent] button[class*="from-[#5B75F8]"]:hover,
+[data-accent] button[class*="from-[#007AFF]"]:hover,
 [data-accent] button[class*="from-[#FF5000]"]:hover,
+[data-accent] button[class*="from-cyan-600"][class*="to-blue-600"]:hover,
 [data-accent] .hover\:from-indigo-600:hover,
 [data-accent] .hover\:to-\[\#5B75F8\]:hover,
 [data-accent] .hover\:bg-\[\#5B75F8\]:hover,
+[data-accent] .hover\:bg-\[\#0071E3\]:hover,
+[data-accent] button.hover\:bg-\[\#0071E3\]:hover,
+[data-accent] button[class*="hover:bg-[#0071E3]"]:hover,
 [data-accent] .accent-btn:hover {
   background-image: linear-gradient(to right, var(--accent-hover), var(--accent-primary)) !important;
   background-color: var(--accent-hover) !important;
@@ -154,7 +169,14 @@
 }
 
 /* Solid Accent Buttons & Backgrounds */
+:root .bg-\[\#007AFF\],
+:root button.bg-\[\#007AFF\],
 [data-accent] .bg-\[\#5B75F8\],
+[data-accent] .bg-\[\#007AFF\],
+[data-accent] button.bg-\[\#5B75F8\],
+[data-accent] button.bg-\[\#007AFF\],
+[data-accent] button[class*="bg-[#007AFF]"],
+[data-accent] button[class*="bg-[#5B75F8]"],
 [data-accent] .bg-\[\#FF5000\],
 [data-accent] .bg-\[\#6C63FF\],
 [data-accent] .bg-teal-600,
@@ -162,118 +184,223 @@
   background-color: var(--accent-primary) !important;
 }
 
+:root .hover\:bg-\[\#0071E3\]:hover,
+:root button.hover\:bg-\[\#0071E3\]:hover,
+[data-accent] .hover\:bg-\[\#0071E3\]:hover,
+[data-accent] button.hover\:bg-\[\#0071E3\]:hover {
+  background-color: var(--accent-hover) !important;
+}
+
 /* Accent Text & Brand Titles */
+:root .text-\[\#007AFF\],
 [data-accent] .text-\[\#5B75F8\],
+[data-accent] .text-\[\#007AFF\],
+[data-accent] [class*="text-[#007AFF]"],
 [data-accent] .text-\[\#FF5000\],
 [data-accent] .text-\[\#6C63FF\] {
   color: var(--accent-text-light) !important;
 }
 
+:root .dark .text-\[\#007AFF\],
+:root .dark .text-\[\#0A84FF\],
+:root .text-\[\#0A84FF\],
 [data-accent].dark .text-\[\#5B75F8\],
 [data-accent].dark .text-\[\#7B92FF\],
+[data-accent].dark .text-\[\#007AFF\],
+[data-accent].dark .text-\[\#0A84FF\],
 [data-accent].dark .text-\[\#FF5000\],
 [data-accent].dark .text-\[\#6C63FF\],
 [data-accent] .dark .text-\[\#5B75F8\],
 [data-accent] .dark .text-\[\#7B92FF\],
+[data-accent] .dark .text-\[\#007AFF\],
+[data-accent] .dark .text-\[\#0A84FF\],
+[data-accent] .dark [class*="text-[#0A84FF]"],
 [data-accent] .dark .text-\[\#FF5000\],
 [data-accent] .dark .text-\[\#6C63FF\],
-[data-accent] .text-\[\#7B92FF\] {
+[data-accent] .text-\[\#7B92FF\],
+[data-accent] .text-\[\#0A84FF\] {
   color: var(--accent-text-dark) !important;
 }
 
-/* Soft Tint Backgrounds */
+/* Soft Tint Backgrounds (Badges, icon pills, active chips) */
+:root .bg-\[\#007AFF\]\/10,
+:root .bg-\[\#007AFF\]\/15,
+:root .bg-\[\#007AFF\]\/20,
 [data-accent] .bg-\[\#5B75F8\]\/10,
 [data-accent] .bg-\[\#5B75F8\]\/15,
 [data-accent] .bg-\[\#5B75F8\]\/20,
+[data-accent] .bg-\[\#007AFF\]\/5,
+[data-accent] .bg-\[\#007AFF\]\/10,
+[data-accent] .bg-\[\#007AFF\]\/15,
+[data-accent] .bg-\[\#007AFF\]\/20,
+[data-accent] .bg-\[\#007AFF\]\/25,
+[data-accent] [class*="bg-[#007AFF]/10"],
+[data-accent] [class*="bg-[#007AFF]/15"],
+[data-accent] [class*="bg-[#007AFF]/20"],
 [data-accent] .bg-\[\#FF5000\]\/10,
 [data-accent] .bg-\[\#FF5000\]\/20,
 [data-accent] .hover\:bg-\[\#5B75F8\]\/10:hover,
 [data-accent] .hover\:bg-\[\#5B75F8\]\/15:hover,
-[data-accent] .hover\:bg-\[\#5B75F8\]\/20:hover {
+[data-accent] .hover\:bg-\[\#5B75F8\]\/20:hover,
+[data-accent] .hover\:bg-\[\#007AFF\]\/25:hover {
   background-color: var(--accent-soft-light) !important;
 }
 
+:root .dark .bg-\[\#007AFF\]\/10,
+:root .dark .bg-\[\#007AFF\]\/15,
+:root .dark .bg-\[\#007AFF\]\/20,
 [data-accent].dark .bg-\[\#5B75F8\]\/10,
 [data-accent].dark .bg-\[\#5B75F8\]\/15,
 [data-accent].dark .bg-\[\#5B75F8\]\/20,
+[data-accent].dark .bg-\[\#007AFF\]\/5,
+[data-accent].dark .bg-\[\#007AFF\]\/10,
+[data-accent].dark .bg-\[\#007AFF\]\/15,
+[data-accent].dark .bg-\[\#007AFF\]\/20,
+[data-accent].dark .bg-\[\#007AFF\]\/25,
 [data-accent] .dark .bg-\[\#5B75F8\]\/10,
 [data-accent] .dark .bg-\[\#5B75F8\]\/15,
 [data-accent] .dark .bg-\[\#5B75F8\]\/20,
+[data-accent] .dark .bg-\[\#007AFF\]\/5,
+[data-accent] .dark .bg-\[\#007AFF\]\/10,
+[data-accent] .dark .bg-\[\#007AFF\]\/15,
+[data-accent] .dark .bg-\[\#007AFF\]\/20,
+[data-accent] .dark .bg-\[\#007AFF\]\/25,
 [data-accent] .dark .hover\:bg-\[\#5B75F8\]\/10:hover,
 [data-accent] .dark .hover\:bg-\[\#5B75F8\]\/15:hover,
-[data-accent] .dark .hover\:bg-\[\#5B75F8\]\/20:hover {
+[data-accent] .dark .hover\:bg-\[\#5B75F8\]\/20:hover,
+[data-accent] .dark .hover\:bg-\[\#007AFF\]\/25:hover {
   background-color: var(--accent-soft-dark) !important;
 }
 
 /* Accent Borders */
+:root .border-\[\#007AFF\],
+:root .border-\[\#007AFF\]\/20,
+:root .border-\[\#007AFF\]\/30,
 [data-accent] .border-\[\#5B75F8\],
 [data-accent] .border-\[\#5B75F8\]\/20,
 [data-accent] .border-\[\#5B75F8\]\/30,
 [data-accent] .border-\[\#5B75F8\]\/40,
+[data-accent] .border-\[\#007AFF\],
+[data-accent] .border-\[\#007AFF\]\/20,
+[data-accent] .border-\[\#007AFF\]\/30,
+[data-accent] .border-\[\#007AFF\]\/40,
+[data-accent] [class*="border-[#007AFF]/20"],
+[data-accent] [class*="border-[#007AFF]/30"],
 [data-accent] .border-\[\#FF5000\],
 [data-accent] .border-\[\#FF5000\]\/20,
 [data-accent] .border-\[\#FF5000\]\/30 {
   border-color: var(--accent-border-light) !important;
 }
 
+:root .dark .border-\[\#007AFF\],
+:root .dark .border-\[\#007AFF\]\/20,
+:root .dark .border-\[\#007AFF\]\/30,
 [data-accent].dark .border-\[\#5B75F8\],
 [data-accent].dark .border-\[\#5B75F8\]\/20,
 [data-accent].dark .border-\[\#5B75F8\]\/30,
 [data-accent].dark .border-\[\#5B75F8\]\/40,
+[data-accent].dark .border-\[\#007AFF\],
+[data-accent].dark .border-\[\#007AFF\]\/20,
+[data-accent].dark .border-\[\#007AFF\]\/30,
+[data-accent].dark .border-\[\#007AFF\]\/40,
 [data-accent] .dark .border-\[\#5B75F8\],
 [data-accent] .dark .border-\[\#5B75F8\]\/20,
 [data-accent] .dark .border-\[\#5B75F8\]\/30,
-[data-accent] .dark .border-\[\#5B75F8\]\/40 {
+[data-accent] .dark .border-\[\#5B75F8\]\/40,
+[data-accent] .dark .border-\[\#007AFF\],
+[data-accent] .dark .border-\[\#007AFF\]\/20,
+[data-accent] .dark .border-\[\#007AFF\]\/30,
+[data-accent] .dark .border-\[\#007AFF\]\/40 {
   border-color: var(--accent-border-dark) !important;
 }
 
 /* Focus Rings & Outlines */
-[data-accent] .focus\:border-\[\#5B75F8\]:focus {
+:root .focus\:border-\[\#007AFF\]:focus,
+:root .focus-within\:border-\[\#007AFF\]:focus-within,
+[data-accent] .focus\:border-\[\#5B75F8\]:focus,
+[data-accent] .focus\:border-\[\#007AFF\]:focus,
+[data-accent] .focus-within\:border-\[\#5B75F8\]:focus-within,
+[data-accent] .focus-within\:border-\[\#007AFF\]:focus-within {
   border-color: var(--accent-primary) !important;
 }
 
+:root .focus\:ring-\[\#007AFF\]\/15:focus,
+:root .focus\:ring-\[\#007AFF\]\/20:focus,
+:root .focus\:ring-\[\#007AFF\]:focus,
+:root .ring-\[\#007AFF\]\/20,
 [data-accent] .focus\:ring-\[\#5B75F8\]:focus,
-[data-accent] .focus\:ring-\[\#5B75F8\]\/20:focus {
+[data-accent] .focus\:ring-\[\#5B75F8\]\/20:focus,
+[data-accent] .focus\:ring-\[\#007AFF\]:focus,
+[data-accent] .focus\:ring-\[\#007AFF\]\/15:focus,
+[data-accent] .focus\:ring-\[\#007AFF\]\/20:focus,
+[data-accent] .ring-\[\#007AFF\],
+[data-accent] .ring-\[\#007AFF\]\/20 {
   --tw-ring-color: var(--accent-ring) !important;
   box-shadow: 0 0 0 2px var(--accent-ring) !important;
 }
 
+/* Accent Shadows */
+[data-accent] .shadow-blue-500\/25,
+[data-accent] .shadow-blue-500\/30,
+[data-accent] .shadow-cyan-500\/25 {
+  --tw-shadow-color: var(--accent-shadow) !important;
+}
+
 /* Accent Hover States */
+:root .hover\:text-\[\#007AFF\]:hover,
+:root .group:hover .group-hover\:text-\[\#007AFF\],
 [data-accent] .hover\:text-\[\#5B75F8\]:hover,
+[data-accent] .hover\:text-\[\#007AFF\]:hover,
 [data-accent] .hover\:text-\[\#FF5000\]:hover {
   color: var(--accent-primary) !important;
 }
 
+:root .dark .hover\:text-\[\#0A84FF\]:hover,
 [data-accent].dark .hover\:text-\[\#7B92FF\]:hover,
+[data-accent].dark .hover\:text-\[\#0A84FF\]:hover,
 [data-accent] .dark .hover\:text-\[\#7B92FF\]:hover,
-[data-accent] .hover\:text-\[\#7B92FF\]:hover {
+[data-accent] .dark .hover\:text-\[\#0A84FF\]:hover,
+[data-accent] .hover\:text-\[\#7B92FF\]:hover,
+[data-accent] .hover\:text-\[\#0A84FF\]:hover {
   color: var(--accent-text-dark) !important;
 }
 
 [data-accent] .group:hover .group-hover\:text-\[\#5B75F8\],
+[data-accent] .group:hover .group-hover\:text-\[\#007AFF\],
 [data-accent] .group:hover .group-hover\:text-\[\#FF5000\] {
   color: var(--accent-primary) !important;
 }
 
 [data-accent].dark .group:hover .dark\:group-hover\:text-\[\#7B92FF\],
+[data-accent].dark .group:hover .dark\:group-hover\:text-\[\#0A84FF\],
 [data-accent] .dark .group:hover .dark\:group-hover\:text-\[\#7B92FF\],
-[data-accent] .group:hover .group-hover\:text-\[\#7B92FF\] {
+[data-accent] .dark .group:hover .dark\:group-hover\:text-\[\#0A84FF\],
+[data-accent] .group:hover .group-hover\:text-\[\#7B92FF\],
+[data-accent] .group:hover .group-hover\:text-\[\#0A84FF\] {
   color: var(--accent-text-dark) !important;
 }
 
 /* Monochrome accent: ink text on light accent surfaces (prevents white-on-white) */
 [data-accent="monochrome"] .from-\[\#5B75F8\],
+[data-accent="monochrome"] .from-\[\#007AFF\],
 [data-accent="monochrome"] .from-\[\#FF5000\],
 [data-accent="monochrome"] .from-\[\#6C63FF\],
 [data-accent="monochrome"] button.from-\[\#5B75F8\],
+[data-accent="monochrome"] button.from-\[\#007AFF\],
 [data-accent="monochrome"] a.from-\[\#5B75F8\],
+[data-accent="monochrome"] a.from-\[\#007AFF\],
 [data-accent="monochrome"] button[class*="from-[#5B75F8]"],
+[data-accent="monochrome"] button[class*="from-[#007AFF]"],
 [data-accent="monochrome"] button[class*="from-[#FF5000]"],
+[data-accent="monochrome"] button[class*="from-cyan-600"][class*="to-blue-600"],
 [data-accent="monochrome"] .accent-btn,
 [data-accent="monochrome"] .from-\[\#5B75F8\]:hover,
+[data-accent="monochrome"] .from-\[\#007AFF\]:hover,
 [data-accent="monochrome"] .hover\:from-indigo-600:hover,
 [data-accent="monochrome"] .hover\:bg-\[\#5B75F8\]:hover,
+[data-accent="monochrome"] .hover\:bg-\[\#0071E3\]:hover,
 [data-accent="monochrome"] .bg-\[\#5B75F8\],
+[data-accent="monochrome"] .bg-\[\#007AFF\],
 [data-accent="monochrome"] .bg-teal-600,
 [data-accent="monochrome"] .bg-teal-500 {
   color: #09090B !important;

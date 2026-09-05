@@ -465,7 +465,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
   const totalBalance = invoices.reduce((acc, i) => acc + Number(i.balanceAmount || 0), 0);
   const overdueCount = invoices.filter(i => i.status === 'OVERDUE' || (Number(i.balanceAmount) > 0 && i.status === 'PARTIAL')).length;
 
-  const inputClass = `h-11 w-full rounded-xl border px-3.5 text-xs font-medium outline-none transition-[border-color,box-shadow,background-color] duration-150 focus:border-[#007AFF] focus:ring-4 focus:ring-[#007AFF]/15 ${
+  const inputClass = `h-11 w-full rounded-xl border px-3.5 text-xs font-medium outline-none transition-[border-color,box-shadow,background-color] duration-150 focus:border-[#5B75F8] focus:ring-4 focus:ring-[#5B75F8]/15 ${
     isDarkMode 
       ? 'border-white/10 bg-black/60 text-white placeholder:text-slate-500 hover:border-white/20 focus:bg-black/80' 
       : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:bg-white'
@@ -498,12 +498,12 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
         {/* Top Header Row */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 pb-6 border-b border-white/10 dark:border-white/10">
           <div className="flex items-start gap-4">
-            <div className="p-3.5 rounded-2xl bg-[#007AFF]/10 text-[#007AFF] border border-[#007AFF]/20 shrink-0">
+            <div className="p-3.5 rounded-2xl bg-[#5B75F8]/10 text-[#5B75F8] border border-[#5B75F8]/20 shrink-0">
               <Receipt className="w-6 h-6" />
             </div>
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide bg-[#007AFF]/15 text-[#007AFF] border border-[#007AFF]/30">
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide bg-[#5B75F8]/15 text-[#5B75F8] border border-[#5B75F8]/30">
                   Customer Billing & Accounts Receivable
                 </span>
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -529,7 +529,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                 setModalError(null);
                 createInvoiceModal.open();
               }}
-              className="px-5 py-2.5 rounded-full bg-[#007AFF] hover:bg-[#0071E3] active:scale-[0.98] text-white text-xs font-semibold flex items-center gap-2 shadow-md shadow-blue-500/20 cursor-pointer transition-all self-start sm:self-center"
+              className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer self-start sm:self-center"
             >
               <Plus className="w-4 h-4" />
               <span>New Tax Invoice</span>
@@ -546,7 +546,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
               sub: `${invoices.length} invoices raised`,
               icon: Receipt,
               tone: isDarkMode ? 'text-white' : 'text-slate-900',
-              iconBg: 'bg-[#007AFF]/10 text-[#007AFF] border border-[#007AFF]/20',
+              iconBg: 'bg-[#5B75F8]/10 text-[#5B75F8] border border-[#5B75F8]/20',
             },
             {
               label: 'Realized Collections',
@@ -628,7 +628,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                   onClick={() => setStatusFilter(tab.id)}
                   className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                     isActive
-                      ? 'bg-[#007AFF] text-white shadow-sm'
+                      ? 'bg-[#5B75F8] text-white shadow-sm'
                       : isDarkMode
                       ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -650,8 +650,8 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
               onChange={(e) => setSearchTerm(e.target.value)}
               className={`h-10 w-full pl-10 pr-8 rounded-full border text-xs font-medium outline-none transition-all ${
                 isDarkMode 
-                  ? 'border-white/10 bg-black/60 text-white placeholder:text-slate-500 focus:border-[#007AFF] focus:ring-4 focus:ring-[#007AFF]/15' 
-                  : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:border-[#007AFF] focus:ring-4 focus:ring-[#007AFF]/15'
+                  ? 'border-white/10 bg-black/60 text-white placeholder:text-slate-500 focus:border-[#5B75F8] focus:ring-4 focus:ring-[#5B75F8]/15' 
+                  : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:border-[#5B75F8] focus:ring-4 focus:ring-[#5B75F8]/15'
               }`}
             />
             {searchTerm && (
@@ -675,7 +675,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
           <div className={`p-8 text-center rounded-3xl border text-xs font-mono ${
             isDarkMode ? 'bg-[#09090B] border-white/10 text-slate-400' : 'bg-white border-slate-200 text-slate-500'
           }`}>
-            <Receipt className="w-8 h-8 mx-auto mb-2 opacity-30 text-[#007AFF]" />
+            <Receipt className="w-8 h-8 mx-auto mb-2 opacity-30 text-[#5B75F8]" />
             <p>No customer invoices found matching filter criteria.</p>
           </div>
         ) : (
@@ -693,7 +693,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <span className="font-mono font-bold text-xs text-[#007AFF]">
+                    <span className="font-mono font-bold text-xs text-[#5B75F8]">
                       {inv.invoiceNo}
                     </span>
                     <h3 className="text-xs font-bold mt-0.5">
@@ -726,7 +726,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                     {onViewOrder ? (
                       <button
                         onClick={() => onViewOrder(inv.orderPo)}
-                        className="text-[#007AFF] hover:underline font-bold"
+                        className="text-[#5B75F8] hover:underline font-bold"
                       >
                         {inv.orderPo}
                       </button>
@@ -876,7 +876,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
               {filteredInvoices.length === 0 ? (
                 <tr>
                   <td colSpan={11} className="py-12 text-center text-slate-400 font-mono">
-                    <Receipt className="w-8 h-8 mx-auto mb-2 opacity-30 text-[#007AFF]" />
+                    <Receipt className="w-8 h-8 mx-auto mb-2 opacity-30 text-[#5B75F8]" />
                     <p>No customer invoices found matching filter criteria.</p>
                   </td>
                 </tr>
@@ -885,10 +885,10 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                   <tr key={inv.id || inv.invoiceNo} className={`transition-colors ${isDarkMode ? 'hover:bg-white/[0.025]' : 'hover:bg-slate-50'}`}>
                     <td className="py-4 px-5">
                       <div className="flex items-center gap-2.5">
-                        <div className="p-2 rounded-xl bg-[#007AFF]/10 text-[#007AFF] border border-[#007AFF]/20 shrink-0">
+                        <div className="p-2 rounded-xl bg-[#5B75F8]/10 text-[#5B75F8] border border-[#5B75F8]/20 shrink-0">
                           <Receipt className="w-3.5 h-3.5" />
                         </div>
-                        <span className="font-mono font-bold text-xs text-[#007AFF]">
+                        <span className="font-mono font-bold text-xs text-[#5B75F8]">
                           {inv.invoiceNo}
                         </span>
                       </div>
@@ -903,7 +903,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                       {onViewOrder ? (
                         <button
                           onClick={() => onViewOrder(inv.orderPo)}
-                          className="text-[#007AFF] hover:underline cursor-pointer flex items-center gap-1 font-semibold"
+                          className="text-[#5B75F8] hover:underline cursor-pointer flex items-center gap-1 font-semibold"
                         >
                           <span>{inv.orderPo}</span>
                           <ExternalLink className="w-3 h-3 opacity-60" />
@@ -1003,7 +1003,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
         onClose={() => !isSubmitting && createInvoiceModal.close()}
         maxWidth="3xl"
         isDarkMode={isDarkMode}
-        icon={<Receipt className="w-5 h-5 text-[#007AFF]" />}
+        icon={<Receipt className="w-5 h-5 text-[#5B75F8]" />}
         title="Generate GST Tax Invoice"
         subtitle="Pre-populated from outward dispatch challan with statutory intra/inter-state tax split"
       >
@@ -1122,7 +1122,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="space-y-0.5">
                     <span className="text-[10px] font-mono uppercase text-slate-400 flex items-center gap-1.5">
-                      <Building2 className="w-3.5 h-3.5 text-[#007AFF]" />
+                      <Building2 className="w-3.5 h-3.5 text-[#5B75F8]" />
                       <span>Bill To Customer</span>
                     </span>
                     <div className="text-sm font-bold text-white dark:text-white">{customerName}</div>
@@ -1249,7 +1249,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                 type="button"
                 onClick={() => handleSaveInvoice('ISSUED')}
                 disabled={isSubmitting || !selectedDispatch}
-                className="flex-1 sm:flex-initial px-5 py-2.5 rounded-full bg-[#007AFF] hover:bg-[#0071E3] active:scale-[0.98] text-white text-xs font-semibold shadow-md shadow-blue-500/20 cursor-pointer disabled:opacity-50 transition-all flex items-center justify-center gap-1.5"
+                className="flex-1 sm:flex-initial px-5 py-2.5 rounded-full bg-[#5B75F8] hover:bg-[#435BE8] active:scale-[0.98] text-white text-xs font-semibold shadow-md shadow-blue-500/20 cursor-pointer disabled:opacity-50 transition-all flex items-center justify-center gap-1.5"
               >
                 <Send className="w-3.5 h-3.5" />
                 <span>Issue invoice</span>

@@ -798,7 +798,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
             {activeTab === 'AUDIT' && (
               <button
                 onClick={handleExportCSV}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-blue-600 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.96] transition-ui"
+                className="w-full sm:w-auto flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer"
               >
                 {copiedExport ? <Check className="w-4 h-4" /> : <Download className="w-4 h-4" />}
                 <span>{copiedExport ? 'Exported Log!' : 'Export Log CSV'}</span>
@@ -808,7 +808,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
             {activeTab === 'USERS' && onAddUser && (
               <button
                 onClick={openAddUserModal}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#5B75F8]/20 hover:scale-[1.02] active:scale-[0.96] transition-ui"
+                className="w-full sm:w-auto flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>Provision New User</span>
@@ -972,7 +972,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                     type="button"
                     disabled={isExporting || filteredLogs.length === 0}
                     onClick={handleExportCSV}
-                    className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-[#5B75F8] text-white text-xs font-bold font-mono flex items-center gap-1.5 cursor-pointer shadow-md shadow-[#5B75F8]/20 transition-ui hover:scale-[1.02] active:scale-[0.96] disabled:opacity-50"
+                    className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer disabled:opacity-50"
                   >
                     {isExporting ? (
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />

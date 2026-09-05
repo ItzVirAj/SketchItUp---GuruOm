@@ -172,7 +172,7 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
   const balanceAmount = payables.reduce((acc, b) => acc + Number(b.balanceAmount || 0), 0);
   const overdueCount = payables.filter(b => b.status === 'OVERDUE' || (Number(b.balanceAmount) > 0 && b.status === 'OPEN')).length;
 
-  const inputClass = `h-11 w-full rounded-xl border px-3.5 text-xs font-medium outline-none transition-[border-color,box-shadow,background-color] duration-150 focus:border-[#007AFF] focus:ring-4 focus:ring-[#007AFF]/15 ${
+  const inputClass = `h-11 w-full rounded-xl border px-3.5 text-xs font-medium outline-none transition-[border-color,box-shadow,background-color] duration-150 focus:border-[#5B75F8] focus:ring-4 focus:ring-[#5B75F8]/15 ${
     isDarkMode 
       ? 'border-white/10 bg-black/60 text-white placeholder:text-slate-500 hover:border-white/20 focus:bg-black/80' 
       : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:bg-white'
@@ -205,12 +205,12 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
         {/* Top Header Row */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 pb-6 border-b border-white/10 dark:border-white/10">
           <div className="flex items-start gap-4">
-            <div className="p-3.5 rounded-2xl bg-[#007AFF]/10 text-[#007AFF] border border-[#007AFF]/20 shrink-0">
+            <div className="p-3.5 rounded-2xl bg-[#5B75F8]/10 text-[#5B75F8] border border-[#5B75F8]/20 shrink-0">
               <Building className="w-6 h-6" />
             </div>
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide bg-[#007AFF]/15 text-[#007AFF] border border-[#007AFF]/30">
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide bg-[#5B75F8]/15 text-[#5B75F8] border border-[#5B75F8]/30">
                   Vendor Accounts & Accounts Payable
                 </span>
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -233,7 +233,7 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
               setFormError(null);
               createBillModal.open();
             }}
-            className="px-5 py-2.5 rounded-full bg-[#007AFF] hover:bg-[#0071E3] active:scale-[0.98] text-white text-xs font-semibold flex items-center gap-2 shadow-md shadow-blue-500/20 cursor-pointer transition-all self-start sm:self-center"
+            className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer self-start sm:self-center"
           >
             <Plus className="w-4 h-4" />
             <span>New Vendor Bill</span>
@@ -249,7 +249,7 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
               detail: `${payables.length} vendor bills`,
               icon: Building,
               tone: isDarkMode ? 'text-white' : 'text-slate-900',
-              iconBg: 'bg-[#007AFF]/10 text-[#007AFF] border border-[#007AFF]/20',
+              iconBg: 'bg-[#5B75F8]/10 text-[#5B75F8] border border-[#5B75F8]/20',
             },
             {
               label: 'Disbursed Payments',
@@ -329,7 +329,7 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                   onClick={() => setStatusFilter(tab.id)}
                   className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                     isActive
-                      ? 'bg-[#007AFF] text-white shadow-sm'
+                      ? 'bg-[#5B75F8] text-white shadow-sm'
                       : isDarkMode
                       ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -351,8 +351,8 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
               onChange={(e) => setSearchTerm(e.target.value)}
               className={`h-10 w-full pl-10 pr-8 rounded-full border text-xs font-medium outline-none transition-all ${
                 isDarkMode 
-                  ? 'border-white/10 bg-black/60 text-white placeholder:text-slate-500 focus:border-[#007AFF] focus:ring-4 focus:ring-[#007AFF]/15' 
-                  : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:border-[#007AFF] focus:ring-4 focus:ring-[#007AFF]/15'
+                  ? 'border-white/10 bg-black/60 text-white placeholder:text-slate-500 focus:border-[#5B75F8] focus:ring-4 focus:ring-[#5B75F8]/15' 
+                  : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:border-[#5B75F8] focus:ring-4 focus:ring-[#5B75F8]/15'
               }`}
             />
             {searchTerm && (
@@ -376,7 +376,7 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
           <div className={`p-8 text-center rounded-3xl border text-xs font-mono ${
             isDarkMode ? 'bg-[#09090B] border-white/10 text-slate-400' : 'bg-white border-slate-200 text-slate-500'
           }`}>
-            <Building2 className="w-8 h-8 mx-auto mb-2 opacity-30 text-[#007AFF]" />
+            <Building2 className="w-8 h-8 mx-auto mb-2 opacity-30 text-[#5B75F8]" />
             <p>No vendor bills found matching search criteria.</p>
           </div>
         ) : (
@@ -394,7 +394,7 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <span className="font-mono font-bold text-xs text-[#007AFF]">
+                    <span className="font-mono font-bold text-xs text-[#5B75F8]">
                       {bill.billNo}
                     </span>
                     <h3 className="text-xs font-bold mt-0.5">
@@ -455,7 +455,7 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                   {!isPaid && Number(bill.balanceAmount) > 0 ? (
                     <button
                       onClick={() => handleOpenDisburseModal(bill)}
-                      className="w-full py-2.5 rounded-full bg-[#007AFF] hover:bg-[#0071E3] text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-blue-500/20 cursor-pointer active:scale-[0.98]"
+                      className="w-full py-2.5 rounded-full bg-[#5B75F8] hover:bg-[#435BE8] text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-blue-500/20 cursor-pointer active:scale-[0.98]"
                     >
                       <CreditCard className="w-3.5 h-3.5" />
                       <span>Disburse Funds (₹{Number(bill.balanceAmount).toLocaleString('en-IN')})</span>
@@ -512,10 +512,10 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                 <tr key={bill.billNo} className={`transition-colors ${isDarkMode ? 'hover:bg-white/[0.025]' : 'hover:bg-slate-50'}`}>
                   <td className="py-4 px-5">
                     <div className="flex items-center gap-2.5">
-                      <div className="p-2 rounded-xl bg-[#007AFF]/10 text-[#007AFF] border border-[#007AFF]/20 shrink-0">
+                      <div className="p-2 rounded-xl bg-[#5B75F8]/10 text-[#5B75F8] border border-[#5B75F8]/20 shrink-0">
                         <Building2 className="w-3.5 h-3.5" />
                       </div>
-                      <span className="font-mono font-bold text-xs text-[#007AFF]">
+                      <span className="font-mono font-bold text-xs text-[#5B75F8]">
                         {bill.billNo}
                       </span>
                     </div>
@@ -557,7 +557,7 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                     {bill.status !== 'PAID' && Number(bill.balanceAmount) > 0 && (
                       <button
                         onClick={() => handleOpenDisburseModal(bill)}
-                        className="px-3.5 py-1.5 rounded-full bg-[#007AFF] hover:bg-[#0071E3] text-white text-xs font-semibold shadow-sm transition-all cursor-pointer active:scale-95"
+                        className="px-3.5 py-1.5 rounded-full bg-[#5B75F8] hover:bg-[#435BE8] text-white text-xs font-semibold shadow-sm transition-all cursor-pointer active:scale-95"
                       >
                         Disburse Funds
                       </button>
@@ -578,7 +578,7 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
         onClose={() => !isSubmitting && createBillModal.close()}
         maxWidth="xl"
         isDarkMode={isDarkMode}
-        icon={<Receipt className="w-5 h-5 text-[#007AFF]" />}
+        icon={<Receipt className="w-5 h-5 text-[#5B75F8]" />}
         title="Record Vendor Bill"
         subtitle="Enter supplier invoice and accounts payable liability"
       >
@@ -751,7 +751,7 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                 onChange={(e) => setFormIsPurchaseOfGoods(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#007AFF]"></div>
+              <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5B75F8]"></div>
             </label>
           </div>
 
@@ -768,7 +768,7 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-6 py-2.5 rounded-full bg-[#007AFF] hover:bg-[#0071E3] active:scale-[0.98] text-white font-semibold text-xs cursor-pointer shadow-md shadow-blue-500/20 transition-all disabled:opacity-50"
+              className="px-6 py-2.5 rounded-full bg-[#5B75F8] hover:bg-[#435BE8] active:scale-[0.98] text-white font-semibold text-xs cursor-pointer shadow-md shadow-blue-500/20 transition-all disabled:opacity-50"
             >
               {isSubmitting ? 'Recording...' : 'Record vendor bill'}
             </button>
@@ -867,7 +867,7 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                 type="button"
                 onClick={handleConfirmDisbursement}
                 disabled={isSubmittingDisbursement}
-                className="px-6 py-2.5 rounded-full bg-[#007AFF] hover:bg-[#0071E3] active:scale-[0.98] text-white font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-blue-500/25 disabled:opacity-50 transition-all"
+                className="px-6 py-2.5 rounded-full bg-[#5B75F8] hover:bg-[#435BE8] active:scale-[0.98] text-white font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-blue-500/25 disabled:opacity-50 transition-all"
               >
                 <CreditCard className="w-4 h-4" />
                 <span>{isSubmittingDisbursement ? 'Settling...' : `Confirm & Disburse ₹${Number(selectedBillForDisbursement.balanceAmount || selectedBillForDisbursement.amount).toLocaleString('en-IN')}`}</span>

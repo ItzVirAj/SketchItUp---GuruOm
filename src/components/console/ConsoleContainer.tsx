@@ -498,7 +498,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
       />
 
       {/* Main Workspace Body */}
-      <div className="flex-1 flex overflow-hidden relative">
+      <div className="flex-1 flex overflow-hidden relative min-h-0">
         {/* Desktop Persistent Sidebar (≥1024px) */}
         <ConsoleSidebar
           currentView={currentView}
@@ -530,7 +530,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
         />
 
         {/* Dynamic View Canvas with safe bottom padding for mobile tab bar */}
-        <main ref={mainScrollRef} className={`flex-1 overflow-y-auto overscroll-y-contain overscroll-x-hidden p-3 sm:p-4 md:p-6 lg:p-8 pb-24 lg:pb-8 dark:bg-[#09090B] ${currentView === 'command-centre' ? 'bg-[#EEF2F7]' : 'bg-[#F8FAFC]'}`}>
+        <main ref={mainScrollRef} className={`flex-1 min-h-0 min-w-0 overflow-y-auto overscroll-y-contain overscroll-x-hidden p-3 sm:p-4 md:p-6 lg:p-8 pb-24 lg:pb-8 dark:bg-[#09090B] ${currentView === 'command-centre' ? 'bg-[#EEF2F7]' : 'bg-[#F8FAFC]'}`}>
           <div key={currentView} className="space-y-6">
             {!isViewAllowedForUser(currentUser, currentView) ? (
               <AccessRestrictedGate
@@ -899,6 +899,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
               orders={orders}
               customers={customers}
               masters={masters}
+              companyProfile={companyProfile}
               isDarkMode={isDarkMode}
               currentRole={currentRole}
               preselectedOrderPo={pendingInvoiceOrderPo}
@@ -910,8 +911,6 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
               onCreateInvoice={handleCreateInvoice}
               onIssueInvoice={handleIssueInvoice}
               onRecordPayment={handleRecordInvoicePayment}
-              onDeleteInvoice={handleDeleteInvoice}
-              onClearAllInvoices={handleClearAllInvoices}
               onViewOrder={(orderId) => {
                 const target = orders.find(o => o.id === orderId || o.poNo === orderId);
                 if (target) {

@@ -28,15 +28,16 @@ import {
   Hash, 
   Landmark, 
   BadgePercent, 
-  Trash2,
-  Check
+  Check,
+  Printer
 } from 'lucide-react';
 import { 
   CustomerInvoice, 
   DispatchChallan, 
   CustomerOrder, 
   CustomerMaster, 
-  MasterItem 
+  MasterItem,
+  CompanyProfile
 } from '../../../types/console';
 import { useCtaPermission } from '../../../hooks/useCtaPermission';
 import { 
@@ -45,6 +46,8 @@ import {
   formatDocumentNumber 
 } from '../../../utils/statutoryAccountingEngine';
 import { Modal } from '../../common/Modal';
+import { TaxInvoicePrint } from '../shared/TaxInvoicePrint';
+import { printElementById } from '../../../utils/printDocument';
 
 import { useUrlModal } from '../../../hooks/useUrlModal';
 
@@ -54,13 +57,12 @@ interface InvoicesViewProps {
   orders?: CustomerOrder[];
   customers?: CustomerMaster[];
   masters?: MasterItem[];
+  companyProfile?: CompanyProfile | null;
   isDarkMode?: boolean;
   currentRole?: string;
   onCreateInvoice?: (invoice: any) => Promise<void> | void;
   onIssueInvoice?: (invoiceNo: string) => Promise<void> | void;
   onRecordPayment?: (invoiceNo: string, paymentData: any) => void;
-  onDeleteInvoice?: (invoiceNo: string) => Promise<void> | void;
-  onClearAllInvoices?: () => Promise<void> | void;
   onViewOrder?: (orderId: string) => void;
   preselectedDispatchNo?: string | null;
   preselectedOrderPo?: string | null;
@@ -73,13 +75,12 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
   orders = [],
   customers = [],
   masters = [],
+  companyProfile,
   isDarkMode = true,
   currentRole = 'OWNER',
   onCreateInvoice,
   onIssueInvoice,
   onRecordPayment,
-  onDeleteInvoice,
-  onClearAllInvoices,
   onViewOrder,
   preselectedDispatchNo,
   preselectedOrderPo,
@@ -145,6 +146,47 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
     setPayNotes(`Payment realization against Tax Invoice ${invoice.invoiceNo}`);
     setPaymentModalError(null);
     paymentModal.open({ invoiceNo: invoice.invoiceNo });
+  };
+
+  // Dedicated View Invoice Modal State (Print & PDF)
+  const viewInvoiceModal = useUrlModal('view-invoice');
+  const [selectedInvoiceForView, setSelectedInvoiceForView] = useState<CustomerInvoice | null>(null);
+
+  // Sync view invoice modal from URL params if reloaded or deep linked
+  useEffect(() => {
+    if (viewInvoiceModal.isOpen && viewInvoiceModal.params.invoiceNo) {
+      const inv = invoices.find(i => i.invoiceNo === viewInvoiceModal.params.invoiceNo);
+      if (inv && (!selectedInvoiceForView || selectedInvoiceForView.invoiceNo !== inv.invoiceNo)) {
+        setSelectedInvoiceForView(inv);
+      }
+    }
+  }, [viewInvoiceModal.isOpen, viewInvoiceModal.params.invoiceNo, invoices, selectedInvoiceForView]);
+
+  const handleOpenViewInvoiceModal = (invoice: CustomerInvoice) => {
+    setSelectedInvoiceForView(invoice);
+    viewInvoiceModal.open({ invoiceNo: invoice.invoiceNo });
+  };
+
+  const handleCloseViewInvoiceModal = () => {
+    viewInvoiceModal.close();
+    setSelectedInvoiceForView(null);
+  };
+
+  const handlePrintInvoice = () => {
+    if (!selectedInvoiceForView) return;
+    printElementById('tax-invoice-printable-document', `Tax Invoice - ${selectedInvoiceForView.invoiceNo}`);
+  };
+
+  const handlePdfInvoice = () => {
+    if (!selectedInvoiceForView) return;
+    printElementById('tax-invoice-printable-document', `Tax Invoice - ${selectedInvoiceForView.invoiceNo}`);
+  };
+
+  // Helper to determine if an invoice is settled
+  const isInvoiceSettled = (inv: CustomerInvoice): boolean => {
+    if (inv.status === 'PAID' || inv.status === 'SETTLED') return true;
+    const balance = Number(inv.balanceAmount !== undefined ? inv.balanceAmount : (Number(inv.totalAmount || 0) - Number(inv.paidAmount || 0)));
+    return balance <= 0;
   };
 
   const handlePaymentSubmit = async (e?: React.FormEvent) => {
@@ -545,7 +587,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
               value: `₹${totalInvoiced.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`,
               sub: `${invoices.length} invoices raised`,
               icon: Receipt,
-              tone: isDarkMode ? 'text-white' : 'text-slate-900',
+              tone: 'text-slate-900 dark:text-white',
               iconBg: 'bg-[#5B75F8]/10 text-[#5B75F8] border border-[#5B75F8]/20',
             },
             {
@@ -687,40 +729,38 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
             return (
               <div
                 key={inv.id || inv.invoiceNo}
-                className={`p-4 rounded-3xl border space-y-3 shadow-md ${
-                  isDarkMode ? 'bg-[#09090B] border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
-                }`}
+                className="p-4 rounded-3xl border space-y-3 shadow-md bg-white dark:bg-[#09090B] border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <span className="font-mono font-bold text-xs text-[#5B75F8]">
                       {inv.invoiceNo}
                     </span>
-                    <h3 className="text-xs font-bold mt-0.5">
+                    <h3 className="text-xs font-bold mt-0.5 text-slate-900 dark:text-white">
                       {inv.customerName}
                     </h3>
                     {inv.customerGstin && (
-                      <div className="text-[10px] text-slate-400 font-mono">GSTIN: {inv.customerGstin}</div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">GSTIN: {inv.customerGstin}</div>
                     )}
                   </div>
 
                   <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-semibold border shrink-0 ${
                     isPaid
-                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                       : isDraft
-                      ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
                       : isPartial
-                      ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
-                      : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                      ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
+                      : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
                   }`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${
-                      isPaid ? 'bg-emerald-400' : isDraft ? 'bg-amber-400' : 'bg-blue-400'
+                      isPaid ? 'bg-emerald-500 dark:bg-emerald-400' : isDraft ? 'bg-amber-500 dark:bg-amber-400' : 'bg-blue-500 dark:bg-blue-400'
                     }`} />
                     <span>{inv.status}</span>
                   </span>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-slate-400">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-slate-500 dark:text-slate-400">
                   <div className="flex items-center gap-1">
                     <span>PO:</span>
                     {onViewOrder ? (
@@ -731,41 +771,39 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                         {inv.orderPo}
                       </button>
                     ) : (
-                      <strong className="text-slate-200">{inv.orderPo}</strong>
+                      <strong className="text-slate-700 dark:text-slate-200">{inv.orderPo}</strong>
                     )}
                   </div>
                   <div>
-                    Challan: <strong className="text-cyan-400">{inv.challanNo || '—'}</strong>
+                    Challan: <strong className="text-cyan-600 dark:text-cyan-400">{inv.challanNo || '—'}</strong>
                   </div>
                   <div>
-                    Date: <strong className="text-slate-200">{inv.date}</strong>
+                    Date: <strong className="text-slate-700 dark:text-slate-200">{inv.date}</strong>
                   </div>
                 </div>
 
-                <div className={`grid grid-cols-3 gap-2 p-2.5 rounded-2xl border text-xs font-mono text-center ${
-                  isDarkMode ? 'bg-black/60 border-white/10' : 'bg-slate-50 border-slate-200'
-                }`}>
+                <div className="grid grid-cols-3 gap-2 p-2.5 rounded-2xl border text-xs font-mono text-center bg-slate-50 dark:bg-black/60 border-slate-200 dark:border-white/10">
                   <div>
-                    <span className="text-[9px] text-slate-400 uppercase block">Taxable</span>
-                    <span className="font-bold">
+                    <span className="text-[9px] text-slate-500 dark:text-slate-400 uppercase block">Taxable</span>
+                    <span className="font-bold text-slate-700 dark:text-slate-300">
                       ₹{Number(inv.taxableAmount || (inv.totalAmount ? inv.totalAmount / 1.18 : 0)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                     </span>
                   </div>
                   <div>
-                    <span className="text-[9px] text-slate-400 uppercase block">Grand Total</span>
-                    <span className="font-bold text-white dark:text-white">
+                    <span className="text-[9px] text-slate-500 dark:text-slate-400 uppercase block">Grand Total</span>
+                    <span className="font-bold text-slate-900 dark:text-white">
                       ₹{Number(inv.totalAmount || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                     </span>
                   </div>
                   <div>
-                    <span className="text-[9px] text-slate-400 uppercase block">Balance Due</span>
-                    <span className={`font-bold ${isPaid ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    <span className="text-[9px] text-slate-500 dark:text-slate-400 uppercase block">Balance Due</span>
+                    <span className={`font-bold ${isPaid ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
                       ₹{Number(inv.balanceAmount ?? (Number(inv.totalAmount || 0) - Number(inv.paidAmount || 0))).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                     </span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 pt-2 border-t border-white/10">
+                <div className="flex items-center gap-2 pt-2 border-t border-slate-200 dark:border-white/10">
                   {inv.status === 'DRAFT' && onIssueInvoice && (
                     <button
                       onClick={async () => {
@@ -773,44 +811,45 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                         setActionSuccessMsg(`Invoice ${inv.invoiceNo} issued successfully.`);
                         setTimeout(() => setActionSuccessMsg(null), 4000);
                       }}
-                      className="flex-1 py-2 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/30 text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
+                      className="flex-1 min-h-[38px] py-1.5 px-4 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 text-blue-400 border border-blue-500/30 text-xs font-bold flex items-center justify-center gap-1.5 transition-ui cursor-pointer active:scale-[0.96]"
                     >
                       <Send className="w-3.5 h-3.5" />
                       <span>Issue Invoice</span>
                     </button>
                   )}
 
-                  {inv.status !== 'PAID' && inv.status !== 'DRAFT' && Number(inv.balanceAmount || inv.totalAmount) > 0 && useCtaPermission('RECORD_PAYMENT') && (
+                  {isInvoiceSettled(inv) ? (
                     <button
-                      onClick={() => handleOpenPaymentModal(inv)}
-                      className="flex-1 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20 cursor-pointer active:scale-[0.98]"
+                      onClick={() => handleOpenViewInvoiceModal(inv)}
+                      className="flex-1 min-h-[38px] py-1.5 px-4 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-[0_4px_12px_var(--accent-shadow)] transition-ui cursor-pointer active:scale-[0.96]"
                     >
-                      <CreditCard className="w-3.5 h-3.5" />
-                      <span>Record Payment</span>
+                      <FileText className="w-3.5 h-3.5" />
+                      <span>View Invoice</span>
                     </button>
-                  )}
-
-                  {isPaid && (
-                    <div className="w-full py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-semibold flex items-center justify-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Fully Paid</span>
-                    </div>
-                  )}
-
-                  {onDeleteInvoice && (
-                    <button
-                      onClick={async () => {
-                        if (window.confirm(`Delete invoice ${inv.invoiceNo}?`)) {
-                          await onDeleteInvoice(inv.invoiceNo);
-                          setActionSuccessMsg(`Invoice ${inv.invoiceNo} deleted.`);
-                          setTimeout(() => setActionSuccessMsg(null), 4000);
-                        }
-                      }}
-                      className="p-2 rounded-full border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 cursor-pointer transition-all"
-                      title={`Delete invoice ${inv.invoiceNo}`}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                  ) : (
+                    <>
+                      {inv.status !== 'DRAFT' && useCtaPermission('RECORD_PAYMENT') && (
+                        <button
+                          onClick={() => handleOpenPaymentModal(inv)}
+                          className="flex-1 min-h-[38px] py-1.5 px-4 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-[0_4px_12px_var(--accent-shadow)] transition-ui cursor-pointer active:scale-[0.96]"
+                        >
+                          <CreditCard className="w-3.5 h-3.5" />
+                          <span>Record Payment</span>
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleOpenViewInvoiceModal(inv)}
+                        className={`min-h-[38px] px-3 py-1.5 rounded-xl border text-xs font-bold transition-ui cursor-pointer inline-flex items-center gap-1.5 active:scale-[0.96] shadow-xs ${
+                          isDarkMode 
+                            ? 'border-[var(--accent-primary)]/30 bg-[var(--accent-primary)]/10 text-[var(--accent-text-dark)] hover:bg-[var(--accent-primary)]/20' 
+                            : 'border-[var(--accent-primary)]/30 bg-[var(--accent-primary)]/5 text-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/10'
+                        }`}
+                        title="View Invoice"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                        <span>View</span>
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -822,32 +861,14 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
       {/* ========================================================================= */}
       {/* ── 4. DESKTOP INVOICES TABLE (≥ md) ──                                    */}
       {/* ========================================================================= */}
-      <div className={`hidden md:block rounded-3xl border overflow-hidden transition-all shadow-xl ${
-        isDarkMode ? 'bg-[#09090B] border-white/10 text-white' : 'bg-white border-slate-200/80 text-slate-900'
-      }`}>
-        <div className="flex items-center justify-between border-b border-white/10 dark:border-white/10 px-6 py-4">
+      <div className="hidden md:block rounded-3xl border overflow-hidden transition-all shadow-xl bg-white dark:bg-[#09090B] border-slate-200/80 dark:border-white/10 text-slate-900 dark:text-white">
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 px-6 py-4">
           <div>
-            <h2 className="text-sm font-bold tracking-tight">Customer Invoicing Ledger</h2>
-            <p className="text-[11px] text-slate-400 mt-0.5">Official GST tax invoices, statutory splits, and payment realization</p>
+            <h2 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">Customer Invoicing Ledger</h2>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Official GST tax invoices, statutory splits, and payment realization</p>
           </div>
           <div className="flex items-center gap-2">
-            {filteredInvoices.length > 0 && onClearAllInvoices && (
-              <button
-                onClick={async () => {
-                  if (window.confirm('Are you sure you want to delete ALL customer invoices from the table?')) {
-                    await onClearAllInvoices();
-                    setActionSuccessMsg('All customer invoices deleted successfully.');
-                    setTimeout(() => setActionSuccessMsg(null), 4000);
-                  }
-                }}
-                className="px-3 py-1.5 rounded-full border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-mono text-[10px] font-semibold transition-all flex items-center gap-1 cursor-pointer active:scale-95"
-                title="Delete all invoices from table"
-              >
-                <Trash2 className="w-3 h-3" />
-                <span>Delete All Entries</span>
-              </button>
-            )}
-            <span className="rounded-full border border-white/10 px-3 py-1 font-mono text-[10px] font-semibold text-slate-400">
+            <span className="rounded-full border border-slate-200 dark:border-white/10 px-3 py-1 font-mono text-[10px] font-semibold text-slate-500 dark:text-slate-400">
               {filteredInvoices.length} invoices
             </span>
           </div>
@@ -856,9 +877,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className={`border-b font-mono font-semibold uppercase tracking-wider text-[10px] ${
-                isDarkMode ? 'border-white/10 bg-black/40 text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'
-              }`}>
+              <tr className="border-b font-mono font-semibold uppercase tracking-wider text-[10px] border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 text-slate-500 dark:text-slate-400">
                 <th className="py-3.5 px-5">Invoice #</th>
                 <th className="py-3.5 px-5">Customer Name</th>
                 <th className="py-3.5 px-5">Order PO</th>
@@ -872,34 +891,38 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                 <th className="py-3.5 px-5 text-center">Action</th>
               </tr>
             </thead>
-            <tbody className={`divide-y ${isDarkMode ? 'divide-white/5' : 'divide-slate-200'}`}>
+            <tbody className="divide-y divide-slate-200 dark:divide-white/5">
               {filteredInvoices.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="py-12 text-center text-slate-400 font-mono">
+                  <td colSpan={11} className="py-12 text-center text-slate-500 dark:text-slate-400 font-mono">
                     <Receipt className="w-8 h-8 mx-auto mb-2 opacity-30 text-[#5B75F8]" />
                     <p>No customer invoices found matching filter criteria.</p>
                   </td>
                 </tr>
               ) : (
                 filteredInvoices.map((inv) => (
-                  <tr key={inv.id || inv.invoiceNo} className={`transition-colors ${isDarkMode ? 'hover:bg-white/[0.025]' : 'hover:bg-slate-50'}`}>
+                  <tr key={inv.id || inv.invoiceNo} className="transition-colors hover:bg-slate-50 dark:hover:bg-white/[0.025]">
                     <td className="py-4 px-5">
-                      <div className="flex items-center gap-2.5">
-                        <div className="p-2 rounded-xl bg-[#5B75F8]/10 text-[#5B75F8] border border-[#5B75F8]/20 shrink-0">
+                      <div 
+                        onClick={() => handleOpenViewInvoiceModal(inv)}
+                        className="flex items-center gap-2.5 cursor-pointer group/inv"
+                        title="Click to view full Tax Invoice"
+                      >
+                        <div className="p-2 rounded-xl bg-[#5B75F8]/10 text-[#5B75F8] border border-[#5B75F8]/20 shrink-0 group-hover/inv:bg-[#5B75F8]/20 transition-colors">
                           <Receipt className="w-3.5 h-3.5" />
                         </div>
-                        <span className="font-mono font-bold text-xs text-[#5B75F8]">
+                        <span className="font-mono font-bold text-xs text-[#5B75F8] group-hover/inv:underline">
                           {inv.invoiceNo}
                         </span>
                       </div>
                     </td>
                     <td className="py-4 px-5">
-                      <div className="font-semibold text-white dark:text-white">{inv.customerName}</div>
+                      <div className="font-semibold text-slate-900 dark:text-white">{inv.customerName}</div>
                       {inv.customerGstin && (
-                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">GSTIN: {inv.customerGstin}</div>
+                        <div className="text-[10px] font-mono mt-0.5 text-slate-500 dark:text-slate-400">GSTIN: {inv.customerGstin}</div>
                       )}
                     </td>
-                    <td className="py-4 px-5 font-mono text-slate-300 text-xs">
+                    <td className="py-4 px-5 font-mono text-xs text-slate-700 dark:text-slate-300">
                       {onViewOrder ? (
                         <button
                           onClick={() => onViewOrder(inv.orderPo)}
@@ -912,36 +935,36 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                         inv.orderPo
                       )}
                     </td>
-                    <td className="py-4 px-5 font-mono text-cyan-400 text-xs font-semibold">
+                    <td className="py-4 px-5 font-mono text-cyan-600 dark:text-cyan-400 text-xs font-semibold">
                       {inv.challanNo || '—'}
                     </td>
-                    <td className="py-4 px-5 font-mono text-slate-400 text-xs">
+                    <td className="py-4 px-5 font-mono text-xs text-slate-600 dark:text-slate-400">
                       {inv.date}
                     </td>
-                    <td className="py-4 px-5 text-right font-mono text-slate-400 text-xs">
+                    <td className="py-4 px-5 text-right font-mono text-xs text-slate-600 dark:text-slate-400">
                       ₹{Number(inv.taxableAmount || (inv.totalAmount ? inv.totalAmount / 1.18 : 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </td>
-                    <td className="py-4 px-5 text-right font-bold font-mono text-xs text-white dark:text-white">
+                    <td className="py-4 px-5 text-right font-bold font-mono text-xs text-slate-900 dark:text-white">
                       ₹{Number(inv.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </td>
-                    <td className="py-4 px-5 text-right font-bold font-mono text-xs text-emerald-400">
+                    <td className="py-4 px-5 text-right font-bold font-mono text-xs text-emerald-600 dark:text-emerald-400">
                       ₹{Number(inv.paidAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </td>
-                    <td className="py-4 px-5 text-right font-bold font-mono text-xs text-amber-400">
+                    <td className="py-4 px-5 text-right font-bold font-mono text-xs text-amber-600 dark:text-amber-400">
                       ₹{Number(inv.balanceAmount ?? (Number(inv.totalAmount || 0) - Number(inv.paidAmount || 0))).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </td>
                     <td className="py-4 px-5 text-center">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-semibold border ${
                         inv.status === 'PAID'
-                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                           : inv.status === 'DRAFT'
-                            ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
                             : inv.status === 'PARTIAL' || inv.status === 'PARTIALLY_PAID'
-                              ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
-                              : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                              ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
+                              : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
                       }`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${
-                          inv.status === 'PAID' ? 'bg-emerald-400' : inv.status === 'DRAFT' ? 'bg-amber-400' : 'bg-blue-400'
+                          inv.status === 'PAID' ? 'bg-emerald-500 dark:bg-emerald-400' : inv.status === 'DRAFT' ? 'bg-amber-500 dark:bg-amber-400' : 'bg-blue-500 dark:bg-blue-400'
                         }`} />
                         <span>{inv.status}</span>
                       </span>
@@ -955,35 +978,45 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                               setActionSuccessMsg(`Invoice ${inv.invoiceNo} issued successfully.`);
                               setTimeout(() => setActionSuccessMsg(null), 4000);
                             }}
-                            className="px-3 py-1.5 rounded-full bg-blue-500/15 hover:bg-blue-500/25 text-blue-400 border border-blue-500/30 text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+                            className="px-3.5 py-1.5 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 text-blue-400 border border-blue-500/30 text-xs font-bold transition-ui cursor-pointer flex items-center gap-1.5 active:scale-[0.96]"
                           >
-                            <Send className="w-3 h-3" />
+                            <Send className="w-3.5 h-3.5" />
                             <span>Issue</span>
                           </button>
                         )}
-                        {inv.status !== 'PAID' && inv.status !== 'DRAFT' && Number(inv.balanceAmount || inv.totalAmount) > 0 && useCtaPermission('RECORD_PAYMENT') && (
+                        {isInvoiceSettled(inv) ? (
                           <button
-                            onClick={() => handleOpenPaymentModal(inv)}
-                            className="px-3.5 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-emerald-500/20 active:scale-95"
+                            onClick={() => handleOpenViewInvoiceModal(inv)}
+                            className="px-3.5 py-1.5 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-white text-xs font-bold transition-ui cursor-pointer flex items-center gap-1.5 shadow-[0_4px_12px_var(--accent-shadow)] active:scale-[0.96]"
+                            title="View full Tax Invoice & Print"
                           >
-                            <CreditCard className="w-3.5 h-3.5" />
-                            <span>Record Payment</span>
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>View Invoice</span>
                           </button>
-                        )}
-                        {onDeleteInvoice && (
-                          <button
-                            onClick={async () => {
-                              if (window.confirm(`Delete invoice ${inv.invoiceNo}?`)) {
-                                await onDeleteInvoice(inv.invoiceNo);
-                                setActionSuccessMsg(`Invoice ${inv.invoiceNo} deleted.`);
-                                setTimeout(() => setActionSuccessMsg(null), 4000);
-                              }
-                            }}
-                            className="p-1.5 rounded-lg border border-rose-500/20 text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
-                            title={`Delete invoice ${inv.invoiceNo}`}
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                        ) : (
+                          <>
+                            {inv.status !== 'DRAFT' && useCtaPermission('RECORD_PAYMENT') && (
+                              <button
+                                onClick={() => handleOpenPaymentModal(inv)}
+                                className="px-3.5 py-1.5 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-white text-xs font-bold transition-ui cursor-pointer flex items-center gap-1.5 shadow-[0_4px_12px_var(--accent-shadow)] active:scale-[0.96]"
+                              >
+                                <CreditCard className="w-3.5 h-3.5" />
+                                <span>Record Payment</span>
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleOpenViewInvoiceModal(inv)}
+                              className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-ui cursor-pointer inline-flex items-center gap-1 active:scale-[0.96] shadow-xs ${
+                                isDarkMode 
+                                  ? 'border-[var(--accent-primary)]/30 bg-[var(--accent-primary)]/10 text-[var(--accent-text-dark)] hover:bg-[var(--accent-primary)]/20' 
+                                  : 'border-[var(--accent-primary)]/30 bg-[var(--accent-primary)]/5 text-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/10'
+                              }`}
+                              title={`View Invoice ${inv.invoiceNo}`}
+                            >
+                              <FileText className="w-3.5 h-3.5" />
+                              <span>View</span>
+                            </button>
+                          </>
                         )}
                       </div>
                     </td>
@@ -1125,8 +1158,8 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                       <Building2 className="w-3.5 h-3.5 text-[#5B75F8]" />
                       <span>Bill To Customer</span>
                     </span>
-                    <div className="text-sm font-bold text-white dark:text-white">{customerName}</div>
-                    <div className="text-xs font-mono text-slate-400">GSTIN: <span className="font-bold text-emerald-400">{customerGstin}</span></div>
+                    <div className="text-sm font-bold text-slate-900 dark:text-white">{customerName}</div>
+                    <div className="text-xs font-mono text-slate-500 dark:text-slate-400">GSTIN: <span className="font-bold text-emerald-600 dark:text-emerald-400">{customerGstin}</span></div>
                   </div>
 
                   <div className="text-right">
@@ -1190,30 +1223,30 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                 isDarkMode ? 'bg-black/60 border-white/10' : 'bg-slate-50 border-slate-200'
               }`}>
                 <div className="space-y-2 font-mono text-xs">
-                  <div className="flex justify-between text-slate-400">
+                  <div className="flex justify-between text-slate-500 dark:text-slate-400">
                     <span>Total Taxable Value:</span>
-                    <span className="font-bold text-white dark:text-white">₹{calculation.taxable.toFixed(2)}</span>
+                    <span className="font-bold text-slate-900 dark:text-white">₹{calculation.taxable.toFixed(2)}</span>
                   </div>
                   {calculation.isIntraState ? (
                     <>
-                      <div className="flex justify-between text-indigo-400">
+                      <div className="flex justify-between text-indigo-600 dark:text-indigo-400">
                         <span>CGST (9.0%):</span>
                         <span>₹{calculation.cgstAmount.toFixed(2)}</span>
                       </div>
-                      <div className="flex justify-between text-indigo-400">
+                      <div className="flex justify-between text-indigo-600 dark:text-indigo-400">
                         <span>SGST (9.0%):</span>
                         <span>₹{calculation.sgstAmount.toFixed(2)}</span>
                       </div>
                     </>
                   ) : (
-                    <div className="flex justify-between text-amber-400">
+                    <div className="flex justify-between text-amber-600 dark:text-amber-400">
                       <span>IGST (18.0%):</span>
                       <span>₹{calculation.igstAmount.toFixed(2)}</span>
                     </div>
                   )}
-                  <div className="pt-2.5 border-t border-white/10 flex justify-between text-sm font-bold text-white dark:text-white">
+                  <div className="pt-2.5 border-t border-slate-200 dark:border-white/10 flex justify-between text-sm font-bold text-slate-900 dark:text-white">
                     <span>Grand Invoice Total:</span>
-                    <span className="text-emerald-400 font-mono text-base">₹{calculation.totalAmount.toFixed(2)}</span>
+                    <span className={`font-mono text-base font-bold ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>₹{calculation.totalAmount.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -1221,7 +1254,9 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
           )}
 
           {/* Modal Actions */}
-          <div className="pt-4 border-t border-white/10 flex flex-col sm:flex-row items-center justify-end gap-2.5 font-sans">
+          <div className={`pt-4 border-t flex flex-col sm:flex-row items-center justify-end gap-2.5 font-sans ${
+            isDarkMode ? 'border-white/10' : 'border-slate-200'
+          }`}>
             <button
               type="button"
               onClick={() => createInvoiceModal.close()}
@@ -1299,23 +1334,23 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
               }`}>
                 <div className="grid grid-cols-3 gap-2.5 text-center font-mono">
                   <div className={`p-2.5 rounded-xl border ${isDarkMode ? 'bg-black/40 border-white/10' : 'bg-white border-slate-200 shadow-xs'}`}>
-                    <span className="text-[10px] uppercase font-semibold text-slate-400 block">Total Invoice</span>
-                    <span className="text-xs font-bold text-white dark:text-white mt-0.5 block truncate">₹{total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                    <span className="text-[10px] uppercase font-semibold block text-slate-500 dark:text-slate-400">Total Invoice</span>
+                    <span className="text-xs font-bold mt-0.5 block truncate text-slate-900 dark:text-white">₹{total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                   </div>
                   <div className={`p-2.5 rounded-xl border ${isDarkMode ? 'bg-black/40 border-white/10' : 'bg-white border-slate-200 shadow-xs'}`}>
-                    <span className="text-[10px] uppercase font-semibold text-slate-400 block">Realized</span>
-                    <span className="text-xs font-bold text-emerald-400 mt-0.5 block truncate">₹{alreadyPaid.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                    <span className="text-[10px] uppercase font-semibold block text-slate-500 dark:text-slate-400">Realized</span>
+                    <span className="text-xs font-bold mt-0.5 block truncate text-emerald-600 dark:text-emerald-400">₹{alreadyPaid.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                   </div>
-                  <div className="p-2.5 rounded-xl border border-amber-500/20 bg-amber-500/10 text-amber-400">
-                    <span className="text-[10px] uppercase font-semibold block">Pending Due</span>
-                    <span className="text-xs font-bold mt-0.5 block truncate">₹{balance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                  <div className={`p-2.5 rounded-xl border ${isDarkMode ? 'border-amber-500/20 bg-amber-500/10 text-amber-400' : 'border-amber-300/80 bg-amber-50 text-amber-700 shadow-xs'}`}>
+                    <span className={`text-[10px] uppercase font-semibold block ${isDarkMode ? 'text-amber-400/80' : 'text-amber-700'}`}>Pending Due</span>
+                    <span className={`text-xs font-bold mt-0.5 block truncate ${isDarkMode ? 'text-amber-400' : 'text-amber-700'}`}>₹{balance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                   </div>
                 </div>
 
-                <div className="pt-2.5 border-t border-white/10 flex flex-wrap items-center justify-between text-[11px] font-mono text-slate-400">
-                  <span>PO: <strong className="text-white">{selectedInvoiceForPayment.orderPo || 'Direct'}</strong></span>
+                <div className="pt-2.5 border-t border-slate-200 dark:border-white/10 flex flex-wrap items-center justify-between text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                  <span>PO: <strong className="text-slate-900 dark:text-white">{selectedInvoiceForPayment.orderPo || 'Direct'}</strong></span>
                   {selectedInvoiceForPayment.challanNo && (
-                    <span>Challan: <strong className="text-cyan-400">{selectedInvoiceForPayment.challanNo}</strong></span>
+                    <span>Challan: <strong className="text-cyan-600 dark:text-cyan-400">{selectedInvoiceForPayment.challanNo}</strong></span>
                   )}
                 </div>
               </div>
@@ -1333,8 +1368,10 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                         onClick={() => setPayAmount(balance)}
                         className={`text-[10px] font-mono font-semibold px-2.5 py-0.5 rounded-full border transition-all cursor-pointer ${
                           payAmount === balance 
-                            ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
-                            : 'bg-white/[0.05] text-slate-300 border-white/10 hover:bg-white/10'
+                            ? 'bg-emerald-500 text-white border-emerald-500 shadow-xs'
+                            : isDarkMode 
+                              ? 'bg-white/[0.05] text-slate-300 border-white/10 hover:bg-white/10'
+                              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100 shadow-xs'
                         }`}
                       >
                         ⚡ Full (₹{balance.toLocaleString('en-IN')})
@@ -1345,8 +1382,10 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                           onClick={() => setPayAmount(Math.round(balance / 2))}
                           className={`text-[10px] font-mono font-semibold px-2.5 py-0.5 rounded-full border transition-all cursor-pointer ${
                             payAmount === Math.round(balance / 2)
-                              ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
-                              : 'bg-white/[0.05] text-slate-300 border-white/10 hover:bg-white/10'
+                              ? 'bg-emerald-500 text-white border-emerald-500 shadow-xs'
+                              : isDarkMode 
+                                ? 'bg-white/[0.05] text-slate-300 border-white/10 hover:bg-white/10'
+                                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100 shadow-xs'
                           }`}
                         >
                           50% Partial
@@ -1430,17 +1469,27 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                 {/* Live Settlement Outcome Preview */}
                 <div className={`p-3.5 rounded-2xl border flex items-center justify-between font-mono text-xs ${
                   willBeFullyPaid 
-                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                    : 'bg-black/40 border-white/10 text-slate-300'
+                    ? isDarkMode 
+                      ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300' 
+                      : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                    : isDarkMode 
+                      ? 'bg-black/40 border-white/10 text-slate-300' 
+                      : 'bg-slate-50 border-slate-200 text-slate-700'
                 }`}>
                   <div className="flex items-center gap-2">
-                    {willBeFullyPaid ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Clock className="w-4 h-4 text-amber-400" />}
-                    <span>Remaining Due: <strong className="text-white">₹{newBalance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</strong></span>
+                    {willBeFullyPaid 
+                      ? <CheckCircle2 className={`w-4 h-4 ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`} /> 
+                      : <Clock className={`w-4 h-4 ${isDarkMode ? 'text-amber-400' : 'text-amber-600'}`} />}
+                    <span>Remaining Due: <strong className="text-slate-900 dark:text-white">₹{newBalance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</strong></span>
                   </div>
                   <span className={`px-2.5 py-0.5 rounded-full font-semibold text-[10px] uppercase border ${
                     willBeFullyPaid 
-                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                      : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                      ? isDarkMode 
+                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
+                        : 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                      : isDarkMode 
+                        ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' 
+                        : 'bg-amber-100 text-amber-800 border-amber-300'
                   }`}>
                     {willBeFullyPaid ? 'Fully Paid' : 'Partial Realization'}
                   </span>
@@ -1448,12 +1497,14 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
               </form>
 
               {/* Actions */}
-              <div className="pt-4 border-t border-white/10 flex items-center justify-end gap-2.5 font-sans">
+              <div className={`pt-4 border-t flex items-center justify-end gap-2.5 font-sans ${
+                isDarkMode ? 'border-white/10' : 'border-slate-200'
+              }`}>
                 <button
                   type="button"
                   onClick={() => paymentModal.close()}
                   disabled={isSubmittingPayment}
-                  className={`px-4 py-2.5 rounded-full border text-xs font-semibold transition-all cursor-pointer ${
+                  className={`px-4 py-2.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
                     isDarkMode ? 'border-white/10 text-slate-300 hover:bg-white/10' : 'border-slate-200 text-slate-700 hover:bg-slate-100'
                   }`}
                 >
@@ -1464,12 +1515,125 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                     type="submit"
                     form="payment-form"
                     disabled={isSubmittingPayment || payAmount <= 0 || payAmount > balance}
-                    className="px-6 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-emerald-500/25 disabled:opacity-50 transition-all"
+                    className="px-6 py-2.5 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] active:scale-[0.96] text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-[0_8px_20px_var(--accent-shadow)] disabled:opacity-50 transition-ui"
                   >
                     <CreditCard className="w-4 h-4" />
                     <span>{isSubmittingPayment ? 'Recording...' : `Settle ₹${payAmount.toLocaleString('en-IN')}`}</span>
                   </button>
                 )}
+              </div>
+            </div>
+          );
+        })()}
+      </Modal>
+
+      {/* ========================================================================= */}
+      {/* VIEW TAX INVOICE MODAL (JobCard Print Page Design UI) */}
+      {/* ========================================================================= */}
+      <Modal
+        isOpen={viewInvoiceModal.isOpen && !!selectedInvoiceForView}
+        onClose={handleCloseViewInvoiceModal}
+        maxWidth="5xl"
+        isDarkMode={isDarkMode}
+        icon={<Receipt className="w-5 h-5 text-[var(--accent-primary)]" />}
+        title={
+          <div className="flex items-center gap-3">
+            <span>Tax Invoice: {selectedInvoiceForView?.invoiceNo}</span>
+            {selectedInvoiceForView && (
+              <span className={`text-[10px] font-mono px-2.5 py-0.5 rounded-full font-bold uppercase border ${
+                isInvoiceSettled(selectedInvoiceForView)
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                  : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+              }`}>
+                {isInvoiceSettled(selectedInvoiceForView) ? 'PAID & SETTLED' : selectedInvoiceForView.status}
+              </span>
+            )}
+          </div>
+        }
+        subtitle={
+          selectedInvoiceForView ? (
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span>Customer: <strong className="text-slate-900 dark:text-white">{selectedInvoiceForView.customerName}</strong></span>
+              <span>•</span>
+              <span>PO: <strong className="font-mono text-[#5B75F8]">{selectedInvoiceForView.orderPo}</strong></span>
+              {selectedInvoiceForView.dispatchNo && (
+                <>
+                  <span>•</span>
+                  <span>Challan: <strong className="font-mono text-cyan-400">{selectedInvoiceForView.dispatchNo}</strong></span>
+                </>
+              )}
+            </div>
+          ) : undefined
+        }
+        headerRight={
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handlePrintInvoice}
+              className={`px-3.5 py-1.5 rounded-xl border flex items-center gap-1.5 text-xs font-mono font-semibold transition-ui cursor-pointer ${
+                isDarkMode
+                  ? 'border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:text-white'
+                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
+              }`}
+              title="Print Tax Invoice"
+            >
+              <Printer className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Print</span>
+            </button>
+            <button
+              type="button"
+              onClick={handlePdfInvoice}
+              className={`px-3.5 py-1.5 rounded-xl border flex items-center gap-1.5 text-xs font-mono font-semibold transition-ui cursor-pointer ${
+                isDarkMode
+                  ? 'border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:text-white'
+                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
+              }`}
+              title="Download / Save as PDF"
+            >
+              <Download className="w-3.5 h-3.5 text-indigo-400" />
+              <span>PDF</span>
+            </button>
+          </div>
+        }
+      >
+        {selectedInvoiceForView && (() => {
+          const matchedOrder = orders.find(o => o.poNo === selectedInvoiceForView.orderPo || o.id === selectedInvoiceForView.orderPo);
+          const matchedDispatch = dispatches.find(d => d.challanNo === selectedInvoiceForView.dispatchNo || d.id === selectedInvoiceForView.dispatchNo);
+          const matchedCustomer = customers.find(c => 
+            c.customerName?.toLowerCase() === selectedInvoiceForView.customerName?.toLowerCase() || 
+            c.id === matchedOrder?.customerId
+          );
+
+          return (
+            <div className="space-y-4">
+              {/* Document Actions & Summary Header */}
+              <div className={`p-3 rounded-2xl border flex items-center justify-between text-xs ${
+                isDarkMode ? 'bg-black/30 border-white/10 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>Statutory GST Tax Invoice (Rule 46) • Standard Industrial Layout</span>
+                </div>
+                <div className="flex items-center gap-3 font-mono">
+                  <span className="text-slate-400">Grand Total:</span>
+                  <span className="font-bold text-emerald-400 text-sm">
+                    ₹{Number(selectedInvoiceForView.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+
+              {/* Printable Tax Invoice Container using Jobcard Print page design UI */}
+              <div 
+                id="tax-invoice-printable-document" 
+                className="w-full bg-white text-slate-900 rounded-2xl p-3 sm:p-6 shadow-sm overflow-x-auto"
+              >
+                <TaxInvoicePrint
+                  invoice={selectedInvoiceForView}
+                  order={matchedOrder}
+                  dispatch={matchedDispatch}
+                  customer={matchedCustomer}
+                  companyProfile={companyProfile}
+                />
               </div>
             </div>
           );

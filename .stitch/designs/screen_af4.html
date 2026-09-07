@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>GuruOmOS • Secure Console Login</title>
+<!-- Google Fonts: Inter -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-surface": "#e3e1e9",
+            "primary-container": "#4d8eff",
+            "primary-fixed-dim": "#adc6ff",
+            "on-secondary-fixed-variant": "#5516be",
+            "on-error-container": "#ffdad6",
+            "surface": "#121318",
+            "outline-variant": "#424754",
+            "on-surface-variant": "#c2c6d6",
+            "on-secondary-container": "#c4abff",
+            "secondary-container": "#571bc1",
+            "surface-container-high": "#292a2f",
+            "surface-tint": "#adc6ff",
+            "on-primary-container": "#00285d",
+            "error": "#ffb4ab",
+            "on-primary-fixed": "#001a42",
+            "surface-container-highest": "#34343a",
+            "tertiary-fixed-dim": "#4cd7f6",
+            "surface-container-lowest": "#0d0e13",
+            "tertiary": "#4cd7f6",
+            "tertiary-container": "#009eb9",
+            "primary-fixed": "#d8e2ff",
+            "secondary-fixed-dim": "#d0bcff",
+            "surface-container": "#1e1f25",
+            "secondary-fixed": "#e9ddff",
+            "on-secondary": "#3c0091",
+            "surface-container-low": "#1a1b21",
+            "inverse-primary": "#005ac2",
+            "on-tertiary-container": "#002f38",
+            "surface-dim": "#121318",
+            "on-tertiary-fixed-variant": "#004e5c",
+            "surface-bright": "#38393f",
+            "primary": "#adc6ff",
+            "on-error": "#690005",
+            "secondary": "#d0bcff",
+            "on-tertiary": "#003640",
+            "on-primary": "#002e6a",
+            "inverse-on-surface": "#2f3036",
+            "surface-variant": "#34343a",
+            "tertiary-fixed": "#acedff",
+            "on-tertiary-fixed": "#001f26",
+            "outline": "#8c909f",
+            "on-secondary-fixed": "#23005c",
+            "on-background": "#e3e1e9",
+            "inverse-surface": "#e3e1e9",
+            "error-container": "#93000a",
+            "on-primary-fixed-variant": "#004395",
+            "background": "#121318"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "card-padding": "2.25rem",
+            "space-xl": "2rem",
+            "space-lg": "1.5rem",
+            "input-gap": "1rem",
+            "space-xs": "0.5rem",
+            "space-2xl": "3rem",
+            "section-gap": "1.5rem",
+            "card-padding-mobile": "1.25rem",
+            "space-sm": "0.75rem",
+            "space-3xl": "4rem",
+            "space-md": "1rem",
+            "space-2xs": "0.25rem"
+          },
+          "fontFamily": {
+            "display-md": ["Inter"],
+            "body-lg": ["Inter"],
+            "label-md": ["Inter"],
+            "body-base": ["Inter"],
+            "headline-md": ["Inter"],
+            "body-medium": ["Inter"],
+            "headline-lg": ["Inter"],
+            "caption-semibold": ["Inter"],
+            "display-lg-mobile": ["Inter"],
+            "display-lg": ["Inter"],
+            "caption": ["Inter"]
+          },
+          "fontSize": {
+            "display-md": ["28px", { "lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+            "body-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "-0.005em", "fontWeight": "400" }],
+            "label-md": ["14px", { "lineHeight": "18px", "letterSpacing": "-0.005em", "fontWeight": "500" }],
+            "body-base": ["14px", { "lineHeight": "20px", "letterSpacing": "0", "fontWeight": "400" }],
+            "headline-md": ["18px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+            "body-medium": ["14px", { "lineHeight": "20px", "letterSpacing": "0", "fontWeight": "500" }],
+            "headline-lg": ["22px", { "lineHeight": "28px", "letterSpacing": "-0.015em", "fontWeight": "600" }],
+            "caption-semibold": ["12px", { "lineHeight": "16px", "letterSpacing": "0.015em", "fontWeight": "600" }],
+            "display-lg-mobile": ["28px", { "lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "display-lg": ["36px", { "lineHeight": "42px", "letterSpacing": "-0.025em", "fontWeight": "700" }],
+            "caption": ["12px", { "lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "400" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    /* Material Symbols Base */
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 350, 'GRAD' 0, 'opsz' 20;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .material-symbols-outlined.fill {
+      font-variation-settings: 'FILL' 1, 'wght' 350, 'GRAD' 0, 'opsz' 20;
+    }
+
+    /* Kowalski Physics Curve */
+    .apple-spring {
+      transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Staggered entrance initial animations */
+    @keyframes appleEntrance {
+      0% {
+        opacity: 0;
+        transform: translateY(12px) scale(0.98);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .stagger-1 { animation: appleEntrance 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.04s both; }
+    .stagger-2 { animation: appleEntrance 0.75s cubic-bezier(0.16, 1, 0.3, 1) 0.12s both; }
+    .stagger-3 { animation: appleEntrance 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both; }
+    .stagger-4 { animation: appleEntrance 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.28s both; }
+    .stagger-5 { animation: appleEntrance 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.36s both; }
+
+    /* Glass Panels */
+    .apple-glass-card {
+      background: rgba(18, 19, 24, 0.72);
+      backdrop-filter: blur(32px) saturate(190%);
+      -webkit-backdrop-filter: blur(32px) saturate(190%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow:
+        0 30px 60px -15px rgba(0, 0, 0, 0.75),
+        0 1px 2px 0 rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.14);
+    }
+
+    .apple-input-well {
+      background: rgba(0, 0, 0, 0.32);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .apple-input-well:focus-within {
+      background: rgba(0, 0, 0, 0.45);
+      border-color: rgba(77, 142, 255, 0.7);
+      box-shadow: 
+        0 0 0 3px rgba(77, 142, 255, 0.18),
+        inset 0 1px 2px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Ambient Spotlight Pulsing */
+    @keyframes softPulse {
+      0%, 100% { opacity: 0.45; transform: scale(1); }
+      50% { opacity: 0.65; transform: scale(1.05); }
+    }
+    .ambient-glow {
+      animation: softPulse 8s ease-in-out infinite;
+    }
+
+    /* Custom Apple Style Radio Checkmark */
+    .custom-check:checked + label .check-icon {
+      opacity: 1;
+      transform: scale(1);
+    }
+  </style>
+</head>
+<body class="bg-surface-container-lowest text-on-surface font-body-base min-h-screen flex flex-col justify-between selection:bg-primary selection:text-on-primary antialiased overflow-x-hidden relative">
+<!-- Atmospheric Background Canvas with Emil Kowalski Lighting Spheres -->
+<div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
+<div class="ambient-glow absolute top-[-15%] left-1/2 -translate-x-1/2 w-[720px] h-[540px] bg-gradient-to-b from-primary-container/15 via-tertiary-container/5 to-transparent rounded-full blur-[110px]"></div>
+<div class="absolute bottom-[-10%] right-[-5%] w-[480px] h-[400px] bg-secondary-container/10 rounded-full blur-[90px]"></div>
+<div class="absolute top-[40%] left-[-10%] w-[420px] h-[360px] bg-primary/5 rounded-full blur-[90px]"></div>
+<!-- Subtle Grid Mesh Texture -->
+<div class="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.035)_1px,transparent_1px)] [background-size:24px_24px] opacity-70"></div>
+</div>
+<!-- Top Navigation Header (Shared Component Glass Header) -->
+<header class="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-12 w-full h-16 border-b border-outline-variant/20 backdrop-blur-2xl bg-surface/75 stagger-1">
+<!-- Brand Anchor -->
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-xl bg-gradient-to-b from-surface-container-highest to-surface-container-low border border-white/10 flex items-center justify-center shadow-inner">
+<span class="material-symbols-outlined text-primary text-[18px]" data-icon="terminal">terminal</span>
+</div>
+<span class="text-headline-md font-headline-md tracking-tight text-on-surface font-semibold">GuruOmOS</span>
+<span class="hidden sm:inline-flex items-center gap-1.5 ml-2 px-2 py-0.5 rounded-full bg-surface-container-high/60 border border-white/10 text-caption-semibold font-caption-semibold text-on-surface-variant">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+        v3.4 Production
+      </span>
+</div>
+<!-- Navigation Links -->
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-on-surface-variant font-normal hover:text-on-surface pb-1 text-label-md font-label-md transition-colors duration-150" href="#platform">Platform</a>
+<a class="text-on-surface-variant font-normal hover:text-on-surface pb-1 text-label-md font-label-md transition-colors duration-150" href="#security">Security</a>
+<a class="text-on-surface-variant font-normal hover:text-on-surface pb-1 text-label-md font-label-md transition-colors duration-150" href="#enterprise">Enterprise</a>
+<a class="text-on-surface-variant font-normal hover:text-on-surface pb-1 text-label-md font-label-md transition-colors duration-150" href="#docs">Documentation</a>
+</nav>
+<!-- Trailing Actions -->
+<div class="flex items-center gap-3">
+<button class="px-3 py-1.5 rounded-lg text-caption-semibold font-caption-semibold text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high/40 transition-all duration-150 active:scale-[0.97]">
+        Support
+      </button>
+<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-high/60 border border-white/10 text-caption-semibold font-caption-semibold text-primary hover:bg-surface-container-highest/60 transition-all duration-150 active:scale-[0.97]" id="navPasskeyBtn">
+<span class="material-symbols-outlined text-[16px]" data-icon="fingerprint">fingerprint</span>
+<span>Passkey Login</span>
+</button>
+</div>
+</header>
+<!-- Main Viewport Canvas (Centered Auth Experience) -->
+<main class="relative z-10 flex-1 flex flex-col items-center justify-center px-4 pt-24 pb-12 w-full max-w-7xl mx-auto">
+<!-- Top System Capsule Indicator -->
+<div class="stagger-2 mb-6 inline-flex items-center gap-2.5 px-3.5 py-1 rounded-full bg-surface-container/70 border border-white/10 backdrop-blur-xl shadow-[0_2px_8px_rgba(0,0,0,0.4)]">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+</span>
+<span class="text-caption-semibold font-caption-semibold text-on-surface-variant tracking-wide">
+        sketchitup.guruom.com <span class="text-outline mx-1">•</span> Zero Trust Cloud
+      </span>
+<span class="material-symbols-outlined text-[14px] text-tertiary" data-icon="verified_user">verified_user</span>
+</div>
+<!-- Master Glass Authentication Card -->
+<div class="stagger-3 w-full max-w-[420px] rounded-3xl apple-glass-card p-6 sm:p-9 relative overflow-hidden">
+<!-- Subtle top inner highlight beam -->
+<div class="absolute top-0 left-1/4 right-1/4 h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent"></div>
+<!-- Header Content -->
+<div class="text-center mb-6">
+<h1 class="text-headline-lg font-headline-lg text-on-surface tracking-tight font-semibold">
+          Authenticate Session
+        </h1>
+<p class="text-caption font-caption text-on-surface-variant mt-1">
+          Enter credentials authorized for GuruOmOS kernel access
+        </p>
+</div>
+<!-- Segmented Pill Switcher (Apple macOS Style Control) -->
+<div class="stagger-4 relative p-1 mb-6 rounded-xl bg-surface-container-lowest/80 border border-white/5 flex items-center text-caption-semibold font-caption-semibold">
+<!-- Animated Background Slider -->
+<div class="absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] bg-surface-container-high border border-white/10 rounded-lg shadow-sm transition-all duration-300 apple-spring" id="segmentHighlight"></div>
+<button class="relative z-10 flex-1 py-1.5 flex items-center justify-center gap-1.5 text-on-surface transition-colors duration-200" id="tabPassword" type="button">
+<span class="material-symbols-outlined text-[16px]" data-icon="key">key</span>
+<span>Password</span>
+</button>
+<button class="relative z-10 flex-1 py-1.5 flex items-center justify-center gap-1.5 text-on-surface-variant hover:text-on-surface transition-colors duration-200" id="tabPasskey" type="button">
+<span class="material-symbols-outlined text-[16px]" data-icon="fingerprint">fingerprint</span>
+<span>Passkey / Face ID</span>
+</button>
+</div>
+<!-- Form Container -->
+<form class="space-y-4" id="authForm" onsubmit="event.preventDefault(); triggerAuth();">
+<!-- Standard Password Section View -->
+<div class="space-y-3.5 transition-opacity duration-200" id="passwordMethodView">
+<!-- Identity Input -->
+<div class="space-y-1.5">
+<div class="flex justify-between items-center px-0.5">
+<label class="text-caption-semibold font-caption-semibold text-on-surface-variant" for="tenantUser">
+                Enterprise ID or Email
+              </label>
+<span class="text-caption font-caption text-outline">sketchitup domain</span>
+</div>
+<div class="apple-input-well rounded-xl flex items-center px-3.5 h-11 group">
+<span class="material-symbols-outlined text-outline group-focus-within:text-primary transition-colors text-[18px] mr-2.5" data-icon="badge">badge</span>
+<input class="w-full bg-transparent border-none p-0 text-body-base font-body-base text-on-surface placeholder:text-outline focus:ring-0 focus:outline-none" id="tenantUser" placeholder="name@organization.com" required="" type="text" value="architect@sketchitup.guruom.com"/>
+<button class="text-outline hover:text-on-surface p-1 transition-colors active:scale-95" id="clearUserBtn" title="Clear input" type="button">
+<span class="material-symbols-outlined text-[16px]" data-icon="cancel">cancel</span>
+</button>
+</div>
+</div>
+<!-- Secret Key Input -->
+<div class="space-y-1.5">
+<div class="flex justify-between items-center px-0.5">
+<label class="text-caption-semibold font-caption-semibold text-on-surface-variant" for="masterKey">
+                Master Security Key
+              </label>
+<a class="text-caption font-caption text-primary hover:text-primary-fixed-dim transition-colors" href="#reset">
+                Recover access?
+              </a>
+</div>
+<div class="apple-input-well rounded-xl flex items-center px-3.5 h-11 group">
+<span class="material-symbols-outlined text-outline group-focus-within:text-primary transition-colors text-[18px] mr-2.5" data-icon="lock">lock</span>
+<input class="w-full bg-transparent border-none p-0 text-body-base font-body-base text-on-surface placeholder:text-outline focus:ring-0 focus:outline-none tracking-wider" id="masterKey" placeholder="Enter password" required="" type="password" value="••••••••••••••••"/>
+<button class="text-outline hover:text-on-surface p-1 transition-colors active:scale-95" id="togglePasswordBtn" title="Toggle visibility" type="button">
+<span class="material-symbols-outlined text-[18px]" data-icon="visibility" id="pwdVisibilityIcon">visibility</span>
+</button>
+</div>
+</div>
+<!-- Remember & Security Level Options -->
+<div class="flex items-center justify-between pt-1 text-caption font-caption">
+<div class="flex items-center gap-2 cursor-pointer">
+<div class="relative flex items-center">
+<input checked="" class="custom-check sr-only" id="trustSession" type="checkbox"/>
+<label class="w-4 h-4 rounded-[5px] bg-black/40 border border-white/20 flex items-center justify-center cursor-pointer transition-all hover:border-primary" for="trustSession">
+<span class="check-icon opacity-1 scale-100 transition-all text-primary material-symbols-outlined text-[14px]" data-icon="check">check</span>
+</label>
+</div>
+<label class="text-on-surface-variant cursor-pointer select-none" for="trustSession">
+                Trust device (14 days)
+              </label>
+</div>
+<span class="text-outline flex items-center gap-1">
+<kbd class="px-1.5 py-0.5 rounded bg-surface-container text-[10px] font-mono text-on-surface-variant border border-white/10">↵ Enter</kbd>
+</span>
+</div>
+</div>
+<!-- Passkey Hardware Key Mode (Alternative Pane) -->
+<div class="hidden space-y-4 py-3 text-center transition-opacity duration-200" id="passkeyMethodView">
+<div class="relative mx-auto w-20 h-20 rounded-2xl bg-surface-container-high/40 border border-white/10 flex items-center justify-center group cursor-pointer hover:border-primary/50 transition-all active:scale-95">
+<div class="absolute inset-0 rounded-2xl bg-primary/10 animate-ping opacity-25"></div>
+<span class="material-symbols-outlined text-primary text-[38px] transition-transform duration-200 group-hover:scale-110" data-icon="fingerprint">fingerprint</span>
+</div>
+<div>
+<div class="text-label-md font-label-md text-on-surface font-medium">Ready for Touch ID / Security Key</div>
+<p class="text-caption font-caption text-on-surface-variant mt-0.5">
+              Touch the sensor or insert your FIDO2 hardware token
+            </p>
+</div>
+</div>
+<!-- Primary Commit Button -->
+<div class="pt-2">
+<button class="w-full h-11 rounded-xl bg-gradient-to-r from-primary-container to-blue-600 hover:from-primary hover:to-blue-500 text-on-primary-container font-label-md text-label-md font-semibold tracking-wide border border-white/20 shadow-[0_4px_16px_rgba(59,130,246,0.35)] flex items-center justify-center gap-2 transition-all duration-150 active:scale-[0.98]" id="commitBtn" type="submit">
+<span id="btnLabel">Sign In to GuruOmOS</span>
+<span class="material-symbols-outlined text-[18px]" data-icon="arrow_forward" id="btnIcon">arrow_forward</span>
+<div class="hidden w-4 h-4 border-2 border-on-primary-container border-t-transparent rounded-full animate-spin" id="btnSpinner"></div>
+</button>
+</div>
+</form>
+<!-- Divider -->
+<div class="relative my-5">
+<div class="absolute inset-0 flex items-center">
+<div class="w-full border-t border-outline-variant/30"></div>
+</div>
+<div class="relative flex justify-center text-[11px] font-caption text-outline uppercase tracking-wider">
+<span class="bg-surface-container-low px-3 py-0.5 rounded-full border border-white/5">Secured By SSO</span>
+</div>
+</div>
+<!-- Quick SSO Secondary Hardware Providers -->
+<div class="grid grid-cols-2 gap-2.5">
+<button class="h-10 rounded-xl bg-surface-container-high/40 hover:bg-surface-container-high/80 border border-white/10 flex items-center justify-center gap-2 text-caption-semibold font-caption-semibold text-on-surface transition-all active:scale-[0.98]" type="button">
+<span class="material-symbols-outlined text-[16px] text-tertiary" data-icon="token">token</span>
+<span>YubiKey 5</span>
+</button>
+<button class="h-10 rounded-xl bg-surface-container-high/40 hover:bg-surface-container-high/80 border border-white/10 flex items-center justify-center gap-2 text-caption-semibold font-caption-semibold text-on-surface transition-all active:scale-[0.98]" type="button">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="vpn_key">vpn_key</span>
+<span>Apple ID SSO</span>
+</button>
+</div>
+<!-- Dynamic Notice Feedback Toast (Embedded) -->
+<div class="hidden mt-4 p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 text-caption font-caption flex items-center gap-2" id="statusToast">
+<span class="material-symbols-outlined text-[16px] text-emerald-400" data-icon="check_circle">check_circle</span>
+<span id="statusToastMessage">Access authorization handshake verified. Redirecting...</span>
+</div>
+</div>
+<!-- Discreet Engineering Credit Capsule -->
+<div class="stagger-5 mt-8 flex flex-col sm:flex-row items-center gap-2 text-caption font-caption text-outline">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px] text-primary" data-icon="memory">memory</span>
+<span>Architected by <span class="text-on-surface font-medium">SketchItUp Solutions</span></span>
+</div>
+<span class="hidden sm:inline text-outline-variant">•</span>
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span>
+<span>All Systems Secure (99.998%)</span>
+</div>
+</div>
+</main>
+<!-- Ambient Glass Footer (Shared Component) -->
+<footer class="w-full py-6 px-6 md:px-12 flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left border-t border-outline-variant/20 bg-surface-container-lowest/60 backdrop-blur-md relative z-10">
+<div class="flex items-center gap-2 text-caption-semibold font-caption-semibold text-on-surface-variant">
+<span>© 2025 SketchItUp Solutions. GuruOmOS Micro-Kernel Architecture.</span>
+</div>
+<div class="flex flex-wrap items-center justify-center gap-6 text-caption font-caption text-on-surface-variant">
+<a class="hover:text-primary transition-colors duration-150" href="#hardware">Hardware Security Key</a>
+<a class="hover:text-primary transition-colors duration-150" href="#zerotrust">Zero Trust Compliance</a>
+<a class="hover:text-primary transition-colors duration-150" href="#privacy">Privacy Telemetry</a>
+<a class="flex items-center gap-1 text-emerald-400 hover:text-emerald-300 transition-colors duration-150" href="#status">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+        Status: Operational
+      </a>
+</div>
+</footer>
+<!-- Micro-interaction Logic (Emil Kowalski & Apple Tactics) -->
+<script>
+    // Segmented Tab Switcher Logic
+    const tabPassword = document.getElementById('tabPassword');
+    const tabPasskey = document.getElementById('tabPasskey');
+    const segmentHighlight = document.getElementById('segmentHighlight');
+    const passwordView = document.getElementById('passwordMethodView');
+    const passkeyView = document.getElementById('passkeyMethodView');
+    const commitBtn = document.getElementById('commitBtn');
+    const btnLabel = document.getElementById('btnLabel');
+    const navPasskeyBtn = document.getElementById('navPasskeyBtn');
+
+    function selectTab(type) {
+      if (type === 'passkey') {
+        segmentHighlight.style.transform = 'translateX(100%)';
+        segmentHighlight.style.marginLeft = '4px';
+        tabPassword.classList.remove('text-on-surface');
+        tabPassword.classList.add('text-on-surface-variant');
+        tabPasskey.classList.remove('text-on-surface-variant');
+        tabPasskey.classList.add('text-on-surface');
+
+        passwordView.classList.add('hidden');
+        passkeyView.classList.remove('hidden');
+        btnLabel.innerText = 'Authorize via Passkey';
+      } else {
+        segmentHighlight.style.transform = 'translateX(0%)';
+        segmentHighlight.style.marginLeft = '0px';
+        tabPasskey.classList.remove('text-on-surface');
+        tabPasskey.classList.add('text-on-surface-variant');
+        tabPassword.classList.remove('text-on-surface-variant');
+        tabPassword.classList.add('text-on-surface');
+
+        passkeyView.classList.add('hidden');
+        passwordView.classList.remove('hidden');
+        btnLabel.innerText = 'Sign In to GuruOmOS';
+      }
+    }
+
+    tabPassword.addEventListener('click', () => selectTab('password'));
+    tabPasskey.addEventListener('click', () => selectTab('passkey'));
+    if (navPasskeyBtn) {
+      navPasskeyBtn.addEventListener('click', () => selectTab('passkey'));
+    }
+
+    // Password Visibility Toggle with Fluid Icon Morph
+    const togglePasswordBtn = document.getElementById('togglePasswordBtn');
+    const masterKeyInput = document.getElementById('masterKey');
+    const pwdVisibilityIcon = document.getElementById('pwdVisibilityIcon');
+
+    togglePasswordBtn.addEventListener('click', () => {
+      const isPass = masterKeyInput.getAttribute('type') === 'password';
+      masterKeyInput.setAttribute('type', isPass ? 'text' : 'password');
+      pwdVisibilityIcon.innerText = isPass ? 'visibility_off' : 'visibility';
+      pwdVisibilityIcon.style.transform = 'scale(0.85)';
+      setTimeout(() => {
+        pwdVisibilityIcon.style.transform = 'scale(1)';
+      }, 100);
+    });
+
+    // Clear input helper
+    const clearUserBtn = document.getElementById('clearUserBtn');
+    const tenantUserInput = document.getElementById('tenantUser');
+    clearUserBtn.addEventListener('click', () => {
+      tenantUserInput.value = '';
+      tenantUserInput.focus();
+    });
+
+    // Authentication Sequence Simulation
+    function triggerAuth() {
+      const btnIcon = document.getElementById('btnIcon');
+      const btnSpinner = document.getElementById('btnSpinner');
+      const statusToast = document.getElementById('statusToast');
+
+      btnIcon.classList.add('hidden');
+      btnSpinner.classList.remove('hidden');
+      commitBtn.disabled = true;
+      commitBtn.classList.add('opacity-90');
+
+      setTimeout(() => {
+        btnSpinner.classList.add('hidden');
+        btnIcon.classList.remove('hidden');
+        btnIcon.innerText = 'check';
+        statusToast.classList.remove('hidden');
+        commitBtn.classList.replace('from-primary-container', 'from-emerald-600');
+        commitBtn.classList.replace('to-blue-600', 'to-emerald-700');
+        btnLabel.innerText = 'Session Authorized';
+
+        setTimeout(() => {
+          commitBtn.disabled = false;
+        }, 2000);
+      }, 950);
+    }
+  </script>
+</body></html>

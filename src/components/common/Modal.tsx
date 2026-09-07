@@ -198,7 +198,7 @@ export const Modal: React.FC<ModalProps> = ({
         {/* Region 2: Scrollable Body */}
         <div
           data-lenis-prevent="true"
-          className={`flex-1 overflow-y-auto p-5 sm:p-6 overscroll-contain space-y-4 text-xs font-sans ${bodyClassName}`}
+          className={`flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 overscroll-contain space-y-4 text-xs font-sans ${bodyClassName}`}
         >
           {children}
         </div>

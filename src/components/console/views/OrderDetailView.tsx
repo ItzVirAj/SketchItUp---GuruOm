@@ -1489,8 +1489,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
       {/* 1. Header Navigation & Action Bar - Apple HIG Toolbar */}
       <div className={`p-4 sm:p-5 rounded-2xl border transition-all relative overflow-hidden backdrop-blur-xl ${isDarkMode
-        ? 'bg-slate-900/80 border-white/10 text-white shadow-[0_4px_24px_rgba(0,0,0,0.3)]'
-        : 'bg-white/90 border-slate-200/80 shadow-[0_4px_20px_rgba(0,0,0,0.04)] text-slate-900'
+        ? 'bg-[#161618]/95 border-white/[0.08] text-white shadow-[0_8px_32px_rgba(0,0,0,0.36)]'
+        : 'bg-white/95 border-slate-200/80 shadow-[0_4px_20px_rgba(0,0,0,0.04)] text-slate-900'
         }`}>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
 
@@ -1611,8 +1611,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
       {/* 2. Apple HIG Segmented Progress Stepper */}
       <div className={`p-4 sm:p-5 rounded-2xl border transition-all relative overflow-hidden backdrop-blur-xl ${isDarkMode
-        ? 'bg-slate-900/80 border-white/10 text-white shadow-[0_4px_24px_rgba(0,0,0,0.3)]'
-        : 'bg-white/90 border-slate-200/80 shadow-[0_4px_20px_rgba(0,0,0,0.04)] text-slate-900'
+        ? 'bg-[#161618]/95 border-white/[0.08] text-white shadow-[0_8px_32px_rgba(0,0,0,0.36)]'
+        : 'bg-white/95 border-slate-200/80 shadow-[0_4px_24px_rgba(0,0,0,0.04)] text-slate-900'
         }`}>
 
         <div className="flex items-center justify-between gap-2.5 mb-3 px-1">
@@ -1621,59 +1621,102 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               Lifecycle Progress
             </span>
           </div>
-          <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${isDarkMode ? 'bg-blue-500/10 border-blue-500/20 text-[#7B92FF]' : 'bg-blue-50 border-blue-100 text-[#5B75F8]'
+          <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium border flex items-center gap-1.5 ${isDarkMode
+            ? 'bg-white/[0.06] border-white/[0.08] text-slate-300'
+            : 'bg-slate-100/90 border-slate-200/70 text-slate-700'
             }`}>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             Phase {activeStepIndex + 1} of {steps.length} • {(order.status || order.stage || 'DRAFT').replace(/_/g, ' ')}
           </span>
         </div>
 
         {/* Apple Segmented Control Rail */}
-        <div className={`p-1.5 rounded-2xl border flex items-center gap-1.5 overflow-x-auto scrollbar-none ${isDarkMode
-          ? 'bg-slate-950/60 border-white/5'
-          : 'bg-slate-100/80 border-slate-200/60'
+        <div className={`p-1.5 rounded-2xl border flex items-center gap-2 overflow-x-auto scrollbar-none ${isDarkMode
+          ? 'bg-[#0f0f11] border-white/[0.05] shadow-[inset_0_1px_3px_rgba(0,0,0,0.6)]'
+          : 'bg-slate-100/80 border-slate-200/70 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)]'
           }`}>
           {steps.map((st, idx) => {
             const isCompleted = idx < activeStepIndex;
             const isCurrent = idx === activeStepIndex;
+            const isOrderClosed = ['COMPLETED', 'CLOSED', 'PAID'].includes((order.status || order.stage || '').toUpperCase());
+            const isClosedState = (isOrderClosed && (isCurrent || idx === steps.length - 1)) || (st.name === 'Closed' && isCompleted);
+            const isFinished = isCompleted || (isOrderClosed && isCurrent);
             const StepIcon = st.icon;
 
             return (
               <div
                 key={st.name}
-                className={`flex-1 min-w-[110px] sm:min-w-[130px] px-3 py-2 rounded-xl flex items-center gap-2.5 transition-all select-none ${isCurrent
-                  ? 'bg-[#5B75F8] text-white shadow-sm shadow-blue-500/25'
-                  : isCompleted
+                className={`relative flex-1 min-w-[125px] sm:min-w-[145px] px-3.5 pt-2.5 pb-3 rounded-[13px] border flex items-center gap-2.5 transition-all duration-200 select-none overflow-hidden ${
+                  isClosedState && isCurrent
                     ? isDarkMode
-                      ? 'bg-slate-900/90 text-slate-200 border border-white/5'
-                      : 'bg-white text-slate-800 shadow-2xs border border-slate-200/50'
-                    : 'text-slate-400 dark:text-slate-500'
+                      ? 'bg-[#18261e] text-white border-emerald-500/40 shadow-[0_4px_16px_rgba(0,0,0,0.45),0_0_0_1px_rgba(16,185,129,0.25)]'
+                      : 'bg-white text-slate-900 border-emerald-500/35 shadow-[0_4px_14px_rgba(16,185,129,0.12),0_1px_3px_rgba(0,0,0,0.06)]'
+                    : isCurrent
+                    ? isDarkMode
+                      ? 'bg-[#25252a] text-white border-blue-500/40 shadow-[0_4px_16px_rgba(0,0,0,0.45),0_0_0_1px_rgba(59,130,246,0.25)]'
+                      : 'bg-white text-slate-900 border-blue-500/35 shadow-[0_4px_14px_rgba(59,130,246,0.12),0_1px_3px_rgba(0,0,0,0.06)]'
+                    : isCompleted
+                    ? isDarkMode
+                      ? 'bg-[#1a1a1d] text-slate-200 border-white/[0.07] hover:bg-[#202024] hover:border-white/[0.12] shadow-[0_2px_6px_rgba(0,0,0,0.2)]'
+                      : 'bg-white/95 text-slate-800 border-slate-200/80 hover:border-slate-300 shadow-[0_1px_3px_rgba(0,0,0,0.04)]'
+                    : isDarkMode
+                      ? 'bg-white/[0.025] text-slate-400 border-white/[0.04] hover:bg-white/[0.05] hover:border-white/[0.08]'
+                      : 'bg-white/60 text-slate-500 border-slate-200/50 hover:bg-white hover:border-slate-200/80'
                   }`}
               >
-                <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 text-xs font-semibold ${isCurrent
-                  ? 'bg-white/20 text-white'
-                  : isCompleted
-                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                <div className={`w-7 h-7 rounded-[9px] flex items-center justify-center shrink-0 text-xs font-semibold transition-all ${
+                  isClosedState && isCurrent
+                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm shadow-emerald-500/35'
+                    : isCurrent
+                    ? 'bg-gradient-to-br from-[#4d8eff] to-[#2563eb] text-white shadow-sm shadow-blue-500/35'
+                    : isCompleted
+                    ? isDarkMode
+                      ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25'
+                      : 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
                     : isDarkMode
-                      ? 'bg-slate-800 text-slate-400'
-                      : 'bg-slate-200/70 text-slate-500'
+                      ? 'bg-white/[0.06] text-slate-400 border border-white/[0.06]'
+                      : 'bg-slate-200/70 text-slate-500 border border-slate-300/50'
                   }`}>
-                  {isCompleted ? (
-                    <CheckCircle2 className="w-3.5 h-3.5 stroke-[2.5]" />
+                  {isFinished ? (
+                    <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
                   ) : isCurrent ? (
                     <StepIcon className="w-3.5 h-3.5 stroke-[2.2]" />
                   ) : (
-                    <span>{idx + 1}</span>
+                    <span className="font-mono text-[11px]">{idx + 1}</span>
                   )}
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <div className={`text-xs truncate ${isCurrent ? 'font-semibold text-white' : isCompleted ? 'font-medium' : 'font-normal'}`}>
-                    {st.name}
+                  <div className={`text-xs truncate flex items-center gap-1.5 ${isCurrent
+                    ? 'font-semibold text-slate-900 dark:text-white'
+                    : isCompleted
+                      ? 'font-medium text-slate-800 dark:text-slate-200'
+                      : 'font-normal text-slate-600 dark:text-slate-400'
+                    }`}>
+                    {isCurrent && (
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 animate-pulse ${
+                        isClosedState ? 'bg-emerald-500' : 'bg-blue-500'
+                      }`} />
+                    )}
+                    <span className="truncate">{st.name}</span>
                   </div>
-                  <div className={`text-[10px] truncate ${isCurrent ? 'text-blue-100' : 'text-slate-400 dark:text-slate-500'}`}>
+                  <div className={`text-[10px] truncate ${
+                    isClosedState && isCurrent
+                      ? 'text-emerald-600 dark:text-emerald-400 font-medium'
+                      : isCurrent
+                      ? 'text-blue-600 dark:text-blue-400 font-medium'
+                      : 'text-slate-400 dark:text-slate-500'
+                    }`}>
                     {st.subtitle}
                   </div>
                 </div>
+
+                {/* Thin status bar line at bottom */}
+                {isFinished ? (
+                  <span className="absolute bottom-0 inset-x-0 h-[2px] bg-emerald-500 dark:bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.5)]" />
+                ) : isCurrent ? (
+                  <span className="absolute bottom-0 inset-x-0 h-[2px] bg-[#3b82f6] dark:bg-[#4d8eff] shadow-[0_0_6px_rgba(59,130,246,0.6)]" />
+                ) : null}
               </div>
             );
           })}
@@ -2369,24 +2412,24 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               <div
                 key={currentStageDef.id}
                 className={`p-4 sm:p-5 rounded-2xl border transition-all w-full relative overflow-hidden backdrop-blur-xl ${isDarkMode
-                  ? 'bg-slate-900/80 border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.3)] text-white'
-                  : 'bg-white/90 border-slate-200/80 shadow-[0_4px_20px_rgba(0,0,0,0.04)] text-slate-900'
+                  ? 'bg-[#161618]/95 border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.36)] text-white'
+                  : 'bg-white/95 border-slate-200/80 shadow-[0_4px_24px_rgba(0,0,0,0.04)] text-slate-900'
                   }`}
               >
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 w-full relative z-10">
                   <div className="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
-                    <div className={`w-10 h-10 rounded-xl shrink-0 flex items-center justify-center transition-all ${isDarkMode
-                      ? 'bg-blue-500/15 text-[#7B92FF] border border-blue-500/20'
-                      : 'bg-blue-50 text-[#5B75F8] border border-blue-100 shadow-2xs'
+                    <div className={`w-11 h-11 rounded-[13px] shrink-0 flex items-center justify-center transition-all ${isDarkMode
+                      ? 'bg-gradient-to-br from-blue-500/20 to-blue-500/5 text-[#4d8eff] border border-blue-500/25 shadow-inner'
+                      : 'bg-blue-50 text-[#3b72e0] border border-blue-100 shadow-2xs'
                       }`}>
                       <StageIcon className="w-5 h-5 stroke-[2]" />
                     </div>
 
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className={`text-[11px] font-semibold uppercase px-2 py-0.5 rounded-md shrink-0 ${isDarkMode
-                          ? 'bg-blue-500/15 text-[#7B92FF] border border-blue-500/20'
-                          : 'bg-blue-50 text-[#5B75F8] border border-blue-100'
+                        <span className={`text-[11px] font-semibold uppercase px-2.5 py-0.5 rounded-[8px] shrink-0 ${isDarkMode
+                          ? 'bg-white/[0.06] text-slate-300 border border-white/[0.08]'
+                          : 'bg-slate-100 text-slate-700 border border-slate-200/70'
                           }`}>
                           {currentStageDef.stageNumber}
                         </span>
@@ -2397,13 +2440,13 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
                         <span className={`text-[11px] font-medium px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shrink-0 ${isClosed
                           ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                          : 'bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF] border border-blue-500/20'
+                          : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'
                           }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${isClosed ? 'bg-emerald-500' : 'bg-[#5B75F8] animate-pulse'}`} />
+                          <span className={`w-1.5 h-1.5 rounded-full ${isClosed ? 'bg-emerald-500' : 'bg-blue-500 animate-pulse'}`} />
                           <span>{isClosed ? 'Order Closed' : 'Active Stage'}</span>
                         </span>
 
-                        <span className={`hidden sm:inline text-[11px] font-medium px-2 py-0.5 rounded-md shrink-0 ${isDarkMode ? 'bg-slate-800 text-slate-300 border border-white/5' : 'bg-slate-100 text-slate-600 border border-slate-200/60'
+                        <span className={`hidden sm:inline text-[11px] font-medium px-2.5 py-0.5 rounded-[8px] shrink-0 ${isDarkMode ? 'bg-white/[0.04] text-slate-300 border border-white/[0.06]' : 'bg-slate-100 text-slate-600 border border-slate-200/60'
                           }`}>
                           {currentStageDef.role}
                         </span>
@@ -2541,20 +2584,31 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             icon: Package,
             color: 'amber',
             content: (
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className={`text-[10px] uppercase font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Status</span>
-                  <span className={`text-xs font-bold ${
-                    isMaterialShort ? 'text-rose-500' : isMaterialReady ? 'text-emerald-500' : 'text-amber-500'
+                  <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Inventory Gate</span>
+                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                    isMaterialShort
+                      ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                      : isMaterialReady
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                      : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
                   }`}>
-                    {isMaterialShort ? 'Shortage' : isMaterialReady ? 'Verified ✓' : 'Pending Check'}
+                    <span className={`w-1.5 h-1.5 rounded-full ${isMaterialShort ? 'bg-rose-500' : isMaterialReady ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                    {isMaterialShort ? 'Shortage' : isMaterialReady ? 'Verified' : 'Checking'}
                   </span>
                 </div>
-                <div className={`text-[11px] ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                  {lineCount} line item{lineCount !== 1 ? 's' : ''} • {totalReqQty} total units required
+                <div className="space-y-1">
+                  <div className="text-sm font-semibold text-slate-900 dark:text-white tracking-tight">
+                    {lineCount} <span className="text-xs font-normal text-slate-500 dark:text-slate-400">BOM item{lineCount !== 1 ? 's' : ''}</span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                    <span>Required Units</span>
+                    <span className="font-mono font-medium text-slate-700 dark:text-slate-300">{totalReqQty}</span>
+                  </div>
                 </div>
                 {materialCheckFeedback?.message && (
-                  <div className={`text-[10px] p-2 rounded-lg ${isDarkMode ? 'bg-slate-800/60 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
+                  <div className="text-[10px] leading-relaxed p-1.5 rounded-[8px] bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-slate-400 border border-slate-200/50 dark:border-white/[0.04] truncate">
                     {materialCheckFeedback.message}
                   </div>
                 )}
@@ -2569,37 +2623,53 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           const totalJc = jcList.length;
           const completedJc = jcList.filter(j => (j.status || '').toUpperCase() === 'COMPLETED').length;
           const inProgressJc = jcList.filter(j => ['IN_PROGRESS', 'IN_PRODUCTION', 'STARTED'].includes((j.status || '').toUpperCase())).length;
+          const isComplete = completedJc >= totalJc && totalJc > 0;
+          const progressPct = totalJc > 0 ? Math.round((completedJc / totalJc) * 100) : 0;
           stageCards.push({
             key: 'jobCards',
             title: 'Job Cards',
             icon: FileCheck,
             color: 'blue',
             content: (
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className={`text-[10px] uppercase font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Progress</span>
-                  <span className={`text-xs font-bold ${completedJc >= totalJc && totalJc > 0 ? 'text-emerald-500' : 'text-blue-500'}`}>
+                  <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Production</span>
+                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                    totalJc === 0
+                      ? 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20'
+                      : isComplete
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                      : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${totalJc === 0 ? 'bg-slate-400' : isComplete ? 'bg-emerald-500' : 'bg-blue-500'}`} />
                     {totalJc === 0 ? 'Not Created' : `${completedJc}/${totalJc} Done`}
                   </span>
                 </div>
-                {totalJc > 0 && (
-                  <>
-                    <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                {totalJc > 0 ? (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-slate-900 dark:text-white tracking-tight">{progressPct}%</span>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                        {completedJc} of {totalJc} completed
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-100 dark:bg-white/[0.08] h-1.5 rounded-full overflow-hidden">
                       <div
-                        className="bg-gradient-to-r from-blue-500 to-emerald-500 h-full rounded-full transition-[width] duration-500"
-                        style={{ width: `${totalJc > 0 ? Math.round((completedJc / totalJc) * 100) : 0}%` }}
+                        className="bg-blue-500 dark:bg-blue-400 h-full rounded-full transition-all duration-500"
+                        style={{ width: `${progressPct}%` }}
                       />
                     </div>
-                    <div className={`flex items-center gap-3 text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                      {inProgressJc > 0 && <span>🔄 {inProgressJc} in progress</span>}
-                      {completedJc > 0 && <span>✅ {completedJc} completed</span>}
+                    <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 pt-0.5">
+                      <span>{inProgressJc} in progress</span>
+                      {jcList[jcList.length - 1]?.jobNo && (
+                        <span className="font-mono truncate max-w-[90px]">#{jcList[jcList.length - 1]?.jobNo}</span>
+                      )}
                     </div>
-                    {jcList[0]?.jobNo && (
-                      <div className={`text-[10px] font-mono ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                        Latest: {jcList[jcList.length - 1]?.jobNo}
-                      </div>
-                    )}
-                  </>
+                  </div>
+                ) : (
+                  <div className="text-[11px] text-slate-400 dark:text-slate-500 italic py-1">
+                    No active job cards released
+                  </div>
                 )}
               </div>
             )
@@ -2610,30 +2680,42 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         if (linkedQc.length > 0 || linkedPdi.length > 0 || activeStepIndex >= 3) {
           stageCards.push({
             key: 'qc',
-            title: 'QC / PDI',
+            title: 'QC & PDI Gate',
             icon: ShieldCheck,
             color: 'emerald',
             content: (
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className={`text-[10px] uppercase font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>QC Gate</span>
-                  <span className={`text-xs font-bold ${
-                    isQcRejected ? 'text-rose-500' : (isQcHold || hasNcr) ? 'text-amber-500' : allQcPassed ? 'text-emerald-500' : 'text-purple-500'
+                  <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Quality Gate</span>
+                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                    isQcRejected
+                      ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                      : (isQcHold || hasNcr)
+                      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                      : allQcPassed
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                      : 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
                   }`}>
-                    {isQcRejected ? 'Rejected' : (isQcHold || hasNcr) ? 'Hold / NCR' : allQcPassed ? 'Passed ✓' : 'Pending'}
+                    <span className={`w-1.5 h-1.5 rounded-full ${
+                      isQcRejected ? 'bg-rose-500' : (isQcHold || hasNcr) ? 'bg-amber-500' : allQcPassed ? 'bg-emerald-500' : 'bg-purple-500'
+                    }`} />
+                    {isQcRejected ? 'Rejected' : (isQcHold || hasNcr) ? 'Hold' : allQcPassed ? 'Passed' : 'Pending'}
                   </span>
                 </div>
-                <div className={`text-[11px] ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                  {linkedQc.length} QC record{linkedQc.length !== 1 ? 's' : ''} • {linkedPdi.length} PDI record{linkedPdi.length !== 1 ? 's' : ''}
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className={`text-[10px] uppercase font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>PDI</span>
-                  <span className={`text-xs font-bold ${isPdiPassed ? 'text-emerald-500' : 'text-slate-400'}`}>
-                    {isPdiPassed ? 'Passed ✓' : 'Pending'}
-                  </span>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-500 dark:text-slate-400 text-[11px]">Inspection Logs</span>
+                    <span className="font-semibold text-slate-900 dark:text-white">{linkedQc.length} QC • {linkedPdi.length} PDI</span>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-slate-500 dark:text-slate-400">Pre-Dispatch Audit</span>
+                    <span className={`font-semibold ${isPdiPassed ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                      {isPdiPassed ? 'Approved ✓' : 'Awaiting'}
+                    </span>
+                  </div>
                 </div>
                 {order.pdiCertificateNo && (
-                  <div className={`text-[10px] font-mono ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                  <div className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-slate-400 truncate">
                     CoC: {order.pdiCertificateNo}
                   </div>
                 )}
@@ -2644,31 +2726,44 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
         // Dispatch Card
         if (linkedDispatches.length > 0 || isDispatched || activeStepIndex >= 4) {
+          const dispatchPct = totalOrderedQty > 0 ? Math.min(100, Math.round((totalDispatchedQty / totalOrderedQty) * 100)) : 0;
           stageCards.push({
             key: 'dispatch',
-            title: 'Dispatch',
+            title: 'Logistics',
             icon: Truck,
             color: 'purple',
             content: (
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className={`text-[10px] uppercase font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Status</span>
-                  <span className={`text-xs font-bold ${isDispatched ? 'text-purple-400 font-bold' : 'text-slate-400'}`}>
-                    {isDispatched ? 'Dispatched ✓' : 'Pending'}
+                  <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Outbound</span>
+                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                    isDispatched
+                      ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
+                      : 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${isDispatched ? 'bg-purple-500' : 'bg-slate-400'}`} />
+                    {isDispatched ? 'Dispatched' : 'Pending'}
                   </span>
                 </div>
-                {effectiveChallanNo && (
-                  <div className={`text-[11px] ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                    Challan: <span className="font-mono font-bold">{effectiveChallanNo}</span>
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-slate-900 dark:text-white tracking-tight">{dispatchPct}%</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                      {totalDispatchedQty}/{totalOrderedQty} units
+                    </span>
                   </div>
-                )}
-                {order.transporterName && (
-                  <div className={`text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Via: {order.transporterName}
+                  <div className="w-full bg-slate-100 dark:bg-white/[0.08] h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className="bg-purple-500 dark:bg-purple-400 h-full rounded-full transition-all duration-500"
+                      style={{ width: `${dispatchPct}%` }}
+                    />
                   </div>
-                )}
-                <div className={`text-[11px] ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                  {totalDispatchedQty}/{totalOrderedQty} units dispatched
+                  {effectiveChallanNo && (
+                    <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 pt-0.5">
+                      <span>Challan</span>
+                      <span className="font-mono font-medium text-slate-800 dark:text-slate-200">{effectiveChallanNo}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )
@@ -2683,23 +2778,32 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             icon: CheckCircle2,
             color: 'teal',
             content: (
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className={`text-[10px] uppercase font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>POD</span>
-                  <span className={`text-xs font-bold ${order.podReceivedDate ? 'text-teal-400 font-bold' : 'text-slate-400'}`}>
-                    {order.podReceivedDate ? 'Received ✓' : 'Awaiting'}
+                  <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Consignee Sign</span>
+                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                    order.podReceivedDate
+                      ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20'
+                      : 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${order.podReceivedDate ? 'bg-teal-500' : 'bg-slate-400'}`} />
+                    {order.podReceivedDate ? 'Signed ✓' : 'Awaiting'}
                   </span>
                 </div>
-                {order.podReceivedDate && (
-                  <div className={`text-[11px] ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                    {order.podReceivedDate}
+                <div className="space-y-1">
+                  <div className="text-xs font-semibold text-slate-900 dark:text-white">
+                    {order.podReceivedDate ? (
+                      <span>Delivered on {order.podReceivedDate}</span>
+                    ) : (
+                      <span className="text-slate-500 dark:text-slate-400 font-normal">Awaiting consignee acknowledgment</span>
+                    )}
                   </div>
-                )}
-                {order.podReceivedBy && (
-                  <div className={`text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Received by: {order.podReceivedBy}
-                  </div>
-                )}
+                  {order.podReceivedBy && (
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Signee: <span className="font-medium text-slate-700 dark:text-slate-300">{order.podReceivedBy}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             )
           });
@@ -2708,30 +2812,45 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         // Invoice & Payment Card
         if (effectiveInvoiceNo || linkedInvoices.length > 0 || activeStepIndex >= 5) {
           const invPaid = order.paymentStatus === 'PAID' || remainingOutstanding <= 0;
+          const paymentPct = gross > 0 ? Math.min(100, Math.round((currentPaid / gross) * 100)) : 0;
           stageCards.push({
             key: 'invoice',
-            title: 'Invoice & Payment',
+            title: 'Invoicing',
             icon: Receipt,
             color: 'rose',
             content: (
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className={`text-[10px] uppercase font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Invoice</span>
-                  <span className={`text-xs font-bold ${effectiveInvoiceNo ? 'text-rose-400 font-bold' : 'text-slate-400'}`}>
-                    {effectiveInvoiceNo || 'Not Issued'}
+                  <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Settlement</span>
+                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                    invPaid
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                      : order.paymentStatus === 'PARTIAL'
+                      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                      : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${invPaid ? 'bg-emerald-500' : order.paymentStatus === 'PARTIAL' ? 'bg-amber-500' : 'bg-rose-500'}`} />
+                    {invPaid ? 'Fully Paid' : order.paymentStatus === 'PARTIAL' ? 'Partial' : 'Unpaid'}
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className={`text-[10px] uppercase font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Payment</span>
-                  <span className={`text-xs font-bold ${invPaid ? 'text-emerald-400 font-bold' : 'text-amber-400'}`}>
-                    {invPaid ? 'Paid ✓' : order.paymentStatus === 'PARTIAL' ? 'Partial' : 'Pending'}
-                  </span>
-                </div>
-                {gross > 0 && (
-                  <div className={`text-[11px] ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                    ₹{currentPaid.toLocaleString('en-IN')} / ₹{gross.toLocaleString('en-IN')}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-slate-900 dark:text-white tracking-tight">₹{currentPaid.toLocaleString('en-IN')}</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">of ₹{gross.toLocaleString('en-IN')}</span>
                   </div>
-                )}
+                  <div className="w-full bg-slate-100 dark:bg-white/[0.08] h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${invPaid ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                      style={{ width: `${paymentPct}%` }}
+                    />
+                  </div>
+                  {effectiveInvoiceNo && (
+                    <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 pt-0.5">
+                      <span>Tax Invoice</span>
+                      <span className="font-mono font-medium text-slate-800 dark:text-slate-200">{effectiveInvoiceNo}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             )
           });
@@ -2739,72 +2858,67 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
         if (stageCards.length === 0) return null;
 
-        const colorMap: Record<string, { bg: string; border: string; icon: string; text: string; glow: string }> = {
+        const colorMap: Record<string, { icon: string; border: string }> = {
           amber: {
-            bg: isDarkMode ? 'bg-gradient-to-b from-amber-500/[0.08] to-amber-500/[0.02]' : 'bg-amber-50/80',
-            border: isDarkMode ? 'border-amber-500/30 hover:border-amber-500/50' : 'border-amber-200 hover:border-amber-300',
-            icon: isDarkMode ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-amber-100 text-amber-700 border border-amber-200',
-            text: isDarkMode ? 'text-amber-400' : 'text-amber-800',
-            glow: 'hover:shadow-[0_4px_20px_-4px_rgba(245,158,11,0.2)]'
+            icon: isDarkMode ? 'bg-amber-500/15 text-amber-400 border border-amber-500/25' : 'bg-amber-50 text-amber-600 border border-amber-200/80',
+            border: isDarkMode ? 'hover:border-amber-500/30' : 'hover:border-amber-400/40'
           },
           blue: {
-            bg: isDarkMode ? 'bg-gradient-to-b from-blue-500/[0.08] to-blue-500/[0.02]' : 'bg-blue-50/80',
-            border: isDarkMode ? 'border-blue-500/30 hover:border-blue-500/50' : 'border-blue-200 hover:border-blue-300',
-            icon: isDarkMode ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-blue-100 text-blue-700 border border-blue-200',
-            text: isDarkMode ? 'text-blue-400' : 'text-blue-800',
-            glow: 'hover:shadow-[0_4px_20px_-4px_rgba(59,130,246,0.2)]'
+            icon: isDarkMode ? 'bg-blue-500/15 text-[#4d8eff] border border-blue-500/25' : 'bg-blue-50 text-[#3b72e0] border border-blue-200/80',
+            border: isDarkMode ? 'hover:border-blue-500/30' : 'hover:border-blue-400/40'
           },
           emerald: {
-            bg: isDarkMode ? 'bg-gradient-to-b from-emerald-500/[0.08] to-emerald-500/[0.02]' : 'bg-emerald-50/80',
-            border: isDarkMode ? 'border-emerald-500/30 hover:border-emerald-500/50' : 'border-emerald-200 hover:border-emerald-300',
-            icon: isDarkMode ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-emerald-100 text-emerald-700 border border-emerald-200',
-            text: isDarkMode ? 'text-emerald-400' : 'text-emerald-800',
-            glow: 'hover:shadow-[0_4px_20px_-4px_rgba(16,185,129,0.2)]'
+            icon: isDarkMode ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25' : 'bg-emerald-50 text-emerald-600 border border-emerald-200/80',
+            border: isDarkMode ? 'hover:border-emerald-500/30' : 'hover:border-emerald-400/40'
           },
           purple: {
-            bg: isDarkMode ? 'bg-gradient-to-b from-purple-500/[0.08] to-purple-500/[0.02]' : 'bg-purple-50/80',
-            border: isDarkMode ? 'border-purple-500/30 hover:border-purple-500/50' : 'border-purple-200 hover:border-purple-300',
-            icon: isDarkMode ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' : 'bg-purple-100 text-purple-700 border border-purple-200',
-            text: isDarkMode ? 'text-purple-400' : 'text-purple-800',
-            glow: 'hover:shadow-[0_4px_20px_-4px_rgba(168,85,247,0.2)]'
+            icon: isDarkMode ? 'bg-purple-500/15 text-purple-400 border border-purple-500/25' : 'bg-purple-50 text-purple-600 border border-purple-200/80',
+            border: isDarkMode ? 'hover:border-purple-500/30' : 'hover:border-purple-400/40'
           },
           teal: {
-            bg: isDarkMode ? 'bg-gradient-to-b from-teal-500/[0.08] to-teal-500/[0.02]' : 'bg-teal-50/80',
-            border: isDarkMode ? 'border-teal-500/30 hover:border-teal-500/50' : 'border-teal-200 hover:border-teal-300',
-            icon: isDarkMode ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30' : 'bg-teal-100 text-teal-700 border border-teal-200',
-            text: isDarkMode ? 'text-teal-400' : 'text-teal-800',
-            glow: 'hover:shadow-[0_4px_20px_-4px_rgba(20,184,166,0.2)]'
+            icon: isDarkMode ? 'bg-teal-500/15 text-teal-400 border border-teal-500/25' : 'bg-teal-50 text-teal-600 border border-teal-200/80',
+            border: isDarkMode ? 'hover:border-teal-500/30' : 'hover:border-teal-400/40'
           },
           rose: {
-            bg: isDarkMode ? 'bg-gradient-to-b from-rose-500/[0.08] to-rose-500/[0.02]' : 'bg-rose-50/80',
-            border: isDarkMode ? 'border-rose-500/30 hover:border-rose-500/50' : 'border-rose-200 hover:border-rose-300',
-            icon: isDarkMode ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-rose-100 text-rose-700 border border-rose-200',
-            text: isDarkMode ? 'text-rose-400' : 'text-rose-800',
-            glow: 'hover:shadow-[0_4px_20px_-4px_rgba(244,63,94,0.2)]'
+            icon: isDarkMode ? 'bg-rose-500/15 text-rose-400 border border-rose-500/25' : 'bg-rose-50 text-rose-600 border border-rose-200/80',
+            border: isDarkMode ? 'hover:border-rose-500/30' : 'hover:border-rose-400/40'
           },
           slate: {
-            bg: isDarkMode ? 'bg-slate-800/40' : 'bg-slate-50',
-            border: isDarkMode ? 'border-slate-700/60' : 'border-slate-200',
-            icon: isDarkMode ? 'bg-slate-700 text-slate-400' : 'bg-slate-200 text-slate-500',
-            text: isDarkMode ? 'text-slate-400' : 'text-slate-600',
-            glow: 'hover:shadow-slate-500/10'
+            icon: isDarkMode ? 'bg-white/[0.08] text-slate-300 border border-white/[0.08]' : 'bg-slate-100 text-slate-600 border border-slate-200/80',
+            border: isDarkMode ? 'hover:border-white/[0.16]' : 'hover:border-slate-300'
           }
         };
 
         return (
-          <div className={`p-4 sm:p-5 rounded-2xl sm:rounded-3xl border transition-ui ${isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-xs'}`}>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <BarChart3 className={`w-4 h-4 ${isDarkMode ? 'text-[#7B92FF]' : 'text-[#5B75F8]'}`} />
-                <h3 className={`font-bold text-xs sm:text-sm uppercase tracking-wider ${isDarkMode ? 'text-[#7B92FF]' : 'text-[#5B75F8]'}`}>
-                  Order Stage Overview
-                </h3>
+          <div className={`p-4 sm:p-5 rounded-[26px] border transition-all ${
+            isDarkMode
+              ? 'bg-[#161618]/95 border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.36)] backdrop-blur-2xl'
+              : 'bg-white/95 border-slate-200/80 shadow-[0_4px_24px_rgba(0,0,0,0.04)] backdrop-blur-2xl'
+          }`}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className={`w-7 h-7 rounded-[9px] flex items-center justify-center shrink-0 ${
+                  isDarkMode ? 'bg-blue-500/15 text-[#4d8eff]' : 'bg-blue-500/10 text-blue-600'
+                }`}>
+                  <BarChart3 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-xs sm:text-sm tracking-tight text-slate-900 dark:text-white">
+                    Order Stage Pipeline
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-none mt-0.5">
+                    Real-time stage checkpoints & validation
+                  </p>
+                </div>
               </div>
-              <span className={`text-[10px] font-medium px-2 py-0.5 rounded-md ${isDarkMode ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
-                {stageCards.length} stage{stageCards.length !== 1 ? 's' : ''}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-100 dark:bg-white/[0.06] text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-white/[0.08]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  {stageCards.length} {stageCards.length === 1 ? 'Stage' : 'Stages'} Active
+                </span>
+              </div>
             </div>
-            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none" style={{ scrollSnapType: 'x mandatory' }}>
+            <div className="flex gap-3.5 overflow-x-auto pb-2 scrollbar-none" style={{ scrollSnapType: 'x mandatory' }}>
               {stageCards.map(card => {
                 const colors = colorMap[card.color] || colorMap.slate;
                 const CardIcon = card.icon;
@@ -2812,17 +2926,26 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   <div
                     key={card.key}
                     onClick={() => handleOpenStageDetailModal(card.key as StageKey)}
-                    className={`min-w-[200px] sm:min-w-[220px] flex-1 max-w-[300px] p-3.5 sm:p-4 rounded-2xl border transition-all shrink-0 cursor-pointer group hover:scale-[1.01] active:scale-[0.99] ${colors.bg} ${colors.border} ${colors.glow}`}
+                    className={`min-w-[220px] sm:min-w-[240px] flex-1 max-w-[320px] p-4 rounded-[20px] border transition-all duration-200 shrink-0 cursor-pointer group hover:-translate-y-0.5 active:scale-[0.99] ${
+                      isDarkMode
+                        ? `bg-[#202024] hover:bg-[#25252a] border-white/[0.08] shadow-[0_4px_20px_rgba(0,0,0,0.35)] ${colors.border}`
+                        : `bg-white hover:bg-slate-50/90 border-slate-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] ${colors.border}`
+                    }`}
                     style={{ scrollSnapAlign: 'start' }}
                   >
-                    <div className="flex items-center justify-between gap-2 mb-2.5">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className={`p-1.5 rounded-lg shrink-0 transition-transform group-hover:scale-105 ${colors.icon}`}>
-                          <CardIcon className="w-3.5 h-3.5" />
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className={`w-8 h-8 rounded-[10px] flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${colors.icon}`}>
+                          <CardIcon className="w-4 h-4" />
                         </div>
-                        <span className={`text-xs font-bold uppercase tracking-wider truncate ${colors.text}`}>
-                          {card.title}
-                        </span>
+                        <div className="min-w-0">
+                          <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 block leading-none mb-0.5">
+                            Stage
+                          </span>
+                          <span className="text-xs font-semibold text-slate-900 dark:text-white truncate block">
+                            {card.title}
+                          </span>
+                        </div>
                       </div>
                       <button
                         type="button"
@@ -2830,15 +2953,15 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                           e.stopPropagation();
                           handleOpenStageDetailModal(card.key as StageKey);
                         }}
-                        className={`p-1 rounded-lg border transition-all cursor-pointer group-hover:opacity-100 opacity-75 shrink-0 ${
+                        className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer group-hover:opacity-100 opacity-60 shrink-0 ${
                           isDarkMode
-                            ? 'border-white/10 bg-white/5 hover:bg-white/15 text-slate-400 hover:text-white'
-                            : 'border-slate-200 bg-white hover:bg-slate-100 text-slate-500 hover:text-slate-900 shadow-xs'
+                            ? 'bg-white/[0.08] hover:bg-white/[0.16] text-slate-300 hover:text-white border border-white/[0.06]'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 border border-slate-200/60'
                         }`}
                         title={`Expand ${card.title} realtime detailed view`}
                         aria-label={`Expand ${card.title}`}
                       >
-                        <Maximize2 className="w-3 h-3 transition-transform group-hover:scale-110" />
+                        <Maximize2 className="w-3.5 h-3.5 transition-transform group-hover:scale-110" />
                       </button>
                     </div>
                     {card.content}
@@ -2854,49 +2977,49 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 font-mono">
 
         {/* Card 1: Gross Commercials */}
-        <div className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border transition-ui ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
+        <div className={`p-4 sm:p-5 rounded-[20px] border transition-all ${isDarkMode ? 'bg-[#161618]/95 border-white/[0.08] shadow-[0_4px_20px_rgba(0,0,0,0.3)]' : 'bg-white border-slate-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.04)]'
           }`}>
           <div className="flex items-center justify-between mb-2 sm:mb-3">
             <span className="text-[10px] sm:text-[11px] text-slate-400 uppercase font-bold tracking-wider">Gross Value</span>
-            <div className="p-1.5 sm:p-2 rounded-xl bg-emerald-500/15 text-emerald-500">
-              <DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <div className="w-8 h-8 rounded-[10px] bg-emerald-500/12 text-emerald-500 border border-emerald-500/20 flex items-center justify-center shrink-0">
+              <DollarSign className="w-4 h-4" />
             </div>
           </div>
           <div className="text-base sm:text-xl font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">
             ₹{order.grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </div>
-          <div className="mt-2 flex items-center justify-between text-[10px] sm:text-[11px] text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <div className="mt-2 flex items-center justify-between text-[10px] sm:text-[11px] text-slate-400 pt-2 border-t border-slate-100 dark:border-white/[0.06]">
             <span>Tax Bracket:</span>
             <span className={`font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>{order.taxCategory || 'GST 18%'}</span>
           </div>
         </div>
 
         {/* Card 2: Delivery & Timeline */}
-        <div className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border transition-ui ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
+        <div className={`p-4 sm:p-5 rounded-[20px] border transition-all ${isDarkMode ? 'bg-[#161618]/95 border-white/[0.08] shadow-[0_4px_20px_rgba(0,0,0,0.3)]' : 'bg-white border-slate-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.04)]'
           }`}>
           <div className="flex items-center justify-between mb-2 sm:mb-3">
             <span className="text-[10px] sm:text-[11px] text-slate-400 uppercase font-bold tracking-wider">Target Date</span>
-            <div className="p-1.5 sm:p-2 rounded-xl bg-amber-500/15 text-amber-500">
-              <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <div className="w-8 h-8 rounded-[10px] bg-amber-500/12 text-amber-500 border border-amber-500/20 flex items-center justify-center shrink-0">
+              <Calendar className="w-4 h-4" />
             </div>
           </div>
           <div className="text-base sm:text-xl font-bold text-amber-600 dark:text-amber-400 tracking-tight truncate">
             {order.deliveryDate || '—'}
           </div>
-          <div className="mt-2 flex items-center justify-between text-[10px] sm:text-[11px] text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <div className="mt-2 flex items-center justify-between text-[10px] sm:text-[11px] text-slate-400 pt-2 border-t border-slate-100 dark:border-white/[0.06]">
             <span>PO Raised:</span>
             <span className={`font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>{order.poDate || '—'}</span>
           </div>
         </div>
 
         {/* Card 3: Quality & Heat Traceability */}
-        <div className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border transition-ui ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
+        <div className={`p-4 sm:p-5 rounded-[20px] border transition-all ${isDarkMode ? 'bg-[#161618]/95 border-white/[0.08] shadow-[0_4px_20px_rgba(0,0,0,0.3)]' : 'bg-white border-slate-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.04)]'
           }`}>
           <div className="flex items-center justify-between mb-2 sm:mb-3">
             <span className="text-[10px] sm:text-[11px] text-slate-400 uppercase font-bold tracking-wider">QA Gate</span>
-            <div className={`p-1.5 sm:p-2 rounded-xl ${isQcRejected ? 'bg-rose-500/15 text-rose-500' : isQcHold || hasNcr ? 'bg-amber-500/15 text-amber-500' : 'bg-blue-500/15 text-blue-500'
+            <div className={`w-8 h-8 rounded-[10px] flex items-center justify-center shrink-0 border ${isQcRejected ? 'bg-rose-500/12 text-rose-500 border-rose-500/20' : isQcHold || hasNcr ? 'bg-amber-500/12 text-amber-500 border-amber-500/20' : 'bg-blue-500/12 text-[#4d8eff] border-blue-500/20'
               }`}>
-              <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <ShieldCheck className="w-4 h-4" />
             </div>
           </div>
           <div className="text-xs sm:text-sm font-bold truncate">
@@ -2906,7 +3029,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               <span className="text-slate-400 font-normal">Pending Issue</span>
             )}
           </div>
-          <div className="mt-2 flex items-center justify-between text-[10px] sm:text-[11px] text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <div className="mt-2 flex items-center justify-between text-[10px] sm:text-[11px] text-slate-400 pt-2 border-t border-slate-100 dark:border-white/[0.06]">
             <span>QA Status:</span>
             <span className={`font-bold ${isQcRejected ? 'text-rose-500' : isQcHold || hasNcr ? 'text-amber-500' : 'text-emerald-500'}`}>
               {isQcRejected ? 'Rejected' : isQcHold || hasNcr ? 'Hold' : 'Cleared'}
@@ -2915,21 +3038,21 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         </div>
 
         {/* Card 4: Fulfillment Progress */}
-        <div className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border transition-ui ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200 shadow-xs'
+        <div className={`p-4 sm:p-5 rounded-[20px] border transition-all ${isDarkMode ? 'bg-[#161618]/95 border-white/[0.08] shadow-[0_4px_20px_rgba(0,0,0,0.3)]' : 'bg-white border-slate-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.04)]'
           }`}>
           <div className="flex items-center justify-between mb-2 sm:mb-3">
             <span className="text-[10px] sm:text-[11px] text-slate-400 uppercase font-bold tracking-wider">Dispatched</span>
-            <div className="p-1.5 sm:p-2 rounded-xl bg-purple-500/15 text-purple-500">
-              <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <div className="w-8 h-8 rounded-[10px] bg-purple-500/12 text-purple-400 border border-purple-500/20 flex items-center justify-center shrink-0">
+              <Package className="w-4 h-4" />
             </div>
           </div>
           <div className="text-base sm:text-xl font-bold text-indigo-600 dark:text-indigo-400 tracking-tight">
             {totalDispatchedQty} / {totalOrderedQty} <span className="text-[10px] sm:text-xs font-normal text-slate-400">units</span>
           </div>
-          <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-            <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+          <div className="mt-2 pt-2 border-t border-slate-100 dark:border-white/[0.06]">
+            <div className="w-full bg-slate-100 dark:bg-white/[0.08] h-1.5 rounded-full overflow-hidden">
               <div
-                className="bg-gradient-to-r from-[#5B75F8] to-emerald-500 h-full rounded-full transition-[width] duration-500"
+                className="bg-gradient-to-r from-[#4d8eff] to-emerald-500 h-full rounded-full transition-[width] duration-500"
                 style={{ width: `${fulfillmentPercentage}%` }}
               />
             </div>
@@ -2941,33 +3064,46 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       {/* 4. Client PO Document & Special Instructions Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-4 font-mono text-xs">
 
-        <div className={`p-4 sm:p-5 rounded-2xl sm:rounded-3xl border flex items-center justify-between gap-3 ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80 text-white' : 'bg-white border-slate-200 text-slate-900 shadow-xs'
+        <div className={`p-4 sm:p-5 rounded-[20px] border flex items-center justify-between gap-3 ${isDarkMode ? 'bg-[#161618]/95 border-white/[0.08] text-white shadow-[0_4px_20px_rgba(0,0,0,0.3)]' : 'bg-white border-slate-200/80 text-slate-900 shadow-[0_2px_12px_rgba(0,0,0,0.04)]'
           }`}>
           <div className="flex items-center gap-3 min-w-0">
-            <div className="p-2 sm:p-2.5 rounded-2xl bg-[#5B75F8]/20 text-[#7B92FF] shrink-0">
+            <div className="w-10 h-10 rounded-[12px] bg-blue-500/12 text-[#4d8eff] border border-blue-500/20 flex items-center justify-center shrink-0">
               <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div className="min-w-0">
-              <span className="font-bold block text-xs sm:text-sm font-sans">Client PO Document</span>
-              <span className="text-slate-400 text-[10px] sm:text-[11px] block mt-0.5 truncate">{poFileName ? poFileName : 'No document attached yet'}</span>
+              <span className="font-semibold block text-xs sm:text-sm font-sans">Client PO Document</span>
+              <span className="text-slate-400 text-[10px] sm:text-[11px] block mt-0.5 truncate font-sans">{poFileName ? poFileName : 'No document attached yet'}</span>
             </div>
           </div>
-          <button
-            onClick={() => uploadPoModal.open()}
-            className="px-3 py-1.5 sm:px-3.5 sm:py-1.5 rounded-xl border border-[#5B75F8]/30 bg-[#5B75F8]/10 text-[#5B75F8] dark:text-[#7B92FF] font-bold hover:bg-[#5B75F8]/20 cursor-pointer text-[11px] sm:text-xs flex items-center gap-1.5 transition-ui shrink-0"
-          >
-            <Upload className="w-3.5 h-3.5" />
-            <span>Upload</span>
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {poFileName && (
+              <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-sans font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                <CheckCircle2 className="w-3 h-3" />
+                Attached
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => uploadPoModal.open()}
+              className={`h-8 sm:h-8.5 px-3.5 rounded-full border text-xs font-sans font-medium transition-all cursor-pointer flex items-center gap-1.5 shrink-0 active:scale-[0.97] ${
+                isDarkMode
+                  ? 'bg-white/[0.08] hover:bg-white/[0.15] text-white border-white/[0.12] shadow-sm'
+                  : 'bg-slate-900 hover:bg-slate-800 text-white border-transparent shadow-sm'
+              }`}
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span>{poFileName ? 'Replace' : 'Upload'}</span>
+            </button>
+          </div>
         </div>
 
-        <div className={`p-4 sm:p-5 rounded-2xl sm:rounded-3xl border flex items-center gap-3 ${isDarkMode ? 'bg-slate-900/70 border-slate-800/80 text-white' : 'bg-white border-slate-200 text-slate-900 shadow-xs'
+        <div className={`p-4 sm:p-5 rounded-[20px] border flex items-center gap-3 ${isDarkMode ? 'bg-[#161618]/95 border-white/[0.08] text-white shadow-[0_4px_20px_rgba(0,0,0,0.3)]' : 'bg-white border-slate-200/80 text-slate-900 shadow-[0_2px_12px_rgba(0,0,0,0.04)]'
           }`}>
-          <div className="p-2 sm:p-2.5 rounded-2xl bg-amber-500/20 text-amber-400 shrink-0">
+          <div className="w-10 h-10 rounded-[12px] bg-amber-500/12 text-amber-400 border border-amber-500/20 flex items-center justify-center shrink-0">
             <Tag className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div className="overflow-hidden">
-            <span className="font-bold block text-xs sm:text-sm font-sans">Special Instructions</span>
+            <span className="font-semibold block text-xs sm:text-sm font-sans">Special Instructions</span>
             <span className={`text-[10px] sm:text-[11px] block mt-0.5 truncate ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
               {order.remark || 'No special order notes recorded.'}
             </span>
@@ -3129,34 +3265,59 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
       {/* Upload Modal */}
       {uploadPoModal.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-md rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-ui ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-            }`}>
-            <div className={`flex items-center justify-between border-b pb-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
-              <h3 className="font-bold text-sm uppercase text-[#5B75F8] dark:text-[#7B92FF]">Upload Client PO Document</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md font-sans animate-fade-in">
+          <div className={`relative w-full max-w-md rounded-[24px] border p-6 space-y-5 font-sans text-xs z-10 shadow-2xl transition-all ${
+            isDarkMode
+              ? 'bg-[#18181b]/95 border-white/[0.1] text-white shadow-[0_16px_48px_rgba(0,0,0,0.5)]'
+              : 'bg-white border-slate-200/90 text-slate-900 shadow-[0_16px_48px_rgba(0,0,0,0.12)]'
+          }`}>
+            <div className={`flex items-center justify-between pb-3.5 border-b ${isDarkMode ? 'border-white/[0.08]' : 'border-slate-100'}`}>
+              <div className="flex items-center gap-2.5">
+                <div className={`w-8 h-8 rounded-[10px] flex items-center justify-center ${isDarkMode ? 'bg-blue-500/15 text-[#4d8eff]' : 'bg-blue-50 text-blue-600'}`}>
+                  <FileText className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm text-slate-900 dark:text-white">Upload Client PO Document</h3>
+                  <p className="text-[11px] text-slate-400 dark:text-slate-400">Attach purchase order contract or drawing</p>
+                </div>
+              </div>
               <button
+                type="button"
                 onClick={() => uploadPoModal.close()}
-                className={`p-1 rounded-xl transition-ui cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
+                className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+                  isDarkMode
+                    ? 'bg-white/[0.06] hover:bg-white/[0.12] text-slate-400 hover:text-white'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900'
+                }`}
+                title="Close"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
             <div>
               <p className={`text-xs mb-3 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                Upload PDF or image file of the customer purchase order
+                Upload PDF or image file of the customer purchase order (max 15MB).
               </p>
               <input
                 type="file"
                 onChange={handleFileUpload}
-                className={`w-full p-3 border rounded-xl text-xs cursor-pointer ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white' : 'border-slate-300 bg-slate-50 text-slate-800'
-                  }`}
+                accept=".pdf,.png,.jpg,.jpeg"
+                className={`w-full p-3 border rounded-xl text-xs cursor-pointer transition-all ${
+                  isDarkMode
+                    ? 'border-white/[0.1] bg-white/[0.04] text-slate-200 hover:border-white/[0.2] file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-white/[0.1] file:text-white hover:file:bg-white/[0.2]'
+                    : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-slate-300 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-slate-200 file:text-slate-800 hover:file:bg-slate-300'
+                }`}
               />
             </div>
-            <div className={`pt-3 flex justify-end border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+            <div className={`pt-3 flex justify-end gap-2 border-t ${isDarkMode ? 'border-white/[0.08]' : 'border-slate-100'}`}>
               <button
+                type="button"
                 onClick={() => uploadPoModal.close()}
-                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-ui cursor-pointer ${isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
+                className={`px-4 py-2 rounded-full border text-xs font-medium transition-all cursor-pointer ${
+                  isDarkMode
+                    ? 'bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 border-white/[0.08]'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+                }`}
               >
                 Close
               </button>

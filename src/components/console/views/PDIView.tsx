@@ -289,10 +289,10 @@ export const PDIView: React.FC<PDIViewProps> = ({
             <button
               type="button"
               onClick={handleExportCSV}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-full border text-xs font-semibold transition-all cursor-pointer ${
+              className={`flex h-10 items-center gap-2 px-4 rounded-xl border text-xs font-bold transition-ui cursor-pointer active:scale-[0.96] shadow-xs ${
                 isDarkMode 
-                  ? 'border-white/10 bg-black/60 text-slate-200 hover:bg-white/10' 
-                  : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 shadow-xs'
+                  ? 'border-white/10 bg-white/[0.04] text-slate-200 hover:bg-white/[0.08] hover:border-white/20' 
+                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
               }`}
             >
               <Download className="w-3.5 h-3.5" />
@@ -310,7 +310,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
                     inspectModal.open({ pdiNo: firstPending.id, jobNo: firstPending.jobNo, orderPo: firstPending.orderPo });
                   }
                 }}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#5B75F8] hover:bg-[#435BE8] text-white text-xs font-semibold shadow-xs cursor-pointer transition-all active:scale-[0.98]"
+                className="flex h-10 items-center gap-2 px-4 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-white text-xs font-extrabold shadow-[0_8px_20px_var(--accent-shadow)] cursor-pointer transition-ui active:scale-[0.96]"
               >
                 <ClipboardCheck className="w-3.5 h-3.5" />
                 <span>Audit Next Pending ({pendingCount})</span>
@@ -655,11 +655,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
                       handleOpenInspect(pdi);
                       inspectModal.open({ pdiNo: pdi.id, jobNo: pdi.jobNo, orderPo: pdi.orderPo });
                     }}
-                    className={`flex-1 py-2 rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition-all active:scale-[0.98] ${
-                      isPassed
-                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                        : 'bg-[#5B75F8] hover:bg-[#435BE8] text-white'
-                    }`}
+                    className="flex-1 min-h-[38px] py-1.5 px-4 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-white text-xs font-bold shadow-[0_4px_12px_var(--accent-shadow)] flex items-center justify-center gap-1.5 transition-ui cursor-pointer active:scale-[0.96]"
                   >
                     <ClipboardCheck className="w-3.5 h-3.5" />
                     <span>{isPassed ? 'Re-Inspect PDI' : 'Inspect PDI'}</span>
@@ -672,14 +668,15 @@ export const PDIView: React.FC<PDIViewProps> = ({
                         setSelectedReport(pdi);
                         certModal.open({ pdiNo: pdi.id, jobNo: pdi.jobNo, orderPo: pdi.orderPo });
                       }}
-                      className={`p-2 rounded-full border flex items-center justify-center cursor-pointer transition-all ${
+                      className={`px-3.5 min-h-[38px] rounded-xl border flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer transition-ui active:scale-[0.96] shadow-xs ${
                         isDarkMode 
-                          ? 'border-white/10 bg-black/60 text-slate-200 hover:bg-white/10' 
-                          : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          ? 'border-[var(--accent-primary)]/30 bg-[var(--accent-primary)]/10 text-[var(--accent-text-dark)] hover:bg-[var(--accent-primary)]/20' 
+                          : 'border-[var(--accent-primary)]/30 bg-[var(--accent-primary)]/5 text-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/10'
                       }`}
                       title="View CoC Certificate"
                     >
-                      <Award className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                      <Award className="w-3.5 h-3.5" />
+                      <span>CoC</span>
                     </button>
                   )}
                 </div>
@@ -786,11 +783,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
                                 handleOpenInspect(pdi);
                                 inspectModal.open({ pdiNo: pdi.id, jobNo: pdi.jobNo, orderPo: pdi.orderPo });
                               }}
-                              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer inline-flex items-center gap-1.5 active:scale-[0.98] ${
-                                isPassed
-                                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs'
-                                  : 'bg-[#5B75F8] hover:bg-[#435BE8] text-white shadow-xs'
-                              }`}
+                              className="px-3.5 py-1.5 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-white text-xs font-bold transition-ui cursor-pointer inline-flex items-center gap-1.5 shadow-[0_4px_12px_var(--accent-shadow)] active:scale-[0.96]"
                               title={`Inspect PDI for ${pdi.jobNo}`}
                             >
                               <ClipboardCheck className="w-3.5 h-3.5" />
@@ -804,14 +797,14 @@ export const PDIView: React.FC<PDIViewProps> = ({
                                   setSelectedReport(pdi);
                                   certModal.open({ pdiNo: pdi.id, jobNo: pdi.jobNo, orderPo: pdi.orderPo });
                                 }}
-                                className={`px-2.5 py-1.5 rounded-full border text-xs font-semibold transition-all cursor-pointer inline-flex items-center gap-1 ${
+                                className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-ui cursor-pointer inline-flex items-center gap-1.5 active:scale-[0.96] shadow-xs ${
                                   isDarkMode 
-                                    ? 'border-white/10 bg-black/60 text-slate-300 hover:bg-white/10' 
-                                    : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                                    ? 'border-[var(--accent-primary)]/30 bg-[var(--accent-primary)]/10 text-[var(--accent-text-dark)] hover:bg-[var(--accent-primary)]/20' 
+                                    : 'border-[var(--accent-primary)]/30 bg-[var(--accent-primary)]/5 text-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/10'
                                 }`}
                                 title="View Compliance Certificate"
                               >
-                                <FileCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                <FileCheck className="w-3.5 h-3.5" />
                                 <span>CoC</span>
                               </button>
                             )}
@@ -914,10 +907,10 @@ export const PDIView: React.FC<PDIViewProps> = ({
                           handleOpenInspect(pdi);
                           inspectModal.open({ pdiNo: pdi.id, jobNo: pdi.jobNo, orderPo: pdi.orderPo });
                         }}
-                        className="px-3.5 py-1.5 rounded-full bg-[#5B75F8] hover:bg-[#435BE8] text-white text-xs font-semibold shadow-xs flex items-center gap-1 transition-all active:scale-[0.98]"
+                        className="px-3.5 py-1.5 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-white text-xs font-bold shadow-[0_4px_12px_var(--accent-shadow)] flex items-center gap-1.5 transition-ui active:scale-[0.96] cursor-pointer"
                       >
                         <ClipboardCheck className="w-3.5 h-3.5" />
-                        <span>Inspect</span>
+                        <span>{isPassed ? 'Re-Inspect' : 'Inspect'}</span>
                       </button>
                       {(pdi.certificateNo || isPassed) && (
                         <button
@@ -926,14 +919,15 @@ export const PDIView: React.FC<PDIViewProps> = ({
                             setSelectedReport(pdi);
                             certModal.open({ pdiNo: pdi.id, jobNo: pdi.jobNo, orderPo: pdi.orderPo });
                           }}
-                          className={`p-1.5 rounded-full border text-xs font-semibold transition-all cursor-pointer inline-flex items-center gap-1 ${
+                          className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-ui cursor-pointer inline-flex items-center gap-1 active:scale-[0.96] shadow-xs ${
                             isDarkMode 
-                              ? 'border-white/10 bg-black/60 text-slate-300 hover:bg-white/10' 
-                              : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                              ? 'border-[var(--accent-primary)]/30 bg-[var(--accent-primary)]/10 text-[var(--accent-text-dark)] hover:bg-[var(--accent-primary)]/20' 
+                              : 'border-[var(--accent-primary)]/30 bg-[var(--accent-primary)]/5 text-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/10'
                           }`}
                           title="View CoC Certificate"
                         >
-                          <Award className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                          <Award className="w-3.5 h-3.5" />
+                          <span>CoC</span>
                         </button>
                       )}
                     </div>
@@ -1153,7 +1147,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
                 type="button"
                 onClick={() => handleInspectSubmit('FAIL')}
                 disabled={isSubmitting}
-                className="w-full sm:w-auto px-4 py-2 rounded-full border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all disabled:opacity-50"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-ui active:scale-[0.96] disabled:opacity-50"
               >
                 <AlertTriangle className="w-3.5 h-3.5" />
                 <span>PDI Fail (Flag Rework)</span>
@@ -1166,7 +1160,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
                     setInspectingItem(null);
                     inspectModal.close();
                   }}
-                  className={`flex-1 sm:flex-initial px-5 py-2 rounded-full border text-xs font-semibold cursor-pointer transition-all ${
+                  className={`flex-1 sm:flex-initial px-5 py-2.5 rounded-xl border text-xs font-bold cursor-pointer transition-ui active:scale-[0.96] ${
                     isDarkMode ? 'border-white/10 bg-black/60 text-slate-300 hover:bg-white/10' : 'border-slate-200/80 bg-slate-100 text-slate-700 hover:bg-slate-200'
                   }`}
                 >
@@ -1176,7 +1170,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
                   type="button"
                   onClick={() => handleInspectSubmit('PASS')}
                   disabled={isSubmitting || acceptedQty <= 0}
-                  className="flex-1 sm:flex-initial px-6 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-all active:scale-[0.98] disabled:opacity-50"
+                  className="flex-1 sm:flex-initial px-6 py-2.5 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-white font-extrabold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-[0_8px_20px_var(--accent-shadow)] transition-ui active:scale-[0.96] disabled:opacity-50"
                 >
                   <ShieldCheck className="w-4 h-4" />
                   <span>{isSubmitting ? 'Processing...' : 'Complete PDI (Pass & Release)'}</span>
@@ -1258,8 +1252,8 @@ export const PDIView: React.FC<PDIViewProps> = ({
                   setSelectedReport(null);
                   certModal.close();
                 }} 
-                className={`w-full sm:w-auto px-5 py-2 rounded-full border text-xs font-semibold cursor-pointer transition-all ${
-                  isDarkMode ? 'border-white/10 bg-black/60 text-slate-300 hover:bg-white/10' : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                className={`w-full sm:w-auto px-5 py-2.5 rounded-xl border text-xs font-bold cursor-pointer transition-ui active:scale-[0.96] shadow-xs ${
+                  isDarkMode ? 'border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/[0.08]' : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
               >
                 Close Certificate

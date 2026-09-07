@@ -39,9 +39,12 @@ import {
   ClipboardCheck,
   Loader2,
   Eye,
-  ExternalLink
+  ExternalLink,
+  ChevronLeft,
+  Info,
+  BarChart3
 } from 'lucide-react';
-import { CustomerOrder, OrderStatus, QCInspection, PDIInspection, OrderLineItem, UserRole, VendorMaster, DispatchChallan, CustomerInvoice, OrderLineProgress } from '../../../types/console';
+import { CustomerOrder, OrderStatus, QCInspection, PDIInspection, OrderLineItem, UserRole, VendorMaster, DispatchChallan, CustomerInvoice, OrderLineProgress, ShortageItem } from '../../../types/console';
 import { isRoleAuthorizedForCta, getCtaPermission, CtaId, normalizeRole } from '../../../utils/rbacMatrix';
 import { useCtaPermission } from '../../../hooks/useCtaPermission';
 import { executeOrderStageTransition, validatePodRequired, validateOrderClosure, normalizeOrderState, CanonicalOrderState } from '../../../utils/orderStateMachine';
@@ -2393,6 +2396,369 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         })()}
       </div>
 
+      {/* 2.6 Material Shortage Alert Panel — only visible when shortages exist */}
+      {(() => {
+        const shortageStages = ['MATERIAL_SHORT', 'MATERIAL_SHORTAGE', 'PROCUREMENT_PENDING', 'PO_SENT', 'GRN', 'GRN_PENDING'];
+        const isShortageStage = shortageStages.includes(currentStage);
+        const shortageItems: ShortageItem[] = materialCheckFeedback?.shortages || [];
+        // Derive shortage data from order lines if we're in shortage stage but have no feedback yet
+        const derivedShortages: ShortageItem[] = (isShortageStage && shortageItems.length === 0)
+          ? (order.lines || []).map(ln => ({
+              code: ln.itemCode,
+              description: ln.itemDescription || ln.itemCode,
+              requiredQty: Number(ln.orderQty || 0),
+              availableQty: Math.max(0, Number(ln.orderQty || 0) - Number(ln.pendingQty || ln.orderQty || 0)),
+              deficit: Number(ln.pendingQty || ln.orderQty || 0),
+              unit: ln.unit || 'Nos'
+            }))
+          : [];
+        const displayShortages = shortageItems.length > 0 ? shortageItems : derivedShortages;
+        const hasShortages = isShortageStage || shortageItems.length > 0;
+
+        if (!hasShortages || displayShortages.length === 0) return null;
+
+        return (
+          <div className={`p-4 sm:p-5 rounded-2xl sm:rounded-3xl border transition-ui relative overflow-hidden ${isDarkMode
+            ? 'bg-rose-950/30 border-rose-500/20 backdrop-blur-xl'
+            : 'bg-rose-50/80 border-rose-200 shadow-xs'
+          }`}>
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <div className="flex items-center gap-2.5">
+                <div className={`p-2 rounded-xl ${isDarkMode ? 'bg-rose-500/20 text-rose-400' : 'bg-rose-100 text-rose-600'}`}>
+                  <AlertTriangle className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className={`font-bold text-sm uppercase tracking-wider ${isDarkMode ? 'text-rose-400' : 'text-rose-700'}`}>
+                    Material Shortage Alert
+                  </h3>
+                  <p className={`text-[11px] mt-0.5 ${isDarkMode ? 'text-rose-400/70' : 'text-rose-600/80'}`}>
+                    {displayShortages.length} material{displayShortages.length !== 1 ? 's' : ''} short — procurement action required
+                  </p>
+                </div>
+              </div>
+              <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border animate-pulse ${isDarkMode
+                ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                : 'bg-rose-100 text-rose-700 border-rose-300'
+              }`}>
+                SHORTAGE
+              </span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className={`w-full text-left text-xs border-collapse ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                <thead>
+                  <tr className={`border-b text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-rose-400/80 border-rose-500/20' : 'text-rose-600 border-rose-200'}`}>
+                    <th className="py-2.5 px-3">Material Code</th>
+                    <th className="py-2.5 px-3">Description</th>
+                    <th className="py-2.5 px-3 text-right">Required</th>
+                    <th className="py-2.5 px-3 text-right">Available</th>
+                    <th className="py-2.5 px-3 text-right">Short</th>
+                    <th className="py-2.5 px-3">Unit</th>
+                  </tr>
+                </thead>
+                <tbody className={`divide-y ${isDarkMode ? 'divide-rose-500/10' : 'divide-rose-100'}`}>
+                  {displayShortages.map((item, idx) => (
+                    <tr key={item.code || idx} className={isDarkMode ? 'hover:bg-rose-500/5' : 'hover:bg-rose-50'}>
+                      <td className={`py-2.5 px-3 font-mono font-bold ${isDarkMode ? 'text-rose-300' : 'text-rose-700'}`}>
+                        {item.code}
+                      </td>
+                      <td className={`py-2.5 px-3 ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                        {item.description}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-bold">{item.requiredQty}</td>
+                      <td className={`py-2.5 px-3 text-right font-bold ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                        {item.availableQty}
+                      </td>
+                      <td className={`py-2.5 px-3 text-right font-bold ${isDarkMode ? 'text-rose-400' : 'text-rose-600'}`}>
+                        −{item.deficit}
+                      </td>
+                      <td className={`py-2.5 px-3 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                        {item.unit}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* 2.7 Stage Overview Carousel — real-time stage summary cards */}
+      {(() => {
+        const stageCards: { key: string; title: string; icon: React.ElementType; color: string; content: React.ReactNode }[] = [];
+        const st = currentStage;
+
+        // Materials Card — show when in material-related stages or beyond
+        const materialStages = ['CONFIRMED', 'APPROVED', 'RELEASED', 'MATERIAL_CHECK', 'MATERIAL_CHECKED', 'MATERIAL_VERIFIED', 'MATERIAL_READY', 'MATERIAL_SHORT', 'MATERIAL_SHORTAGE', 'PROCUREMENT_PENDING', 'GRN', 'PO_SENT', 'GRN_RECEIVED', 'GRN_PENDING'];
+        if (materialStages.includes(st) || activeStepIndex >= 1) {
+          const lineCount = (order.lines || []).length;
+          const totalReqQty = (order.lines || []).reduce((s, l) => s + Number(l.orderQty || 0), 0);
+          // Material is verified if: explicitly in a verified stage, order progressed past material (job card / production / QC and beyond), or feedback says ready
+          const postMaterialStages = ['JOB_RELEASED', 'MATERIAL_ISSUED', 'IN_PRODUCTION', 'WITH_SUBCONTRACTOR', 'REWORK',
+            'MANUFACTURING_COMPLETED', 'READY_FOR_QC', 'QC', 'QC_INSPECTION', 'QC_HOLD', 'QC_REPORT_UPLOADED',
+            'PDI', 'PDI_HOLD', 'PDI_COMPLETE', 'READY_FOR_DISPATCH', 'READY_TO_DISPATCH', 'DISPATCH_READY',
+            'DISPATCHED', 'PARTIALLY_DISPATCHED', 'IN_TRANSIT', 'DELIVERY_DELAYED', 'DELIVERED',
+            'INVOICED', 'PAYMENT_PENDING', 'COMPLETED', 'CLOSED', 'PAID'];
+          const isMaterialReady = ['MATERIAL_READY', 'MATERIAL_VERIFIED', 'MATERIAL_CHECKED'].includes(st)
+            || postMaterialStages.includes(st)
+            || activeStepIndex >= 2
+            || materialCheckFeedback?.ready === true;
+          const isMaterialShort = !isMaterialReady && ['MATERIAL_SHORT', 'MATERIAL_SHORTAGE', 'PROCUREMENT_PENDING', 'PO_SENT'].includes(st);
+          stageCards.push({
+            key: 'materials',
+            title: 'BOM Materials',
+            icon: Package,
+            color: isMaterialShort ? 'rose' : isMaterialReady ? 'emerald' : 'amber',
+            content: (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className={`text-[10px] uppercase font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Status</span>
+                  <span className={`text-xs font-bold ${
+                    isMaterialShort ? 'text-rose-500' : isMaterialReady ? 'text-emerald-500' : 'text-amber-500'
+                  }`}>
+                    {isMaterialShort ? 'Shortage' : isMaterialReady ? 'Verified ✓' : 'Pending Check'}
+                  </span>
+                </div>
+                <div className={`text-[11px] ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                  {lineCount} line item{lineCount !== 1 ? 's' : ''} • {totalReqQty} total units required
+                </div>
+                {materialCheckFeedback?.message && (
+                  <div className={`text-[10px] p-2 rounded-lg ${isDarkMode ? 'bg-slate-800/60 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
+                    {materialCheckFeedback.message}
+                  </div>
+                )}
+              </div>
+            )
+          });
+        }
+
+        // Job Cards Card
+        const jcList = order.jobCards || [];
+        if (jcList.length > 0 || activeStepIndex >= 2) {
+          const totalJc = jcList.length;
+          const completedJc = jcList.filter(j => (j.status || '').toUpperCase() === 'COMPLETED').length;
+          const inProgressJc = jcList.filter(j => ['IN_PROGRESS', 'IN_PRODUCTION', 'STARTED'].includes((j.status || '').toUpperCase())).length;
+          stageCards.push({
+            key: 'jobcards',
+            title: 'Job Cards',
+            icon: FileCheck,
+            color: totalJc === 0 ? 'slate' : completedJc >= totalJc ? 'emerald' : 'blue',
+            content: (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className={`text-[10px] uppercase font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Progress</span>
+                  <span className={`text-xs font-bold ${completedJc >= totalJc && totalJc > 0 ? 'text-emerald-500' : 'text-blue-500'}`}>
+                    {totalJc === 0 ? 'Not Created' : `${completedJc}/${totalJc} Done`}
+                  </span>
+                </div>
+                {totalJc > 0 && (
+                  <>
+                    <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                      <div
+                        className="bg-gradient-to-r from-blue-500 to-emerald-500 h-full rounded-full transition-[width] duration-500"
+                        style={{ width: `${totalJc > 0 ? Math.round((completedJc / totalJc) * 100) : 0}%` }}
+                      />
+                    </div>
+                    <div className={`flex items-center gap-3 text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                      {inProgressJc > 0 && <span>🔄 {inProgressJc} in progress</span>}
+                      {completedJc > 0 && <span>✅ {completedJc} completed</span>}
+                    </div>
+                    {jcList[0]?.jobNo && (
+                      <div className={`text-[10px] font-mono ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                        Latest: {jcList[jcList.length - 1]?.jobNo}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )
+          });
+        }
+
+        // QC / PDI Card
+        if (linkedQc.length > 0 || linkedPdi.length > 0 || activeStepIndex >= 3) {
+          stageCards.push({
+            key: 'qcpdi',
+            title: 'QC / PDI',
+            icon: ShieldCheck,
+            color: isQcRejected ? 'rose' : (isQcHold || hasNcr) ? 'amber' : allQcPassed ? 'emerald' : 'purple',
+            content: (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className={`text-[10px] uppercase font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>QC Gate</span>
+                  <span className={`text-xs font-bold ${
+                    isQcRejected ? 'text-rose-500' : (isQcHold || hasNcr) ? 'text-amber-500' : allQcPassed ? 'text-emerald-500' : 'text-purple-500'
+                  }`}>
+                    {isQcRejected ? 'Rejected' : (isQcHold || hasNcr) ? 'Hold / NCR' : allQcPassed ? 'Passed ✓' : 'Pending'}
+                  </span>
+                </div>
+                <div className={`text-[11px] ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                  {linkedQc.length} QC record{linkedQc.length !== 1 ? 's' : ''} • {linkedPdi.length} PDI record{linkedPdi.length !== 1 ? 's' : ''}
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className={`text-[10px] uppercase font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>PDI</span>
+                  <span className={`text-xs font-bold ${isPdiPassed ? 'text-emerald-500' : 'text-slate-400'}`}>
+                    {isPdiPassed ? 'Passed ✓' : 'Pending'}
+                  </span>
+                </div>
+                {order.pdiCertificateNo && (
+                  <div className={`text-[10px] font-mono ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                    CoC: {order.pdiCertificateNo}
+                  </div>
+                )}
+              </div>
+            )
+          });
+        }
+
+        // Dispatch Card
+        if (linkedDispatches.length > 0 || isDispatched || activeStepIndex >= 4) {
+          stageCards.push({
+            key: 'dispatch',
+            title: 'Dispatch',
+            icon: Truck,
+            color: isDispatched ? 'teal' : 'slate',
+            content: (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className={`text-[10px] uppercase font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Status</span>
+                  <span className={`text-xs font-bold ${isDispatched ? 'text-teal-500' : 'text-slate-400'}`}>
+                    {isDispatched ? 'Dispatched ✓' : 'Pending'}
+                  </span>
+                </div>
+                {effectiveChallanNo && (
+                  <div className={`text-[11px] ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                    Challan: <span className="font-mono font-bold">{effectiveChallanNo}</span>
+                  </div>
+                )}
+                {order.transporterName && (
+                  <div className={`text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                    Via: {order.transporterName}
+                  </div>
+                )}
+                <div className={`text-[11px] ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                  {totalDispatchedQty}/{totalOrderedQty} units dispatched
+                </div>
+              </div>
+            )
+          });
+        }
+
+        // Invoice & Payment Card
+        if (effectiveInvoiceNo || linkedInvoices.length > 0 || activeStepIndex >= 5) {
+          const invPaid = order.paymentStatus === 'PAID' || remainingOutstanding <= 0;
+          stageCards.push({
+            key: 'invoice',
+            title: 'Invoice & Payment',
+            icon: Receipt,
+            color: invPaid ? 'emerald' : effectiveInvoiceNo ? 'indigo' : 'slate',
+            content: (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className={`text-[10px] uppercase font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Invoice</span>
+                  <span className={`text-xs font-bold ${effectiveInvoiceNo ? 'text-indigo-500' : 'text-slate-400'}`}>
+                    {effectiveInvoiceNo || 'Not Issued'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className={`text-[10px] uppercase font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Payment</span>
+                  <span className={`text-xs font-bold ${invPaid ? 'text-emerald-500' : 'text-amber-500'}`}>
+                    {invPaid ? 'Paid ✓' : order.paymentStatus === 'PARTIAL' ? 'Partial' : 'Pending'}
+                  </span>
+                </div>
+                {gross > 0 && (
+                  <div className={`text-[11px] ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                    ₹{currentPaid.toLocaleString('en-IN')} / ₹{gross.toLocaleString('en-IN')}
+                  </div>
+                )}
+              </div>
+            )
+          });
+        }
+
+        // Delivery Card
+        if (order.podReceivedDate || ['DELIVERED', 'COMPLETED', 'CLOSED', 'PAID'].includes(st) || activeStepIndex >= 6) {
+          stageCards.push({
+            key: 'delivery',
+            title: 'Delivery & POD',
+            icon: CheckCircle2,
+            color: order.podReceivedDate ? 'emerald' : 'slate',
+            content: (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className={`text-[10px] uppercase font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>POD</span>
+                  <span className={`text-xs font-bold ${order.podReceivedDate ? 'text-emerald-500' : 'text-slate-400'}`}>
+                    {order.podReceivedDate ? 'Received ✓' : 'Awaiting'}
+                  </span>
+                </div>
+                {order.podReceivedDate && (
+                  <div className={`text-[11px] ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                    {order.podReceivedDate}
+                  </div>
+                )}
+                {order.podReceivedBy && (
+                  <div className={`text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                    Received by: {order.podReceivedBy}
+                  </div>
+                )}
+              </div>
+            )
+          });
+        }
+
+        if (stageCards.length === 0) return null;
+
+        const colorMap: Record<string, { bg: string; border: string; icon: string; text: string }> = {
+          rose:    { bg: isDarkMode ? 'bg-rose-500/5'    : 'bg-rose-50',    border: 'border-rose-500/20',    icon: isDarkMode ? 'bg-rose-500/20 text-rose-400'       : 'bg-rose-100 text-rose-600',       text: isDarkMode ? 'text-rose-400'    : 'text-rose-700' },
+          amber:   { bg: isDarkMode ? 'bg-amber-500/5'   : 'bg-amber-50',   border: 'border-amber-500/20',   icon: isDarkMode ? 'bg-amber-500/20 text-amber-400'     : 'bg-amber-100 text-amber-600',     text: isDarkMode ? 'text-amber-400'   : 'text-amber-700' },
+          emerald: { bg: isDarkMode ? 'bg-emerald-500/5' : 'bg-emerald-50', border: 'border-emerald-500/20', icon: isDarkMode ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-600', text: isDarkMode ? 'text-emerald-400' : 'text-emerald-700' },
+          blue:    { bg: isDarkMode ? 'bg-blue-500/5'    : 'bg-blue-50',    border: 'border-blue-500/20',    icon: isDarkMode ? 'bg-blue-500/20 text-blue-400'       : 'bg-blue-100 text-blue-600',       text: isDarkMode ? 'text-blue-400'    : 'text-blue-700' },
+          purple:  { bg: isDarkMode ? 'bg-purple-500/5'  : 'bg-purple-50',  border: 'border-purple-500/20',  icon: isDarkMode ? 'bg-purple-500/20 text-purple-400'   : 'bg-purple-100 text-purple-600',   text: isDarkMode ? 'text-purple-400'  : 'text-purple-700' },
+          indigo:  { bg: isDarkMode ? 'bg-indigo-500/5'  : 'bg-indigo-50',  border: 'border-indigo-500/20',  icon: isDarkMode ? 'bg-indigo-500/20 text-indigo-400'   : 'bg-indigo-100 text-indigo-600',   text: isDarkMode ? 'text-indigo-400'  : 'text-indigo-700' },
+          teal:    { bg: isDarkMode ? 'bg-teal-500/5'    : 'bg-teal-50',    border: 'border-teal-500/20',    icon: isDarkMode ? 'bg-teal-500/20 text-teal-400'       : 'bg-teal-100 text-teal-600',       text: isDarkMode ? 'text-teal-400'    : 'text-teal-700' },
+          slate:   { bg: isDarkMode ? 'bg-slate-800/40'  : 'bg-slate-50',   border: isDarkMode ? 'border-slate-700/60' : 'border-slate-200', icon: isDarkMode ? 'bg-slate-700 text-slate-400' : 'bg-slate-200 text-slate-500', text: isDarkMode ? 'text-slate-400' : 'text-slate-600' },
+        };
+
+        return (
+          <div className={`p-4 sm:p-5 rounded-2xl sm:rounded-3xl border transition-ui ${isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-xs'}`}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <BarChart3 className={`w-4 h-4 ${isDarkMode ? 'text-[#7B92FF]' : 'text-[#5B75F8]'}`} />
+                <h3 className={`font-bold text-xs sm:text-sm uppercase tracking-wider ${isDarkMode ? 'text-[#7B92FF]' : 'text-[#5B75F8]'}`}>
+                  Order Stage Overview
+                </h3>
+              </div>
+              <span className={`text-[10px] font-medium px-2 py-0.5 rounded-md ${isDarkMode ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
+                {stageCards.length} stage{stageCards.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none" style={{ scrollSnapType: 'x mandatory' }}>
+              {stageCards.map(card => {
+                const colors = colorMap[card.color] || colorMap.slate;
+                const CardIcon = card.icon;
+                return (
+                  <div
+                    key={card.key}
+                    className={`min-w-[220px] sm:min-w-[260px] max-w-[300px] p-3.5 sm:p-4 rounded-2xl border transition-all shrink-0 ${colors.bg} ${colors.border}`}
+                    style={{ scrollSnapAlign: 'start' }}
+                  >
+                    <div className="flex items-center gap-2 mb-2.5">
+                      <div className={`p-1.5 rounded-lg ${colors.icon}`}>
+                        <CardIcon className="w-3.5 h-3.5" />
+                      </div>
+                      <span className={`text-xs font-bold uppercase tracking-wider ${colors.text}`}>
+                        {card.title}
+                      </span>
+                    </div>
+                    {card.content}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* 3. Executive KPI & Order Metadata Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 font-mono">
 
@@ -2555,6 +2921,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                         invoiceStatus: order.paymentStatus || null
                       }}
                       orderPo={order.poNo || order.id}
+                      orderStatus={order.status || order.stage}
                       onNavigateToCreateJobCard={onNavigateToCreateJobCard}
                       onNavigateToPDI={onNavigateToPDI}
                       isDarkMode={isDarkMode}
@@ -2635,6 +3002,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                         invoiceStatus: order.paymentStatus || null
                       }}
                       orderPo={order.poNo || order.id}
+                      orderStatus={order.status || order.stage}
                       onNavigateToCreateJobCard={onNavigateToCreateJobCard}
                       onNavigateToPDI={onNavigateToPDI}
                       isDarkMode={isDarkMode}

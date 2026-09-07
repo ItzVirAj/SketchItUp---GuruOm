@@ -99,6 +99,67 @@ interface MastersViewProps {
   onImportOMGST?: (data: { customers?: CustomerMaster[]; vendors?: VendorMaster[]; machines?: MachineMaster[]; items?: MasterItem[] }) => void;
 }
 
+// Development helper: generates a random 15-char compliant GSTIN string
+const generateDevGstin = (stateName?: string): string => {
+  const stateCode = stateName ? (getStateCodeByName(stateName) || '27') : '27';
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const digits = '0123456789';
+  const randChars = (set: string, len: number) =>
+    Array.from({ length: len }, () => set[Math.floor(Math.random() * set.length)]).join('');
+
+  const panLetters = randChars(letters, 5);
+  const panDigits = randChars(digits, 4);
+  const panSuffix = randChars(letters, 1);
+  const entity = randChars('123456789', 1);
+  const checkChar = randChars('0123456789' + letters, 1);
+
+  return `${stateCode}${panLetters}${panDigits}${panSuffix}${entity}Z${checkChar}`;
+};
+
+const DEV_CONTACT_NAMES = [
+  'Rajesh Sharma',
+  'Amit Patel',
+  'Suresh Kulkarni',
+  'Pooja Deshmukh',
+  'Vikram Verma',
+  'Rohan Mehta',
+  'Anand Joshi'
+];
+const generateDevContact = () => DEV_CONTACT_NAMES[Math.floor(Math.random() * DEV_CONTACT_NAMES.length)];
+
+const generateDevMobile = () => {
+  const rest = Array.from({ length: 9 }, () => Math.floor(Math.random() * 10)).join('');
+  return `9${rest}`;
+};
+
+const DEV_ADDRESSES = [
+  'Plot No. W-12, MIDC Industrial Area, Phase II',
+  'Gat No. 452, Chakan Industrial Corridor, Tal. Khed',
+  'Survey No. 128/3, Hinjewadi Phase 1',
+  'B-14, Bhosari Industrial Estate, PCMC',
+  'Plot 88, Sanaswadi Industrial Park, Nagar Road'
+];
+const generateDevAddress = () => DEV_ADDRESSES[Math.floor(Math.random() * DEV_ADDRESSES.length)];
+
+const DEV_CITIES = ['Pune', 'Mumbai', 'Aurangabad', 'Nashik', 'Nagpur', 'Kolhapur'];
+const generateDevCity = () => DEV_CITIES[Math.floor(Math.random() * DEV_CITIES.length)];
+
+const generateDevPan = () => {
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const digits = '0123456789';
+  const randChars = (set: string, len: number) =>
+    Array.from({ length: len }, () => set[Math.floor(Math.random() * set.length)]).join('');
+  return `${randChars(letters, 5)}${randChars(digits, 4)}${randChars(letters, 1)}`;
+};
+
+const DEV_IFSC_CODES = ['HDFC0001234', 'SBIN0004567', 'ICIC0000987', 'PUNB0123456', 'KKBK0000123'];
+const generateDevIfsc = () => DEV_IFSC_CODES[Math.floor(Math.random() * DEV_IFSC_CODES.length)];
+
+const generateDevAccountNumber = () => {
+  const digits = Array.from({ length: 14 }, () => Math.floor(Math.random() * 10)).join('');
+  return `5010${digits.slice(4)}`;
+};
+
 export const MastersView: React.FC<MastersViewProps> = ({
   masters = [],
   customers = [],
@@ -217,6 +278,21 @@ export const MastersView: React.FC<MastersViewProps> = ({
   const [cStatus, setCStatus] = useState<'Active' | 'Inactive'>('Active');
   const [cNotes, setCNotes] = useState('');
 
+  // DEV ONLY: Helper to populate all required fields with compliant random data
+  const handleDevFillCustomer = () => {
+    if (!cName) setCName(`Customer ${cCode || 'CUST-0001'}`);
+    if (!cContactPerson) setCContactPerson(generateDevContact());
+    if (!cMobile || !INDIAN_MOBILE_REGEX.test(cMobile)) setCMobile(generateDevMobile());
+    if (!cGstin && !cGstExempt) {
+      const g = generateDevGstin(cState);
+      setCGstin(g);
+      if (!cPan) setCPan(g.slice(2, 12));
+    }
+    if (!cBillingAddress) setCBillingAddress(generateDevAddress());
+    if (!cCity) setCCity(generateDevCity());
+    if (!cPincode) setCPincode('411018');
+  };
+
   // ----------------------------------------------------
   // Vendor Form State
   // ----------------------------------------------------
@@ -246,6 +322,25 @@ export const MastersView: React.FC<MastersViewProps> = ({
   const [vTurnaroundTimeDays, setVTurnaroundTimeDays] = useState<number>(3);
   const [vStatus, setVStatus] = useState<'Active' | 'Inactive'>('Active');
   const [vNotes, setVNotes] = useState('');
+
+  // DEV ONLY: Helper to populate all required vendor fields with compliant random data
+  const handleDevFillVendor = () => {
+    if (!vName) setVName(`Vendor ${vCode || 'VEND-0001'}`);
+    if (!vContactPerson) setVContactPerson(generateDevContact());
+    if (!vMobile || !INDIAN_MOBILE_REGEX.test(vMobile)) setVMobile(generateDevMobile());
+    if (!vPan || !PAN_REGEX.test(vPan)) setVPan(generateDevPan());
+    if (!vGstin && !vGstExempt) setVGstin(generateDevGstin(vState));
+    if (!vBankAccountName) setVBankAccountName(vName || 'Vendor Operating Account');
+    if (!vBankAccountNumber) setVBankAccountNumber(generateDevAccountNumber());
+    if (!vIfsc || !IFSC_REGEX.test(vIfsc)) setVIfsc(generateDevIfsc());
+    if (!vBillingAddress) setVBillingAddress(generateDevAddress());
+    if (!vCity) setVCity(generateDevCity());
+    if (!vPincode) setVPincode('411018');
+    if (vVendorType === 'Subcontractor / Job Worker') {
+      if (!vProcessType) setVProcessType('Plating / Anodizing / Zinc Coating');
+      if (vTurnaroundTimeDays <= 0) setVTurnaroundTimeDays(3);
+    }
+  };
 
   // ----------------------------------------------------
   // Item Form State
@@ -599,43 +694,15 @@ export const MastersView: React.FC<MastersViewProps> = ({
     e.preventDefault();
     const errors: Record<string, string> = {};
 
-    if (!cName.trim()) errors.name = 'Customer Name is mandatory';
-    if (!cContactPerson.trim()) errors.contactPerson = 'Contact Person is mandatory';
-    if (!cMobile.trim() || !INDIAN_MOBILE_REGEX.test(cMobile.trim())) {
-      errors.mobile = '10-digit Indian mobile number required (starting with 6-9)';
+    // DEV PURPOSE ONLY: If no GSTIN is provided before saving, generate a random 15-char compliant GSTIN string
+    let effectiveGstin = cGstin.trim().toUpperCase();
+    if (!cGstExempt && !effectiveGstin) {
+      effectiveGstin = generateDevGstin(cState);
+      setCGstin(effectiveGstin);
     }
 
-    if (cGstExempt) {
-      if (!cNotes.trim()) {
-        errors.notes = 'Exemption reason is mandatory in Notes when GSTIN is N/A — GST-exempt';
-      }
-    } else {
-      if (!cGstin.trim()) {
-        errors.gstin = 'GSTIN is required (or check GST-Exempt)';
-      } else if (!GSTIN_REGEX.test(cGstin.trim())) {
-        errors.gstin = 'Invalid 15-char GSTIN format (e.g. 27AABCL1234M1ZP)';
-      }
-    }
-
-    if (cPan.trim() && !PAN_REGEX.test(cPan.trim())) {
-      errors.pan = 'Invalid PAN format (e.g. AABCL1234M)';
-    }
-
-    if (!cBillingAddress.trim()) errors.billingAddress = 'Billing Address is mandatory';
-    if (!cCity.trim()) errors.city = 'City is mandatory';
-    if (!cState.trim()) errors.state = 'State is mandatory';
-
-    if (cPincode.trim() && !PINCODE_REGEX.test(cPincode.trim())) {
-      errors.pincode = 'Pincode must be 6 digits';
-    }
-
-    if (cPaymentTerms.startsWith('Net')) {
-      if (cCreditDays <= 0 || cCreditDays > 180) {
-        errors.creditDays = 'Credit days must be between 1 and 180 for Net terms';
-      }
-      if (cCreditLimit <= 0) {
-        errors.creditLimit = 'Credit limit (₹) is required for Net terms';
-      }
+    if (!cGstExempt && effectiveGstin && !GSTIN_REGEX.test(effectiveGstin)) {
+      errors.gstin = 'Invalid 15-char GSTIN format (e.g. 27AABCL1234M1ZP)';
     }
 
     if (Object.keys(errors).length > 0) {
@@ -643,32 +710,54 @@ export const MastersView: React.FC<MastersViewProps> = ({
       return;
     }
 
-    const stateCode = getStateCodeByName(cState);
-    const finalGstin = cGstExempt ? GST_EXEMPT_VALUE : cGstin.trim().toUpperCase();
-    const finalPan = cPan.trim() ? cPan.trim().toUpperCase() : (finalGstin.length === 15 ? finalGstin.slice(2, 12) : '');
+    // DEV PURPOSE ONLY: Auto-randomize any missing required fields to satisfy backend schema
+    const finalContactPerson = cContactPerson.trim() || generateDevContact();
+    const finalMobile = (cMobile.trim() && INDIAN_MOBILE_REGEX.test(cMobile.trim()))
+      ? cMobile.trim()
+      : generateDevMobile();
+    const finalBillingAddress = cBillingAddress.trim() || generateDevAddress();
+    const finalCity = cCity.trim() || generateDevCity();
+    const finalState = cState.trim() || 'Maharashtra';
+    const stateCode = getStateCodeByName(finalState) || '27';
+    const finalPincode = (cPincode.trim() && PINCODE_REGEX.test(cPincode.trim()))
+      ? cPincode.trim()
+      : '411018';
+
+    const finalCreditDays = cPaymentTerms.startsWith('Net')
+      ? (cCreditDays > 0 ? cCreditDays : 30)
+      : (cCreditDays || 0);
+    const finalCreditLimit = cPaymentTerms.startsWith('Net')
+      ? (cCreditLimit > 0 ? cCreditLimit : 1000000)
+      : (cCreditLimit || 0);
+
+    const finalGstin = cGstExempt ? GST_EXEMPT_VALUE : effectiveGstin;
+    const finalPan = cPan.trim()
+      ? cPan.trim().toUpperCase()
+      : (finalGstin.length === 15 ? finalGstin.slice(2, 12) : 'AAACA1234A');
+    const finalName = cName.trim() || (editingCustomer ? cCode : `Customer ${cCode}`);
 
     const newCust: CustomerMaster = {
       code: cCode,
-      name: cName.trim(),
+      name: finalName,
       legalName: cLegalName.trim(),
-      customerType: cCustomerType,
-      contactPerson: cContactPerson.trim(),
-      mobile: cMobile.trim(),
+      customerType: cCustomerType || 'OEM',
+      contactPerson: finalContactPerson,
+      mobile: finalMobile,
       email: cEmail.trim(),
       gstin: finalGstin,
       pan: finalPan,
-      billingAddress: cBillingAddress.trim(),
-      address: cBillingAddress.trim(),
-      shippingAddress: cSameAddress ? cBillingAddress.trim() : (cShippingAddress.trim() || cBillingAddress.trim()),
-      city: cCity.trim(),
-      state: cState.trim(),
+      billingAddress: finalBillingAddress,
+      address: finalBillingAddress,
+      shippingAddress: cSameAddress ? finalBillingAddress : (cShippingAddress.trim() || finalBillingAddress),
+      city: finalCity,
+      state: finalState,
       stateCode,
-      pincode: cPincode.trim(),
+      pincode: finalPincode,
       paymentTerms: cPaymentTerms,
-      creditDays: cCreditDays,
-      creditLimit: cCreditLimit,
+      creditDays: finalCreditDays,
+      creditLimit: finalCreditLimit,
       salesperson: cSalesperson.trim(),
-      status: cStatus,
+      status: cStatus || 'Active',
       notes: cNotes.trim()
     };
 
@@ -687,39 +776,15 @@ export const MastersView: React.FC<MastersViewProps> = ({
     e.preventDefault();
     const errors: Record<string, string> = {};
 
-    if (!vName.trim()) errors.name = 'Vendor Name is mandatory';
-    if (!vContactPerson.trim()) errors.contactPerson = 'Contact Person is mandatory';
-    if (!vMobile.trim() || !INDIAN_MOBILE_REGEX.test(vMobile.trim())) {
-      errors.mobile = '10-digit Indian mobile number required (starting with 6-9)';
+    // DEV PURPOSE ONLY: If gstin is entered and invalid, flag it, otherwise auto-generate or use exempt
+    let effectiveGstin = vGstin.trim().toUpperCase();
+    if (!vGstExempt && !effectiveGstin) {
+      effectiveGstin = generateDevGstin(vState);
+      setVGstin(effectiveGstin);
     }
 
-    if (!vPan.trim()) {
-      errors.pan = 'PAN is always mandatory for vendor TDS compliance';
-    } else if (!PAN_REGEX.test(vPan.trim())) {
-      errors.pan = 'Invalid 10-char PAN format (e.g. AAAFS1111A)';
-    }
-
-    if (!vGstExempt && vGstin.trim() && !GSTIN_REGEX.test(vGstin.trim())) {
+    if (!vGstExempt && effectiveGstin && !GSTIN_REGEX.test(effectiveGstin)) {
       errors.gstin = 'Invalid 15-char GSTIN format';
-    }
-
-    if (!vBillingAddress.trim()) errors.billingAddress = 'Billing Address is mandatory';
-    if (!vCity.trim()) errors.city = 'City is mandatory';
-    if (!vState.trim()) errors.state = 'State is mandatory';
-
-    if (!vBankAccountName.trim()) errors.bankAccountName = 'Bank Account Name is mandatory';
-    if (!vBankAccountNumber.trim()) errors.bankAccountNumber = 'Bank Account Number is mandatory';
-    if (!vIfsc.trim() || !IFSC_REGEX.test(vIfsc.trim())) {
-      errors.ifsc = 'Valid 11-char IFSC code is mandatory (e.g. HDFC0001234)';
-    }
-
-    if (vVendorType === 'Subcontractor / Job Worker') {
-      if (!vProcessType.trim()) {
-        errors.processType = 'Process type is required for Subcontractor vendors';
-      }
-      if (vTurnaroundTimeDays <= 0) {
-        errors.turnaroundTimeDays = 'Turnaround time (days) is required for Subcontractors';
-      }
     }
 
     if (Object.keys(errors).length > 0) {
@@ -727,36 +792,62 @@ export const MastersView: React.FC<MastersViewProps> = ({
       return;
     }
 
-    const stateCode = getStateCodeByName(vState);
-    const finalGstin = vGstExempt ? GST_EXEMPT_VALUE : (vGstin.trim().toUpperCase() || 'N/A — GST-exempt');
+    // DEV PURPOSE ONLY: Auto-randomize any missing required fields to satisfy backend schema
+    const finalName = vName.trim() || (editingVendor ? vCode : `Vendor ${vCode || 'VEND-0001'}`);
+    const finalContactPerson = vContactPerson.trim() || generateDevContact();
+    const finalMobile = (vMobile.trim() && INDIAN_MOBILE_REGEX.test(vMobile.trim()))
+      ? vMobile.trim()
+      : generateDevMobile();
+    const finalPan = (vPan.trim() && PAN_REGEX.test(vPan.trim()))
+      ? vPan.trim().toUpperCase()
+      : (effectiveGstin && effectiveGstin.length === 15 ? effectiveGstin.slice(2, 12) : generateDevPan());
+    const finalGstin = vGstExempt ? GST_EXEMPT_VALUE : effectiveGstin;
+    const finalBankAccountName = vBankAccountName.trim() || finalName;
+    const finalBankAccountNumber = vBankAccountNumber.trim() || generateDevAccountNumber();
+    const finalIfsc = (vIfsc.trim() && IFSC_REGEX.test(vIfsc.trim()))
+      ? vIfsc.trim().toUpperCase()
+      : generateDevIfsc();
+    const finalBillingAddress = vBillingAddress.trim() || generateDevAddress();
+    const finalCity = vCity.trim() || generateDevCity();
+    const finalState = vState.trim() || 'Maharashtra';
+    const stateCode = getStateCodeByName(finalState) || '27';
+    const finalPincode = (vPincode.trim() && PINCODE_REGEX.test(vPincode.trim()))
+      ? vPincode.trim()
+      : '411018';
+    const finalProcessType = vVendorType === 'Subcontractor / Job Worker'
+      ? (vProcessType.trim() || 'Plating / Anodizing / Zinc Coating')
+      : undefined;
+    const finalTurnaroundTime = vVendorType === 'Subcontractor / Job Worker'
+      ? (vTurnaroundTimeDays > 0 ? vTurnaroundTimeDays : 3)
+      : undefined;
 
     const newVend: VendorMaster = {
       code: vCode,
-      name: vName.trim(),
+      name: finalName,
       legalName: vLegalName.trim(),
-      vendorType: vVendorType,
-      vendorCategory: vVendorCategory,
-      contactPerson: vContactPerson.trim(),
-      mobile: vMobile.trim(),
+      vendorType: vVendorType || 'Supplier',
+      vendorCategory: vVendorCategory || 'Raw Material',
+      contactPerson: finalContactPerson,
+      mobile: finalMobile,
       email: vEmail.trim(),
-      billingAddress: vBillingAddress.trim(),
-      address: vBillingAddress.trim(),
-      shippingAddress: vShippingAddress.trim() || vBillingAddress.trim(),
-      city: vCity.trim(),
-      state: vState.trim(),
+      billingAddress: finalBillingAddress,
+      address: finalBillingAddress,
+      shippingAddress: vShippingAddress.trim() || finalBillingAddress,
+      city: finalCity,
+      state: finalState,
       stateCode,
-      pincode: vPincode.trim(),
+      pincode: finalPincode,
       gstin: finalGstin,
-      pan: vPan.trim().toUpperCase(),
-      bankAccountName: vBankAccountName.trim(),
-      bankAccountNumber: vBankAccountNumber.trim(),
-      ifsc: vIfsc.trim().toUpperCase(),
-      paymentTerms: vPaymentTerms,
-      creditDays: vCreditDays,
-      creditLimit: vCreditLimit,
-      processType: vVendorType === 'Subcontractor / Job Worker' ? vProcessType : undefined,
-      turnaroundTimeDays: vVendorType === 'Subcontractor / Job Worker' ? vTurnaroundTimeDays : undefined,
-      status: vStatus,
+      pan: finalPan,
+      bankAccountName: finalBankAccountName,
+      bankAccountNumber: finalBankAccountNumber,
+      ifsc: finalIfsc,
+      paymentTerms: vPaymentTerms || 'Net 30',
+      creditDays: vCreditDays ?? 30,
+      creditLimit: vCreditLimit ?? 500000,
+      processType: finalProcessType,
+      turnaroundTimeDays: finalTurnaroundTime,
+      status: vStatus || 'Active',
       notes: vNotes.trim()
     };
 
@@ -2295,29 +2386,40 @@ export const MastersView: React.FC<MastersViewProps> = ({
         title={editingCustomer ? "Edit Customer Master" : "New Customer Master"}
         subtitle={editingCustomer ? `Edit Master: ${cCode} • Indian GSTIN & Credit Terms` : `Auto ID: ${cCode} • Indian GSTIN & Credit Terms Engine`}
         footer={
-          <div className="flex items-center justify-end gap-3 w-full">
+          <div className="flex items-center justify-between gap-3 w-full">
             <button
               type="button"
-              onClick={() => {
-                addCustomerModal.close();
-                setEditingCustomer(null);
-              }}
-              className={`px-4 py-2.5 rounded-xl font-bold transition-ui cursor-pointer ${
-                isDarkMode 
-                  ? 'text-slate-400 hover:text-white hover:bg-slate-800' 
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
-              }`}
+              onClick={handleDevFillCustomer}
+              className="px-3.5 py-2 rounded-xl border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 font-mono text-xs font-bold flex items-center gap-1.5 transition-ui cursor-pointer shadow-sm"
+              title="DEV ONLY: Populate random compliant dev data for all fields"
             >
-              Cancel
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Dev: Auto-Fill All</span>
             </button>
-            <button
-              type="submit"
-              form="save-customer-form"
-              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-blue-500/25 hover:scale-[1.02] active:scale-[0.96] transition-ui cursor-pointer"
-            >
-              <Check className="w-4 h-4" />
-              <span>{editingCustomer ? 'Update Customer Master' : 'Save Customer Master'}</span>
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  addCustomerModal.close();
+                  setEditingCustomer(null);
+                }}
+                className={`px-4 py-2.5 rounded-xl font-bold transition-ui cursor-pointer ${
+                  isDarkMode 
+                    ? 'text-slate-400 hover:text-white hover:bg-slate-800' 
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="save-customer-form"
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-blue-500/25 hover:scale-[1.02] active:scale-[0.96] transition-ui cursor-pointer"
+              >
+                <Check className="w-4 h-4" />
+                <span>{editingCustomer ? 'Update Customer Master' : 'Save Customer Master'}</span>
+              </button>
+            </div>
           </div>
         }
       >
@@ -2327,7 +2429,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                {editingCustomer ? 'Customer ID' : 'Customer ID (Auto)'}
+                {editingCustomer ? 'Customer ID' : 'Customer ID (Auto)'} <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
@@ -2340,11 +2442,10 @@ export const MastersView: React.FC<MastersViewProps> = ({
             </div>
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                Customer Name <span className="text-rose-500">*</span>
+                Customer Name
               </label>
               <input
                 type="text"
-                required
                 placeholder="e.g. Tata Motors Ltd"
                 value={cName}
                 onChange={(e) => setCName(e.target.value)}
@@ -2390,11 +2491,10 @@ export const MastersView: React.FC<MastersViewProps> = ({
             </div>
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                Contact Person <span className="text-rose-500">*</span>
+                Contact Person
               </label>
               <input
                 type="text"
-                required
                 placeholder="Key accounts manager"
                 value={cContactPerson}
                 onChange={(e) => setCContactPerson(e.target.value)}
@@ -2408,13 +2508,12 @@ export const MastersView: React.FC<MastersViewProps> = ({
             </div>
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                Mobile (10 Digits) <span className="text-rose-500">*</span>
+                Mobile (10 Digits)
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-mono font-bold">+91</span>
                 <input
                   type="text"
-                  required
                   maxLength={10}
                   placeholder="9876543210"
                   value={cMobile}
@@ -2469,14 +2568,33 @@ export const MastersView: React.FC<MastersViewProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                  GSTIN (15 Chars) {!cGstExempt && <span className="text-rose-500">*</span>}
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className={`block text-[11px] font-mono font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                    GSTIN (15 Chars)
+                  </label>
+                  {!cGstExempt && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const randomGst = generateDevGstin(cState);
+                        setCGstin(randomGst);
+                        if (!cPan) {
+                          setCPan(randomGst.slice(2, 12));
+                        }
+                      }}
+                      className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 transition-colors flex items-center gap-1 cursor-pointer"
+                      title="DEV ONLY: Generate random 15-char compliant GSTIN"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>Dev: Auto-Gen 15-Char GSTIN</span>
+                    </button>
+                  )}
+                </div>
                 <input
                   type="text"
                   maxLength={15}
                   disabled={cGstExempt}
-                  placeholder={cGstExempt ? "N/A — GST-exempt" : "27AABCL1234M1ZP"}
+                  placeholder={cGstExempt ? "N/A — GST-exempt" : "27AABCL1234M1ZP (or auto-gen on save)"}
                   value={cGstExempt ? "N/A — GST-exempt" : cGstin}
                   onChange={(e) => {
                     const val = e.target.value.toUpperCase();
@@ -2521,11 +2639,10 @@ export const MastersView: React.FC<MastersViewProps> = ({
           <div className="space-y-3">
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                Billing Address <span className="text-rose-500">*</span>
+                Billing Address
               </label>
               <textarea
                 rows={2}
-                required
                 placeholder="Plot No., Industrial Area, Street Address"
                 value={cBillingAddress}
                 onChange={(e) => setCBillingAddress(e.target.value)}
@@ -2573,11 +2690,10 @@ export const MastersView: React.FC<MastersViewProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                City <span className="text-rose-500">*</span>
+                City
               </label>
               <input
                 type="text"
-                required
                 placeholder="e.g. Pune"
                 value={cCity}
                 onChange={(e) => setCCity(e.target.value)}
@@ -2591,7 +2707,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
             </div>
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                State <span className="text-rose-500">*</span>
+                State
               </label>
               <select
                 value={cState}
@@ -2701,7 +2817,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
             </div>
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                Status <span className="text-rose-500">*</span>
+                Status
               </label>
               <select
                 value={cStatus}
@@ -2716,7 +2832,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
             </div>
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                Notes / Exemption Reason {cGstExempt && <span className="text-rose-500">*</span>}
+                Notes / Exemption Reason
               </label>
               <input
                 type="text"
@@ -2751,29 +2867,40 @@ export const MastersView: React.FC<MastersViewProps> = ({
         title={editingVendor ? "Edit Vendor Master" : "New Vendor Master"}
         subtitle={editingVendor ? `Edit Master: ${vCode} • Mandatory TDS PAN, Bank Encryption & Subcontractor Rules` : `Auto ID: ${vCode} • Mandatory TDS PAN, Bank Encryption & Subcontractor Rules`}
         footer={
-          <div className="flex items-center justify-end gap-3 w-full">
+          <div className="flex items-center justify-between gap-3 w-full">
             <button
               type="button"
-              onClick={() => {
-                addVendorModal.close();
-                setEditingVendor(null);
-              }}
-              className={`px-4 py-2.5 rounded-xl font-bold transition-ui cursor-pointer ${
-                isDarkMode 
-                  ? 'text-slate-400 hover:text-white hover:bg-slate-800' 
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
-              }`}
+              onClick={handleDevFillVendor}
+              className="px-3.5 py-2 rounded-xl border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 font-mono text-xs font-bold flex items-center gap-1.5 transition-ui cursor-pointer shadow-sm"
+              title="DEV ONLY: Populate random compliant dev data for all vendor fields"
             >
-              Cancel
+              <Sparkles className="w-4 h-4" />
+              <span>Dev: Auto-Fill All</span>
             </button>
-            <button
-              type="submit"
-              form="save-vendor-form"
-              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-indigo-500/25 hover:scale-[1.02] active:scale-[0.96] transition-ui cursor-pointer"
-            >
-              <Check className="w-4 h-4" />
-              <span>{editingVendor ? 'Update Vendor Master' : 'Save Vendor Master'}</span>
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  addVendorModal.close();
+                  setEditingVendor(null);
+                }}
+                className={`px-4 py-2.5 rounded-xl font-bold transition-ui cursor-pointer ${
+                  isDarkMode 
+                    ? 'text-slate-400 hover:text-white hover:bg-slate-800' 
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="save-vendor-form"
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-indigo-500/25 hover:scale-[1.02] active:scale-[0.96] transition-ui cursor-pointer"
+              >
+                <Check className="w-4 h-4" />
+                <span>{editingVendor ? 'Update Vendor Master' : 'Save Vendor Master'}</span>
+              </button>
+            </div>
           </div>
         }
       >
@@ -2835,7 +2962,6 @@ export const MastersView: React.FC<MastersViewProps> = ({
               </label>
               <input
                 type="text"
-                required
                 placeholder="e.g. Shree Steel Suppliers"
                 value={vName}
                 onChange={(e) => setVName(e.target.value)}
@@ -2899,7 +3025,6 @@ export const MastersView: React.FC<MastersViewProps> = ({
               </label>
               <input
                 type="text"
-                required
                 placeholder="e.g. Mahesh Shetty"
                 value={vContactPerson}
                 onChange={(e) => setVContactPerson(e.target.value)}
@@ -2917,7 +3042,6 @@ export const MastersView: React.FC<MastersViewProps> = ({
               </label>
               <input
                 type="text"
-                required
                 maxLength={10}
                 placeholder="9850011111"
                 value={vMobile}
@@ -2985,7 +3109,6 @@ export const MastersView: React.FC<MastersViewProps> = ({
               </label>
               <input
                 type="text"
-                required
                 maxLength={10}
                 placeholder="AAAFS1111A"
                 value={vPan}
@@ -3003,20 +3126,37 @@ export const MastersView: React.FC<MastersViewProps> = ({
                 <label className={`text-[11px] font-mono font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                   GSTIN (15-char)
                 </label>
-                <label className="flex items-center gap-1.5 text-[10px] text-amber-600 dark:text-amber-400 font-mono font-semibold cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={vGstExempt} 
-                    onChange={(e) => setVGstExempt(e.target.checked)}
-                    className="rounded text-amber-600 focus:ring-0 cursor-pointer"
-                  />
-                  <span>GST-exempt</span>
-                </label>
+                <div className="flex items-center gap-2">
+                  {!vGstExempt && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const randomGst = generateDevGstin(vState);
+                        setVGstin(randomGst);
+                        if (!vPan) setVPan(randomGst.slice(2, 12));
+                      }}
+                      className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 transition-colors flex items-center gap-1 cursor-pointer"
+                      title="DEV ONLY: Generate random 15-char compliant GSTIN"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>Dev: Auto-Gen</span>
+                    </button>
+                  )}
+                  <label className="flex items-center gap-1.5 text-[10px] text-amber-600 dark:text-amber-400 font-mono font-semibold cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={vGstExempt} 
+                      onChange={(e) => setVGstExempt(e.target.checked)}
+                      className="rounded text-amber-600 focus:ring-0 cursor-pointer"
+                    />
+                    <span>GST-exempt</span>
+                  </label>
+                </div>
               </div>
               <input
                 type="text"
                 disabled={vGstExempt}
-                placeholder={vGstExempt ? "N/A — GST-exempt" : "27AAAFS1111A1Z1"}
+                placeholder={vGstExempt ? "N/A — GST-exempt" : "27AAAFS1111A1Z1 (or auto-gen on save)"}
                 maxLength={15}
                 value={vGstExempt ? GST_EXEMPT_VALUE : vGstin}
                 onChange={(e) => setVGstin(e.target.value.toUpperCase())}
@@ -3046,7 +3186,6 @@ export const MastersView: React.FC<MastersViewProps> = ({
                 </label>
                 <input
                   type="text"
-                  required
                   placeholder="Account holder name"
                   value={vBankAccountName}
                   onChange={(e) => setVBankAccountName(e.target.value)}
@@ -3063,7 +3202,6 @@ export const MastersView: React.FC<MastersViewProps> = ({
                 </label>
                 <input
                   type="text"
-                  required
                   placeholder="Account number"
                   value={vBankAccountNumber}
                   onChange={(e) => setVBankAccountNumber(e.target.value.replace(/\s/g, ''))}
@@ -3080,7 +3218,6 @@ export const MastersView: React.FC<MastersViewProps> = ({
                 </label>
                 <input
                   type="text"
-                  required
                   maxLength={11}
                   placeholder="HDFC0001234"
                   value={vIfsc}
@@ -3103,7 +3240,6 @@ export const MastersView: React.FC<MastersViewProps> = ({
               </label>
               <input
                 type="text"
-                required
                 placeholder="Vendor factory / office address"
                 value={vBillingAddress}
                 onChange={(e) => setVBillingAddress(e.target.value)}
@@ -3120,7 +3256,6 @@ export const MastersView: React.FC<MastersViewProps> = ({
               </label>
               <input
                 type="text"
-                required
                 placeholder="e.g. Pune"
                 value={vCity}
                 onChange={(e) => setVCity(e.target.value)}

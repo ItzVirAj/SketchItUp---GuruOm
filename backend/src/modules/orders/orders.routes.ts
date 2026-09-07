@@ -9,6 +9,8 @@ const router = Router();
 router.use(requireAuth);
 
 router.get('/', requirePermission('orders', 'VIEW_ONLY'), (req, res) => ordersController.getOrders(req, res));
+router.get('/:id/stage-details/:stage', requirePermission('orders', 'VIEW_ONLY'), (req, res) => ordersController.getStageDetails(req, res));
+router.get('/:id/stage-details', requirePermission('orders', 'VIEW_ONLY'), (req, res) => ordersController.getAllStageDetails(req, res));
 router.get('/:id', requirePermission('orders', 'VIEW_ONLY'), (req, res) => ordersController.getOrderById(req, res));
 router.post('/', requirePermission('orders', 'CREATE_EDIT', { commercialCheck: true }), (req, res) => ordersController.createOrder(req, res));
 router.patch('/:id', requirePermission('orders', 'CREATE_EDIT', { commercialCheck: true }), (req, res) => ordersController.updateOrder(req, res));

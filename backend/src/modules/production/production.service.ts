@@ -605,6 +605,7 @@ export class ProductionService {
       try {
         await this.db.from('customer_orders').update({
           status: 'IN_PRODUCTION',
+          stage: 'IN_PRODUCTION',
           progress_step: 5,
           updated_at: new Date().toISOString()
         }).or(`po_no.eq.${jobCard.orderPo},id.eq.${jobCard.orderPo}`);
@@ -913,6 +914,7 @@ export class ProductionService {
             try {
               await this.db.from('customer_orders').update({
                 status: 'READY_FOR_QC',
+                stage: 'READY_FOR_QC',
                 progress_step: 6,
                 updated_at: new Date().toISOString()
               }).or(`po_no.eq.${result.jobCard.orderPo},id.eq.${result.jobCard.orderPo}`);
@@ -1181,6 +1183,7 @@ export class ProductionService {
       try {
         await this.db.from('customer_orders').update({
           status: 'READY_FOR_QC',
+          stage: 'READY_FOR_QC',
           progress_step: 6,
           updated_at: new Date().toISOString()
         }).or(`po_no.eq.${orderPo},id.eq.${orderPo}`);
@@ -1460,6 +1463,7 @@ export class ProductionService {
             try {
               await this.db.from('customer_orders').update({
                 status: 'READY_FOR_QC',
+                stage: 'READY_FOR_QC',
                 progress_step: 6,
                 updated_at: new Date().toISOString()
               }).or(`po_no.eq.${job.orderPo},id.eq.${job.orderPo}`);

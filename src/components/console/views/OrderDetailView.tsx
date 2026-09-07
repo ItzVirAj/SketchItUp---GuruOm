@@ -42,7 +42,8 @@ import {
   ExternalLink,
   ChevronLeft,
   Info,
-  BarChart3
+  BarChart3,
+  Maximize2
 } from 'lucide-react';
 import { CustomerOrder, OrderStatus, QCInspection, PDIInspection, OrderLineItem, UserRole, VendorMaster, DispatchChallan, CustomerInvoice, OrderLineProgress, ShortageItem } from '../../../types/console';
 import { isRoleAuthorizedForCta, getCtaPermission, CtaId, normalizeRole } from '../../../utils/rbacMatrix';
@@ -51,6 +52,7 @@ import { executeOrderStageTransition, validatePodRequired, validateOrderClosure,
 import { runMaterialCheckForOrder, overrideMaterialCheckForOrder } from '../../../services/supabaseServices';
 import { getCurrentFinancialYear, formatDocumentNumber } from '../../../utils/statutoryAccountingEngine';
 import { ChallanDetailModal } from '../modals/ChallanDetailModal';
+import { OrderStageDetailModal, StageKey } from '../modals/OrderStageDetailModal';
 import { useUrlModal } from '../../../hooks/useUrlModal';
 import { LineItemProgressBadge } from '../LineItemProgressBadge';
 import { OrderClosureSummaryCard } from '../OrderClosureSummaryCard';
@@ -127,6 +129,19 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   const delayedModal = useUrlModal('mark-delayed');
   const challanDetailModal = useUrlModal('challan-detail');
   const overrideModal = useUrlModal('material-override');
+  const stageDetailModal = useUrlModal<Record<string, string>>('stage-detail');
+  const [activeStageDetailKey, setActiveStageDetailKey] = useState<StageKey>('materials');
+
+  useEffect(() => {
+    if (stageDetailModal.isOpen && stageDetailModal.params.stage) {
+      setActiveStageDetailKey(stageDetailModal.params.stage as StageKey);
+    }
+  }, [stageDetailModal.isOpen, stageDetailModal.params.stage]);
+
+  const handleOpenStageDetailModal = (stageKey: StageKey) => {
+    setActiveStageDetailKey(stageKey);
+    stageDetailModal.open({ stage: stageKey });
+  };
 
   // Permissions for CTAs (rules-of-hooks: declared unconditionally at top level)
   const allowedDelivered = useCtaPermission('MARK_DELIVERED') || useCtaPermission('ORDER_RECEIVED');
@@ -1244,7 +1259,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
     }
 
     // Stage 6 (Dispatched / In Transit / Delivery Delayed): shipped / in transit -> Generate Invoice or Order Received (Mark Delivered)
-    if (isDispatched || ['PARTIALLY_DISPATCHED', 'DISPATCHED', 'IN_TRANSIT', 'DELIVERY_DELAYED'].includes(st)) {
+    const isOrderDeliveredOrBeyond = ['DELIVERED', 'COMPLETED', 'CLOSED', 'PAID'].includes(st) || Boolean(order.podReceivedDate);
+    if (!isOrderDeliveredOrBeyond && (isDispatched || ['PARTIALLY_DISPATCHED', 'DISPATCHED', 'IN_TRANSIT', 'DELIVERY_DELAYED'].includes(st))) {
       if (!effectiveInvoiceNo) {
         const allowed = isRoleAuthorizedForCta(currentRole, 'GENERATE_INVOICE');
         return {
@@ -2109,8 +2125,12 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               role: 'Accounts & Finance Controller',
               description: 'Statutory GST Tax Invoice (INV-2627-####) generation against outward dispatch challan.',
               icon: Receipt,
-              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) =>
-                (isDispatched || ['DISPATCHED', 'PARTIALLY_DISPATCHED', 'INVOICE_GENERATED', 'INVOICED'].includes(n) || ['DISPATCHED', 'PARTIALLY_DISPATCHED'].includes((o.status || '').toUpperCase())) && (!effectiveInvoiceNo || effectiveInvoiceNo === ''),
+              matchCurrent: (n: CanonicalOrderState, o: CustomerOrder) => {
+                const status = (o.status || o.stage || '').toUpperCase();
+                const isDeliveredOrBeyond = ['DELIVERED', 'PAYMENT_PENDING', 'COMPLETED', 'CLOSED', 'PAID'].includes(status) || Boolean(o.podReceivedDate || o.podDocumentUrl);
+                if (isDeliveredOrBeyond) return false;
+                return (isDispatched || ['DISPATCHED', 'PARTIALLY_DISPATCHED', 'INVOICE_GENERATED', 'INVOICED'].includes(n) || ['DISPATCHED', 'PARTIALLY_DISPATCHED'].includes(status)) && (!effectiveInvoiceNo || effectiveInvoiceNo === '');
+              },
               renderActions: () => {
                 const allowed = isRoleAuthorizedForCta(currentRole, 'GENERATE_INVOICE');
                 if (effectiveInvoiceNo) {
@@ -2210,6 +2230,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               },
               renderActions: () => {
                 const allowed = isRoleAuthorizedForCta(currentRole, 'RECORD_PAYMENT');
+                const canGenInvoice = !effectiveInvoiceNo && isRoleAuthorizedForCta(currentRole, 'GENERATE_INVOICE');
                 const isPartial = currentPaid > 0 && remainingOutstanding > 0;
                 return (
                   <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
@@ -2217,6 +2238,16 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                       <span className="text-xs font-mono font-bold px-3 py-1.5 rounded-xl bg-amber-500/15 text-amber-400 border border-amber-500/30 whitespace-nowrap shrink-0">
                         ₹{currentPaid.toLocaleString('en-IN')} of ₹{gross.toLocaleString('en-IN')} received (₹{remainingOutstanding.toLocaleString('en-IN')} due)
                       </span>
+                    )}
+                    {canGenInvoice && (
+                      <button
+                        disabled={isConfirming}
+                        onClick={handleGoToCreateInvoice}
+                        className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:from-blue-600 hover:to-indigo-600 active:scale-[0.96] cursor-pointer whitespace-nowrap"
+                      >
+                        <Receipt className="w-3.5 h-3.5 shrink-0" />
+                        <span>Generate GST Tax Invoice</span>
+                      </button>
                     )}
                     <button
                       disabled={isConfirming || !allowed}
@@ -2508,7 +2539,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             key: 'materials',
             title: 'BOM Materials',
             icon: Package,
-            color: isMaterialShort ? 'rose' : isMaterialReady ? 'emerald' : 'amber',
+            color: 'amber',
             content: (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -2539,10 +2570,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           const completedJc = jcList.filter(j => (j.status || '').toUpperCase() === 'COMPLETED').length;
           const inProgressJc = jcList.filter(j => ['IN_PROGRESS', 'IN_PRODUCTION', 'STARTED'].includes((j.status || '').toUpperCase())).length;
           stageCards.push({
-            key: 'jobcards',
+            key: 'jobCards',
             title: 'Job Cards',
             icon: FileCheck,
-            color: totalJc === 0 ? 'slate' : completedJc >= totalJc ? 'emerald' : 'blue',
+            color: 'blue',
             content: (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -2578,10 +2609,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         // QC / PDI Card
         if (linkedQc.length > 0 || linkedPdi.length > 0 || activeStepIndex >= 3) {
           stageCards.push({
-            key: 'qcpdi',
+            key: 'qc',
             title: 'QC / PDI',
             icon: ShieldCheck,
-            color: isQcRejected ? 'rose' : (isQcHold || hasNcr) ? 'amber' : allQcPassed ? 'emerald' : 'purple',
+            color: 'emerald',
             content: (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -2617,12 +2648,12 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             key: 'dispatch',
             title: 'Dispatch',
             icon: Truck,
-            color: isDispatched ? 'teal' : 'slate',
+            color: 'purple',
             content: (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className={`text-[10px] uppercase font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Status</span>
-                  <span className={`text-xs font-bold ${isDispatched ? 'text-teal-500' : 'text-slate-400'}`}>
+                  <span className={`text-xs font-bold ${isDispatched ? 'text-purple-400 font-bold' : 'text-slate-400'}`}>
                     {isDispatched ? 'Dispatched ✓' : 'Pending'}
                   </span>
                 </div>
@@ -2644,50 +2675,18 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           });
         }
 
-        // Invoice & Payment Card
-        if (effectiveInvoiceNo || linkedInvoices.length > 0 || activeStepIndex >= 5) {
-          const invPaid = order.paymentStatus === 'PAID' || remainingOutstanding <= 0;
-          stageCards.push({
-            key: 'invoice',
-            title: 'Invoice & Payment',
-            icon: Receipt,
-            color: invPaid ? 'emerald' : effectiveInvoiceNo ? 'indigo' : 'slate',
-            content: (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className={`text-[10px] uppercase font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Invoice</span>
-                  <span className={`text-xs font-bold ${effectiveInvoiceNo ? 'text-indigo-500' : 'text-slate-400'}`}>
-                    {effectiveInvoiceNo || 'Not Issued'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className={`text-[10px] uppercase font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Payment</span>
-                  <span className={`text-xs font-bold ${invPaid ? 'text-emerald-500' : 'text-amber-500'}`}>
-                    {invPaid ? 'Paid ✓' : order.paymentStatus === 'PARTIAL' ? 'Partial' : 'Pending'}
-                  </span>
-                </div>
-                {gross > 0 && (
-                  <div className={`text-[11px] ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                    ₹{currentPaid.toLocaleString('en-IN')} / ₹{gross.toLocaleString('en-IN')}
-                  </div>
-                )}
-              </div>
-            )
-          });
-        }
-
         // Delivery Card
         if (order.podReceivedDate || ['DELIVERED', 'COMPLETED', 'CLOSED', 'PAID'].includes(st) || activeStepIndex >= 6) {
           stageCards.push({
             key: 'delivery',
             title: 'Delivery & POD',
             icon: CheckCircle2,
-            color: order.podReceivedDate ? 'emerald' : 'slate',
+            color: 'teal',
             content: (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className={`text-[10px] uppercase font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>POD</span>
-                  <span className={`text-xs font-bold ${order.podReceivedDate ? 'text-emerald-500' : 'text-slate-400'}`}>
+                  <span className={`text-xs font-bold ${order.podReceivedDate ? 'text-teal-400 font-bold' : 'text-slate-400'}`}>
                     {order.podReceivedDate ? 'Received ✓' : 'Awaiting'}
                   </span>
                 </div>
@@ -2706,17 +2705,90 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           });
         }
 
+        // Invoice & Payment Card
+        if (effectiveInvoiceNo || linkedInvoices.length > 0 || activeStepIndex >= 5) {
+          const invPaid = order.paymentStatus === 'PAID' || remainingOutstanding <= 0;
+          stageCards.push({
+            key: 'invoice',
+            title: 'Invoice & Payment',
+            icon: Receipt,
+            color: 'rose',
+            content: (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className={`text-[10px] uppercase font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Invoice</span>
+                  <span className={`text-xs font-bold ${effectiveInvoiceNo ? 'text-rose-400 font-bold' : 'text-slate-400'}`}>
+                    {effectiveInvoiceNo || 'Not Issued'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className={`text-[10px] uppercase font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Payment</span>
+                  <span className={`text-xs font-bold ${invPaid ? 'text-emerald-400 font-bold' : 'text-amber-400'}`}>
+                    {invPaid ? 'Paid ✓' : order.paymentStatus === 'PARTIAL' ? 'Partial' : 'Pending'}
+                  </span>
+                </div>
+                {gross > 0 && (
+                  <div className={`text-[11px] ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                    ₹{currentPaid.toLocaleString('en-IN')} / ₹{gross.toLocaleString('en-IN')}
+                  </div>
+                )}
+              </div>
+            )
+          });
+        }
+
         if (stageCards.length === 0) return null;
 
-        const colorMap: Record<string, { bg: string; border: string; icon: string; text: string }> = {
-          rose:    { bg: isDarkMode ? 'bg-rose-500/5'    : 'bg-rose-50',    border: 'border-rose-500/20',    icon: isDarkMode ? 'bg-rose-500/20 text-rose-400'       : 'bg-rose-100 text-rose-600',       text: isDarkMode ? 'text-rose-400'    : 'text-rose-700' },
-          amber:   { bg: isDarkMode ? 'bg-amber-500/5'   : 'bg-amber-50',   border: 'border-amber-500/20',   icon: isDarkMode ? 'bg-amber-500/20 text-amber-400'     : 'bg-amber-100 text-amber-600',     text: isDarkMode ? 'text-amber-400'   : 'text-amber-700' },
-          emerald: { bg: isDarkMode ? 'bg-emerald-500/5' : 'bg-emerald-50', border: 'border-emerald-500/20', icon: isDarkMode ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-600', text: isDarkMode ? 'text-emerald-400' : 'text-emerald-700' },
-          blue:    { bg: isDarkMode ? 'bg-blue-500/5'    : 'bg-blue-50',    border: 'border-blue-500/20',    icon: isDarkMode ? 'bg-blue-500/20 text-blue-400'       : 'bg-blue-100 text-blue-600',       text: isDarkMode ? 'text-blue-400'    : 'text-blue-700' },
-          purple:  { bg: isDarkMode ? 'bg-purple-500/5'  : 'bg-purple-50',  border: 'border-purple-500/20',  icon: isDarkMode ? 'bg-purple-500/20 text-purple-400'   : 'bg-purple-100 text-purple-600',   text: isDarkMode ? 'text-purple-400'  : 'text-purple-700' },
-          indigo:  { bg: isDarkMode ? 'bg-indigo-500/5'  : 'bg-indigo-50',  border: 'border-indigo-500/20',  icon: isDarkMode ? 'bg-indigo-500/20 text-indigo-400'   : 'bg-indigo-100 text-indigo-600',   text: isDarkMode ? 'text-indigo-400'  : 'text-indigo-700' },
-          teal:    { bg: isDarkMode ? 'bg-teal-500/5'    : 'bg-teal-50',    border: 'border-teal-500/20',    icon: isDarkMode ? 'bg-teal-500/20 text-teal-400'       : 'bg-teal-100 text-teal-600',       text: isDarkMode ? 'text-teal-400'    : 'text-teal-700' },
-          slate:   { bg: isDarkMode ? 'bg-slate-800/40'  : 'bg-slate-50',   border: isDarkMode ? 'border-slate-700/60' : 'border-slate-200', icon: isDarkMode ? 'bg-slate-700 text-slate-400' : 'bg-slate-200 text-slate-500', text: isDarkMode ? 'text-slate-400' : 'text-slate-600' },
+        const colorMap: Record<string, { bg: string; border: string; icon: string; text: string; glow: string }> = {
+          amber: {
+            bg: isDarkMode ? 'bg-gradient-to-b from-amber-500/[0.08] to-amber-500/[0.02]' : 'bg-amber-50/80',
+            border: isDarkMode ? 'border-amber-500/30 hover:border-amber-500/50' : 'border-amber-200 hover:border-amber-300',
+            icon: isDarkMode ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-amber-100 text-amber-700 border border-amber-200',
+            text: isDarkMode ? 'text-amber-400' : 'text-amber-800',
+            glow: 'hover:shadow-[0_4px_20px_-4px_rgba(245,158,11,0.2)]'
+          },
+          blue: {
+            bg: isDarkMode ? 'bg-gradient-to-b from-blue-500/[0.08] to-blue-500/[0.02]' : 'bg-blue-50/80',
+            border: isDarkMode ? 'border-blue-500/30 hover:border-blue-500/50' : 'border-blue-200 hover:border-blue-300',
+            icon: isDarkMode ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-blue-100 text-blue-700 border border-blue-200',
+            text: isDarkMode ? 'text-blue-400' : 'text-blue-800',
+            glow: 'hover:shadow-[0_4px_20px_-4px_rgba(59,130,246,0.2)]'
+          },
+          emerald: {
+            bg: isDarkMode ? 'bg-gradient-to-b from-emerald-500/[0.08] to-emerald-500/[0.02]' : 'bg-emerald-50/80',
+            border: isDarkMode ? 'border-emerald-500/30 hover:border-emerald-500/50' : 'border-emerald-200 hover:border-emerald-300',
+            icon: isDarkMode ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-emerald-100 text-emerald-700 border border-emerald-200',
+            text: isDarkMode ? 'text-emerald-400' : 'text-emerald-800',
+            glow: 'hover:shadow-[0_4px_20px_-4px_rgba(16,185,129,0.2)]'
+          },
+          purple: {
+            bg: isDarkMode ? 'bg-gradient-to-b from-purple-500/[0.08] to-purple-500/[0.02]' : 'bg-purple-50/80',
+            border: isDarkMode ? 'border-purple-500/30 hover:border-purple-500/50' : 'border-purple-200 hover:border-purple-300',
+            icon: isDarkMode ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' : 'bg-purple-100 text-purple-700 border border-purple-200',
+            text: isDarkMode ? 'text-purple-400' : 'text-purple-800',
+            glow: 'hover:shadow-[0_4px_20px_-4px_rgba(168,85,247,0.2)]'
+          },
+          teal: {
+            bg: isDarkMode ? 'bg-gradient-to-b from-teal-500/[0.08] to-teal-500/[0.02]' : 'bg-teal-50/80',
+            border: isDarkMode ? 'border-teal-500/30 hover:border-teal-500/50' : 'border-teal-200 hover:border-teal-300',
+            icon: isDarkMode ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30' : 'bg-teal-100 text-teal-700 border border-teal-200',
+            text: isDarkMode ? 'text-teal-400' : 'text-teal-800',
+            glow: 'hover:shadow-[0_4px_20px_-4px_rgba(20,184,166,0.2)]'
+          },
+          rose: {
+            bg: isDarkMode ? 'bg-gradient-to-b from-rose-500/[0.08] to-rose-500/[0.02]' : 'bg-rose-50/80',
+            border: isDarkMode ? 'border-rose-500/30 hover:border-rose-500/50' : 'border-rose-200 hover:border-rose-300',
+            icon: isDarkMode ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-rose-100 text-rose-700 border border-rose-200',
+            text: isDarkMode ? 'text-rose-400' : 'text-rose-800',
+            glow: 'hover:shadow-[0_4px_20px_-4px_rgba(244,63,94,0.2)]'
+          },
+          slate: {
+            bg: isDarkMode ? 'bg-slate-800/40' : 'bg-slate-50',
+            border: isDarkMode ? 'border-slate-700/60' : 'border-slate-200',
+            icon: isDarkMode ? 'bg-slate-700 text-slate-400' : 'bg-slate-200 text-slate-500',
+            text: isDarkMode ? 'text-slate-400' : 'text-slate-600',
+            glow: 'hover:shadow-slate-500/10'
+          }
         };
 
         return (
@@ -2739,16 +2811,35 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 return (
                   <div
                     key={card.key}
-                    className={`min-w-[220px] sm:min-w-[260px] max-w-[300px] p-3.5 sm:p-4 rounded-2xl border transition-all shrink-0 ${colors.bg} ${colors.border}`}
+                    onClick={() => handleOpenStageDetailModal(card.key as StageKey)}
+                    className={`min-w-[200px] sm:min-w-[220px] flex-1 max-w-[300px] p-3.5 sm:p-4 rounded-2xl border transition-all shrink-0 cursor-pointer group hover:scale-[1.01] active:scale-[0.99] ${colors.bg} ${colors.border} ${colors.glow}`}
                     style={{ scrollSnapAlign: 'start' }}
                   >
-                    <div className="flex items-center gap-2 mb-2.5">
-                      <div className={`p-1.5 rounded-lg ${colors.icon}`}>
-                        <CardIcon className="w-3.5 h-3.5" />
+                    <div className="flex items-center justify-between gap-2 mb-2.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className={`p-1.5 rounded-lg shrink-0 transition-transform group-hover:scale-105 ${colors.icon}`}>
+                          <CardIcon className="w-3.5 h-3.5" />
+                        </div>
+                        <span className={`text-xs font-bold uppercase tracking-wider truncate ${colors.text}`}>
+                          {card.title}
+                        </span>
                       </div>
-                      <span className={`text-xs font-bold uppercase tracking-wider ${colors.text}`}>
-                        {card.title}
-                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenStageDetailModal(card.key as StageKey);
+                        }}
+                        className={`p-1 rounded-lg border transition-all cursor-pointer group-hover:opacity-100 opacity-75 shrink-0 ${
+                          isDarkMode
+                            ? 'border-white/10 bg-white/5 hover:bg-white/15 text-slate-400 hover:text-white'
+                            : 'border-slate-200 bg-white hover:bg-slate-100 text-slate-500 hover:text-slate-900 shadow-xs'
+                        }`}
+                        title={`Expand ${card.title} realtime detailed view`}
+                        aria-label={`Expand ${card.title}`}
+                      >
+                        <Maximize2 className="w-3 h-3 transition-transform group-hover:scale-110" />
+                      </button>
                     </div>
                     {card.content}
                   </div>
@@ -2957,7 +3048,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 </div>
                 <div className="p-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20">
                   <div className="text-[8px] text-amber-500 uppercase">Pending</div>
-                  <div className="font-bold text-amber-600 dark:text-amber-400">{ln.pendingQty || 0}</div>
+                  <div className="font-bold text-amber-600 dark:text-amber-400">{Math.max(0, Number(ln.orderQty || 0) - Number(ln.dispatchedQty || 0))}</div>
                 </div>
               </div>
             </div>
@@ -3010,7 +3101,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   </td>
                   <td className="py-3.5 px-4 text-right font-bold">{ln.orderQty} {ln.unit}</td>
                   <td className="py-3.5 px-4 text-right text-emerald-500 font-bold">{ln.dispatchedQty}</td>
-                  <td className="py-3.5 px-4 text-right text-amber-500 font-bold">{ln.pendingQty}</td>
+                  <td className="py-3.5 px-4 text-right text-amber-500 font-bold">{Math.max(0, Number(ln.orderQty || 0) - Number(ln.dispatchedQty || 0))}</td>
                   <td className="py-3.5 px-4 text-right font-bold">₹{ln.rate.toFixed(2)}</td>
                   <td className="py-3.5 px-4 text-right font-bold text-emerald-500">₹{(Number(ln.orderQty) * Number(ln.rate)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                 </tr>
@@ -4387,6 +4478,22 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           }
           setSelectedChallanDetail(prev => prev ? { ...prev, status: 'DISPATCHED' } : null);
         }}
+      />
+
+      {/* 7. REALTIME ORDER STAGE DETAIL EXPANDED MODAL */}
+      <OrderStageDetailModal
+        isOpen={stageDetailModal.isOpen}
+        onClose={() => stageDetailModal.close()}
+        order={order}
+        initialStage={activeStageDetailKey}
+        isDarkMode={isDarkMode}
+        dispatches={dispatches}
+        invoices={invoices}
+        qcQueue={qcQueue}
+        pdiQueue={pdiQueue}
+        onNavigate={onNavigate}
+        onNavigateToPDI={onNavigateToPDI}
+        onNavigateToCreateJobCard={onNavigateToCreateJobCard}
       />
 
     </div>

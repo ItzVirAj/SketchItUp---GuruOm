@@ -221,6 +221,32 @@ export class OrdersController {
       });
     }
   }
+
+  async getStageDetails(req: Request, res: Response) {
+    try {
+      const { id, stage } = req.params;
+      const details = await ordersService.getStageDetails(id, stage);
+      return res.json(details);
+    } catch (err: any) {
+      return res.status(404).json({
+        error: 'StageDetailsNotFound',
+        message: err.message
+      });
+    }
+  }
+
+  async getAllStageDetails(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const details = await ordersService.getStageDetails(id);
+      return res.json(details);
+    } catch (err: any) {
+      return res.status(404).json({
+        error: 'StageDetailsNotFound',
+        message: err.message
+      });
+    }
+  }
 }
 
 export const ordersController = new OrdersController();

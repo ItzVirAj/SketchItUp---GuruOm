@@ -1,0 +1,165 @@
+diff --git a/backend/src/modules/invoices/invoices.service.ts b/backend/src/modules/invoices/invoices.service.ts
+index 32f21f5..7b993c8 100644
+--- a/backend/src/modules/invoices/invoices.service.ts
++++ b/backend/src/modules/invoices/invoices.service.ts
+@@ -482,6 +482,7 @@ export class InvoicesService {
+           .from('customer_orders')
+           .update({
+             status: 'INVOICED',
++            stage: 'INVOICED',
+             invoice_no: invoice.invoiceNo,
+             progress_step: 8,
+             updated_at: new Date().toISOString()
+diff --git a/backend/src/modules/orders/orders.service.ts b/backend/src/modules/orders/orders.service.ts
+index 7d8458b..68efa0a 100644
+--- a/backend/src/modules/orders/orders.service.ts
++++ b/backend/src/modules/orders/orders.service.ts
+@@ -526,6 +526,7 @@ export class OrdersService {
+             .from('customer_orders')
+             .update({
+               status: 'MATERIAL_READY',
++              stage: 'MATERIAL_READY',
+               progress_step: 4,
+               updated_at: new Date().toISOString()
+             })
+@@ -961,6 +962,7 @@ export class OrdersService {
+         .from('customer_orders')
+         .update({
+           status: 'MATERIAL_READY',
++          stage: 'MATERIAL_READY',
+           progress_step: 4,
+           updated_at: updatedAt
+         })
+diff --git a/backend/src/modules/production/production.service.ts b/backend/src/modules/production/production.service.ts
+index 8a88045..7ef4959 100644
+--- a/backend/src/modules/production/production.service.ts
++++ b/backend/src/modules/production/production.service.ts
+@@ -605,6 +605,7 @@ export class ProductionService {
+       try {
+         await this.db.from('customer_orders').update({
+           status: 'IN_PRODUCTION',
++          stage: 'IN_PRODUCTION',
+           progress_step: 5,
+           updated_at: new Date().toISOString()
+         }).or(`po_no.eq.${jobCard.orderPo},id.eq.${jobCard.orderPo}`);
+@@ -913,6 +914,7 @@ export class ProductionService {
+             try {
+               await this.db.from('customer_orders').update({
+                 status: 'READY_FOR_QC',
++                stage: 'READY_FOR_QC',
+                 progress_step: 6,
+                 updated_at: new Date().toISOString()
+               }).or(`po_no.eq.${result.jobCard.orderPo},id.eq.${result.jobCard.orderPo}`);
+@@ -1181,6 +1183,7 @@ export class ProductionService {
+       try {
+         await this.db.from('customer_orders').update({
+           status: 'READY_FOR_QC',
++          stage: 'READY_FOR_QC',
+           progress_step: 6,
+           updated_at: new Date().toISOString()
+         }).or(`po_no.eq.${orderPo},id.eq.${orderPo}`);
+@@ -1460,6 +1463,7 @@ export class ProductionService {
+             try {
+               await this.db.from('customer_orders').update({
+                 status: 'READY_FOR_QC',
++                stage: 'READY_FOR_QC',
+                 progress_step: 6,
+                 updated_at: new Date().toISOString()
+               }).or(`po_no.eq.${job.orderPo},id.eq.${job.orderPo}`);
+diff --git a/backend/src/modules/qc/qc.service.ts b/backend/src/modules/qc/qc.service.ts
+index 06afbea..53510aa 100644
+--- a/backend/src/modules/qc/qc.service.ts
++++ b/backend/src/modules/qc/qc.service.ts
+@@ -134,6 +134,7 @@ export class QcService {
+           // Advance order to QC_INSPECTION (Stage 6) and clear NCR hold
+           await this.db.from('customer_orders').update({
+             status: 'QC_INSPECTION',
++            stage: 'QC_INSPECTION',
+             progress_step: 6,
+             has_open_ncr: false
+           }).or(`po_no.eq.${target.orderPo},id.eq.${target.orderPo}`);
+@@ -356,6 +357,7 @@ export class QcService {
+         // Advance parent order status to READY_TO_DISPATCH (Stage 7)
+         await this.db.from('customer_orders').update({
+           status: 'READY_TO_DISPATCH',
++          stage: 'READY_TO_DISPATCH',
+           progress_step: 7,
+           updated_at: new Date().toISOString()
+         }).or(`po_no.eq.${pdi.order_po},id.eq.${pdi.order_po}`);
+diff --git a/src/components/console/ConsoleContainer.tsx b/src/components/console/ConsoleContainer.tsx
+index 47619d7..2e07dbf 100644
+--- a/src/components/console/ConsoleContainer.tsx
++++ b/src/components/console/ConsoleContainer.tsx
+@@ -644,22 +644,25 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
+                 return handleCompletePDI(orderId, payload);
+               }}
+               onGenerateInvoice={async (orderId, invoiceData) => {
++                const result = await handleGenerateInvoice(orderId, invoiceData);
+                 if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
+                   const invNo = typeof invoiceData === 'string' ? invoiceData : (invoiceData.invoiceNo || invoiceData.invoice_no);
+                   setDynamicFetchedOrder(prev => prev ? { ...prev, invoiceNo: invNo } : null);
+                 }
+-                return handleGenerateInvoice(orderId, invoiceData);
++                return result;
+               }}
+               onGenerateChallan={async (orderId, challanData) => {
++                const result = await handleGenerateChallan(orderId, challanData);
+                 if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
+                   const chNo = typeof challanData === 'string' ? challanData : (challanData.challanNo || challanData.challan_no);
+                   setDynamicFetchedOrder(prev => prev ? { ...prev, deliveryChallanNo: chNo } : null);
+                 }
+-                return handleGenerateChallan(orderId, challanData);
++                return result;
+               }}
+               onUpdateChallan={handleUpdateChallan}
+               onCancelChallan={handleCancelChallan}
+               onMarkDispatched={async (orderId, dispatchData) => {
++                const result = await handleMarkDispatched(orderId, dispatchData);
+                 if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
+                   setDynamicFetchedOrder(prev => prev ? {
+                     ...prev,
+@@ -669,9 +672,10 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
+                     deliveryChallanNo: dispatchData?.challanNo || prev.deliveryChallanNo
+                   } : null);
+                 }
+-                return handleMarkDispatched(orderId, dispatchData);
++                return result;
+               }}
+               onMarkDelivered={async (orderId, deliveryData) => {
++                const result = await handleMarkDelivered(orderId, deliveryData);
+                 if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
+                   setDynamicFetchedOrder(prev => prev ? {
+                     ...prev,
+@@ -683,9 +687,10 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
+                     podReceivedBy: deliveryData?.podReceivedBy || prev.podReceivedBy
+                   } : null);
+                 }
+-                return handleMarkDelivered(orderId, deliveryData);
++                return result;
+               }}
+               onMarkDelayed={async (orderId, delayData) => {
++                const result = await handleMarkDelayed(orderId, delayData);
+                 if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
+                   setDynamicFetchedOrder(prev => prev ? {
+                     ...prev,
+@@ -695,9 +700,10 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
+                     delayedFollowUpDate: delayData?.followUpDate
+                   } : null);
+                 }
+-                return handleMarkDelayed(orderId, delayData);
++                return result;
+               }}
+               onRecordPayment={async (orderId, paymentData) => {
++                const result = await handleRecordPayment(orderId, paymentData);
+                 if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
+                   const payAmt = Number(paymentData.amount || paymentData.paymentAmount || 0);
+                   const gross = Number(dynamicFetchedOrder.grossAmount || 0);
+@@ -712,7 +718,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
+                     progressStep: 10
+                   } : null);
+                 }
+-                return handleRecordPayment(orderId, paymentData);
++                return result;
+               }}
+             />
+           )}

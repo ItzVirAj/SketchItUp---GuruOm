@@ -134,6 +134,7 @@ export class QcService {
           // Advance order to QC_INSPECTION (Stage 6) and clear NCR hold
           await this.db.from('customer_orders').update({
             status: 'QC_INSPECTION',
+            stage: 'QC_INSPECTION',
             progress_step: 6,
             has_open_ncr: false
           }).or(`po_no.eq.${target.orderPo},id.eq.${target.orderPo}`);
@@ -356,6 +357,7 @@ export class QcService {
         // Advance parent order status to READY_TO_DISPATCH (Stage 7)
         await this.db.from('customer_orders').update({
           status: 'READY_TO_DISPATCH',
+          stage: 'READY_TO_DISPATCH',
           progress_step: 7,
           updated_at: new Date().toISOString()
         }).or(`po_no.eq.${pdi.order_po},id.eq.${pdi.order_po}`);

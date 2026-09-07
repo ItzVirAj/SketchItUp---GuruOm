@@ -482,6 +482,7 @@ export class InvoicesService {
           .from('customer_orders')
           .update({
             status: 'INVOICED',
+            stage: 'INVOICED',
             invoice_no: invoice.invoiceNo,
             progress_step: 8,
             updated_at: new Date().toISOString()

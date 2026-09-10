@@ -8,6 +8,7 @@ import { ordersService } from '../orders/orders.service';
 import { logAudit } from '../../services/auditLog';
 import { auditService } from '../audit/audit.service';
 import { getCurrentFinancialYear, formatDocumentNumber } from '../../../../src/utils/statutoryAccountingEngine';
+import { logger } from '../../utils/logger';
 
 const SEED_DISPATCHES: any[] = [];
 const documentSequenceState: Record<string, number> = {};
@@ -128,7 +129,7 @@ export class DispatchService {
     // 1. Check Idempotency Key in Memory Cache (24h validity)
     if (validated.idempotencyKey && this.idempotencyCache.has(validated.idempotencyKey)) {
       const cached = this.idempotencyCache.get(validated.idempotencyKey)!;
-      console.log(`[Idempotency] Returning cached dispatch creation for key: ${validated.idempotencyKey}`);
+      logger.info(`[Idempotency] Returning cached dispatch creation for key: ${validated.idempotencyKey}`);
       return cached.result;
     }
 
@@ -205,10 +206,10 @@ export class DispatchService {
           orderLines = (memoryOrder.lines || []).map(l => ({
             id: l.id,
             item_code: l.itemCode,
-            item_description: l.itemDescription || l.description,
+            item_description: l.itemDescription,
             order_qty: l.orderQty,
             dispatched_qty: l.dispatchedQty || 0,
-            rate: l.rate || l.unitPrice || 0
+            rate: l.rate || 0
           }));
         }
       }
@@ -268,7 +269,7 @@ export class DispatchService {
 
           if (existing) {
             if (existing.order_po === validated.orderPo && ['DRAFT', 'GENERATED', 'DISPATCH_READY'].includes(existing.status)) {
-              console.log(`Challan ${challanNo} already exists for order ${validated.orderPo}, updating existing record.`);
+              logger.info(`Challan ${challanNo} already exists for order ${validated.orderPo}, updating existing record.`);
               await this.db
                 .from('dispatch_challans')
                 .update({
@@ -417,8 +418,10 @@ export class DispatchService {
       }
 
       // Synchronize in-memory order status
+      // Note: OrderStage has no PARTIALLY_DISPATCHED state; keep the order at
+      // DISPATCHED only when fully dispatched, else at READY_TO_DISPATCH.
       if (!isDraftOrReady) {
-        ordersService.updateOrderStageDirectly(validated.orderPo, fullyDispatched ? 'DISPATCHED' : 'PARTIALLY_DISPATCHED', 8);
+        ordersService.updateOrderStageDirectly(validated.orderPo, fullyDispatched ? 'DISPATCHED' : 'READY_TO_DISPATCH', 8);
       } else {
         ordersService.updateOrderStageDirectly(validated.orderPo, 'READY_TO_DISPATCH', 7);
       }
@@ -660,7 +663,7 @@ export class DispatchService {
           lines = memoryOrder.lines.map(l => ({
             id: l.id,
             item_code: l.itemCode,
-            item_description: l.itemDescription || l.description,
+            item_description: l.itemDescription,
             order_qty: l.orderQty,
             dispatched_qty: l.dispatchedQty || 0
           }));

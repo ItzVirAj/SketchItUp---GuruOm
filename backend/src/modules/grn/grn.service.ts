@@ -226,7 +226,13 @@ export class GrnService {
       action: isQtyMismatched ? 'GRN_RECEIVED_WITH_MISMATCH' : 'GRN_RECEIVED_MATCHED',
       entityType: 'goods_receipt_notes',
       entityId: String(createdGrn.grnNo || createdGrn.id || ''),
-      afterState: { poNo: createdGrn.poNo, vendor: createdGrn.vendorName, receivedQty: createdGrn.receivedQty, status: createdGrn.status, isQtyMismatched },
+      afterState: { 
+        poNo: createdGrn.poNo, 
+        vendor: createdGrn.vendorName, 
+        receivedQty: validated.items.reduce((sum, item) => sum + (item.receivedQty || 0), 0), 
+        status: createdGrn.status, 
+        isQtyMismatched 
+      },
       metadata: {
         details: mismatchNotes ? `GRN ${createdGrn.grnNo} received with mismatch: ${mismatchNotes}` : `GRN ${createdGrn.grnNo} received and matched for PO ${createdGrn.poNo} from ${createdGrn.vendorName || 'vendor'}`,
         mismatch: isQtyMismatched ? { isMismatched: true, notes: mismatchNotes } : undefined

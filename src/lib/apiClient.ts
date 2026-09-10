@@ -21,30 +21,20 @@ export class ApiError extends Error {
   }
 }
 
-// In-memory access token storage with safe 15-minute session persistence
-let inMemoryAccessToken: string | null = (() => {
-  try {
-    const expiresAt = localStorage.getItem('stratum_session_expires_at');
-    if (expiresAt && parseInt(expiresAt, 10) > Date.now()) {
-      return localStorage.getItem('stratum_access_token');
-    }
-  } catch (_) {}
-  return null;
-})();
+// H-01: access token kept strictly in-memory (never persisted to localStorage).
+// A hard refresh has no token; the refresh path restores a fresh access token
+// from the httpOnly refresh cookie via the silent-refresh interceptor below.
+let inMemoryAccessToken: string | null = null;
 
 let isRefreshing = false;
 let refreshSubscribers: ((token: string) => void)[] = [];
 let authFailureListeners: (() => void)[] = [];
 
 export function setAccessToken(token: string | null) {
+  // H-01: in-memory only — never write the access token to localStorage, which is
+  // readable by any script on the page (XSS-exposed). Persistence is delegated to
+  // the httpOnly refresh cookie + silent refresh.
   inMemoryAccessToken = token;
-  try {
-    if (token) {
-      localStorage.setItem('stratum_access_token', token);
-    } else {
-      localStorage.removeItem('stratum_access_token');
-    }
-  } catch (_) {}
 }
 
 export function getAccessToken(): string | null {
@@ -59,10 +49,8 @@ export function onAuthFailure(callback: () => void) {
 }
 
 function notifyAuthFailure() {
+  // H-01: access token is in-memory only, so nothing to scrub from localStorage.
   inMemoryAccessToken = null;
-  try {
-    localStorage.removeItem('stratum_access_token');
-  } catch (_) {}
   authFailureListeners.forEach(cb => cb());
 }
 
@@ -129,11 +117,12 @@ async function executeRequest<T>(
   endpoint: string,
   body?: any,
   headers?: Record<string, string>,
-  retryCount = 0
+  retryCount = 0,
+  rawBody?: FormData
 ): Promise<T> {
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
   const requestHeaders: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(rawBody ? {} : { 'Content-Type': 'application/json' }), // let the browser set the multipart boundary
     ...headers
   };
 
@@ -146,7 +135,7 @@ async function executeRequest<T>(
       method,
       headers: requestHeaders,
       credentials: 'include', // Includes httpOnly refresh token cookie
-      body: body ? JSON.stringify(body) : undefined
+      body: rawBody ? rawBody : (body ? JSON.stringify(body) : undefined)
     });
 
     // 401 Interceptor: Try silent refresh once if unauthorized
@@ -168,7 +157,7 @@ async function executeRequest<T>(
             isRefreshing = false;
             onRefreshed(newToken);
             // Retry original request
-            return executeRequest<T>(method, endpoint, body, headers, 1);
+            return executeRequest<T>(method, endpoint, body, headers, 1, rawBody);
           } else {
             isRefreshing = false;
             notifyAuthFailure();
@@ -182,7 +171,7 @@ async function executeRequest<T>(
         return new Promise((resolve, reject) => {
           subscribeTokenRefresh(async (newToken) => {
             try {
-              const res = await executeRequest<T>(method, endpoint, body, headers, 1);
+              const res = await executeRequest<T>(method, endpoint, body, headers, 1, rawBody);
               resolve(res);
             } catch (err) {
               reject(err);
@@ -206,6 +195,10 @@ export const apiClient = {
 
   post<T>(endpoint: string, body?: any, headers?: Record<string, string>): Promise<T> {
     return executeRequest<T>('POST', endpoint, body, headers);
+  },
+
+  postFormData<T>(endpoint: string, formData: FormData, headers?: Record<string, string>): Promise<T> {
+    return executeRequest<T>('POST', endpoint, undefined, headers, 0, formData);
   },
 
   put<T>(endpoint: string, body?: any, headers?: Record<string, string>): Promise<T> {

@@ -3,6 +3,13 @@
 // Description: Server-side Permission Verification & ServerAdmin Guard Middleware.
 //              Fail-closed design: Every route independently re-verifies session
 //              and actor state from the database.
+//
+// H-04 (LEGACY STATUS): The CANONICAL authorization pipeline lives in
+// `rbac.middleware.ts` (`requirePermission` / `requireRole` / `requireCtaPermission`).
+// This file is the older verification-style middleware and is used by exactly two
+// modules today: `admin.routes.ts` (`requireServerAdmin`) and `dispatch.routes.ts`
+// (`requireEffectivePermission`). New routes should use `rbac.middleware.ts`; this
+// file is kept to avoid a risky one-shot migration of those two modules.
 // ============================================================================
 
 import { Request, Response, NextFunction } from 'express';

@@ -28,8 +28,8 @@ export const AccentColorSelector: React.FC<AccentColorSelectorProps> = ({
         }`}>
           Accent Color
         </label>
-        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 capitalize">
-          {accent} Active
+        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+          {availableAccents[accent]?.label || accent} Active
         </span>
       </div>
 

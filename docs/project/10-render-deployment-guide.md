@@ -123,6 +123,7 @@ Under the **Environment Variables** section in Render, click **Add Environment V
 > ```bash
 > node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 > ```
+> For details on managing distinct Supabase projects and keys across Local and Render environments, see [11-environment-and-database-separation.md](./11-environment-and-database-separation.md).
 
 #### B. Public Client Variables (Vite Build Parameters)
 

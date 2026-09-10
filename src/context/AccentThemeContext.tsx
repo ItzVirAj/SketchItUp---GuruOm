@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 
-export type AccentColor = 'blue' | 'teal' | 'orange' | 'red' | 'monochrome';
+export type AccentColor = 'blue' | 'teal' | 'orange' | 'red' | 'monochrome' | 'brand';
 
 export interface AccentThemeConfig {
   id: AccentColor;
@@ -111,10 +111,28 @@ export const ACCENT_PRESETS: Record<AccentColor, AccentThemeConfig> = {
     gradientFrom: '#F4F4F5',
     gradientTo: '#A1A1AA',
     dotColor: '#F4F4F5'
+  },
+  brand: {
+    id: 'brand',
+    label: 'Brand Colors',
+    primary: '#0A7E58',
+    hover: '#086B4A',
+    active: '#06573C',
+    textLight: '#0A7E58',
+    textDark: '#34D399',
+    softLight: 'rgba(10, 126, 88, 0.08)',
+    softDark: 'rgba(52, 211, 153, 0.12)',
+    borderLight: 'rgba(10, 126, 88, 0.30)',
+    borderDark: 'rgba(52, 211, 153, 0.25)',
+    ring: 'rgba(10, 126, 88, 0.50)',
+    shadow: 'rgba(10, 126, 88, 0.35)',
+    gradientFrom: '#0A7E58',
+    gradientTo: '#34D399',
+    dotColor: '#0A7E58'
   }
 };
 
-export const ACCENT_COLORS: AccentColor[] = ['blue', 'teal', 'orange', 'red', 'monochrome'];
+export const ACCENT_COLORS: AccentColor[] = ['blue', 'teal', 'orange', 'red', 'monochrome', 'brand'];
 
 const STORAGE_KEY = 'sketchitup-accent-color';
 
@@ -129,6 +147,28 @@ const AccentThemeContext = createContext<AccentThemeContextType | undefined>(und
 
 function applyAccentCssVariables(config: AccentThemeConfig) {
   const root = document.documentElement;
+  if (config.id === 'brand') {
+    // Brand Colors is scoped specifically to the Inventory page for now.
+    // Keep root on default blue so other pages remain unaffected.
+    const defaultPreset = ACCENT_PRESETS.blue;
+    root.setAttribute('data-accent', 'blue');
+    root.setAttribute('data-brand-accent-active', 'true');
+    root.style.setProperty('--accent-primary', defaultPreset.primary);
+    root.style.setProperty('--accent-hover', defaultPreset.hover);
+    root.style.setProperty('--accent-active', defaultPreset.active);
+    root.style.setProperty('--accent-text-light', defaultPreset.textLight);
+    root.style.setProperty('--accent-text-dark', defaultPreset.textDark);
+    root.style.setProperty('--accent-soft-light', defaultPreset.softLight);
+    root.style.setProperty('--accent-soft-dark', defaultPreset.softDark);
+    root.style.setProperty('--accent-border-light', defaultPreset.borderLight);
+    root.style.setProperty('--accent-border-dark', defaultPreset.borderDark);
+    root.style.setProperty('--accent-ring', defaultPreset.ring);
+    root.style.setProperty('--accent-shadow', defaultPreset.shadow);
+    root.style.setProperty('--accent-gradient-from', defaultPreset.gradientFrom);
+    root.style.setProperty('--accent-gradient-to', defaultPreset.gradientTo);
+    return;
+  }
+  root.removeAttribute('data-brand-accent-active');
   root.setAttribute('data-accent', config.id);
   root.style.setProperty('--accent-primary', config.primary);
   root.style.setProperty('--accent-hover', config.hover);
@@ -149,23 +189,24 @@ export const AccentThemeProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [accent, setAccentState] = useState<AccentColor>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved && (saved === 'blue' || saved === 'teal' || saved === 'orange' || saved === 'red' || saved === 'monochrome')) {
+      if (saved && ACCENT_COLORS.includes(saved as AccentColor)) {
         return saved as AccentColor;
       }
     } catch (_) {}
     return 'blue';
   });
 
-  const setAccent = (newAccent: AccentColor) => {
-    if (!ACCENT_COLORS.includes(newAccent)) {
-      newAccent = 'blue';
+  const setAccent = useCallback((newAccent: AccentColor) => {
+    let resolved = newAccent;
+    if (!ACCENT_COLORS.includes(resolved)) {
+      resolved = 'blue';
     }
-    setAccentState(newAccent);
+    setAccentState(resolved);
     try {
-      localStorage.setItem(STORAGE_KEY, newAccent);
+      localStorage.setItem(STORAGE_KEY, resolved);
     } catch (_) {}
-    applyAccentCssVariables(ACCENT_PRESETS[newAccent]);
-  };
+    applyAccentCssVariables(ACCENT_PRESETS[resolved]);
+  }, []);
 
   // Sync initial state to DOM
   useEffect(() => {
@@ -188,15 +229,15 @@ export const AccentThemeProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const currentTheme = useMemo(() => ACCENT_PRESETS[accent] || ACCENT_PRESETS.blue, [accent]);
 
+  const contextValue = useMemo(() => ({
+    accent,
+    setAccent,
+    currentTheme,
+    availableAccents: ACCENT_PRESETS
+  }), [accent, setAccent, currentTheme]);
+
   return (
-    <AccentThemeContext.Provider
-      value={{
-        accent,
-        setAccent,
-        currentTheme,
-        availableAccents: ACCENT_PRESETS
-      }}
-    >
+    <AccentThemeContext.Provider value={contextValue}>
       {children}
     </AccentThemeContext.Provider>
   );

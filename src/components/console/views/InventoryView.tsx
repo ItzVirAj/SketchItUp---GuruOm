@@ -25,7 +25,8 @@ import {
   History,
   RotateCcw,
   FileDiff,
-  TrendingUp
+  TrendingUp,
+  Sparkles
 } from 'lucide-react';
 import {
   StockItem,
@@ -56,6 +57,7 @@ import {
   reverseInventoryMovement
 } from '../../../services/supabaseServices';
 import { useAuth } from '../../../context/AuthContext';
+import { useAccentTheme } from '../../../context/AccentThemeContext';
 import { Modal } from '../../common/Modal';
 import { useUrlModal } from '../../../hooks/useUrlModal';
 import { evaluateGrnMismatch, evaluatePoAging } from '../../../utils/procurementEngine';
@@ -90,6 +92,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   onAdjustStock
 }) => {
   const { user } = useAuth();
+  const { accent } = useAccentTheme();
+  const isBrandAccent = accent === 'brand';
   const [subTab, setSubTab] = useState<'stock' | 'shortages' | 'purchases' | 'grn' | 'movements' | 'reconciliation'>('stock');
   const [selectedCategory, setSelectedCategory] = useState<InventoryCategoryKey>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -422,7 +426,55 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   const reorderCount = stockMasterRows.filter(s => (s.available || 0) <= (s.reorderLevel || 0) && (s.onHand || 0) > 0).length;
 
   return (
-    <div className="space-y-4 sm:space-y-6 font-sans select-none pb-4">
+    <div
+      data-accent={isBrandAccent ? 'brand' : undefined}
+      className={`space-y-4 sm:space-y-6 font-sans select-none pb-4 brand-theme-container ${
+        isBrandAccent ? 'brand-theme-active' : ''
+      }`}
+    >
+      {/* Brand Accent Banner & Pill (Shown ONLY when accent is set to 'Brand Colors') */}
+      {isBrandAccent && (
+        <div
+          className={`p-3.5 sm:p-4 rounded-2xl border flex items-center justify-between gap-3.5 backdrop-blur-xl transition-all ${
+            isDarkMode
+              ? 'bg-[#121815]/95 border-emerald-500/20 text-white shadow-[0_8px_32px_rgba(0,0,0,0.45)]'
+              : 'bg-[#F2F8F6] border-emerald-600/20 text-[#121815] shadow-[0_4px_24px_rgba(10,126,88,0.06)]'
+          }`}
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#109367] to-[#086B4A] text-white flex items-center justify-center shrink-0 shadow-sm shadow-emerald-900/40">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold tracking-tight">Synthesis Brand Theme</span>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${
+                    isDarkMode
+                      ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                      : 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                  }`}
+                >
+                  Active on Inventory
+                </span>
+              </div>
+              <p className={`text-[11px] truncate mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-[#5E827B]'}`}>
+                Deep Teal (#0A7E58) • Slate Grey (#5E827B) • Pale Aqua (#F2F8F6) • Black Forest (#121815)
+              </p>
+            </div>
+          </div>
+          <div className="hidden sm:flex items-center gap-2 shrink-0">
+            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-medium border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <span className="w-2 h-2 rounded-full bg-[#0A7E58]" />
+              Deep Teal
+            </span>
+            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-medium border border-slate-500/20 bg-slate-500/10 text-slate-600 dark:text-slate-300">
+              <span className="w-2 h-2 rounded-full bg-[#5E827B]" />
+              Slate Grey
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* ========================================================================= */}
       {/* ── MOBILE-FIRST TOP HEADER & QUICK ACTION BAR (< md) ──                   */}
@@ -451,7 +503,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     adjustStockModal.open({ itemId: target.code });
                   }
                 }}
-                className="min-h-[40px] px-3.5 py-2 rounded-xl bg-gradient-to-r from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer shrink-0 active:scale-[0.96] transition-transform font-mono"
+                className={`min-h-[40px] px-3.5 py-2 rounded-xl text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shrink-0 active:scale-[0.96] transition-transform font-mono ${
+                  isBrandAccent
+                    ? 'brand-btn-primary'
+                    : 'bg-gradient-to-r from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] shadow-md'
+                }`}
               >
                 <SlidersHorizontal className="w-3.5 h-3.5" />
                 <span>Adjust</span>
@@ -460,7 +516,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             {subTab === 'purchases' && (
               <button
                 onClick={() => createPoModal.open()}
-                className="min-h-[40px] px-3.5 py-2 rounded-xl bg-gradient-to-r from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer shrink-0 active:scale-[0.96] transition-transform font-mono"
+                className={`min-h-[40px] px-3.5 py-2 rounded-xl text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shrink-0 active:scale-[0.96] transition-transform font-mono ${
+                  isBrandAccent
+                    ? 'brand-btn-primary'
+                    : 'bg-gradient-to-r from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] shadow-md'
+                }`}
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>New PO</span>
@@ -469,7 +529,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             {subTab === 'grn' && (
               <button
                 onClick={() => createGrnModal.open()}
-                className="min-h-[40px] px-3.5 py-2 rounded-xl bg-gradient-to-r from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer shrink-0 active:scale-[0.96] transition-transform font-mono"
+                className={`min-h-[40px] px-3.5 py-2 rounded-xl text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shrink-0 active:scale-[0.96] transition-transform font-mono ${
+                  isBrandAccent
+                    ? 'brand-btn-primary'
+                    : 'bg-gradient-to-r from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] shadow-md'
+                }`}
               >
                 <Truck className="w-3.5 h-3.5" />
                 <span>GRN</span>
@@ -576,7 +640,15 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       {/* ── DESKTOP HEADER & KPI ROW (≥ md) ──                                      */}
       {/* ========================================================================= */}
       <div className="hidden md:block space-y-4">
-        <section className={`overflow-hidden rounded-[24px] border ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'}`}>
+        <section className={`overflow-hidden rounded-[24px] border transition-all ${
+          isBrandAccent
+            ? isDarkMode
+              ? 'border-emerald-500/20 bg-[#121815] shadow-[0_12px_36px_rgba(0,0,0,0.5)]'
+              : 'border-emerald-600/20 bg-[#F2F8F6] shadow-[0_12px_36px_rgba(10,126,88,0.06)]'
+            : isDarkMode
+              ? 'border-white/[0.08] bg-[#121215]'
+              : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
+        }`}>
           <div className="flex items-center justify-between gap-6 px-6 py-5">
             <div className="min-w-0">
               <div className="mb-1.5 flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">
@@ -608,7 +680,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                       adjustStockModal.open({ itemId: target.code });
                     }
                   }}
-                  className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96]"
+                  className={`flex h-11 shrink-0 items-center gap-2 rounded-xl px-4 text-xs font-extrabold text-white transition-ui active:scale-[0.96] cursor-pointer ${
+                    isBrandAccent
+                      ? 'brand-btn-primary'
+                      : 'bg-[var(--accent-primary)] shadow-[0_8px_20px_var(--accent-shadow)] hover:bg-[var(--accent-hover)]'
+                  }`}
                 >
                   <SlidersHorizontal className="h-4 w-4" />
                   Adjust Stock
@@ -617,7 +693,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               {subTab === 'purchases' && (
                 <button
                   onClick={() => createPoModal.open()}
-                  className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96]"
+                  className={`flex h-11 shrink-0 items-center gap-2 rounded-xl px-4 text-xs font-extrabold text-white transition-ui active:scale-[0.96] cursor-pointer ${
+                    isBrandAccent
+                      ? 'brand-btn-primary'
+                      : 'bg-[var(--accent-primary)] shadow-[0_8px_20px_var(--accent-shadow)] hover:bg-[var(--accent-hover)]'
+                  }`}
                 >
                   <Plus className="h-4 w-4" />
                   Create Purchase Order
@@ -626,7 +706,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               {subTab === 'grn' && (
                 <button
                   onClick={() => createGrnModal.open()}
-                  className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96]"
+                  className={`flex h-11 shrink-0 items-center gap-2 rounded-xl px-4 text-xs font-extrabold text-white transition-ui active:scale-[0.96] cursor-pointer ${
+                    isBrandAccent
+                      ? 'brand-btn-primary'
+                      : 'bg-[var(--accent-primary)] shadow-[0_8px_20px_var(--accent-shadow)] hover:bg-[var(--accent-hover)]'
+                  }`}
                 >
                   <Truck className="h-4 w-4" />
                   Receive Material (GRN)

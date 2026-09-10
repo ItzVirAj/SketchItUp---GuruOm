@@ -8,6 +8,8 @@ import {
   executeOrderStageTransition
 } from '../../../../src/utils/orderStateMachine';
 import { auditService } from '../audit/audit.service';
+import { getNextDocumentNumber } from '../../utils/documentNumbers';
+import { logger } from '../../utils/logger';
 
 export class OrderStateMachineService {
   private db = getDbClient();
@@ -98,7 +100,9 @@ export class OrderStateMachineService {
             const p = action.payload;
             await this.db.from('purchase_requisitions').insert({
               id: require('crypto').randomUUID(),
-              req_number: p.reqNumber,
+              // C-02: the persisted PR number is minted from the backend's atomic
+              // document_sequences — never trust a client/preview value for it.
+              req_number: await getNextDocumentNumber('PR', 'PR'),
               order_id: ctx.orderId,
               order_po: ctx.poNo,
               item_code: p.itemCode,
@@ -110,7 +114,7 @@ export class OrderStateMachineService {
               created_by: 'System Material Auto-Checker'
             });
           } catch (dbErr) {
-            console.warn('Purchase requisition DB insert fallback:', dbErr);
+            logger.warn('Purchase requisition DB insert fallback:', dbErr);
           }
         }
 

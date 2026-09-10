@@ -1,4 +1,6 @@
+// @ts-ignore – redlock's package.json "exports" map does not expose its .d.ts; types exist at dist/index.d.ts but are unreachable under moduleResolution:bundler
 import Redlock from 'redlock';
+// @ts-ignore
 import type { Lock } from 'redlock';
 
 // Support both ESM (default export is class) and CJS bundles (default export wrapped on object)

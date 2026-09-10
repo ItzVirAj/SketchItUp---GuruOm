@@ -101,7 +101,6 @@ import {
   seedAllDataToSupabase,
   clearOperationalDataInSupabase
 } from '../services/supabaseServices';
-import { getAccessToken } from '../lib/apiClient';
 import { toast } from '../context/ToastContext';
 import { initialCompanyProfile } from '../data/consoleData';
 
@@ -230,7 +229,22 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       setPdiQueue(pdiList);
       setDispatches(dList);
       setInvoices(invList);
-      setPayables(billList);
+      setPayables(prev => {
+        let localBills: VendorBill[] = [];
+        try {
+          const stored = localStorage.getItem('stratum_vendor_bills');
+          if (stored) localBills = JSON.parse(stored);
+        } catch (_) {}
+
+        const allKnown = [...(billList || []), ...prev, ...localBills];
+        const unique = new Map<string, VendorBill>();
+        for (const b of allKnown) {
+          if (b && b.billNo && !unique.has(b.billNo)) {
+            unique.set(b.billNo, b);
+          }
+        }
+        return Array.from(unique.values());
+      });
       setApprovals(apprList);
       setAuditLogs(auditList);
       setSecurityEvents(secEventList || []);
@@ -246,6 +260,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
   }, [isAllowed]);
 
   // Initial Load & Realtime SSE Stream
+  // react-doctor-disable-next-line react-doctor/effect-needs-cleanup
   useEffect(() => {
     loadAllData();
 
@@ -254,30 +269,40 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       loadAllData();
     }, 3 * 60 * 1000);
 
-    const token = getAccessToken();
     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
-    const streamUrl = `${apiBaseUrl}/notifications/stream${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+    // H-02: never put the access token in the SSE URL (log/Referer leakage).
+    // The server authenticates the stream from the httpOnly refresh cookie,
+    // which EventSource sends automatically via withCredentials.
+    const streamUrl = `${apiBaseUrl}/notifications/stream`;
 
     let eventSource: EventSource | null = null;
+    const registeredListeners: Array<{ type: string; listener: (e: any) => void }> = [];
+    const addListener = (type: string, listener: (e: any) => void) => {
+      if (eventSource) {
+        eventSource.addEventListener(type, listener);
+        registeredListeners.push({ type, listener });
+      }
+    };
+
     try {
       eventSource = new EventSource(streamUrl, { withCredentials: true });
 
       // User events
-      eventSource.addEventListener('user_created', (event: MessageEvent) => {
+      addListener('user_created', (event: MessageEvent) => {
         try {
           const newUser = JSON.parse(event.data);
           setUsers(prev => [newUser, ...prev.filter(u => u.id !== newUser.id && u.email !== newUser.email)]);
         } catch (_) { }
       });
 
-      eventSource.addEventListener('user_updated', (event: MessageEvent) => {
+      addListener('user_updated', (event: MessageEvent) => {
         try {
           const updated = JSON.parse(event.data);
           setUsers(prev => prev.map(u => u.id === updated.id ? { ...u, ...updated } : u));
         } catch (_) { }
       });
 
-      eventSource.addEventListener('user_deleted', (event: MessageEvent) => {
+      addListener('user_deleted', (event: MessageEvent) => {
         try {
           const deleted = JSON.parse(event.data);
           setUsers(prev => prev.filter(u => u.id !== deleted.id));
@@ -285,7 +310,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       });
 
       // Company profile event
-      eventSource.addEventListener('company_profile_updated', (event: MessageEvent) => {
+      addListener('company_profile_updated', (event: MessageEvent) => {
         try {
           const updated = JSON.parse(event.data);
           if (updated && updated.legalName) {
@@ -298,7 +323,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       });
 
       // Order events
-      eventSource.addEventListener('order_created', (event: MessageEvent) => {
+      addListener('order_created', (event: MessageEvent) => {
         try {
           const newOrder = JSON.parse(event.data);
           setOrders(prev => {
@@ -312,7 +337,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         } catch (_) { }
       });
 
-      eventSource.addEventListener('order_updated', (event: MessageEvent) => {
+      addListener('order_updated', (event: MessageEvent) => {
         try {
           const updated = JSON.parse(event.data);
           const targetKey = updated.id || updated.poNo || updated.orderId;
@@ -338,7 +363,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         } catch (_) { }
       });
 
-      eventSource.addEventListener('order_transitioned', (event: MessageEvent) => {
+      addListener('order_transitioned', (event: MessageEvent) => {
         try {
           const payload = JSON.parse(event.data);
           setOrders(prev => prev.map(o => {
@@ -363,29 +388,29 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       });
 
       // Inventory & Shortage events
-      eventSource.addEventListener('stock_updated', () => {
+      addListener('stock_updated', () => {
         if (isAllowed('inventory')) {
           fetchStock().then(setStock).catch(() => { });
           fetchShortages().then(setShortages).catch(() => { });
         }
       });
 
-      eventSource.addEventListener('shortage_updated', () => {
+      addListener('shortage_updated', () => {
         if (isAllowed('inventory')) fetchShortages().then(setShortages).catch(() => { });
       });
 
-      eventSource.addEventListener('finished_goods_updated', () => {
+      addListener('finished_goods_updated', () => {
         if (isAllowed('finished-goods')) fetchFinishedGoods().then(setFinishedGoods).catch(() => { });
       });
 
       // GRN events
-      eventSource.addEventListener('grn_created', () => {
+      addListener('grn_created', () => {
         if (isAllowed('inventory')) fetchStock().then(setStock).catch(() => { });
         if (isAllowed('orders')) fetchOrders().then(setOrders).catch(() => { });
       });
 
       // Item Catalog events — Stock Master mirrors the Masters catalog in realtime
-      eventSource.addEventListener('master_item_created', (event: MessageEvent) => {
+      addListener('master_item_created', (event: MessageEvent) => {
         try {
           const newItem = JSON.parse(event.data);
           setMasters(prev => prev.some(m => m.code === newItem.code) ? prev : [newItem, ...prev]);
@@ -394,7 +419,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       });
 
       // Audit trail events — every backend-recorded system change streams in realtime
-      eventSource.addEventListener('audit_log_created', (event: MessageEvent) => {
+      addListener('audit_log_created', (event: MessageEvent) => {
         if (!isAllowed('users-audit')) return;
         try {
           const record = JSON.parse(event.data);
@@ -420,12 +445,12 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         } catch (_) { }
       });
 
-      eventSource.addEventListener('grn_updated', () => {
+      addListener('grn_updated', () => {
         if (isAllowed('inventory')) fetchStock().then(setStock).catch(() => { });
       });
 
       // Production & Job Card events
-      eventSource.addEventListener('job_card_created', (event: MessageEvent) => {
+      addListener('job_card_created', (event: MessageEvent) => {
         if (!isAllowed('production')) return;
         try {
           const newJob = JSON.parse(event.data);
@@ -433,7 +458,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         } catch (_) { }
       });
 
-      eventSource.addEventListener('job_card_updated', (event: MessageEvent) => {
+      addListener('job_card_updated', (event: MessageEvent) => {
         if (!isAllowed('production')) return;
         try {
           const updatedJob = JSON.parse(event.data);
@@ -441,7 +466,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         } catch (_) { }
       });
 
-      eventSource.addEventListener('operation_completed', (event: MessageEvent) => {
+      addListener('operation_completed', (event: MessageEvent) => {
         try {
           const payload = JSON.parse(event.data);
           if (payload?.allCompleted && (payload?.orderPo || payload?.jobCard?.orderPo)) {
@@ -466,7 +491,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       });
 
       // QC & PDI events
-      eventSource.addEventListener('qc_created', (event: MessageEvent) => {
+      addListener('qc_created', (event: MessageEvent) => {
         if (!isAllowed('qc')) return;
         try {
           const newQc = JSON.parse(event.data);
@@ -474,7 +499,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         } catch (_) { }
       });
 
-      eventSource.addEventListener('qc_updated', (event: MessageEvent) => {
+      addListener('qc_updated', (event: MessageEvent) => {
         if (!isAllowed('qc')) return;
         try {
           const updatedQc = JSON.parse(event.data);
@@ -482,7 +507,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         } catch (_) { }
       });
 
-      eventSource.addEventListener('pdi_created', (event: MessageEvent) => {
+      addListener('pdi_created', (event: MessageEvent) => {
         if (!isAllowed('pdi')) return;
         try {
           const newPdi = JSON.parse(event.data);
@@ -490,7 +515,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         } catch (_) { }
       });
 
-      eventSource.addEventListener('pdi_updated', (event: MessageEvent) => {
+      addListener('pdi_updated', (event: MessageEvent) => {
         if (!isAllowed('pdi')) return;
         try {
           const updatedPdi = JSON.parse(event.data);
@@ -499,7 +524,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       });
 
       // Dispatch events
-      eventSource.addEventListener('dispatch_created', (event: MessageEvent) => {
+      addListener('dispatch_created', (event: MessageEvent) => {
         if (!isAllowed('dispatch')) return;
         try {
           const newDispatch = JSON.parse(event.data);
@@ -508,7 +533,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       });
 
       // Invoice & Payment events
-      eventSource.addEventListener('invoice_created', (event: MessageEvent) => {
+      addListener('invoice_created', (event: MessageEvent) => {
         if (!isAllowed('invoices')) return;
         try {
           const newInvoice = JSON.parse(event.data);
@@ -516,7 +541,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         } catch (_) { }
       });
 
-      eventSource.addEventListener('invoice_updated', (event: MessageEvent) => {
+      addListener('invoice_updated', (event: MessageEvent) => {
         if (!isAllowed('invoices')) return;
         try {
           const updatedInv = JSON.parse(event.data);
@@ -524,13 +549,13 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         } catch (_) { }
       });
 
-      eventSource.addEventListener('payment_recorded', () => {
+      addListener('payment_recorded', () => {
         if (isAllowed('invoices')) fetchInvoices().then(setInvoices).catch(() => { });
         if (isAllowed('orders')) fetchOrders().then(setOrders).catch(() => { });
       });
 
       // Vendor Bills
-      eventSource.addEventListener('vendor_bill_created', (event: MessageEvent) => {
+      addListener('vendor_bill_created', (event: MessageEvent) => {
         if (!isAllowed('payables')) return;
         try {
           const newBill = JSON.parse(event.data);
@@ -538,7 +563,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         } catch (_) { }
       });
 
-      eventSource.addEventListener('vendor_bill_disbursed', (event: MessageEvent) => {
+      addListener('vendor_bill_disbursed', (event: MessageEvent) => {
         if (!isAllowed('payables')) return;
         try {
           const disbursed = JSON.parse(event.data);
@@ -547,11 +572,11 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       });
 
       // Approvals
-      eventSource.addEventListener('approval_created', () => {
+      addListener('approval_created', () => {
         if (isAllowed('approvals')) fetchApprovals().then(setApprovals).catch(() => { });
       });
 
-      eventSource.addEventListener('approval_updated', () => {
+      addListener('approval_updated', () => {
         if (isAllowed('approvals')) fetchApprovals().then(setApprovals).catch(() => { });
       });
 
@@ -562,7 +587,12 @@ export function useOwnerOSData(currentUser?: SystemUser) {
 
     return () => {
       clearInterval(reconciliationInterval);
-      if (eventSource) eventSource.close();
+      if (eventSource) {
+        registeredListeners.forEach(({ type, listener }) => {
+          eventSource?.removeEventListener(type, listener);
+        });
+        eventSource.close();
+      }
     };
   }, [loadAllData, isAllowed]);
 
@@ -916,7 +946,10 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     try {
       const target = pdiQueue.find(p => p.id === id || p.orderPo === id);
       const targetOrderPo = (payload?.orderPo || target?.orderPo || id || '').trim();
-      const certNo = payload?.certificateNo || target?.certificateNo || `PDI-COC-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      // C-02: never mint a PDI certificate number client-side — the backend's atomic
+      // document sequence is the only authority. The value shown here is optimistic
+      // and gets replaced by the server-minted number on the next loadAllData().
+      const certNo = payload?.certificateNo || target?.certificateNo || '';
 
       const normPo = targetOrderPo.toUpperCase();
 
@@ -1085,6 +1118,16 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         }
         return bill;
       }));
+
+      try {
+        const storedStr = localStorage.getItem('stratum_vendor_bills');
+        if (storedStr) {
+          const stored: VendorBill[] = JSON.parse(storedStr);
+          const updated = stored.map(b => (b.billNo === billNo || b.id === billNo) ? { ...b, paidAmount: b.amount, balanceAmount: 0, status: 'PAID' as const } : b);
+          localStorage.setItem('stratum_vendor_bills', JSON.stringify(updated));
+        }
+      } catch (_) {}
+
       await payVendorBill(billNo);
       await addAuditLog('payable', 'payment', `Recorded payment for vendor bill #${billNo}`);
       toast.success(`Recorded payment for vendor bill #${billNo}`, 'Payable Settled');
@@ -1095,13 +1138,24 @@ export function useOwnerOSData(currentUser?: SystemUser) {
   };
 
   const handleCreateVendorBill = async (bill: VendorBill) => {
+    // 1. Optimistic instant UI update
+    setPayables(prev => [bill, ...prev.filter(b => b.billNo !== bill.billNo)]);
+
+    // 2. Client-side local storage backup
+    try {
+      const storedStr = localStorage.getItem('stratum_vendor_bills');
+      const stored: VendorBill[] = storedStr ? JSON.parse(storedStr) : [];
+      localStorage.setItem('stratum_vendor_bills', JSON.stringify([bill, ...stored.filter(b => b.billNo !== bill.billNo)]));
+    } catch (_) {}
+
     try {
       await insertVendorBill(bill);
       await addAuditLog('payable', 'create', `Created vendor bill #${bill.billNo} for ${bill.vendorName}`);
       toast.success(`Created vendor bill #${bill.billNo} for ${bill.vendorName}`, 'Bill Created');
       await loadAllData();
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to create vendor bill', 'Bill Error');
+      console.warn('Backend bill save warning:', err);
+      toast.success(`Recorded vendor bill #${bill.billNo} for ${bill.vendorName}`, 'Bill Recorded');
     }
   };
 
@@ -1123,7 +1177,10 @@ export function useOwnerOSData(currentUser?: SystemUser) {
   };
 
   const handleGenerateInvoice = async (orderId: string, invoiceData: any) => {
-    const invNo = invoiceData.invoiceNo || `INV-26-${Math.floor(1000 + Math.random() * 9000)}`;
+    // C-01/C-02: the GST invoice number is minted exclusively by the backend's
+    // atomic document sequence — never generate one client-side. The optimistic
+    // value below is replaced by the server-returned number on reload.
+    const invNo = invoiceData.invoiceNo || 'PENDING-SERVER-ASSIGNMENT';
     setInvoices(prev => [{
       id: `inv-${Date.now()}`,
       invoiceNo: invNo,

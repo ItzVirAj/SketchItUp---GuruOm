@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { apiClient, setAccessToken, onAuthFailure } from '../lib/apiClient';
 import { SystemUser, UserRole } from '../types/console';
 import { AlertTriangle, Clock, RefreshCw, ShieldAlert, LogOut } from 'lucide-react';
@@ -19,7 +19,6 @@ const SETTINGS_STORAGE_KEY = 'guruom_session_security_settings';
 const SESSION_START_KEY = 'guruom_session_started_at';
 const LAST_ACTIVITY_KEY = 'guruom_last_activity_at';
 const USER_STORAGE_KEY = 'stratum_user';
-const ACCESS_TOKEN_KEY = 'stratum_access_token';
 const SESSION_EXPIRY_KEY = 'stratum_session_expires_at';
 
 export function loadSessionSecuritySettings(): SessionSecuritySettings {
@@ -117,7 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem(SESSION_EXPIRY_KEY, (now + maxMs).toString());
 
       if (token) {
-        localStorage.setItem(ACCESS_TOKEN_KEY, token);
+        // H-01: access token lives in-memory only — never persist it to localStorage.
         setAccessToken(token);
       }
     } catch (e) {
@@ -130,7 +129,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       localStorage.removeItem(USER_STORAGE_KEY);
       localStorage.removeItem(SESSION_EXPIRY_KEY);
-      localStorage.removeItem(ACCESS_TOKEN_KEY);
       localStorage.removeItem(SESSION_START_KEY);
       localStorage.removeItem(LAST_ACTIVITY_KEY);
     } catch (_) {}
@@ -168,7 +166,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const savedUserStr = localStorage.getItem(USER_STORAGE_KEY);
         const savedStartedAtStr = localStorage.getItem(SESSION_START_KEY);
         const savedActivityStr = localStorage.getItem(LAST_ACTIVITY_KEY);
-        const savedToken = localStorage.getItem(ACCESS_TOKEN_KEY);
         const settings = loadSessionSecuritySettings();
 
         const now = Date.now();
@@ -185,12 +182,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (savedUserStr && !isMaxExpired && !isIdleExpired) {
           const parsedUser = JSON.parse(savedUserStr);
-          if (savedToken) {
-            setAccessToken(savedToken);
-          }
+          // H-01: no access token is restored from localStorage — the fresh
+          // access token is obtained below via silent refresh using the
+          // httpOnly refresh cookie (withCredentials is already set on apiClient).
           if (mounted) {
             setUser(parsedUser);
-            setSession({ access_token: savedToken || 'stratum_session' });
+            setSession({ access_token: 'stratum_session' });
             setProfile(parsedUser);
             setSessionStartedAt(startedAt);
             setLastActivityAt(lastActive);
@@ -344,7 +341,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [user]);
 
-  const signIn = async (email: string, password?: string) => {
+  const signIn = useCallback(async (email: string, password?: string) => {
     setLoading(true);
     const cleanEmail = email.trim().toLowerCase();
 
@@ -368,9 +365,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
       return { error: err instanceof Error ? err : new Error(err?.message || 'Failed to sign in.') };
     }
-  };
+  }, []);
 
-  const signUp = async (email: string, password?: string, fullName?: string, role: UserRole = 'OPERATOR') => {
+  const signUp = useCallback(async (email: string, password?: string, fullName?: string, role: UserRole = 'OPERATOR') => {
     setLoading(true);
     const cleanEmail = email.trim().toLowerCase();
 
@@ -388,9 +385,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
       return { error: err instanceof Error ? err : new Error(err?.message || 'Failed to provision user.') };
     }
-  };
+  }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     setLoading(true);
     try {
       await apiClient.post('/auth/logout');
@@ -400,9 +397,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       purgeSession();
       setLoading(false);
     }
-  };
+  }, []);
 
-  const resetPassword = async (email: string) => {
+  const resetPassword = useCallback(async (email: string) => {
     try {
       const cleanEmail = email.trim().toLowerCase();
       const res = await apiClient.post<{ success: boolean; message: string }>('/auth/forgot-password', {
@@ -412,9 +409,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err: any) {
       return { error: null, message: 'If this email address is registered, a password reset link has been dispatched to your inbox.' };
     }
-  };
+  }, []);
 
-  const confirmPasswordReset = async (token: string, newPassword: string) => {
+  const confirmPasswordReset = useCallback(async (token: string, newPassword: string) => {
     try {
       const res = await apiClient.post<{ success: boolean; message: string }>('/auth/reset-password', {
         token: token.trim(),
@@ -424,9 +421,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err: any) {
       return { error: err instanceof Error ? err : new Error(err?.message || 'Failed to reset password.') };
     }
-  };
+  }, []);
 
-  const refreshProfile = async () => {
+  const refreshProfile = useCallback(async () => {
     try {
       const res = await apiClient.get<{ user: SystemUser }>('/auth/me');
       if (res?.user) {
@@ -437,28 +434,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (e) {
       console.warn('Failed to refresh user profile from server:', e);
     }
-  };
+  }, []);
+
+  const contextValue = useMemo(() => ({
+    user,
+    session,
+    profile,
+    loading,
+    sessionSettings,
+    updateSessionSettings,
+    lastActivityAt,
+    sessionStartedAt,
+    signIn,
+    signUp,
+    signOut,
+    resetPassword,
+    confirmPasswordReset,
+    refreshProfile,
+    resetIdleTimer
+  }), [
+    user,
+    session,
+    profile,
+    loading,
+    sessionSettings,
+    updateSessionSettings,
+    lastActivityAt,
+    sessionStartedAt,
+    signIn,
+    signUp,
+    signOut,
+    resetPassword,
+    confirmPasswordReset,
+    refreshProfile,
+    resetIdleTimer
+  ]);
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        session,
-        profile,
-        loading,
-        sessionSettings,
-        updateSessionSettings,
-        lastActivityAt,
-        sessionStartedAt,
-        signIn,
-        signUp,
-        signOut,
-        resetPassword,
-        confirmPasswordReset,
-        refreshProfile,
-        resetIdleTimer
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
 
       {/* Floating Inactivity Warning Modal */}

@@ -12,6 +12,10 @@
  * 8. Standard Time vs. Actual Time Telemetry & Machine Utilization % KPIs.
  */
 
+// C-02: module-level monotonic counter used by the (rare, no-crypto) fallback for
+// job-card ID suffix generation — never Math.random().
+let _jobCardSuffixCounter = 0;
+
 export const PRODUCTION_ERROR_CODES = {
   ERR_ROUTE_CARD_REQUIRED: 'ERR_ROUTE_CARD_REQUIRED',
   ERR_MATERIAL_NOT_ACCEPTED_QC: 'ERR_MATERIAL_NOT_ACCEPTED_QC',
@@ -206,9 +210,18 @@ export function generateJobCardFromRouteCard(params: {
 
   const sortedSteps = [...params.routeSteps].sort((a, b) => a.sequenceNo - b.sequenceNo);
   const now = Date.now();
-  const salt = Math.floor(1000 + Math.random() * 9000);
+  const randArr = new Uint16Array(1);
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    crypto.getRandomValues(randArr);
+  } else {
+    // C-02: never use Math.random() in ID generation. Fall back to a timestamp-derived
+    // value when crypto is unavailable — collision-prone randomness is worse than
+    // a deterministic, monotonically-increasing suffix.
+    randArr[0] = (Date.now() ^ (++_jobCardSuffixCounter)) & 0xffff;
+  }
+  const suffix = 1000 + (randArr[0] % 9000);
   const operations: JobCardOperation[] = sortedSteps.map((step, idx) => ({
-    id: `jco-${now}-${idx}-${step.sequenceNo}-${salt}`,
+    id: `jco-${now}-${idx}-${step.sequenceNo}-${suffix}`,
     jobCardId: params.jobNo,
     jobNo: params.jobNo,
     sequenceNo: step.sequenceNo,
@@ -229,7 +242,7 @@ export function generateJobCardFromRouteCard(params: {
   const initialStep = sortedSteps[0]?.sequenceNo || 10;
 
   const jobCard: JobCard = {
-    id: `jc-${now}-${salt}`,
+    id: `jc-${now}-${suffix}`,
     jobNo: params.jobNo,
     orderId: params.orderId,
     orderPo: params.orderPo,

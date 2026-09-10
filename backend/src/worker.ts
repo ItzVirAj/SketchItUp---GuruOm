@@ -6,6 +6,7 @@ import { publishTenantEvent } from './lib/pubsub';
 import { authService } from './modules/auth/auth.service';
 import { attachmentsService } from './modules/attachments/attachments.service';
 import { getDbClient } from './config/database';
+import { logger } from './utils/logger';
 
 const db = getDbClient();
 
@@ -39,7 +40,7 @@ trailer
  */
 async function processGenerateInvoicePdf(job: Job) {
   const { invoiceId, invoiceNo, customerName, totalAmount, tenantId, recipientEmail } = job.data;
-  console.log(`📄 [Worker:PDF] Starting invoice PDF pipeline for ${invoiceNo} (${customerName}, ₹${totalAmount})`);
+  logger.info(`📄 [Worker:PDF] Starting invoice PDF pipeline for ${invoiceNo} (${customerName}, ₹${totalAmount})`);
 
   const redis = getRedisClient();
   const pdfDedupeKey = `pdf_attachment_registered:${invoiceNo}`;
@@ -48,7 +49,7 @@ async function processGenerateInvoicePdf(job: Job) {
   if (isRedisConnected()) {
     const existing = await redis.get(pdfDedupeKey);
     if (existing) {
-      console.log(`ℹ️ [Worker:PDF] Clean attachment for Invoice ${invoiceNo} already exists (${existing}). Skipping.`);
+      logger.info(`ℹ️ [Worker:PDF] Clean attachment for Invoice ${invoiceNo} already exists (${existing}). Skipping.`);
       return { status: 'already_generated', attachmentId: existing };
     }
   }
@@ -168,7 +169,7 @@ async function updateInvoiceStatus(
 
 async function processSendEmail(job: Job) {
   const { to, subject, html, messageId, tenantId } = job.data;
-  console.log(`📧 [Worker:Email] Outbound email to ${to} (Subject: "${subject}")`);
+  logger.info(`📧 [Worker:Email] Outbound email to ${to} (Subject: "${subject}")`);
 
   const redis = getRedisClient();
   const dedupeKey = `email_sent:${messageId || job.id}`;
@@ -177,7 +178,7 @@ async function processSendEmail(job: Job) {
   if (isRedisConnected() && messageId) {
     const isSent = await redis.get(dedupeKey);
     if (isSent) {
-      console.log(`ℹ️ [Worker:Email] Email "${messageId}" was already delivered. Skipping duplicate.`);
+      logger.info(`ℹ️ [Worker:Email] Email "${messageId}" was already delivered. Skipping duplicate.`);
       return { status: 'already_sent', to, messageId };
     }
   }
@@ -190,13 +191,13 @@ async function processSendEmail(job: Job) {
     await redis.setex(dedupeKey, 86400, 'sent');
   }
 
-  console.log(`✅ [Worker:Email] Email delivered to ${to}`);
+  logger.info(`✅ [Worker:Email] Email delivered to ${to}`);
   return { status: 'sent', to, subject };
 }
 
 async function processCreateNotification(job: Job) {
   const { name, message, severity, tenantId } = job.data;
-  console.log(`🔔 [Worker:Notify] Notification created: "${name}" (${severity})`);
+  logger.info(`🔔 [Worker:Notify] Notification created: "${name}" (${severity})`);
 
   await publishTenantEvent(tenantId, 'NOTIFICATION_CREATED', {
     name,
@@ -235,18 +236,18 @@ export function startWorker(): Worker {
   );
 
   worker.on('ready', () => {
-    console.log('⚡ [BullMQ Worker] Online and processing queued jobs.');
+    logger.info('⚡ [BullMQ Worker] Online and processing queued jobs.');
   });
 
   worker.on('completed', (job: Job) => {
-    console.log(`✅ [BullMQ Worker] Job ${job.id} (${job.name}) completed.`);
+    logger.info(`✅ [BullMQ Worker] Job ${job.id} (${job.name}) completed.`);
   });
 
   worker.on('failed', async (job: Job | undefined, err: Error) => {
-    console.error(`❌ [BullMQ Worker] Job ${job?.id} (${job?.name}) failed:`, err.message);
+    logger.error(`❌ [BullMQ Worker] Job ${job?.id} (${job?.name}) failed:`, err.message);
 
     if (job && job.attemptsMade >= (job.opts.attempts || 3)) {
-      console.error(`🚨 [BullMQ Worker] Job ${job.id} exhausted retries (Dead-Letter).`);
+      logger.error(`🚨 [BullMQ Worker] Job ${job.id} exhausted retries (Dead-Letter).`);
       try {
         if (authService && typeof authService.logSecurityEvent === 'function') {
           await authService.logSecurityEvent({
@@ -273,11 +274,11 @@ export function startWorker(): Worker {
 }
 
 if (process.argv[1]?.endsWith('worker.ts') || process.argv[1]?.endsWith('worker.js')) {
-  console.log('🚀 Launching standalone BullMQ worker process...');
+  logger.info('🚀 Launching standalone BullMQ worker process...');
   const worker = startWorker();
 
   const shutdown = async () => {
-    console.log('Stopping BullMQ worker gracefully...');
+    logger.info('Stopping BullMQ worker gracefully...');
     await worker.close();
     process.exit(0);
   };

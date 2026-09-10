@@ -1,852 +1,1231 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   AlertCircle,
   ArrowRight,
+  ArrowUpRight,
   Building2,
   Check,
+  CheckCircle2,
+  ChevronRight,
   Eye,
   EyeOff,
   KeyRound,
+  Layers3,
+  Loader2,
   Lock,
   Mail,
   Moon,
   ShieldCheck,
   Sun,
-  X
+  X,
 } from 'lucide-react';
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useAuth } from '../../context/AuthContext';
 import { ApiError } from '../../lib/apiClient';
 
-const SAVED_CREDENTIALS_KEY = 'guruom_remember_me_7d';
+const REMEMBERED_EMAIL_KEY = 'owneros_remembered_email_v1';
+const LEGACY_CREDENTIALS_KEY = 'guruom_remember_me_7d';
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 interface LoginPageProps {
   onLoginSuccess?: (email: string) => void;
   isDarkMode?: boolean;
   onToggleTheme?: () => void;
+  /** "split" shows the OwnerOS showcase panel. "centered" matches the original single-card layout. */
+  variant?: 'split' | 'centered';
 }
+
+type Notice = {
+  type: 'error' | 'warning' | 'success';
+  message: string;
+};
+
+type FieldErrors = {
+  email?: string;
+  password?: string;
+};
+
+type ThemeVariables = React.CSSProperties & {
+  [key: `--${string}`]: string;
+};
+
+/* -------------------------------------------------------------------------- */
+/* Design tokens — matched to the original obsidian + cobalt system            */
+/* -------------------------------------------------------------------------- */
+
+const getThemeVariables = (isDarkMode: boolean): ThemeVariables =>
+  isDarkMode
+    ? {
+      colorScheme: 'dark',
+      '--page': '#090a0f',
+      '--surface': 'rgba(15, 17, 24, 0.85)',
+      '--surface-soft': 'rgba(255, 255, 255, 0.04)',
+      '--surface-hover': 'rgba(255, 255, 255, 0.07)',
+      '--input': 'rgba(0, 0, 0, 0.35)',
+      '--text': '#e8e9f0',
+      '--muted': '#98a1b3',
+      '--subtle': '#6b7484',
+      '--line': 'rgba(255, 255, 255, 0.12)',
+      '--line-soft': 'rgba(255, 255, 255, 0.07)',
+      '--accent': '#4d8eff',
+      '--accent-cyan': '#4cd7f6',
+      '--accent-soft': 'rgba(77, 142, 255, 0.12)',
+      '--accent-line': 'rgba(77, 142, 255, 0.28)',
+      '--ring': 'rgba(77, 142, 255, 0.18)',
+      '--btn-from': '#4d8eff',
+      '--btn-to': '#005ac2',
+      '--btn-text': '#ffffff',
+    }
+    : {
+      colorScheme: 'light',
+      '--page': '#f4f5f8',
+      '--surface': 'rgba(255, 255, 255, 0.95)',
+      '--surface-soft': '#f6f8fb',
+      '--surface-hover': '#eef2f8',
+      '--input': '#f8fafc',
+      '--text': '#0f172a',
+      '--muted': '#5a677d',
+      '--subtle': '#94a3b8',
+      '--line': '#e2e8f0',
+      '--line-soft': '#eef2f7',
+      '--accent': '#0055d4',
+      '--accent-cyan': '#0891b2',
+      '--accent-soft': 'rgba(0, 85, 212, 0.08)',
+      '--accent-line': 'rgba(0, 85, 212, 0.18)',
+      '--ring': 'rgba(0, 85, 212, 0.14)',
+      '--btn-from': '#4d8eff',
+      '--btn-to': '#005ac2',
+      '--btn-text': '#ffffff',
+    };
+
+/* -------------------------------------------------------------------------- */
+/* Storage helpers — email only, never the password                           */
+/* -------------------------------------------------------------------------- */
+
+function removeRememberedEmail() {
+  try {
+    localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+  } catch {
+    // Storage may be unavailable in restricted browsing modes.
+  }
+}
+
+function persistRememberedEmail(email: string) {
+  try {
+    localStorage.setItem(
+      REMEMBERED_EMAIL_KEY,
+      JSON.stringify({ email, expiresAt: Date.now() + SEVEN_DAYS_MS }),
+    );
+  } catch {
+    // Remembering an email must never block authentication.
+  }
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Shared UI                                                                  */
+/* -------------------------------------------------------------------------- */
+
+function BrandMark({
+  className = '',
+}: {
+  className?: string;
+  isDarkMode?: boolean;
+}) {
+  return (
+    <img
+      src="/logo.png"
+      alt="GuruOm Logo"
+      aria-hidden="true"
+      className={`shrink-0 object-contain drop-shadow-sm transition-transform hover:scale-105 ${className}`}
+    />
+  );
+}
+
+function NoticeBanner({
+  notice,
+  onDismiss,
+  isDarkMode,
+  id,
+}: {
+  notice: Notice;
+  onDismiss?: () => void;
+  isDarkMode: boolean;
+  id?: string;
+}) {
+  const styles = {
+    error: isDarkMode
+      ? 'border-rose-500/30 bg-rose-500/10 text-rose-200'
+      : 'border-rose-200 bg-rose-50 text-rose-800',
+    warning: isDarkMode
+      ? 'border-amber-500/30 bg-amber-500/10 text-amber-200'
+      : 'border-amber-200 bg-amber-50 text-amber-900',
+    success: isDarkMode
+      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'
+      : 'border-emerald-200 bg-emerald-50 text-emerald-800',
+  };
+
+  const Icon = notice.type === 'success' ? CheckCircle2 : AlertCircle;
+
+  return (
+    <div
+      id={id}
+      role={notice.type === 'success' ? 'status' : 'alert'}
+      className={`flex items-start gap-2.5 rounded-2xl border p-3.5 backdrop-blur-sm ${styles[notice.type]}`}
+    >
+      <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+
+      <p className="flex-1 text-[12.5px] leading-relaxed">{notice.message}</p>
+
+      {onDismiss && (
+        <button
+          type="button"
+          onClick={onDismiss}
+          aria-label="Dismiss message"
+          className="shrink-0 cursor-pointer rounded-md p-1 opacity-60 transition-opacity hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        >
+          <X className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+interface DialogProps {
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  onClose: () => void;
+  isDarkMode: boolean;
+  children: React.ReactNode;
+}
+
+function Dialog({ title, description, icon, onClose, isDarkMode, children }: DialogProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef(onClose);
+  const titleId = React.useId();
+  const descriptionId = React.useId();
+  const reduceMotion = useReducedMotion();
+
+  useEffect(() => {
+    closeRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+
+    document.body.style.overflow = 'hidden';
+
+    const frame = requestAnimationFrame(() => {
+      const panel = panelRef.current;
+      const initialInput = panel?.querySelector<HTMLInputElement>('input');
+
+      if (initialInput) {
+        initialInput.focus();
+      } else {
+        panel?.focus();
+      }
+    });
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeRef.current();
+        return;
+      }
+
+      if (event.key !== 'Tab') return;
+
+      const panel = panelRef.current;
+      if (!panel) return;
+
+      const elements: HTMLElement[] = Array.from(
+        panel.querySelectorAll(
+          'button:not([disabled]), input:not([disabled]), a[href], select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((element): element is HTMLElement => element instanceof HTMLElement && element.getClientRects().length > 0);
+
+      const first: HTMLElement | undefined = elements[0];
+      const last: HTMLElement | undefined = elements[elements.length - 1];
+
+      if (!first || !last) {
+        event.preventDefault();
+        panel.focus();
+        return;
+      }
+
+      const activeElement = document.activeElement;
+      const isOutsidePanel = !panel.contains(activeElement);
+
+      if (event.shiftKey && (activeElement === first || activeElement === panel || isOutsidePanel)) {
+        event.preventDefault();
+        last.focus();
+      } else if (
+        !event.shiftKey &&
+        (activeElement === last || activeElement === panel || isOutsidePanel)
+      ) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', handleKeyDown);
+
+      if (previousFocus?.isConnected) {
+        previousFocus.focus();
+      }
+    };
+  }, []);
+
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div
+      style={getThemeVariables(isDarkMode)}
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/75 p-4 font-sans text-[var(--text)] backdrop-blur-md sm:p-6"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div className="pointer-events-none flex min-h-full items-center justify-center">
+        <motion.div
+          ref={panelRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          aria-describedby={descriptionId}
+          tabIndex={-1}
+          initial={reduceMotion ? false : { opacity: 0, y: 14, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.22 }}
+          className={`pointer-events-auto relative w-full max-w-[440px] rounded-[28px] border border-[var(--line)] bg-[var(--surface)] p-6 outline-none backdrop-blur-3xl sm:p-8 ${isDarkMode
+              ? 'shadow-[0_30px_70px_rgba(0,0,0,0.85),inset_0_1px_1px_rgba(255,255,255,0.12)]'
+              : 'shadow-[0_24px_70px_-15px_rgba(15,23,42,0.22)]'
+            }`}
+        >
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close dialog"
+            className="absolute right-4 top-4 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-[var(--subtle)] transition-colors hover:bg-[var(--surface-soft)] hover:text-[var(--text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--accent-line)] bg-[var(--accent-soft)] text-[var(--accent)]">
+            {icon}
+          </div>
+
+          <h2 id={titleId} className="mt-5 pr-6 text-[21px] font-bold tracking-[-0.03em]">
+            {title}
+          </h2>
+
+          <p id={descriptionId} className="mt-2.5 text-[12.5px] leading-relaxed text-[var(--muted)]">
+            {description}
+          </p>
+
+          <div className="mt-6">{children}</div>
+        </motion.div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Login page                                                                 */
+/* -------------------------------------------------------------------------- */
 
 export const LoginPage: React.FC<LoginPageProps> = ({
   onLoginSuccess,
   isDarkMode = true,
   onToggleTheme,
+  variant = 'split',
 }) => {
   const { signIn, resetPassword } = useAuth();
+  const reduceMotion = useReducedMotion();
+  const isCentered = variant === 'centered';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [trustDevice, setTrustDevice] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
+  const [rememberEmail, setRememberEmail] = useState(false);
 
-  // Real-time 7-day credential autofill on load
+  const [isLoading, setIsLoading] = useState(false);
+  const loginInFlight = useRef(false);
+
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [notice, setNotice] = useState<Notice | null>(null);
+
+  const [activeDialog, setActiveDialog] = useState<'recovery' | 'access' | null>(null);
+
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [resetNotice, setResetNotice] = useState<Notice | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
+  const resetInFlight = useRef(false);
+
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     try {
-      const savedRaw = localStorage.getItem(SAVED_CREDENTIALS_KEY);
-      if (savedRaw) {
-        const saved = JSON.parse(savedRaw);
-        if (saved && saved.expiresAt && saved.expiresAt > Date.now()) {
-          if (saved.email) setEmail(saved.email);
-          if (saved.password) {
-            try {
-              setPassword(atob(saved.password));
-            } catch {
-              setPassword(saved.password);
-            }
-          }
-          setTrustDevice(true);
-        } else {
-          localStorage.removeItem(SAVED_CREDENTIALS_KEY);
-        }
+      // Purge credentials written by the previous build. Base64 is encoding, not encryption.
+      localStorage.removeItem(LEGACY_CREDENTIALS_KEY);
+
+      const raw = localStorage.getItem(REMEMBERED_EMAIL_KEY);
+      if (!raw) return;
+
+      const saved: unknown = JSON.parse(raw);
+
+      if (
+        typeof saved === 'object' &&
+        saved !== null &&
+        'email' in saved &&
+        typeof saved.email === 'string' &&
+        'expiresAt' in saved &&
+        typeof saved.expiresAt === 'number' &&
+        saved.expiresAt > Date.now() &&
+        isValidEmail(saved.email)
+      ) {
+        setEmail(saved.email);
+        setRememberEmail(true);
+      } else {
+        removeRememberedEmail();
       }
     } catch {
-      // Ignore parsing errors
+      removeRememberedEmail();
     }
   }, []);
 
-  // Sync credentials in real-time if trustDevice is active
-  const handleToggleTrustDevice = () => {
-    const nextVal = !trustDevice;
-    setTrustDevice(nextVal);
-    if (!nextVal) {
-      localStorage.removeItem(SAVED_CREDENTIALS_KEY);
-    } else if (email && password) {
-      try {
-        localStorage.setItem(
-          SAVED_CREDENTIALS_KEY,
-          JSON.stringify({
-            email: email.trim(),
-            password: btoa(password),
-            expiresAt: Date.now() + SEVEN_DAYS_MS
-          })
-        );
-      } catch {}
-    }
+  const clearFieldError = (field: keyof FieldErrors) => {
+    setFieldErrors((previous) => ({ ...previous, [field]: undefined }));
+    setNotice(null);
   };
 
-  const handleEmailChange = (val: string) => {
-    setEmail(val);
-    if (fieldErrors.email) setFieldErrors(prev => ({ ...prev, email: undefined }));
-    if (trustDevice && val && password) {
-      try {
-        localStorage.setItem(
-          SAVED_CREDENTIALS_KEY,
-          JSON.stringify({
-            email: val.trim(),
-            password: btoa(password),
-            expiresAt: Date.now() + SEVEN_DAYS_MS
-          })
-        );
-      } catch {}
-    }
+  const handleRememberChange = (checked: boolean) => {
+    setRememberEmail(checked);
+    if (!checked) removeRememberedEmail();
   };
 
-  const handlePasswordChange = (val: string) => {
-    setPassword(val);
-    if (fieldErrors.password) setFieldErrors(prev => ({ ...prev, password: undefined }));
-    if (trustDevice && email && val) {
-      try {
-        localStorage.setItem(
-          SAVED_CREDENTIALS_KEY,
-          JSON.stringify({
-            email: email.trim(),
-            password: btoa(val),
-            expiresAt: Date.now() + SEVEN_DAYS_MS
-          })
-        );
-      } catch {}
-    }
-  };
+  const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
 
-  // Mouse ambient glow coords
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+    if (loginInFlight.current) return;
 
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePos({ x: e.clientX, y: e.clientY });
-    };
-    window.addEventListener('mousemove', handleMouseMove, { passive: true });
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
+    const normalizedEmail = email.trim().toLowerCase();
+    const errors: FieldErrors = {};
 
-  // Real-time inline field & auth state alerts
-  const [inlineAlert, setInlineAlert] = useState<{
-    type: 'error' | 'warning' | 'success';
-    title: string;
-    message: string;
-  } | null>(null);
-
-  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
-  const [isForgotOpen, setIsForgotOpen] = useState(false);
-  const [forgotEmail, setForgotEmail] = useState('');
-  const [isResetting, setIsResetting] = useState(false);
-  const [isRequestAccessOpen, setIsRequestAccessOpen] = useState(false);
-
-  const validateForm = () => {
-    const errors: { email?: string; password?: string } = {};
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!email.trim()) {
-      errors.email = 'Work email is required.';
-    } else if (!emailRegex.test(email.trim())) {
-      errors.email = 'Enter a valid enterprise work email address.';
+    if (!normalizedEmail) {
+      errors.email = 'Enter your work email.';
+    } else if (!isValidEmail(normalizedEmail)) {
+      errors.email = 'Enter a valid email address.';
     }
 
     if (!password) {
-      errors.password = 'Password is required.';
-    } else if (password.length < 4) {
-      errors.password = 'Password must be at least 4 characters.';
+      errors.password = 'Enter your password.';
     }
 
     setFieldErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
+    setNotice(null);
 
-  const handleLogin = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-
-    if (!validateForm()) {
-      setInlineAlert({
-        type: 'warning',
-        title: 'Incomplete Credentials',
-        message: 'Please resolve the highlighted fields below before attempting to sign in.'
-      });
+    if (Object.keys(errors).length > 0) {
+      if (errors.email) {
+        emailRef.current?.focus();
+      } else {
+        passwordRef.current?.focus();
+      }
       return;
     }
 
-    setInlineAlert(null);
-    setFieldErrors({});
+    loginInFlight.current = true;
     setIsLoading(true);
 
+    let authenticated = false;
+
     try {
-      const trimmedEmail = email.trim().toLowerCase();
-      const { error: authError } = await signIn(trimmedEmail, password);
+      const { error } = await signIn(normalizedEmail, password);
 
-      if (authError) {
-        const status = authError instanceof ApiError ? authError.statusCode : undefined;
+      if (error) {
+        const status = error instanceof ApiError ? error.statusCode : undefined;
 
-        if (status === 401) {
-          setFieldErrors({ password: 'Incorrect password entered.' });
-          setInlineAlert({
+        if (status === 401 || status === 404) {
+          setNotice({
             type: 'error',
-            title: 'Authentication Failed (401)',
-            message: 'The password or work email entered does not match verified records. Please check your credentials and try again.'
-          });
-        } else if (status === 404) {
-          setFieldErrors({ email: 'No account registered with this email.' });
-          setInlineAlert({
-            type: 'error',
-            title: 'Account Not Found',
-            message: 'We could not find an active OwnerOS profile for this email address. Contact your plant administrator.'
+            message:
+              'We couldn’t sign you in with those details. Check your email and password, then try again.',
           });
         } else if (status === 429) {
-          setInlineAlert({
-            type: 'error',
-            title: 'Rate Limit Exceeded (429)',
-            message: 'Too many failed sign-in attempts. For security reasons, this terminal is temporarily throttled. Wait 60 seconds.'
+          setNotice({
+            type: 'warning',
+            message: 'Too many sign-in attempts. Please wait a moment before trying again.',
           });
         } else {
-          setInlineAlert({
+          setNotice({
             type: 'error',
-            title: 'Sign-In Error',
-            message: authError.message || 'Unable to authenticate. Verify server connectivity.'
+            message:
+              'Sign-in is currently unavailable. Please try again shortly or contact your administrator.',
           });
-        }
-      } else {
-        if (trustDevice) {
-          try {
-            localStorage.setItem(
-              SAVED_CREDENTIALS_KEY,
-              JSON.stringify({
-                email: trimmedEmail,
-                password: btoa(password),
-                expiresAt: Date.now() + SEVEN_DAYS_MS
-              })
-            );
-          } catch {}
-        } else {
-          localStorage.removeItem(SAVED_CREDENTIALS_KEY);
         }
 
-        if (onLoginSuccess) {
-          onLoginSuccess(trimmedEmail);
-        }
+        return;
       }
-    } catch (err: any) {
-      setInlineAlert({
+
+      if (rememberEmail) {
+        persistRememberedEmail(normalizedEmail);
+      } else {
+        removeRememberedEmail();
+      }
+
+      authenticated = true;
+      setPassword('');
+    } catch {
+      setNotice({
         type: 'error',
-        title: 'Connection Error',
-        message: err.message || 'Unable to establish secure handshake with the OwnerOS server. Check network.'
+        message: 'We couldn’t connect to OwnerOS. Check your connection and try again.',
       });
     } finally {
+      loginInFlight.current = false;
       setIsLoading(false);
+    }
+
+    if (authenticated) {
+      onLoginSuccess?.(normalizedEmail);
     }
   };
 
-  const handleSendResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const openRecovery = () => {
+    setForgotEmail(email);
+    setResetNotice(null);
+    setActiveDialog('recovery');
+  };
 
-    const targetEmail = (forgotEmail || email).trim().toLowerCase();
+  const handleResetPassword = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
 
-    if (!targetEmail) {
-      setInlineAlert({
-        type: 'warning',
-        title: 'Email Required',
-        message: 'Provide your enterprise work email to receive password recovery instructions.'
-      });
+    if (resetInFlight.current) return;
+
+    const normalizedEmail = forgotEmail.trim().toLowerCase();
+
+    if (!isValidEmail(normalizedEmail)) {
+      setResetNotice({ type: 'warning', message: 'Enter a valid work email address.' });
       return;
     }
 
+    resetInFlight.current = true;
     setIsResetting(true);
+    setResetNotice(null);
 
     try {
-      const { error: resetError } = await resetPassword(targetEmail);
+      const { error } = await resetPassword(normalizedEmail);
 
-      if (resetError) {
-        setInlineAlert({
+      if (error) {
+        setResetNotice({
           type: 'error',
-          title: 'Reset Failed',
-          message: resetError.message || 'Failed to dispatch reset instructions.'
+          message: 'We couldn’t process the request. Please try again shortly.',
         });
-      } else {
-        setInlineAlert({
-          type: 'success',
-          title: 'Recovery Link Dispatched',
-          message: `Secure password reset instructions sent to ${targetEmail}. Check your inbox.`
-        });
-        setIsForgotOpen(false);
+        return;
       }
-    } catch (err: any) {
-      setInlineAlert({
+
+      setActiveDialog(null);
+      setNotice({
+        type: 'success',
+        message:
+          'If an account matches that email, you’ll receive password reset instructions shortly.',
+      });
+    } catch (error: unknown) {
+      setResetNotice({
         type: 'error',
-        title: 'Dispatch Error',
-        message: err.message || 'Network error encountered during password reset request.'
+        message: getErrorMessage(
+          error,
+          'Unable to send your request. Check your connection and try again.',
+        ),
       });
     } finally {
+      resetInFlight.current = false;
       setIsResetting(false);
     }
   };
 
+  /* ---------------------------------------------------------------- */
+  /* Reusable class strings                                           */
+  /* ---------------------------------------------------------------- */
+
+  const inputClassName =
+    'h-[46px] w-full rounded-2xl border bg-[var(--input)] pl-11 pr-4 text-[13.5px] text-[var(--text)] outline-none transition-all duration-200 placeholder:text-[var(--subtle)] focus:border-[var(--accent)] focus:ring-4 focus:ring-[color:var(--ring)] disabled:cursor-not-allowed disabled:opacity-60';
+
+  const primaryButtonClassName =
+    'group flex h-[46px] w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(180deg,var(--btn-from),var(--btn-to))] px-4 text-[14px] font-semibold text-[var(--btn-text)] shadow-[0_6px_18px_-4px_rgba(77,142,255,0.45),inset_0_1px_1px_rgba(255,255,255,0.35)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--accent)] disabled:cursor-wait disabled:opacity-60';
+
+  const labelClassName =
+    'text-[11px] font-semibold uppercase tracking-[0.05em] text-[var(--muted)]';
+
+  const errorTextClassName = `mt-1.5 text-[11px] font-medium ${isDarkMode ? 'text-rose-300' : 'text-rose-700'
+    }`;
+
+  /* ---------------------------------------------------------------- */
+  /* Auth card                                                         */
+  /* ---------------------------------------------------------------- */
+
+  const authPanel = (
+    <motion.section
+      aria-labelledby="signin-heading"
+      initial={reduceMotion ? false : { opacity: 0, y: 18 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: reduceMotion || isCentered ? 0 : 0.1, ease: 'easeOut' }}
+      className={`w-full max-w-[470px] ${isCentered ? 'mx-auto' : 'mx-auto lg:ml-auto lg:mr-0'}`}
+    >
+      <div
+        className={`overflow-hidden rounded-[32px] border border-[var(--line)] bg-[var(--surface)] backdrop-blur-3xl ${isDarkMode
+            ? 'shadow-[0_30px_90px_-15px_rgba(0,0,0,0.9),0_0_120px_-40px_rgba(77,142,255,0.25),inset_0_1px_1px_rgba(255,255,255,0.13)]'
+            : 'shadow-[0_24px_70px_-15px_rgba(15,23,42,0.15),0_4px_16px_rgba(15,23,42,0.04),inset_0_1px_1px_rgba(255,255,255,1)]'
+          }`}
+      >
+        {/* Workspace strip */}
+        <div className="flex items-center justify-between gap-3 border-b border-[var(--line-soft)] px-6 py-2.5 sm:px-8">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--surface-soft)]">
+              <Building2 className="h-3.5 w-3.5 text-[var(--accent)]" aria-hidden="true" />
+            </span>
+            <span className="text-[12px] font-semibold tracking-[-0.01em]">GuruOm Industries</span>
+          </div>
+
+          <span className="text-[9.5px] font-semibold uppercase tracking-[0.16em] text-[var(--subtle)]">
+            Workspace
+          </span>
+        </div>
+
+        <div className="px-6 pb-6 pt-5 sm:px-8 sm:pb-7 sm:pt-6">
+          {/* Emblem + heading */}
+          <div className="flex flex-col items-center text-center">
+            <div
+              className={`group relative mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border text-[var(--accent)] transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:scale-105 ${isDarkMode
+                  ? 'border-white/20 bg-gradient-to-b from-white/[0.14] to-white/[0.02] shadow-[0_8px_24px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.4)]'
+                  : 'border-slate-200 bg-gradient-to-b from-slate-100 to-white shadow-[0_8px_20px_rgba(15,23,42,0.06)]'
+                }`}
+            >
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-[var(--accent)]/15 to-[var(--accent-cyan)]/15 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+              <ShieldCheck className="h-5 w-5" strokeWidth={2} aria-hidden="true" />
+            </div>
+
+            <h2
+              id="signin-heading"
+              className="text-[21px] font-bold leading-tight tracking-[-0.03em] sm:text-[23px]"
+            >
+              Sign in to <span className="text-[var(--accent)]">OwnerOS</span>
+            </h2>
+
+            <p className="mt-1 text-[12.5px] font-medium text-[var(--muted)]">
+              The owner’s operating system, by SketchitUp
+            </p>
+
+            <div className="mt-2.5 inline-flex items-center gap-1.5 rounded-full border border-[var(--accent-line)] bg-[var(--accent-soft)] px-3 py-0.5 text-[11px] font-semibold tracking-tight text-[var(--accent)]">
+              <KeyRound className="h-3 w-3" aria-hidden="true" />
+              <span>Welcome back</span>
+            </div>
+          </div>
+
+          {/* Alerts */}
+          <AnimatePresence mode="wait">
+            {notice && (
+              <motion.div
+                key={notice.message}
+                initial={reduceMotion ? false : { opacity: 0, y: -8, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                transition={{ duration: 0.2 }}
+                className="mt-5"
+              >
+                <NoticeBanner
+                  notice={notice}
+                  onDismiss={() => setNotice(null)}
+                  isDarkMode={isDarkMode}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Form */}
+          <form onSubmit={handleLogin} noValidate aria-busy={isLoading} className="mt-4 space-y-3.5">
+            {/* Email */}
+            <div>
+              <div className="mb-1.5 flex items-center justify-between px-1">
+                <label htmlFor="owneros-email" className={labelClassName}>
+                  Work email
+                </label>
+              </div>
+
+              <div className="relative">
+                <Mail
+                  className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--subtle)]"
+                  aria-hidden="true"
+                />
+
+                <input
+                  ref={emailRef}
+                  id="owneros-email"
+                  name="email"
+                  type="email"
+                  autoComplete="username"
+                  inputMode="email"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  required
+                  disabled={isLoading}
+                  value={email}
+                  onChange={(event) => {
+                    setEmail(event.target.value);
+                    clearFieldError('email');
+                  }}
+                  aria-invalid={Boolean(fieldErrors.email)}
+                  aria-describedby={fieldErrors.email ? 'owneros-email-error' : undefined}
+                  placeholder="name@company.com"
+                  className={`${inputClassName} ${fieldErrors.email ? 'border-rose-500' : 'border-[var(--line)]'
+                    }`}
+                />
+              </div>
+
+              {fieldErrors.email && (
+                <p id="owneros-email-error" role="alert" className={errorTextClassName}>
+                  {fieldErrors.email}
+                </p>
+              )}
+            </div>
+
+            {/* Password */}
+            <div>
+              <div className="mb-1.5 flex items-center justify-between gap-3 px-1">
+                <label htmlFor="owneros-password" className={labelClassName}>
+                  Password
+                </label>
+
+                <button
+                  type="button"
+                  onClick={openRecovery}
+                  className="cursor-pointer rounded-md text-[11.5px] font-medium text-[var(--accent)] underline-offset-2 transition-opacity hover:underline hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--accent)]"
+                >
+                  Forgot password?
+                </button>
+              </div>
+
+              <div className="relative">
+                <Lock
+                  className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--subtle)]"
+                  aria-hidden="true"
+                />
+
+                <input
+                  ref={passwordRef}
+                  id="owneros-password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  required
+                  disabled={isLoading}
+                  value={password}
+                  onChange={(event) => {
+                    setPassword(event.target.value);
+                    clearFieldError('password');
+                  }}
+                  aria-invalid={Boolean(fieldErrors.password)}
+                  aria-describedby={fieldErrors.password ? 'owneros-password-error' : undefined}
+                  placeholder="Enter your password"
+                  className={`${inputClassName} pr-12 ${fieldErrors.password ? 'border-rose-500' : 'border-[var(--line)]'
+                    }`}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((previous) => !previous)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
+                  className="absolute right-1.5 top-1/2 flex h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-xl text-[var(--subtle)] transition-colors hover:text-[var(--text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <Eye className="h-4 w-4" aria-hidden="true" />
+                  )}
+                </button>
+              </div>
+
+              {fieldErrors.password && (
+                <p id="owneros-password-error" role="alert" className={errorTextClassName}>
+                  {fieldErrors.password}
+                </p>
+              )}
+            </div>
+
+            {/* Remember email — password is never stored */}
+            <div className="px-1 pt-0.5">
+              <label className="group inline-flex cursor-pointer items-center gap-2.5">
+                <span className="relative flex h-[18px] w-[18px] shrink-0">
+                  <input
+                    type="checkbox"
+                    name="rememberEmail"
+                    checked={rememberEmail}
+                    disabled={isLoading}
+                    onChange={(event) => handleRememberChange(event.target.checked)}
+                    className="peer sr-only"
+                  />
+
+                  <span
+                    className={`flex h-[18px] w-[18px] items-center justify-center rounded-[6px] border transition-all duration-200 peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4 peer-focus-visible:outline-[var(--accent)] peer-disabled:opacity-50 ${rememberEmail
+                        ? 'border-[var(--accent)] bg-[var(--accent)] text-white shadow-[0_2px_8px_rgba(77,142,255,0.4)]'
+                        : 'border-[var(--line)] bg-[var(--surface-soft)] group-hover:border-[var(--subtle)]'
+                      }`}
+                  >
+                    {rememberEmail && (
+                      <Check className="h-3 w-3" strokeWidth={2.8} aria-hidden="true" />
+                    )}
+                  </span>
+                </span>
+
+                <span
+                  className={`text-[12px] font-medium transition-colors ${rememberEmail ? 'text-[var(--text)]' : 'text-[var(--muted)]'
+                    }`}
+                >
+                  Remember my email on this device (7 days)
+                </span>
+              </label>
+            </div>
+
+            <button type="submit" disabled={isLoading} className={`${primaryButtonClassName} mt-1`}>
+              {isLoading ? (
+                <>
+                  <Loader2
+                    className="h-4 w-4 animate-spin motion-reduce:animate-none"
+                    aria-hidden="true"
+                  />
+                  <span>Signing you in…</span>
+                </>
+              ) : (
+                <>
+                  <span>Sign in</span>
+                  <ArrowRight
+                    className="h-4 w-4 transition-transform group-hover:translate-x-1 motion-reduce:transform-none"
+                    aria-hidden="true"
+                  />
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Request access */}
+          <div
+            className={`mt-6 flex items-center justify-between gap-3 rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-soft)] p-3.5 transition-colors hover:bg-[var(--surface-hover)] sm:p-4`}
+          >
+            <div className="flex min-w-0 items-center gap-3 pr-1">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--surface-soft)]">
+                <Building2 className="h-4 w-4 text-[var(--accent)]" aria-hidden="true" />
+              </div>
+
+              <div className="min-w-0">
+                <div className="text-[12px] font-semibold">Need an account?</div>
+                <div className="truncate text-[11px] text-[var(--muted)]">
+                  Provisioned by your GuruOm administrator
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setActiveDialog('access')}
+              className="group inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface-soft)] px-3.5 py-2 text-[11.5px] font-semibold tracking-tight transition-all hover:bg-[var(--surface-hover)] active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--accent)]"
+            >
+              <span>Request access</span>
+              <ChevronRight
+                className="h-3.5 w-3.5 text-[var(--accent)] transition-transform group-hover:translate-x-0.5"
+                aria-hidden="true"
+              />
+            </button>
+          </div>
+
+          {/* Signature line */}
+          <div className="mt-6 flex items-center justify-center border-t border-[var(--line-soft)] pt-4 text-[11px] text-[var(--muted)]">
+            <span className="flex items-center gap-1.5 font-mono">
+              <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" aria-hidden="true" />
+              <span>Encrypted session · Authorized personnel only</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </motion.section>
+  );
+
+  /* ---------------------------------------------------------------- */
+  /* Showcase panel                                                    */
+  /* ---------------------------------------------------------------- */
+
+  const showcasePanel = (
+    <motion.section
+      aria-labelledby="product-heading"
+      initial={reduceMotion ? false : { opacity: 0, y: 18 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: 'easeOut' }}
+      className="hidden lg:block"
+    >
+      <div className="mb-9 flex items-center gap-3">
+        <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--surface-soft)]">
+          <Layers3 className="h-4 w-4 text-[var(--accent)]" strokeWidth={1.9} aria-hidden="true" />
+        </span>
+
+        <span className="text-[14px] font-bold tracking-[-0.02em]">OwnerOS</span>
+
+        <span className="h-4 w-px bg-[var(--line)]" />
+
+        <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
+          Built for your business
+        </span>
+      </div>
+
+      <h1
+        id="product-heading"
+        className="max-w-[560px] text-[clamp(2.6rem,4.8vw,4.4rem)] font-bold leading-[1.05] tracking-[-0.045em]"
+      >
+        Your operation.
+        <br />
+        <span className="bg-gradient-to-r from-[var(--accent)] to-[var(--accent-cyan)] bg-clip-text text-transparent">
+          In focus.
+        </span>
+      </h1>
+
+      <p className="mt-6 max-w-[400px] text-[15px] leading-7 text-[var(--muted)]">
+        Less switching. More clarity. One workspace for the people, processes, and decisions that
+        move your business forward.
+      </p>
+
+      <div className="mt-10 max-w-[440px]">
+        <div className="mb-3.5 flex items-center justify-between px-1">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--subtle)]">
+            Connected by design
+          </span>
+
+          <span aria-hidden="true" className="flex items-center gap-1.5">
+            <span className="h-1 w-1 rounded-full bg-[var(--accent)]" />
+            <span className="h-1 w-1 rounded-full bg-[var(--line)]" />
+            <span className="h-1 w-1 rounded-full bg-[var(--line)]" />
+          </span>
+        </div>
+
+        <div
+          className={`rounded-[26px] border border-[var(--line)] bg-[var(--surface)] p-5 backdrop-blur-2xl ${isDarkMode
+              ? 'shadow-[0_24px_60px_-25px_rgba(0,0,0,0.9),inset_0_1px_1px_rgba(255,255,255,0.1)]'
+              : 'shadow-[0_18px_50px_-25px_rgba(15,23,42,0.2)]'
+            }`}
+        >
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--line)] bg-[var(--surface-soft)]">
+                <Building2 className="h-5 w-5 text-[var(--accent)]" strokeWidth={1.7} aria-hidden="true" />
+              </span>
+
+              <div>
+                <p className="text-[13.5px] font-bold tracking-[-0.02em]">GuruOm Industries</p>
+                <p className="mt-0.5 text-[11.5px] text-[var(--muted)]">
+                  Your business. One shared view.
+                </p>
+              </div>
+            </div>
+
+            <ArrowUpRight className="h-4 w-4 text-[var(--subtle)]" aria-hidden="true" />
+          </div>
+
+          <div className="my-5 h-px bg-[var(--line-soft)]" />
+
+          <div className="grid grid-cols-3 gap-2.5">
+            {[
+              { number: '01', title: 'Production', subtitle: 'Plan & execute' },
+              { number: '02', title: 'Quality', subtitle: 'Review & refine' },
+              { number: '03', title: 'Dispatch', subtitle: 'Deliver & track' },
+            ].map((item) => (
+              <div
+                key={item.number}
+                className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-soft)] px-3 py-3.5"
+              >
+                <span className="font-mono text-[10px] text-[var(--accent)]">{item.number}</span>
+                <p className="mt-3 text-[12px] font-semibold">{item.title}</p>
+                <p className="mt-1 text-[10.5px] text-[var(--muted)]">{item.subtitle}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <p className="mt-4 px-1 text-[11.5px] text-[var(--muted)]">
+          A little more connected. A lot more in control.
+        </p>
+      </div>
+    </motion.section>
+  );
+
+  /* ---------------------------------------------------------------- */
+  /* Render                                                            */
+  /* ---------------------------------------------------------------- */
+
   return (
     <div
-      className={`relative min-h-screen w-full flex items-center justify-center px-4 py-8 sm:py-12 overflow-x-hidden font-sans transition-colors duration-300 select-none ${
-        isDarkMode ? 'bg-[#090a0f] text-[#e3e1e9]' : 'bg-[#f4f5f8] text-slate-900'
-      }`}
+      style={getThemeVariables(isDarkMode)}
+      className="relative isolate flex min-h-screen min-h-[100dvh] w-full flex-col overflow-x-hidden bg-[var(--page)] font-sans text-[var(--text)] antialiased transition-colors duration-300"
     >
-      {/* ── INTERACTIVE POINTER AMBIENT LIGHT ── */}
-      {mousePos.x > 0 && (
+      {/* Minimal atmospheric field — two soft washes only */}
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
         <div
-          aria-hidden="true"
-          className="pointer-events-none fixed z-0 rounded-full blur-[100px] transition-opacity duration-300"
+          className="absolute -top-[22%] left-1/2 h-[520px] w-[900px] -translate-x-1/2 rounded-full blur-[140px]"
           style={{
-            left: mousePos.x,
-            top: mousePos.y,
-            width: '640px',
-            height: '640px',
-            transform: 'translate(-50%, -50%)',
             background: isDarkMode
-              ? 'radial-gradient(circle, rgba(77, 142, 255, 0.08) 0%, rgba(76, 215, 246, 0.03) 40%, transparent 70%)'
-              : 'radial-gradient(circle, rgba(67, 91, 232, 0.06) 0%, rgba(14, 165, 233, 0.02) 40%, transparent 70%)'
+              ? 'radial-gradient(circle, rgba(28, 53, 105, 0.38) 0%, rgba(0, 78, 92, 0.12) 45%, transparent 72%)'
+              : 'radial-gradient(circle, rgba(147, 197, 253, 0.28) 0%, rgba(165, 243, 252, 0.12) 45%, transparent 72%)',
           }}
         />
-      )}
-
-      {/* ── ATMOSPHERIC DEEP FIELD GRADIENTS (NO IMAGES) ── */}
-      <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 overflow-hidden select-none">
-        {/* Top-center deep cobalt/teal glow */}
         <div
-          className={`absolute -top-[25%] left-1/2 -translate-x-1/2 w-[900px] h-[540px] rounded-full blur-[130px] ${
-            isDarkMode ? 'bg-gradient-to-b from-[#1c3569]/35 via-[#004e5c]/15 to-transparent' : 'bg-gradient-to-b from-blue-300/25 via-teal-200/10 to-transparent'
-          }`}
-        />
-        {/* Bottom right violet/slate glow */}
-        <div
-          className={`absolute -bottom-[20%] right-[-10%] w-[620px] h-[500px] rounded-full blur-[140px] ${
-            isDarkMode ? 'bg-gradient-to-t from-[#2c1354]/25 via-transparent to-transparent' : 'bg-gradient-to-t from-indigo-200/20 via-transparent to-transparent'
-          }`}
-        />
-        {/* Left subtle operational flare */}
-        <div
-          className={`absolute top-[40%] -left-[15%] w-[520px] h-[520px] rounded-full blur-[140px] ${
-            isDarkMode ? 'bg-gradient-to-r from-[#003640]/20 to-transparent' : 'bg-gradient-to-r from-teal-200/15 to-transparent'
-          }`}
+          className="absolute -bottom-[22%] right-[-12%] h-[480px] w-[620px] rounded-full blur-[150px]"
+          style={{
+            background: isDarkMode
+              ? 'radial-gradient(circle, rgba(44, 19, 84, 0.28) 0%, transparent 70%)'
+              : 'radial-gradient(circle, rgba(199, 210, 254, 0.30) 0%, transparent 70%)',
+          }}
         />
       </div>
 
-      {/* ── CENTERED CONTAINER (HOLDS HEADER, AUTH CARD & FOOTER TOGETHER) ── */}
-      <div className="relative z-10 w-full max-w-[460px] flex flex-col items-center my-auto space-y-5">
+      {/* ------------------------------------------------------------------ */}
+      {/* Header                                                              */}
+      {/* ------------------------------------------------------------------ */}
 
-        {/* ========================================================================= */}
-        {/* ── TOP SYSTEM BAR: FLOATING PILL (GURUOMOS ONLY) & THEME SWITCHER ──      */}
-        {/* ========================================================================= */}
-        <header className="w-full flex items-center justify-between gap-3">
-          <div className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border backdrop-blur-xl shadow-lg transition-all duration-300 ${
-            isDarkMode
-              ? 'bg-white/[0.04] border-white/[0.08] hover:bg-white/[0.07] hover:border-white/[0.15]'
-              : 'bg-white/80 border-slate-200/80 text-slate-700 hover:bg-white'
-          }`}>
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#4cd7f6] opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#4cd7f6]" />
-            </span>
-            <span className={`text-[12px] font-bold tracking-tight ${isDarkMode ? 'text-white/90' : 'text-slate-900'}`}>
-              SketchItUp Solutions
-            </span>
-          </div>
-
-          {/* Visual Appearance Switcher */}
-          {onToggleTheme && (
-            <button
-              type="button"
-              onClick={onToggleTheme}
-              aria-label="Toggle theme appearance"
-              className={`flex h-8.5 w-8.5 shrink-0 cursor-pointer items-center justify-center rounded-full border transition-all active:scale-95 shadow-sm ${
-                isDarkMode
-                  ? 'border-white/15 bg-white/[0.06] text-slate-200 hover:bg-white/10 hover:border-white/25'
-                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-              }`}
-              title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-            >
-              <AnimatePresence mode="popLayout" initial={false}>
-                <motion.div
-                  key={isDarkMode ? 'sun' : 'moon'}
-                  initial={{ opacity: 0, scale: 0.5, rotate: -30 }}
-                  animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                  exit={{ opacity: 0, scale: 0.5, rotate: 30 }}
-                  transition={{ duration: 0.2 }}
-                  className="flex items-center justify-center"
-                >
-                  {isDarkMode ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-slate-700" />}
-                </motion.div>
-              </AnimatePresence>
-            </button>
-          )}
-        </header>
-
-        {/* ========================================================================= */}
-        {/* ── MAIN CENTERPIECE: STITCH OBSIDIAN AUTH ENCLAVE CARD ──                 */}
-        {/* ========================================================================= */}
-        <main className="w-full">
+      <header className="relative z-10">
+        <div className="mx-auto flex w-full max-w-[1320px] items-center justify-between gap-4 px-5 py-3 sm:px-8 lg:px-12 lg:py-4">
           <div
-            className={`w-full rounded-[32px] p-7 sm:p-9 transition-all duration-300 backdrop-blur-3xl border ${
-              isDarkMode
-                ? 'bg-[#0f1118]/85 border-white/[0.12] text-[#e3e1e9] shadow-[0_30px_90px_-15px_rgba(0,0,0,0.9),0_0_120px_-30px_rgba(77,142,255,0.2),inset_0_1px_1px_rgba(255,255,255,0.15)]'
-                : 'bg-white/95 border-slate-200 text-slate-900 shadow-[0_24px_70px_-15px_rgba(15,23,42,0.15),0_4px_16px_rgba(15,23,42,0.04),inset_0_1px_1px_rgba(255,255,255,1)]'
-            }`}
+            className={`inline-flex items-center gap-3.5 rounded-full border border-[var(--line)] bg-[var(--surface)] py-1.5 pl-2.5 pr-5 backdrop-blur-xl transition-all hover:bg-[var(--surface-hover)] hover:shadow-md ${isDarkMode ? 'shadow-lg shadow-black/40' : 'shadow-sm'
+              }`}
           >
-            {/* Header Typographic Brand Glyph & Enclave Emblem */}
-            <div className="flex flex-col items-center text-center">
-              <div
-                className={`relative w-14 h-14 rounded-2xl border shadow-lg flex items-center justify-center group mb-4 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:scale-105 active:scale-95 ${
-                  isDarkMode
-                    ? 'bg-gradient-to-b from-white/[0.14] to-white/[0.02] border-white/20 text-[#adc6ff] shadow-[0_8px_24px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.4)]'
-                    : 'bg-gradient-to-b from-slate-100 to-white border-slate-200 text-[#0055D4] shadow-[0_8px_20px_rgba(0,0,0,0.06)]'
-                }`}
-              >
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-[#4d8eff]/15 to-[#4cd7f6]/15 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <ShieldCheck className="w-6 h-6 transition-transform duration-500 group-hover:scale-110" strokeWidth={2} />
-              </div>
+            <BrandMark className="h-12 w-12" isDarkMode={isDarkMode} />
 
-              <h1 className={`text-[23px] sm:text-[25px] font-bold tracking-[-0.03em] leading-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                Authenticate with <span className="text-[#4d8eff]">GuruOmOS</span>
-              </h1>
-              <p className={`text-[13px] font-medium tracking-[-0.01em] mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                Owner Operating System Architecture
-              </p>
-
-              {/* "Welcome Back" Pill Indicator */}
-              <div className="mt-4 inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full border text-[11.5px] font-semibold tracking-tight backdrop-blur-sm bg-white/[0.04] border-white/[0.10] text-[#adc6ff] dark:text-[#adc6ff]">
-                <KeyRound className="w-3.5 h-3.5 text-[#4d8eff]" />
-                <span>Welcome Back</span>
-              </div>
-            </div>
-
-            {/* ── REAL-TIME ALERTS ── */}
-            <AnimatePresence mode="wait">
-              {inlineAlert && (
-                <motion.div
-                  key={inlineAlert.title}
-                  initial={{ opacity: 0, y: -8, scale: 0.97 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -8, scale: 0.97 }}
-                  transition={{ duration: 0.2 }}
-                  className={`mt-5 rounded-2xl border p-3.5 text-left text-xs ${
-                    inlineAlert.type === 'error'
-                      ? 'border-rose-500/30 bg-rose-500/10 text-rose-300 dark:text-rose-200'
-                      : inlineAlert.type === 'warning'
-                      ? 'border-amber-500/30 bg-amber-500/10 text-amber-300 dark:text-amber-200'
-                      : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 dark:text-emerald-200'
-                  }`}
-                >
-                  <div className="flex items-start gap-2.5">
-                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                    <div className="flex-1">
-                      <strong className="block font-semibold">{inlineAlert.title}</strong>
-                      <p className="mt-0.5 text-[11px] leading-relaxed opacity-90">{inlineAlert.message}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setInlineAlert(null)}
-                      className="p-1 rounded-md opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* ── AUTHENTICATION FORM ── */}
-            <div className="mt-6">
-              <form onSubmit={handleLogin} className="space-y-4">
-                {/* Work Email */}
-                <div>
-                  <div className="flex justify-between items-center mb-1.5 px-1">
-                    <label
-                      htmlFor="auth-email"
-                      className={`text-[11px] font-semibold tracking-[0.05em] uppercase ${
-                        isDarkMode ? 'text-white/60' : 'text-slate-600'
-                      }`}
-                    >
-                      Enterprise Identity
-                    </label>
-                    <span className="text-[11px] text-[#4d8eff] font-medium">SSO Enabled</span>
-                  </div>
-
-                  <div className={`relative rounded-2xl border transition-all duration-200 ${
-                    fieldErrors.email
-                      ? 'border-rose-500/70 bg-rose-500/10 text-rose-100 ring-2 ring-rose-500/20'
-                      : isDarkMode
-                      ? 'border-white/[0.12] bg-black/35 focus-within:border-[#4d8eff] focus-within:ring-4 focus-within:ring-[#4d8eff]/15'
-                      : 'border-slate-300 bg-slate-50 focus-within:border-[#4d8eff] focus-within:bg-white focus-within:ring-4 focus-within:ring-[#4d8eff]/15'
-                  }`}>
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                      <Mail className="w-4 h-4" />
-                    </div>
-                    <input
-                      id="auth-email"
-                      type="email"
-                      required
-                      autoComplete="username"
-                      value={email}
-                      onChange={(e) => handleEmailChange(e.target.value)}
-                      placeholder="name@company.com"
-                      className={`w-full pl-10 pr-10 py-3 bg-transparent text-[13.5px] rounded-2xl border-0 focus:ring-0 focus:outline-none ${
-                        isDarkMode ? 'text-white placeholder-white/25' : 'text-slate-900 placeholder-slate-400'
-                      }`}
-                    />
-                    {email && (
-                      <button
-                        type="button"
-                        onClick={() => handleEmailChange('')}
-                        className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-                  {fieldErrors.email && (
-                    <p className="mt-1 font-mono text-[10.5px] font-semibold text-rose-400 animate-pulse">
-                      {fieldErrors.email}
-                    </p>
-                  )}
-                </div>
-
-                {/* Security Password */}
-                <div>
-                  <div className="flex justify-between items-center mb-1.5 px-1">
-                    <label
-                      htmlFor="auth-password"
-                      className={`text-[11px] font-semibold tracking-[0.05em] uppercase ${
-                        isDarkMode ? 'text-white/60' : 'text-slate-600'
-                      }`}
-                    >
-                      Master Password
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setForgotEmail(email);
-                        setIsForgotOpen(true);
-                      }}
-                      className="text-[11.5px] text-[#4d8eff] hover:text-[#7B92FF] transition-colors hover:underline underline-offset-2 cursor-pointer font-medium"
-                    >
-                      Recover key
-                    </button>
-                  </div>
-
-                  <div className={`relative rounded-2xl border transition-all duration-200 ${
-                    fieldErrors.password
-                      ? 'border-rose-500/70 bg-rose-500/10 text-rose-100 ring-2 ring-rose-500/20'
-                      : isDarkMode
-                      ? 'border-white/[0.12] bg-black/35 focus-within:border-[#4d8eff] focus-within:ring-4 focus-within:ring-[#4d8eff]/15'
-                      : 'border-slate-300 bg-slate-50 focus-within:border-[#4d8eff] focus-within:bg-white focus-within:ring-4 focus-within:ring-[#4d8eff]/15'
-                  }`}>
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                      <Lock className="w-4 h-4" />
-                    </div>
-                    <input
-                      id="auth-password"
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      autoComplete="current-password"
-                      value={password}
-                      onChange={(e) => handlePasswordChange(e.target.value)}
-                      placeholder="Enter enclave password"
-                      className={`w-full pl-10 pr-11 py-3 bg-transparent text-[13.5px] rounded-2xl border-0 focus:ring-0 focus:outline-none ${
-                        isDarkMode ? 'text-white placeholder-white/25' : 'text-slate-900 placeholder-slate-400'
-                      }`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
-                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-
-                  {fieldErrors.password && (
-                    <p className="mt-1 font-mono text-[10.5px] font-semibold text-rose-400 animate-pulse">
-                      {fieldErrors.password}
-                    </p>
-                  )}
-                </div>
-
-                {/* Custom Apple-grade 7-day autofill checkbox */}
-                <div className="flex items-center justify-between pt-1">
-                  <button
-                    type="button"
-                    onClick={handleToggleTrustDevice}
-                    className="flex items-center gap-2.5 cursor-pointer group select-none text-left"
-                    role="checkbox"
-                    aria-checked={trustDevice}
-                  >
-                    <div
-                      className={`w-4.5 h-4.5 rounded-[6px] border flex items-center justify-center transition-all duration-200 shrink-0 ${
-                        trustDevice
-                          ? 'bg-[#4d8eff] border-[#4d8eff] text-white shadow-xs shadow-[#4d8eff]/40'
-                          : isDarkMode
-                          ? 'border-white/20 bg-white/[0.04] group-hover:border-white/35 text-transparent'
-                          : 'border-slate-300 bg-slate-100 group-hover:border-slate-400 text-transparent'
-                      }`}
-                    >
-                      <Check className={`w-3 h-3 transition-transform duration-150 stroke-[2.8] ${trustDevice ? 'scale-100 text-white' : 'scale-50 opacity-0'}`} />
-                    </div>
-                    <span className={`text-[12px] font-medium transition-colors ${
-                      isDarkMode
-                        ? trustDevice ? 'text-white' : 'text-slate-400 group-hover:text-slate-300'
-                        : trustDevice ? 'text-slate-900' : 'text-slate-600 group-hover:text-slate-800'
-                    }`}>
-                      Autofill & trust this device (7 Days)
-                    </span>
-                  </button>
-                </div>
-
-                {/* Submit Action Button */}
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full mt-2 py-3 px-4 rounded-2xl bg-gradient-to-b from-[#4d8eff] to-[#005ac2] hover:brightness-110 active:scale-[0.98] transition-all duration-200 text-white font-medium text-[14px] shadow-[0_8px_20px_-4px_rgba(77,142,255,0.45),inset_0_1px_1px_rgba(255,255,255,0.35)] flex items-center justify-center gap-2 group cursor-pointer disabled:cursor-wait disabled:opacity-60"
-                >
-                  {isLoading ? (
-                    <div className="flex items-center gap-2">
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                      <span>Decrypting & Authenticating...</span>
-                    </div>
-                  ) : (
-                    <>
-                      <span>Decrypt & Sign In</span>
-                      <ArrowRight className="w-4 h-4 text-white group-hover:translate-x-1 transition-transform" />
-                    </>
-                  )}
-                </button>
-              </form>
-            </div>
-
-            {/* ── REQUEST ACCESS & SUPPORT CALLOUT ── */}
-            <div
-              className={`mt-6 flex items-center justify-between gap-3 rounded-2xl border p-3.5 sm:p-4 transition-all ${
-                isDarkMode
-                  ? 'border-white/10 bg-white/[0.03] hover:bg-white/[0.05]'
-                  : 'border-slate-200/90 bg-slate-50/80 hover:bg-slate-100/80 shadow-2xs'
-              }`}
-            >
-              <div className="flex items-center gap-3 min-w-0 pr-1">
-                <div
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${
-                    isDarkMode
-                      ? 'bg-white/[0.06] border-white/10 text-slate-300'
-                      : 'bg-white border-slate-200 text-slate-700 shadow-2xs'
-                  }`}
-                >
-                  <Building2 className="w-4 h-4 text-[#4d8eff]" />
-                </div>
-                <div className="min-w-0">
-                  <div className={`text-xs font-semibold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                    Need an account?
-                  </div>
-                  <div className={`text-[11px] truncate ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Provisioned by GuruOm IT Admin
-                  </div>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setIsRequestAccessOpen(true)}
-                className={`group inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold tracking-tight transition-all active:scale-95 cursor-pointer shrink-0 border ${
-                  isDarkMode
-                    ? 'border-white/15 bg-white/[0.08] text-white hover:bg-white/15 hover:border-white/25 shadow-xs'
-                    : 'border-slate-300/90 bg-white text-slate-800 hover:bg-slate-50 hover:border-slate-400 shadow-xs'
-                }`}
-              >
-                <span>Request Access</span>
-                <ArrowRight className="w-3.5 h-3.5 opacity-60 group-hover:translate-x-0.5 group-hover:opacity-100 transition-all text-[#4d8eff]" />
-              </button>
-            </div>
-
-            {/* ── SECURITY CREDENTIAL SIGNATURE ── */}
-            <div
-              className={`mt-6 flex items-center justify-center text-[11px] pt-3 border-t ${
-                isDarkMode ? 'border-white/[0.08] text-slate-400' : 'border-slate-200 text-slate-500'
-              }`}
-            >
-              <span className="flex items-center gap-1.5 font-mono">
-                <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
-                <span>256-Bit Hardware Enclave Handshake</span>
+            <div className="flex items-center gap-2.5">
+              <span className="text-[15px] font-bold tracking-[-0.03em]">SketchitUp</span>
+              <span className="hidden h-3.5 w-px bg-[var(--line)] sm:block" />
+              <span className="hidden text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)] sm:block">
+                Business, by design
               </span>
             </div>
           </div>
-        </main>
 
-        {/* ========================================================================= */}
-        {/* ── FOOTER: ENTERPRISE ATTRIBUTION ──                                      */}
-        {/* ========================================================================= */}
-        <footer className="w-full text-center flex flex-col items-center gap-2 pt-1">
-          <div className={`text-[12px] tracking-[-0.01em] ${isDarkMode ? 'text-white/50' : 'text-slate-600'}`}>
-            Architected with precision by{' '}
-            <span className={`font-semibold ${isDarkMode ? 'text-white/90' : 'text-slate-900'}`}>
-              SketchItUp Solutions
-            </span>{' '}
-            for <strong className="text-[#4d8eff] dark:text-[#adc6ff]">GuruOmOS</strong> Enterprise.
-          </div>
-
-          <div className={`flex gap-4 text-[11px] ${isDarkMode ? 'text-white/40' : 'text-slate-400'}`}>
-            <span>Privacy Specification</span>
-            <span>•</span>
-            <span>Zero-Trust Protocol</span>
-            <span>•</span>
-            <span>Compliance Shield</span>
-          </div>
-        </footer>
-
-      </div>
-
-      {/* ========================================================================= */}
-      {/* ── MODAL: FORGOT PASSWORD RECOVERY ──                                     */}
-      {/* ========================================================================= */}
-      {isForgotOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-md"
-          role="dialog"
-          aria-modal="true"
-        >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className={`w-full max-w-md overflow-hidden rounded-3xl border shadow-2xl ${
-              isDarkMode
-                ? 'border-white/15 bg-[#12141c]/95 text-white backdrop-blur-3xl shadow-[0_30px_70px_rgba(0,0,0,0.85)]'
-                : 'border-slate-200 bg-white text-slate-900 shadow-2xl'
-            }`}
-          >
-            <div className="relative px-6 pb-4 pt-7 text-center sm:px-8">
-              <button
-                type="button"
-                onClick={() => setIsForgotOpen(false)}
-                className="absolute right-4 top-4 rounded-full p-2 text-slate-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </button>
-
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#4d8eff]/15 text-[#4d8eff] border border-[#4d8eff]/30">
-                <KeyRound className="h-6 w-6" />
-              </div>
-
-              <h2 className="mt-4 text-xl font-bold tracking-tight">Recover Security Password</h2>
-              <p className={`mx-auto mt-2 max-w-sm text-xs leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                Enter the enterprise work email associated with your OwnerOS user profile to receive recovery instructions.
-              </p>
+          <div className="flex items-center gap-3 sm:gap-5">
+            <div className="hidden items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[11.5px] font-medium text-[var(--muted)] backdrop-blur-xl md:flex">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--accent-cyan)] opacity-75 motion-reduce:animate-none" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--accent-cyan)]" />
+              </span>
+              GuruOm Industries workspace
             </div>
 
-            <form onSubmit={handleSendResetPassword} className="px-6 pb-6 sm:px-8 space-y-4">
-              <div>
-                <label className={`block text-xs font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                  Work Email Address
-                </label>
-                <div className="relative mt-1.5">
-                  <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
-                    <Mail className="h-4 w-4" />
-                  </div>
-                  <input
-                    type="email"
-                    required
-                    value={forgotEmail}
-                    onChange={(e) => setForgotEmail(e.target.value)}
-                    placeholder="Enter registered work email"
-                    className={`h-11 w-full rounded-2xl border pl-10 pr-4 text-xs font-medium outline-none transition-all ${
-                      isDarkMode
-                        ? 'border-white/15 bg-black/40 text-white placeholder:text-slate-500 focus:border-[#4d8eff] focus:ring-4 focus:ring-[#4d8eff]/15'
-                        : 'border-slate-300 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:border-[#4d8eff] focus:bg-white focus:ring-4 focus:ring-[#4d8eff]/15'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsForgotOpen(false)}
-                  className={`h-11 flex-1 rounded-2xl border text-xs font-semibold transition-all cursor-pointer ${
-                    isDarkMode
-                      ? 'border-white/15 bg-white/5 text-slate-300 hover:bg-white/10'
-                      : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isResetting}
-                  className="h-11 flex-1 rounded-2xl bg-gradient-to-r from-[#4d8eff] to-[#005ac2] text-xs font-semibold text-white shadow-md shadow-[#4d8eff]/30 transition-all hover:brightness-110 active:scale-95 cursor-pointer disabled:opacity-60"
-                >
-                  {isResetting ? 'Dispatching...' : 'Send Recovery Link'}
-                </button>
-              </div>
-            </form>
-          </motion.div>
+            {onToggleTheme && (
+              <button
+                type="button"
+                onClick={onToggleTheme}
+                aria-label={isDarkMode ? 'Switch to light theme' : 'Switch to dark theme'}
+                title={isDarkMode ? 'Light theme' : 'Dark theme'}
+                className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] backdrop-blur-xl transition-all hover:bg-[var(--surface-hover)] hover:text-[var(--text)] active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--accent)]"
+              >
+                <AnimatePresence mode="popLayout" initial={false}>
+                  <motion.span
+                    key={isDarkMode ? 'sun' : 'moon'}
+                    initial={{ opacity: 0, scale: 0.5, rotate: -30 }}
+                    animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                    exit={{ opacity: 0, scale: 0.5, rotate: 30 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex items-center justify-center"
+                  >
+                    {isDarkMode ? (
+                      <Sun className="h-4 w-4 text-amber-400" aria-hidden="true" />
+                    ) : (
+                      <Moon className="h-4 w-4" aria-hidden="true" />
+                    )}
+                  </motion.span>
+                </AnimatePresence>
+              </button>
+            )}
+          </div>
         </div>
+      </header>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Main                                                                */}
+      {/* ------------------------------------------------------------------ */}
+
+      <main className="relative z-10 mx-auto flex w-full max-w-[1320px] flex-1 items-center px-5 py-2 sm:px-8 lg:px-12 lg:py-4">
+        {isCentered ? (
+          <div className="mx-auto w-full">{authPanel}</div>
+        ) : (
+          <div className="grid w-full items-center gap-12 lg:grid-cols-[1.05fr_1fr] lg:gap-16 xl:gap-24">
+            {showcasePanel}
+            {authPanel}
+          </div>
+        )}
+      </main>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Footer                                                              */}
+      {/* ------------------------------------------------------------------ */}
+
+      <footer className="relative z-10">
+        <div className="mx-auto flex w-full max-w-[1320px] flex-col items-center justify-between gap-2 border-t border-[var(--line-soft)] px-5 py-3 text-center sm:flex-row sm:px-8 sm:text-left lg:px-12">
+          <p className="text-[11.5px] text-[var(--muted)]">
+            © {new Date().getFullYear()}{' '}
+            <span className="font-semibold text-[var(--text)]">SketchitUp</span>
+            <span className="mx-2 text-[var(--subtle)]">/</span>
+            Thoughtfully built for GuruOm Industries.
+          </p>
+
+          <div className="flex items-center gap-2 text-[11.5px]">
+            <span className="font-bold tracking-[-0.02em] text-[var(--accent)]">OwnerOS</span>
+            <span className="text-[var(--subtle)]">—</span>
+            <span className="text-[var(--muted)]">The owner’s operating system</span>
+          </div>
+        </div>
+      </footer>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Password recovery                                                   */}
+      {/* ------------------------------------------------------------------ */}
+
+      {activeDialog === 'recovery' && (
+        <Dialog
+          title="Let’s get you back in."
+          description="Enter your work email and we’ll send instructions to reset your OwnerOS password."
+          icon={<KeyRound className="h-5 w-5" aria-hidden="true" />}
+          onClose={() => {
+            if (!resetInFlight.current) setActiveDialog(null);
+          }}
+          isDarkMode={isDarkMode}
+        >
+          <form onSubmit={handleResetPassword} noValidate aria-busy={isResetting} className="space-y-4">
+            {resetNotice && (
+              <NoticeBanner id="owneros-reset-notice" notice={resetNotice} isDarkMode={isDarkMode} />
+            )}
+
+            <div>
+              <label htmlFor="owneros-recovery-email" className={`${labelClassName} mb-1.5 block px-1`}>
+                Work email
+              </label>
+
+              <div className="relative">
+                <Mail
+                  className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--subtle)]"
+                  aria-hidden="true"
+                />
+
+                <input
+                  id="owneros-recovery-email"
+                  name="recoveryEmail"
+                  type="email"
+                  autoComplete="email"
+                  inputMode="email"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  required
+                  disabled={isResetting}
+                  value={forgotEmail}
+                  onChange={(event) => {
+                    setForgotEmail(event.target.value);
+                    setResetNotice(null);
+                  }}
+                  aria-describedby={resetNotice ? 'owneros-reset-notice' : undefined}
+                  placeholder="name@company.com"
+                  className={`${inputClassName} border-[var(--line)]`}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 pt-1">
+              <button
+                type="button"
+                disabled={isResetting}
+                onClick={() => setActiveDialog(null)}
+                className="h-[52px] flex-1 cursor-pointer rounded-2xl border border-[var(--line)] bg-[var(--surface-soft)] text-[13px] font-semibold text-[var(--muted)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--accent)] disabled:opacity-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                disabled={isResetting}
+                className={`${primaryButtonClassName} flex-1`}
+              >
+                {isResetting ? (
+                  <>
+                    <Loader2
+                      className="h-4 w-4 animate-spin motion-reduce:animate-none"
+                      aria-hidden="true"
+                    />
+                    <span>Sending…</span>
+                  </>
+                ) : (
+                  <span>Send reset link</span>
+                )}
+              </button>
+            </div>
+          </form>
+        </Dialog>
       )}
 
-      {/* ========================================================================= */}
-      {/* ── MODAL: REQUEST ACCESS SHEET ──                                         */}
-      {/* ========================================================================= */}
-      {isRequestAccessOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md"
-          role="dialog"
-          aria-modal="true"
-        >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className={`w-full max-w-md overflow-hidden rounded-3xl border shadow-2xl ${
-              isDarkMode
-                ? 'border-white/15 bg-[#12141c]/95 text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.15),0_30px_70px_rgba(0,0,0,0.85)] backdrop-blur-3xl'
-                : 'border-slate-200 bg-white text-slate-900 shadow-2xl'
-            }`}
-          >
-            <div className="relative px-6 pb-4 pt-7 text-center sm:px-8">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#4d8eff]/15 text-[#4d8eff] border border-[#4d8eff]/30">
-                <Building2 className="h-6 w-6" />
-              </div>
+      {/* ------------------------------------------------------------------ */}
+      {/* Request access                                                      */}
+      {/* ------------------------------------------------------------------ */}
 
-              <h2 className="mt-4 text-xl font-bold tracking-tight">Request Account Provisioning</h2>
-              <p className={`mx-auto mt-2 max-w-sm text-xs leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                GuruOm OwnerOS is a private enterprise platform architected by <strong>SketchItUp Solutions</strong>. Access is restricted to authenticated plant personnel.
+      {activeDialog === 'access' && (
+        <Dialog
+          title="Your workspace starts here."
+          description="OwnerOS access is managed by GuruOm Industries. Your administrator can create your account and assign the right permissions."
+          icon={<Building2 className="h-5 w-5" aria-hidden="true" />}
+          onClose={() => setActiveDialog(null)}
+          isDarkMode={isDarkMode}
+        >
+          <div className="space-y-5">
+            <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface-soft)] p-4">
+              <p className="text-[12.5px] font-bold">Contact your department head or IT admin</p>
+              <p className="mt-1.5 text-[11.5px] leading-relaxed text-[var(--muted)]">
+                Share your full name, work email, and department. They’ll help you join the GuruOm
+                Industries workspace with the access you need.
               </p>
             </div>
 
-            <div className="px-6 pb-6 sm:px-8 space-y-4">
-              <div className={`flex items-start gap-3 rounded-2xl border p-4 text-left ${
-                isDarkMode ? 'border-white/15 bg-white/[0.04]' : 'border-slate-200 bg-slate-50'
-              }`}>
-                <ShieldCheck className="h-5 w-5 shrink-0 text-[#4d8eff] mt-0.5" />
-                <div>
-                  <p className={`text-xs font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                    Role-Based Access Control (RBAC)
-                  </p>
-                  <p className={`mt-0.5 text-[11px] leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                    To obtain access, contact your Department Head or GuruOm Server Administrator. They will assign your role (Production, QC, Dispatch, Finance, or Admin).
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setIsRequestAccessOpen(false)}
-                className="h-11 w-full cursor-pointer rounded-2xl bg-[#4d8eff] text-xs font-semibold text-white shadow-md shadow-[#4d8eff]/30 transition-all hover:bg-[#005ac2] active:scale-[0.98]"
-              >
-                Understood & Close
-              </button>
+            <div className="flex items-start gap-3 px-1">
+              <ShieldCheck
+                className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent)]"
+                aria-hidden="true"
+              />
+              <p className="text-[11.5px] leading-relaxed text-[var(--muted)]">
+                Accounts are provisioned internally. Public self-registration isn’t available for
+                this workspace.
+              </p>
             </div>
-          </motion.div>
-        </div>
+
+            <button
+              type="button"
+              onClick={() => setActiveDialog(null)}
+              className={primaryButtonClassName}
+            >
+              Got it
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </button>
+
+            <p className="text-center text-[10.5px] text-[var(--subtle)]">
+              OwnerOS by SketchitUp · For GuruOm Industries
+            </p>
+          </div>
+        </Dialog>
       )}
     </div>
   );

@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Boxes, CheckCircle2, Package, Warehouse, Truck, Search, X,
   AlertTriangle, TrendingUp, ChevronDown, ChevronUp, Info, Filter
@@ -29,6 +29,13 @@ interface FGRow {
   dispatched: number;
   stockStatus: StockStatus;
 }
+
+const SortIcon: React.FC<{ col: SortKey; sortKey: SortKey; sortDir: SortDir }> = ({ col, sortKey, sortDir }) => {
+  if (sortKey !== col) return <ChevronDown className="w-3 h-3 opacity-30" />;
+  return sortDir === "asc"
+    ? <ChevronUp className="w-3 h-3 text-[var(--accent-primary)]" />
+    : <ChevronDown className="w-3 h-3 text-[var(--accent-primary)]" />;
+};
 
 export const FinishedGoodsView: React.FC<FinishedGoodsViewProps> = ({
   items,
@@ -124,19 +131,12 @@ export const FinishedGoodsView: React.FC<FinishedGoodsViewProps> = ({
     );
   };
 
-  const SortIcon = ({ col }: { col: SortKey }) => {
-    if (sortKey !== col) return <ChevronDown className="w-3 h-3 opacity-30" />;
-    return sortDir === "asc"
-      ? <ChevronUp   className="w-3 h-3 text-[var(--accent-primary)]" />
-      : <ChevronDown className="w-3 h-3 text-[var(--accent-primary)]" />;
-  };
-
   const thBase = `py-3.5 px-5 font-mono font-bold uppercase tracking-[0.12em] text-[9px] cursor-pointer select-none ${isDarkMode ? "text-slate-500" : "text-slate-400"}`;
 
-  const Th = ({ col, label, right }: { col: SortKey; label: string; right?: boolean }) => (
-    <th className={`${thBase} ${right ? "text-right" : ""}`} onClick={() => toggleSort(col)}>
+  const renderTh = (col: SortKey, label: string, right?: boolean) => (
+    <th key={col} className={`${thBase} ${right ? "text-right" : ""}`} onClick={() => toggleSort(col)}>
       <span className={`inline-flex items-center gap-1 ${right ? "justify-end" : ""}`}>
-        {label}<SortIcon col={col} />
+        {label}<SortIcon col={col} sortKey={sortKey} sortDir={sortDir} />
       </span>
     </th>
   );
@@ -234,14 +234,14 @@ export const FinishedGoodsView: React.FC<FinishedGoodsViewProps> = ({
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className={`border-b ${isDarkMode ? "border-white/[0.07] bg-black/20" : "border-slate-200 bg-slate-50/80"}`}>
-                <Th col="code"      label="FG Code" />
-                <Th col="name"      label="Description" />
+                {renderTh("code", "FG Code")}
+                {renderTh("name", "Description")}
                 <th className={thBase}>HSN / UoM</th>
-                <Th col="onHand"    label="On Hand"    right />
-                <Th col="reserved"  label="Reserved"   right />
-                <Th col="available" label="Available"  right />
+                {renderTh("onHand", "On Hand", true)}
+                {renderTh("reserved", "Reserved", true)}
+                {renderTh("available", "Available", true)}
                 <th className={`${thBase} text-right`}>Reorder</th>
-                <Th col="status"    label="Status" />
+                {renderTh("status", "Status")}
                 <th className={thBase}>Sale Price</th>
               </tr>
             </thead>

@@ -26,7 +26,7 @@ import {
   Printer,
   Download
 } from 'lucide-react';
-import { CustomerOrder, DispatchChallan, CustomerInvoice, QCInspection, PDIInspection, JobCard } from '../../../types/console';
+import { CustomerOrder, DispatchChallan, CustomerInvoice, QCInspection, PDIInspection, JobCard, BillOfMaterials } from '../../../types/console';
 import { apiClient } from '../../../lib/apiClient';
 import { printElementById } from '../../../utils/printDocument';
 import { RouteCardTravelerPrint } from '../shared/RouteCardTravelerPrint';
@@ -158,6 +158,10 @@ export const OrderStageDetailModal: React.FC<OrderStageDetailModalProps> = ({
   const [selectedJobCardForPrint, setSelectedJobCardForPrint] = useState<JobCard | null>(null);
   const [, startTransition] = useTransition();
 
+  // BOM data for materials stage — keyed by itemCode
+  const [bomsMap, setBomsMap] = useState<Record<string, BillOfMaterials | null>>({});
+  const [bomsLoading, setBomsLoading] = useState<boolean>(false);
+
   useEffect(() => {
     if (initialStage) {
       setSelectedStage(initialStage);
@@ -195,6 +199,30 @@ export const OrderStageDetailModal: React.FC<OrderStageDetailModalProps> = ({
       fetchStageData(selectedStage);
     }
   }, [isOpen, selectedStage, order.id]);
+
+  // Fetch BOM for each order line item when materials stage is active
+  useEffect(() => {
+    if (!isOpen || selectedStage !== 'materials') return;
+    const lines = order.lines || [];
+    if (lines.length === 0) return;
+
+    const uniqueCodes: string[] = [...new Set<string>(lines.map(l => l.itemCode as string).filter((c): c is string => c.length > 0))];
+    setBomsLoading(true);
+    Promise.all(
+      uniqueCodes.map(async (code) => {
+        try {
+          const res = await apiClient.get<{ data: BillOfMaterials }>(`/bom/${encodeURIComponent(code)}`);
+          return [code, res?.data || null] as [string, BillOfMaterials | null];
+        } catch {
+          return [code, null] as [string, null];
+        }
+      })
+    ).then(results => {
+      const map: Record<string, BillOfMaterials | null> = {};
+      for (const [code, bom] of results) map[code] = bom;
+      setBomsMap(map);
+    }).finally(() => setBomsLoading(false));
+  }, [isOpen, selectedStage, order.id, order.lines]);
 
   if (!isOpen) return null;
 
@@ -527,6 +555,103 @@ export const OrderStageDetailModal: React.FC<OrderStageDetailModalProps> = ({
                         </tbody>
                       </table>
                     </div>
+                  </div>
+
+                  {/* Raw Materials BOM Breakdown per Line Item */}
+                  <div className={`rounded-[24px] border overflow-hidden ${isDarkMode ? 'border-white/[0.08] bg-white/[0.02]' : 'border-slate-200/80 bg-white shadow-xs'}`}>
+                    <div className="p-4 border-b border-slate-200/60 dark:border-white/[0.06] flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Package className="w-4 h-4 text-amber-500" />
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">Raw Material Requirements (BOM Exploded)</h4>
+                      </div>
+                      {bomsLoading && (
+                        <span className="flex items-center gap-1.5 text-[10px] font-mono text-slate-400">
+                          <RefreshCw className="w-3 h-3 animate-spin" />
+                          Fetching BOM...
+                        </span>
+                      )}
+                    </div>
+
+                    {lines.map((ln, lnIdx) => {
+                      const bom = bomsMap[ln.itemCode];
+                      const components = bom?.components || [];
+                      const qty = Number(ln.orderQty || 0);
+
+                      return (
+                        <div key={ln.id || lnIdx} className={`border-b last:border-b-0 ${isDarkMode ? 'border-white/[0.05]' : 'border-slate-100'}`}>
+                          {/* Line item header */}
+                          <div className={`px-4 py-2.5 flex items-center gap-2 ${isDarkMode ? 'bg-white/[0.02]' : 'bg-slate-50/60'}`}>
+                            <span className="w-5 h-5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-[9px] font-bold flex items-center justify-center">{lnIdx + 1}</span>
+                            <span className="font-mono font-bold text-xs text-[#5B75F8] dark:text-[#7B92FF]">{ln.itemCode}</span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400 truncate">{ln.itemDescription}</span>
+                            <span className="ml-auto text-[10px] font-mono text-slate-400">Order Qty: <strong className="text-slate-700 dark:text-slate-200">{qty} {ln.unit}</strong></span>
+                          </div>
+
+                          {bomsLoading && !bom ? (
+                            <div className="px-4 py-4 flex items-center gap-2 text-xs text-slate-400">
+                              <RefreshCw className="w-3 h-3 animate-spin" />
+                              Loading BOM...
+                            </div>
+                          ) : components.length === 0 ? (
+                            <div className="px-4 py-4 flex items-center gap-2">
+                              <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                              <span className="text-xs text-slate-500 dark:text-slate-400">
+                                {bom === null ? 'No BOM configured for this part code.' : 'BOM has no components defined.'}
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-left text-xs">
+                                <thead>
+                                  <tr className={`text-[10px] font-bold uppercase tracking-wider border-b ${
+                                    isDarkMode ? 'text-slate-400 border-white/[0.05] bg-white/[0.01]' : 'text-slate-400 border-slate-100 bg-slate-50/40'
+                                  }`}>
+                                    <th className="py-2 px-4">Component</th>
+                                    <th className="py-2 px-4">Type</th>
+                                    <th className="py-2 px-4 text-right">Qty / Unit</th>
+                                    <th className="py-2 px-4 text-right">Total Required</th>
+                                    <th className="py-2 px-4 text-right">Scrap %</th>
+                                    <th className="py-2 px-4 text-right">With Scrap</th>
+                                    <th className="py-2 px-4">UOM</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 dark:divide-white/[0.03]">
+                                  {components.map((comp, ci) => {
+                                    const totalRequired = Number((comp.qtyPerUnit * qty).toFixed(3));
+                                    const scrapFactor = 1 + (comp.scrapAllowancePct || 0) / 100;
+                                    const withScrap = Number((totalRequired * scrapFactor).toFixed(3));
+                                    const typeColors: Record<string, string> = {
+                                      RAW_MATERIAL: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+                                      HARDWARE: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
+                                      PACKING: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
+                                      SUB_ASSEMBLY: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+                                    };
+                                    return (
+                                      <tr key={comp.componentCode || ci} className={isDarkMode ? 'hover:bg-white/[0.02]' : 'hover:bg-slate-50/50'}>
+                                        <td className="py-2.5 px-4">
+                                          <div className="font-mono font-bold text-slate-800 dark:text-slate-200">{comp.componentCode}</div>
+                                          <div className="text-[11px] text-slate-500 dark:text-slate-400">{comp.componentName}</div>
+                                        </td>
+                                        <td className="py-2.5 px-4">
+                                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border ${typeColors[comp.componentType] || 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                                            {comp.componentType.replace('_', ' ')}
+                                          </span>
+                                        </td>
+                                        <td className="py-2.5 px-4 text-right font-mono text-slate-700 dark:text-slate-300">{comp.qtyPerUnit}</td>
+                                        <td className="py-2.5 px-4 text-right font-mono font-bold text-slate-900 dark:text-white">{totalRequired}</td>
+                                        <td className="py-2.5 px-4 text-right font-mono text-slate-500 dark:text-slate-400">{comp.scrapAllowancePct || 0}%</td>
+                                        <td className="py-2.5 px-4 text-right font-mono font-bold text-amber-600 dark:text-amber-400">{withScrap}</td>
+                                        <td className="py-2.5 px-4 font-mono text-slate-500 dark:text-slate-400">{comp.unit}</td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
 
                   {onNavigate && (

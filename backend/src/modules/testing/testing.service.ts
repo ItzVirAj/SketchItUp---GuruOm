@@ -199,11 +199,14 @@ export class TestingWorkflowService {
           case 2: {
             const createdOrder = await ordersService.createOrder({
               id: ctx.orderId,
-              poNo: ctx.orderPo,
+              poNo: ctx.orderPo || 'PO-TEST-001',
               customerName: ctx.customerName!,
               poDate: new Date().toISOString().split('T')[0],
               deliveryDate: new Date(Date.now() + 86400000 * 14).toISOString().split('T')[0],
               status: 'CONFIRMED',
+              stage: 'CONFIRMED',
+              subType: 'FRESH_PO',
+              drawingRevision: 'REV-0',
               progressStep: 1,
               grossAmount: ctx.grossAmount,
               taxCategory: 'GST 18%',
@@ -213,6 +216,8 @@ export class TestingWorkflowService {
                   id: `line-${runState.runId}`,
                   itemCode: ctx.partCode!,
                   itemDescription: ctx.partDescription!,
+                  custPartNo: 'PART-TEST-001',
+                  drawingRevision: 'REV-0',
                   orderQty: ctx.orderQty,
                   unit: 'NOS',
                   dispatchedQty: 0,
@@ -220,7 +225,7 @@ export class TestingWorkflowService {
                   rate: ctx.unitRate
                 }
               ]
-            }, 'sales@guruom.in');
+            }, { name: 'sales@guruom.in', role: 'Sales' });
 
             stage.checks = { api: true, database: Boolean(createdOrder.id), auditLog: true };
             stage.outputSummary = `Order ${ctx.orderPo} confirmed for ₹${ctx.grossAmount.toLocaleString()} (${ctx.orderQty} Units)`;
@@ -327,7 +332,7 @@ export class TestingWorkflowService {
           case 5: {
             const createdPo = await purchasingService.createPurchaseOrder({
               id: ctx.poId,
-              poNo: ctx.poNo!,
+              poNo: ctx.poNo || 'PO-PUR-TEST-001',
               supplierCode: 'VEND-001',
               supplierName: 'Hindalco Aluminium Extrusions Ltd',
               orderDate: new Date().toISOString().split('T')[0],
@@ -353,7 +358,7 @@ export class TestingWorkflowService {
                   lineTotal: ctx.rawMaterialRequiredKg * ctx.rawMaterialUnitPrice
                 }
               ]
-            });
+            }, 'purchasing@guruom.in');
 
             await logAudit({
               actorEmail: 'purchasing@guruom.in',
@@ -441,7 +446,7 @@ export class TestingWorkflowService {
 
             stage.checks = { api: true, database: true, auditLog: true };
             stage.outputSummary = `Job Card ${ctx.jobNo} scheduled for ${ctx.orderQty} units on VMC-01`;
-            stage.details = { jobNo: ctx.jobNo, machine: createdJob.machine, qty: createdJob.qty };
+            stage.details = { jobNo: ctx.jobNo, machine: (createdJob as any).machine || 'VMC-01', qty: createdJob.qty };
             break;
           }
 
@@ -559,7 +564,7 @@ export class TestingWorkflowService {
               actorEmail: 'qc@guruom.in',
               action: 'PDI_INSPECTION_PASS',
               entityType: 'pdi_inspection',
-              entityId: ctx.pdiId,
+              entityId: ctx.pdiId || 'pdi-test-1',
               afterState: { certificateNo: ctx.certNo, pdiStatus: 'PASS' }
             });
 
@@ -623,17 +628,25 @@ export class TestingWorkflowService {
           case 14: {
             const createdInvoice = await invoicesService.createInvoice({
               id: ctx.invoiceId,
-              invoiceNo: ctx.invoiceNo!,
-              orderPo: ctx.orderPo!,
-              challanNo: ctx.challanNo!,
-              customerName: ctx.customerName!,
+              customerGstin: '27AABCU9603R1ZM',
+              orderPo: ctx.orderPo || 'PO-TEST-001',
+              challanNo: ctx.challanNo || 'CH-TEST-001',
+              customerName: ctx.customerName || 'Test Customer',
               date: new Date().toISOString().split('T')[0],
               dueDate: new Date(Date.now() + 86400000 * 30).toISOString().split('T')[0],
+              status: 'ISSUED',
               taxRate: 18.0,
-              totalAmount: ctx.grossAmount * 1.18,
               paidAmount: 0,
-              balanceAmount: ctx.grossAmount * 1.18,
-              status: 'ISSUED'
+              items: [
+                {
+                  itemCode: ctx.partCode || 'PART-001',
+                  itemDescription: ctx.partDescription || 'Test Part',
+                  hsnCode: '8481',
+                  qty: ctx.orderQty || 10,
+                  unitPrice: ctx.unitRate || 100,
+                  gstRate: 18.0
+                }
+              ]
             });
 
             const { logs: invoiceAudit } = await getAuditLogs({ entityType: 'invoice', entityId: ctx.invoiceNo });

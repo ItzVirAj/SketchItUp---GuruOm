@@ -1,6 +1,7 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
@@ -26,10 +27,22 @@ import attachmentsRoutes from './backend/src/modules/attachments/attachments.rou
 import testingRoutes from './backend/src/modules/testing/testing.routes';
 import adminRoutes from './backend/src/modules/admin/admin.routes';
 import { getRedisClient, closeRedis } from './backend/src/lib/redis';
+import { logger } from './backend/src/utils/logger';
 
-dotenv.config();
+dotenv.config(); // Reload environment configuration on server watch restart
 
-const __dirname = path.dirname(process.argv[1] || __filename || '.');
+// ESM-safe __dirname (M-06). import.meta.url is the standards-based ESM equivalent of
+// __dirname and works under tsx / Vite. esbuild's CJS bundle rewrites import.meta, so
+// we fall back to the launch script path (process.argv[1]) there instead of relying
+// on __filename, which does not exist in native ESM.
+const __dirname = (() => {
+  try {
+    if (typeof import.meta !== 'undefined' && typeof import.meta.url === 'string') {
+      return path.dirname(fileURLToPath(import.meta.url));
+    }
+  } catch (_) { /* fall through to launch-path resolution */ }
+  return path.dirname(process.argv[1] || '.');
+})();
 
 async function startServer() {
   // Initialize shared Redis fast-layer connection gracefully
@@ -38,18 +51,18 @@ async function startServer() {
   const app = express();
   const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
-  // Immediate Health Check Endpoints (for Render proxy and load balancers)
-  app.get('/health', (_req, res) => {
-    res.status(200).send('OK');
-  });
-  app.get('/api/health', (_req, res) => {
+  // Immediate Health Check Endpoints (for Render proxy and load balancers).
+  // /health and /api/health share one canonical JSON handler to avoid drift (L-02).
+  const handleHealth = (_req: unknown, res: { status(code: number): any; json(body: unknown): any }) => {
     res.status(200).json({
       status: 'ok',
       service: 'guruom-owner-os',
       uptime: process.uptime(),
       timestamp: new Date().toISOString()
     });
-  });
+  };
+  app.get('/health', handleHealth);
+  app.get('/api/health', handleHealth);
 
   // CORS Configuration for Credentialed Requests (Cookies & JWTs)
   const allowedOrigins = (process.env.FRONTEND_ORIGIN || 'http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000')
@@ -60,7 +73,10 @@ async function startServer() {
     origin: (origin, callback) => {
       // Allow requests with no origin (e.g. mobile apps, curl, same-origin, health checks)
       if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin) || allowedOrigins.includes('*') || process.env.NODE_ENV !== 'production') {
+      // Fail-closed credentialed CORS (C-04): ONLY origins explicitly listed in
+      // FRONTEND_ORIGIN are allowed; everything else is rejected. Never key this
+      // behaviour off NODE_ENV, which would default to an insecure open state.
+      if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
       return callback(new Error('Not allowed by CORS'), false);
@@ -112,8 +128,9 @@ async function startServer() {
   app.use('/api/v1/attachments', attachmentsRoutes);
 
   // Mount Dedicated ServerAdmin Platform Maker Governance Module
+  // (H-03) mounted under /api/v1 only; the bare /admin path belongs to the
+  // client-side SPA router and must not be intercepted by the API router.
   app.use('/api/v1/admin', adminRoutes);
-  app.use('/admin', adminRoutes);
 
   // Mount Developer Workflow Testing Dashboard Router
   if (process.env.NODE_ENV !== 'production') {
@@ -132,7 +149,7 @@ async function startServer() {
       const systemInstruction = `You are Stratum AI Executive Copilot, an advanced business analytics and workspace intelligence assistant. Provide precise, actionable, data-driven answers in clean markdown format. Keep tone professional, concise, and executive-ready. Focus on metric trends, anomaly resolution, team performance, and strategic growth.`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite',
         contents: [
           {
             role: 'user',
@@ -142,7 +159,7 @@ async function startServer() {
       });
       res.json({ text: response.text });
     } catch (err: any) {
-      console.error('Gemini API Error:', err);
+      logger.error('Gemini API Error:', err);
       res.status(500).json({ error: err.message || 'Failed to process AI request' });
     }
   });
@@ -173,7 +190,7 @@ async function startServer() {
 
   // Global Error Handler Middleware
   app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    console.error('⚠️ [Server Error]:', err.message || err);
+    logger.error('⚠️ [Server Error]:', err.message || err);
     if (res.headersSent) return;
     res.status(err.status || 500).json({
       error: err.name || 'InternalServerError',
@@ -182,11 +199,11 @@ async function startServer() {
   });
 
   const server = app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server listening on http://0.0.0.0:${PORT}`);
+    logger.info(`Server listening on http://0.0.0.0:${PORT}`);
   });
 
   const shutdown = async () => {
-    console.log('Shutting down server gracefully...');
+    logger.info('Shutting down server gracefully...');
     server.close(async () => {
       await closeRedis();
       process.exit(0);
@@ -198,6 +215,6 @@ async function startServer() {
 }
 
 startServer().catch((err) => {
-  console.error('❌ Fatal Server Startup Error:', err);
+  logger.error('❌ Fatal Server Startup Error:', err);
   process.exit(1);
 });

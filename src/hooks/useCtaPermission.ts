@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { CtaId, isRoleAuthorizedForCta, normalizeRole } from '../utils/rbacMatrix';
 
@@ -41,11 +42,21 @@ export function checkCtaPermission(authUser: any, ctaId: CtaId): boolean {
 }
 
 /**
+ * Custom React hook that returns a stable, memoized callback function to check CTA authorization.
+ * Call this hook once at the top of a component and invoke the returned function freely inside
+ * loops, callbacks, or conditional branches without violating the Rules of Hooks.
+ */
+export function useCanPerformCta(): (ctaId: CtaId) => boolean {
+  const { user, profile } = useAuth();
+  const authUser = user || profile;
+  return useCallback((ctaId: CtaId) => checkCtaPermission(authUser, ctaId), [authUser]);
+}
+
+/**
  * Custom React hook that evaluates CTA authorization for the currently authenticated user.
  * Wraps CTA button renders so a REVOKED CTA is fully hidden.
  */
 export function useCtaPermission(ctaId: CtaId): boolean {
-  const { user, profile } = useAuth();
-  const authUser = user || profile;
-  return checkCtaPermission(authUser, ctaId);
+  const canPerform = useCanPerformCta();
+  return canPerform(ctaId);
 }

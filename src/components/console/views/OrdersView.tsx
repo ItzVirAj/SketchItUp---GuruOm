@@ -307,7 +307,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
       (o.drawingRevision && o.drawingRevision.toLowerCase().includes(q)) ||
       (o.heatLotNumber && o.heatLotNumber.toLowerCase().includes(q));
 
-    const matchesStatus = statusFilter === 'ALL' || o.status === statusFilter || o.stage === statusFilter;
+    const matchesStatus = statusFilter === 'ALL' || o.status === statusFilter || o.stage === statusFilter || (statusFilter === 'CANCELLED' && (String(o.status || '').toUpperCase() === 'CANCELLED' || String(o.stage || '').toUpperCase() === 'CANCELLED' || normalizeOrderState(o.stage) === 'CANCELLED' || normalizeOrderState(o.status) === 'CANCELLED'));
     const matchesSubType = subTypeFilter === 'ALL' || (o.subType || 'FRESH_PO') === subTypeFilter;
 
     return matchesSearch && matchesStatus && matchesSubType;
@@ -486,12 +486,19 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
     const isPdiHold = rawStatus === 'PDI_HOLD';
     const isDelayed = rawStatus === 'DELIVERY_DELAYED';
 
+    const isCancelled = ['CANCELLED'].includes(rawStatus) || norm === 'CANCELLED' || String(ord.status || '').toUpperCase() === 'CANCELLED' || String(ord.stage || '').toUpperCase() === 'CANCELLED';
+
     let activeStepIndex = 0;
     let statusLabel = '1. PO Received';
     let badgeBg = 'bg-slate-400/10 text-slate-500 dark:text-slate-400 border-slate-400/30';
     let badgeDot = 'bg-slate-400';
 
-    if (isQcRejected) {
+    if (isCancelled) {
+      activeStepIndex = -1;
+      statusLabel = 'Cancelled';
+      badgeBg = isDarkMode ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200';
+      badgeDot = 'bg-rose-500';
+    } else if (isQcRejected) {
       activeStepIndex = 3;
       statusLabel = '4. QC Rejected (NCR)';
       badgeBg = isDarkMode ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200';
@@ -560,6 +567,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
       isQcRejected,
       isQcHold,
       isPdiHold,
+      isCancelled,
       steps: ORDER_PROGRESSION_STEPS
     };
   };
@@ -575,7 +583,42 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
   };
 
   const renderProgressionStepper = (ord?: CustomerOrder, variant: 'table' | 'card' | 'grid' = 'table') => {
+    const rawStatus = String(ord?.status || ord?.stage || '').trim().toUpperCase();
+    const norm = normalizeOrderState(ord?.stage || ord?.status);
+    const isCancelled = rawStatus === 'CANCELLED' || norm === 'CANCELLED' || String(ord?.status || '').toUpperCase() === 'CANCELLED' || String(ord?.stage || '').toUpperCase() === 'CANCELLED';
     const prog = getOrderProgression(ord);
+
+    if (isCancelled) {
+      return (
+        <div className={`space-y-1.5 select-none ${variant === 'table' ? 'min-w-[190px] max-w-[270px]' : 'w-full'}`}>
+          <div className="flex items-center justify-between gap-2">
+            <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${prog.badgeBg}`}>
+              <span className="relative flex h-1.5 w-1.5 shrink-0">
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500" />
+              </span>
+              <span className="truncate max-w-[150px]">Cancelled</span>
+            </div>
+
+            <div className="flex items-center gap-1 text-[10px] font-medium shrink-0 text-slate-400 dark:text-slate-500">
+              <span>Terminated</span>
+            </div>
+          </div>
+
+          <div
+            title="Order Cancelled — Workflow terminated"
+            className={`w-full h-1.5 rounded-full overflow-hidden ${
+              isDarkMode ? 'bg-slate-800' : 'bg-slate-100'
+            }`}
+          >
+            <div
+              className="h-full rounded-full bg-rose-500/80 transition-all"
+              style={{ width: '100%' }}
+            />
+          </div>
+        </div>
+      );
+    }
+
     const stagePct = Math.round(((prog.activeStepIndex + 1) / 8) * 100);
 
     let progressBg = 'bg-[#5B75F8]';
@@ -633,6 +676,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
   const inProdCount = orders.filter(o => o.status === 'IN_PRODUCTION' || o.stage === 'IN_PRODUCTION' || o.status === 'JOB_RELEASED').length;
   const qcGateCount = orders.filter(o => o.status === 'QC_INSPECTION' || o.stage === 'QC_INSPECTION' || o.stage === 'QC').length;
   const dispatchReadyCount = orders.filter(o => o.status === 'READY_TO_DISPATCH' || o.stage === 'READY_TO_DISPATCH' || o.status === 'DISPATCHED').length;
+  const cancelledCount = orders.filter(o => (o.status || '').toUpperCase() === 'CANCELLED' || (o.stage || '').toUpperCase() === 'CANCELLED' || normalizeOrderState(o.stage) === 'CANCELLED' || normalizeOrderState(o.status) === 'CANCELLED').length;
 
   const openNewOrderModal = () => {
     setValidationError(null);
@@ -748,7 +792,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
             { id: 'READY_TO_DISPATCH', label: '5. PDI', active: 'bg-purple-600 text-white', idle: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30' },
             { id: 'DISPATCHED', label: '6. Dispatch', active: 'bg-cyan-600 text-white', idle: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/30' },
             { id: 'INVOICED', label: '7. Invoice', active: 'bg-teal-600 text-white', idle: 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/30' },
-            { id: 'CLOSED', label: '8. Closed', active: 'bg-emerald-600 text-white', idle: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' }
+            { id: 'CLOSED', label: '8. Closed', active: 'bg-emerald-600 text-white', idle: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' },
+            { id: 'CANCELLED', label: `Cancelled (${cancelledCount})`, active: 'bg-rose-600 text-white', idle: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30' }
           ].map((stage) => {
             const isSelected = statusFilter === stage.id;
             return (
@@ -885,6 +930,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
               <option value="DISPATCHED">6. Outward Dispatched</option>
               <option value="INVOICED">7. GST Invoiced</option>
               <option value="CLOSED">8. Closed & Settled</option>
+              <option value="CANCELLED">Cancelled ({cancelledCount})</option>
             </select>
 
             {/* Sort Pill */}
@@ -973,6 +1019,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
           sortedOrders.map((ord) => {
             const subType = ord.subType || 'FRESH_PO';
             const hasCreditHold = ord.isCustomerOnCreditHold;
+            const prog = getOrderProgression(ord);
 
             const linkedQc = (qcQueue || []).filter(q =>
               (q.orderPo && (q.orderPo.trim().toUpperCase() === ord.poNo.trim().toUpperCase() || q.orderPo.trim().toUpperCase() === ord.id.trim().toUpperCase())) ||
@@ -1009,16 +1056,22 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                 {/* Header: PO Number + Type Pill */}
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="font-mono font-black text-sm text-[var(--accent-primary)] truncate">
+                    <span className={`font-mono font-black text-sm truncate ${prog.isCancelled ? 'line-through opacity-70 text-slate-400' : 'text-[var(--accent-primary)]'}`}>
                       {ord.poNo}
                     </span>
-                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase border shrink-0 ${
-                      subType === 'BLANKET_CALLOFF'
-                        ? 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30'
-                        : 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30'
-                    }`}>
-                      {subType === 'BLANKET_CALLOFF' ? 'Blanket' : 'Fresh PO'}
-                    </span>
+                    {prog.isCancelled ? (
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase border bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30 shrink-0">
+                        Cancelled
+                      </span>
+                    ) : (
+                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase border shrink-0 ${
+                        subType === 'BLANKET_CALLOFF'
+                          ? 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30'
+                          : 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30'
+                      }`}>
+                        {subType === 'BLANKET_CALLOFF' ? 'Blanket' : 'Fresh PO'}
+                      </span>
+                    )}
                   </div>
 
                   <span className="text-[10px] text-slate-400 font-mono">
@@ -1194,6 +1247,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                     sortedOrders.map((ord) => {
                       const subType = ord.subType || 'FRESH_PO';
                       const hasCreditHold = ord.isCustomerOnCreditHold;
+                      const prog = getOrderProgression(ord);
 
                       const linkedQc = (qcQueue || []).filter(q =>
                         (q.orderPo && (q.orderPo.trim().toUpperCase() === ord.poNo.trim().toUpperCase() || q.orderPo.trim().toUpperCase() === ord.id.trim().toUpperCase())) ||
@@ -1231,7 +1285,9 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                           <td className="py-3.5 px-5">
                             <div className="flex items-center gap-3">
                               <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${
-                                subType === 'BLANKET_CALLOFF'
+                                prog.isCancelled
+                                  ? isDarkMode ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30' : 'bg-rose-50 text-rose-600 border border-rose-200'
+                                  : subType === 'BLANKET_CALLOFF'
                                   ? isDarkMode ? 'bg-purple-500/15 text-purple-300 border border-purple-500/20' : 'bg-purple-50 text-purple-700 border border-purple-100'
                                   : isDarkMode ? 'bg-blue-500/15 text-[#7B92FF] border border-blue-500/20' : 'bg-blue-50 text-[#5B75F8] border border-blue-100'
                               }`}>
@@ -1239,16 +1295,22 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                               </div>
                               <div>
                                 <div className="text-xs font-semibold flex items-center gap-1.5 text-slate-900 dark:text-white">
-                                  <span>{ord.poNo}</span>
-                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${
-                                    subType === 'BLANKET_CALLOFF'
-                                      ? isDarkMode ? 'bg-purple-500/15 text-purple-300 border-purple-500/30' : 'bg-purple-50 text-purple-700 border-purple-200'
-                                      : subType === 'AMENDMENT'
-                                        ? isDarkMode ? 'bg-amber-500/15 text-amber-300 border-amber-500/30' : 'bg-amber-50 text-amber-700 border-amber-200'
-                                        : isDarkMode ? 'bg-blue-500/15 text-[#7B92FF] border-blue-500/30' : 'bg-blue-50 text-[#5B75F8] border-blue-200'
-                                  }`}>
-                                    {subType === 'BLANKET_CALLOFF' ? 'Blanket Call-off' : subType === 'AMENDMENT' ? 'Amendment' : 'Fresh PO'}
-                                  </span>
+                                  <span className={prog.isCancelled ? 'line-through opacity-70 text-slate-400' : ''}>{ord.poNo}</span>
+                                  {prog.isCancelled ? (
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30">
+                                      Cancelled
+                                    </span>
+                                  ) : (
+                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${
+                                      subType === 'BLANKET_CALLOFF'
+                                        ? isDarkMode ? 'bg-purple-500/15 text-purple-300 border-purple-500/30' : 'bg-purple-50 text-purple-700 border-purple-200'
+                                        : subType === 'AMENDMENT'
+                                          ? isDarkMode ? 'bg-amber-500/15 text-amber-300 border-amber-500/30' : 'bg-amber-50 text-amber-700 border-amber-200'
+                                          : isDarkMode ? 'bg-blue-500/15 text-[#7B92FF] border-blue-500/30' : 'bg-blue-50 text-[#5B75F8] border-blue-200'
+                                    }`}>
+                                      {subType === 'BLANKET_CALLOFF' ? 'Blanket Call-off' : subType === 'AMENDMENT' ? 'Amendment' : 'Fresh PO'}
+                                    </span>
+                                  )}
                                 </div>
                                 <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
                                   {ord.lines ? `${ord.lines.length} Lines` : '0 Lines'} • {ord.poDate || ord.createdAt?.split('T')[0] || 'N/A'} • Due: {ord.deliveryDate}
@@ -1305,6 +1367,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
         ) : (
           <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2 2xl:grid-cols-3">
             {sortedOrders.map((ord) => {
+              const prog = getOrderProgression(ord);
               return (
                 <div
                   key={ord.id}
@@ -1316,7 +1379,14 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <div className="font-semibold text-sm text-[#5B75F8] dark:text-[#7B92FF]">{ord.poNo}</div>
+                    <div className="flex items-center gap-1.5">
+                      <div className={`font-semibold text-sm ${prog.isCancelled ? 'line-through opacity-70 text-slate-400' : 'text-[#5B75F8] dark:text-[#7B92FF]'}`}>{ord.poNo}</div>
+                      {prog.isCancelled && (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase border bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30">
+                          Cancelled
+                        </span>
+                      )}
+                    </div>
                     <div className="text-sm font-semibold text-slate-900 dark:text-white">
                       ₹{ord.grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </div>

@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import { logger } from '../utils/logger';
 dotenv.config();
 
 export const ENV = {
@@ -10,7 +11,11 @@ export const ENV = {
 
   // Database / Supabase Service Secrets (Server Only)
   SUPABASE_URL: process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
-  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY,
+
+  // M-01: never fall back from the server-only service-role secret to the public
+  // anon key. If SUPABASE_SERVICE_ROLE_KEY is missing, leave it undefined so the
+  // validation block below fails loudly at boot instead of silently downgrading.
+  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
 
   // JWT Token Secrets & Durations (Server Only)
   JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET,
@@ -39,7 +44,11 @@ export const ENV = {
   RATE_LIMIT_SESSION_REVOKE_WINDOW_SEC: parseInt(process.env.RATE_LIMIT_SESSION_REVOKE_WINDOW_SEC || '60', 10), // 1 min
 
   // Resend Secrets (Server Only)
-  RESEND_API_KEY: process.env.RESEND_API_KEY || ''
+  RESEND_API_KEY: process.env.RESEND_API_KEY || '',
+
+  // Gemini Vision (Server Only) — used by the vendor-bills receipt scanner
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
+  GEMINI_MODEL: process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite'
 };
 
 // --- Environment Validation (Fail-Close Security) ---
@@ -57,9 +66,10 @@ const missing = Object.entries(requiredSecrets)
 if (missing.length > 0) {
   const msg = `CRITICAL: Missing required environment variables: ${missing.join(', ')}`;
   if (ENV.NODE_ENV === 'production') {
+    logger.error(msg);
     throw new Error(msg);
   } else {
-    console.error(`\x1b[31m${msg}\x1b[0m`);
-    console.error('\x1b[33mServer is booting in DEVELOPMENT mode with MISSING SECRETS. Operations will fail.\x1b[0m');
+    logger.error(`\x1b[31m${msg}\x1b[0m`);
+    logger.warn('\x1b[33mServer is booting in DEVELOPMENT mode with MISSING SECRETS. Operations will fail.\x1b[0m');
   }
 }

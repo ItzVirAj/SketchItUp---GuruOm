@@ -2,10 +2,18 @@ import { Router } from 'express';
 import { vendorBillsController } from './vendor-bills.controller';
 import { requireAuth } from '../../middleware/auth.middleware';
 import { requirePermission } from '../../middleware/rbac.middleware';
+import { handleFileUpload } from '../../middleware/upload.middleware';
 
 const router = Router();
 
 router.use(requireAuth);
+
+router.post(
+  '/scan-receipt',
+  requirePermission('accounting', 'CREATE_EDIT'),
+  handleFileUpload,
+  (req, res) => vendorBillsController.scanReceipt(req, res)
+);
 
 router.get('/', requirePermission('accounting', 'VIEW_ONLY'), (req, res) => vendorBillsController.getVendorBills(req, res));
 router.get('/:billNo', requirePermission('accounting', 'VIEW_ONLY'), (req, res) => vendorBillsController.getVendorBillByNo(req, res));

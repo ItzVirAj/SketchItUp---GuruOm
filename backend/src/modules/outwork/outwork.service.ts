@@ -2,7 +2,9 @@ import { getDbClient } from '../../config/database';
 import { z } from 'zod';
 import { SubcontractGateOutSchema, SubcontractGateInSchema } from './outwork.schema';
 import { auditService } from '../audit/audit.service';
-import { inventoryService } from '../inventory/inventory.service';
+import { inventoryMovementsService } from '../inventory/inventory_movements.service';
+import { getNextDocumentNumber } from '../../utils/documentNumbers';
+import { logger } from '../../utils/logger';
 import { 
   evaluateSubcontractOverdueStatus, 
   SubcontractOrder 
@@ -63,7 +65,7 @@ export class OutworkService {
         });
       }
     } catch (err) {
-      console.warn('DB getSubcontractOrders fallback:', err);
+      logger.warn('DB getSubcontractOrders fallback:', err);
     }
 
     // Fallback seed with live overdue evaluation
@@ -84,10 +86,10 @@ export class OutworkService {
    * 2. Deducts on-hand stock via SUBCON_GATE_OUT ledger movement
    * 3. Updates Job Card status to OUT_FOR_JOBWORK
    */
-  async dispatchSubcontractGateOut(data: z.infer<typeof SubcontractGateOutSchema>, actorName: string) {
+  async dispatchSubcontractGateOut(data: z.input<typeof SubcontractGateOutSchema>, actorName: string) {
     const validated = SubcontractGateOutSchema.parse(data);
     const subId = validated.id || `sub-${Date.now()}`;
-    const gatePassNo = validated.gatePassNo || `GP-OUT-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
+    const gatePassNo = validated.gatePassNo || await getNextDocumentNumber('GP-OUT', 'GP-OUT');
 
     try {
       await this.db.from('subcontract_orders').insert({
@@ -116,12 +118,13 @@ export class OutworkService {
       });
 
       // 1. Record Ledger Movement SUBCON_GATE_OUT
-      await inventoryService.recordMovement({
+      await inventoryMovementsService.recordMovement({
         itemCode: validated.itemCode,
+        quantityChange: -validated.dispatchedQty,
         movementType: 'TRANSFER_OUT',
-        qty: validated.dispatchedQty,
-        referenceDoc: gatePassNo,
-        actor: actorName,
+        referenceId: gatePassNo,
+        referenceType: 'system',
+        actorEmail: actorName,
         notes: `Outward job-work dispatch for ${validated.processType} at ${validated.subcontractorName}. Gate Pass: ${gatePassNo}`
       });
 
@@ -132,7 +135,7 @@ export class OutworkService {
         .or(`job_no.eq.${validated.jobNo},id.eq.${validated.jobNo}`);
 
     } catch (err) {
-      console.warn('DB dispatchSubcontractGateOut fallback:', err);
+      logger.warn('DB dispatchSubcontractGateOut fallback:', err);
     }
 
     await auditService.recordAuditLog({
@@ -159,9 +162,9 @@ export class OutworkService {
    * 2. Restores material into factory inventory via SUBCON_GATE_IN ledger movement
    * 3. Records incoming quality inspection
    */
-  async receiveSubcontractGateIn(data: z.infer<typeof SubcontractGateInSchema>, actorName: string) {
+  async receiveSubcontractGateIn(data: z.input<typeof SubcontractGateInSchema>, actorName: string) {
     const validated = SubcontractGateInSchema.parse(data);
-    const gateInPassNo = validated.gateInPassNo || `GP-IN-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
+    const gateInPassNo = validated.gateInPassNo || await getNextDocumentNumber('GP-IN', 'GP-IN');
 
     try {
       await this.db
@@ -182,16 +185,17 @@ export class OutworkService {
         .or(`gate_pass_no.eq.${validated.gatePassNo},id.eq.${validated.gatePassNo}`);
 
       // Record Ledger Movement SUBCON_GATE_IN
-      await inventoryService.recordMovement({
+      await inventoryMovementsService.recordMovement({
         itemCode: 'SUBCON-RETURN',
+        quantityChange: validated.receivedQty,
         movementType: 'TRANSFER_IN',
-        qty: validated.receivedQty,
-        referenceDoc: gateInPassNo,
-        actor: actorName,
+        referenceId: gateInPassNo,
+        referenceType: 'system',
+        actorEmail: actorName,
         notes: `Inward job-work receipt for ${validated.gatePassNo}. QC Inspection: ${validated.qcStatus}. Notes: ${validated.inspectionNotes || 'Accepted'}`
       });
     } catch (err) {
-      console.warn('DB receiveSubcontractGateIn fallback:', err);
+      logger.warn('DB receiveSubcontractGateIn fallback:', err);
     }
 
     await auditService.recordAuditLog({

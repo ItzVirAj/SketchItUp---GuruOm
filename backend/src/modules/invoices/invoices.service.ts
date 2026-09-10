@@ -14,6 +14,7 @@ import {
 
 import { notificationsService } from '../notifications/notifications.service';
 import { logAudit } from '../../services/auditLog';
+import { logger } from '../../utils/logger';
 
 const SEED_INVOICES: any[] = [];
 const documentSequenceState: Record<string, number> = {};
@@ -48,7 +49,7 @@ export class InvoicesService {
         return data as string;
       }
     } catch (err) {
-      console.warn('DB getNextDocumentNumber fallback:', err);
+      logger.warn('DB getNextDocumentNumber fallback:', err);
     }
 
     // Atomic fallback increment
@@ -73,18 +74,16 @@ export class InvoicesService {
         const overhead = overheadRow ? Number(overheadRow.value) : 18.00;
 
         return {
-          threshold,
           turnover,
           overheadPercentage: overhead,
           ...isEInvoiceApplicable(turnover, threshold)
         };
       }
     } catch (err) {
-      console.warn('DB getStatutorySettings fallback:', err);
+      logger.warn('DB getStatutorySettings fallback:', err);
     }
 
     return {
-      threshold: 50000000.00,
       turnover: 68500000.00,
       overheadPercentage: 18.00,
       ...isEInvoiceApplicable(68500000.00, 50000000.00)
@@ -114,7 +113,7 @@ export class InvoicesService {
     if (validated.idempotencyKey) {
       const cached = invoiceIdempotencyCache.get(validated.idempotencyKey);
       if (cached && Date.now() - cached.timestamp < INVOICE_IDEMPOTENCY_TTL_MS) {
-        console.log(`[Idempotency] Returning cached invoice for key: ${validated.idempotencyKey}`);
+        logger.info(`[Idempotency] Returning cached invoice for key: ${validated.idempotencyKey}`);
         return cached.result;
       }
     }
@@ -135,10 +134,10 @@ export class InvoicesService {
           err.statusCode = 409;
           throw err;
         }
-        if (dupErr) console.warn('Invoice duplicate check query warning:', dupErr);
+        if (dupErr) logger.warn('Invoice duplicate check query warning:', dupErr);
       } catch (dupErr: any) {
         if (dupErr.statusCode === 409) throw dupErr;
-        console.warn('Invoice duplicate check fallback:', dupErr);
+        logger.warn('Invoice duplicate check fallback:', dupErr);
       }
     }
 
@@ -283,7 +282,10 @@ export class InvoicesService {
       : totalInvoiceAmount;
 
     // 5. Generate Next Atomic Gapless Invoice Number
-    const invoiceNo = validated.invoiceNo || (await this.getNextDocumentNumber('INV', 'INV'));
+    // C-01: the invoice number is a statutory (GST) serial — it is ALWAYS minted
+    // from the DB-side atomic sequence. Any client-supplied value is untrusted and
+    // ignored; the server is the only authority for this field.
+    const invoiceNo = await this.getNextDocumentNumber('INV', 'INV');
     const invoiceId = validated.id || `inv-${Date.now()}`;
     const invoiceStatus = (data as any).status || validated.status || 'DRAFT';
 
@@ -316,7 +318,7 @@ export class InvoicesService {
     });
 
     if (invErr) {
-      console.error('Database createInvoice error:', invErr);
+      logger.error('Database createInvoice error:', invErr);
       const err: any = new Error(`Failed to create customer invoice: ${invErr.message}`);
       err.code = invErr.code;
       err.statusCode = invErr.code === '23505' ? 409 : 400;
@@ -350,7 +352,7 @@ export class InvoicesService {
       });
       const { error: itemErr } = await this.db.from('customer_invoice_items').insert(itemPayloads);
       if (itemErr) {
-        console.warn('Database customer_invoice_items insert warning (non-fatal, continuing invoice creation):', itemErr);
+        logger.warn('Database customer_invoice_items insert warning (non-fatal, continuing invoice creation):', itemErr);
       }
     }
 
@@ -418,7 +420,7 @@ export class InvoicesService {
           .update(orderUpdates)
           .or(`po_no.eq.${validated.orderPo},id.eq.${validated.orderPo}`);
       } catch (ordErr) {
-        console.warn('DB link invoice to order fallback:', ordErr);
+        logger.warn('DB link invoice to order fallback:', ordErr);
       }
 
       // Broadcast the persisted advancement through the shared stage-direct helper if not already closed
@@ -466,7 +468,7 @@ export class InvoicesService {
       .or(`id.eq.${invoiceNo},invoice_no.eq.${invoiceNo}`);
 
     if (upErr) {
-      console.error('Database issueInvoice error:', upErr);
+      logger.error('Database issueInvoice error:', upErr);
       const err: any = new Error(`Failed to issue invoice: ${upErr.message}`);
       err.code = upErr.code;
       err.statusCode = 400;
@@ -502,7 +504,7 @@ export class InvoicesService {
           .update(orderUpdates)
           .or(`po_no.eq.${invoice.orderPo},id.eq.${invoice.orderPo}`);
       } catch (ordErr) {
-        console.warn('DB update order to INVOICED fallback:', ordErr);
+        logger.warn('DB update order to INVOICED fallback:', ordErr);
       }
 
       if (!isAlreadyClosed) {
@@ -581,7 +583,7 @@ export class InvoicesService {
         }));
       }
     } catch (err) {
-      console.warn('DB getInvoices fallback:', err);
+      logger.warn('DB getInvoices fallback:', err);
     }
     return SEED_INVOICES;
   }
@@ -621,7 +623,7 @@ export class InvoicesService {
         };
       }
     } catch (err) {
-      console.warn('DB getInvoiceByNo fallback:', err);
+      logger.warn('DB getInvoiceByNo fallback:', err);
     }
     return SEED_INVOICES.find(i => i.id === invoiceNo || i.invoiceNo === invoiceNo) || null;
   }
@@ -655,7 +657,7 @@ export class InvoicesService {
       .or(`id.eq.${invoiceNo},invoice_no.eq.${invoiceNo}`);
 
     if (upErr) {
-      console.error('Database recordPayment error:', upErr);
+      logger.error('Database recordPayment error:', upErr);
       const err: any = new Error(`Failed to record invoice payment: ${upErr.message}`);
       err.code = upErr.code;
       err.statusCode = 400;
@@ -685,7 +687,7 @@ export class InvoicesService {
           })
           .or(`po_no.eq.${invoice.orderPo},id.eq.${invoice.orderPo}`);
       } catch (ordErr) {
-        console.warn('DB update order payment fallback:', ordErr);
+        logger.warn('DB update order payment fallback:', ordErr);
       }
 
       notificationsService.broadcastEvent('order_updated', {
@@ -817,7 +819,7 @@ export class InvoicesService {
     try {
       await this.db.from('customer_invoices').delete().or(`invoice_no.eq.${invoiceNo},id.eq.${invoiceNo}`);
     } catch (err: any) {
-      console.warn('Database deleteInvoice exception:', err);
+      logger.warn('Database deleteInvoice exception:', err);
       throw new Error(`Failed to delete invoice ${invoiceNo}: ${err.message}`);
     }
 
@@ -842,7 +844,7 @@ export class InvoicesService {
     try {
       await this.db.from('customer_invoices').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     } catch (err: any) {
-      console.warn('Database clearAllInvoices exception:', err);
+      logger.warn('Database clearAllInvoices exception:', err);
     }
 
     await auditService.recordAuditLog({

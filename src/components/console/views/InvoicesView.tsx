@@ -39,7 +39,7 @@ import {
   MasterItem,
   CompanyProfile
 } from '../../../types/console';
-import { useCtaPermission } from '../../../hooks/useCtaPermission';
+import { useCanPerformCta } from '../../../hooks/useCtaPermission';
 import { 
   calculateGstTaxSplit, 
   getCurrentFinancialYear, 
@@ -86,6 +86,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
   preselectedOrderPo,
   onInvoiceModalOpened
 }) => {
+  const canPerformCta = useCanPerformCta();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
@@ -562,7 +563,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
             </div>
           </div>
 
-          {useCtaPermission('GENERATE_INVOICE') && (
+          {canPerformCta('GENERATE_INVOICE') && (
             <button
               type="button"
               onClick={() => {
@@ -828,7 +829,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                     </button>
                   ) : (
                     <>
-                      {inv.status !== 'DRAFT' && useCtaPermission('RECORD_PAYMENT') && (
+                      {inv.status !== 'DRAFT' && canPerformCta('RECORD_PAYMENT') && (
                         <button
                           onClick={() => handleOpenPaymentModal(inv)}
                           className="flex-1 min-h-[38px] py-1.5 px-4 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-[0_4px_12px_var(--accent-shadow)] transition-ui cursor-pointer active:scale-[0.96]"
@@ -995,7 +996,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                           </button>
                         ) : (
                           <>
-                            {inv.status !== 'DRAFT' && useCtaPermission('RECORD_PAYMENT') && (
+                            {inv.status !== 'DRAFT' && canPerformCta('RECORD_PAYMENT') && (
                               <button
                                 onClick={() => handleOpenPaymentModal(inv)}
                                 className="px-3.5 py-1.5 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-white text-xs font-bold transition-ui cursor-pointer flex items-center gap-1.5 shadow-[0_4px_12px_var(--accent-shadow)] active:scale-[0.96]"
@@ -1510,7 +1511,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                 >
                   Cancel
                 </button>
-                {useCtaPermission('RECORD_PAYMENT') && (
+                {canPerformCta('RECORD_PAYMENT') && (
                   <button
                     type="submit"
                     form="payment-form"

@@ -87,7 +87,9 @@ export class InventoryMovementsService {
    * Appends an immutable movement to the inventory ledger.
    * Atomically computes balance_after and updates the denormalized read model.
    */
-  async recordMovement(input: z.infer<typeof RecordMovementSchema>): Promise<InventoryMovementRecord> {
+  // H-06: accept the *input* shape (location has a schema default, so callers may omit it).
+  // z.infer (output) made `location` required for every internal caller.
+  async recordMovement(input: z.input<typeof RecordMovementSchema>): Promise<InventoryMovementRecord> {
     const validated = RecordMovementSchema.parse(input);
     const itemCode = validated.itemCode;
     const location = validated.location || 'MAIN-WAREHOUSE';

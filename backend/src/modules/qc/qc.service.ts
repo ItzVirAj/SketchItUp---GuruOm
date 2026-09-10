@@ -5,6 +5,8 @@ import { notificationsService } from '../notifications/notifications.service';
 import { logAudit } from '../../services/auditLog';
 import { inventoryMovementsService } from '../inventory/inventory_movements.service';
 import { auditService } from '../audit/audit.service';
+import { getNextDocumentNumber } from '../../utils/documentNumbers';
+import { logger } from '../../utils/logger';
 
 const SEED_QC_QUEUE: any[] = [];
 const SEED_PDI_QUEUE: any[] = [];
@@ -35,7 +37,7 @@ export class QcService {
         }));
       }
     } catch (err) {
-      console.warn('Database getQCQueue fallback:', err);
+      logger.warn('Database getQCQueue fallback:', err);
     }
     return SEED_QC_QUEUE;
   }
@@ -64,7 +66,7 @@ export class QcService {
         };
       }
     } catch (err) {
-      console.warn('Database getQCById fallback:', err);
+      logger.warn('Database getQCById fallback:', err);
     }
     return SEED_QC_QUEUE.find(q => q.id === id) || null;
   }
@@ -91,7 +93,7 @@ export class QcService {
 
       if (error) throw error;
     } catch (err) {
-      console.warn('Database createQCInspection fallback:', err);
+      logger.warn('Database createQCInspection fallback:', err);
     }
 
     const created = { id: qcId, ...validated };
@@ -163,7 +165,7 @@ export class QcService {
               created_at: new Date().toISOString()
             });
           } catch (pdiDbErr) {
-            console.warn('DB pdi insert fallback:', pdiDbErr);
+            logger.warn('DB pdi insert fallback:', pdiDbErr);
           }
 
           const pdiRecord = {
@@ -216,7 +218,7 @@ export class QcService {
             status: 'QC_HOLD'
           }).or(`job_no.eq.${target.jobNo},id.eq.${target.jobNo}`);
 
-          const ncrNo = `NCR-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+          const ncrNo = await getNextDocumentNumber('NCR', 'NCR');
           await this.db.from('ncrs').insert({
             id: `ncr-${Date.now()}`,
             ncr_number: ncrNo,
@@ -237,7 +239,7 @@ export class QcService {
         }
       }
     } catch (err) {
-      console.warn('Database reviewQCInspection fallback:', err);
+      logger.warn('Database reviewQCInspection fallback:', err);
     }
 
     const local = SEED_QC_QUEUE.find(q => q.id === id);
@@ -291,7 +293,7 @@ export class QcService {
         }));
       }
     } catch (err) {
-      console.warn('Database getPDIQueue fallback:', err);
+      logger.warn('Database getPDIQueue fallback:', err);
     }
 
     if (rawList.length === 0) {
@@ -314,7 +316,7 @@ export class QcService {
   }
 
   async passPDIInspection(id: string, actorEmail?: string, actorRole?: string) {
-    const certNo = `PDI-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+    const certNo = await getNextDocumentNumber('PDI', 'PDI');
     const reportDate = new Date().toISOString().split('T')[0];
     const effectiveEmail = (actorEmail && actorEmail.includes('@')) ? actorEmail : (actorEmail || 'qc@guruom.in');
     const effectiveRole = actorRole || 'Quality Inspector';
@@ -363,7 +365,7 @@ export class QcService {
         }).or(`po_no.eq.${pdi.order_po},id.eq.${pdi.order_po}`);
       }
     } catch (err) {
-      console.warn('Database passPDIInspection fallback:', err);
+      logger.warn('Database passPDIInspection fallback:', err);
     }
 
     const local = SEED_PDI_QUEUE.find(p => p.id === id);
@@ -387,7 +389,7 @@ export class QcService {
           progressStep: 7
         });
       } catch (err) {
-        console.warn('ordersService updateOrder on PDI pass fallback:', err);
+        logger.warn('ordersService updateOrder on PDI pass fallback:', err);
       }
     }
 
@@ -398,10 +400,11 @@ export class QcService {
         entityId: id,
         severity: 'INFO',
         title: `PDI Inspection Passed (${certNo})`,
-        message: `Inspection cleared for ${partDesc} (${orderPo}). Certificate of Compliance ${certNo} issued.`
+        message: `Inspection cleared for ${partDesc} (${orderPo}). Certificate of Compliance ${certNo} issued.`,
+        isTest: false
       });
     } catch (notifErr) {
-      console.warn('Could not dispatch PDI pass notification:', notifErr);
+      logger.warn('Could not dispatch PDI pass notification:', notifErr);
     }
 
     // Record Audit Log for PDI compliance clearance

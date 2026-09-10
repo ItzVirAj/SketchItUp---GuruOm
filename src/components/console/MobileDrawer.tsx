@@ -123,10 +123,11 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
     }));
   };
 
-  const displayName = currentUser ? currentUser.name : userName;
-  const displayEmail = currentUser ? currentUser.email : 'owner@guruom.in';
-  const initials = displayName
+  const displayName = currentUser?.name || (currentUser as any)?.fullName || userName || 'GuruOm Admin';
+  const displayEmail = currentUser?.email || 'owner@guruom.in';
+  const initials = (displayName || 'GA')
     .split(' ')
+    .filter(Boolean)
     .map(n => n[0])
     .join('')
     .slice(0, 2)

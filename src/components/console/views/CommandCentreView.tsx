@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   BarChart3,
   Hash,
+  LayoutDashboard,
   AlertTriangle,
   Check,
   Clock,
@@ -17,7 +18,6 @@ import {
   Eye,
   EyeOff,
   RotateCcw,
-  Activity,
   ArrowRight,
   Search,
   TrendingUp,
@@ -30,7 +30,6 @@ import {
   Plus,
   Radio,
   Layers,
-  CircleDot,
   ArrowUpRight,
   ClipboardList,
   Boxes,
@@ -40,7 +39,8 @@ import {
   ShoppingBag,
   CreditCard,
   Building2,
-  Receipt
+  Receipt,
+  FileText
 } from 'lucide-react';
 import {
   CustomerOrder,
@@ -56,6 +56,20 @@ import {
 } from '../../../types/console';
 import { AgentBentoGrid } from '../AgentBentoGrid';
 import { AccentColorSelector } from '../AccentColorSelector';
+import { OrderBookRevenueChart } from '../charts/OrderBookRevenueChart';
+import {
+  StatSparklineCard,
+  CashflowTrendCard,
+  MonthlyProgressCard,
+  HistoryCard,
+  GateConsolidationCard
+} from '../widgets/ExecutiveCommandWidgets';
+import {
+  ExecutiveDashboardLayout,
+  OperationsDashboardLayout,
+  QualityGateDashboardLayout,
+  FinancialDashboardLayout
+} from '../widgets/CommandCentreLayouts';
 import { usePullToRefresh } from '../../../hooks/usePullToRefresh';
 import { useUrlModal } from '../../../hooks/useUrlModal';
 
@@ -88,6 +102,28 @@ interface CommandCentreViewProps {
   setScope?: (scope: string) => void;
 }
 
+const SectionTitle: React.FC<{
+  icon: React.ElementType;
+  title: string;
+  sub?: string;
+  accent?: string;
+  action?: React.ReactNode;
+  isDarkMode?: boolean;
+}> = ({ icon: Icon, title, sub, accent, action, isDarkMode = true }) => (
+  <div className="mb-4 flex items-start justify-between gap-3">
+    <div className="flex items-start gap-3">
+      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${accent || 'bg-[var(--accent-soft-light)] text-[var(--accent-text-light)] border border-[var(--accent-border-light)] dark:bg-[var(--accent-soft-dark)] dark:text-[var(--accent-text-dark)] dark:border-[var(--accent-border-dark)] shadow-2xs'}`}>
+        <Icon className="h-4.5 w-4.5 stroke-[2]" />
+      </div>
+      <div>
+        <h2 className={`text-[15px] font-bold tracking-tight leading-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{title}</h2>
+        {sub && <p className={`mt-0.5 text-xs ${isDarkMode ? 'text-slate-300' : 'text-slate-500'}`}>{sub}</p>}
+      </div>
+    </div>
+    {action}
+  </div>
+);
+
 export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
   orders = [],
   stock = [],
@@ -114,11 +150,29 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
   scope: externalScope,
   setScope: externalSetScope
 }) => {
-  const [mode, setMode] = useState<'charts' | 'numbers'>('charts');
+  type CommandCentreLayoutMode = 'executive' | 'operations' | 'quality' | 'financial' | 'numbers' | 'charts';
+  const [mode, setMode] = useState<CommandCentreLayoutMode>(() => {
+    try {
+      const saved = localStorage.getItem('stratum_cmd_layout') as CommandCentreLayoutMode;
+      if (['executive', 'operations', 'quality', 'financial', 'numbers'].includes(saved)) {
+        return saved;
+      }
+      return 'executive';
+    } catch {
+      return 'executive';
+    }
+  });
+
+  const handleSetMode = (newMode: CommandCentreLayoutMode) => {
+    setMode(newMode);
+    try {
+      localStorage.setItem('stratum_cmd_layout', newMode);
+    } catch {
+      // ignore
+    }
+  };
   const [tabularSearchQuery, setTabularSearchQuery] = useState('');
   const [tabularCategoryFilter, setTabularCategoryFilter] = useState('ALL');
-  const [activitySearchQuery, setActivitySearchQuery] = useState('');
-  const [activityCategoryFilter, setActivityCategoryFilter] = useState('ALL');
   const [localScope, setLocalScope] = useState('FY 26-27');
   const scope = externalScope ?? localScope;
   const setScope = externalSetScope ?? setLocalScope;
@@ -149,7 +203,6 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
     showAgentBentoGrid: true,
     showTopMetricsRow: true,
     showAnalyticsGrid: true,
-    showRecentActivities: true,
     showThroughputChart: true,
     showOrderPipelineCard: true,
     showQcCard: true,
@@ -261,25 +314,6 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
   const fmt = (num: number) =>
     `${currencySymbol}${num.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
-  const formattedActivities = auditLogs.map(log => ({
-    time: log.when || 'Just now',
-    activity: log.details || `${log.entity} status updated`,
-    category: log.entity || 'System',
-    user: log.user || 'Admin',
-    status: log.details?.toLowerCase().includes('cancel') || log.details?.toLowerCase().includes('hold')
-      ? 'Alert'
-      : log.details?.toLowerCase().includes('process') || log.details?.toLowerCase().includes('created')
-        ? 'Processing'
-        : 'Completed'
-  }));
-
-  const filteredActivities = formattedActivities.filter(act => {
-    const q = activitySearchQuery.toLowerCase();
-    const matchesSearch = act.activity.toLowerCase().includes(q) || act.user.toLowerCase().includes(q);
-    const matchesCategory = activityCategoryFilter === 'ALL' || act.category.toUpperCase() === activityCategoryFilter.toUpperCase();
-    return matchesSearch && matchesCategory;
-  });
-
   const allTabularMetrics = [
     { code: 'MTR-FIN-01', name: 'Open Order Book Value', category: 'FINANCIAL', valueStr: fmt(metrics.openOrderBookValue), status: 'HEALTHY', viewKey: 'orders' },
     { code: 'MTR-ORD-02', name: 'Active Customer POs', category: 'PRODUCTION', valueStr: `${metrics.openOrders.length} POs`, status: 'ACTIVE', viewKey: 'orders' },
@@ -309,6 +343,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const recentOrders = metrics.scopedOrders.slice(0, 6);
@@ -318,44 +353,47 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
 
   const surface = isDarkMode
     ? 'bg-[#18181B]/90 border border-white/15 backdrop-blur-2xl shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12),0_16px_36px_rgba(0,0,0,0.5)]'
-    : 'bg-white/95 border border-slate-200/90 backdrop-blur-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)]';
+    : 'bg-gradient-to-b from-white via-white to-slate-50/70 border border-slate-200/90 backdrop-blur-2xl shadow-[inset_0_1px_0_0_#ffffff,0_1px_3px_0_rgba(15,23,42,0.05),0_8px_20px_-3px_rgba(15,23,42,0.07)]';
 
   const softInner = isDarkMode 
     ? 'bg-white/[0.04] border border-white/10 hover:border-white/20' 
-    : 'bg-slate-50/90 border border-slate-200/80';
+    : 'bg-slate-50/80 border border-slate-200/80 hover:bg-slate-100/90 shadow-[inset_0_1px_1px_0_rgba(15,23,42,0.02)]';
   const textPrimary = isDarkMode ? 'text-white' : 'text-slate-900';
   const textMuted = isDarkMode ? 'text-slate-300' : 'text-slate-500';
   const textFaint = isDarkMode ? 'text-slate-400' : 'text-slate-400';
 
   /* ─────────────────────────────  SUB-COMPONENTS  ───────────────────────────── */
 
-  const SectionTitle = ({ icon: Icon, title, sub, accent, action }: {
-    icon: React.ElementType; title: string; sub?: string; accent?: string; action?: React.ReactNode;
-  }) => (
-    <div className="mb-4 flex items-start justify-between gap-3">
-      <div className="flex items-start gap-3">
-        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${accent || 'bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF]'}`}>
-          <Icon className="h-4.5 w-4.5 stroke-[2]" />
-        </div>
-        <div>
-          <h2 className={`text-[15px] font-bold tracking-tight leading-tight ${textPrimary}`}>{title}</h2>
-          {sub && <p className={`mt-0.5 text-xs ${textMuted}`}>{sub}</p>}
-        </div>
-      </div>
-      {action}
-    </div>
-  );
-
   const AlertPill = ({ count, label, sub, icon: Icon, tone, onClick }: {
     count: number | string; label: string; sub: string; icon: React.ElementType;
     tone: 'rose' | 'amber' | 'emerald' | 'sky' | 'violet'; onClick: () => void;
   }) => {
     const tones: Record<string, { border: string; icon: string; text: string }> = {
-      rose: { border: 'border-rose-500/30', icon: 'bg-rose-500/15 text-rose-400', text: 'text-rose-400' },
-      amber: { border: 'border-amber-500/30', icon: 'bg-amber-500/15 text-amber-400', text: 'text-amber-400' },
-      emerald: { border: 'border-emerald-500/30', icon: 'bg-emerald-500/15 text-emerald-400', text: 'text-emerald-400' },
-      sky: { border: 'border-blue-500/30', icon: 'bg-blue-500/15 text-[#5B75F8] dark:text-[#7B92FF]', text: 'text-[#5B75F8] dark:text-[#7B92FF]' },
-      violet: { border: 'border-purple-500/30', icon: 'bg-purple-500/15 text-purple-400', text: 'text-purple-400' }
+      rose: {
+        border: 'border-rose-500/30',
+        icon: isDarkMode ? 'bg-rose-500/15 text-rose-400' : 'bg-rose-50 text-rose-700 border border-rose-200/90 shadow-[0_1px_2px_rgba(244,63,94,0.12)]',
+        text: isDarkMode ? 'text-rose-400' : 'text-rose-700'
+      },
+      amber: {
+        border: 'border-amber-500/30',
+        icon: isDarkMode ? 'bg-amber-500/15 text-amber-400' : 'bg-amber-50 text-amber-700 border border-amber-200/90 shadow-[0_1px_2px_rgba(245,158,11,0.12)]',
+        text: isDarkMode ? 'text-amber-400' : 'text-amber-700'
+      },
+      emerald: {
+        border: 'border-emerald-500/30',
+        icon: isDarkMode ? 'bg-emerald-500/15 text-emerald-400' : 'bg-emerald-50 text-emerald-700 border border-emerald-200/90 shadow-[0_1px_2px_rgba(16,185,129,0.12)]',
+        text: isDarkMode ? 'text-emerald-400' : 'text-emerald-700'
+      },
+      sky: {
+        border: 'border-blue-500/30',
+        icon: isDarkMode ? 'bg-blue-500/15 text-[#5B75F8] dark:text-[#7B92FF]' : 'bg-blue-50 text-blue-700 border border-blue-200/90 shadow-[0_1px_2px_rgba(59,130,246,0.12)]',
+        text: isDarkMode ? 'text-[#7B92FF]' : 'text-blue-700'
+      },
+      violet: {
+        border: 'border-purple-500/30',
+        icon: isDarkMode ? 'bg-purple-500/15 text-purple-400' : 'bg-purple-50 text-purple-700 border border-purple-200/90 shadow-[0_1px_2px_rgba(147,51,234,0.12)]',
+        text: isDarkMode ? 'text-purple-400' : 'text-purple-700'
+      }
     };
     const t = tones[tone] || tones.sky;
     
@@ -366,7 +404,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
         className={`group relative flex min-w-[190px] shrink-0 items-center gap-3.5 rounded-2xl border px-4 py-3 text-left transition-all backdrop-blur-2xl hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
           isDarkMode 
             ? 'bg-[#18181B]/90 border-white/15 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08),0_8px_20px_rgba(0,0,0,0.35)] hover:bg-[#202026] hover:border-white/25' 
-            : 'bg-white/95 border-slate-200/90 shadow-xs hover:bg-white'
+            : 'bg-gradient-to-b from-white via-white to-slate-50/70 border-slate-200/90 shadow-[inset_0_1px_0_0_#ffffff,0_1px_3px_rgba(15,23,42,0.04),0_6px_16px_-2px_rgba(15,23,42,0.06)] hover:border-slate-300 hover:shadow-[inset_0_1px_0_0_#ffffff,0_4px_12px_rgba(15,23,42,0.08)]'
         } ${t.border}`}
       >
         <div className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${t.icon} transition-transform`}>
@@ -399,11 +437,26 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
     badge?: string; tone?: 'blue' | 'rose' | 'amber' | 'emerald' | 'purple'; onClick: () => void;
   }) => {
     const toneStyles: Record<string, { icon: string; text: string }> = {
-      blue: { icon: 'bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF]', text: 'text-[#5B75F8] dark:text-[#7B92FF]' },
-      rose: { icon: 'bg-rose-500/10 text-rose-600 dark:text-rose-400', text: 'text-rose-600 dark:text-rose-400' },
-      amber: { icon: 'bg-amber-500/10 text-amber-600 dark:text-amber-400', text: 'text-amber-600 dark:text-amber-400' },
-      emerald: { icon: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400', text: 'text-emerald-600 dark:text-emerald-400' },
-      purple: { icon: 'bg-purple-500/10 text-purple-600 dark:text-purple-400', text: 'text-purple-600 dark:text-purple-400' }
+      blue: {
+        icon: isDarkMode ? 'bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF]' : 'bg-blue-50 text-blue-700 border border-blue-200/90 shadow-[0_1px_2px_rgba(59,130,246,0.12)]',
+        text: isDarkMode ? 'text-[#7B92FF]' : 'text-blue-700'
+      },
+      rose: {
+        icon: isDarkMode ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' : 'bg-rose-50 text-rose-700 border border-rose-200/90 shadow-[0_1px_2px_rgba(244,63,94,0.12)]',
+        text: isDarkMode ? 'text-rose-400' : 'text-rose-700'
+      },
+      amber: {
+        icon: isDarkMode ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-amber-50 text-amber-700 border border-amber-200/90 shadow-[0_1px_2px_rgba(245,158,11,0.12)]',
+        text: isDarkMode ? 'text-amber-400' : 'text-amber-700'
+      },
+      emerald: {
+        icon: isDarkMode ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-emerald-50 text-emerald-700 border border-emerald-200/90 shadow-[0_1px_2px_rgba(16,185,129,0.12)]',
+        text: isDarkMode ? 'text-emerald-400' : 'text-emerald-700'
+      },
+      purple: {
+        icon: isDarkMode ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400' : 'bg-purple-50 text-purple-700 border border-purple-200/90 shadow-[0_1px_2px_rgba(147,51,234,0.12)]',
+        text: isDarkMode ? 'text-purple-400' : 'text-purple-700'
+      }
     };
     const t = toneStyles[tone] || toneStyles.blue;
 
@@ -414,7 +467,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
         className={`group relative flex min-h-[140px] flex-col justify-between rounded-3xl border p-5 text-left transition-all backdrop-blur-2xl hover:scale-[1.01] active:scale-[0.99] cursor-pointer ${
           isDarkMode 
             ? 'bg-[#18181B]/90 border-white/15 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12),0_12px_32px_rgba(0,0,0,0.45)] hover:bg-[#202026] hover:border-white/25' 
-            : 'bg-white/95 border-slate-200/90 shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:bg-white'
+            : 'bg-gradient-to-b from-white via-white to-slate-50/70 border-slate-200/90 shadow-[inset_0_1px_0_0_#ffffff,0_1px_3px_0_rgba(15,23,42,0.05),0_8px_20px_-3px_rgba(15,23,42,0.07)] hover:border-slate-300 hover:shadow-[inset_0_1px_0_0_#ffffff,0_4px_12px_rgba(15,23,42,0.08),0_16px_32px_-4px_rgba(15,23,42,0.1)]'
         }`}
       >
         <div className="flex items-start justify-between gap-3">
@@ -501,7 +554,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
       <section className={`relative overflow-hidden rounded-3xl border transition-all backdrop-blur-2xl ${
         isDarkMode
           ? 'bg-gradient-to-b from-[#1c1c22]/95 via-[#16161b]/95 to-[#121216]/95 border-white/15 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.15),0_24px_60px_rgba(0,0,0,0.6)] text-white'
-          : 'bg-gradient-to-br from-white via-white/95 to-blue-50/60 border-slate-200/90 shadow-[0_4px_24px_rgba(0,0,0,0.06)] text-slate-900'
+          : 'bg-gradient-to-b from-white via-white to-slate-50/80 border-slate-200/90 shadow-[inset_0_1px_0_0_#ffffff,0_2px_4px_rgba(15,23,42,0.04),0_12px_28px_-4px_rgba(15,23,42,0.08)] text-slate-900'
       }`}>
         {/* Apple Inset Specular Ambient Highlight */}
         <div className="pointer-events-none absolute -top-20 -right-20 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(0,122,255,0.22),transparent_70%)] blur-2xl" />
@@ -543,44 +596,45 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                 onChange={e => setScope(e.target.value)}
                 className={`h-9 cursor-pointer rounded-full border px-3.5 text-xs font-semibold outline-none transition-all ${
                   isDarkMode 
-                    ? 'border-white/10 bg-black/60 text-white hover:border-white/20' 
-                    : 'border-slate-200/80 bg-white/90 text-slate-700'
+                    ? 'border-white/10 bg-black/60 text-slate-200 hover:border-white/20' 
+                    : 'border-slate-200/90 bg-white text-slate-800 hover:border-slate-300 shadow-2xs'
                 }`}
               >
+                <option value="All-Time">All-Time</option>
                 <option value="FY 26-27">FY 26-27</option>
                 <option value="FY 25-26">FY 25-26</option>
                 <option value="Q3 2026">Q3 2026</option>
-                <option value="All-Time">All Time</option>
               </select>
 
-              {/* Apple Segmented View Toggle */}
-              <div className={`flex h-9 items-center rounded-full border p-0.5 ${
-                isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200/80 bg-slate-100/80'
+              {/* Layout Switcher Pill Group */}
+              <div className={`flex items-center rounded-full border p-1 ${
+                isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200/90 bg-slate-100/90 shadow-2xs'
               }`}>
-                <button
-                  type="button"
-                  onClick={() => setMode('charts')}
-                  className={`flex h-7.5 px-3.5 items-center gap-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                    mode === 'charts'
-                      ? 'bg-[#5B75F8] text-white shadow-sm'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <BarChart3 className="h-3.5 w-3.5" />
-                  <span>Visual</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMode('numbers')}
-                  className={`flex h-7.5 px-3.5 items-center gap-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                    mode === 'numbers'
-                      ? 'bg-[#5B75F8] text-white shadow-sm'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <Hash className="h-3.5 w-3.5" />
-                  <span>Tabular</span>
-                </button>
+                {[
+                  { id: 'executive', label: 'Executive', icon: LayoutDashboard },
+                  { id: 'operations', label: 'Shopfloor', icon: Factory },
+                  { id: 'quality', label: 'Quality', icon: ShieldCheck },
+                  { id: 'financial', label: 'Finance', icon: Wallet },
+                  { id: 'numbers', label: 'Tabular', icon: Hash }
+                ].map(item => {
+                  const Icon = item.icon;
+                  const isActive = mode === item.id || (mode === 'charts' && item.id === 'executive');
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => handleSetMode(item.id as any)}
+                      className={`flex h-7.5 px-3 items-center gap-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                        isActive
+                          ? 'bg-[var(--accent-primary)] text-white shadow-sm shadow-[var(--accent-shadow)]'
+                          : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                      }`}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                      <span className="hidden md:inline">{item.label}</span>
+                    </button>
+                  );
+                })}
               </div>
 
               <button
@@ -589,7 +643,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                 className={`flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border transition-all active:scale-95 ${
                   isDarkMode 
                     ? 'border-white/10 bg-black/60 text-slate-300 hover:text-white hover:bg-white/10' 
-                    : 'border-slate-200/80 bg-white/90 text-slate-700 hover:bg-slate-100'
+                    : 'border-slate-200/90 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-2xs'
                 }`}
                 title="Customize Dashboard"
               >
@@ -599,7 +653,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
               <button
                 type="button"
                 onClick={() => handleNavigate('orders')}
-                className="flex h-9 cursor-pointer items-center gap-1.5 rounded-full bg-[#5B75F8] hover:bg-[#435BE8] active:scale-[0.98] px-4 text-xs font-semibold text-white shadow-sm shadow-blue-500/25 transition-all"
+                className="flex h-9 cursor-pointer items-center gap-1.5 rounded-full bg-[var(--accent-primary)] hover:opacity-90 active:scale-[0.98] px-4 text-xs font-semibold text-white shadow-sm shadow-[var(--accent-shadow)] transition-all"
               >
                 <Plus className="h-3.5 w-3.5" />
                 <span>New Order</span>
@@ -608,26 +662,26 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
           </div>
 
           {/* Quick stats strip */}
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 pt-5 border-t border-slate-100 dark:border-white/10">
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 pt-5 border-t border-slate-200/70 dark:border-white/10">
             {[
-              { label: 'Open POs', value: metrics.openOrders.length, icon: ShoppingCart, tone: 'text-[#5B75F8] dark:text-[#7B92FF]', bg: 'bg-blue-500/10' },
-              { label: 'Active JCs', value: metrics.activeJobCards.length, icon: Factory, tone: 'text-indigo-400', bg: 'bg-indigo-500/10' },
-              { label: 'QC Pass Rate', value: `${metrics.qcPassRate}%`, icon: ShieldCheck, tone: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-              { label: 'Parts Output', value: metrics.totalOutput.toLocaleString('en-IN'), icon: Gauge, tone: 'text-amber-400', bg: 'bg-amber-500/10' }
+              { label: 'Open POs', value: metrics.openOrders.length, icon: ShoppingCart, tone: 'text-[#5B75F8] dark:text-[#7B92FF]', bg: 'bg-blue-50 text-blue-700 border border-blue-200/90 dark:bg-blue-500/10 dark:text-[#7B92FF] dark:border-blue-500/20' },
+              { label: 'Active JCs', value: metrics.activeJobCards.length, icon: Factory, tone: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-50 text-indigo-700 border border-indigo-200/90 dark:bg-indigo-500/10 dark:text-indigo-400 dark:border-indigo-500/20' },
+              { label: 'QC Pass Rate', value: `${metrics.qcPassRate}%`, icon: ShieldCheck, tone: 'text-emerald-700 dark:text-emerald-400', bg: 'bg-emerald-50 text-emerald-700 border border-emerald-200/90 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20' },
+              { label: 'Parts Output', value: metrics.totalOutput.toLocaleString('en-IN'), icon: Gauge, tone: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-50 text-amber-700 border border-amber-200/90 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20' }
             ].map(item => {
               const Icon = item.icon;
               return (
                 <div
                   key={item.label}
                   className={`flex items-center gap-3.5 p-3.5 rounded-2xl border transition-all ${
-                    isDarkMode ? 'border-white/10 bg-black/50 hover:border-white/20' : 'border-slate-100 bg-slate-50/60'
+                    isDarkMode ? 'border-white/10 bg-black/50 hover:border-white/20' : 'border-slate-200/70 bg-slate-50/70 shadow-[inset_0_1px_1px_0_rgba(15,23,42,0.02)]'
                   }`}
                 >
-                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${item.bg} ${item.tone}`}>
+                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-xs ${item.bg}`}>
                     <Icon className="h-5 w-5 stroke-[2]" />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-[11px] font-medium text-slate-400 dark:text-slate-400">{item.label}</div>
+                    <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">{item.label}</div>
                     <div className="mt-0.5 text-lg font-bold tracking-tight text-slate-900 dark:text-white tabular-nums">{item.value}</div>
                   </div>
                 </div>
@@ -645,7 +699,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
           className={`group w-full rounded-3xl border border-rose-500/30 p-4 text-left transition-all backdrop-blur-2xl flex items-center justify-between gap-3 cursor-pointer ${
             isDarkMode 
               ? 'bg-[#1c1417]/90 hover:bg-[#26191e] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1),0_12px_32px_rgba(0,0,0,0.4)]' 
-              : 'bg-rose-50/90 hover:bg-rose-50 shadow-xs'
+              : 'bg-gradient-to-r from-rose-50/90 via-rose-50/70 to-white border-rose-200/90 hover:border-rose-300 shadow-[inset_0_1px_0_0_#ffffff,0_2px_8px_rgba(244,63,94,0.08)]'
           }`}
         >
           <div className="flex items-center gap-3.5">
@@ -666,22 +720,12 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
         </button>
       )}
 
-      {/* ══════════════  ALERT RAIL  ══════════════ */}
-      {widgetVisibility.showAlertsBar && (
-        <div className="no-scrollbar flex gap-2.5 overflow-x-auto pb-1">
-          <AlertPill count={metrics.qcHoldCount} label="QC Holds" sub="Inspection blocked" icon={ShieldCheck} tone="amber" onClick={() => handleNavigate('qc')} />
-          <AlertPill count={metrics.itemsShortCount} label="Stock Short" sub="Raw material gaps" icon={Package} tone="rose" onClick={() => handleNavigate('inventory')} />
-          <AlertPill count={metrics.overdueDeliveriesCount} label="Overdue" sub="Past delivery date" icon={Clock} tone="amber" onClick={() => handleNavigate('orders')} />
-          <AlertPill count={fmt(metrics.overdueReceivablesSum)} label="Receivables" sub="Customer overdue" icon={Wallet} tone="emerald" onClick={() => handleNavigate('invoices')} />
-          <AlertPill count={metrics.pendingDispatchesCount} label="Dispatch" sub="Ready at dock" icon={Truck} tone="sky" onClick={() => handleNavigate('dispatch')} />
-        </div>
-      )}
 
       {/* ══════════════  TABULAR MODE  ══════════════ */}
       {mode === 'numbers' && (
         <section className={`space-y-4 rounded-3xl border p-5 ${surface}`}>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <SectionTitle icon={Target} title="Telemetry Registry" sub="All operational KPIs in tabular form" />
+            <SectionTitle icon={Target} title="Telemetry Registry" sub="All operational KPIs in tabular form" isDarkMode={isDarkMode} />
             <div className="flex flex-wrap items-center gap-2">
               <div className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs ${softInner}`}>
                 <Search className="h-3.5 w-3.5 text-slate-400" />
@@ -706,7 +750,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
               <button
                 type="button"
                 onClick={handleExportTabularCSV}
-                className="flex items-center gap-1.5 rounded-full bg-[#5B75F8] hover:bg-[#435BE8] active:scale-[0.98] px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs transition-all cursor-pointer"
+                className="flex items-center gap-1.5 rounded-full bg-[var(--accent-primary)] hover:opacity-90 active:scale-[0.98] px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs shadow-[var(--accent-shadow)] transition-all cursor-pointer"
               >
                 <Download className="h-3.5 w-3.5" />
                 <span>Export CSV</span>
@@ -753,296 +797,93 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
         </section>
       )}
 
-      {mode === 'charts' && (
-        <>
-          {/* ══════════════  KPI GRID  ══════════════ */}
-          {widgetVisibility.showTopMetricsRow && (
-            <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <KpiCard
-                label="Order Book"
-                value={fmt(metrics.totalRevenue || metrics.openOrderBookValue)}
-                hint={`${metrics.openOrders.length} active purchase orders`}
-                delta="+12% vs last period"
-                badge="Revenue"
-                icon={ShoppingBag}
-                tone="blue"
-                onClick={() => handleNavigate('orders')}
-              />
-              <KpiCard
-                label="Material Shortages"
-                value={`${metrics.itemsShortCount} SKUs`}
-                hint={`${stock.length} items tracked in stores`}
-                badge={metrics.itemsShortCount > 0 ? 'Action Req' : 'Optimal'}
-                icon={metrics.itemsShortCount > 0 ? AlertTriangle : Boxes}
-                tone={metrics.itemsShortCount > 0 ? 'rose' : 'emerald'}
-                onClick={() => handleNavigate('inventory')}
-              />
-              <KpiCard
-                label="Overdue Receivables"
-                value={fmt(metrics.overdueReceivablesSum)}
-                hint={`${metrics.overdueInvoicesList.length} invoices past due`}
-                badge="Receivables"
-                icon={Clock}
-                tone={metrics.overdueReceivablesSum > 0 ? 'amber' : 'emerald'}
-                onClick={() => handleNavigate('invoices')}
-              />
-              <KpiCard
-                label="Vendor Payables"
-                value={fmt(metrics.outstandingPayablesSum)}
-                hint={`${payables.length} supplier bills outstanding`}
-                badge="Payables"
-                icon={Building2}
-                tone="purple"
-                onClick={() => handleNavigate('payables')}
-              />
-            </section>
-          )}
+      {(mode === 'executive' || mode === 'charts') && (
+        <ExecutiveDashboardLayout
+          orders={orders}
+          stock={stock}
+          qcItems={qcItems}
+          pdiQueue={pdiQueue}
+          jobCards={jobCards}
+          shortages={shortages}
+          dispatches={dispatches}
+          invoices={invoices}
+          payables={payables}
+          productionLogs={productionLogs}
+          auditLogs={auditLogs}
+          approvals={approvals}
+          scope={scope}
+          currencySymbol={currencySymbol}
+          isDarkMode={isDarkMode}
+          onNavigate={handleNavigate}
+          onSelectOrder={onSelectOrder}
+        />
+      )}
 
-          {/* ══════════════  MAIN BENTO  ══════════════ */}
-          <section className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-12">
+      {mode === 'operations' && (
+        <OperationsDashboardLayout
+          orders={orders}
+          stock={stock}
+          qcItems={qcItems}
+          pdiQueue={pdiQueue}
+          jobCards={jobCards}
+          shortages={shortages}
+          dispatches={dispatches}
+          invoices={invoices}
+          payables={payables}
+          productionLogs={productionLogs}
+          auditLogs={auditLogs}
+          approvals={approvals}
+          scope={scope}
+          currencySymbol={currencySymbol}
+          isDarkMode={isDarkMode}
+          onNavigate={handleNavigate}
+          onSelectOrder={onSelectOrder}
+        />
+      )}
 
-            {/* Order Pipeline Funnel */}
-            {widgetVisibility.showAnalyticsGrid && widgetVisibility.showOrderPipelineCard && (
-              <div className={`rounded-3xl border p-6 lg:col-span-8 ${surface}`}>
-                <SectionTitle
-                  icon={Layers}
-                  title="Order Lifecycle Pipeline"
-                  sub={`${metrics.scopedOrders.length} orders in ${scope}`}
-                  action={
-                    <button
-                      type="button"
-                      onClick={() => handleNavigate('orders')}
-                      className="flex items-center gap-1 text-xs font-semibold text-[#5B75F8] dark:text-[#7B92FF] transition hover:underline cursor-pointer"
-                    >
-                      <span>View All</span>
-                      <ChevronRight className="h-3.5 w-3.5" />
-                    </button>
-                  }
-                />
+      {mode === 'quality' && (
+        <QualityGateDashboardLayout
+          orders={orders}
+          stock={stock}
+          qcItems={qcItems}
+          pdiQueue={pdiQueue}
+          jobCards={jobCards}
+          shortages={shortages}
+          dispatches={dispatches}
+          invoices={invoices}
+          payables={payables}
+          productionLogs={productionLogs}
+          auditLogs={auditLogs}
+          approvals={approvals}
+          scope={scope}
+          currencySymbol={currencySymbol}
+          isDarkMode={isDarkMode}
+          onNavigate={handleNavigate}
+          onSelectOrder={onSelectOrder}
+        />
+      )}
 
-                <div className="grid gap-2">
-                  {[
-                    { key: 'draft', label: 'PO Received', color: 'bg-slate-400', view: 'orders' },
-                    { key: 'confirmed', label: 'Confirmed', color: 'bg-indigo-500', view: 'orders' },
-                    { key: 'production', label: 'In Production', color: 'bg-blue-600', view: 'production' },
-                    { key: 'qc', label: 'QC / Inspection', color: 'bg-amber-500', view: 'qc' },
-                    { key: 'dispatch', label: 'Dispatch Ready', color: 'bg-teal-500', view: 'dispatch' },
-                    { key: 'closed', label: 'Closed', color: 'bg-emerald-500', view: 'orders' }
-                  ].map((stage) => {
-                    const count = metrics.pipeline[stage.key as keyof typeof metrics.pipeline] as number;
-                    const pct = Math.round((count / pipelineTotal) * 100);
-                    return (
-                      <button
-                        key={stage.key}
-                        type="button"
-                        onClick={() => handleNavigate(stage.view)}
-                        className={`group grid w-full grid-cols-[minmax(112px,0.75fr)_minmax(0,1.6fr)_auto] items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-all cursor-pointer ${softInner} ${isDarkMode ? 'hover:bg-white/[0.08]' : 'hover:bg-white hover:shadow-xs'}`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className={`h-2 w-2 shrink-0 rounded-full ${stage.color}`} />
-                          <span className={`truncate text-xs font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>{stage.label}</span>
-                        </div>
-                        <div className={`relative h-2 overflow-hidden rounded-full ${isDarkMode ? 'bg-white/[0.08]' : 'bg-slate-200/70'}`}>
-                          <div
-                            className={`h-full rounded-full transition-[width] duration-700 ease-out ${stage.color}`}
-                            style={{ width: `${Math.max(pct, count > 0 ? 5 : 0)}%` }}
-                          />
-                        </div>
-                        <span className={`text-right text-xs font-semibold ${textPrimary}`}>
-                          {count} <span className={`text-[10px] font-normal ${textFaint}`}>({pct}%)</span>
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Plant Health Ring */}
-            <div className={`flex flex-col rounded-3xl border p-6 lg:col-span-4 ${surface}`}>
-              <SectionTitle icon={Radio} title="Plant Health" sub="Live shopfloor telemetry" accent="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" />
-
-              <div className="flex flex-1 flex-col items-center justify-center py-2">
-                <div className="relative">
-                  <svg className="h-40 w-40 -rotate-90" viewBox="0 0 120 120">
-                    <circle cx="60" cy="60" r="52" fill="none" stroke={isDarkMode ? 'rgba(255,255,255,0.08)' : '#f1f5f9'} strokeWidth="8" />
-                    <circle
-                      cx="60"
-                      cy="60"
-                      r="52"
-                      fill="none"
-                      stroke="#5B75F8"
-                      strokeWidth="8"
-                      strokeLinecap="round"
-                      strokeDasharray={`${Number(metrics.qcPassRate) * 3.27} 327`}
-                      className="transition-[stroke-dasharray] duration-1000 ease-out"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className={`text-3xl font-bold tracking-tight ${textPrimary}`}>{metrics.qcPassRate}%</span>
-                    <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">QC Pass</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-4 grid grid-cols-3 gap-2">
-                {[
-                  { label: 'Active JCs', value: metrics.activeJobCards.length },
-                  { label: 'QC Items', value: qcItems.length },
-                  { label: 'Output', value: metrics.totalOutput }
-                ].map(s => (
-                  <div key={s.label} className={`rounded-2xl border p-2.5 text-center ${softInner}`}>
-                    <div className="text-[10px] font-medium text-slate-400">{s.label}</div>
-                    <div className={`mt-0.5 text-sm font-bold ${textPrimary}`}>{s.value}</div>
-                  </div>
-                ))}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => handleNavigate('production')}
-                className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-2xl bg-blue-500/10 hover:bg-blue-500/15 py-3 text-xs font-semibold text-[#5B75F8] dark:text-[#7B92FF] transition-all active:scale-[0.98] cursor-pointer"
-              >
-                <Play className="h-3.5 w-3.5" />
-                <span>Open Shopfloor</span>
-              </button>
-            </div>
-
-            {/* Recent Orders */}
-            <div className={`rounded-3xl border p-6 lg:col-span-6 ${surface}`}>
-              <SectionTitle
-                icon={ClipboardList}
-                title="Recent Orders"
-                action={
-                  <button
-                    type="button"
-                    onClick={() => handleNavigate('orders')}
-                    className="flex items-center gap-1 text-xs font-semibold text-[#5B75F8] dark:text-[#7B92FF] transition hover:underline cursor-pointer"
-                  >
-                    <span>View All</span>
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  </button>
-                }
-              />
-              <div className="space-y-2">
-                {recentOrders.length === 0 ? (
-                  <div className={`flex flex-col items-center gap-2 py-10 text-center ${textFaint}`}>
-                    <ShoppingCart className="h-7 w-7 opacity-40" />
-                    <p className="text-xs">No orders in this scope yet</p>
-                  </div>
-                ) : (
-                  recentOrders.map(order => (
-                    <button
-                      key={order.id}
-                      type="button"
-                      onClick={() => onSelectOrder?.(order.id || order.poNo)}
-                      className={`group flex w-full items-center justify-between gap-3 rounded-2xl border p-3.5 text-left transition-all cursor-pointer ${softInner} ${isDarkMode ? 'hover:bg-white/[0.08]' : 'hover:bg-white hover:shadow-xs'}`}
-                    >
-                      <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF]">
-                          <Receipt className="h-4 w-4" />
-                        </div>
-                        <div className="min-w-0">
-                          <div className={`truncate text-sm font-semibold ${textPrimary}`}>{order.poNo}</div>
-                          <div className="truncate text-[11px] text-slate-400">{order.customerName}</div>
-                        </div>
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <div className={`text-sm font-bold ${textPrimary}`}>{fmt(order.grossAmount || 0)}</div>
-                        <span className="text-[10px] font-medium text-slate-400">
-                          {(order.status || order.stage || 'DRAFT').replace(/_/g, ' ')}
-                        </span>
-                      </div>
-                    </button>
-                  ))
-                )}
-              </div>
-            </div>
-
-            {/* Active Job Cards */}
-            <div className={`rounded-3xl border p-6 lg:col-span-6 ${surface}`}>
-              <SectionTitle
-                icon={Factory}
-                title="Active Job Cards"
-                accent="bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
-                action={
-                  <button
-                    type="button"
-                    onClick={() => handleNavigate('production')}
-                    className="flex items-center gap-1 text-xs font-semibold text-[#5B75F8] dark:text-[#7B92FF] transition hover:underline cursor-pointer"
-                  >
-                    <span>Shopfloor</span>
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  </button>
-                }
-              />
-              <div className="space-y-2">
-                {(metrics.activeJobCards.length > 0 ? metrics.activeJobCards : jobCards).slice(0, 5).map((jc, i) => (
-                  <div
-                    key={jc.id || i}
-                    className={`flex items-center justify-between gap-3 rounded-2xl border p-3.5 ${softInner}`}
-                  >
-                    <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-                        <Boxes className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className={`text-sm font-semibold ${textPrimary}`}>{jc.jobCardNo || `JC-${i + 1}`}</div>
-                        <div className="truncate text-[11px] text-slate-400">{jc.partDescription || jc.partCode || 'Precision component'}</div>
-                      </div>
-                    </div>
-                    <span className="shrink-0 rounded-full bg-indigo-500/10 px-2.5 py-0.5 text-[10px] font-medium text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
-                      {jc.status || 'IN_PROGRESS'}
-                    </span>
-                  </div>
-                ))}
-                {jobCards.length === 0 && (
-                  <div className={`flex flex-col items-center gap-2 py-10 text-center ${textFaint}`}>
-                    <Factory className="h-7 w-7 opacity-40" />
-                    <p className="text-xs">No job cards scheduled</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className={`rounded-3xl border p-5 sm:p-6 lg:col-span-12 ${surface}`}>
-              <div className="mb-3.5 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <Zap className="h-4 w-4 text-[#5B75F8] dark:text-[#7B92FF]" />
-                  <h2 className={`text-sm font-bold tracking-tight ${textPrimary}`}>Quick Actions</h2>
-                </div>
-                <span className={`text-[11px] font-medium ${textFaint}`}>Module shortcuts</span>
-              </div>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8">
-                {[
-                  { label: 'Orders', icon: ShoppingCart, view: 'orders', color: 'text-blue-500', bg: 'bg-blue-500/10' },
-                  { label: 'Production', icon: Factory, view: 'production', color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
-                  { label: 'Inventory', icon: Package, view: 'inventory', color: 'text-rose-500', bg: 'bg-rose-500/10' },
-                  { label: 'QC Gate', icon: ShieldCheck, view: 'qc', color: 'text-amber-500', bg: 'bg-amber-500/10' },
-                  { label: 'Dispatch', icon: Truck, view: 'dispatch', color: 'text-teal-500', bg: 'bg-teal-500/10' },
-                  { label: 'Invoices', icon: DollarSign, view: 'invoices', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-                  { label: 'Approvals', icon: CheckSquare, view: 'approvals', color: 'text-rose-500', bg: 'bg-rose-500/10' },
-                  { label: 'AI Swarm', icon: Sparkles, view: 'command-centre', color: 'text-purple-500', bg: 'bg-purple-500/10' }
-                ].map(action => {
-                  const Icon = action.icon;
-                  return (
-                    <button
-                      key={action.label}
-                      type="button"
-                      onClick={() => handleNavigate(action.view)}
-                      className={`group flex min-h-[88px] flex-col items-center justify-center gap-2.5 rounded-2xl border p-3 transition-all hover:scale-105 active:scale-[0.98] cursor-pointer ${softInner} ${isDarkMode ? 'hover:bg-white/[0.08]' : 'hover:bg-white hover:shadow-xs'}`}
-                    >
-                      <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${action.bg}`}>
-                        <Icon className={`h-5 w-5 ${action.color}`} strokeWidth={2} />
-                      </div>
-                      <span className={`text-[11px] font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>{action.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </section>
+      {mode === 'financial' && (
+        <FinancialDashboardLayout
+          orders={orders}
+          stock={stock}
+          qcItems={qcItems}
+          pdiQueue={pdiQueue}
+          jobCards={jobCards}
+          shortages={shortages}
+          dispatches={dispatches}
+          invoices={invoices}
+          payables={payables}
+          productionLogs={productionLogs}
+          auditLogs={auditLogs}
+          approvals={approvals}
+          scope={scope}
+          currencySymbol={currencySymbol}
+          isDarkMode={isDarkMode}
+          onNavigate={handleNavigate}
+          onSelectOrder={onSelectOrder}
+        />
+      )}
 
           {/* ══════════════  AI AGENT GRID  ══════════════ */}
           {widgetVisibility.showAgentBentoGrid && (
@@ -1082,84 +923,6 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
             </section>
           )}
 
-          {/* ══════════════  ACTIVITY FEED  ══════════════ */}
-          {widgetVisibility.showRecentActivities && (
-            <section className={`space-y-4 rounded-3xl border p-6 ${surface}`}>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <SectionTitle icon={Activity} title="Factory Activity Stream" sub="Real-time audit trail across all modules" />
-                <div className="flex gap-2">
-                  <div className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs ${softInner}`}>
-                    <Search className="h-3.5 w-3.5 text-slate-400" />
-                    <input
-                      value={activitySearchQuery}
-                      onChange={e => setActivitySearchQuery(e.target.value)}
-                      placeholder="Search activities"
-                      className={`w-32 bg-transparent outline-none text-xs sm:w-48 ${textPrimary}`}
-                    />
-                  </div>
-                  <select
-                    value={activityCategoryFilter}
-                    onChange={e => setActivityCategoryFilter(e.target.value)}
-                    className={`cursor-pointer rounded-xl border px-3 py-1.5 text-xs font-medium outline-none ${softInner} ${textPrimary}`}
-                  >
-                    <option value="ALL">All Categories</option>
-                    <option value="ORDER">Order</option>
-                    <option value="INVENTORY">Inventory</option>
-                    <option value="SYSTEM">System</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="relative">
-                {/* timeline spine */}
-                {filteredActivities.length > 0 && (
-                  <div className={`absolute bottom-4 left-[15px] top-4 w-px ${isDarkMode ? 'bg-white/10' : 'bg-slate-200/80'}`} />
-                )}
-                <div className="space-y-1">
-                  {filteredActivities.slice(0, 10).map((act, idx) => (
-                    <div key={idx} className="relative flex items-start gap-4 py-2.5">
-                      <div
-                        className={`relative z-10 mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ring-4 ${isDarkMode ? 'ring-slate-900' : 'ring-white'} ${
-                          act.status === 'Alert'
-                            ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
-                            : act.status === 'Processing'
-                              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                              : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                        }`}
-                      >
-                        <CircleDot className="h-3.5 w-3.5" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className={`text-sm font-semibold ${textPrimary}`}>{act.activity}</p>
-                        <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
-                          {act.time} · {act.user} · {act.category}
-                        </p>
-                      </div>
-                      <span
-                        className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-medium border ${
-                          act.status === 'Alert'
-                            ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
-                            : act.status === 'Processing'
-                              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
-                              : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                        }`}
-                      >
-                        {act.status}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                {filteredActivities.length === 0 && (
-                  <div className={`flex flex-col items-center gap-2 py-10 text-center ${textFaint}`}>
-                    <Activity className="h-7 w-7 opacity-40" />
-                    <p className="text-xs">No activities match your filter</p>
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
-        </>
-      )}
 
       {/* ══════════════  CUSTOMIZE MODAL  ══════════════ */}
       {showCustomizeModal && (
@@ -1168,7 +931,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
           <div className={`relative z-10 w-full max-w-md space-y-4 rounded-2xl border p-6 shadow-2xl backdrop-blur-2xl ${isDarkMode ? 'border-white/10 bg-slate-900/95 text-white' : 'border-slate-200/80 bg-white/95 text-slate-900'}`}>
             <div className="flex items-center justify-between border-b pb-3.5 border-slate-100 dark:border-white/10">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF]">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--accent-soft-light)] text-[var(--accent-text-light)] dark:bg-[var(--accent-soft-dark)] dark:text-[var(--accent-text-dark)]">
                   <SlidersHorizontal className="h-4 w-4" />
                 </div>
                 <h3 className="text-base font-bold tracking-tight">Customize Dashboard</h3>
@@ -1188,24 +951,35 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
               </div>
 
               <div className={`space-y-2 rounded-xl border p-3.5 ${softInner}`}>
-                <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">Display Mode</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {(['charts', 'numbers'] as const).map(m => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => setMode(m)}
-                      className={`flex min-h-[40px] items-center justify-center gap-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${mode === m
-                          ? 'border-transparent bg-[#5B75F8] text-white shadow-xs'
-                          : isDarkMode
-                            ? 'border-white/10 bg-slate-800/80 text-slate-300 hover:bg-slate-800'
-                            : 'border-slate-200/80 bg-white text-slate-700 hover:bg-slate-50'
+                <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">Dashboard Layout Preset</label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {[
+                    { id: 'executive', label: 'Executive', icon: Sparkles },
+                    { id: 'operations', label: 'Operations', icon: Factory },
+                    { id: 'quality', label: 'Quality', icon: ShieldCheck },
+                    { id: 'financial', label: 'Financial', icon: DollarSign },
+                    { id: 'numbers', label: 'Tabular', icon: Hash }
+                  ].map(tab => {
+                    const Icon = tab.icon;
+                    const isActive = mode === tab.id || (mode === 'charts' && tab.id === 'executive');
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => handleSetMode(tab.id as any)}
+                        className={`flex min-h-[38px] items-center justify-center gap-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                          isActive
+                            ? 'border-transparent bg-[#0F766E] text-white shadow-xs dark:bg-[#2DD4BF] dark:text-slate-950'
+                            : isDarkMode
+                              ? 'border-white/10 bg-slate-800/80 text-slate-300 hover:bg-slate-800'
+                              : 'border-slate-200/80 bg-white text-slate-700 hover:bg-slate-50'
                         }`}
-                    >
-                      {m === 'charts' ? <BarChart3 className="h-4 w-4" /> : <Hash className="h-4 w-4" />}
-                      <span>{m === 'charts' ? 'Visual' : 'Tabular'}</span>
-                    </button>
-                  ))}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                        <span>{tab.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -1227,9 +1001,8 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                   { key: 'showAlertsBar', label: 'Alert Rail' },
                   { key: 'showTopMetricsRow', label: 'KPI Cards' },
                   { key: 'showAnalyticsGrid', label: 'Analytics Grid' },
-                  { key: 'showOrderPipelineCard', label: 'Order Pipeline' },
-                  { key: 'showAgentBentoGrid', label: 'AI Agent Grid' },
-                  { key: 'showRecentActivities', label: 'Activity Stream' }
+                  { key: 'showOrderPipelineCard', label: 'Order Book Revenue & Pipeline' },
+                  { key: 'showAgentBentoGrid', label: 'AI Agent Grid' }
                 ].map(item => {
                   const key = item.key as keyof typeof widgetVisibility;
                   const active = widgetVisibility[key];

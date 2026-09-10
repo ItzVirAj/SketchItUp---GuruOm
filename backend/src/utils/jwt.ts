@@ -2,6 +2,15 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { ENV } from '../config/env';
 
+// H-07: JWT secrets come from env as `string | undefined`. Fail loudly (secure
+// default) instead of letting jsonwebtoken type errors or `undefined` secrets through.
+function requireSecret(secret: string | undefined, name: 'JWT_ACCESS_SECRET' | 'JWT_REFRESH_SECRET'): string {
+  if (!secret) {
+    throw new Error(`CRITICAL: ${name} is not configured. Refusing to ${name === 'JWT_ACCESS_SECRET' ? 'sign/verify access' : 'sign/verify refresh'} tokens.`);
+  }
+  return secret;
+}
+
 export interface JwtUserPayload {
   id: string;
   email: string;
@@ -34,7 +43,7 @@ export function generateTokens(user: JwtUserPayload, existingFamilyId?: string):
       department: user.department,
       orgId: user.orgId || '00000000-0000-0000-0000-000000000001'
     },
-    ENV.JWT_ACCESS_SECRET,
+    requireSecret(ENV.JWT_ACCESS_SECRET, 'JWT_ACCESS_SECRET'),
     {
       expiresIn: ENV.ACCESS_TOKEN_EXPIRES_IN as any
     }
@@ -50,7 +59,7 @@ export function generateTokens(user: JwtUserPayload, existingFamilyId?: string):
       jti: tokenId,
       fid: familyId
     },
-    ENV.JWT_REFRESH_SECRET,
+    requireSecret(ENV.JWT_REFRESH_SECRET, 'JWT_REFRESH_SECRET'),
     {
       expiresIn: `${ENV.REFRESH_TOKEN_EXPIRES_IN_DAYS}d` as any
     }
@@ -68,7 +77,7 @@ export function generateTokens(user: JwtUserPayload, existingFamilyId?: string):
  * Verifies and decodes an Access Token.
  */
 export function verifyAccessToken(token: string): JwtUserPayload {
-  const decoded = jwt.verify(token, ENV.JWT_ACCESS_SECRET) as any;
+  const decoded = jwt.verify(token, requireSecret(ENV.JWT_ACCESS_SECRET, 'JWT_ACCESS_SECRET')) as any;
   return {
     id: decoded.sub || decoded.id,
     email: decoded.email,
@@ -83,7 +92,7 @@ export function verifyAccessToken(token: string): JwtUserPayload {
  * Verifies and decodes a Refresh Token.
  */
 export function verifyRefreshToken(token: string): { sub: string; email: string; jti: string } {
-  return jwt.verify(token, ENV.JWT_REFRESH_SECRET) as { sub: string; email: string; jti: string };
+  return jwt.verify(token, requireSecret(ENV.JWT_REFRESH_SECRET, 'JWT_REFRESH_SECRET')) as unknown as { sub: string; email: string; jti: string };
 }
 
 /**

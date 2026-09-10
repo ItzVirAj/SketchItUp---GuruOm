@@ -80,7 +80,15 @@ const SEED_RULES = [
   }
 ];
 
-const SEED_RECIPIENTS = [
+const SEED_RECIPIENTS: Array<{
+  id: string;
+  notification_rule_id: string;
+  recipient_type: string;
+  recipient_value: string;
+  email: string | undefined;
+  name: string | undefined;
+  enabled: boolean;
+}> = [
   {
     id: 'rec-1',
     notification_rule_id: 'rule-critical',
@@ -114,6 +122,7 @@ const SEED_NOTIFICATIONS: any[] = [];
 const SEED_LOGS: any[] = [];
 
 import { publishTenantEvent, subscribeTenantEvents } from '../../lib/pubsub';
+import { logger } from '../../utils/logger';
 
 export class NotificationsService {
   private db = getDbClient();
@@ -166,7 +175,7 @@ export class NotificationsService {
       try {
         client.res.write(`event: notification\ndata: ${data}\n\n`);
       } catch (err) {
-        console.warn('Failed to push SSE to client:', client.id, err);
+        logger.warn('Failed to push SSE to client:', client.id, err);
       }
     }
 
@@ -183,7 +192,7 @@ export class NotificationsService {
       try {
         client.res.write(`event: ${eventName}\ndata: ${data}\n\n`);
       } catch (err) {
-        console.warn(`Failed to push SSE event ${eventName} to client:`, client.id, err);
+        logger.warn(`Failed to push SSE event ${eventName} to client:`, client.id, err);
       }
     }
 
@@ -237,7 +246,7 @@ export class NotificationsService {
     try {
       await this.db.from('notifications').insert(notifRecord);
     } catch (err) {
-      console.warn('Database insert notification fallback:', err);
+      logger.warn('Database insert notification fallback:', err);
     }
     SEED_NOTIFICATIONS.unshift(notifRecord);
 
@@ -300,7 +309,7 @@ export class NotificationsService {
     try {
       await this.db.from('notification_logs').insert(logRecord);
     } catch (err) {
-      console.warn('Database insert notification_logs fallback:', err);
+      logger.warn('Database insert notification_logs fallback:', err);
     }
     SEED_LOGS.unshift(logRecord as any);
 
@@ -325,7 +334,7 @@ export class NotificationsService {
         return data;
       }
     } catch (err) {
-      console.warn('Database getNotifications fallback:', err);
+      logger.warn('Database getNotifications fallback:', err);
     }
     return SEED_NOTIFICATIONS;
   }
@@ -334,7 +343,7 @@ export class NotificationsService {
     try {
       await this.db.from('notifications').update({ is_read: true }).eq('id', id);
     } catch (err) {
-      console.warn('Database markAsRead fallback:', err);
+      logger.warn('Database markAsRead fallback:', err);
     }
     const target = SEED_NOTIFICATIONS.find(n => n.id === id);
     if (target) target.is_read = true;
@@ -345,7 +354,7 @@ export class NotificationsService {
     try {
       await this.db.from('notifications').update({ is_read: true }).eq('is_read', false);
     } catch (err) {
-      console.warn('Database markAllAsRead fallback:', err);
+      logger.warn('Database markAllAsRead fallback:', err);
     }
     SEED_NOTIFICATIONS.forEach(n => { n.is_read = true; });
     return { success: true };
@@ -355,7 +364,7 @@ export class NotificationsService {
     try {
       await this.db.from('notifications').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     } catch (err) {
-      console.warn('Database clearAllNotifications fallback:', err);
+      logger.warn('Database clearAllNotifications fallback:', err);
     }
     SEED_NOTIFICATIONS.length = 0;
     return { success: true };
@@ -372,7 +381,7 @@ export class NotificationsService {
         return data;
       }
     } catch (err) {
-      console.warn('Database getNotificationRules fallback:', err);
+      logger.warn('Database getNotificationRules fallback:', err);
     }
     return SEED_RULES;
   }
@@ -382,7 +391,7 @@ export class NotificationsService {
     try {
       await this.db.from('notification_rules').update({ enabled }).eq('id', id);
     } catch (err) {
-      console.warn('Database updateNotificationRule fallback:', err);
+      logger.warn('Database updateNotificationRule fallback:', err);
     }
     const target = SEED_RULES.find(r => r.id === id);
     if (target) target.enabled = enabled;
@@ -398,7 +407,7 @@ export class NotificationsService {
         return data;
       }
     } catch (err) {
-      console.warn('Database getNotificationRecipients fallback:', err);
+      logger.warn('Database getNotificationRecipients fallback:', err);
     }
     if (ruleId) return SEED_RECIPIENTS.filter(r => r.notification_rule_id === ruleId);
     return SEED_RECIPIENTS;
@@ -420,7 +429,7 @@ export class NotificationsService {
     try {
       await this.db.from('notification_recipients').insert(record);
     } catch (err) {
-      console.warn('Database addNotificationRecipient fallback:', err);
+      logger.warn('Database addNotificationRecipient fallback:', err);
     }
 
     SEED_RECIPIENTS.unshift(record);
@@ -431,7 +440,7 @@ export class NotificationsService {
     try {
       await this.db.from('notification_recipients').delete().eq('id', id);
     } catch (err) {
-      console.warn('Database deleteNotificationRecipient fallback:', err);
+      logger.warn('Database deleteNotificationRecipient fallback:', err);
     }
     const index = SEED_RECIPIENTS.findIndex(r => r.id === id);
     if (index !== -1) SEED_RECIPIENTS.splice(index, 1);
@@ -450,7 +459,7 @@ export class NotificationsService {
         return data;
       }
     } catch (err) {
-      console.warn('Database getNotificationLogs fallback:', err);
+      logger.warn('Database getNotificationLogs fallback:', err);
     }
     return SEED_LOGS;
   }

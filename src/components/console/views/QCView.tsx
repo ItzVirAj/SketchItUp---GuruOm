@@ -21,7 +21,7 @@ import {
 import { QCInspection } from '../../../types/console';
 import { triggerQCFailure } from '../../../services/notificationService';
 import { useUrlModal } from '../../../hooks/useUrlModal';
-import { useCtaPermission } from '../../../hooks/useCtaPermission';
+import { useCanPerformCta } from '../../../hooks/useCtaPermission';
 
 interface QCViewProps {
   qcItems?: QCInspection[];
@@ -38,6 +38,7 @@ export const QCView: React.FC<QCViewProps> = ({
   onInspectSubmit,
   onUpdateQC
 }) => {
+  const canPerformCta = useCanPerformCta();
   const initialItems = qcItems || qcQueue || [];
   const [localQc, setLocalQc] = useState<QCInspection[]>(initialItems);
   const [filterStatus, setFilterStatus] = useState('ALL');
@@ -225,7 +226,7 @@ export const QCView: React.FC<QCViewProps> = ({
             </button>
 
             {/* Quick First Pending CTA */}
-            {pendingCount > 0 && useCtaPermission('UPLOAD_QC_REPORT') && (
+            {pendingCount > 0 && canPerformCta('UPLOAD_QC_REPORT') && (
               <button
                 type="button"
                 onClick={() => {
@@ -601,7 +602,7 @@ export const QCView: React.FC<QCViewProps> = ({
                 )}
 
                 {/* Action CTA Button */}
-                {useCtaPermission('UPLOAD_QC_REPORT') && (
+                {canPerformCta('UPLOAD_QC_REPORT') && (
                   <button
                     type="button"
                     onClick={(e) => {
@@ -705,7 +706,7 @@ export const QCView: React.FC<QCViewProps> = ({
                           {qc.inspectorNotes || <span className="text-slate-400/60 italic">Awaiting audit notes</span>}
                         </td>
                         <td className="py-3.5 px-5 text-right" onClick={(e) => e.stopPropagation()}>
-                          {useCtaPermission('UPLOAD_QC_REPORT') && (
+                          {canPerformCta('UPLOAD_QC_REPORT') && (
                             <button
                               type="button"
                               onClick={() => openInspection(qc)}
@@ -808,7 +809,7 @@ export const QCView: React.FC<QCViewProps> = ({
 
                   <div className="pt-2 border-t border-slate-100 dark:border-white/5 flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
                     <span className="text-[11px] text-slate-400 font-medium">Click to audit</span>
-                    {useCtaPermission('UPLOAD_QC_REPORT') && (
+                    {canPerformCta('UPLOAD_QC_REPORT') && (
                       <button
                         type="button"
                         onClick={() => openInspection(qc)}
@@ -913,7 +914,7 @@ export const QCView: React.FC<QCViewProps> = ({
                 </label>
                 <div className="grid grid-cols-3 gap-2.5 text-xs">
                   {/* PASS */}
-                  {useCtaPermission('MARK_READY_TO_DISPATCH') && (
+                  {canPerformCta('MARK_READY_TO_DISPATCH') && (
                     <button
                       type="button"
                       onClick={() => setQcDecision('PASS')}
@@ -945,7 +946,7 @@ export const QCView: React.FC<QCViewProps> = ({
                   </button>
 
                   {/* REJECT */}
-                  {useCtaPermission('RAISE_NCR_REWORK') && (
+                  {canPerformCta('RAISE_NCR_REWORK') && (
                     <button
                       type="button"
                       onClick={() => setQcDecision('REJECTED')}
@@ -1032,7 +1033,7 @@ export const QCView: React.FC<QCViewProps> = ({
                 >
                   Cancel
                 </button>
-                {useCtaPermission('UPLOAD_QC_REPORT') && (
+                {canPerformCta('UPLOAD_QC_REPORT') && (
                   <button 
                     type="submit" 
                     className={`flex-1 sm:flex-initial px-6 py-2 rounded-full text-white font-semibold text-xs cursor-pointer shadow-xs transition-all active:scale-[0.98] ${

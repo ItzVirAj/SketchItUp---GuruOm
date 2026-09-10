@@ -622,6 +622,12 @@ export interface VendorBill {
   isThreeWayMatched?: boolean;
   matchStatus?: 'MATCHED' | 'PRICE_VARIANCE_FLAGGED' | 'QTY_VARIANCE_FLAGGED' | 'PRICE_AND_QTY_VARIANCE';
   varianceDetails?: string;
+  vendorType?: string;
+  vendorPan?: string;
+  grossAmount?: number;
+  isPurchaseOfGoods?: boolean;
+  /** Reference to an attachments-table record (e.g. an AI-scanned receipt/invoice) linked to this bill. */
+  attachmentId?: string;
 }
 
 export interface MasterItem {

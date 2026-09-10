@@ -3,7 +3,6 @@ import { AnimatePresence, motion } from 'motion/react';
 import {
   ChevronDown,
   ChevronRight,
-  Command,
   LayoutGrid,
   LogOut,
   PanelLeftClose,
@@ -85,11 +84,12 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
     setHoveredSection(null);
   };
 
-  const displayName = currentUser?.name || userName;
+  const displayName = currentUser?.name || (currentUser as any)?.fullName || userName || 'GuruOm Admin';
   const displayEmail = currentUser?.email || 'owner@guruom.in';
   const displayRole = currentUser?.role || currentRole;
-  const initials = displayName
+  const initials = (displayName || 'GO')
     .split(' ')
+    .filter(Boolean)
     .map(part => part[0])
     .join('')
     .slice(0, 2)
@@ -117,15 +117,10 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
         <div className={`flex h-[74px] shrink-0 items-center border-b border-white/15 dark:border-white/15 ${isCollapsed ? 'justify-center px-3' : 'justify-between px-4'
           }`}>
           {!isCollapsed && (
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] text-white shadow-md shadow-[var(--accent-shadow)]">
-                <Command className="h-5 w-5" strokeWidth={2.5} />
-                <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#09090B] bg-emerald-400" />
-              </div>
-              <div className="min-w-0">
-                <div className="truncate text-[15px] font-bold tracking-tight text-slate-900 dark:text-white">GuruOm</div>
-                <div className="mt-0.5 truncate font-mono text-[9.5px] font-semibold uppercase tracking-wider text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)]">OwnerOS</div>
-              </div>
+            <div className="flex min-w-0 items-center pl-1">
+              <span className="truncate text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+                OwnerOS
+              </span>
             </div>
           )}
 

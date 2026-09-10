@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { apiClient, getAccessToken } from '../lib/apiClient';
+import { apiClient } from '../lib/apiClient';
 import { InAppNotification } from '../services/notificationService';
 import { playAlertSound, isNotificationSoundEnabled, setNotificationSoundEnabled } from '../lib/notificationSound';
 
@@ -43,37 +43,40 @@ export function useInAppNotifications() {
 
     let eventSource: EventSource | null = null;
 
+    const handleNotification = (event: MessageEvent) => {
+      try {
+        const newNotif = JSON.parse(event.data) as InAppNotification;
+        setNotifications((prev) => {
+          // Check for duplicate ID
+          if (prev.some((n) => n.id === newNotif.id)) return prev;
+          return [newNotif, ...prev];
+        });
+        if (!newNotif.is_read) {
+          setUnreadCount((count) => count + 1);
+        }
+
+        // Trigger audio alert only on newly delivered live push events
+        playAlertSound(newNotif.severity);
+      } catch (parseErr) {
+        console.warn('Error parsing incoming SSE notification:', parseErr);
+      }
+    };
+
+    const handleSecuritySync = (event: MessageEvent) => {
+      try {
+        const secEvent = JSON.parse(event.data);
+        window.dispatchEvent(new CustomEvent('guruom:security_sync', { detail: secEvent }));
+      } catch (err) {
+        console.warn('Error processing security sync event:', err);
+      }
+    };
+
     try {
       eventSource = new EventSource(streamUrl, { withCredentials: true });
       eventSourceRef.current = eventSource;
 
-      eventSource.addEventListener('notification', (event: MessageEvent) => {
-        try {
-          const newNotif = JSON.parse(event.data) as InAppNotification;
-          setNotifications((prev) => {
-            // Check for duplicate ID
-            if (prev.some((n) => n.id === newNotif.id)) return prev;
-            return [newNotif, ...prev];
-          });
-          if (!newNotif.is_read) {
-            setUnreadCount((count) => count + 1);
-          }
-
-          // Trigger audio alert only on newly delivered live push events
-          playAlertSound(newNotif.severity);
-        } catch (parseErr) {
-          console.warn('Error parsing incoming SSE notification:', parseErr);
-        }
-      });
-
-      eventSource.addEventListener('user_security_sync', (event: MessageEvent) => {
-        try {
-          const secEvent = JSON.parse(event.data);
-          window.dispatchEvent(new CustomEvent('guruom:security_sync', { detail: secEvent }));
-        } catch (err) {
-          console.warn('Error processing security sync event:', err);
-        }
-      });
+      eventSource.addEventListener('notification', handleNotification);
+      eventSource.addEventListener('user_security_sync', handleSecuritySync);
 
       eventSource.onerror = (err) => {
         console.warn('Notifications SSE connection state changed:', err);
@@ -84,6 +87,8 @@ export function useInAppNotifications() {
 
     return () => {
       if (eventSource) {
+        eventSource.removeEventListener('notification', handleNotification);
+        eventSource.removeEventListener('user_security_sync', handleSecuritySync);
         eventSource.close();
       }
     };

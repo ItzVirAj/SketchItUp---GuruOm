@@ -279,7 +279,7 @@ export class BomService {
       batchSize: source.batchSize,
       status: 'DRAFT',
       notes: `Duplicated from ${sourceBomCode}`,
-      components: (source.components || []).map(c => ({
+      components: (source.components || []).map((c: any) => ({
         ...c,
         id: undefined
       }))
@@ -301,7 +301,7 @@ export class BomService {
       revision: newRevision,
       status: 'ACTIVE',
       notes: `New engineering revision ${newRevision} generated from ${source.revision}`,
-      components: (source.components || []).map(c => ({
+      components: (source.components || []).map((c: any) => ({
         ...c,
         id: undefined
       }))

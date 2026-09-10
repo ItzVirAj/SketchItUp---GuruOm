@@ -30,7 +30,7 @@ import { getCurrentFinancialYear, formatDocumentNumber } from '../../../utils/st
 import { ChallanDetailModal } from '../modals/ChallanDetailModal';
 import { Modal } from '../../common/Modal';
 import { useUrlModal } from '../../../hooks/useUrlModal';
-import { useCtaPermission } from '../../../hooks/useCtaPermission';
+import { useCanPerformCta } from '../../../hooks/useCtaPermission';
 
 interface DispatchViewProps {
   dispatches?: DispatchChallan[];
@@ -63,6 +63,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
   preselectedOrderPo,
   onDispatchModalOpened
 }) => {
+  const canPerformCta = useCanPerformCta();
   // URL-driven modal hooks
   const createChallanModal = useUrlModal('issue-delivery-challan');
   const challanDetailModal = useUrlModal('challan-detail');
@@ -356,7 +357,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
               <span>Export CSV</span>
             </button>
 
-            {useCtaPermission('GENERATE_DELIVERY_CHALLAN') && (
+            {canPerformCta('GENERATE_DELIVERY_CHALLAN') && (
               <button
                 type="button"
                 onClick={handleOpenCreateModal}
@@ -730,7 +731,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                               <CheckCircle2 className="w-3 h-3" />
                               <span>POD</span>
                             </span>
-                          ) : useCtaPermission('MARK_DELIVERED') ? (
+                          ) : canPerformCta('MARK_DELIVERED') ? (
                             <button
                               type="button"
                               onClick={(e) => handleOpenDeliveryModal(disp, e)}
@@ -835,7 +836,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           <span>POD Verified</span>
                         </span>
-                      ) : useCtaPermission('MARK_DELIVERED') ? (
+                      ) : canPerformCta('MARK_DELIVERED') ? (
                         <button
                           type="button"
                           onClick={(e) => handleOpenDeliveryModal(disp, e)}
@@ -996,7 +997,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
               >
                 Cancel
               </button>
-              {useCtaPermission('MARK_DELIVERED') && (
+              {canPerformCta('MARK_DELIVERED') && (
                 <button
                   type="submit"
                   disabled={isDelivering}
@@ -1264,7 +1265,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
             >
               Cancel
             </button>
-            {useCtaPermission('GENERATE_DELIVERY_CHALLAN') && (
+            {canPerformCta('GENERATE_DELIVERY_CHALLAN') && (
               <button 
                 type="submit" 
                 disabled={isSubmitting || !vehicleNo.trim()}

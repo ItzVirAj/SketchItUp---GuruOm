@@ -15,7 +15,9 @@ import {
   computeVendorScorecard,
   VendorPerformanceMetric
 } from '../../../../src/utils/procurementEngine';
-import { inventoryService } from '../inventory/inventory.service';
+import { inventoryMovementsService } from '../inventory/inventory_movements.service';
+import { getNextDocumentNumber } from '../../utils/documentNumbers';
+import { logger } from '../../utils/logger';
 
 const SEED_PURCHASE_REQUISITIONS: any[] = [];
 const SEED_PURCHASE_ORDERS: any[] = [];
@@ -59,7 +61,7 @@ export class PurchasingService {
         }));
       }
     } catch (err) {
-      console.warn('DB getPurchaseRequisitions fallback:', err);
+      logger.warn('DB getPurchaseRequisitions fallback:', err);
     }
     return SEED_PURCHASE_REQUISITIONS;
   }
@@ -67,7 +69,9 @@ export class PurchasingService {
   async createPurchaseRequisition(data: z.infer<typeof PurchaseRequisitionSchema>, requestedBy: string) {
     const validated = PurchaseRequisitionSchema.parse(data);
     const prId = validated.id || `pr-${Date.now()}`;
-    const reqNumber = validated.reqNumber || `PR-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
+    // C-02: requisition numbers are UNIQUE at the DB level and must never be
+    // minted with Math.random() — always use the atomic document sequence.
+    const reqNumber = validated.reqNumber || await getNextDocumentNumber('PR', 'PR');
 
     const { error: insErr } = await this.db.from('purchase_requisitions').insert({
       id: prId,
@@ -88,7 +92,7 @@ export class PurchasingService {
     });
 
     if (insErr) {
-      console.error('Database createPurchaseRequisition error:', insErr);
+      logger.error('Database createPurchaseRequisition error:', insErr);
       const err: any = new Error(`Failed to create purchase requisition: ${insErr.message}`);
       err.code = insErr.code;
       err.statusCode = insErr.code === '23505' ? 409 : 400;
@@ -127,7 +131,7 @@ export class PurchasingService {
       .or(`id.eq.${prId},req_number.eq.${prId}`);
 
     if (upErr) {
-      console.error('Database approvePurchaseRequisition error:', upErr);
+      logger.error('Database approvePurchaseRequisition error:', upErr);
       const err: any = new Error(`Failed to update purchase requisition: ${upErr.message}`);
       err.code = upErr.code;
       err.statusCode = 400;
@@ -202,7 +206,7 @@ export class PurchasingService {
         });
       }
     } catch (err) {
-      console.warn('DB getPurchaseOrders fallback:', err);
+      logger.warn('DB getPurchaseOrders fallback:', err);
     }
     return SEED_PURCHASE_ORDERS;
   }
@@ -236,7 +240,7 @@ export class PurchasingService {
     });
 
     if (poErr) {
-      console.error('Database createPurchaseOrder error:', poErr);
+      logger.error('Database createPurchaseOrder error:', poErr);
       const err: any = new Error(`Failed to create purchase order: ${poErr.message}`);
       err.code = poErr.code;
       err.statusCode = poErr.code === '23505' ? 409 : 400;
@@ -258,7 +262,7 @@ export class PurchasingService {
       }));
       const { error: itemErr } = await this.db.from('purchase_order_items').insert(itemPayloads);
       if (itemErr) {
-        console.error('Database purchase_order_items insert error:', itemErr);
+        logger.error('Database purchase_order_items insert error:', itemErr);
         await this.db.from('purchase_orders').delete().eq('id', poId);
         const err: any = new Error(`Failed to create purchase order items: ${itemErr.message}`);
         err.code = itemErr.code;
@@ -310,7 +314,7 @@ export class PurchasingService {
         }));
       }
     } catch (err) {
-      console.warn('DB getGrns fallback:', err);
+      logger.warn('DB getGrns fallback:', err);
     }
     return SEED_GRNS;
   }
@@ -319,7 +323,8 @@ export class PurchasingService {
   async createGrnWithMismatchCheck(data: z.infer<typeof GrnEntrySchema>, storeKeeperName: string) {
     const validated = GrnEntrySchema.parse(data);
     const grnId = validated.id || `grn-${Date.now()}`;
-    const grnNo = validated.grnNo || `GRN-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
+    // C-02: Document numbers must come from atomic DB sequence
+    const grnNo = validated.grnNo || (await getNextDocumentNumber('GRN', 'GRN'));
 
     // Evaluate Mismatch between PO expected and received quantity
     const mismatch = evaluateGrnMismatch(validated.poExpectedQty, validated.receivedQty);
@@ -356,16 +361,17 @@ export class PurchasingService {
         .eq('item_code', validated.itemCode);
 
       // Record Inventory Inward Movement in Ledger
-      await inventoryService.recordMovement({
+      await inventoryMovementsService.recordMovement({
         itemCode: validated.itemCode,
+        quantityChange: validated.receivedQty,
         movementType: 'GRN',
-        qty: validated.receivedQty,
-        referenceDoc: grnNo,
-        actor: storeKeeperName,
+        referenceId: grnNo,
+        referenceType: 'grn',
+        actorEmail: storeKeeperName,
         notes: `Inward GRN receipt with Mill Heat/Lot: ${validated.heatLotNumber}. ${mismatch.message}`
       });
     } catch (err) {
-      console.warn('DB createGrn fallback:', err);
+      logger.warn('DB createGrn fallback:', err);
     }
 
     await auditService.recordAuditLog({
@@ -408,7 +414,8 @@ export class PurchasingService {
       // If rejected material exists, automatically initialize a Vendor Return record
       if (validated.rejectedQty > 0) {
         const returnId = `ret-${Date.now()}`;
-        const returnNo = `RET-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
+        // C-02: Document numbers must come from atomic DB sequence
+        const returnNo = await getNextDocumentNumber('RET', 'RET');
 
         await this.db.from('vendor_returns').insert({
           id: returnId,
@@ -426,7 +433,7 @@ export class PurchasingService {
         });
       }
     } catch (err) {
-      console.warn('DB recordIncomingInspection fallback:', err);
+      logger.warn('DB recordIncomingInspection fallback:', err);
     }
 
     await auditService.recordAuditLog({
@@ -469,13 +476,14 @@ export class PurchasingService {
         }));
       }
     } catch (err) {
-      console.warn('DB getVendorReturns fallback:', err);
+      logger.warn('DB getVendorReturns fallback:', err);
     }
     return SEED_VENDOR_RETURNS;
   }
 
   async approveVendorReturn(returnId: string, approverName: string) {
-    const debitNote = `DN-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
+    // C-02: Debit notes must come from atomic DB sequence
+    const debitNote = await getNextDocumentNumber('DN', 'DN');
     const { error: upErr } = await this.db
       .from('vendor_returns')
       .update({
@@ -487,7 +495,7 @@ export class PurchasingService {
       .or(`id.eq.${returnId},return_no.eq.${returnId}`);
 
     if (upErr) {
-      console.error('Database approveVendorReturn error:', upErr);
+      logger.error('Database approveVendorReturn error:', upErr);
       const err: any = new Error(`Failed to approve vendor return: ${upErr.message}`);
       err.code = upErr.code;
       err.statusCode = 400;
@@ -542,7 +550,7 @@ export class PurchasingService {
         matched_at: new Date().toISOString()
       });
     } catch (err) {
-      console.warn('DB evaluateThreeWayMatch fallback:', err);
+      logger.warn('DB evaluateThreeWayMatch fallback:', err);
     }
 
     return matchResult;
@@ -578,7 +586,7 @@ export class PurchasingService {
         }));
       }
     } catch (err) {
-      console.warn('DB getVendorScorecards fallback:', err);
+      logger.warn('DB getVendorScorecards fallback:', err);
     }
 
     // Default compute from seed

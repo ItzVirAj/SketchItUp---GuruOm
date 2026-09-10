@@ -47,7 +47,7 @@ export const CustomerMasterBaseSchema = z.object({
     'Corporate',
     'Export',
     'Other'
-  ], { errorMap: () => ({ message: 'Please select a valid customer type' }) }),
+  ], { message: 'Please select a valid customer type' }),
   contactPerson: z.string().min(1, 'Contact person is required'),
   mobile: z.string().regex(INDIAN_MOBILE_REGEX, 'Mobile must be a valid 10-digit Indian mobile number starting with 6-9'),
   email: z.string().email('Please enter a valid email address').optional().or(z.literal('')),
@@ -75,7 +75,7 @@ export const CustomerMasterBaseSchema = z.object({
     'Net 45',
     'Net 60',
     'Other'
-  ], { errorMap: () => ({ message: 'Please select valid payment terms' }) }),
+  ], { message: 'Please select valid payment terms' }),
   creditDays: z.coerce.number().min(0, 'Credit days cannot be negative').max(180, 'Max credit days is 180').default(0),
   creditLimit: z.coerce.number().min(0, 'Credit limit cannot be negative').default(0),
   salesperson: z.string().optional().default(''),
@@ -120,7 +120,7 @@ export const VendorMasterBaseSchema = z.object({
     'ProfessionalService',
     'ManpowerProvider',
     'Other'
-  ], { errorMap: () => ({ message: 'Please select a valid vendor type' }) }),
+  ], { message: 'Please select a valid vendor type' }),
   vendorCategory: z.enum([
     'Raw Material',
     'Components',
@@ -133,7 +133,7 @@ export const VendorMasterBaseSchema = z.object({
     'Professional',
     'Manpower',
     'Other'
-  ], { errorMap: () => ({ message: 'Please select a valid vendor category' }) }),
+  ], { message: 'Please select a valid vendor category' }),
   contactPerson: z.string().min(1, 'Contact person is required'),
   mobile: z.string().regex(INDIAN_MOBILE_REGEX, 'Mobile must be a valid 10-digit Indian mobile number starting with 6-9'),
   email: z.string().email('Please enter a valid email address').optional().or(z.literal('')),
@@ -205,12 +205,12 @@ export const MasterItemBaseSchema = z.object({
     'Consumable',
     'Bought-Out',
     'Other'
-  ], { errorMap: () => ({ message: 'Please select a valid item type' }) }),
+  ], { message: 'Please select a valid item type' }),
   category: z.string().optional().default(''),
   description: z.string().optional().default(''),
   partNo: z.string().optional().default(''),
   unit: z.enum(['Nos', 'Kg', 'Meter', 'Litre', 'Set', 'Box'], {
-    errorMap: () => ({ message: 'Please select a valid Unit of Measure (UOM)' })
+    message: 'Please select a valid Unit of Measure (UOM)'
   }),
   hsnCode: z.string().min(1, 'HSN code is required')
     .regex(HSN_CODE_REGEX, 'HSN code must be 4 to 8 digits for GST invoicing'),
@@ -267,7 +267,7 @@ export const MachineMasterBaseSchema = z.object({
     'Grinding',
     'Inspection-CMM',
     'Other'
-  ], { errorMap: () => ({ message: 'Please select a valid machine type' }) }),
+  ], { message: 'Please select a valid machine type' }),
   department: z.string().min(1, 'Department is required'),
   location: z.string().min(1, 'Location on shop floor is required'),
   manufacturer: z.string().optional().default(''),
@@ -315,12 +315,12 @@ export const UserMasterSchema = z.object({
     'Dispatch Executive',
     'Management/Viewer',
     'Other'
-  ], { errorMap: () => ({ message: 'Please select a valid user role' }) }),
+  ], { message: 'Please select a valid user role' }),
   department: z.string().min(1, 'Department is required'),
   mobile: z.string().regex(INDIAN_MOBILE_REGEX, 'Mobile must be a valid 10-digit Indian mobile number used for OTP'),
   email: z.string().email('Please enter a valid email ID (login identifier)'),
   accessLevel: z.enum(['Full Access', 'Edit', 'View Only'], {
-    errorMap: () => ({ message: 'Please select access level' })
+    message: 'Please select access level'
   }),
   modulesAccess: z.array(z.string()).min(1, 'Select at least one module for access'),
   reportingManager: z.string().optional().default(''),

@@ -26,7 +26,7 @@ export const RecordMovementSchema = z.object({
   actorId: z.string().optional(),
   actorEmail: z.string().email().optional(),
   notes: z.string().optional(),
-  metadata: z.record(z.any()).optional()
+  metadata: z.record(z.string(), z.any()).optional()
 });
 
 export const MovementQueryFilterSchema = z.object({

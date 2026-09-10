@@ -20,6 +20,9 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@bklitui/ui/charts": [
+        "./src/components/ui/charts/index.ts"
       ]
     },
     "allowImportingTsExtensions": true,

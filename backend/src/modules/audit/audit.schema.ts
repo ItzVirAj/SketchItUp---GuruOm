@@ -9,7 +9,7 @@ export const AuditLogSchema = z.object({
   entityId: z.string().optional(),
   action: z.string().min(1, 'Action description is required'),
   details: z.string().min(1, 'Details description is required'),
-  changes: z.record(z.any()).optional()
+  changes: z.record(z.string(), z.any()).optional()
 });
 
 export const AuditQueryFilterSchema = z.object({

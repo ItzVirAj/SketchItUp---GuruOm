@@ -19,6 +19,8 @@ import { inventoryMovementsService } from '../inventory/inventory_movements.serv
 import { inventoryReservationsService } from '../inventory/inventory_reservations.service';
 import { LockService } from '../../lib/lock';
 import { logAudit } from '../../services/auditLog';
+import { getNextDocumentNumber } from '../../utils/documentNumbers';
+import { logger } from '../../utils/logger';
 
 
 
@@ -176,7 +178,7 @@ export class OrdersService {
         return combined;
       }
     } catch (err) {
-      console.warn('Database getOrders error:', err);
+      logger.warn('Database getOrders error:', err);
     }
 
     return [];
@@ -191,7 +193,7 @@ export class OrdersService {
       const payload: any = { status: stage, stage, progress_step: step, updated_at: new Date().toISOString() };
       await this.db.from('customer_orders').update(payload).or(`id.eq.${orderPoOrId},po_no.eq.${orderPoOrId}`);
     } catch (err) {
-      console.warn('Database updateOrderStageDirectly error:', err);
+      logger.warn('Database updateOrderStageDirectly error:', err);
     }
 
     // Real-Time Push: Broadcast stage transition across all dashboards
@@ -232,7 +234,7 @@ export class OrdersService {
 
     const { error: upErr } = await this.db.from('customer_orders').update(delayPayload).or(`id.eq.${orderIdOrPo},po_no.eq.${orderIdOrPo}`);
     if (upErr) {
-      console.error('Database markOrderDelayed error:', upErr);
+      logger.error('Database markOrderDelayed error:', upErr);
       const err: any = new Error(`Failed to mark order delayed: ${upErr.message}`);
       err.code = upErr.code;
       err.statusCode = 400;
@@ -320,13 +322,13 @@ export class OrdersService {
 
       if (order.id) {
         const { error: uErr } = await this.db.from('customer_orders').update(updatePayload).eq('id', order.id);
-        if (uErr) console.error('Database updateOrder error:', uErr);
+        if (uErr) logger.error('Database updateOrder error:', uErr);
       } else if (order.poNo) {
         const { error: uErr } = await this.db.from('customer_orders').update(updatePayload).eq('po_no', order.poNo);
-        if (uErr) console.error('Database updateOrder error:', uErr);
+        if (uErr) logger.error('Database updateOrder error:', uErr);
       }
     } catch (dbErr) {
-      console.warn('DB updateOrder fallback:', dbErr);
+      logger.warn('DB updateOrder fallback:', dbErr);
     }
 
     await auditService.recordAuditLog({
@@ -416,8 +418,8 @@ export class OrdersService {
       for (const sh of shortagesList) {
         try {
           await this.db.from('purchase_requisitions').insert({
-            id: `pr-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-            req_number: `PR-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+            id: `pr-${Date.now()}-${sh.componentCode}-${sh.requiredQty}`,
+            req_number: await getNextDocumentNumber('PR', 'PR'),
             order_id: order.id,
             order_po: order.poNo,
             item_code: sh.componentCode,
@@ -532,7 +534,7 @@ export class OrdersService {
             })
             .or(`id.eq.${orderId},po_no.eq.${order.poNo}`);
         } catch (dbErr) {
-          console.warn('DB recheckMaterial update fallback:', dbErr);
+          logger.warn('DB recheckMaterial update fallback:', dbErr);
         }
 
         newlyReadyOrders.push(order.poNo);
@@ -669,11 +671,11 @@ export class OrdersService {
       });
 
       if (insertErr) {
-        console.error('Database create_order_with_lines RPC error:', insertErr);
+        logger.error('Database create_order_with_lines RPC error:', insertErr);
         throw new Error(`Failed to save order to database: ${insertErr.message}`);
       }
     } catch (dbErr: any) {
-      console.warn('Database createOrder exception:', dbErr);
+      logger.warn('Database createOrder exception:', dbErr);
       throw dbErr;
     }
 
@@ -726,13 +728,13 @@ export class OrdersService {
       }
 
       // Optimistic concurrency verification
-      LockService.verifyOptimisticVersion(order.updatedAt || order.created_at, payload.expectedUpdatedAt, `Order ${order.poNo}`);
+      LockService.verifyOptimisticVersion((order as any).updatedAt || (order as any).created_at || (order as any).createdAt, payload.expectedUpdatedAt, `Order ${order.poNo}`);
 
       let resolvedTargetStage: OrderStage = typeof targetStage === 'string' 
         ? targetStage 
         : ((targetStage as any)?.targetStage || (targetStage as any)?.stage || (targetStage as any)?.status || 'CONFIRMED');
       const effectivePayload = typeof targetStage === 'object' && targetStage !== null 
-        ? { ...targetStage, ...payload } 
+        ? { ...(targetStage as Record<string, any>), ...payload } 
         : payload;
 
       const currentStage = (order.stage || order.status || 'PO_RECEIVED') as OrderStage;
@@ -834,13 +836,13 @@ export class OrdersService {
 
         if (order.id) {
           const { error: tErr } = await this.db.from('customer_orders').update(transitionPayload).eq('id', order.id);
-          if (tErr) console.error('Database transitionOrderStage error:', tErr);
+          if (tErr) logger.error('Database transitionOrderStage error:', tErr);
         } else if (order.poNo) {
           const { error: tErr } = await this.db.from('customer_orders').update(transitionPayload).eq('po_no', order.poNo);
-          if (tErr) console.error('Database transitionOrderStage error:', tErr);
+          if (tErr) logger.error('Database transitionOrderStage error:', tErr);
         }
       } catch (dbErr) {
-        console.warn('Database transitionOrderStage fallback:', dbErr);
+        logger.warn('Database transitionOrderStage fallback:', dbErr);
       }
 
       await auditService.recordAuditLog({
@@ -901,7 +903,7 @@ export class OrdersService {
         })
         .or(`id.eq.${order.id},po_no.eq.${order.poNo}`);
     } catch (dbErr) {
-      console.warn('DB runMaterialVerification update fallback:', dbErr);
+      logger.warn('DB runMaterialVerification update fallback:', dbErr);
     }
 
     await auditService.recordAuditLog({
@@ -968,7 +970,7 @@ export class OrdersService {
         })
         .or(`id.eq.${order.id},po_no.eq.${order.poNo}`);
     } catch (dbErr) {
-      console.warn('DB overrideMaterialCheck fallback:', dbErr);
+      logger.warn('DB overrideMaterialCheck fallback:', dbErr);
     }
 
     await auditService.recordAuditLog({
@@ -1028,7 +1030,7 @@ export class OrdersService {
             details: `Proposed price change for ${order.poNo}. Reason: ${amendment.reason}`
           });
         } catch (dbErr) {
-          console.warn('DB pending_approvals fallback:', dbErr);
+          logger.warn('DB pending_approvals fallback:', dbErr);
         }
 
         return {
@@ -1049,7 +1051,7 @@ export class OrdersService {
         await this.db.from('order_line_items').update({ rate: amendment.newUnitPrice }).eq('order_id', order.id);
       }
     } catch (dbErr) {
-      console.warn('DB update amendment fallback:', dbErr);
+      logger.warn('DB update amendment fallback:', dbErr);
     }
 
     await auditService.recordAuditLog({
@@ -1168,7 +1170,7 @@ export class OrdersService {
         title: 'Outward Dispatch & Logistics',
         status: ['DISPATCHED', 'IN_TRANSIT', 'DELIVERED', 'CLOSED', 'PAID'].includes(order.status || '') ? 'DISPATCHED' : 'PENDING',
         effectiveChallanNo: order.deliveryChallanNo || dispatchesData?.[0]?.challan_no || null,
-        transporterName: order.transporterName || dispatchesData?.[0]?.transporter_name || 'SafeXpress Logistics',
+        transporterName: (order as any).transporterName || dispatchesData?.[0]?.transporter_name || 'SafeXpress Logistics',
         vehicleNo: dispatchesData?.[0]?.vehicle_no || 'MH 12 AB 4589',
         lrNo: dispatchesData?.[0]?.lr_no || 'LR-2026-9812',
         challans: (dispatchesData || []).map((d: any) => ({

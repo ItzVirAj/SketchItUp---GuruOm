@@ -116,7 +116,7 @@ export class MastersService {
         codes = items.map(i => i.code);
       } else if (entityType === 'USER') {
         const items = await this.getUsers();
-        codes = items.map(i => i.code || i.userId || i.id);
+        codes = items.map(i => (i as any).code || i.employeeCode || i.userId || i.id);
       }
 
       let max = 0;
@@ -1285,12 +1285,12 @@ export class MastersService {
       return this.inMemoryCompanyProfile;
     }
 
-    // 4. Default fallback
+    // 4. Default fallback (M-04: accurate company profile at the source)
     const defaultProfile = {
       legalName: 'GuruOm Industries LLP',
-      address: 'Plot No. 42, MIDC Industrial Area, Bhosari, Pune, Maharashtra - 411026',
-      phone: '+91 20 2712 3456',
-      email: 'operations@guruom.in',
+      address: 'Sr No 15/2, Mataji Logistic Park, Behind Tilakraj CNG Pump, Urali Devachi, Pune 412308, India',
+      phone: '+91 9763 969 798',
+      email: 'contact@guruom.in',
       gstin: '27AABCG1234F1Z5',
       pan: 'AABCG1234F',
       state: 'Maharashtra',

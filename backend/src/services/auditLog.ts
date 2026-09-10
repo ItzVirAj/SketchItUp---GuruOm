@@ -122,9 +122,9 @@ export async function logAudit(
     details: input.details,
     beforeState: input.beforeState ?? null,
     afterState: input.afterState ?? null,
-    ipAddress: input.ipAddress ?? null,
-    userAgent: input.userAgent ?? null,
-    metadata: input.metadata ?? null,
+    ipAddress: input.ipAddress ?? undefined,
+    userAgent: input.userAgent ?? undefined,
+    metadata: input.metadata ?? undefined,
     created_at: new Date().toISOString()
   };
 

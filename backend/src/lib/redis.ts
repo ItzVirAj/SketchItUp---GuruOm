@@ -1,5 +1,6 @@
 import Redis, { RedisOptions } from 'ioredis';
 import { ENV } from '../config/env';
+import { logger } from '../utils/logger';
 
 let redisClient: Redis | null = null;
 let isConnected = false;
@@ -20,41 +21,34 @@ export function getRedisClient(): Redis {
   const options: RedisOptions = {
     lazyConnect: true,
     maxRetriesPerRequest: 1,
-    enableOfflineQueue: false,
-    connectTimeout: 2000,
-    commandTimeout: 1000,
+    enableReadyCheck: true,
     retryStrategy(times) {
-      if (times > 2) {
-        // Stop retrying if Redis is offline / not installed locally
+      if (times > 3) {
         return null;
       }
-      return 2000;
-    }
+      return Math.min(times * 200, 1000);
+    },
+    connectTimeout: 2000,
+    ...(isTls ? { tls: { rejectUnauthorized: false } } : {})
   };
-
-  if (isTls) {
-    options.tls = {
-      rejectUnauthorized: false
-    };
-  }
 
   try {
     redisClient = new Redis(redisUrl, options);
 
     redisClient.on('connect', () => {
       isConnected = true;
-      console.log('⚡ [Redis] Connecting to fast-layer storage at', redisUrl.replace(/\/\/[^@]*@/, '//***@'));
+      logger.info('⚡ [Redis] Connecting to fast-layer storage at', redisUrl.replace(/\/\/[^@]*@/, '//***@'));
     });
 
     redisClient.on('ready', () => {
       isConnected = true;
-      console.log('✅ [Redis] Connection ready and operational.');
+      logger.info('✅ [Redis] Connection ready and operational.');
     });
 
     redisClient.on('error', (err: any) => {
       isConnected = false;
       // Log concise warning rather than noisy stack trace
-      console.warn('⚠️ [Redis] Fast-layer connection warning:', err.message || err);
+      logger.warn('⚠️ [Redis] Fast-layer connection warning:', err.message || err);
     });
 
     redisClient.on('close', () => {
@@ -63,7 +57,7 @@ export function getRedisClient(): Redis {
 
     redisClient.on('reconnecting', () => {
       isConnected = false;
-      console.log('🔄 [Redis] Attempting reconnection to fast-layer...');
+      logger.info('🔄 [Redis] Attempting reconnection to fast-layer...');
     });
 
     // Initiate non-blocking connection
@@ -71,13 +65,13 @@ export function getRedisClient(): Redis {
       isInitialized = true;
       redisClient.connect().catch((err) => {
         isConnected = false;
-        console.warn('⚠️ [Redis] Initial connect deferred (offline mode active):', err.message);
+        logger.warn('⚠️ [Redis] Initial connect deferred (offline mode active):', err.message);
       });
     }
 
     return redisClient;
   } catch (err: any) {
-    console.warn('⚠️ [Redis] Failed to initialize Redis instance:', err.message);
+    logger.warn('⚠️ [Redis] Failed to initialize Redis instance:', err.message);
     // Return dummy client fallback
     redisClient = new Redis({ lazyConnect: true, enableOfflineQueue: false });
     return redisClient;

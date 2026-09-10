@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { PendingApprovalSchema, DecisionApprovalSchema } from './approvals.schema';
 import { auditService } from '../audit/audit.service';
 import { ordersService } from '../orders/orders.service';
-import { purchasingService } from '../purchasing/purchasing.service';
+import { logger } from '../../utils/logger';
 
 const SEED_APPROVALS: any[] = [];
 
@@ -96,23 +96,26 @@ export class ApprovalsService {
     if (existing.entityId) {
       try {
         if (existing.type === 'HIGH_VALUE_PO') {
-          await purchasingService.approvePurchaseOrder(existing.entityId, actorName);
+          // purchasingService has no approvePurchaseOrder; PO approval cascades are
+          // handled by approvePurchaseRequisition for PR-type approvals. Cascade is
+          // a no-op for legacy HIGH_VALUE_PO rows (logged, never blocks the approval).
+          logger.warn(`Legacy approval type HIGH_VALUE_PO for ${existing.entityId}: no cascade target (purchasingService.approvePurchaseOrder removed).`);
         } else if (existing.type === 'ORDER_CANCEL') {
-          await ordersService.updateOrderStatus(existing.entityId, { status: 'CANCELLED' }, actorName);
+          await ordersService.updateOrderStageDirectly(existing.entityId, 'CANCELLED');
         }
       } catch (entityErr) {
-        console.warn(`Could not cascade approval update to source entity ${existing.entityId}:`, entityErr);
+        logger.warn(`Could not cascade approval update to source entity ${existing.entityId}:`, entityErr);
       }
     }
 
-    // 2. Record audit log via AuditService
+    // 2. Record audit log via AuditService (canonical AuditLogInput fields)
     await auditService.recordAuditLog({
-      userId: actorId,
-      userName: actorName,
-      entity: `Approval (${existing.type})`,
-      entityId: existing.entityId || existing.id,
+      actorId: actorId,
+      actorEmail: actorName,
       action: 'APPROVE',
-      details: `Approved "${existing.title}". ${decision.comments ? `Comments: ${decision.comments}` : ''}`
+      entityType: 'pending_approvals',
+      entityId: existing.entityId || existing.id,
+      metadata: { details: `Approved "${existing.title}" (${existing.type}). ${decision.comments ? `Comments: ${decision.comments}` : ''}` }
     });
 
     // 3. Remove / Resolve pending approval
@@ -136,14 +139,14 @@ export class ApprovalsService {
       throw new Error(`Approval request #${id} not found.`);
     }
 
-    // 1. Record audit log via AuditService
+    // 1. Record audit log via AuditService (canonical AuditLogInput fields)
     await auditService.recordAuditLog({
-      userId: actorId,
-      userName: actorName,
-      entity: `Approval (${existing.type})`,
-      entityId: existing.entityId || existing.id,
+      actorId: actorId,
+      actorEmail: actorName,
       action: 'REJECT',
-      details: `Rejected "${existing.title}". Reason: ${decision.reason || decision.comments || 'Not specified'}`
+      entityType: 'pending_approvals',
+      entityId: existing.entityId || existing.id,
+      metadata: { details: `Rejected "${existing.title}" (${existing.type}). Reason: ${decision.reason || decision.comments || 'Not specified'}` }
     });
 
     // 2. Remove / Resolve pending approval

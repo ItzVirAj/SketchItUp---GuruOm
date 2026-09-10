@@ -28,7 +28,9 @@ import {
 
 import { notificationsService } from '../notifications/notifications.service';
 import { qcService } from '../qc/qc.service';
+import { getNextDocumentNumber } from '../../utils/documentNumbers';
 import { LockService } from '../../lib/lock';
+import { logger } from '../../utils/logger';
 
 const SEED_ROUTE_CARDS: RouteCardTemplateStep[] = [];
 const SEED_CERTIFIED_EMPLOYEES: EmployeeCertification[] = [];
@@ -138,7 +140,7 @@ export class ProductionService {
         }));
       }
     } catch (err) {
-      console.warn('DB getRouteCardTemplates error:', err);
+      logger.warn('DB getRouteCardTemplates error:', err);
     }
     return [];
   }
@@ -199,7 +201,7 @@ export class ProductionService {
       .maybeSingle();
 
     if (partErr) {
-      console.error('Error validating part item in masters:', partErr);
+      logger.error('Error validating part item in masters:', partErr);
       throw partErr;
     }
 
@@ -238,7 +240,7 @@ export class ProductionService {
         if (insErr) throw insErr;
       }
     } catch (err: any) {
-      console.warn('Database saveRouteCard exception:', err);
+      logger.warn('Database saveRouteCard exception:', err);
       throw new Error(`Failed to save Route Card for ${partCode}: ${err.message}`);
     }
 
@@ -286,7 +288,7 @@ export class ProductionService {
       const { error } = await this.db.from('route_card_templates').delete().eq('part_code', partCode);
       if (error) throw error;
     } catch (err: any) {
-      console.warn('Database deleteRouteCard error:', err);
+      logger.warn('Database deleteRouteCard error:', err);
       throw new Error(`Failed to delete Route Card for ${partCode}: ${err.message}`);
     }
 
@@ -326,12 +328,12 @@ export class ProductionService {
           orderPo: jc.order_po,
           partCode: jc.part_code,
           partDescription: jc.part_description,
-          drawingRevision: 'REV-A',
+          drawingRevision: jc.drawing_revision || 'REV-A',
           targetQty: Number(jc.qty || 0),
           qty: Number(jc.qty || 0),
           machine: jc.machine || 'CNC-01',
-          materialIssuedLot: 'NOT-TRACKED',
-          materialQcStatus: 'ACCEPTED',
+          materialIssuedLot: jc.material_issued_lot || 'NOT-TRACKED',
+          materialQcStatus: (jc.material_qc_status || 'ACCEPTED') as 'PENDING_INSPECTION' | 'ACCEPTED' | 'QUALITY_HOLD',
           currentStepNo: 10,
           currentOperation: 'CNC Machining',
           jobStatus: jc.status === 'SCHEDULED' ? 'NOT_STARTED' : (jc.status || 'NOT_STARTED'),
@@ -362,7 +364,7 @@ export class ProductionService {
         }));
       }
     } catch (err) {
-      console.warn('DB getJobCards fallback:', err);
+      logger.warn('DB getJobCards fallback:', err);
     }
     return [];
   }
@@ -452,7 +454,7 @@ export class ProductionService {
       .order('sequence_no', { ascending: true });
 
     if (routeErr) {
-      console.error('Database route card lookup error:', routeErr);
+      logger.error('Database route card lookup error:', routeErr);
       const lookupErr: any = new Error(
         `Failed to verify Route Card configuration for part '${validated.partCode}'. Job Card release aborted.`
       );
@@ -557,7 +559,7 @@ export class ProductionService {
             }
             continue;
           }
-          console.error('Database createJobCard error:', insertErr);
+          logger.error('Database createJobCard error:', insertErr);
           const dbErr: any = new Error(`Failed to write Job Card to database: ${insertErr.message}`);
           dbErr.statusCode = 500;
           throw dbErr;
@@ -582,7 +584,7 @@ export class ProductionService {
           }));
           const { error: opErr } = await this.db.from('job_card_operations').insert(opPayloads);
           if (opErr) {
-            console.error('Database job_card_operations insert error:', opErr);
+            logger.error('Database job_card_operations insert error:', opErr);
             // CRITICAL ISSUE #8 (Atomicity): never leave an orphan Job Card without
             // its configured process steps — remove the partially created Job Card
             // row so zero partial manufacturing state remains, then fail loudly.
@@ -594,7 +596,7 @@ export class ProductionService {
         insertSuccess = true;
       } catch (err: any) {
         if (attempts >= 5) {
-          console.warn('DB createJobCard exception:', err);
+          logger.warn('DB createJobCard exception:', err);
           throw err;
         }
       }
@@ -671,7 +673,7 @@ export class ProductionService {
       return null;
     }
 
-    return bom.components.map(comp => ({
+    return bom.components.map((comp: any) => ({
       itemCode: comp.componentCode,
       description: comp.componentName || comp.componentCode,
       qty: Number((Number(comp.qtyPerUnit || 1) * (1 + Number(comp.scrapAllowancePct || 0) / 100) * targetQty).toFixed(4))
@@ -779,7 +781,7 @@ export class ProductionService {
         })
         .eq('job_no', jobNo);
     } catch (err) {
-      console.warn('DB startOperation error:', err);
+      logger.warn('DB startOperation error:', err);
     }
 
     await auditService.recordAuditLog({
@@ -834,7 +836,7 @@ export class ProductionService {
       await inventoryMovementsService.recordMovement({
         itemCode: result.scrapMovementTriggered.itemCode,
         quantityChange: -result.scrapMovementTriggered.qty,
-        movementType: 'SCRAP',
+        movementType: 'DAMAGE_WRITE_OFF',
         referenceId: `${jobNo}-OP${validated.sequenceNo}`,
         referenceType: 'job_card',
         actorEmail: `${operatorName.toLowerCase().replace(/\s+/g, '.')}@guruom.in`,
@@ -865,7 +867,7 @@ export class ProductionService {
         })
         .eq('job_no', jobNo);
     } catch (err) {
-      console.warn('DB completeOperation fallback:', err);
+      logger.warn('DB completeOperation fallback:', err);
     }
 
     // AUTOMATED CHAIN TRIGGER: If all operations on this job card complete -> Auto-create QC inspection & advance order
@@ -881,7 +883,7 @@ export class ProductionService {
           qcStatus: 'PENDING'
         });
       } catch (qcErr) {
-        console.warn('Auto QC inspection generation fallback:', qcErr);
+        logger.warn('Auto QC inspection generation fallback:', qcErr);
       }
 
       if (result.jobCard.orderPo) {
@@ -897,7 +899,7 @@ export class ProductionService {
             allOrderJobsCompleted = siblingJobs.every(j => j.status === 'COMPLETED' || j.jobStatus === 'COMPLETED');
           }
         } catch (jErr) {
-          console.warn('Job card siblings check fallback:', jErr);
+          logger.warn('Job card siblings check fallback:', jErr);
         }
 
         if (allOrderJobsCompleted) {
@@ -910,7 +912,7 @@ export class ProductionService {
               { role: 'Production Planner', name: operatorName }
             );
           } catch (transErr) {
-            console.warn('ordersService.transitionOrderStage in completeOperation fallback:', transErr);
+            logger.warn('ordersService.transitionOrderStage in completeOperation fallback:', transErr);
             try {
               await this.db.from('customer_orders').update({
                 status: 'READY_FOR_QC',
@@ -975,7 +977,7 @@ export class ProductionService {
       throw new Error(`Job Card ${validated.jobNo} not found`);
     }
 
-    const ncrNumber = `NCR-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
+    const ncrNumber = await getNextDocumentNumber('NCR', 'NCR');
     const ncr: NcrRecord = {
       id: `ncr-${Date.now()}`,
       ncrNumber,
@@ -1022,7 +1024,7 @@ export class ProductionService {
           .or(`po_no.eq.${validated.orderPo},id.eq.${validated.orderPo}`);
       }
     } catch (err) {
-      console.warn('DB raiseNcr fallback:', err);
+      logger.warn('DB raiseNcr fallback:', err);
     }
 
     await auditService.recordAuditLog({
@@ -1066,8 +1068,8 @@ export class ProductionService {
       await inventoryMovementsService.recordMovement({
         itemCode: result.scrapMovementTriggered.itemCode,
         quantityChange: -result.scrapMovementTriggered.qty,
-        movementType: 'SCRAP',
-        referenceId: result.scrapMovementTriggered.referenceDoc || jobNo,
+        movementType: 'DAMAGE_WRITE_OFF',
+        referenceId: jobNo,
         referenceType: 'job_card',
         actorEmail: 'production@guruom.in',
         notes: `NCR ${validated.ncrNumber} disposition scrap write-off.`
@@ -1101,7 +1103,7 @@ export class ProductionService {
           .or(`po_no.eq.${jobCard.orderPo},id.eq.${jobCard.orderPo}`);
       }
     } catch (err) {
-      console.warn('DB disposeNcr fallback:', err);
+      logger.warn('DB disposeNcr fallback:', err);
     }
 
     await auditService.recordAuditLog({
@@ -1163,7 +1165,7 @@ export class ProductionService {
         allOrderJobsCompleted = siblingJobs.every(j => j.status === 'COMPLETED' || j.jobStatus === 'COMPLETED');
       }
     } catch (jErr) {
-      console.warn('Job card siblings check fallback:', jErr);
+      logger.warn('Job card siblings check fallback:', jErr);
     }
 
     if (!allOrderJobsCompleted) return;
@@ -1179,7 +1181,7 @@ export class ProductionService {
         { role: 'Production Planner', name: actorName }
       );
     } catch (transErr) {
-      console.warn('advanceOrderToReadyForQcWhenAllJobsComplete fallback:', transErr);
+      logger.warn('advanceOrderToReadyForQcWhenAllJobsComplete fallback:', transErr);
       try {
         await this.db.from('customer_orders').update({
           status: 'READY_FOR_QC',
@@ -1249,7 +1251,7 @@ export class ProductionService {
     });
 
     if (insErr) {
-      console.error('Database recordProductionLog insert error:', insErr);
+      logger.error('Database recordProductionLog insert error:', insErr);
       const err: any = new Error(`Failed to record production log: ${insErr.message}`);
       err.code = insErr.code;
       err.statusCode = 400;
@@ -1265,7 +1267,7 @@ export class ProductionService {
         .eq('job_no', validated.jobNo);
       if (rows) allLogs = rows;
     } catch (err) {
-      console.warn('recordProductionLog all logs read fallback:', err);
+      logger.warn('recordProductionLog all logs read fallback:', err);
     }
 
     // Include the just-created log if not already in rows
@@ -1315,7 +1317,7 @@ export class ProductionService {
           .eq('sequence_no', created.stepNo);
       }
     } catch (err) {
-      console.warn('recordProductionLog op update fallback:', err);
+      logger.warn('recordProductionLog op update fallback:', err);
     }
 
     // 3. Determine all required steps for this job
@@ -1349,7 +1351,7 @@ export class ProductionService {
           .update({ status: 'COMPLETED', jobStatus: 'COMPLETED', updated_at: new Date().toISOString() })
           .eq('job_no', validated.jobNo);
       } catch (err) {
-        console.warn('recordProductionLog job complete update fallback:', err);
+        logger.warn('recordProductionLog job complete update fallback:', err);
       }
 
       const completedJob: any = { ...job, status: 'COMPLETED', jobStatus: 'COMPLETED' };
@@ -1367,7 +1369,7 @@ export class ProductionService {
             qcStatus: 'PENDING'
           });
         } catch (qcErr) {
-          console.warn('Auto QC inspection generation fallback:', qcErr);
+          logger.warn('Auto QC inspection generation fallback:', qcErr);
         }
       }
 
@@ -1420,7 +1422,7 @@ export class ProductionService {
         }));
       }
     } catch (err) {
-      console.warn('getProductionLogs DB read fallback:', err);
+      logger.warn('getProductionLogs DB read fallback:', err);
     }
     return [];
   }
@@ -1431,7 +1433,7 @@ export class ProductionService {
       try {
         await this.db.from('job_cards').update({ status: payload.status, updated_at: new Date().toISOString() }).eq('job_no', jobNo);
       } catch (err) {
-        console.error('Database updateJobStatus error:', err);
+        logger.error('Database updateJobStatus error:', err);
       }
       notificationsService.broadcastEvent('job_card_updated', { ...job, status: payload.status, jobStatus: payload.status });
 
@@ -1447,7 +1449,7 @@ export class ProductionService {
             allOrderJobsCompleted = siblingJobs.every(j => j.status === 'COMPLETED' || j.jobStatus === 'COMPLETED');
           }
         } catch (jErr) {
-          console.warn('Job card siblings check fallback:', jErr);
+          logger.warn('Job card siblings check fallback:', jErr);
         }
 
         if (allOrderJobsCompleted) {
@@ -1459,7 +1461,7 @@ export class ProductionService {
               { role: 'Production Planner', name: 'System / PPC' }
             );
           } catch (transErr) {
-            console.warn('ordersService.transitionOrderStage in updateJobStatus fallback:', transErr);
+            logger.warn('ordersService.transitionOrderStage in updateJobStatus fallback:', transErr);
             try {
               await this.db.from('customer_orders').update({
                 status: 'READY_FOR_QC',

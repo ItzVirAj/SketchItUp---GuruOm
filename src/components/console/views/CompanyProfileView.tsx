@@ -287,7 +287,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
             />
 
             {/* Entity Header */}
-            <div className="flex items-start justify-between border-b border-white/10 dark:border-white/10 pb-4">
+            <div className={`flex items-start justify-between border-b pb-4 ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#5B75F8] to-[#5856D6] flex items-center justify-center text-white shadow-md shadow-blue-500/20 font-bold text-sm">
                   GO
@@ -296,7 +296,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                   <span className="text-[10px] font-mono uppercase font-semibold text-[#5B75F8] tracking-wider block">
                     REGISTERED ENTERPRISE
                   </span>
-                  <h3 className="text-sm font-bold tracking-tight text-white dark:text-white line-clamp-1">
+                  <h3 className={`text-sm font-bold tracking-tight line-clamp-1 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                     {legalName || 'GuruOm Industries LLP'}
                   </h3>
                 </div>
@@ -309,7 +309,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
             </div>
 
             {/* Address & Contact Block */}
-            <div className="py-4 space-y-3 border-b border-white/10 dark:border-white/10 text-xs">
+            <div className={`py-4 space-y-3 border-b text-xs ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
               <div>
                 <span className="text-[10px] font-semibold uppercase text-slate-400 tracking-wider block mb-1">
                   Registered Works Address
@@ -323,11 +323,11 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
               <div className="grid grid-cols-2 gap-2 pt-1">
                 <div className={`p-2.5 rounded-xl border ${isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-50 border-slate-200'}`}>
                   <span className="text-[10px] uppercase text-slate-400 font-medium block">Phone</span>
-                  <p className="font-mono text-xs font-semibold truncate mt-0.5">{phone || '—'}</p>
+                  <p className={`font-mono text-xs font-semibold truncate mt-0.5 ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>{phone || '—'}</p>
                 </div>
                 <div className={`p-2.5 rounded-xl border ${isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-50 border-slate-200'}`}>
                   <span className="text-[10px] uppercase text-slate-400 font-medium block">Email</span>
-                  <p className="font-mono text-xs font-semibold truncate mt-0.5">{email || '—'}</p>
+                  <p className={`font-mono text-xs font-semibold truncate mt-0.5 ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>{email || '—'}</p>
                 </div>
               </div>
             </div>
@@ -409,10 +409,10 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
             ? 'bg-[#09090B] border-white/10 text-white'
             : 'bg-white border-slate-200 text-slate-900'
             }`}>
-            <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
+            <div className={`flex items-center justify-between border-b pb-2.5 ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
               <div className="flex items-center gap-2">
                 <Receipt className="w-4 h-4 text-[#5B75F8]" />
-                <span className="text-xs font-semibold">
+                <span className={`text-xs font-semibold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                   Official Document Header Preview
                 </span>
               </div>
@@ -427,13 +427,13 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
               <span className="inline-block px-2 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase bg-[#5B75F8]/15 text-[#5B75F8] border border-[#5B75F8]/30">
                 PRECISION MANUFACTURING ENTERPRISE
               </span>
-              <h4 className="font-bold text-sm tracking-tight text-white dark:text-white uppercase">
+              <h4 className={`font-bold text-sm tracking-tight uppercase ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                 {legalName || 'GuruOm Industries LLP'}
               </h4>
-              <p className="text-[11px] text-slate-400 leading-relaxed">
+              <p className={`text-[11px] leading-relaxed ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                 {address || 'Sr No 15/2, Mataji Logistic Park, Behind Tilakraj CNG Pump, Urali Devachi, Pune 412308, India'}
               </p>
-              <div className="flex flex-wrap gap-x-3 gap-y-1 font-mono text-[10px] text-slate-400 pt-1 border-t border-white/10">
+              <div className={`flex flex-wrap gap-x-3 gap-y-1 font-mono text-[10px] pt-1 border-t ${isDarkMode ? 'border-white/10 text-slate-400' : 'border-slate-200 text-slate-600'}`}>
                 <span><strong>GSTIN:</strong> {gstin || '27AABCG1234F1Z5'}</span>
                 <span><strong>State Code:</strong> {stateCode || '27'}</span>
                 <span><strong>PAN:</strong> {pan || 'AABCG1234F'}</span>
@@ -463,15 +463,15 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
 
               {/* Group 1: Legal Identity & Corporate Details */}
               <div className="space-y-4">
-                <div className="flex items-center gap-2 pb-2 border-b border-white/10">
+                <div className={`flex items-center gap-2 pb-2 border-b ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
                   <div className="p-1.5 rounded-lg bg-[#5B75F8]/10 text-[#5B75F8]">
                     <Building className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                    <h3 className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
                       1. Legal Entity & Corporate Details
                     </h3>
-                    <p className="text-[11px] text-slate-400">Official registered corporate title and verified contact info</p>
+                    <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Official registered corporate title and verified contact info</p>
                   </div>
                 </div>
 
@@ -531,15 +531,15 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
 
               {/* Group 2: Registered Manufacturing Works & Dispatch Plant */}
               <div className="space-y-4 pt-2">
-                <div className="flex items-center gap-2 pb-2 border-b border-white/10">
+                <div className={`flex items-center gap-2 pb-2 border-b ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
                   <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400">
                     <MapPin className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                    <h3 className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
                       2. Registered Manufacturing Works & Plant
                     </h3>
-                    <p className="text-[11px] text-slate-400">Physical factory location used as the primary consignor facility</p>
+                    <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Physical factory location used as the primary consignor facility</p>
                   </div>
                 </div>
 
@@ -566,15 +566,15 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
 
               {/* Group 3: Statutory GST & Tax Registration */}
               <div className="space-y-4 pt-2">
-                <div className="flex items-center gap-2 pb-2 border-b border-white/10">
+                <div className={`flex items-center gap-2 pb-2 border-b ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
                   <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-400">
                     <ShieldCheck className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                    <h3 className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
                       3. Statutory GST & Tax Registration
                     </h3>
-                    <p className="text-[11px] text-slate-400">Government statutory identifiers and state tax jurisdiction</p>
+                    <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Government statutory identifiers and state tax jurisdiction</p>
                   </div>
                 </div>
 
@@ -652,8 +652,8 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
               </div>
 
               {/* Form Action Footer */}
-              <div className="pt-5 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <p className="text-[11px] text-slate-400 leading-relaxed">
+              <div className={`pt-5 border-t flex flex-col sm:flex-row items-center justify-between gap-4 ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
+                <p className={`text-[11px] leading-relaxed ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                   Modifications take effect immediately across all newly generated documents.
                 </p>
 

@@ -3,8 +3,15 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://txztwjvjqjczxwskzjjx.supabase.co';
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4enR3anZqcWpjenh3c2t6amp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1NDA4MjEsImV4cCI6MjEwMjExNjgyMX0.oTGcfvvmWb9qXUitJGfdsNdWqi0FEWpxytIMWTx_F_E';
+// C-03: project credentials must come from the environment only — never hardcode a
+// Supabase URL or key into source. Boot fails loudly when they are missing.
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('Refusing to run: missing SUPABASE_URL and/or SUPABASE_SERVICE_ROLE_KEY. Set them in the environment (e.g. .env) - do not hardcode project credentials in source.');
+  process.exit(1);
+}
 
 const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false }

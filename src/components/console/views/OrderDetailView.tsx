@@ -43,11 +43,12 @@ import {
   ChevronLeft,
   Info,
   BarChart3,
-  Maximize2
+  Maximize2,
+  Ban
 } from 'lucide-react';
 import { CustomerOrder, OrderStatus, QCInspection, PDIInspection, OrderLineItem, UserRole, VendorMaster, DispatchChallan, CustomerInvoice, OrderLineProgress, ShortageItem } from '../../../types/console';
 import { isRoleAuthorizedForCta, getCtaPermission, CtaId, normalizeRole } from '../../../utils/rbacMatrix';
-import { useCtaPermission } from '../../../hooks/useCtaPermission';
+import { useCanPerformCta } from '../../../hooks/useCtaPermission';
 import { executeOrderStageTransition, validatePodRequired, validateOrderClosure, normalizeOrderState, CanonicalOrderState } from '../../../utils/orderStateMachine';
 import { runMaterialCheckForOrder, overrideMaterialCheckForOrder } from '../../../services/supabaseServices';
 import { getCurrentFinancialYear, formatDocumentNumber } from '../../../utils/statutoryAccountingEngine';
@@ -144,10 +145,11 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   };
 
   // Permissions for CTAs (rules-of-hooks: declared unconditionally at top level)
-  const allowedDelivered = useCtaPermission('MARK_DELIVERED') || useCtaPermission('ORDER_RECEIVED');
-  const canMarkDelayed = useCtaPermission('MARK_DELAYED');
-  const canMarkOrderClosed = useCtaPermission('MARK_ORDER_CLOSED');
-  const canUploadPdiReport = useCtaPermission('UPLOAD_PDI_REPORT');
+  const canPerformCta = useCanPerformCta();
+  const allowedDelivered = canPerformCta('MARK_DELIVERED') || canPerformCta('ORDER_RECEIVED');
+  const canMarkDelayed = canPerformCta('MARK_DELAYED');
+  const canMarkOrderClosed = canPerformCta('MARK_ORDER_CLOSED');
+  const canUploadPdiReport = canPerformCta('UPLOAD_PDI_REPORT');
 
   const [selectedChallanDetail, setSelectedChallanDetail] = useState<DispatchChallan | null>(null);
 
@@ -391,7 +393,15 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   // Active step index calculation matching the 8-stage lifecycle
   let activeStepIndex = 0;
   const currentStage = (order.status || order.stage || 'DRAFT').toUpperCase();
-  if (['COMPLETED', 'CLOSED'].includes(currentStage)) {
+  const isCancelled = currentStage === 'CANCELLED' ||
+    String(order.status || '').toUpperCase() === 'CANCELLED' ||
+    String(order.stage || '').toUpperCase() === 'CANCELLED' ||
+    normalizeOrderState(order.stage) === 'CANCELLED' ||
+    normalizeOrderState(order.status) === 'CANCELLED';
+
+  if (isCancelled) {
+    activeStepIndex = -1;
+  } else if (['COMPLETED', 'CLOSED'].includes(currentStage)) {
     activeStepIndex = 7;
   } else if (['PAYMENT_PENDING', 'INVOICED'].includes(currentStage) || (['DELIVERED'].includes(currentStage) && (order.paymentStatus === 'PAID' || remainingOutstanding <= 0))) {
     activeStepIndex = 6;
@@ -1530,33 +1540,37 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   </span>
                 )}
 
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-all ${isQcRejected ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20' :
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
+                  isCancelled ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20' :
+                  isQcRejected ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20' :
                   isQcHold || hasNcr ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
-                    order.status === 'CANCELLED' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20' :
-                      order.status === 'DRAFT' || order.status === 'PO_RECEIVED' || order.status === 'SUBMITTED' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
-                        order.status === 'CONFIRMED' || order.status === 'APPROVED' ? 'bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF] border-blue-500/20' :
-                          order.status === 'MATERIAL_CHECKED' || order.status === 'MATERIAL_CHECK' || order.status === 'MATERIAL_READY' ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20' :
-                            order.status === 'IN_PRODUCTION' || order.status === 'JOB_RELEASED' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
-                              order.status === 'READY_FOR_QC' || order.status === 'MANUFACTURING_COMPLETED' || order.status === 'QC_INSPECTION' || order.status === 'QC' ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20' :
-                                order.status === 'READY_TO_DISPATCH' || order.status === 'READY_FOR_DISPATCH' || order.status === 'PDI_COMPLETE' ? 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20' :
-                                  order.status === 'PARTIALLY_DISPATCHED' || order.status === 'DISPATCHED' ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20' :
-                                    order.status === 'CLOSED' || order.status === 'COMPLETED' ? 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20' :
-                                      'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                  order.status === 'DRAFT' || order.status === 'PO_RECEIVED' || order.status === 'SUBMITTED' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
+                  order.status === 'CONFIRMED' || order.status === 'APPROVED' ? 'bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF] border-blue-500/20' :
+                  order.status === 'MATERIAL_CHECKED' || order.status === 'MATERIAL_CHECK' || order.status === 'MATERIAL_READY' ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20' :
+                  order.status === 'IN_PRODUCTION' || order.status === 'JOB_RELEASED' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
+                  order.status === 'READY_FOR_QC' || order.status === 'MANUFACTURING_COMPLETED' || order.status === 'QC_INSPECTION' || order.status === 'QC' ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20' :
+                  order.status === 'READY_TO_DISPATCH' || order.status === 'READY_FOR_DISPATCH' || order.status === 'PDI_COMPLETE' ? 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20' :
+                  order.status === 'PARTIALLY_DISPATCHED' || order.status === 'DISPATCHED' ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20' :
+                  order.status === 'CLOSED' || order.status === 'COMPLETED' ? 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20' :
+                  'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                   }`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${isQcRejected ? 'bg-rose-500 animate-pulse' :
+                  <span className={`w-1.5 h-1.5 rounded-full ${
+                    isCancelled ? 'bg-rose-500' :
+                    isQcRejected ? 'bg-rose-500 animate-pulse' :
                     isQcHold || hasNcr ? 'bg-amber-500 animate-pulse' :
-                      order.status === 'CANCELLED' ? 'bg-rose-500' :
-                        order.status === 'DRAFT' || order.status === 'PO_RECEIVED' || order.status === 'SUBMITTED' ? 'bg-amber-500 animate-pulse' :
-                          order.status === 'CONFIRMED' || order.status === 'APPROVED' ? 'bg-[#5B75F8]' :
-                            order.status === 'MATERIAL_CHECKED' || order.status === 'MATERIAL_CHECK' || order.status === 'MATERIAL_READY' ? 'bg-indigo-500' :
-                              order.status === 'IN_PRODUCTION' || order.status === 'JOB_RELEASED' ? 'bg-amber-500 animate-pulse' :
-                                order.status === 'READY_FOR_QC' || order.status === 'MANUFACTURING_COMPLETED' ? 'bg-purple-500 animate-pulse' :
-                                  order.status === 'QC_INSPECTION' || order.status === 'QC' ? 'bg-purple-500' :
-                                    order.status === 'READY_TO_DISPATCH' || order.status === 'READY_FOR_DISPATCH' || order.status === 'PDI_COMPLETE' ? 'bg-cyan-500' :
-                                      order.status === 'PARTIALLY_DISPATCHED' || order.status === 'DISPATCHED' ? 'bg-teal-500' :
-                                        order.status === 'CLOSED' || order.status === 'COMPLETED' ? 'bg-slate-400' : 'bg-emerald-500'
+                    order.status === 'DRAFT' || order.status === 'PO_RECEIVED' || order.status === 'SUBMITTED' ? 'bg-amber-500 animate-pulse' :
+                    order.status === 'CONFIRMED' || order.status === 'APPROVED' ? 'bg-[#5B75F8]' :
+                    order.status === 'MATERIAL_CHECKED' || order.status === 'MATERIAL_CHECK' || order.status === 'MATERIAL_READY' ? 'bg-indigo-500' :
+                    order.status === 'IN_PRODUCTION' || order.status === 'JOB_RELEASED' ? 'bg-amber-500 animate-pulse' :
+                    order.status === 'READY_FOR_QC' || order.status === 'MANUFACTURING_COMPLETED' ? 'bg-purple-500 animate-pulse' :
+                    order.status === 'QC_INSPECTION' || order.status === 'QC' ? 'bg-purple-500' :
+                    order.status === 'READY_TO_DISPATCH' || order.status === 'READY_FOR_DISPATCH' || order.status === 'PDI_COMPLETE' ? 'bg-cyan-500' :
+                    order.status === 'PARTIALLY_DISPATCHED' || order.status === 'DISPATCHED' ? 'bg-teal-500' :
+                    order.status === 'CLOSED' || order.status === 'COMPLETED' ? 'bg-slate-400' : 'bg-emerald-500'
                     }`} />
-                  <span>{isQcRejected ? 'QC Rejected' : (isQcHold || hasNcr) ? 'QC Hold / NCR' : (order.status || order.stage || 'DRAFT').replace(/_/g, ' ')}</span>
+                  <span>
+                    {isCancelled ? 'Order Cancelled' : isQcRejected ? 'QC Rejected' : (isQcHold || hasNcr) ? 'QC Hold / NCR' : (order.status || order.stage || 'DRAFT').replace(/_/g, ' ')}
+                  </span>
                 </span>
               </div>
 
@@ -1621,16 +1635,67 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               Lifecycle Progress
             </span>
           </div>
-          <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium border flex items-center gap-1.5 ${isDarkMode
-            ? 'bg-white/[0.06] border-white/[0.08] text-slate-300'
-            : 'bg-slate-100/90 border-slate-200/70 text-slate-700'
-            }`}>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Phase {activeStepIndex + 1} of {steps.length} • {(order.status || order.stage || 'DRAFT').replace(/_/g, ' ')}
-          </span>
+          {isCancelled ? (
+            <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium border flex items-center gap-1.5 ${isDarkMode
+              ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+              : 'bg-rose-50 border-rose-200 text-rose-700'
+              }`}>
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+              Cancelled
+            </span>
+          ) : (
+            <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium border flex items-center gap-1.5 ${isDarkMode
+              ? 'bg-white/[0.06] border-white/[0.08] text-slate-300'
+              : 'bg-slate-100/90 border-slate-200/70 text-slate-700'
+              }`}>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Phase {activeStepIndex + 1} of {steps.length} • {(order.status || order.stage || 'DRAFT').replace(/_/g, ' ')}
+            </span>
+          )}
         </div>
 
-        {/* Apple Segmented Control Rail */}
+        {isCancelled ? (
+          <div className={`p-4 sm:p-4.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 transition-all ${isDarkMode
+            ? 'bg-[#0f0f11] border-white/[0.05] shadow-[inset_0_1px_3px_rgba(0,0,0,0.6)]'
+            : 'bg-slate-100/80 border-slate-200/70 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)]'
+            }`}>
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all ${isDarkMode
+                ? 'bg-rose-500/15 text-rose-400 border border-rose-500/25'
+                : 'bg-rose-100/80 text-rose-600 border border-rose-200/80'
+                }`}>
+                <Ban className="w-5 h-5 stroke-[2]" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-sm sm:text-base tracking-tight text-slate-900 dark:text-white">
+                    Order Cancelled
+                  </h3>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${isDarkMode
+                    ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                    : 'bg-rose-100 text-rose-700 border border-rose-200'
+                    }`}>
+                    Terminated
+                  </span>
+                </div>
+                <p className={`text-xs mt-0.5 leading-relaxed ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                  This purchase order has been cancelled. Lifecycle progress and operational workflows are permanently disabled.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+              <span className={`px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 border ${isDarkMode
+                ? 'bg-white/[0.04] text-slate-400 border-white/[0.08]'
+                : 'bg-white/80 text-slate-500 border-slate-200 shadow-2xs'
+                }`}>
+                <Lock className="w-3.5 h-3.5 text-slate-400" />
+                <span>No Actions Available</span>
+              </span>
+            </div>
+          </div>
+        ) : (
+        /* Apple Segmented Control Rail */
         <div className={`p-1.5 rounded-2xl border flex items-center gap-2 overflow-x-auto scrollbar-none ${isDarkMode
           ? 'bg-[#0f0f11] border-white/[0.05] shadow-[inset_0_1px_3px_rgba(0,0,0,0.6)]'
           : 'bg-slate-100/80 border-slate-200/70 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)]'
@@ -1721,11 +1786,12 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
             );
           })}
         </div>
+        )}
       </div>
 
       {/* 2.5 Unified Stage Gateway Panels (Single Source of Truth) */}
+      {!isCancelled && (
       <div className="space-y-2.5">
-
         {(() => {
           const norm = normalizeOrderState(order.status || order.stage);
 
@@ -1743,7 +1809,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 const allowed = isRoleAuthorizedForCta(currentRole, 'CONFIRM_ORDER');
                 return (
                   <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
-                    {useCtaPermission('REQUEST_REVISION') && (
+                    {canPerformCta('REQUEST_REVISION') && (
                       <button
                         onClick={openEditModal}
                         className={`flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border px-3.5 text-xs font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-[0.98] ${isDarkMode
@@ -1755,7 +1821,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                         <span>Request Revision / Edit</span>
                       </button>
                     )}
-                    {useCtaPermission('CONFIRM_ORDER') && (
+                    {canPerformCta('CONFIRM_ORDER') && (
                       <button
                         disabled={isConfirming || !allowed}
                         onClick={handleConfirmAction}
@@ -1787,7 +1853,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 n === 'APPROVED' || ['CONFIRMED', 'APPROVED', 'PO_APPROVED'].includes((o.status || '').toUpperCase()),
               renderActions: () => (
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
-                  {useCtaPermission('RAISE_CHANGE_ORDER') && (
+                  {canPerformCta('RAISE_CHANGE_ORDER') && (
                     <button
                       onClick={openEditModal}
                       className={`flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border px-3.5 text-xs font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-[0.98] ${isDarkMode
@@ -1799,7 +1865,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                       <span>Raise Change Order</span>
                     </button>
                   )}
-                  {useCtaPermission('VERIFY_MATERIAL_AVAILABILITY') && (
+                  {canPerformCta('VERIFY_MATERIAL_AVAILABILITY') && (
                     <button
                       disabled={isRunningMaterialCheck}
                       onClick={handleMaterialCheckAction}
@@ -1823,7 +1889,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 ['RELEASED', 'PENDING_VERIFICATION', 'MATERIAL_CHECK'].includes(n) || ['MATERIAL_CHECK', 'PENDING_VERIFICATION'].includes((o.status || '').toUpperCase()),
               renderActions: () => (
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
-                  {useCtaPermission('VERIFY_MATERIAL_AVAILABILITY') && (
+                  {canPerformCta('VERIFY_MATERIAL_AVAILABILITY') && (
                     <button
                       disabled={isRunningMaterialCheck}
                       onClick={handleMaterialCheckAction}
@@ -1859,7 +1925,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 n === 'MATERIAL_SHORT' || ['MATERIAL_SHORT', 'MATERIAL_SHORTAGE'].includes((o.status || o.stage || '').toUpperCase()),
               renderActions: () => (
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
-                  {useCtaPermission('VERIFY_MATERIAL_AVAILABILITY') && (
+                  {canPerformCta('VERIFY_MATERIAL_AVAILABILITY') && (
                     <button
                       disabled={isRunningMaterialCheck}
                       onClick={handleMaterialCheckAction}
@@ -1891,7 +1957,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 n === 'PROCUREMENT_PENDING' || ['PROCUREMENT_PENDING', 'PO_SENT', 'UNDER_PROCUREMENT'].includes((o.status || '').toUpperCase()),
               renderActions: () => (
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
-                  {useCtaPermission('CREATE_PURCHASE_ORDER') && (
+                  {canPerformCta('CREATE_PURCHASE_ORDER') && (
                     <button
                       onClick={() => onNavigate?.('inventory')}
                       className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer whitespace-nowrap"
@@ -1915,7 +1981,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 n === 'GRN' || ['GRN', 'GRN_PENDING', 'AWAITING_GRN'].includes((o.status || '').toUpperCase()),
               renderActions: () => (
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
-                  {useCtaPermission('RECORD_GRN') && (
+                  {canPerformCta('RECORD_GRN') && (
                     <button
                       onClick={() => onNavigate?.('inventory')}
                       className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer whitespace-nowrap"
@@ -1952,7 +2018,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 const lineCount = (order.lines || []).length;
                 return (
                   <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
-                    {useCtaPermission('CREATE_JOB_CARD') && (
+                    {canPerformCta('CREATE_JOB_CARD') && (
                       <button
                         disabled={!allowed || lineCount === 0}
                         onClick={handleGoToCreateJobCard}
@@ -1978,7 +2044,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 ['WITH_SUBCONTRACTOR', 'OUTWORK_DISPATCHED', 'OUTWORK_RECEIVED'].includes((o.status || '').toUpperCase()),
               renderActions: () => (
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
-                  {(useCtaPermission('ISSUE_TO_SUBCONTRACTOR') || useCtaPermission('RECEIVE_FROM_SUBCONTRACTOR')) && (
+                  {(canPerformCta('ISSUE_TO_SUBCONTRACTOR') || canPerformCta('RECEIVE_FROM_SUBCONTRACTOR')) && (
                     <button
                       onClick={() => onNavigate?.('production')}
                       className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer whitespace-nowrap"
@@ -2001,7 +2067,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 n === 'IN_PRODUCTION' || ['IN_PRODUCTION', 'IN_PROGRESS', 'MANUFACTURING'].includes((o.status || '').toUpperCase()),
               renderActions: () => (
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
-                  {(useCtaPermission('START_MANUFACTURING') || useCtaPermission('COMPLETE_STEP')) && (
+                  {(canPerformCta('START_MANUFACTURING') || canPerformCta('COMPLETE_STEP')) && (
                     <button
                       onClick={() => onNavigate?.('production')}
                       className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer whitespace-nowrap"
@@ -2024,7 +2090,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 !allQcPassed && !isPdiPassed && ['MANUFACTURING_COMPLETED', 'READY_FOR_QC'].includes((o.status || o.stage || '').toUpperCase()),
               renderActions: () => (
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
-                  {useCtaPermission('MARK_MANUFACTURING_COMPLETE') && (
+                  {canPerformCta('MARK_MANUFACTURING_COMPLETE') && (
                     <button
                       onClick={() => onNavigate?.('qc')}
                       className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer whitespace-nowrap"
@@ -2469,6 +2535,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           );
         })()}
       </div>
+      )}
 
       {/* 2.6 Material Shortage Alert Panel — only visible when shortages exist */}
       {(() => {
@@ -2489,7 +2556,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         const displayShortages = shortageItems.length > 0 ? shortageItems : derivedShortages;
         const hasShortages = isShortageStage || shortageItems.length > 0;
 
-        if (!hasShortages || displayShortages.length === 0) return null;
+        if (isCancelled || !hasShortages || displayShortages.length === 0) return null;
 
         return (
           <div className={`p-4 sm:p-5 rounded-2xl sm:rounded-3xl border transition-ui relative overflow-hidden ${isDarkMode

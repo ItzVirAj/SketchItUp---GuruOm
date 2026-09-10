@@ -377,8 +377,19 @@ export function requirePermission(
 
 /**
  * Backwards-compatible requireRole function.
+ *
+ * H-04: This file (`rbac.middleware.ts`) is the CANONICAL authorization pipeline
+ * (`requirePermission`, `requireRole`, `requireCtaPermission`). The older
+ * `permission.middleware.ts` (`requireServerAdmin` / `requireEffectivePermission`)
+ * is legacy and is only used by the admin + dispatch modules.
+ *
+ * H-05: by default, ServerAdmin / Owner / Admin (System) bypass the role allow-list
+ * (an intentional "superadmin can do anything" override). Routes that must NOT
+ * allow that bypass (e.g. maker-checker controls where Owner must not self-approve)
+ * can opt out per-route via `allowSuperAdminBypass: false`.
  */
-export function requireRole(allowedRoles: string[]) {
+export function requireRole(allowedRoles: string[], options: { allowSuperAdminBypass?: boolean } = {}) {
+  const { allowSuperAdminBypass = true } = options;
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
       return res.status(401).json({
@@ -392,7 +403,10 @@ export function requireRole(allowedRoles: string[]) {
 
     const isMatch = allowedRoles.some(r => normalizeRole(r) === normRole || r === rawRole);
 
-    if (!isMatch && normRole !== 'ServerAdmin' && normRole !== 'Owner' && normRole !== 'Admin (System)') {
+    const isSuperAdminBypass = allowSuperAdminBypass &&
+      (normRole === 'ServerAdmin' || normRole === 'Owner' || normRole === 'Admin (System)');
+
+    if (!isMatch && !isSuperAdminBypass) {
       return res.status(403).json({
         error: 'Forbidden',
         message: `Access denied. Role "${normRole}" lacks permission for this endpoint. Required: [${allowedRoles.join(', ')}]`

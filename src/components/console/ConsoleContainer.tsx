@@ -51,7 +51,6 @@ import { CommandPaletteModal } from './modals/CommandPaletteModal';
 import { isViewAllowedForUser } from '../../utils/permissions';
 import { useAuth } from '../../context/AuthContext';
 import { useOwnerOSData } from '../../hooks/useOwnerOSData';
-import { useSmoothScroll } from '../../hooks/useSmoothScroll';
 import { fetchOrderById, receiveOutworkReturn } from '../../services/supabaseServices';
 import { triggerOrderDelayed } from '../../services/notificationService';
 import { toast } from '../../context/ToastContext';
@@ -139,9 +138,8 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
   const [currentUserId, setCurrentUserId] = useState<string>(authProfile?.id || '');
   const [isRealtimeStreaming, setIsRealtimeStreaming] = useState<boolean>(true);
 
-  // Butter-smooth, delayed momentum scrolling on the main workspace canvas
+  // Main scrollable workspace canvas ref
   const mainScrollRef = useRef<HTMLElement | null>(null);
-  useSmoothScroll(mainScrollRef, [currentView]);
 
   useEffect(() => {
     if (authProfile?.id && !currentUserId) {
@@ -530,7 +528,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
         />
 
         {/* Dynamic View Canvas with safe bottom padding for mobile tab bar */}
-        <main ref={mainScrollRef} className={`flex-1 min-h-0 min-w-0 overflow-y-auto overscroll-y-contain overscroll-x-hidden p-3 sm:p-4 md:p-6 lg:p-8 pb-24 lg:pb-8 dark:bg-[#09090B] ${currentView === 'command-centre' ? 'bg-[#EEF2F7]' : 'bg-[#F8FAFC]'}`}>
+        <main ref={mainScrollRef} className={`flex-1 min-h-0 min-w-0 overflow-y-auto scroll-smooth overscroll-y-contain overscroll-x-hidden p-3 sm:p-4 md:p-6 lg:p-8 pb-24 lg:pb-8 dark:bg-[#09090B] ${currentView === 'command-centre' ? 'bg-[#EEF1F6]' : 'bg-[#F8FAFC]'}`}>
           <div key={currentView} className="space-y-6">
             {!isViewAllowedForUser(currentUser, currentView) ? (
               <AccessRestrictedGate

@@ -129,9 +129,9 @@ export const Modal: React.FC<ModalProps> = ({
         data-lenis-prevent="true"
         onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
-        className={`relative w-full ${maxWidthClass} max-h-[92vh] sm:max-h-[88vh] flex flex-col rounded-t-2xl sm:rounded-2xl border shadow-2xl backdrop-blur-2xl transition-all overflow-hidden overscroll-contain modal-animate-enter ${
+        className={`relative w-full ${maxWidthClass} max-h-[92vh] sm:max-h-[88vh] flex flex-col rounded-t-3xl sm:rounded-[28px] border shadow-2xl backdrop-blur-2xl transition-all overflow-hidden overscroll-contain modal-animate-enter ${
           isDarkMode
-            ? 'bg-[#09090B] border-white/10 text-white shadow-[0_24px_60px_rgba(0,0,0,0.8)]'
+            ? 'bg-[#121215]/95 border-white/[0.12] text-white shadow-[0_32px_96px_rgba(0,0,0,0.85)]'
             : 'bg-white/95 border-slate-200/80 text-slate-900 shadow-[0_24px_60px_rgba(0,0,0,0.15)]'
         } ${className}`}
       >
@@ -145,14 +145,14 @@ export const Modal: React.FC<ModalProps> = ({
           <div
             className={`shrink-0 px-5 sm:px-6 py-4 border-b flex items-center justify-between gap-4 select-none ${
               isDarkMode
-                ? 'border-white/10 bg-black/60 text-white'
+                ? 'border-white/[0.08] bg-white/[0.02] text-white'
                 : 'border-slate-200/80 bg-slate-50/50 text-slate-900'
             } ${headerClassName}`}
           >
             <div className="flex items-center gap-3 min-w-0">
               {icon && (
                 <div
-                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF] shrink-0"
+                  className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF] shrink-0"
                 >
                   {icon}
                 </div>
@@ -185,7 +185,11 @@ export const Modal: React.FC<ModalProps> = ({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-200 transition-all cursor-pointer"
+                  className={`w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+                    isDarkMode 
+                      ? 'bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border border-white/5' 
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 border border-slate-200/50'
+                  }`}
                   aria-label="Close modal"
                 >
                   <X className="w-4 h-4" />

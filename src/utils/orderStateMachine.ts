@@ -12,6 +12,11 @@
  * 8. Distinct Order Sub-Types: FRESH_PO, BLANKET_CALLOFF, AMENDMENT
  */
 
+// C-02: deterministic preview counter for auto-generated requisition numbers.
+// The authoritative, collision-free number is minted by the backend's atomic
+// document_sequences before the PR is persisted — this is UI/audit preview only.
+let autoPurchaseRequisitionPreviewCounter = 0;
+
 export type CanonicalOrderState =
   | 'DRAFT'
   | 'SUBMITTED'
@@ -441,7 +446,8 @@ export function validateMaterialAvailability(
     const deficit = requiredQty - availableStock;
     // We dynamically require this to avoid circular dependencies if any, but since it's a util it's fine.
     const { formatDocumentNumber, getCurrentFinancialYear } = require('./statutoryAccountingEngine');
-    const reqNumber = formatDocumentNumber('PR', getCurrentFinancialYear(), Math.floor(1000 + Math.random() * 8999));
+    autoPurchaseRequisitionPreviewCounter += 1;
+    const reqNumber = formatDocumentNumber('PR', getCurrentFinancialYear(), autoPurchaseRequisitionPreviewCounter);
 
     return {
       valid: true, // Transition proceeds, but auto-generates Purchase Requisition

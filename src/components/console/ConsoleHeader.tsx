@@ -250,9 +250,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
             className="group flex min-w-0 items-center gap-2.5 text-left transition-all active:scale-95 cursor-pointer lg:hidden"
             title="Command Centre"
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] text-xs font-black text-white shadow-md shadow-[var(--accent-shadow)]">
-              OS
-            </div>
+            <img src="/logo.png" alt="OwnerOS Logo" className="h-11 w-11 shrink-0 object-contain drop-shadow-sm" />
             <div className="hidden min-w-0 flex-col leading-tight sm:flex">
               <span className={`truncate text-sm font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                 SketchItUp
@@ -269,11 +267,13 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
               onClick={() => onNavigate?.('command-centre')}
               className="flex items-center gap-2.5 cursor-pointer group"
             >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] text-xs font-black text-white shadow-md shadow-[var(--accent-shadow)] group-hover:scale-105 transition-transform">
-                OS
-              </div>
+              <img
+                src="/logo.png"
+                alt="OwnerOS Logo"
+                className="h-12 w-12 shrink-0 object-contain drop-shadow-sm transition-transform group-hover:scale-105"
+              />
               <div className="flex flex-col justify-center leading-tight">
-                <span className={`text-sm font-bold tracking-tight group-hover:text-[var(--accent-text-light)] dark:group-hover:text-[var(--accent-text-dark)] transition-colors ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                <span className={`text-[15px] font-bold tracking-tight group-hover:text-[var(--accent-text-light)] dark:group-hover:text-[var(--accent-text-dark)] transition-colors ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                   SketchItUp
                 </span>
                 <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)]">

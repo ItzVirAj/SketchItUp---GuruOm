@@ -6,7 +6,7 @@ import { LoginPage } from './components/auth/LoginPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AccentThemeProvider } from './context/AccentThemeContext';
 import { ToastProvider } from './context/ToastContext';
-import { useSmoothScroll } from './hooks/useSmoothScroll';
+
 import { setDarkModeWithoutTransitions } from './utils/themeTransitions';
 import { Agentation } from 'agentation';
 
@@ -23,7 +23,7 @@ function ScrollToTop() {
 
 function MainApp() {
   const { user, loading, signOut } = useAuth();
-  useSmoothScroll(); // Global window-level butter-smooth momentum scroll
+
 
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     try {

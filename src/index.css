@@ -39,6 +39,44 @@
 }
 
 /* Centralized Accent Color Tokens */
+:root {
+  --chart-background: #ffffff;
+  --chart-foreground: #0f172a;
+  --chart-foreground-muted: #64748b;
+  --chart-line-primary: #435BE8;
+  --chart-line-secondary: #10B981;
+  --chart-crosshair: #435BE8;
+  --chart-grid: rgba(226, 232, 240, 0.8);
+  --chart-tooltip-foreground: #0f172a;
+  --chart-tooltip-muted: #64748b;
+  --chart-marker-background: #f8fafc;
+  --chart-marker-border: #cbd5e1;
+  --chart-marker-foreground: #334155;
+  --chart-marker-badge-background: #0f172a;
+  --chart-marker-badge-foreground: #ffffff;
+  --chart-segment-background: rgba(67, 91, 232, 0.08);
+  --chart-segment-line: rgba(67, 91, 232, 0.30);
+}
+
+.dark {
+  --chart-background: #121215;
+  --chart-foreground: #f8fafc;
+  --chart-foreground-muted: #94a3b8;
+  --chart-line-primary: #5B75F8;
+  --chart-line-secondary: #34D399;
+  --chart-crosshair: #7B92FF;
+  --chart-grid: rgba(255, 255, 255, 0.08);
+  --chart-tooltip-foreground: #f8fafc;
+  --chart-tooltip-muted: #94a3b8;
+  --chart-marker-background: #18181b;
+  --chart-marker-border: #27272a;
+  --chart-marker-foreground: #e2e8f0;
+  --chart-marker-badge-background: #ffffff;
+  --chart-marker-badge-foreground: #09090b;
+  --chart-segment-background: rgba(91, 117, 248, 0.12);
+  --chart-segment-line: rgba(91, 117, 248, 0.35);
+}
+
 :root, [data-accent="blue"] {
   --accent-primary: #435BE8;
   --accent-hover: #344BC7;
@@ -117,6 +155,63 @@
   --accent-shadow: rgba(0, 0, 0, 0.50);
   --accent-gradient-from: #F4F4F5;
   --accent-gradient-to: #A1A1AA;
+}
+
+[data-accent="brand"] {
+  --accent-primary: #0A7E58;
+  --accent-hover: #086B4A;
+  --accent-active: #06573C;
+  --accent-text-light: #0A7E58;
+  --accent-text-dark: #34D399;
+  --accent-soft-light: rgba(10, 126, 88, 0.08);
+  --accent-soft-dark: rgba(52, 211, 153, 0.12);
+  --accent-border-light: rgba(10, 126, 88, 0.30);
+  --accent-border-dark: rgba(52, 211, 153, 0.25);
+  --accent-ring: rgba(10, 126, 88, 0.50);
+  --accent-shadow: rgba(10, 126, 88, 0.35);
+  --accent-gradient-from: #0A7E58;
+  --accent-gradient-to: #34D399;
+}
+
+/* Brand Theme Dedicated Tokens (Synthesis Palette) */
+.brand-theme-container.brand-theme-active {
+  --accent-primary: #0A7E58;
+  --accent-hover: #086B4A;
+  --accent-active: #06573C;
+  --accent-text-light: #0A7E58;
+  --accent-text-dark: #34D399;
+  --accent-soft-light: rgba(10, 126, 88, 0.08);
+  --accent-soft-dark: rgba(52, 211, 153, 0.12);
+  --accent-border-light: rgba(10, 126, 88, 0.30);
+  --accent-border-dark: rgba(52, 211, 153, 0.25);
+  --accent-ring: rgba(10, 126, 88, 0.50);
+  --accent-shadow: rgba(10, 126, 88, 0.35);
+  --accent-gradient-from: #0A7E58;
+  --accent-gradient-to: #34D399;
+}
+
+/* Synthesis Hero Gradient Banner */
+.brand-synthesis-hero {
+  background: linear-gradient(135deg, #06573C 0%, #0A7E58 45%, #34D399 82%, #C5ECE3 100%);
+}
+
+/* Update to Go Button Style (Luminous Deep Teal with Diffuse Aura) */
+.brand-theme-active .brand-btn-primary {
+  background: linear-gradient(180deg, #109367 0%, #086B4A 100%) !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15), 0 8px 24px -4px rgba(10, 126, 88, 0.45) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.brand-theme-active .brand-btn-primary:hover {
+  background: linear-gradient(180deg, #14A776 0%, #0A7E58 100%) !important;
+  box-shadow: 0 12px 32px -4px rgba(10, 126, 88, 0.60) !important;
+  transform: translateY(-1px);
+}
+
+.brand-theme-active .brand-btn-primary:active {
+  transform: scale(0.98);
 }
 
 /* Multi-Accent System Utility & Direct Color Override Bindings */

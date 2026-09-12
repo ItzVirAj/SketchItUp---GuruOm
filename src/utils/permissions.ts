@@ -4,6 +4,7 @@ import { normalizeRole, getRoleModulePermission, hasMinimumAccess, RBAC_ROLE_MAT
 export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   'Owner': [
     'command-centre',
+    'meetings',
     'orders',
     'order-detail',
     'inventory',
@@ -27,6 +28,7 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   ],
   'Sales/Order Desk': [
     'command-centre',
+    'meetings',
     'orders',
     'order-detail',
     'inventory',
@@ -37,6 +39,7 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   ],
   'Production Planner': [
     'command-centre',
+    'meetings',
     'orders',
     'order-detail',
     'inventory',
@@ -52,6 +55,7 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   ],
   'Shop Floor Supervisor': [
     'command-centre',
+    'meetings',
     'inventory',
     'production',
     'finished-goods',
@@ -62,6 +66,7 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   ],
   'Quality Inspector': [
     'command-centre',
+    'meetings',
     'inventory',
     'production',
     'finished-goods',
@@ -72,6 +77,7 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   ],
   'Store Keeper': [
     'command-centre',
+    'meetings',
     'inventory',
     'finished-goods',
     'purchasing',
@@ -82,6 +88,7 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   ],
   'Purchase Manager': [
     'command-centre',
+    'meetings',
     'orders',
     'inventory',
     'purchasing',
@@ -93,6 +100,7 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   ],
   'Dispatch Executive': [
     'command-centre',
+    'meetings',
     'orders',
     'order-detail',
     'inventory',
@@ -105,6 +113,7 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   ],
   'Accountant': [
     'command-centre',
+    'meetings',
     'orders',
     'order-detail',
     'inventory',
@@ -118,16 +127,19 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   ],
   'HR/Admin': [
     'command-centre',
+    'meetings',
     'masters',
     'users-audit',
     'company-profile'
   ],
   'Machine Operator': [
     'command-centre',
+    'meetings',
     'production'
   ],
   'Admin (System)': [
     'command-centre',
+    'meetings',
     'orders',
     'order-detail',
     'inventory',
@@ -153,6 +165,7 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   // Legacy compatibility keys
   'SUPER ADMIN': [
     'command-centre',
+    'meetings',
     'orders',
     'order-detail',
     'inventory',
@@ -176,10 +189,12 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   ],
   'OPERATOR': [
     'command-centre',
+    'meetings',
     'production'
   ],
   'QC_MANAGER': [
     'command-centre',
+    'meetings',
     'inventory',
     'production',
     'finished-goods',
@@ -190,6 +205,7 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   ],
   'DISPATCH_CLERK': [
     'command-centre',
+    'meetings',
     'orders',
     'order-detail',
     'inventory',
@@ -201,6 +217,7 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   ],
   'FINANCE_MANAGER': [
     'command-centre',
+    'meetings',
     'orders',
     'order-detail',
     'inventory',
@@ -210,6 +227,54 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
     'payables',
     'masters',
     'company-profile'
+  ],
+  'TESTER': [
+    'command-centre',
+    'meetings',
+    'orders',
+    'order-detail',
+    'inventory',
+    'production',
+    'finished-goods',
+    'plating-outwork',
+    'purchasing',
+    'grn',
+    'reports',
+    'qc',
+    'pdi',
+    'dispatch',
+    'approvals',
+    'invoices',
+    'payables',
+    'masters',
+    'bom',
+    'route-cards',
+    'company-profile',
+    'workflow-testing'
+  ],
+  'TEST_USER': [
+    'command-centre',
+    'meetings',
+    'orders',
+    'order-detail',
+    'inventory',
+    'production',
+    'finished-goods',
+    'plating-outwork',
+    'purchasing',
+    'grn',
+    'reports',
+    'qc',
+    'pdi',
+    'dispatch',
+    'approvals',
+    'invoices',
+    'payables',
+    'masters',
+    'bom',
+    'route-cards',
+    'company-profile',
+    'workflow-testing'
   ]
 };
 
@@ -232,7 +297,8 @@ const VIEW_PERMISSION_KEYS: Partial<Record<ConsoleView, string[]>> = {
   'masters': ['admin:view_users', 'inventory:view'],
   'users-audit': ['admin:view_users', 'system:view_immutable_audit'],
   'company-profile': ['admin:view_users', 'system:manage_permission_overrides'],
-  'workflow-testing': ['system:override_all_rules']
+  'workflow-testing': ['system:override_all_rules'],
+  'meetings': ['meetings:view']
 };
 
 export function isViewAllowedForRole(role: string, view: ConsoleView): boolean {
@@ -319,6 +385,13 @@ export function getRoleColor(role: string): { bg: string; text: string; border: 
         bg: 'bg-purple-50 dark:bg-purple-500/10',
         text: 'text-purple-700 dark:text-purple-400',
         border: 'border-purple-200 dark:border-purple-500/30'
+      };
+    case 'TESTER':
+    case 'TEST_USER':
+      return {
+        bg: 'bg-emerald-50 dark:bg-emerald-500/10',
+        text: 'text-emerald-700 dark:text-emerald-400',
+        border: 'border-emerald-200 dark:border-emerald-500/30'
       };
     case 'Machine Operator':
     case 'OPERATOR':

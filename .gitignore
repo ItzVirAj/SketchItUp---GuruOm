@@ -29,7 +29,8 @@ skills/
 tests/
 scripts/
 .mcp.json
-
+patches/
+tests/
 # ---- Logs & Data ----
 logs/
 data/

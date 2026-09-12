@@ -20,6 +20,7 @@ import {
   CircleDollarSign,
   Settings,
   FlaskConical,
+  CalendarClock,
   LucideIcon
 } from 'lucide-react';
 import { isViewAllowedForRole, isViewAllowedForUser } from './permissions';
@@ -84,6 +85,15 @@ export const NAVIGATION_SECTIONS: NavSectionConfig[] = [
       { id: 'users-audit', label: 'Users & Audit Logs', shortLabel: 'Users', icon: Users, description: 'Role Permissions & Activity Logs' },
       { id: 'company-profile', label: 'Company Profile', shortLabel: 'Company', icon: Building2, description: 'GSTIN, Bank Details & Factory Address' },
       { id: 'workflow-testing', label: 'Workflow Testing', shortLabel: 'Testing', icon: FlaskConical, description: 'End-to-End Simulation & Verification' },
+    ]
+  },
+  {
+    id: 'hr',
+    label: 'HR',
+    icon: Users,
+    items: [
+      { id: 'meetings', label: 'Meetings', shortLabel: 'Meetings', icon: CalendarClock, description: 'Team Meeting Schedule & Reminders', badgeKey: 'meetings' },
+      // future HR submodules (attendance, leave requests, etc.) join this section
     ]
   }
 ];

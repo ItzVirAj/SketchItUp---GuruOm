@@ -23,6 +23,7 @@ import vendorBillsRoutes from './backend/src/modules/vendor-bills/vendor-bills.r
 import auditRoutes from './backend/src/modules/audit/audit.routes';
 import approvalsRoutes from './backend/src/modules/approvals/approvals.routes';
 import notificationsRoutes from './backend/src/modules/notifications/notifications.routes';
+import meetingsRoutes from './backend/src/modules/meetings/meetings.routes';
 import attachmentsRoutes from './backend/src/modules/attachments/attachments.routes';
 import testingRoutes from './backend/src/modules/testing/testing.routes';
 import adminRoutes from './backend/src/modules/admin/admin.routes';
@@ -123,6 +124,9 @@ async function startServer() {
 
   // Mount Seventh Batch Realtime Notification System (SSE Stream & Resend Email Service)
   app.use('/api/v1/notifications', notificationsRoutes);
+
+  // Mount HR Module — Meetings submodule (scheduler + reminders, not a meeting platform)
+  app.use('/api/v1/meetings', meetingsRoutes);
 
   // Mount Eighth Batch File Storage & Attachment Management
   app.use('/api/v1/attachments', attachmentsRoutes);

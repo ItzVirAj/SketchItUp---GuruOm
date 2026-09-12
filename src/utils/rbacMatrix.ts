@@ -27,7 +27,8 @@ export type SystemModule =
   | 'qc'
   | 'bom'
   | 'transport'
-  | 'subcontracting';
+  | 'subcontracting'
+  | 'meetings';
 
 export type ScopeRule = 
   | 'ALL'
@@ -81,7 +82,11 @@ export type CtaId =
   | 'ORDER_RECEIVED'
   | 'MARK_DELAYED'
   | 'RECORD_PAYMENT'
-  | 'MARK_ORDER_CLOSED';
+  | 'MARK_ORDER_CLOSED'
+  | 'CREATE_MEETING'
+  | 'EDIT_MEETING'
+  | 'CANCEL_MEETING'
+  | 'SHARE_MEETING_LINK';
 
 export interface CtaPermission {
   ctaId: CtaId;
@@ -119,6 +124,12 @@ export const CTA_PERMISSION_TABLE: CtaPermission[] = [
   { ctaId: 'MARK_DELAYED', label: 'Mark Delayed', stage: 'Stage 10b', authorizedRoles: ['Dispatch Executive', 'Owner'], preCondition: 'Consignment did not reach customer on schedule', resultingStatus: 'DELIVERY_DELAYED' },
   { ctaId: 'RECORD_PAYMENT', label: 'Record Payment Received', stage: 'Stage 11', authorizedRoles: ['Accountant', 'Owner'], preCondition: 'Invoice outstanding balance > 0', resultingStatus: 'PAYMENT_RECORDED' },
   { ctaId: 'MARK_ORDER_CLOSED', label: 'Mark Order Closed', stage: 'Stage 11a', authorizedRoles: ['Accountant', 'Owner'], preCondition: 'Order Delivered AND full payment received', resultingStatus: 'CLOSED', hardGate: 'Server-side block if partial payment or not Delivered' },
+
+  // HR / Meetings module CTAs (v1 — Owner + Admin (System) only; expand to section heads later)
+  { ctaId: 'CREATE_MEETING', label: 'Schedule Meeting', stage: 'HR', authorizedRoles: ['Owner', 'Admin (System)', 'ServerAdmin'], preCondition: 'None', resultingStatus: 'SCHEDULED' },
+  { ctaId: 'EDIT_MEETING', label: 'Edit Meeting', stage: 'HR', authorizedRoles: ['Owner', 'Admin (System)', 'ServerAdmin'], preCondition: 'Meeting is SCHEDULED and organizer or Owner/Admin', resultingStatus: 'SCHEDULED' },
+  { ctaId: 'CANCEL_MEETING', label: 'Cancel Meeting', stage: 'HR', authorizedRoles: ['Owner', 'Admin (System)', 'ServerAdmin'], preCondition: 'Meeting is SCHEDULED', resultingStatus: 'CANCELLED' },
+  { ctaId: 'SHARE_MEETING_LINK', label: 'Copy / Share Meeting Link', stage: 'HR', authorizedRoles: ['Owner', 'Admin (System)', 'ServerAdmin', 'Sales/Order Desk', 'Production Planner', 'Shop Floor Supervisor', 'Quality Inspector', 'Quality Auditor', 'Store Keeper', 'Purchase Manager', 'Dispatch Executive', 'Accountant', 'HR/Admin', 'Machine Operator', 'Subcontractor Coordinator', 'Client'], preCondition: 'Meeting link is present', resultingStatus: 'SCHEDULED' },
 ];
 
 /**
@@ -128,8 +139,8 @@ export function isRoleAuthorizedForCta(role: string, ctaId: CtaId): boolean {
   const normRole = normalizeRole(role);
   const cta = CTA_PERMISSION_TABLE.find(c => c.ctaId === ctaId);
   if (!cta) return false;
-  // ServerAdmin, Owner, and Admin (System) can always act
-  if (normRole === 'ServerAdmin' || normRole === 'Owner' || normRole === 'Admin (System)') return true;
+  // ServerAdmin, Owner, Admin (System), and TESTER can always act
+  if (normRole === 'ServerAdmin' || normRole === 'Owner' || normRole === 'Admin (System)' || normRole === 'TESTER') return true;
   return cta.authorizedRoles.includes(normRole);
 }
 
@@ -164,7 +175,8 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       qc: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
       bom: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
       transport: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
-      subcontracting: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' }
+      subcontracting: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      meetings: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' }
     }
   },
 
@@ -188,7 +200,8 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       qc: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
       bom: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
       transport: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
-      subcontracting: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' }
+      subcontracting: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      meetings: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' }
     }
   },
 
@@ -212,7 +225,8 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       qc: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       bom: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
       transport: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
-      subcontracting: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' }
+      subcontracting: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
+      meetings: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' }
     }
   },
 
@@ -236,7 +250,8 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       qc: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
       bom: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'ALL' },
       transport: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
-      subcontracting: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' }
+      subcontracting: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
+      meetings: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' }
     }
   },
 
@@ -260,7 +275,8 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       qc: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'ALL' },
       bom: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
       transport: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
-      subcontracting: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' }
+      subcontracting: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
+      meetings: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' }
     }
   },
 
@@ -284,7 +300,8 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       qc: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'QC_HOLDS_ONLY' },
       bom: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
       transport: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
-      subcontracting: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' }
+      subcontracting: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
+      meetings: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' }
     }
   },
 
@@ -310,7 +327,8 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       qc: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'PDI_ONLY' },
       bom: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
       transport: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
-      subcontracting: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' }
+      subcontracting: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
+      meetings: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' }
     }
   },
 
@@ -334,7 +352,8 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       qc: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
       bom: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
       transport: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
-      subcontracting: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' }
+      subcontracting: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
+      meetings: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' }
     }
   },
 
@@ -358,7 +377,8 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       qc: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       bom: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
       transport: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
-      subcontracting: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' }
+      subcontracting: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
+      meetings: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' }
     }
   },
 
@@ -382,7 +402,8 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       qc: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
       bom: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       transport: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'ALL' },
-      subcontracting: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' }
+      subcontracting: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
+      meetings: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' }
     }
   },
 
@@ -406,7 +427,8 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       qc: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       bom: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
       transport: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
-      subcontracting: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' }
+      subcontracting: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
+      meetings: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' }
     }
   },
 
@@ -430,7 +452,8 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       qc: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       bom: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       transport: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
-      subcontracting: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' }
+      subcontracting: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
+      meetings: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' }
     }
   },
 
@@ -454,7 +477,8 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       qc: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       bom: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       transport: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
-      subcontracting: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' }
+      subcontracting: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
+      meetings: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' }
     }
   },
 
@@ -478,7 +502,8 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       qc: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
       bom: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
       transport: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
-      subcontracting: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' }
+      subcontracting: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      meetings: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' }
     }
   },
 
@@ -503,7 +528,8 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       qc: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
       bom: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
       transport: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
-      subcontracting: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' }
+      subcontracting: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      meetings: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' }
     }
   },
 
@@ -528,7 +554,33 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       qc: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       bom: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       transport: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
-      subcontracting: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' }
+      subcontracting: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
+      meetings: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' }
+    }
+  },
+
+  'TESTER': {
+    role: 'TESTER',
+    label: 'QA / Operations Testing Specialist',
+    category: 'Operations',
+    approvalLimitDisplay: 'Unlimited (Testing Authority)',
+    scopeDescription: 'Full testing access across all operational, commercial, quality, and shopfloor modules (Admin panel restricted)',
+    permissions: {
+      orders: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      inventory: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      production: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      procurement: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      dispatch: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      accounting: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      masters: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      settings: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
+      approvals: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      reports: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      qc: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      bom: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      transport: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      subcontracting: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      meetings: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' }
     }
   }
 };
@@ -588,6 +640,9 @@ export function normalizeRole(rawRole?: string | null): string {
   }
   if (trimmed === 'Client' || trimmed === 'Customer' || trimmed === 'CLIENT') {
     return 'Client';
+  }
+  if (trimmed === 'TESTER' || trimmed === 'TEST_USER' || trimmed === 'Tester' || trimmed === 'Test User' || trimmed === 'QA_TESTER') {
+    return 'TESTER';
   }
 
   // Exact match fallback

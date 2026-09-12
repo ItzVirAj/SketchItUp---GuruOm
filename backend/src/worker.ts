@@ -5,6 +5,7 @@ import { getRedisClient, isRedisConnected } from './lib/redis';
 import { publishTenantEvent } from './lib/pubsub';
 import { authService } from './modules/auth/auth.service';
 import { attachmentsService } from './modules/attachments/attachments.service';
+import { notificationsService } from './modules/notifications/notifications.service';
 import { getDbClient } from './config/database';
 import { logger } from './utils/logger';
 
@@ -210,6 +211,58 @@ async function processCreateNotification(job: Job) {
 }
 
 /**
+ * Fires a scheduled meeting reminder. Uses `notificationsService.triggerNotification`
+ * (not the thin `create-notification` job above) because that path persists the
+ * alert to the `notifications` table AND broadcasts it over the live SSE stream —
+ * the actual pipeline the in-app notification bell reads from.
+ *
+ * v1 targeting note: like every other business SSE event in this app
+ * (order_created, job_card_updated, ...), the broadcast fans out to all
+ * connected clients; `attendeeUserIds` rides along in the payload so the
+ * frontend can highlight/toast only for attendees. Tightening this to a
+ * true per-recipient notification is a follow-up (see plan Phase 2).
+ */
+async function processMeetingReminder(job: Job) {
+  const { meetingId, title, startTime, meetingLink, attendeeUserIds, offsetLabel } = job.data;
+
+  // Defensive re-check: the meeting may have been cancelled/rescheduled after
+  // this job was queued but before cancelMeeting/updateMeeting retracted it
+  // (e.g. Redis was briefly unreachable during the retract call).
+  const { data: meeting } = await db
+    .from('meetings')
+    .select('status, start_time, title')
+    .eq('id', meetingId)
+    .maybeSingle();
+
+  if (!meeting || meeting.status !== 'SCHEDULED') {
+    logger.info(`⏭️ [Worker:Meetings] Skipping reminder for ${meetingId} — meeting is ${meeting?.status || 'missing'}.`);
+    return { status: 'skipped', meetingId };
+  }
+
+  const when = new Date(startTime).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+  const linkLine = meetingLink ? ` Link: ${meetingLink}` : '';
+
+  await notificationsService.triggerNotification({
+    eventType: 'meeting_reminder',
+    entityType: 'meeting',
+    entityId: meetingId,
+    title: `Reminder: ${title}`,
+    message: `Meeting "${title}" starts ${when}.${linkLine}`,
+    severity: offsetLabel === '15m_before' ? 'HIGH' : 'MEDIUM',
+    data: { attendeeUserIds, offsetLabel }
+  } as any);
+
+  await db
+    .from('meeting_reminder_jobs')
+    .update({ sent_at: new Date().toISOString() })
+    .eq('meeting_id', meetingId)
+    .eq('offset_label', offsetLabel);
+
+  logger.info(`🔔 [Worker:Meetings] Reminder sent for meeting ${meetingId} (${offsetLabel}).`);
+  return { status: 'sent', meetingId, offsetLabel };
+}
+
+/**
  * Initializes BullMQ worker process.
  */
 export function startWorker(): Worker {
@@ -225,6 +278,8 @@ export function startWorker(): Worker {
           return await processSendEmail(job);
         case 'create-notification':
           return await processCreateNotification(job);
+        case 'meeting-reminder':
+          return await processMeetingReminder(job);
         default:
           throw new Error(`Unknown job type "${job.name}"`);
       }

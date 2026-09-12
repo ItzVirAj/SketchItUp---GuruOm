@@ -406,7 +406,12 @@ export function requireRole(allowedRoles: string[], options: { allowSuperAdminBy
     const isSuperAdminBypass = allowSuperAdminBypass &&
       (normRole === 'ServerAdmin' || normRole === 'Owner' || normRole === 'Admin (System)');
 
-    if (!isMatch && !isSuperAdminBypass) {
+    // TESTER is allowed on all operational endpoints, but blocked on exclusively administrative endpoints
+    const isTesterAllowed = normRole === 'TESTER' && !allowedRoles.every(r => [
+      'ServerAdmin', 'Owner', 'Admin (System)', 'SUPER ADMIN', 'ADMIN_OWNER', 'ADMIN', 'Super Admin', 'Admin', 'Owner / Managing Director'
+    ].includes(normalizeRole(r)));
+
+    if (!isMatch && !isSuperAdminBypass && !isTesterAllowed) {
       return res.status(403).json({
         error: 'Forbidden',
         message: `Access denied. Role "${normRole}" lacks permission for this endpoint. Required: [${allowedRoles.join(', ')}]`

@@ -30,10 +30,20 @@ export interface CreateNotificationJobData {
   tenantId: string;
 }
 
+export interface MeetingReminderJobData {
+  meetingId: string;
+  title: string;
+  startTime: string; // ISO 8601
+  meetingLink?: string;
+  attendeeUserIds: string[];
+  offsetLabel: string; // e.g. '24h_before', '15m_before'
+}
+
 export type OwnerOSJobData =
   | { type: 'generate-invoice-pdf'; payload: GenerateInvoicePdfJobData }
   | { type: 'send-email'; payload: SendEmailJobData }
-  | { type: 'create-notification'; payload: CreateNotificationJobData };
+  | { type: 'create-notification'; payload: CreateNotificationJobData }
+  | { type: 'meeting-reminder'; payload: MeetingReminderJobData };
 
 export const QUEUE_NAME = 'owner-os-jobs';
 
@@ -74,7 +84,7 @@ export function getQueueEvents(): QueueEvents {
  * Fail-safe: Does not throw if Redis is offline; logs warning so the DB record remains preserved.
  */
 export async function enqueueJob(
-  jobType: 'generate-invoice-pdf' | 'send-email' | 'create-notification',
+  jobType: 'generate-invoice-pdf' | 'send-email' | 'create-notification' | 'meeting-reminder',
   payload: any,
   options?: JobsOptions
 ): Promise<{ enqueued: boolean; jobId?: string }> {

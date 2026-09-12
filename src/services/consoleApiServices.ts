@@ -1309,6 +1309,78 @@ export async function removeApproval(id: string): Promise<void> {
   await approveApproval(id);
 }
 
+// ----------------------------------------------------
+// Meetings Services (HR module — scheduler + reminders, via REST API)
+// ----------------------------------------------------
+export interface MeetingAttendee {
+  userId: string;
+  isRequired: boolean;
+  name?: string;
+  email?: string;
+}
+
+export interface Meeting {
+  id: string;
+  title: string;
+  agenda?: string;
+  section?: string;
+  organizerId: string;
+  meetingLink?: string;
+  location?: string;
+  startTime: string;
+  endTime: string;
+  status: 'SCHEDULED' | 'CANCELLED' | 'COMPLETED';
+  createdAt: string;
+  updatedAt: string;
+  attendees: MeetingAttendee[];
+}
+
+export async function fetchMeetings(scope: 'upcoming' | 'mine' | 'all' = 'upcoming'): Promise<Meeting[]> {
+  try {
+    const res = await apiClient.get<{ data: Meeting[] }>(`/meetings?scope=${scope}`);
+    return res?.data || [];
+  } catch (err) {
+    console.warn('fetchMeetings REST API error:', err);
+    return [];
+  }
+}
+
+export async function createMeeting(payload: {
+  title: string;
+  agenda?: string;
+  section?: string;
+  meetingLink?: string;
+  location?: string;
+  startTime: string;
+  endTime: string;
+  attendeeUserIds: string[];
+}): Promise<Meeting> {
+  const res = await apiClient.post<{ data: Meeting }>('/meetings', payload);
+  return res.data;
+}
+
+export async function updateMeeting(
+  id: string,
+  payload: Partial<{
+    title: string;
+    agenda: string;
+    section: string;
+    meetingLink: string;
+    location: string;
+    startTime: string;
+    endTime: string;
+    attendeeUserIds: string[];
+  }>
+): Promise<Meeting> {
+  const res = await apiClient.patch<{ data: Meeting }>(`/meetings/${id}`, payload);
+  return res.data;
+}
+
+export async function cancelMeeting(id: string, reason?: string): Promise<Meeting> {
+  const res = await apiClient.post<{ data: Meeting }>(`/meetings/${id}/cancel`, { reason });
+  return res.data;
+}
+
 export async function fetchAuditLogs(filters?: {
   actorEmail?: string;
   entityType?: string;

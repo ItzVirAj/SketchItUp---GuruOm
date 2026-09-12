@@ -20,9 +20,10 @@ export type ConsoleView =
   | 'purchasing'
   | 'grn'
   | 'bom'
-  | 'route-cards';
+  | 'route-cards'
+  | 'meetings';
 
-export type UserRole = 'ServerAdmin' | 'SUPER ADMIN' | 'OPERATOR' | 'QC_MANAGER' | 'DISPATCH_CLERK' | 'FINANCE_MANAGER';
+export type UserRole = 'ServerAdmin' | 'SUPER ADMIN' | 'OPERATOR' | 'QC_MANAGER' | 'DISPATCH_CLERK' | 'FINANCE_MANAGER' | 'TESTER';
 
 export type ConsoleUser = SystemUser;
 

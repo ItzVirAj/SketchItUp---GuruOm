@@ -238,6 +238,7 @@ export class NotificationsService {
       severity,
       entity_type: validated.entityType,
       entity_id: validated.entityId,
+      data: validated.data || null,
       is_read: false,
       created_at: createdAt
     };

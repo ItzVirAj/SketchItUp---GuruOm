@@ -89,6 +89,18 @@ export class PermissionService {
         }
       }
 
+      // TESTER has full operational capabilities across all workflows, but zero admin/system vault access
+      if (role === 'TESTER') {
+        const { data: allPerms } = await this.db.from('permissions').select('key, category');
+        if (allPerms && allPerms.length > 0) {
+          allPerms.forEach((p: { key: string; category?: string }) => {
+            if (p.category !== 'system' && (!p.key.startsWith('admin:') || p.key === 'admin:manage_masters')) {
+              effective.add(p.key);
+            }
+          });
+        }
+      }
+
       // 2. Fetch role default permissions from role_permission_grants
       const { data: roleRow } = await this.db
         .from('roles')

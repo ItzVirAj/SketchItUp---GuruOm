@@ -38,6 +38,7 @@ import { QCView } from './views/QCView';
 import { PDIView } from './views/PDIView';
 import { DispatchView } from './views/DispatchView';
 import { ApprovalsView } from './views/ApprovalsView';
+import { MeetingsView } from './views/MeetingsView';
 import { InvoicesView } from './views/InvoicesView';
 import { PayablesView } from './views/PayablesView';
 import { MastersView } from './views/MastersView';
@@ -51,6 +52,7 @@ import { CommandPaletteModal } from './modals/CommandPaletteModal';
 import { isViewAllowedForUser } from '../../utils/permissions';
 import { useAuth } from '../../context/AuthContext';
 import { useOwnerOSData } from '../../hooks/useOwnerOSData';
+import { useMeetings } from '../../hooks/useMeetings';
 import { fetchOrderById, receiveOutworkReturn } from '../../services/supabaseServices';
 import { triggerOrderDelayed } from '../../services/notificationService';
 import { toast } from '../../context/ToastContext';
@@ -87,6 +89,8 @@ const getPathForView = (view: ConsoleView, orderId?: string | null): string => {
       return '/dispatch';
     case 'approvals':
       return '/approvals';
+    case 'meetings':
+      return '/hr/meetings';
     case 'invoices':
       return '/invoices';
     case 'payables':
@@ -255,6 +259,17 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
 
   const currentRole: UserRole = currentUser?.role || authProfile?.role || 'SUPER ADMIN';
 
+  // Meetings (HR module) — kept as its own hook rather than folded into
+  // useOwnerOSData; see src/hooks/useMeetings.ts for why.
+  const {
+    meetings,
+    isLoadingMeetings,
+    canManageMeetings,
+    handleCreateMeeting,
+    handleUpdateMeeting,
+    handleCancelMeeting
+  } = useMeetings(isViewAllowedForUser(currentUser, 'meetings'), currentRole);
+
   // Fast User Switching is exclusively restricted to the Owner and Server Admin
   const isSwitchUserAllowed = Boolean(
     currentUser?.email?.toLowerCase() === 'owner@guruom.in' ||
@@ -372,6 +387,8 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
       setCurrentView('dispatch');
     } else if (path === '/approvals') {
       setCurrentView('approvals');
+    } else if (path === '/hr/meetings') {
+      setCurrentView('meetings');
     } else if (path === '/invoices') {
       setCurrentView('invoices');
     } else if (path === '/payables') {
@@ -887,6 +904,20 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
                   handleNavigateView('order-detail');
                 }
               }}
+            />
+          )}
+
+          {currentView === 'meetings' && (
+            <MeetingsView
+              meetings={meetings}
+              isLoadingMeetings={isLoadingMeetings}
+              users={users}
+              currentUser={currentUser}
+              canManageMeetings={canManageMeetings}
+              isDarkMode={isDarkMode}
+              onCreateMeeting={handleCreateMeeting}
+              onUpdateMeeting={handleUpdateMeeting}
+              onCancelMeeting={handleCancelMeeting}
             />
           )}
 

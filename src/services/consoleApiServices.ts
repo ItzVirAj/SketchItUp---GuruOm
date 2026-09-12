@@ -1381,6 +1381,100 @@ export async function cancelMeeting(id: string, reason?: string): Promise<Meetin
   return res.data;
 }
 
+// ----------------------------------------------------
+// Tasks Services (HR module — internal task/job assignment tracker)
+// ----------------------------------------------------
+export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'BLOCKED' | 'DONE' | 'CANCELLED';
+
+export interface TaskAssignee {
+  userId: string;
+  name?: string;
+  email?: string;
+}
+
+export interface TaskComment {
+  id: string;
+  body: string;
+  createdAt: string;
+  authorId: string;
+  authorName?: string;
+}
+
+export interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  section?: string;
+  priority: TaskPriority;
+  status: TaskStatus;
+  dueDate?: string;
+  assignedBy: string;
+  linkedEntityType?: string;
+  linkedEntityId?: string;
+  linkedEntityLabel?: string;
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
+  assignees: TaskAssignee[];
+  comments: TaskComment[];
+}
+
+export async function fetchTasks(scope: 'mine' | 'assigned-by-me' | 'all' = 'mine'): Promise<Task[]> {
+  try {
+    const res = await apiClient.get<{ data: Task[] }>(`/tasks?scope=${scope}`);
+    return res?.data || [];
+  } catch (err) {
+    console.warn('fetchTasks REST API error:', err);
+    return [];
+  }
+}
+
+export async function createTask(payload: {
+  title: string;
+  description?: string;
+  section?: string;
+  priority: TaskPriority;
+  dueDate?: string;
+  assigneeUserIds: string[];
+  linkedEntityType?: string;
+  linkedEntityId?: string;
+  linkedEntityLabel?: string;
+}): Promise<Task> {
+  const res = await apiClient.post<{ data: Task }>('/tasks', payload);
+  return res.data;
+}
+
+export async function updateTask(
+  id: string,
+  payload: Partial<{
+    title: string;
+    description: string;
+    section: string;
+    priority: TaskPriority;
+    dueDate: string | null;
+    assigneeUserIds: string[];
+  }>
+): Promise<Task> {
+  const res = await apiClient.patch<{ data: Task }>(`/tasks/${id}`, payload);
+  return res.data;
+}
+
+export async function updateTaskStatus(id: string, status: TaskStatus): Promise<Task> {
+  const res = await apiClient.patch<{ data: Task }>(`/tasks/${id}/status`, { status });
+  return res.data;
+}
+
+export async function addTaskComment(id: string, body: string): Promise<TaskComment> {
+  const res = await apiClient.post<{ data: TaskComment }>(`/tasks/${id}/comments`, { body });
+  return res.data;
+}
+
+export async function cancelTask(id: string, reason?: string): Promise<Task> {
+  const res = await apiClient.post<{ data: Task }>(`/tasks/${id}/cancel`, { reason });
+  return res.data;
+}
+
 export async function fetchAuditLogs(filters?: {
   actorEmail?: string;
   entityType?: string;

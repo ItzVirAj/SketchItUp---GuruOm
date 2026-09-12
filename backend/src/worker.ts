@@ -263,6 +263,48 @@ async function processMeetingReminder(job: Job) {
 }
 
 /**
+ * Fires a scheduled task due-date reminder. Same shape/rationale as
+ * processMeetingReminder — persisted + broadcast via triggerNotification,
+ * with a defensive re-check so a task that was completed, reassigned, or
+ * cancelled after this job was queued doesn't fire a stale reminder.
+ */
+async function processTaskReminder(job: Job) {
+  const { taskId, title, dueDate, assigneeUserIds, offsetLabel } = job.data;
+
+  const { data: task } = await db
+    .from('tasks')
+    .select('status, due_date, title')
+    .eq('id', taskId)
+    .maybeSingle();
+
+  if (!task || task.status === 'DONE' || task.status === 'CANCELLED') {
+    logger.info(`⏭️ [Worker:Tasks] Skipping reminder for ${taskId} — task is ${task?.status || 'missing'}.`);
+    return { status: 'skipped', taskId };
+  }
+
+  const when = new Date(dueDate).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+
+  await notificationsService.triggerNotification({
+    eventType: 'task_reminder',
+    entityType: 'task',
+    entityId: taskId,
+    title: `Due soon: ${title}`,
+    message: `Task "${title}" is due ${when}.`,
+    severity: 'MEDIUM',
+    data: { assigneeUserIds, offsetLabel }
+  } as any);
+
+  await db
+    .from('task_reminder_jobs')
+    .update({ sent_at: new Date().toISOString() })
+    .eq('task_id', taskId)
+    .eq('offset_label', offsetLabel);
+
+  logger.info(`🔔 [Worker:Tasks] Reminder sent for task ${taskId} (${offsetLabel}).`);
+  return { status: 'sent', taskId, offsetLabel };
+}
+
+/**
  * Initializes BullMQ worker process.
  */
 export function startWorker(): Worker {
@@ -280,6 +322,8 @@ export function startWorker(): Worker {
           return await processCreateNotification(job);
         case 'meeting-reminder':
           return await processMeetingReminder(job);
+        case 'task-reminder':
+          return await processTaskReminder(job);
         default:
           throw new Error(`Unknown job type "${job.name}"`);
       }

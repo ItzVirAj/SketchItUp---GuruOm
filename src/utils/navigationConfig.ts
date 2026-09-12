@@ -18,6 +18,7 @@ import {
   Building2, 
   Layers,
   CircleDollarSign,
+  ListTodo,
   Settings,
   FlaskConical,
   CalendarClock,
@@ -93,6 +94,7 @@ export const NAVIGATION_SECTIONS: NavSectionConfig[] = [
     icon: Users,
     items: [
       { id: 'meetings', label: 'Meetings', shortLabel: 'Meetings', icon: CalendarClock, description: 'Team Meeting Schedule & Reminders', badgeKey: 'meetings' },
+      { id: 'tasks', label: 'Tasks', shortLabel: 'Tasks', icon: ListTodo, description: 'Team Task Assignment & Reminders', badgeKey: 'tasks' },
       // future HR submodules (attendance, leave requests, etc.) join this section
     ]
   }

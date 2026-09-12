@@ -21,7 +21,8 @@ export type ConsoleView =
   | 'grn'
   | 'bom'
   | 'route-cards'
-  | 'meetings';
+  | 'meetings'
+  | 'tasks';
 
 export type UserRole = 'ServerAdmin' | 'SUPER ADMIN' | 'OPERATOR' | 'QC_MANAGER' | 'DISPATCH_CLERK' | 'FINANCE_MANAGER' | 'TESTER';
 

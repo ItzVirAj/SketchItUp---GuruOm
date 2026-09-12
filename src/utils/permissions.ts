@@ -5,6 +5,7 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   'Owner': [
     'command-centre',
     'meetings',
+    'tasks',
     'orders',
     'order-detail',
     'inventory',
@@ -29,6 +30,7 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   'Sales/Order Desk': [
     'command-centre',
     'meetings',
+    'tasks',
     'orders',
     'order-detail',
     'inventory',
@@ -40,6 +42,7 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   'Production Planner': [
     'command-centre',
     'meetings',
+    'tasks',
     'orders',
     'order-detail',
     'inventory',
@@ -56,6 +59,7 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   'Shop Floor Supervisor': [
     'command-centre',
     'meetings',
+    'tasks',
     'inventory',
     'production',
     'finished-goods',
@@ -67,6 +71,7 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   'Quality Inspector': [
     'command-centre',
     'meetings',
+    'tasks',
     'inventory',
     'production',
     'finished-goods',
@@ -78,6 +83,7 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   'Store Keeper': [
     'command-centre',
     'meetings',
+    'tasks',
     'inventory',
     'finished-goods',
     'purchasing',
@@ -89,6 +95,7 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   'Purchase Manager': [
     'command-centre',
     'meetings',
+    'tasks',
     'orders',
     'inventory',
     'purchasing',
@@ -101,6 +108,7 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   'Dispatch Executive': [
     'command-centre',
     'meetings',
+    'tasks',
     'orders',
     'order-detail',
     'inventory',
@@ -114,6 +122,7 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   'Accountant': [
     'command-centre',
     'meetings',
+    'tasks',
     'orders',
     'order-detail',
     'inventory',
@@ -128,6 +137,7 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   'HR/Admin': [
     'command-centre',
     'meetings',
+    'tasks',
     'masters',
     'users-audit',
     'company-profile'
@@ -135,11 +145,13 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   'Machine Operator': [
     'command-centre',
     'meetings',
+    'tasks',
     'production'
   ],
   'Admin (System)': [
     'command-centre',
     'meetings',
+    'tasks',
     'orders',
     'order-detail',
     'inventory',
@@ -166,6 +178,7 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   'SUPER ADMIN': [
     'command-centre',
     'meetings',
+    'tasks',
     'orders',
     'order-detail',
     'inventory',
@@ -190,11 +203,13 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   'OPERATOR': [
     'command-centre',
     'meetings',
+    'tasks',
     'production'
   ],
   'QC_MANAGER': [
     'command-centre',
     'meetings',
+    'tasks',
     'inventory',
     'production',
     'finished-goods',
@@ -206,6 +221,7 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   'DISPATCH_CLERK': [
     'command-centre',
     'meetings',
+    'tasks',
     'orders',
     'order-detail',
     'inventory',
@@ -218,6 +234,7 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   'FINANCE_MANAGER': [
     'command-centre',
     'meetings',
+    'tasks',
     'orders',
     'order-detail',
     'inventory',
@@ -231,6 +248,7 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   'TESTER': [
     'command-centre',
     'meetings',
+    'tasks',
     'orders',
     'order-detail',
     'inventory',
@@ -255,6 +273,7 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   'TEST_USER': [
     'command-centre',
     'meetings',
+    'tasks',
     'orders',
     'order-detail',
     'inventory',
@@ -298,7 +317,8 @@ const VIEW_PERMISSION_KEYS: Partial<Record<ConsoleView, string[]>> = {
   'users-audit': ['admin:view_users', 'system:view_immutable_audit'],
   'company-profile': ['admin:view_users', 'system:manage_permission_overrides'],
   'workflow-testing': ['system:override_all_rules'],
-  'meetings': ['meetings:view']
+  'meetings': ['meetings:view'],
+  'tasks': ['tasks:view']
 };
 
 export function isViewAllowedForRole(role: string, view: ConsoleView): boolean {

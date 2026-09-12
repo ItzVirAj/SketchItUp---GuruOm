@@ -1370,8 +1370,8 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       phone: user.phone || '',
       lastLogin: 'Never'
     };
-    setUsers(prev => [newUser, ...prev.filter(u => u.email !== newUser.email)]);
     await createProfile(user);
+    setUsers(prev => [newUser, ...prev.filter(u => u.email !== newUser.email)]);
     await addAuditLog('users', 'add_user', `Created user profile ${user.name} (${user.email})`);
     await loadAllData();
   };
@@ -1407,7 +1407,6 @@ export function useOwnerOSData(currentUser?: SystemUser) {
   };
 
   const handleUpdateUser = async (userId: string, updates: Partial<SystemUser>) => {
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...updates } : u));
     const saved = localStorage.getItem('stratum_user');
     if (saved) {
       try {
@@ -1418,6 +1417,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       } catch (_) { }
     }
     await updateProfile(userId, updates);
+    setUsers(prev => prev.map(u => (u.id === userId || u.userId === userId || u.code === userId) ? { ...u, ...updates } : u));
     await addAuditLog('users', 'update_user', `Updated user record #${userId} [Name: ${updates.name || '—'}, Email: ${updates.email || '—'}, Role: ${updates.role || '—'}]`);
     await loadAllData();
   };

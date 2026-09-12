@@ -35,7 +35,11 @@ export function useMeetings(canView: boolean, currentUserRole?: string | null) {
     if (!canView) return;
     setIsLoading(true);
     try {
-      const data = await fetchMeetings('upcoming');
+      // scope='all' (not 'upcoming'): the view's Upcoming / All / Cancelled
+      // tabs filter client-side, and the backend 'upcoming' scope excludes
+      // CANCELLED and past-ended meetings server-side — fetching it would
+      // leave the Cancelled tab empty forever and make "All" misleading.
+      const data = await fetchMeetings('all');
       setMeetings(data);
     } finally {
       setIsLoading(false);

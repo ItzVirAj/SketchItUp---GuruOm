@@ -12,12 +12,15 @@ function actorFromReq(req: Request) {
 export class MeetingsController {
   async listMeetings(req: Request, res: Response) {
     try {
-      const query = ListMeetingsQuerySchema.parse({
+      const parsed = ListMeetingsQuerySchema.safeParse({
         scope: req.query.scope,
         status: req.query.status
       });
+      if (!parsed.success) {
+        return res.status(400).json({ error: 'ValidationError', message: parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ') });
+      }
       const actor = actorFromReq(req);
-      const data = await meetingsService.listMeetings(actor.id, query);
+      const data = await meetingsService.listMeetings(actor.id, parsed.data);
       return res.json({ data });
     } catch (err: any) {
       return res.status(500).json({ error: 'InternalServerError', message: err.message });
@@ -50,6 +53,9 @@ export class MeetingsController {
       const data = await meetingsService.updateMeeting(req.params.id, req.body, actor);
       return res.json({ message: 'Meeting updated successfully', data });
     } catch (err: any) {
+      if (err.message?.includes('not found')) {
+        return res.status(404).json({ error: 'NotFound', message: err.message });
+      }
       return res.status(400).json({ error: 'ValidationError', message: err.message });
     }
   }
@@ -60,6 +66,9 @@ export class MeetingsController {
       const data = await meetingsService.cancelMeeting(req.params.id, actor, req.body?.reason);
       return res.json({ message: 'Meeting cancelled successfully', data });
     } catch (err: any) {
+      if (err.message?.includes('not found')) {
+        return res.status(404).json({ error: 'NotFound', message: err.message });
+      }
       return res.status(400).json({ error: 'ValidationError', message: err.message });
     }
   }

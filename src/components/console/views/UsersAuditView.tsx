@@ -147,6 +147,25 @@ export const ROLE_DEFINITIONS = Object.values(RBAC_ROLE_MATRIX).map(r => ({
   approvalLimitDisplay: r.approvalLimitDisplay
 }));
 
+const RBAC_ROLE_TO_LEGACY_MODULES: Record<string, string> = {
+  'Owner': 'Admin/Owner',
+  'Sales/Order Desk': 'Sales Executive',
+  'Purchase Manager': 'Purchase Executive',
+  'Production Planner': 'Production Supervisor',
+  'Shop Floor Supervisor': 'Production Supervisor',
+  'Store Keeper': 'Store/Inventory Executive',
+  'Accountant': 'Accounts Executive',
+  'Machine Operator': 'Machine Operator',
+  'Quality Inspector': 'Quality Inspector',
+  'Quality Auditor': 'Quality Inspector',
+  'Subcontractor Coordinator': 'Purchase Executive',
+  'Dispatch Executive': 'Dispatch Executive',
+  'HR/Admin': 'Admin/Owner',
+  'Client': 'Other',
+  'Management/Viewer': 'Management/Viewer',
+  'ServerAdmin': 'Admin/Owner'
+};
+
 export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
   users = [],
   auditLogs = [],
@@ -351,7 +370,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
 
   const handleRoleSelect = (role: string) => {
     setUUserRole(role);
-    const defaults = ROLE_DEFAULT_MODULES[role] || [];
+    const defaults = ROLE_DEFAULT_MODULES[role] || ROLE_DEFAULT_MODULES[RBAC_ROLE_TO_LEGACY_MODULES[role]] || [];
     setUModulesAccess(defaults);
     if (role === 'Owner' || role === 'Admin (System)' || role === 'Admin/Owner') {
       setUAccessLevel('Full Access');
@@ -656,7 +675,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
     setIsExporting(false);
   };
 
-  const handleCreateUser = (e: React.FormEvent) => {
+  const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     const errors: Record<string, string> = {};
 
@@ -691,7 +710,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
     }
 
     if (onAddUser) {
-      onAddUser({
+      const addResult = onAddUser({
         id: `user-${Date.now()}`,
         code: uCode,
         userId: uCode,
@@ -712,6 +731,14 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
         password: uPassword,
         requirePasswordChangeFirstLogin: uRequirePasswordChange
       } as any);
+      if (addResult && typeof (addResult as any)?.then === 'function') {
+        try {
+          await addResult;
+        } catch (err: any) {
+          setUserErrors(prev => ({ ...prev, general: err?.message || 'Failed to provision user on the server. Please try again.' }));
+          return;
+        }
+      }
     }
 
     addUserModal.close();
@@ -730,7 +757,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
     editUserModal.open({ userId: usr.id });
   };
 
-  const handleSaveEditUser = (e: React.FormEvent) => {
+  const handleSaveEditUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!userToEdit) return;
 
@@ -748,7 +775,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
     }
 
     if (onUpdateUser) {
-      onUpdateUser(userToEdit.id, {
+      const updateResult = onUpdateUser(userToEdit.id, {
         name: editFullName.trim(),
         fullName: editFullName.trim(),
         email: editEmail.trim().toLowerCase(),
@@ -760,6 +787,14 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
         status: editStatus === 'Active' ? 'ACTIVE' : 'REVOKED',
         reportingManager: editReportingManager.trim()
       } as any);
+      if (updateResult && typeof (updateResult as any)?.then === 'function') {
+        try {
+          await updateResult;
+        } catch (err: any) {
+          setEditUserErrors(prev => ({ ...prev, general: err?.message || 'Failed to save user changes on the server. Please try again.' }));
+          return;
+        }
+      }
     }
 
     editUserModal.close();
@@ -1884,7 +1919,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
           </div>
         }
       >
-        <form id="provision-user-form" onSubmit={handleCreateUser} className="space-y-4 text-xs">
+        <form id="provision-user-form" onSubmit={handleCreateUser} className="space-y-4 text-xs">{userErrors.general && (<div className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-3 py-2.5 text-[11px] font-mono font-bold text-rose-500">{userErrors.general}</div>)}
           
           {/* Row 1: User ID, Full Name, Employee Code */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -2161,12 +2196,12 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
               Primary System Role & Access Privilege *
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {Object.values(RBAC_ROLE_MATRIX).map((r) => {
+              {Object.values(RBAC_ROLE_MATRIX).filter(r => r.role !== 'ServerAdmin').map((r) => {
                 const isSelected = uUserRole === r.role || uUserRole === r.label;
                 return (
                   <div
                     key={r.role}
-                    onClick={() => handleRoleSelect(r.label)}
+                    onClick={() => handleRoleSelect(r.role)}
                     className={`p-3 rounded-2xl border transition-ui cursor-pointer flex items-start gap-3 ${
                       isSelected
                         ? isDarkMode 
@@ -2285,7 +2320,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
           </div>
         }
       >
-        <form onSubmit={handleSaveEditUser} className="space-y-4 text-xs font-sans">
+        <form onSubmit={handleSaveEditUser} className="space-y-4 text-xs font-sans">{editUserErrors.general && (<div className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-3 py-2.5 text-[11px] font-mono font-bold text-rose-500">{editUserErrors.general}</div>)}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Full Name */}
             <div>
@@ -2333,7 +2368,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                   isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-300 bg-white text-slate-900'
                 }`}
               >
-                {Object.values(RBAC_ROLE_MATRIX).map(r => (
+                {Object.values(RBAC_ROLE_MATRIX).filter(r => r.role !== 'ServerAdmin').map(r => (
                   <option key={r.role} value={r.role}>
                     {r.label} ({r.role})
                   </option>

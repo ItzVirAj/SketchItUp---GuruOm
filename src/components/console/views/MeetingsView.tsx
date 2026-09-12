@@ -90,14 +90,20 @@ export const MeetingsView: React.FC<MeetingsViewProps> = ({
     [cancelModal.params.id, meetings]
   );
 
+  // Meetings are fetched with scope='all' (see useMeetings) so every tab is
+  // backed by real data; filters narrow client-side. "Upcoming" means still
+  // scheduled AND not over yet — a stale SCHEDULED meeting whose time has
+  // passed only shows under "All Meetings".
+  const nowMs = Date.now();
+  const isUpcoming = (m: Meeting) => m.status === 'SCHEDULED' && new Date(m.endTime).getTime() > nowMs;
   const visibleMeetings = useMemo(() => {
     const sorted = [...meetings].sort((a, b) => a.startTime.localeCompare(b.startTime));
     if (statusFilter === 'CANCELLED') return sorted.filter((m) => m.status === 'CANCELLED');
     if (statusFilter === 'ALL') return sorted;
-    return sorted.filter((m) => m.status === 'SCHEDULED');
-  }, [meetings, statusFilter]);
+    return sorted.filter(isUpcoming);
+  }, [meetings, statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const upcomingCount = meetings.filter((m) => m.status === 'SCHEDULED').length;
+  const upcomingCount = meetings.filter(isUpcoming).length;
 
   const handleCopyLink = async (meeting: Meeting) => {
     if (!meeting.meetingLink) {
@@ -124,20 +130,29 @@ export const MeetingsView: React.FC<MeetingsViewProps> = ({
   }) => {
     setIsSubmitting(true);
     try {
-      const payload = {
+      const base = {
         title: form.title.trim(),
-        agenda: form.agenda.trim() || undefined,
-        section: form.section.trim() || undefined,
-        meetingLink: form.meetingLink.trim() || undefined,
-        location: form.location.trim() || undefined,
+        agenda: form.agenda.trim(),
+        section: form.section.trim(),
+        meetingLink: form.meetingLink.trim(),
+        location: form.location.trim(),
         startTime: new Date(form.startTime).toISOString(),
         endTime: new Date(form.endTime).toISOString(),
         attendeeUserIds: form.attendeeUserIds
       };
       if (editingMeeting) {
-        await onUpdateMeeting(editingMeeting.id, payload);
+        // Send empty strings as-is: '' tells the API "clear this optional
+        // field" (the backend stores NULL). Mapping '' → undefined would make
+        // a previously-set agenda/link/section/location impossible to remove.
+        await onUpdateMeeting(editingMeeting.id, base);
       } else {
-        await onCreateMeeting(payload);
+        await onCreateMeeting({
+          ...base,
+          agenda: base.agenda || undefined,
+          section: base.section || undefined,
+          meetingLink: base.meetingLink || undefined,
+          location: base.location || undefined
+        });
       }
       meetingModal.close();
     } catch {
@@ -263,6 +278,7 @@ export const MeetingsView: React.FC<MeetingsViewProps> = ({
           visibleMeetings.map((meeting) => {
             const organizer = users.find((u) => u.id === meeting.organizerId);
             const isCancelled = meeting.status === 'CANCELLED';
+            const isCompleted = meeting.status === 'COMPLETED';
             return (
               <div
                 key={meeting.id}
@@ -279,6 +295,12 @@ export const MeetingsView: React.FC<MeetingsViewProps> = ({
                           isDarkMode ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
                         }`}>
                           <XCircle className="w-3 h-3" /> Cancelled
+                        </span>
+                      ) : isCompleted ? (
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${
+                          isDarkMode ? 'bg-slate-500/10 text-slate-400 border-slate-500/30' : 'bg-slate-100 text-slate-600 border-slate-200'
+                        }`}>
+                          <CheckCircle2 className="w-3 h-3" /> Completed
                         </span>
                       ) : (
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${
@@ -311,7 +333,7 @@ export const MeetingsView: React.FC<MeetingsViewProps> = ({
                       <Copy className="w-3.5 h-3.5" /> Copy Link
                     </button>
 
-                    {canManageMeetings && !isCancelled && (
+                    {canManageMeetings && meeting.status === 'SCHEDULED' && (
                       <>
                         <button
                           onClick={() => meetingModal.open({ id: meeting.id })}
@@ -446,27 +468,41 @@ const MeetingFormModal: React.FC<MeetingFormModalProps> = ({
 }) => {
   const isEdit = !!editingMeeting;
 
-  const defaultStart = useMemo(() => {
-    const d = new Date();
-    d.setMinutes(d.getMinutes() + (30 - (d.getMinutes() % 30)) + 30); // next half-hour, +30min buffer
-    return d;
-  }, []);
-  const defaultEnd = useMemo(() => new Date(defaultStart.getTime() + 30 * 60 * 1000), [defaultStart]);
+  // Fresh "next half-hour + 30min buffer" slot computed at call time so the
+  // proposed slot never goes stale — a mount-time memo would suggest times in
+  // the past once the app has been open for a while (and the backend rejects
+  // past start times).
+  const computeDefaultTimes = () => {
+    const start = new Date();
+    start.setSeconds(0, 0);
+    start.setMinutes(start.getMinutes() + (30 - (start.getMinutes() % 30)) + 30); // next half-hour, +30min buffer
+    return { start, end: new Date(start.getTime() + 30 * 60 * 1000) };
+  };
 
   const [title, setTitle] = useState('');
   const [agenda, setAgenda] = useState('');
   const [section, setSection] = useState('');
   const [meetingLink, setMeetingLink] = useState('');
   const [location, setLocation] = useState('');
-  const [startTime, setStartTime] = useState(toLocalInputValue(defaultStart.toISOString()));
-  const [endTime, setEndTime] = useState(toLocalInputValue(defaultEnd.toISOString()));
+  const [startTime, setStartTime] = useState(() => toLocalInputValue(computeDefaultTimes().start.toISOString()));
+  const [endTime, setEndTime] = useState(() => toLocalInputValue(computeDefaultTimes().end.toISOString()));
   const [attendeeUserIds, setAttendeeUserIds] = useState<string[]>([]);
   const [attendeeSearch, setAttendeeSearch] = useState('');
 
-  // Re-seed the form whenever a different meeting is opened for editing,
-  // or the modal opens fresh for "create".
+  // Seed the form when the modal opens for a given target (a meeting id, or
+  // 'create') — and NEVER again while it stays open on the same target. The
+  // 60s live-refresh in useMeetings keeps replacing the meetings array (and
+  // thus the `editingMeeting` object identity); re-seeding on that would wipe
+  // the user's in-progress edits mid-typing.
+  const seededForRef = React.useRef<string | null>(null);
   React.useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      seededForRef.current = null;
+      return;
+    }
+    const seedKey = editingMeeting?.id ?? 'create';
+    if (seededForRef.current === seedKey) return;
+    seededForRef.current = seedKey;
     if (editingMeeting) {
       setTitle(editingMeeting.title);
       setAgenda(editingMeeting.agenda || '');
@@ -477,13 +513,14 @@ const MeetingFormModal: React.FC<MeetingFormModalProps> = ({
       setEndTime(toLocalInputValue(editingMeeting.endTime));
       setAttendeeUserIds(editingMeeting.attendees.map((a) => a.userId));
     } else {
+      const { start, end } = computeDefaultTimes();
       setTitle('');
       setAgenda('');
       setSection('');
       setMeetingLink('');
       setLocation('');
-      setStartTime(toLocalInputValue(defaultStart.toISOString()));
-      setEndTime(toLocalInputValue(defaultEnd.toISOString()));
+      setStartTime(toLocalInputValue(start.toISOString()));
+      setEndTime(toLocalInputValue(end.toISOString()));
       setAttendeeUserIds(currentUser ? [currentUser.id] : []);
     }
   }, [isOpen, editingMeeting]); // eslint-disable-line react-hooks/exhaustive-deps

@@ -99,8 +99,8 @@ export class MeetingsService {
       .from('meetings')
       .insert({
         title: validated.title,
-        agenda: validated.agenda,
-        section: validated.section,
+        agenda: validated.agenda || null,
+        section: validated.section || null,
         organizer_id: actor.id,
         meeting_link: validated.meetingLink || null,
         location: validated.location || null,
@@ -158,8 +158,8 @@ export class MeetingsService {
     const validated = UpdateMeetingSchema.parse(input);
     const patch: Record<string, any> = { updated_by: actor.id };
     if (validated.title !== undefined) patch.title = validated.title;
-    if (validated.agenda !== undefined) patch.agenda = validated.agenda;
-    if (validated.section !== undefined) patch.section = validated.section;
+    if (validated.agenda !== undefined) patch.agenda = validated.agenda || null;
+    if (validated.section !== undefined) patch.section = validated.section || null;
     if (validated.meetingLink !== undefined) patch.meeting_link = validated.meetingLink || null;
     if (validated.location !== undefined) patch.location = validated.location || null;
     if (validated.startTime !== undefined) patch.start_time = validated.startTime;
@@ -170,10 +170,22 @@ export class MeetingsService {
 
     if (validated.attendeeUserIds) {
       const attendeeIds = Array.from(new Set([existing.organizerId, ...validated.attendeeUserIds]));
-      await this.db.from('meeting_attendees').delete().eq('meeting_id', id);
-      await this.db
+      // Delete-then-reinsert with rollback — mirrors the create path's
+      // guarantee that a failed attendee write never leaves a meeting
+      // attendee-less (createMeeting does the same above).
+      const { error: delErr } = await this.db.from('meeting_attendees').delete().eq('meeting_id', id);
+      if (delErr) throw delErr;
+      const { error: insErr } = await this.db
         .from('meeting_attendees')
         .insert(attendeeIds.map((userId) => ({ meeting_id: id, user_id: userId })));
+      if (insErr) {
+        logger.error(`[Meetings] Attendee reinsert failed for meeting ${id}, restoring previous attendee set.`, insErr);
+        const previousIds = Array.from(new Set([existing.organizerId, ...existing.attendees.map((a) => a.userId)]));
+        if (previousIds.length > 0) {
+          await this.db.from('meeting_attendees').insert(previousIds.map((userId) => ({ meeting_id: id, user_id: userId })));
+        }
+        throw insErr;
+      }
     }
 
     const timeChanged = validated.startTime && validated.startTime !== existing.startTime;

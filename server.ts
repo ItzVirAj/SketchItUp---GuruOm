@@ -28,6 +28,7 @@ import tasksRoutes from './backend/src/modules/tasks/tasks.routes';
 import employeesRoutes from './backend/src/modules/employees/employees.routes';
 import attachmentsRoutes from './backend/src/modules/attachments/attachments.routes';
 import testingRoutes from './backend/src/modules/testing/testing.routes';
+import { checkRbacRoleConsistency } from './backend/src/utils/rbacConsistencyCheck';
 import adminRoutes from './backend/src/modules/admin/admin.routes';
 import { getRedisClient, closeRedis } from './backend/src/lib/redis';
 import { logger } from './backend/src/utils/logger';
@@ -211,6 +212,15 @@ async function startServer() {
 
   const server = app.listen(PORT, '0.0.0.0', () => {
     logger.info(`Server listening on http://0.0.0.0:${PORT}`);
+  });
+
+  // RBAC fix #1 — non-fatal drift check between rbacMatrix.ts and the DB
+  // roles table. Fire-and-forget: never blocks startup, never crashes the
+  // process — checkRbacRoleConsistency() catches its own DB errors and only
+  // ever logs. See backend/src/utils/rbacConsistencyCheck.ts for why this is
+  // a warning and not a boot-time failure.
+  checkRbacRoleConsistency().catch((err) => {
+    logger.warn('[RBAC Consistency Check] Unexpected error running the check itself:', err);
   });
 
   const shutdown = async () => {

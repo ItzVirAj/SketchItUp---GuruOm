@@ -388,6 +388,38 @@ export function requirePermission(
  * allow that bypass (e.g. maker-checker controls where Owner must not self-approve)
  * can opt out per-route via `allowSuperAdminBypass: false`.
  */
+/**
+ * Unconditional bypass check for requireRole() — resolves to true if a role
+ * should pass regardless of whether it's literally in `allowedRoles`.
+ *
+ * KNOWN DEBT (RBAC audit #8): this function only exists because 32 route
+ * files across the backend still call requireRole() with a hardcoded
+ * allowedRoles array, instead of requirePermission(module, tier) — which
+ * reads tier directly from RBAC_ROLE_MATRIX and needs no bypass logic at
+ * all, since ServerAdmin/Owner/Admin (System)/TESTER already hold
+ * FULL_APPROVE on every module there. Migrating those 32 call sites is the
+ * real fix; it wasn't done here because verifying 32 endpoints' authorization
+ * behavior without a live app/test run is a bigger, separate, and riskier
+ * change than this audit pass covers. This function exists so that debt is
+ * centralized and documented instead of living as duplicated inline
+ * conditionals — refactor only, no authorization outcome changes here.
+ */
+function resolveUnconditionalBypass(
+  normRole: string,
+  allowedRoles: string[],
+  allowSuperAdminBypass: boolean
+): boolean {
+  const isSuperAdminBypass = allowSuperAdminBypass &&
+    (normRole === 'ServerAdmin' || normRole === 'Owner' || normRole === 'Admin (System)');
+
+  // TESTER is allowed on all operational endpoints, but blocked on exclusively administrative endpoints
+  const isTesterAllowed = normRole === 'TESTER' && !allowedRoles.every(r => [
+    'ServerAdmin', 'Owner', 'Admin (System)', 'SUPER ADMIN', 'ADMIN_OWNER', 'ADMIN', 'Super Admin', 'Admin', 'Owner / Managing Director'
+  ].includes(normalizeRole(r)));
+
+  return isSuperAdminBypass || isTesterAllowed;
+}
+
 export function requireRole(allowedRoles: string[], options: { allowSuperAdminBypass?: boolean } = {}) {
   const { allowSuperAdminBypass = true } = options;
   return (req: Request, res: Response, next: NextFunction) => {
@@ -402,16 +434,9 @@ export function requireRole(allowedRoles: string[], options: { allowSuperAdminBy
     const normRole = normalizeRole(rawRole);
 
     const isMatch = allowedRoles.some(r => normalizeRole(r) === normRole || r === rawRole);
+    const hasBypass = resolveUnconditionalBypass(normRole, allowedRoles, allowSuperAdminBypass);
 
-    const isSuperAdminBypass = allowSuperAdminBypass &&
-      (normRole === 'ServerAdmin' || normRole === 'Owner' || normRole === 'Admin (System)');
-
-    // TESTER is allowed on all operational endpoints, but blocked on exclusively administrative endpoints
-    const isTesterAllowed = normRole === 'TESTER' && !allowedRoles.every(r => [
-      'ServerAdmin', 'Owner', 'Admin (System)', 'SUPER ADMIN', 'ADMIN_OWNER', 'ADMIN', 'Super Admin', 'Admin', 'Owner / Managing Director'
-    ].includes(normalizeRole(r)));
-
-    if (!isMatch && !isSuperAdminBypass && !isTesterAllowed) {
+    if (!isMatch && !hasBypass) {
       return res.status(403).json({
         error: 'Forbidden',
         message: `Access denied. Role "${normRole}" lacks permission for this endpoint. Required: [${allowedRoles.join(', ')}]`

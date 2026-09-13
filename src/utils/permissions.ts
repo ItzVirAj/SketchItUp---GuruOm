@@ -2,6 +2,35 @@ import { UserRole, ConsoleView, SystemUser } from '../types/console';
 import { normalizeRole, getRoleModulePermission, hasMinimumAccess, RBAC_ROLE_MATRIX } from './rbacMatrix';
 
 export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
+  // ServerAdmin holds FULL_APPROVE on every module in RBAC_ROLE_MATRIX,
+  // including 'settings' — platform maker/developer tier, so it gets the
+  // same full view set as Owner plus anything settings-gated.
+  'ServerAdmin': [
+    'command-centre',
+    'meetings',
+    'tasks',
+    'employee-master',
+    'orders',
+    'order-detail',
+    'inventory',
+    'production',
+    'finished-goods',
+    'plating-outwork',
+    'purchasing',
+    'grn',
+    'reports',
+    'qc',
+    'pdi',
+    'dispatch',
+    'approvals',
+    'invoices',
+    'payables',
+    'masters',
+    'bom',
+    'users-audit',
+    'company-profile',
+    'workflow-testing'
+  ],
   'Owner': [
     'command-centre',
     'meetings',
@@ -81,6 +110,23 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
     'qc',
     'pdi'
   ],
+  // rbacMatrix.ts: VIEW_ONLY on orders/inventory/production/dispatch/reports/bom,
+  // FULL_APPROVE (PDI_ONLY scope) on qc, NO_ACCESS on procurement/accounting/
+  // masters/settings/approvals/transport/subcontracting.
+  'Quality Auditor': [
+    'command-centre',
+    'meetings',
+    'tasks',
+    'orders',
+    'order-detail',
+    'inventory',
+    'production',
+    'dispatch',
+    'reports',
+    'qc',
+    'pdi',
+    'bom'
+  ],
   'Store Keeper': [
     'command-centre',
     'meetings',
@@ -150,6 +196,24 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
     'tasks',
     'production'
   ],
+  // rbacMatrix.ts: VIEW_ONLY orders(NO_COMMERCIAL_EDIT)/inventory/production/
+  // procurement/masters/reports/qc/bom, FULL_APPROVE on subcontracting,
+  // NO_ACCESS dispatch/accounting/settings/approvals/transport.
+  'Subcontractor Coordinator': [
+    'command-centre',
+    'meetings',
+    'tasks',
+    'orders',
+    'order-detail',
+    'inventory',
+    'production',
+    'plating-outwork',
+    'purchasing',
+    'masters',
+    'reports',
+    'qc',
+    'bom'
+  ],
   'Admin (System)': [
     'command-centre',
     'meetings',
@@ -175,6 +239,18 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
     'users-audit',
     'company-profile',
     'workflow-testing'
+  ],
+
+  // rbacMatrix.ts: "View-only access to own orders and dispatches" —
+  // VIEW_ONLY(OWN_RECORDS_ONLY) on orders/dispatch/meetings/tasks,
+  // NO_ACCESS on everything else, including masters/reports/invoices.
+  'Client': [
+    'command-centre',
+    'meetings',
+    'tasks',
+    'orders',
+    'order-detail',
+    'dispatch'
   ],
 
   // Legacy compatibility keys
@@ -329,7 +405,11 @@ const VIEW_PERMISSION_KEYS: Partial<Record<ConsoleView, string[]>> = {
 export function isViewAllowedForRole(role: string, view: ConsoleView): boolean {
   const normRole = normalizeRole(role);
   const allowed = ROLE_PERMISSIONS[normRole] || ROLE_PERMISSIONS[role];
-  if (!allowed) return true;
+  // Fail CLOSED: an unrecognized/misspelled role must not default to full
+  // access. Every real role is expected to have an explicit entry above —
+  // if one doesn't, that's a bug to fix by adding it, not a reason to let
+  // the request through.
+  if (!allowed) return false;
   return allowed.includes(view);
 }
 

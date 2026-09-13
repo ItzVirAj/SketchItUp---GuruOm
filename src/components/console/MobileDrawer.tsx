@@ -160,12 +160,12 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
             className={`relative flex flex-col w-[85vw] max-w-[340px] h-full shadow-2xl z-10 select-none overflow-hidden font-sans border-r ${
               isDarkMode 
                 ? 'bg-[#18181B] border-[#2E2E34] text-slate-200' 
-                : 'bg-[#F8FAFC] border-[#E2E8F0] text-slate-800'
+                : 'bg-white border-slate-200 text-slate-800'
             }`}
           >
             {/* Header: Brand Logo, Role Badge & Close Button */}
             <div className={`px-4 py-3.5 border-b flex items-center justify-between gap-3 shrink-0 ${
-              isDarkMode ? 'border-[#2E2E34] bg-[#18181B]/60' : 'border-[#E2E8F0] bg-[#F1F5F9]'
+              isDarkMode ? 'border-[#2E2E34] bg-[#18181B]/60' : 'border-slate-200 bg-slate-50'
             }`}>
               <div className="flex items-center gap-2.5 overflow-hidden">
                 <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] flex items-center justify-center text-white text-xs font-black shadow-sm shrink-0">
@@ -327,7 +327,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
 
             {/* Footer Profile & Actions Card */}
             <div className={`p-3 border-t space-y-2 shrink-0 ${
-              isDarkMode ? 'border-[#2E2E34] bg-[#18181B]/80' : 'border-[#d8dde8] bg-[#F8FAFC]'
+              isDarkMode ? 'border-[#2E2E34] bg-[#18181B]/80' : 'border-slate-200 bg-slate-50'
             }`}>
               {/* User Identity Box */}
               <div 

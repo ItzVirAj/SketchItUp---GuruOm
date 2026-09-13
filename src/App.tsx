@@ -61,7 +61,7 @@ function MainApp() {
   return (
     <Router>
       <ScrollToTop />
-      <div className="min-h-screen bg-[#09090B] text-[#F4F4F5] font-sans">
+      <div className={`min-h-screen font-sans ${isDarkMode ? 'bg-[#09090B] text-[#F4F4F5]' : 'bg-white text-slate-900'}`}>
         <Routes>
           <Route path="/admin/*" element={<ServerAdminVault onSignOut={signOut} />} />
           <Route path="*" element={<ConsoleContainer onSignOut={signOut} />} />

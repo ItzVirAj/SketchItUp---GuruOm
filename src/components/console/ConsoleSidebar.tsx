@@ -162,8 +162,8 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
               {!isCollapsed && (
                 <>
                   <span className="flex-1 text-left text-xs sm:text-[13px] font-semibold">Command Centre</span>
-                  <span className="flex items-center gap-1 font-mono text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live
+                  <span className="flex items-center gap-1 font-mono text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-600 text-white shadow-xs">
+                    <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" /> Live
                   </span>
                 </>
               )}

@@ -18,6 +18,30 @@
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-noto: 'Noto Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
+
+  /* ==========================================================================
+     "Dopely Palette" full neutral re-theme.
+     Every view in this app builds its dark/light surfaces from Tailwind's
+     built-in `slate-*` scale (bg-slate-900, text-slate-400, border-slate-800,
+     etc. — 72 files use it; the pre-existing `--color-carbon-*` tokens below
+     are unused everywhere, likely leftover from an earlier attempt). Tailwind
+     v4 lets a theme block override a built-in scale directly, so redefining
+     slate here repaints every one of those 72 files app-wide, in both modes,
+     with no per-view edits needed.
+     Anchors are exact: 50=Frost White, 400=Cool Silver, 700=Graphite,
+     950=Carbon. The steps in between are linearly interpolated to keep the
+     ramp smooth rather than jumping straight from one named color to the next. */
+  --color-slate-50:  #F4F7FA; /* Frost White  — clean light dashboard canvas base */
+  --color-slate-100: #E9EDF1;
+  --color-slate-200: #D4D9E0;
+  --color-slate-300: #BFC6CE;
+  --color-slate-400: #AAB2BD; /* Cool Silver  — sleek aluminum midtone */
+  --color-slate-500: #838A93;
+  --color-slate-600: #5B626A;
+  --color-slate-700: #343A40; /* Graphite     — solid structural element container */
+  --color-slate-800: #262A30;
+  --color-slate-900: #171B1F;
+  --color-slate-950: #101317; /* Carbon       — sharp dark UI bedrock layer */
   /* True Neutral Carbon/Obsidian Primitives (better-colors overhaul) */
   --color-carbon-950: #09090B;
   --color-carbon-900: #121215;
@@ -40,41 +64,41 @@
 
 /* Centralized Accent Color Tokens */
 :root {
-  --chart-background: #ffffff;
-  --chart-foreground: #0f172a;
-  --chart-foreground-muted: #64748b;
-  --chart-line-primary: #435BE8;
+  --chart-background: #F4F7FA;
+  --chart-foreground: #101317;
+  --chart-foreground-muted: #5B626A;
+  --chart-line-primary: #3B82F6;
   --chart-line-secondary: #10B981;
-  --chart-crosshair: #435BE8;
-  --chart-grid: rgba(226, 232, 240, 0.8);
-  --chart-tooltip-foreground: #0f172a;
-  --chart-tooltip-muted: #64748b;
-  --chart-marker-background: #f8fafc;
-  --chart-marker-border: #cbd5e1;
-  --chart-marker-foreground: #334155;
-  --chart-marker-badge-background: #0f172a;
-  --chart-marker-badge-foreground: #ffffff;
-  --chart-segment-background: rgba(67, 91, 232, 0.08);
-  --chart-segment-line: rgba(67, 91, 232, 0.30);
+  --chart-crosshair: #3B82F6;
+  --chart-grid: rgba(52, 58, 64, 0.12);
+  --chart-tooltip-foreground: #101317;
+  --chart-tooltip-muted: #5B626A;
+  --chart-marker-background: #F4F7FA;
+  --chart-marker-border: #BFC6CE;
+  --chart-marker-foreground: #343A40;
+  --chart-marker-badge-background: #101317;
+  --chart-marker-badge-foreground: #F4F7FA;
+  --chart-segment-background: rgba(59, 130, 246, 0.08);
+  --chart-segment-line: rgba(59, 130, 246, 0.30);
 }
 
 .dark {
-  --chart-background: #121215;
-  --chart-foreground: #f8fafc;
-  --chart-foreground-muted: #94a3b8;
-  --chart-line-primary: #5B75F8;
+  --chart-background: #101317;
+  --chart-foreground: #F4F7FA;
+  --chart-foreground-muted: #AAB2BD;
+  --chart-line-primary: #60A5FA;
   --chart-line-secondary: #34D399;
-  --chart-crosshair: #7B92FF;
-  --chart-grid: rgba(255, 255, 255, 0.08);
-  --chart-tooltip-foreground: #f8fafc;
-  --chart-tooltip-muted: #94a3b8;
-  --chart-marker-background: #18181b;
-  --chart-marker-border: #27272a;
-  --chart-marker-foreground: #e2e8f0;
-  --chart-marker-badge-background: #ffffff;
-  --chart-marker-badge-foreground: #09090b;
-  --chart-segment-background: rgba(91, 117, 248, 0.12);
-  --chart-segment-line: rgba(91, 117, 248, 0.35);
+  --chart-crosshair: #93C5FD;
+  --chart-grid: rgba(244, 247, 250, 0.08);
+  --chart-tooltip-foreground: #F4F7FA;
+  --chart-tooltip-muted: #AAB2BD;
+  --chart-marker-background: #171B1F;
+  --chart-marker-border: #262A30;
+  --chart-marker-foreground: #D4D9E0;
+  --chart-marker-badge-background: #F4F7FA;
+  --chart-marker-badge-foreground: #101317;
+  --chart-segment-background: rgba(96, 165, 250, 0.12);
+  --chart-segment-line: rgba(96, 165, 250, 0.35);
 }
 
 :root, [data-accent="electric"] {

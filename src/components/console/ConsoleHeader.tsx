@@ -18,7 +18,6 @@ import {
   Palette,
   CalendarRange,
   CircleCheck,
-  UserRound,
   Bell,
   Terminal,
   Layers,
@@ -218,13 +217,12 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
   const activeTitle = getViewTitle(currentView as ConsoleView);
 
   return (
-    <header className={`relative z-30 shrink-0 border-b px-4 font-sans transition-colors sm:px-6 lg:px-8 ${
-      isDarkMode
+    <header className={`relative z-30 shrink-0 border-b px-4 font-sans transition-colors sm:px-6 lg:px-8 ${isDarkMode
         ? 'border-white/15 bg-[#141418]/90 backdrop-blur-3xl text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12),0_8px_30px_rgba(0,0,0,0.4)]'
         : 'border-slate-200/90 bg-white/95 backdrop-blur-3xl text-slate-900 shadow-xs'
-    }`}>
+      }`}>
       <div className="flex h-[74px] items-center justify-between gap-4">
-        
+
         {/* ========================================================================= */}
         {/* ── LEFT: APPLE BRANDING & VIEW CONTEXT ──                                 */}
         {/* ========================================================================= */}
@@ -234,11 +232,10 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
               type="button"
               onClick={onToggleMobileMenu}
               aria-label="Open navigation"
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border transition-all active:scale-95 cursor-pointer lg:hidden ${
-                isDarkMode 
-                  ? 'border-white/10 bg-white/[0.06] text-white hover:bg-white/10' 
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border transition-all active:scale-95 cursor-pointer lg:hidden ${isDarkMode
+                  ? 'border-white/10 bg-white/[0.06] text-white hover:bg-white/10'
                   : 'border-slate-200 bg-slate-100 text-slate-800 hover:bg-slate-200'
-              }`}
+                }`}
             >
               <Menu className="h-5 w-5" />
             </button>
@@ -263,7 +260,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
 
           {/* Desktop Apple HIG Title Strip */}
           <div className="hidden min-w-0 lg:flex items-center gap-3">
-            <div 
+            <div
               onClick={() => onNavigate?.('command-centre')}
               className="flex items-center gap-2.5 cursor-pointer group"
             >
@@ -286,9 +283,8 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
             <div className={`h-6 w-px shrink-0 mx-1 ${isDarkMode ? 'bg-white/15' : 'bg-slate-200'}`} />
 
             {/* Breadcrumb pill */}
-            <div className={`min-w-0 flex items-center gap-1.5 px-3 py-1 rounded-full text-xs shadow-2xs border ${
-              isDarkMode ? 'bg-white/[0.06] border-white/15' : 'bg-slate-100 border-slate-200'
-            }`}>
+            <div className={`min-w-0 flex items-center gap-1.5 px-3 py-1 rounded-full text-xs shadow-2xs border ${isDarkMode ? 'bg-white/[0.06] border-white/15' : 'bg-slate-100 border-slate-200'
+              }`}>
               <span className={`${isDarkMode ? 'text-slate-300' : 'text-slate-600'} font-medium`}>Workspace</span>
               <span className="text-slate-400">/</span>
               <span className="font-semibold text-[#5B75F8] dark:text-[#7B92FF] truncate">{activeTitle}</span>
@@ -314,11 +310,10 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
                 searchInputRef.current?.focus();
               }
             }}
-            className={`group relative flex h-10 w-full max-w-[560px] items-center justify-between rounded-full border px-4 transition-all duration-150 cursor-pointer active:scale-[0.99] ${
-              isDarkMode
+            className={`group relative flex h-10 w-full max-w-[560px] items-center justify-between rounded-full border px-4 transition-all duration-150 cursor-pointer active:scale-[0.99] ${isDarkMode
                 ? 'border-white/15 bg-white/[0.06] hover:border-white/25 hover:bg-white/[0.1] text-slate-200 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]'
                 : 'border-slate-200 bg-slate-50/90 hover:border-slate-300 hover:bg-slate-100 text-slate-700'
-            }`}
+              }`}
           >
             <div className="flex items-center gap-2.5 min-w-0">
               <Search className="h-3.5 w-3.5 shrink-0 text-slate-400 group-hover:text-[#5B75F8] transition-colors" />
@@ -327,9 +322,8 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
               </span>
             </div>
             <div className="flex items-center gap-1 shrink-0">
-              <span className={`rounded-full border px-2.5 py-0.5 font-mono text-[10px] font-semibold flex items-center gap-1 shadow-xs ${
-                isDarkMode ? 'border-white/15 bg-white/[0.08] text-slate-300' : 'border-slate-300 bg-slate-200/80 text-slate-600'
-              }`}>
+              <span className={`rounded-full border px-2.5 py-0.5 font-mono text-[10px] font-semibold flex items-center gap-1 shadow-xs ${isDarkMode ? 'border-white/15 bg-white/[0.08] text-slate-300' : 'border-slate-300 bg-slate-200/80 text-slate-600'
+                }`}>
                 <span>⌘</span>
                 <span>K</span>
               </span>
@@ -338,9 +332,8 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
 
           {/* Live Search Quick Results Dropdown */}
           {isSearchFocused && searchQuery.trim() !== '' && (
-            <div className={`absolute left-1/2 top-full mt-2 w-full max-w-[580px] -translate-x-1/2 overflow-hidden rounded-3xl border shadow-[0_24px_60px_rgba(0,0,0,0.8),inset_0_1px_0_0_rgba(255,255,255,0.15)] z-50 backdrop-blur-3xl ${
-              isDarkMode ? 'bg-[#18181D]/98 border-white/15 text-white' : 'bg-white border-slate-200 text-slate-900'
-            }`}>
+            <div className={`absolute left-1/2 top-full mt-2 w-full max-w-[580px] -translate-x-1/2 overflow-hidden rounded-3xl border shadow-[0_24px_60px_rgba(0,0,0,0.8),inset_0_1px_0_0_rgba(255,255,255,0.15)] z-50 backdrop-blur-3xl ${isDarkMode ? 'bg-[#18181D]/98 border-white/15 text-white' : 'bg-white border-slate-200 text-slate-900'
+              }`}>
               <div className="flex items-center justify-between border-b border-white/10 px-4 py-3 text-xs font-semibold text-slate-400">
                 <span>Search results ({totalResultsCount})</span>
                 <span className="font-mono text-[10px]">Orders • Parts • Finance</span>
@@ -422,15 +415,14 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
         {/* ── RIGHT: APPLE CONTROL DECK & ACTION PILLS ──                            */}
         {/* ========================================================================= */}
         <div className="ml-auto flex shrink-0 items-center gap-2">
-          
+
           {/* Mobile Search Button */}
           <button
             type="button"
             onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
             aria-label="Toggle quick search"
-            className={`flex h-9 w-9 items-center justify-center rounded-full border transition-all active:scale-95 lg:hidden ${
-              isDarkMode ? 'border-white/15 bg-white/[0.06] text-slate-200' : 'border-slate-200 bg-slate-100 text-slate-700'
-            }`}
+            className={`flex h-9 w-9 items-center justify-center rounded-full border transition-all active:scale-95 lg:hidden ${isDarkMode ? 'border-white/15 bg-white/[0.06] text-slate-200' : 'border-slate-200 bg-slate-100 text-slate-700'
+              }`}
           >
             <Search className="h-4 w-4" />
           </button>
@@ -440,22 +432,20 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
             <button
               type="button"
               onClick={() => setShowScopeDropdown(!showScopeDropdown)}
-              className={`flex h-9 items-center gap-2 rounded-full border px-3.5 text-xs font-semibold transition-all active:scale-95 cursor-pointer shadow-2xs ${
-                isDarkMode 
-                  ? 'border-white/15 bg-white/[0.06] text-slate-200 hover:bg-white/[0.1] hover:border-white/25' 
+              className={`flex h-9 items-center gap-2 rounded-full border px-3.5 text-xs font-semibold transition-all active:scale-95 cursor-pointer shadow-2xs ${isDarkMode
+                  ? 'border-white/15 bg-white/[0.06] text-slate-200 hover:bg-white/[0.1] hover:border-white/25'
                   : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-              }`}
+                }`}
               title={`Reporting period: ${fiscalYear}`}
             >
               <CalendarRange className="h-3.5 w-3.5 text-[#5B75F8]" />
               <span>{scope}</span>
               <ChevronDown className={`h-3 w-3 text-slate-400 transition-transform ${showScopeDropdown ? 'rotate-180 text-[#5B75F8]' : ''}`} />
             </button>
-            
+
             {showScopeDropdown && (
-              <div className={`absolute right-0 top-full mt-2 w-44 rounded-2xl border p-1.5 text-xs shadow-[0_20px_50px_rgba(0,0,0,0.8),inset_0_1px_0_0_rgba(255,255,255,0.12)] z-50 backdrop-blur-3xl ${
-                isDarkMode ? 'bg-[#18181D]/98 border-white/15 text-white' : 'bg-white border-slate-200 text-slate-900'
-              }`}>
+              <div className={`absolute right-0 top-full mt-2 w-44 rounded-2xl border p-1.5 text-xs shadow-[0_20px_50px_rgba(0,0,0,0.8),inset_0_1px_0_0_rgba(255,255,255,0.12)] z-50 backdrop-blur-3xl ${isDarkMode ? 'bg-[#18181D]/98 border-white/15 text-white' : 'bg-white border-slate-200 text-slate-900'
+                }`}>
                 {scopeOptions.map(sc => (
                   <button
                     key={sc}
@@ -465,11 +455,10 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
                       if (sc.startsWith('FY')) setFiscalYear(sc);
                       setShowScopeDropdown(false);
                     }}
-                    className={`w-full rounded-xl px-3 py-2 text-left font-semibold transition-all cursor-pointer ${
-                      scope === sc 
-                        ? 'bg-[#5B75F8] text-white shadow-sm' 
+                    className={`w-full rounded-xl px-3 py-2 text-left font-semibold transition-all cursor-pointer ${scope === sc
+                        ? 'bg-[#5B75F8] text-white shadow-sm'
                         : isDarkMode ? 'hover:bg-white/[0.08] text-slate-200' : 'hover:bg-slate-100 text-slate-700'
-                    }`}
+                      }`}
                   >
                     {sc}
                   </button>
@@ -483,22 +472,20 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
             <button
               type="button"
               onClick={() => setShowCustomizeMenu(prev => !prev)}
-              className={`flex h-9 w-9 items-center justify-center rounded-full border text-xs font-semibold transition-all active:scale-95 cursor-pointer shadow-2xs ${
-                showCustomizeMenu
+              className={`flex h-9 w-9 items-center justify-center rounded-full border text-xs font-semibold transition-all active:scale-95 cursor-pointer shadow-2xs ${showCustomizeMenu
                   ? 'border-[#5B75F8] bg-[#5B75F8]/15 text-[#5B75F8]'
-                  : isDarkMode 
-                    ? 'border-white/15 bg-white/[0.06] text-slate-200 hover:bg-white/[0.1] hover:border-white/25' 
+                  : isDarkMode
+                    ? 'border-white/15 bg-white/[0.06] text-slate-200 hover:bg-white/[0.1] hover:border-white/25'
                     : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
-              }`}
+                }`}
               title="Theme and appearance"
             >
               <Palette className="h-4 w-4" />
             </button>
 
             {showCustomizeMenu && (
-              <div className={`absolute right-0 top-full mt-2 w-72 rounded-3xl border p-4 shadow-[0_20px_50px_rgba(0,0,0,0.8),inset_0_1px_0_0_rgba(255,255,255,0.12)] z-50 backdrop-blur-3xl ${
-                isDarkMode ? 'bg-[#18181D]/98 border-white/15 text-white' : 'bg-white border-slate-200 text-slate-900'
-              }`}>
+              <div className={`absolute right-0 top-full mt-2 w-72 rounded-3xl border p-4 shadow-[0_20px_50px_rgba(0,0,0,0.8),inset_0_1px_0_0_rgba(255,255,255,0.12)] z-50 backdrop-blur-3xl ${isDarkMode ? 'bg-[#18181D]/98 border-white/15 text-white' : 'bg-white border-slate-200 text-slate-900'
+                }`}>
                 <AccentColorSelector isDarkMode={isDarkMode} />
                 {onOpenCustomize && (
                   <button
@@ -507,9 +494,8 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
                       setShowCustomizeMenu(false);
                       onOpenCustomize();
                     }}
-                    className={`mt-4 flex w-full items-center justify-between rounded-full border px-4 py-2.5 text-xs font-semibold transition-all cursor-pointer ${
-                      isDarkMode ? 'border-white/15 bg-white/[0.06] hover:bg-white/10 text-white' : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800'
-                    }`}
+                    className={`mt-4 flex w-full items-center justify-between rounded-full border px-4 py-2.5 text-xs font-semibold transition-all cursor-pointer ${isDarkMode ? 'border-white/15 bg-white/[0.06] hover:bg-white/10 text-white' : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800'
+                      }`}
                   >
                     <span className="flex items-center gap-2"><SlidersHorizontal className="h-3.5 w-3.5" /> Configure widgets</span>
                     <ArrowRight className="h-3.5 w-3.5 text-slate-400" />
@@ -525,23 +511,21 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
             onClick={handleSyncClick}
             disabled={isSyncing}
             title="Refresh and synchronize system data"
-            className={`flex h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold transition-all active:scale-95 cursor-pointer shadow-2xs ${
-              isSyncing
+            className={`flex h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold transition-all active:scale-95 cursor-pointer shadow-2xs ${isSyncing
                 ? 'cursor-wait opacity-80'
                 : isDarkMode
-                ? 'border-white/15 bg-white/[0.06] text-slate-200 hover:bg-white/[0.1] hover:border-white/25'
-                : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-            }`}
+                  ? 'border-white/15 bg-white/[0.06] text-slate-200 hover:bg-white/[0.1] hover:border-white/25'
+                  : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+              }`}
           >
             <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin text-[#5B75F8]' : 'text-slate-400'}`} />
             <span className="hidden sm:inline">{isSyncing ? 'Syncing' : 'Sync'}</span>
           </button>
 
           {/* Last Synced Badge (1.15X Scaled) */}
-          <div 
-            className={`hidden items-center gap-2 rounded-full border px-3.5 py-1.5 xl:flex shadow-2xs transition-all ${
-              isDarkMode ? 'border-white/15 bg-white/[0.06] hover:bg-white/[0.1]' : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
-            }`} 
+          <div
+            className={`hidden items-center gap-2 rounded-full border px-3.5 py-1.5 xl:flex shadow-2xs transition-all ${isDarkMode ? 'border-white/15 bg-white/[0.06] hover:bg-white/[0.1]' : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
+              }`}
             title={`Last synchronized: ${lastSynced}`}
           >
             <CircleCheck className="h-4 w-4 text-emerald-500 shrink-0" />
@@ -564,11 +548,10 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
           <button
             type="button"
             onClick={() => setIsNotificationOpen(true)}
-            className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-all active:scale-95 cursor-pointer shadow-2xs ${
-              isDarkMode 
-                ? 'border-white/15 bg-white/[0.06] text-slate-200 hover:bg-white/[0.1] hover:border-white/25' 
+            className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-all active:scale-95 cursor-pointer shadow-2xs ${isDarkMode
+                ? 'border-white/15 bg-white/[0.06] text-slate-200 hover:bg-white/[0.1] hover:border-white/25'
                 : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-            }`}
+              }`}
             title={`Operations Alerts (${unreadCount} unread)`}
           >
             <Bell className="h-4 w-4" />
@@ -583,17 +566,15 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
           <button
             type="button"
             onClick={() => setIsDarkMode(!isDarkMode)}
-            className={`relative flex h-9 w-14 shrink-0 items-center rounded-full border p-0.5 transition-all cursor-pointer shadow-2xs ${
-              isDarkMode ? 'border-white/15 bg-black/60 shadow-inner' : 'border-slate-200 bg-slate-100'
-            }`}
+            className={`relative flex h-9 w-14 shrink-0 items-center rounded-full border p-0.5 transition-all cursor-pointer shadow-2xs ${isDarkMode ? 'border-white/15 bg-black/60 shadow-inner' : 'border-slate-200 bg-slate-100'
+              }`}
             title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
           >
             <motion.div
               layout
               transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-              className={`flex h-7 w-7 items-center justify-center rounded-full text-white shadow-sm ${
-                isDarkMode ? 'ml-6 bg-[#5B75F8]' : 'ml-0 bg-slate-800'
-              }`}
+              className={`flex h-7 w-7 items-center justify-center rounded-full text-white shadow-sm ${isDarkMode ? 'ml-6 bg-[#5B75F8]' : 'ml-0 bg-slate-800'
+                }`}
             >
               <AnimatePresence mode="popLayout" initial={false}>
                 <motion.div
@@ -610,29 +591,13 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
             </motion.div>
           </button>
 
-          {/* User Profile Pill (Only available to authorized administrators) */}
-          {onOpenSwitchUser && (
-            <button
-              type="button"
-              onClick={onOpenSwitchUser}
-              className={`hidden h-9 w-9 items-center justify-center rounded-full border transition-all active:scale-95 cursor-pointer xl:flex shadow-2xs ${
-                isDarkMode 
-                  ? 'border-white/15 bg-white/[0.06] text-slate-200 hover:bg-white/[0.1] hover:border-white/25' 
-                  : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
-              }`}
-              title={`Switch user: ${currentUser?.name || userName} (${currentRole})`}
-            >
-              <UserRound className="h-4 w-4" />
-            </button>
-          )}
         </div>
       </div>
 
       {/* Mobile Search Overlay Bar */}
       {isMobileSearchOpen && (
-        <div className={`absolute left-0 right-0 top-full z-40 border-b p-3 shadow-2xl lg:hidden ${
-          isDarkMode ? 'border-white/15 bg-[#18181D]/98 backdrop-blur-3xl' : 'border-slate-200 bg-white'
-        }`}>
+        <div className={`absolute left-0 right-0 top-full z-40 border-b p-3 shadow-2xl lg:hidden ${isDarkMode ? 'border-white/15 bg-[#18181D]/98 backdrop-blur-3xl' : 'border-slate-200 bg-white'
+          }`}>
           <div className="relative flex items-center">
             <Search className="absolute left-3.5 h-4 w-4 text-slate-400" />
             <input
@@ -642,11 +607,10 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search orders, parts, invoices, jobs..."
-              className={`w-full rounded-full border py-2 pl-9 pr-9 text-xs font-medium outline-none ${
-                isDarkMode 
-                  ? 'border-white/15 bg-white/[0.06] text-white placeholder:text-slate-400 focus:border-[#5B75F8]' 
+              className={`w-full rounded-full border py-2 pl-9 pr-9 text-xs font-medium outline-none ${isDarkMode
+                  ? 'border-white/15 bg-white/[0.06] text-white placeholder:text-slate-400 focus:border-[#5B75F8]'
                   : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:border-[#5B75F8]'
-              }`}
+                }`}
             />
             {searchQuery && (
               <button type="button" onClick={() => setSearchQuery('')} className="absolute right-3 text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer">

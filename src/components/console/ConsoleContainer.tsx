@@ -515,7 +515,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
 
   return (
     <div className={`h-screen flex flex-col font-sans transition-colors overflow-hidden ${
-      isDarkMode ? 'bg-[#09090B] text-[#F4F4F5]' : 'bg-[#F8FAFC] text-slate-900'
+      isDarkMode ? 'bg-[#09090B] text-[#F4F4F5]' : 'bg-white text-slate-900'
     }`}>
       {/* Console Header */}
       <ConsoleHeader
@@ -579,7 +579,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
         />
 
         {/* Dynamic View Canvas with safe bottom padding for mobile tab bar */}
-        <main ref={mainScrollRef} className={`flex-1 min-h-0 min-w-0 overflow-y-auto scroll-smooth overscroll-y-contain overscroll-x-hidden p-3 sm:p-4 md:p-6 lg:p-8 pb-24 lg:pb-8 dark:bg-[#09090B] ${currentView === 'command-centre' ? 'bg-[#EEF1F6]' : 'bg-[#F8FAFC]'}`}>
+        <main ref={mainScrollRef} className="flex-1 min-h-0 min-w-0 overflow-y-auto scroll-smooth overscroll-y-contain overscroll-x-hidden p-3 sm:p-4 md:p-6 lg:p-8 pb-24 lg:pb-8 dark:bg-[#09090B] bg-white">
           <div key={currentView} className="space-y-6">
             {!isViewAllowedForUser(currentUser, currentView) ? (
               <AccessRestrictedGate

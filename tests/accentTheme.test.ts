@@ -3,32 +3,32 @@ import { ACCENT_PRESETS, ACCENT_COLORS, AccentColor } from '../src/context/Accen
 
 describe('Multi-Accent Color System Architecture', () => {
 
-  it('provides all 4 required accent color presets with Blue as default', () => {
-    expect(ACCENT_COLORS).toEqual(['blue', 'teal', 'orange', 'red']);
-    expect(ACCENT_PRESETS.blue).toBeDefined();
+  it('provides the curated accent color presets with Electric Blue as default', () => {
+    expect(ACCENT_COLORS).toEqual(['electric', 'teal', 'red', 'brand']);
+    expect(ACCENT_PRESETS.electric).toBeDefined();
     expect(ACCENT_PRESETS.teal).toBeDefined();
-    expect(ACCENT_PRESETS.orange).toBeDefined();
     expect(ACCENT_PRESETS.red).toBeDefined();
+    expect(ACCENT_PRESETS.brand).toBeDefined();
   });
 
-  it('preserves the exact original blue primary accent (#5B75F8)', () => {
-    const blue = ACCENT_PRESETS.blue;
-    expect(blue.primary).toBe('#5B75F8');
-    expect(blue.textDark).toBe('#7B92FF');
+  it('preserves the Electric Blue primary accent (#3B82F6)', () => {
+    const electric = ACCENT_PRESETS.electric;
+    expect(electric.primary).toBe('#3B82F6');
+    expect(electric.textDark).toBe('#60A5FA');
   });
 
-  it('defines professional, industrial-grade palettes for Teal, Orange, and Red', () => {
+  it('defines professional palettes for Teal, Red, and Brand Colors', () => {
     const teal = ACCENT_PRESETS.teal;
     expect(teal.primary).toBe('#0F766E');
     expect(teal.textDark).toBe('#2DD4BF');
 
-    const orange = ACCENT_PRESETS.orange;
-    expect(orange.primary).toBe('#EA580C');
-    expect(orange.textDark).toBe('#FB923C');
-
     const red = ACCENT_PRESETS.red;
     expect(red.primary).toBe('#DC2626');
     expect(red.textDark).toBe('#F87171');
+
+    const brand = ACCENT_PRESETS.brand;
+    expect(brand.primary).toBe('#0A7E58');
+    expect(brand.textDark).toBe('#34D399');
   });
 
   it('includes complete interaction tokens (hover, active, soft, border, ring, shadow, gradient) for each preset', () => {
@@ -49,20 +49,22 @@ describe('Multi-Accent Color System Architecture', () => {
     }
   });
 
-  it('safely handles unknown or invalid color keys by falling back to blue', () => {
+  it('safely handles unknown or invalid color keys by falling back to electric', () => {
     const sanitizeAccent = (input: string | null | undefined): AccentColor => {
       if (input && ACCENT_COLORS.includes(input as AccentColor)) {
         return input as AccentColor;
       }
-      return 'blue';
+      return 'electric';
     };
 
     expect(sanitizeAccent('teal')).toBe('teal');
-    expect(sanitizeAccent('orange')).toBe('orange');
     expect(sanitizeAccent('red')).toBe('red');
-    expect(sanitizeAccent('purple')).toBe('blue');
-    expect(sanitizeAccent(null)).toBe('blue');
-    expect(sanitizeAccent(undefined)).toBe('blue');
-    expect(sanitizeAccent('')).toBe('blue');
+    expect(sanitizeAccent('brand')).toBe('brand');
+    expect(sanitizeAccent('purple')).toBe('electric');
+    expect(sanitizeAccent('orange')).toBe('electric');
+    expect(sanitizeAccent('blue')).toBe('electric');
+    expect(sanitizeAccent(null)).toBe('electric');
+    expect(sanitizeAccent(undefined)).toBe('electric');
+    expect(sanitizeAccent('')).toBe('electric');
   });
 });

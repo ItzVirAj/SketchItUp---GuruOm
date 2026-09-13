@@ -40,6 +40,7 @@ import { DispatchView } from './views/DispatchView';
 import { ApprovalsView } from './views/ApprovalsView';
 import { MeetingsView } from './views/MeetingsView';
 import { TasksView } from './views/TasksView';
+import { EmployeeMasterView } from './views/EmployeeMasterView';
 import { InvoicesView } from './views/InvoicesView';
 import { PayablesView } from './views/PayablesView';
 import { MastersView } from './views/MastersView';
@@ -55,6 +56,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useOwnerOSData } from '../../hooks/useOwnerOSData';
 import { useMeetings } from '../../hooks/useMeetings';
 import { useTasks } from '../../hooks/useTasks';
+import { useEmployees } from '../../hooks/useEmployees';
 import { fetchOrderById, receiveOutworkReturn } from '../../services/supabaseServices';
 import { triggerOrderDelayed } from '../../services/notificationService';
 import { toast } from '../../context/ToastContext';
@@ -95,6 +97,8 @@ const getPathForView = (view: ConsoleView, orderId?: string | null): string => {
       return '/hr/meetings';
     case 'tasks':
       return '/hr/tasks';
+    case 'employee-master':
+      return '/hr/employees';
     case 'invoices':
       return '/invoices';
     case 'payables':
@@ -285,6 +289,16 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
     handleAddComment,
     handleCancelTask
   } = useTasks(isViewAllowedForUser(currentUser, 'tasks'), currentRole);
+  // Employee Master is a standalone HR submodule. It projects only internal
+  // employee-role users from the existing users table; it does not create a
+  // parallel employee identity store.
+  const {
+    employees,
+    isLoadingEmployees,
+    canManageEmployees,
+    loadEmployees,
+    handleUpdateEmployee
+  } = useEmployees(isViewAllowedForUser(currentUser, 'employee-master'), currentRole);
 
   // Fast User Switching is exclusively restricted to the Owner and Server Admin
   const isSwitchUserAllowed = Boolean(
@@ -407,6 +421,8 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
       setCurrentView('meetings');
     } else if (path === '/hr/tasks') {
       setCurrentView('tasks');
+    } else if (path === '/hr/employees') {
+      setCurrentView('employee-master');
     } else if (path === '/invoices') {
       setCurrentView('invoices');
     } else if (path === '/payables') {
@@ -952,6 +968,16 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
               onUpdateStatus={handleUpdateStatus}
               onAddComment={handleAddComment}
               onCancelTask={handleCancelTask}
+            />
+          )}
+          {currentView === 'employee-master' && (
+            <EmployeeMasterView
+              employees={employees}
+              isLoadingEmployees={isLoadingEmployees}
+              canManageEmployees={canManageEmployees}
+              isDarkMode={isDarkMode}
+              onUpdateEmployee={handleUpdateEmployee}
+              onRefresh={() => loadEmployees()}
             />
           )}
 

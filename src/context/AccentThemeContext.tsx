@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 
-export type AccentColor = 'blue' | 'teal' | 'orange' | 'red' | 'monochrome' | 'brand';
+export type AccentColor = 'electric' | 'teal' | 'red' | 'brand';
 
 export interface AccentThemeConfig {
   id: AccentColor;
@@ -22,23 +22,23 @@ export interface AccentThemeConfig {
 }
 
 export const ACCENT_PRESETS: Record<AccentColor, AccentThemeConfig> = {
-  blue: {
-    id: 'blue',
-    label: 'Cobalt',
-    primary: '#435BE8',
-    hover: '#344BC7',
-    active: '#273AA6',
-    textLight: '#344BC7',
-    textDark: '#8CA0FF',
-    softLight: 'rgba(67, 91, 232, 0.08)',
-    softDark: 'rgba(67, 91, 232, 0.12)',     // Subdued glow on pure black
-    borderLight: 'rgba(67, 91, 232, 0.30)',
-    borderDark: 'rgba(140, 160, 255, 0.25)', // Crisp, thin border
-    ring: 'rgba(67, 91, 232, 0.50)',
-    shadow: 'rgba(67, 91, 232, 0.20)',
-    gradientFrom: '#435BE8',
-    gradientTo: '#4f46e5',
-    dotColor: '#435BE8'
+  electric: {
+    id: 'electric',
+    label: 'Electric Blue',
+    primary: '#3B82F6',
+    hover: '#2563EB',
+    active: '#1D4ED8',
+    textLight: '#2563EB',
+    textDark: '#60A5FA',
+    softLight: 'rgba(59, 130, 246, 0.08)',
+    softDark: 'rgba(96, 165, 250, 0.12)',
+    borderLight: 'rgba(59, 130, 246, 0.30)',
+    borderDark: 'rgba(96, 165, 250, 0.25)',
+    ring: 'rgba(59, 130, 246, 0.50)',
+    shadow: 'rgba(59, 130, 246, 0.20)',
+    gradientFrom: '#3B82F6',
+    gradientTo: '#0EA5E9',
+    dotColor: '#3B82F6'
   },
   teal: {
     id: 'teal',
@@ -58,24 +58,6 @@ export const ACCENT_PRESETS: Record<AccentColor, AccentThemeConfig> = {
     gradientTo: '#059669',
     dotColor: '#0F766E'
   },
-  orange: {
-    id: 'orange',
-    label: 'Orange',
-    primary: '#EA580C',
-    hover: '#C2410C',
-    active: '#9A3412',
-    textLight: '#C2410C',
-    textDark: '#FB923C',
-    softLight: 'rgba(234, 88, 12, 0.08)',
-    softDark: 'rgba(251, 146, 60, 0.12)',
-    borderLight: 'rgba(234, 88, 12, 0.30)',
-    borderDark: 'rgba(251, 146, 60, 0.25)',
-    ring: 'rgba(234, 88, 12, 0.50)',
-    shadow: 'rgba(234, 88, 12, 0.20)',
-    gradientFrom: '#EA580C',
-    gradientTo: '#d97706',
-    dotColor: '#EA580C'
-  },
   red: {
     id: 'red',
     label: 'Red',
@@ -93,24 +75,6 @@ export const ACCENT_PRESETS: Record<AccentColor, AccentThemeConfig> = {
     gradientFrom: '#DC2626',
     gradientTo: '#e11d48',
     dotColor: '#DC2626'
-  },
-  monochrome: {
-    id: 'monochrome',
-    label: 'Obsidian Pure',
-    primary: '#F4F4F5',
-    hover: '#E4E4E7',
-    active: '#D4D4D8',
-    textLight: '#18181B',
-    textDark: '#FFFFFF',
-    softLight: 'rgba(0, 0, 0, 0.06)',
-    softDark: 'rgba(255, 255, 255, 0.08)',
-    borderLight: 'rgba(0, 0, 0, 0.20)',
-    borderDark: 'rgba(255, 255, 255, 0.15)',
-    ring: 'rgba(255, 255, 255, 0.40)',
-    shadow: 'rgba(0, 0, 0, 0.50)',
-    gradientFrom: '#F4F4F5',
-    gradientTo: '#A1A1AA',
-    dotColor: '#F4F4F5'
   },
   brand: {
     id: 'brand',
@@ -132,7 +96,7 @@ export const ACCENT_PRESETS: Record<AccentColor, AccentThemeConfig> = {
   }
 };
 
-export const ACCENT_COLORS: AccentColor[] = ['blue', 'teal', 'orange', 'red', 'monochrome', 'brand'];
+export const ACCENT_COLORS: AccentColor[] = ['electric', 'teal', 'red', 'brand'];
 
 const STORAGE_KEY = 'sketchitup-accent-color';
 
@@ -149,9 +113,9 @@ function applyAccentCssVariables(config: AccentThemeConfig) {
   const root = document.documentElement;
   if (config.id === 'brand') {
     // Brand Colors is scoped specifically to the Inventory page for now.
-    // Keep root on default blue so other pages remain unaffected.
-    const defaultPreset = ACCENT_PRESETS.blue;
-    root.setAttribute('data-accent', 'blue');
+    // Keep root on the app's default (Electric Blue) so other pages remain unaffected.
+    const defaultPreset = ACCENT_PRESETS.electric;
+    root.setAttribute('data-accent', 'electric');
     root.setAttribute('data-brand-accent-active', 'true');
     root.style.setProperty('--accent-primary', defaultPreset.primary);
     root.style.setProperty('--accent-hover', defaultPreset.hover);
@@ -193,13 +157,13 @@ export const AccentThemeProvider: React.FC<{ children: React.ReactNode }> = ({ c
         return saved as AccentColor;
       }
     } catch (_) {}
-    return 'blue';
+    return 'electric';
   });
 
   const setAccent = useCallback((newAccent: AccentColor) => {
     let resolved = newAccent;
     if (!ACCENT_COLORS.includes(resolved)) {
-      resolved = 'blue';
+      resolved = 'electric';
     }
     setAccentState(resolved);
     try {
@@ -227,7 +191,7 @@ export const AccentThemeProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
-  const currentTheme = useMemo(() => ACCENT_PRESETS[accent] || ACCENT_PRESETS.blue, [accent]);
+  const currentTheme = useMemo(() => ACCENT_PRESETS[accent] || ACCENT_PRESETS.electric, [accent]);
 
   const contextValue = useMemo(() => ({
     accent,

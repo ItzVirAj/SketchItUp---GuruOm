@@ -95,6 +95,7 @@ export const NAVIGATION_SECTIONS: NavSectionConfig[] = [
     items: [
       { id: 'meetings', label: 'Meetings', shortLabel: 'Meetings', icon: CalendarClock, description: 'Team Meeting Schedule & Reminders', badgeKey: 'meetings' },
       { id: 'tasks', label: 'Tasks', shortLabel: 'Tasks', icon: ListTodo, description: 'Team Task Assignment & Reminders', badgeKey: 'tasks' },
+      { id: 'employee-master', label: 'Employee Management', shortLabel: 'Employees', icon: Users, description: 'Employee Master & Staff Profiles' },
       // future HR submodules (attendance, leave requests, etc.) join this section
     ]
   }

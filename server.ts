@@ -25,6 +25,7 @@ import approvalsRoutes from './backend/src/modules/approvals/approvals.routes';
 import notificationsRoutes from './backend/src/modules/notifications/notifications.routes';
 import meetingsRoutes from './backend/src/modules/meetings/meetings.routes';
 import tasksRoutes from './backend/src/modules/tasks/tasks.routes';
+import employeesRoutes from './backend/src/modules/employees/employees.routes';
 import attachmentsRoutes from './backend/src/modules/attachments/attachments.routes';
 import testingRoutes from './backend/src/modules/testing/testing.routes';
 import adminRoutes from './backend/src/modules/admin/admin.routes';
@@ -131,6 +132,8 @@ async function startServer() {
 
   // Mount HR Module — Tasks submodule (internal action-item / job assignment tracker)
   app.use('/api/v1/tasks', tasksRoutes);
+  // HR Module — Employee Master (projection of internal users only)
+  app.use('/api/v1/employees', employeesRoutes);
 
   // Mount Eighth Batch File Storage & Attachment Management
   app.use('/api/v1/attachments', attachmentsRoutes);

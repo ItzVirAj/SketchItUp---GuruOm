@@ -6,6 +6,7 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
     'command-centre',
     'meetings',
     'tasks',
+    'employee-master',
     'orders',
     'order-detail',
     'inventory',
@@ -138,6 +139,7 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
     'command-centre',
     'meetings',
     'tasks',
+    'employee-master',
     'masters',
     'users-audit',
     'company-profile'
@@ -152,6 +154,7 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
     'command-centre',
     'meetings',
     'tasks',
+    'employee-master',
     'orders',
     'order-detail',
     'inventory',
@@ -179,6 +182,7 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
     'command-centre',
     'meetings',
     'tasks',
+    'employee-master',
     'orders',
     'order-detail',
     'inventory',
@@ -318,7 +322,8 @@ const VIEW_PERMISSION_KEYS: Partial<Record<ConsoleView, string[]>> = {
   'company-profile': ['admin:view_users', 'system:manage_permission_overrides'],
   'workflow-testing': ['system:override_all_rules'],
   'meetings': ['meetings:view'],
-  'tasks': ['tasks:view']
+  'tasks': ['tasks:view'],
+  'employee-master': ['admin:view_users']
 };
 
 export function isViewAllowedForRole(role: string, view: ConsoleView): boolean {

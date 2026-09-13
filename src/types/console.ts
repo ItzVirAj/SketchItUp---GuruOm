@@ -22,7 +22,8 @@ export type ConsoleView =
   | 'bom'
   | 'route-cards'
   | 'meetings'
-  | 'tasks';
+  | 'tasks'
+  | 'employee-master';
 
 export type UserRole = 'ServerAdmin' | 'SUPER ADMIN' | 'OPERATOR' | 'QC_MANAGER' | 'DISPATCH_CLERK' | 'FINANCE_MANAGER' | 'TESTER';
 
@@ -759,6 +760,22 @@ export interface SystemUser {
   shift?: string;
   status: 'ACTIVE' | 'INACTIVE' | 'Active' | 'Inactive' | 'REVOKED' | string;
   lastLogin?: string;
+}
+
+export interface EmployeeMasterRecord {
+  id: string;
+  employeeCode: string;
+  name: string;
+  email: string;
+  role: string;
+  department: string;
+  phone: string;
+  reportingManager: string;
+  shift: string;
+  status: string;
+  lastLogin?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 }
 
 export interface AuditLogEntry {

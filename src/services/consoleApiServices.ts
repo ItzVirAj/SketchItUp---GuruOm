@@ -1599,6 +1599,44 @@ export async function clearOperationalDataInSupabase(): Promise<void> {
 }
 
 // ----------------------------------------------------
+// HR — Employee Master Services (projection of authenticated users)
+// ----------------------------------------------------
+export async function fetchEmployees(params?: {
+  search?: string;
+  department?: string;
+  status?: string;
+}): Promise<import('../types/console').EmployeeMasterRecord[]> {
+  const qs = new URLSearchParams();
+  if (params?.search) qs.set('search', params.search);
+  if (params?.department) qs.set('department', params.department);
+  if (params?.status) qs.set('status', params.status);
+  const query = qs.toString();
+
+  const res = await apiClient.get<{ data: import('../types/console').EmployeeMasterRecord[] }>(
+    `/employees${query ? `?${query}` : ''}`
+  );
+  return res?.data || [];
+}
+
+export async function updateEmployee(
+  id: string,
+  updates: Partial<{
+    name: string;
+    email: string;
+    department: string;
+    phone: string;
+    reportingManager: string;
+    shift: string;
+  }>
+): Promise<import('../types/console').EmployeeMasterRecord> {
+  const res = await apiClient.patch<{ data: import('../types/console').EmployeeMasterRecord }>(
+    `/employees/${encodeURIComponent(id)}`,
+    updates
+  );
+  return res.data;
+}
+
+// ----------------------------------------------------
 // Goods Receipt Notes (GRN) Services (via REST API)
 // ----------------------------------------------------
 export async function fetchGrnList(): Promise<GoodsReceiptNote[]> {

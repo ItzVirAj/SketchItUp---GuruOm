@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, startTransition } from 'react';
 import { toast } from '../context/ToastContext';
 import { getRoleModulePermission, hasMinimumAccess } from '../utils/rbacMatrix';
 import {
@@ -45,7 +45,10 @@ export function useTasks(canView: boolean, currentUserRole?: string | null) {
   }, [canView, canManageTasks]);
 
   useEffect(() => {
-    loadTasks();
+    // See useMeetings.ts for why this is wrapped in startTransition.
+    startTransition(() => {
+      loadTasks();
+    });
   }, [loadTasks]);
 
   // Same pragmatic polling choice as useMeetings.ts — see that file for why

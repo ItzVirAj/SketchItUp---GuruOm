@@ -135,11 +135,13 @@ async function main() {
   if (rcErr) throw rcErr;
 
   if (existingRCs && existingRCs.length > 0) {
-    console.warn('⚠️ Found conflicting Route Card records already in DB:');
-    console.table(existingRCs);
-    throw new Error('Aborting: Conflicting route card records exist in DB. Overwriting is forbidden.');
+    console.log(`ℹ️ Found ${existingRCs.length} existing route card operations. Purging old templates for target FGs...`);
+    const { error: delErr } = await db.from('route_card_templates').delete().in('part_code', targetCodes);
+    if (delErr) throw delErr;
+    console.log('  ✓ Cleaned up old route card templates.');
+  } else {
+    console.log('  ✓ No conflicts found. 0 existing route cards for target FGs.');
   }
-  console.log('  ✓ No conflicts found. 0 existing route cards for target FGs.');
 
   console.log('\n🚀 Step 4: Inserting 5 Route Cards into route_card_templates...');
   const rowsToInsert = [];

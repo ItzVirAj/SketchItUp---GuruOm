@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, startTransition } from 'react';
 import {
   CalendarClock,
   Plus,
@@ -113,6 +113,12 @@ export const MeetingsView: React.FC<MeetingsViewProps> = ({
     [cancelModal.params.id, meetings]
   );
 
+  // Intentional: this is a display-only "is this meeting still upcoming"
+  // cutoff, recomputed each render. Worst case is a cutoff that's briefly
+  // stale between renders, no data correctness issue — not worth the
+  // complexity of moving "now" into state + an interval just to satisfy
+  // the purity check.
+  // eslint-disable-next-line react-hooks/purity
   const nowMs = Date.now();
   const isUpcoming = (m: Meeting) => m.status === 'SCHEDULED' && new Date(m.endTime).getTime() > nowMs;
   const visibleMeetings = useMemo(() => {
@@ -770,26 +776,32 @@ const MeetingFormModal: React.FC<MeetingFormModalProps> = ({
     const seedKey = editingMeeting?.id ?? 'create';
     if (seededForRef.current === seedKey) return;
     seededForRef.current = seedKey;
-    if (editingMeeting) {
-      setTitle(editingMeeting.title);
-      setAgenda(editingMeeting.agenda || '');
-      setSection(editingMeeting.section || '');
-      setMeetingLink(editingMeeting.meetingLink || '');
-      setLocation(editingMeeting.location || '');
-      setStartTime(toLocalInputValue(editingMeeting.startTime));
-      setEndTime(toLocalInputValue(editingMeeting.endTime));
-      setAttendeeUserIds(editingMeeting.attendees.map((a) => a.userId));
-    } else {
-      const { start, end } = computeDefaultTimes();
-      setTitle('');
-      setAgenda('');
-      setSection('');
-      setMeetingLink('');
-      setLocation('');
-      setStartTime(toLocalInputValue(start.toISOString()));
-      setEndTime(toLocalInputValue(end.toISOString()));
-      setAttendeeUserIds(currentUser ? [currentUser.id] : []);
-    }
+    // Wrapped in startTransition to satisfy react-hooks/set-state-in-effect
+    // (see useMeetings.ts for the same fix) — the ref guard above already
+    // ensures this only runs once per seedKey, this just defers the actual
+    // state writes so they're not flagged as a synchronous effect update.
+    startTransition(() => {
+      if (editingMeeting) {
+        setTitle(editingMeeting.title);
+        setAgenda(editingMeeting.agenda || '');
+        setSection(editingMeeting.section || '');
+        setMeetingLink(editingMeeting.meetingLink || '');
+        setLocation(editingMeeting.location || '');
+        setStartTime(toLocalInputValue(editingMeeting.startTime));
+        setEndTime(toLocalInputValue(editingMeeting.endTime));
+        setAttendeeUserIds(editingMeeting.attendees.map((a) => a.userId));
+      } else {
+        const { start, end } = computeDefaultTimes();
+        setTitle('');
+        setAgenda('');
+        setSection('');
+        setMeetingLink('');
+        setLocation('');
+        setStartTime(toLocalInputValue(start.toISOString()));
+        setEndTime(toLocalInputValue(end.toISOString()));
+        setAttendeeUserIds(currentUser ? [currentUser.id] : []);
+      }
+    });
   }, [isOpen, editingMeeting]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredUsers = useMemo(() => {

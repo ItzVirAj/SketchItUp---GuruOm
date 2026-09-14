@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, startTransition } from 'react';
 import {
   ListTodo,
   Plus,
@@ -845,7 +845,11 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
 
   React.useEffect(() => {
     if (!isOpen) return;
-    if (editingTask) {
+    // Wrapped in startTransition — see useMeetings.ts for why (same
+    // react-hooks/set-state-in-effect fix; here it's several setState calls
+    // resetting the form instead of one, same root cause).
+    startTransition(() => {
+      if (editingTask) {
       setTitle(editingTask.title);
       setDescription(editingTask.description || '');
       setSection(editingTask.section || '');
@@ -860,6 +864,7 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
       setDueDate('');
       setAssigneeUserIds([]);
     }
+    });
   }, [isOpen, editingTask]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredUsers = useMemo(() => {

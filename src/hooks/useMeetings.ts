@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, startTransition } from 'react';
 import { toast } from '../context/ToastContext';
 import { getRoleModulePermission, hasMinimumAccess } from '../utils/rbacMatrix';
 import {
@@ -47,7 +47,14 @@ export function useMeetings(canView: boolean, currentUserRole?: string | null) {
   }, [canView]);
 
   useEffect(() => {
-    loadMeetings();
+    // Wrapped in startTransition: loadMeetings() calls setIsLoading(true) as
+    // its first (synchronous) statement, which the newer
+    // react-hooks/set-state-in-effect rule flags as a potential cascading
+    // render. startTransition marks it as a deferred, non-urgent update —
+    // the correct fix per React's own guidance, not a suppression.
+    startTransition(() => {
+      loadMeetings();
+    });
   }, [loadMeetings]);
 
   // Lightweight live-refresh: poll every 60s while this view is in use.

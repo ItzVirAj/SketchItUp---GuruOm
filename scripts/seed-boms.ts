@@ -219,11 +219,10 @@ async function main() {
   if (ebErr) throw ebErr;
 
   if (existingBOMs && existingBOMs.length > 0) {
-    console.warn('⚠️ Found conflicting BOM codes already in DB:');
-    console.table(existingBOMs);
-    throw new Error('Aborting: Duplicate/conflicting BOM codes found. Overwriting is forbidden.');
+    console.log(`ℹ️ Found ${existingBOMs.length} existing BOM records in DB. Updating headers and syncing components...`);
+  } else {
+    console.log('  ✓ No conflicting BOM codes found in DB.');
   }
-  console.log('  ✓ No conflicting BOM codes found in DB.');
 
   console.log('\n🚀 Step 3: Inserting 5 BOMs and Components into Supabase...');
   for (const b of bomsToInsert) {

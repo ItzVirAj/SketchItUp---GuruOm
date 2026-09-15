@@ -109,3 +109,9 @@ backup/
 *.backup
 .tmp_patch/
 
+# ---- Impeccable Design Skills & Hooks ----
+.impeccable/
+.impeccable*
+impeccable.json
+.codex/
+

@@ -1,9 +1,9 @@
 import React from 'react';
-import { 
-  LayoutGrid, 
-  ShoppingBag, 
-  Activity, 
-  CheckSquare, 
+import {
+  LayoutGrid,
+  ShoppingBag,
+  Activity,
+  CheckSquare,
   Menu,
   LucideIcon
 } from 'lucide-react';
@@ -45,7 +45,7 @@ export const MobileBottomTabBar: React.FC<MobileBottomTabBarProps> = ({
   ];
 
   // Filter tabs by RBAC role permission
-  const allowedPrimaryTabs = defaultTabs.filter(tab => 
+  const allowedPrimaryTabs = defaultTabs.filter(tab =>
     isViewAllowedForRole(currentRole, tab.id as ConsoleView)
   );
 
@@ -64,13 +64,12 @@ export const MobileBottomTabBar: React.FC<MobileBottomTabBarProps> = ({
   };
 
   return (
-    <nav 
+    <nav
       aria-label="Mobile Navigation"
-      className={`fixed bottom-0 left-0 right-0 z-40 lg:hidden border-t select-none ${
-        isDarkMode 
-          ? 'bg-[#18181B] border-[#2E2E34] text-slate-400 shadow-[0_-4px_25px_rgba(0,0,0,0.4)]' 
+      className={`fixed bottom-0 left-0 right-0 z-40 lg:hidden border-t select-none ${isDarkMode
+          ? 'bg-[#18181B] border-[#2E2E34] text-slate-400 shadow-[0_-4px_25px_rgba(0,0,0,0.4)]'
           : 'bg-white border-[#d8dde8] text-slate-600 shadow-[0_-4px_20px_rgba(15,23,42,0.06)]'
-      }`}
+        }`}
       style={{
         paddingBottom: 'max(0.4rem, env(safe-area-inset-bottom, 0px))'
       }}
@@ -80,7 +79,7 @@ export const MobileBottomTabBar: React.FC<MobileBottomTabBarProps> = ({
           const Icon = tab.icon;
           const isMore = tab.id === 'more';
           const isActive = !isMore && (
-            currentView === tab.id || 
+            currentView === tab.id ||
             (tab.id === 'orders' && currentView === 'order-detail')
           );
           const isMoreActive = isMore && isDrawerOpen;
@@ -90,21 +89,19 @@ export const MobileBottomTabBar: React.FC<MobileBottomTabBarProps> = ({
               key={tab.id}
               type="button"
               onClick={() => handleTabClick(tab.id)}
-              className={`relative flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-xl transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-150 cursor-pointer active:scale-[0.96] group ${
-                isActive || isMoreActive
+              className={`relative flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-xl transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-150 cursor-pointer active:scale-[0.96] group ${isActive || isMoreActive
                   ? 'text-[var(--accent-primary)] font-bold'
                   : isDarkMode
                     ? 'text-slate-400 hover:text-slate-200'
                     : 'text-slate-500 hover:text-slate-800'
-              }`}
+                }`}
             >
               {/* Icon Container with Badge */}
               <div className="relative flex items-center justify-center w-7 h-7">
-                <Icon className={`w-5 h-5 transition-transform duration-150 group-hover:scale-110 ${
-                  isActive || isMoreActive
+                <Icon className={`w-5 h-5 transition-transform duration-150 group-hover:scale-110 ${isActive || isMoreActive
                     ? 'text-[var(--accent-primary)] scale-105 stroke-[2.25]'
                     : isDarkMode ? 'text-slate-400' : 'text-slate-500'
-                }`} />
+                  }`} />
 
                 {/* Badge for notifications / pending counts */}
                 {tab.badgeCount !== undefined && tab.badgeCount > 0 && (
@@ -115,11 +112,10 @@ export const MobileBottomTabBar: React.FC<MobileBottomTabBarProps> = ({
               </div>
 
               {/* Tab Label */}
-              <span className={`text-[10px] font-medium tracking-tight mt-0.5 leading-tight ${
-                isActive || isMoreActive
+              <span className={`text-[10px] font-medium tracking-tight mt-0.5 leading-tight ${isActive || isMoreActive
                   ? 'text-[var(--accent-primary)] font-bold'
                   : ''
-              }`}>
+                }`}>
                 {tab.label}
               </span>
 

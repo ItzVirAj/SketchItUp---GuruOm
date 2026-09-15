@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { getDbClient } from '../../config/database';
-import { normalizeRole } from '../../../../src/utils/rbacMatrix';
+import { tryNormalizeRole } from '../../../../src/utils/rbacMatrix';
 import { auditService } from '../audit/audit.service';
 import { notificationsService } from '../notifications/notifications.service';
 import { EmployeeListQuerySchema, EmployeeUpdateSchema } from './employees.schema';
@@ -15,11 +15,16 @@ export interface EmployeeActor {
 const EXCLUDED_EMPLOYEE_ROLES = new Set(['ServerAdmin', 'Owner', 'Client']);
 
 export function isEmployeeRole(role?: string | null): boolean {
-  return !EXCLUDED_EMPLOYEE_ROLES.has(normalizeRole(role || ''));
+  // Read/display filter: an unrecognized role is still listed as an employee
+  // row (same as before, where it failed open to Shop Floor Supervisor) — the
+  // row renders its raw role string, so nothing is silently misrepresented.
+  const resolved = tryNormalizeRole(role || '');
+  return !EXCLUDED_EMPLOYEE_ROLES.has(resolved ?? String(role ?? ''));
 }
 
 function canManageEmployeeMaster(role?: string | null): boolean {
-  const normalized = normalizeRole(role || '');
+  const normalized = tryNormalizeRole(role || '');
+  // Fail-closed: an unrecognized role can never manage the employee master.
   return normalized === 'ServerAdmin' || normalized === 'Owner' ||
     normalized === 'Admin (System)' || normalized === 'HR/Admin';
 }
@@ -144,7 +149,9 @@ export class EmployeesService {
     await auditService.recordAuditLog({
       actorId: actor.id,
       actorEmail: actor.email,
-      actorRole: normalizeRole(actor.role),
+      // Audit metadata records the truthful value: canonical when recognized,
+      // otherwise the raw string — never a silent 'Shop Floor Supervisor'.
+      actorRole: tryNormalizeRole(actor.role) ?? String(actor.role ?? ''),
       action: 'EMPLOYEE_MASTER_UPDATE',
       entityType: 'employee',
       entityId: id,

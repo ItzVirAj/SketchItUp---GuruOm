@@ -8,7 +8,7 @@ import { RiskService, RiskEvaluationResult, PriorSessionData } from './risk.serv
 import { notificationsService } from '../notifications/notifications.service';
 import { logAudit } from '../../services/auditLog';
 import { permissionService } from '../../services/permission.service';
-import { normalizeRole } from '../../../../src/utils/rbacMatrix';
+import { tryNormalizeRole, requireCanonicalRole } from '../../../../src/utils/rbacMatrix';
 import { auditService } from '../audit/audit.service';
 
 export interface UserRecord {
@@ -1373,10 +1373,15 @@ export class AuthService {
       throw new Error('Password must be at least 8 characters long and contain at least one letter and one number.');
     }
 
-    const normRole = normalizeRole(params.role || 'OPERATOR');
-    if (normRole === 'ServerAdmin' || (params.role && params.role.trim().toLowerCase() === 'serveradmin')) {
+    const adminGateRole = tryNormalizeRole(params.role || 'OPERATOR');
+    if (adminGateRole === 'ServerAdmin' || (params.role && params.role.trim().toLowerCase() === 'serveradmin')) {
       throw new Error('The ServerAdmin role cannot be created via the user API. It is strictly provisionable via CLI seed script only.');
     }
+
+    // Fail-closed: an unrecognized role is rejected (the controller's catch
+    // maps this to a 400 naming the value) instead of being silently
+    // rewritten to a different real role.
+    const normRole = requireCanonicalRole(params.role || 'OPERATOR');
 
     const userId = crypto.randomUUID();
     const passwordHash = await hashPassword(rawPassword);
@@ -1636,10 +1641,15 @@ export class AuthService {
   }
 
   async updateUserRole(id: string, role: string, actorId?: string) {
-    const normRole = normalizeRole(role);
-    if (normRole === 'ServerAdmin' || role.trim().toLowerCase() === 'serveradmin') {
+    const adminGateRole = tryNormalizeRole(role);
+    if (adminGateRole === 'ServerAdmin' || role.trim().toLowerCase() === 'serveradmin') {
       throw new Error('The ServerAdmin role cannot be assigned via the API. This role is strictly provisionable via CLI seed script only.');
     }
+
+    // Fail-closed: an unrecognized role is rejected (the controller's catch
+    // maps this to a 400 naming the value) instead of being silently
+    // rewritten to a different real role.
+    const normRole = requireCanonicalRole(role);
 
     const existing = await this.findUserById(id);
     const beforeState = existing ? { role: existing.role, status: existing.status } : null;

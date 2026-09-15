@@ -9,7 +9,7 @@ import crypto from 'crypto';
 import { getDbClient } from '../../config/database';
 import { permissionService } from '../../services/permission.service';
 import { notificationsService } from '../notifications/notifications.service';
-import { normalizeRole } from '../../../../src/utils/rbacMatrix';
+import { tryNormalizeRole, requireCanonicalRole, UnrecognizedRoleError } from '../../../../src/utils/rbacMatrix';
 import { verifyPassword } from '../../utils/password';
 
 export class AdminController {
@@ -64,7 +64,10 @@ export class AdminController {
       // Map roles to tier ranks
       const enriched = await Promise.all(
         (users || []).map(async (u: any) => {
-          const normRole = normalizeRole(u.role);
+          // Read-only enrichment: an unrecognized role is reported honestly as
+          // the raw string (tier resolves to 99 / lowest authority) instead of
+          // silently masquerading as Shop Floor Supervisor.
+          const normRole = tryNormalizeRole(u.role) ?? String(u.role ?? '');
           const tier = await permissionService.getRoleTier(normRole);
           return {
             ...u,
@@ -119,10 +122,10 @@ export class AdminController {
         });
       }
 
-      const normTargetRole = normalizeRole(requestedRole);
-
-      // NON-NEGOTIABLE SECURITY GATE: ServerAdmin cannot be assigned via HTTP API
-      if (normTargetRole === 'ServerAdmin' || requestedRole.trim().toLowerCase() === 'serveradmin') {
+      // NON-NEGOTIABLE SECURITY GATE: ServerAdmin cannot be assigned via HTTP API.
+      // Raw-string check stays FIRST so even unrecognized spellings like
+      // 'serveradmin' hit the audited 403 path rather than the generic 400 below.
+      if (requestedRole.trim().toLowerCase() === 'serveradmin') {
         await permissionService.recordAdminAudit({
           actorId: actor.id,
           actorEmail: actor.email,
@@ -139,6 +142,22 @@ export class AdminController {
           error: 'Forbidden',
           message: 'The ServerAdmin role cannot be granted through the API. This role is strictly provisionable via CLI seed script only.'
         });
+      }
+
+      // Fail-closed input validation: an unrecognized role is rejected with a
+      // 400 naming the bad value — never silently rewritten to a real role
+      // (the old normalizeRole() fail-open wrote 'Shop Floor Supervisor' here).
+      let normTargetRole: string;
+      try {
+        normTargetRole = requireCanonicalRole(requestedRole);
+      } catch (err) {
+        if (err instanceof UnrecognizedRoleError) {
+          return res.status(400).json({
+            error: 'BadRequest',
+            message: `Invalid role "${String(err.rawRole)}". Must be one of the canonical roles (see RBAC_ROLE_MATRIX).`
+          });
+        }
+        throw err;
       }
 
       // Fetch target user from DB
@@ -254,7 +273,17 @@ export class AdminController {
         });
       }
 
-      if (normalizeRole(targetUser.role) === 'ServerAdmin') {
+      const targetNormRole = tryNormalizeRole(targetUser.role);
+      if (!targetNormRole) {
+        // Fail-closed: never allow permission overrides against an
+        // unrecognized target role.
+        return res.status(403).json({
+          error: 'Forbidden',
+          message: 'Target user role is not a recognized role; overrides are blocked.'
+        });
+      }
+
+      if (targetNormRole === 'ServerAdmin') {
         return res.status(403).json({
           error: 'Forbidden',
           message: 'ServerAdmin permissions cannot be modified with user overrides.'

@@ -3,7 +3,7 @@ import { authService } from './auth.service';
 import { recordFailedLogin, clearFailedLogin } from '../../middleware/rateLimit';
 import { GeoLocationService } from '../../utils/geolocation';
 import { ENV } from '../../config/env';
-import { RBAC_ROLE_MATRIX, normalizeRole } from '../../../../src/utils/rbacMatrix';
+import { RBAC_ROLE_MATRIX, tryNormalizeRole } from '../../../../src/utils/rbacMatrix';
 
 // Roles that may be assigned during user provisioning. Built from the canonical RBAC
 // matrix (keys + display labels) plus the legacy roles the users.role CHECK constraint
@@ -244,7 +244,8 @@ export class AuthController {
    * Super Admin security audit stream.
    */
   async getAdminSecurityAudit(req: Request, res: Response) {
-    const normRole = normalizeRole(req.user?.role);
+    const normRole = tryNormalizeRole(req.user?.role);
+    // Fail-closed: an unrecognized session role is never part of the admin trio.
     if (normRole !== 'ServerAdmin' && normRole !== 'Owner' && normRole !== 'Admin (System)') {
       return res.status(403).json({ error: 'Forbidden', message: 'Administrative access required for security audit stream.' });
     }

@@ -5,7 +5,7 @@
 // ============================================================================
 
 import { getDbClient } from '../config/database';
-import { normalizeRole } from '../../../src/utils/rbacMatrix';
+import { tryNormalizeRole } from '../../../src/utils/rbacMatrix';
 
 export interface AdminAuditEntry {
   actorId?: string;
@@ -52,7 +52,12 @@ export class PermissionService {
 
     try {
       // 1. Fetch user & role directly from DB if not provided or to ensure freshness
-      let role = rawRole ? normalizeRole(rawRole) : '';
+      let role = rawRole ? tryNormalizeRole(rawRole) : '';
+      if (rawRole && !role) {
+        // Fail-closed: the caller supplied an explicit role that is neither
+        // canonical nor a known alias — grant nothing.
+        return effective;
+      }
       if (!role) {
         const { data: userRow } = await this.db
           .from('users')
@@ -63,7 +68,11 @@ export class PermissionService {
         if (!userRow || userRow.status !== 'ACTIVE') {
           return effective; // Fail closed if inactive or not found
         }
-        role = normalizeRole(userRow.role);
+        role = tryNormalizeRole(userRow.role);
+        if (!role) {
+          // Fail-closed: a stored role that resolves to nothing grants nothing.
+          return effective;
+        }
       }
 
       // ServerAdmin has full, unrestricted platform capabilities
@@ -157,7 +166,10 @@ export class PermissionService {
    * Get the numerical tier of a role (Lower = Higher Authority)
    */
   async getRoleTier(roleName: string): Promise<number> {
-    const norm = normalizeRole(roleName);
+    const norm = tryNormalizeRole(roleName);
+    // Fail-closed: an unrecognized role gets the lowest-authority tier (99)
+    // instead of silently inheriting Shop Floor Supervisor's tier.
+    if (!norm) return 99;
     if (ROLE_TIER_MAP[norm] !== undefined) {
       return ROLE_TIER_MAP[norm];
     }

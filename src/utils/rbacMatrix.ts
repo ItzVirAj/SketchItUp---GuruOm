@@ -152,7 +152,10 @@ export const CTA_PERMISSION_TABLE: CtaPermission[] = [
  * Check if a given role is authorized to perform a specific CTA action
  */
 export function isRoleAuthorizedForCta(role: string, ctaId: CtaId): boolean {
-  const normRole = normalizeRole(role);
+  const normRole = tryNormalizeRole(role);
+  // Fail-closed: an unrecognized role is never CTA-authorized (previously it
+  // silently inherited Shop Floor Supervisor's CTA authorizations here).
+  if (!normRole) return false;
   const cta = CTA_PERMISSION_TABLE.find(c => c.ctaId === ctaId);
   if (!cta) return false;
   // ServerAdmin, Owner, Admin (System), and TESTER can always act
@@ -622,8 +625,36 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
 // Normalization & Helper Functions
 // ============================================================================
 
-export function normalizeRole(rawRole?: string | null): string {
-  if (!rawRole || typeof rawRole !== 'string') return 'Shop Floor Supervisor';
+/**
+ * Thrown by requireCanonicalRole() when a role string matches neither the
+ * canonical role vocabulary nor any known legacy alias. Distinct class (not a
+ * generic Error) so authorization middleware and controllers can catch it
+ * specifically and map it to the right HTTP status (401/403 for authorization
+ * paths, 400 for write-validation paths). Mirrors the ForbiddenTaskActionError
+ * pattern in backend/src/modules/tasks/tasks.service.ts.
+ */
+export class UnrecognizedRoleError extends Error {
+  readonly rawRole: string | null | undefined;
+
+  constructor(rawRole: string | null | undefined) {
+    super(
+      `Unrecognized role: ${rawRole === null || rawRole === undefined ? String(rawRole) : `"${rawRole}"`}. ` +
+      'Must be one of the canonical roles or a known legacy alias (see RBAC_ROLE_MATRIX).'
+    );
+    this.name = 'UnrecognizedRoleError';
+    this.rawRole = rawRole;
+  }
+}
+
+/**
+ * Non-throwing role normalization (Bucket C / internal reuse).
+ * Returns the canonical role string, or null when the input matches no
+ * canonical role and no known legacy alias. NEVER guesses: callers must handle
+ * null explicitly — deny for authorization paths, degrade honestly (e.g. an
+ * "Unrecognized Role" badge) for display paths.
+ */
+export function tryNormalizeRole(rawRole?: string | null): string | null {
+  if (!rawRole || typeof rawRole !== 'string') return null;
   const trimmed = rawRole.replace(/\s+/g, ' ').trim();
 
   if (trimmed === 'ServerAdmin' || trimmed === 'SERVER_ADMIN' || trimmed === 'SERVER ADMIN' || trimmed === 'Server Admin') {
@@ -683,13 +714,31 @@ export function normalizeRole(rawRole?: string | null): string {
     return trimmed;
   }
 
-  return 'Shop Floor Supervisor';
+  // Fail-closed: unrecognized input resolves to null, never to a real role.
+  return null;
+}
+
+/**
+ * Strict role normalization (Buckets A & B — authorization + write validation).
+ * Throws UnrecognizedRoleError on anything unrecognized. Callers MUST catch it
+ * and map to the right HTTP status; a missing catch surfaces as a 500, which
+ * is still better than silently granting a different real role's permissions.
+ */
+export function requireCanonicalRole(rawRole?: string | null): string {
+  const resolved = tryNormalizeRole(rawRole);
+  if (resolved === null) {
+    throw new UnrecognizedRoleError(rawRole);
+  }
+  return resolved;
 }
 
 export function getRoleModulePermission(role: string, module: SystemModule): RolePermissionRule {
-  const normRole = normalizeRole(role);
-  const roleDef = RBAC_ROLE_MATRIX[normRole] || RBAC_ROLE_MATRIX['Shop Floor Supervisor'];
-  return roleDef.permissions[module] || { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' };
+  const normRole = tryNormalizeRole(role);
+  // Fail-closed: an unrecognized role gets NO_ACCESS on every module. It must
+  // never borrow another real role's row (the old code silently substituted
+  // Shop Floor Supervisor here).
+  const roleDef = normRole ? RBAC_ROLE_MATRIX[normRole] : undefined;
+  return roleDef?.permissions[module] || { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' };
 }
 
 export function hasMinimumAccess(userAccess: AccessLevel, requiredAccess: AccessLevel): boolean {
@@ -701,7 +750,11 @@ export function isWithinApprovalLimit(
   amount: number, 
   module: SystemModule = 'procurement'
 ): { allowed: boolean; limit: number | null; requiresEscalation: boolean } {
-  const normRole = normalizeRole(role);
+  const normRole = tryNormalizeRole(role);
+  // Fail-closed: an unrecognized role has no approval authority at all —
+  // deny and route to Owner escalation rather than borrowing another role's
+  // monetary ceiling.
+  if (!normRole) return { allowed: false, limit: null, requiresEscalation: true };
   const perm = getRoleModulePermission(normRole, module);
 
   // Unlimited authority (Owner, Admin)
@@ -719,23 +772,35 @@ export function isWithinApprovalLimit(
 }
 
 export function isScopeRestrictedToOwnRecords(role: string, module: SystemModule = 'production'): boolean {
-  const perm = getRoleModulePermission(role, module);
+  const normRole = tryNormalizeRole(role);
+  // Fail-closed (narrowest direction): an unrecognized role is treated as
+  // scope-restricted to its own records rather than implicitly all-seeing.
+  if (!normRole) return true;
+  const perm = getRoleModulePermission(normRole, module);
   return perm.scopeRule === 'OWN_RECORDS_ONLY';
 }
 
 export function isScopeRestrictedToEmployeeMaster(role: string): boolean {
-  const perm = getRoleModulePermission(role, 'masters');
+  const normRole = tryNormalizeRole(role);
+  // Fail-closed (narrowest direction): unrecognized role sees only the
+  // employee-master projection.
+  if (!normRole) return true;
+  const perm = getRoleModulePermission(normRole, 'masters');
   return perm.scopeRule === 'EMPLOYEE_MASTER_ONLY';
 }
 
 export function canPlaceClearQcHold(role: string): boolean {
-  const normRole = normalizeRole(role);
+  const normRole = tryNormalizeRole(role);
+  // Fail-closed: an unrecognized role can never place or clear QC holds.
+  if (!normRole) return false;
   if (normRole === 'Owner' || normRole === 'Admin (System)') return true;
   return normRole === 'Quality Inspector';
 }
 
 export function canEditCommercialTerms(role: string): boolean {
-  const normRole = normalizeRole(role);
+  const normRole = tryNormalizeRole(role);
+  // Fail-closed: an unrecognized role can never edit commercial terms.
+  if (!normRole) return false;
   const perm = getRoleModulePermission(normRole, 'orders');
   if (perm.scopeRule === 'NO_COMMERCIAL_EDIT') return false;
   return hasMinimumAccess(perm.accessLevel, 'CREATE_EDIT');

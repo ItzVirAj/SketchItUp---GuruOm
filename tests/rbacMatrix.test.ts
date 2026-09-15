@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { 
   RBAC_ROLE_MATRIX, 
-  normalizeRole, 
+  tryNormalizeRole,
+  requireCanonicalRole,
+  UnrecognizedRoleError,
   getRoleModulePermission, 
   hasMinimumAccess, 
   isWithinApprovalLimit, 
@@ -38,14 +40,60 @@ describe('RBAC Role-Permission Matrix & Monetary Approvals Engine', () => {
 
   describe('Role Normalization', () => {
     it('normalizes legacy role string variants correctly', () => {
-      expect(normalizeRole('SUPER ADMIN')).toBe('Admin (System)');
-      expect(normalizeRole('Owner')).toBe('Owner');
-      expect(normalizeRole('OPERATOR')).toBe('Machine Operator');
-      expect(normalizeRole('QC_MANAGER')).toBe('Quality Inspector');
-      expect(normalizeRole('DISPATCH_CLERK')).toBe('Dispatch Executive');
-      expect(normalizeRole('FINANCE_MANAGER')).toBe('Accountant');
-      expect(normalizeRole('Purchase Manager')).toBe('Purchase Manager');
-      expect(normalizeRole('HR/Admin')).toBe('HR/Admin');
+      expect(tryNormalizeRole('SUPER ADMIN')).toBe('Admin (System)');
+      expect(tryNormalizeRole('Owner')).toBe('Owner');
+      expect(tryNormalizeRole('OPERATOR')).toBe('Machine Operator');
+      expect(tryNormalizeRole('QC_MANAGER')).toBe('Quality Inspector');
+      expect(tryNormalizeRole('DISPATCH_CLERK')).toBe('Dispatch Executive');
+      expect(tryNormalizeRole('FINANCE_MANAGER')).toBe('Accountant');
+      expect(tryNormalizeRole('Purchase Manager')).toBe('Purchase Manager');
+      expect(tryNormalizeRole('HR/Admin')).toBe('HR/Admin');
+    });
+
+    it('fails closed on unrecognized roles instead of guessing a real role', () => {
+      // Previously every one of these silently resolved to 'Shop Floor Supervisor'.
+      expect(tryNormalizeRole(' C')).toBeNull();
+      expect(tryNormalizeRole('ACCOUNTANT')).toBeNull(); // uppercase — NOT a recognized alias
+      expect(tryNormalizeRole('ADMIN_OWNER')).toBeNull();
+      expect(tryNormalizeRole('garbage-role')).toBeNull();
+      expect(tryNormalizeRole('')).toBeNull();
+      expect(tryNormalizeRole('   ')).toBeNull();
+      expect(tryNormalizeRole(null)).toBeNull();
+      expect(tryNormalizeRole(undefined)).toBeNull();
+      expect(tryNormalizeRole(42 as any)).toBeNull();
+    });
+
+    it('requireCanonicalRole returns canonical roles and throws UnrecognizedRoleError otherwise', () => {
+      expect(requireCanonicalRole('Owner')).toBe('Owner');
+      expect(requireCanonicalRole('SUPER ADMIN')).toBe('Admin (System)');
+      expect(() => requireCanonicalRole('garbage-role')).toThrow(UnrecognizedRoleError);
+      expect(() => requireCanonicalRole(null)).toThrow(UnrecognizedRoleError);
+      try {
+        requireCanonicalRole('fluffyunicorn');
+        throw new Error('should not reach here');
+      } catch (err) {
+        expect(err).toBeInstanceOf(UnrecognizedRoleError);
+        expect((err as UnrecognizedRoleError).rawRole).toBe('fluffyunicorn');
+        expect((err as Error).message).toContain('fluffyunicorn');
+      }
+    });
+
+    it('getRoleModulePermission fails closed for unrecognized roles', () => {
+      // Must NOT borrow Shop Floor Supervisor's row anymore.
+      expect(getRoleModulePermission('garbage-role', 'orders').accessLevel).toBe('NO_ACCESS');
+      expect(getRoleModulePermission('garbage-role', 'procurement').approvalLimit).toBeNull();
+      expect(getRoleModulePermission('garbage-role', 'qc').scopeRule).toBe('ALL');
+    });
+
+    it('scope and approval helpers fail closed for unrecognized roles', () => {
+      expect(isScopeRestrictedToOwnRecords('garbage-role', 'production')).toBe(true);
+      expect(isScopeRestrictedToEmployeeMaster('garbage-role')).toBe(true);
+      expect(canPlaceClearQcHold('garbage-role')).toBe(false);
+      expect(canEditCommercialTerms('garbage-role')).toBe(false);
+      expect(isWithinApprovalLimit('garbage-role', 10, 'procurement')).toEqual({
+        allowed: false, limit: null, requiresEscalation: true
+      });
+      expect(isRoleAuthorizedForCta('garbage-role', 'UPDATE_TASK_STATUS')).toBe(false);
     });
   });
 

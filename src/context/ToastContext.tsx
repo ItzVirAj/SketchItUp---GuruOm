@@ -51,8 +51,12 @@ export const toast = {
   }
 };
 
-// Expose on window for runtime testing
-if (typeof window !== 'undefined') {
+// Expose on window for runtime testing — DEV BUILDS ONLY. In production this
+// handle let any injected or third-party script fabricate convincing "success"
+// toasts, which is a cheap social-engineering primitive (e.g. faking a
+// "Payment recorded" confirmation). import.meta.env.DEV is statically replaced
+// at build time, so this block is dead-code-eliminated from prod bundles.
+if (import.meta.env.DEV && typeof window !== 'undefined') {
   (window as any).appToast = toast;
 }
 

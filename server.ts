@@ -2,9 +2,9 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { GoogleGenAI } from '@google/genai';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
+import helmet from 'helmet';
 import dotenv from 'dotenv';
 import authRoutes from './backend/src/modules/auth/auth.routes';
 import mastersRoutes from './backend/src/modules/masters/masters.routes';
@@ -67,6 +67,22 @@ async function startServer() {
   };
   app.get('/health', handleHealth);
   app.get('/api/health', handleHealth);
+
+  // Security headers. CSP is deliberately left DISABLED here: this server also
+  // serves the Vite SPA (and in dev, Vite's HMR client), and a default-src CSP
+  // would break inline styles/scripts the bundle relies on. Enabling CSP needs
+  // a nonce/hash strategy worked out against the real bundle — a separate,
+  // testable change rather than something to switch on blind. Everything else
+  // helmet provides (X-Frame-Options/frameguard, X-Content-Type-Options,
+  // Referrer-Policy, HSTS in production, X-DNS-Prefetch-Control, etc.) is safe
+  // to enable as-is and costs nothing.
+  app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    // Allow the SPA's assets/images to be loaded cross-origin (e.g. from a CDN
+    // or a separately-hosted frontend origin) — 'same-origin' would break that.
+    crossOriginResourcePolicy: { policy: 'cross-origin' }
+  }));
 
   // CORS Configuration for Credentialed Requests (Cookies & JWTs)
   const allowedOrigins = (process.env.FRONTEND_ORIGIN || 'http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000')
@@ -149,32 +165,14 @@ async function startServer() {
     app.use('/api/v1/testing', testingRoutes);
   }
 
-  // Gemini Executive AI Copilot API
-  app.post('/api/gemini/analyze', async (req, res) => {
-    try {
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        return res.status(400).json({ error: 'GEMINI_API_KEY environment variable is missing.' });
-      }
-      const { prompt, context } = req.body;
-      const ai = new GoogleGenAI({ apiKey });
-      const systemInstruction = `You are Stratum AI Executive Copilot, an advanced business analytics and workspace intelligence assistant. Provide precise, actionable, data-driven answers in clean markdown format. Keep tone professional, concise, and executive-ready. Focus on metric trends, anomaly resolution, team performance, and strategic growth.`;
-
-      const response = await ai.models.generateContent({
-        model: process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite',
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: `${systemInstruction}\n\nContext Data: ${JSON.stringify(context || {})}\n\nUser Prompt: ${prompt}` }]
-          }
-        ]
-      });
-      res.json({ text: response.text });
-    } catch (err: any) {
-      logger.error('Gemini API Error:', err);
-      res.status(500).json({ error: err.message || 'Failed to process AI request' });
-    }
-  });
+  // REMOVED (security): `POST /api/gemini/analyze` was mounted here with no
+  // requireAuth and no rate limiting — any anonymous caller on the internet
+  // could send arbitrary prompts through it and consume the GEMINI_API_KEY
+  // quota/budget. Its only frontend caller (AiStudioView.tsx) is no longer
+  // imported anywhere in the live console, so the endpoint had zero
+  // legitimate traffic. If the AI copilot is revived, re-mount it behind
+  // requireAuth + requirePermission + a rate limiter, and re-wire the
+  // frontend at the same time — do not restore it unauthenticated.
 
   // Vite middleware in development vs Static Assets in production
   if (process.env.NODE_ENV !== 'production') {

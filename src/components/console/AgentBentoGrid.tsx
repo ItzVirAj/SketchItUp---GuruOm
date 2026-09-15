@@ -80,6 +80,7 @@ interface FeatCardProps {
   badge?: string;
   badgeColor?: string;
   className?: string;
+  isDarkMode?: boolean;
 }
 
 export function FeatCard({ 
@@ -88,7 +89,8 @@ export function FeatCard({
   children, 
   badge, 
   badgeColor = "bg-[#5B75F8]/10 text-[#5B75F8] dark:text-[#7B92FF] border-[#5B75F8]/20", 
-  className = "" 
+  className = "",
+  isDarkMode = false
 }: FeatCardProps) {
   return (
     <motion.div
@@ -97,10 +99,10 @@ export function FeatCard({
       transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
         "group relative flex flex-col gap-2 overflow-hidden rounded-3xl p-5 font-sans backdrop-blur-2xl",
-        "bg-gradient-to-b from-white via-white to-slate-50/70 dark:from-[#18181B]/90 dark:to-[#18181B]/90",
-        "border border-slate-200/90 dark:border-white/15",
-        "shadow-[inset_0_1px_0_0_#ffffff,0_1px_3px_0_rgba(15,23,42,0.05),0_8px_20px_-3px_rgba(15,23,42,0.07)] dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12),0_16px_36px_rgba(0,0,0,0.5)]",
-        "hover:border-slate-300 hover:shadow-[inset_0_1px_0_0_#ffffff,0_4px_12px_rgba(15,23,42,0.08),0_16px_32px_-4px_rgba(15,23,42,0.1)] dark:hover:border-white/25 transition-all",
+        "bg-gradient-to-b from-white via-white to-slate-50/70 dark:from-[#18181B]/95 dark:via-[#18181B]/95 dark:to-[#121215]/95",
+        "border border-slate-200/90 dark:border-white/10",
+        "shadow-[inset_0_1px_0_0_#ffffff,0_1px_3px_0_rgba(15,23,42,0.05),0_8px_20px_-3px_rgba(15,23,42,0.07)] dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08),0_16px_36px_rgba(0,0,0,0.5)]",
+        "hover:border-slate-300 dark:hover:border-white/20 hover:shadow-[inset_0_1px_0_0_#ffffff,0_4px_12px_rgba(15,23,42,0.08),0_16px_32px_-4px_rgba(15,23,42,0.1)] dark:hover:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12),0_20px_40px_rgba(0,0,0,0.6)] transition-all",
         className
       )}
     >
@@ -117,7 +119,7 @@ export function FeatCard({
           <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed max-w-[95%]">{description}</p>
         </div>
       </div>
-      <div className="relative mt-2 flex-1 w-full rounded-2xl overflow-hidden border border-slate-200/80 dark:border-white/10 bg-slate-50/80 dark:bg-white/[0.04] shadow-[inset_0_1px_1px_0_rgba(15,23,42,0.02)] p-3">
+      <div className="relative mt-2 flex-1 w-full rounded-2xl overflow-hidden border border-slate-200/80 dark:border-white/10 bg-slate-50/80 dark:bg-white/[0.03] shadow-[inset_0_1px_1px_0_rgba(15,23,42,0.02)] p-3 flex flex-col justify-between">
         {children}
       </div>
     </motion.div>
@@ -248,9 +250,9 @@ function StageTile({
       title={`${stage.name} (${stage.role}): ${stage.action}. Click to open ${stage.targetView}.`}
       className={cn(
         "group relative flex flex-col justify-between p-2 rounded-xl border transition-all cursor-pointer select-none",
-        "bg-white/90 dark:bg-[#18181B]/95",
+        "bg-white/90 dark:bg-[#121215]/95",
         "border-slate-200/80 dark:border-white/10",
-        "hover:shadow-md hover:border-slate-300 dark:hover:border-white/25 hover:-translate-y-0.5",
+        "hover:shadow-md hover:border-slate-300 dark:hover:border-white/20 hover:-translate-y-0.5",
         "min-h-[82px]"
       )}
     >
@@ -360,7 +362,7 @@ export function CardOrderPipeline({
           <div className="h-px bg-slate-200/80 dark:bg-slate-800 flex-1 mr-2" />
           <div className="flex items-center gap-1 text-[8.5px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
             <span>Routing to Quality & Outward Transit</span>
-            <CaretRight weight="bold" className="w-3 h-3 text-slate-400 rotate-90" />
+            <CaretRight weight="bold" className="w-3 h-3 text-slate-400 dark:text-slate-500 rotate-90" />
           </div>
           <div className="h-px bg-slate-200/80 dark:bg-slate-800 w-6 ml-2" />
         </div>
@@ -550,7 +552,7 @@ export function CardShortages({
                   className="px-2.5 py-1.5 rounded-xl border border-slate-100 dark:border-white/5 bg-white/70 dark:bg-white/[0.02] hover:bg-white dark:hover:bg-white/[0.05] transition-all flex items-center justify-between gap-2 cursor-pointer group"
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="font-mono text-[11px] font-bold text-slate-500 dark:text-slate-400 group-hover:text-[var(--accent-text-light)] dark:group-hover:text-[var(--accent-text-dark)] transition-colors">
+                    <span className="font-mono text-[11px] font-bold text-slate-500 dark:text-slate-400 group-hover:text-[#5B75F8] dark:group-hover:text-[#7B92FF] transition-colors">
                       {rm.code}
                     </span>
                     <span className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate max-w-[120px]">
@@ -561,7 +563,7 @@ export function CardShortages({
                     <span className="font-bold text-emerald-600 dark:text-emerald-400">
                       {rm.available} {rm.unit}
                     </span>
-                    <span className="text-[9px] text-slate-400">OK</span>
+                    <span className="text-[9px] text-slate-400 dark:text-slate-500">OK</span>
                   </div>
                 </div>
               ))}
@@ -573,13 +575,13 @@ export function CardShortages({
       {/* Footer Subtext */}
       <div className="pt-1.5 border-t border-slate-100 dark:border-white/10 flex items-center justify-between text-[10.5px]">
         <span className="text-slate-400 dark:text-slate-500 flex items-center gap-1">
-          <Package className="w-3 h-3 text-[var(--accent-primary)]" />
+          <Package className="w-3 h-3 text-[#5B75F8] dark:text-[#7B92FF]" />
           <span>Stores & BOM Sync</span>
         </span>
         <button
           type="button"
           onClick={() => onNavigateView?.('inventory')}
-          className="font-bold text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)] hover:underline cursor-pointer"
+          className="font-bold text-[#5B75F8] dark:text-[#7B92FF] hover:underline cursor-pointer"
         >
           {allShortages.length > 0 ? "Inventory Queue →" : "View Inventory →"}
         </button>
@@ -787,26 +789,26 @@ export function CardQualityAndDispatch({
                 <div
                   key={`qc-${q.id || q.jobNo}`}
                   onClick={() => onNavigateView?.('qc')}
-                  className="p-1.5 rounded-xl border border-slate-200/80 dark:border-white/10 bg-white/90 dark:bg-[#18181B] hover:border-[#5B75F8]/40 transition-all cursor-pointer flex items-center justify-between gap-2 shadow-2xs group"
+                  className="p-1.5 rounded-xl border border-slate-200/80 dark:border-white/10 bg-white/90 dark:bg-[#121215] hover:border-[#5B75F8]/40 transition-all cursor-pointer flex items-center justify-between gap-2 shadow-2xs group"
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     <div className={cn(
                       "w-5 h-5 rounded-lg flex items-center justify-center shrink-0 border",
-                      isPass ? "bg-emerald-500/15 text-emerald-600 border-emerald-500/20" : isHold ? "bg-rose-500/15 text-rose-600 border-rose-500/20" : "bg-amber-500/15 text-amber-600 border-amber-500/20"
+                      isPass ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" : isHold ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/20" : "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/20"
                     )}>
                       <ShieldCheck weight="bold" className="w-3 h-3" />
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         <span className="font-mono text-[10px] font-black text-slate-800 dark:text-slate-200">{q.partCode || q.jobNo}</span>
-                        <span className="text-[9px] text-slate-400 truncate">{q.orderPo}</span>
+                        <span className="text-[9px] text-slate-400 dark:text-slate-500 truncate">{q.orderPo}</span>
                       </div>
-                      <div className="text-[9px] text-slate-500 truncate leading-tight">{q.partDescription || 'Precision Part'} • {q.qty} NOS</div>
+                      <div className="text-[9px] text-slate-500 dark:text-slate-400 truncate leading-tight">{q.partDescription || 'Precision Part'} • {q.qty} NOS</div>
                     </div>
                   </div>
                   <span className={cn(
                     "text-[8.5px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 uppercase tracking-wider",
-                    isPass ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : isHold ? "bg-rose-500/10 text-rose-600 border-rose-500/20" : "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                    isPass ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" : isHold ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20" : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
                   )}>
                     {q.qcStatus || 'PENDING'}
                   </span>
@@ -822,26 +824,26 @@ export function CardQualityAndDispatch({
                 <div
                   key={`disp-${d.challanNo}`}
                   onClick={() => onNavigateView?.('dispatch')}
-                  className="p-1.5 rounded-xl border border-slate-200/80 dark:border-white/10 bg-white/90 dark:bg-[#18181B] hover:border-[#5B75F8]/40 transition-all cursor-pointer flex items-center justify-between gap-2 shadow-2xs group"
+                  className="p-1.5 rounded-xl border border-slate-200/80 dark:border-white/10 bg-white/90 dark:bg-[#121215] hover:border-[#5B75F8]/40 transition-all cursor-pointer flex items-center justify-between gap-2 shadow-2xs group"
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     <div className={cn(
                       "w-5 h-5 rounded-lg flex items-center justify-center shrink-0 border",
-                      isDelivered ? "bg-emerald-500/15 text-emerald-600 border-emerald-500/20" : isDispatched ? "bg-cyan-500/15 text-cyan-600 border-cyan-500/20" : "bg-purple-500/15 text-purple-600 border-purple-500/20"
+                      isDelivered ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" : isDispatched ? "bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border-cyan-500/20" : "bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/20"
                     )}>
                       <Truck weight="bold" className="w-3 h-3" />
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         <span className="font-mono text-[10px] font-black text-slate-800 dark:text-slate-200">{d.challanNo}</span>
-                        <span className="text-[9px] text-slate-400 truncate">{d.orderPo}</span>
+                        <span className="text-[9px] text-slate-400 dark:text-slate-500 truncate">{d.orderPo}</span>
                       </div>
-                      <div className="text-[9px] text-slate-500 truncate leading-tight">{d.transporter || 'Direct Fleet'} • {d.vehicleNo || 'Vehicle Assigned'}</div>
+                      <div className="text-[9px] text-slate-500 dark:text-slate-400 truncate leading-tight">{d.transporter || 'Direct Fleet'} • {d.vehicleNo || 'Vehicle Assigned'}</div>
                     </div>
                   </div>
                   <span className={cn(
                     "text-[8.5px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 uppercase tracking-wider",
-                    isDelivered ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : isDispatched ? "bg-cyan-500/10 text-cyan-600 border-cyan-500/20" : "bg-purple-500/10 text-purple-600 border-purple-500/20"
+                    isDelivered ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" : isDispatched ? "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20" : "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20"
                   )}>
                     {d.status || 'PENDING'}
                   </span>
@@ -868,22 +870,22 @@ export function CardQualityAndDispatch({
                   <div
                     key={`q-full-${q.id || q.jobNo}`}
                     onClick={() => onNavigateView?.('qc')}
-                    className="p-2 rounded-xl border border-slate-200/80 dark:border-white/10 bg-white/90 dark:bg-[#18181B] hover:border-[#5B75F8]/40 transition-all cursor-pointer flex items-center justify-between gap-2 shadow-2xs"
+                    className="p-2 rounded-xl border border-slate-200/80 dark:border-white/10 bg-white/90 dark:bg-[#121215] hover:border-[#5B75F8]/40 transition-all cursor-pointer flex items-center justify-between gap-2 shadow-2xs"
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         <span className="font-mono text-xs font-black text-slate-800 dark:text-slate-200">{q.partCode}</span>
-                        <span className="text-[10px] text-slate-400">PO: {q.orderPo}</span>
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500">PO: {q.orderPo}</span>
                       </div>
-                      <div className="text-[10px] text-slate-500 truncate mt-0.5">{q.partDescription}</div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">{q.partDescription}</div>
                       {q.inspectorNotes && (
-                        <div className="text-[9px] text-slate-400 italic truncate mt-0.5">"{q.inspectorNotes}"</div>
+                        <div className="text-[9px] text-slate-400 dark:text-slate-500 italic truncate mt-0.5">"{q.inspectorNotes}"</div>
                       )}
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
                       <span className={cn(
                         "text-[9px] font-bold px-2 py-0.5 rounded-full border uppercase",
-                        isPass ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : isHold ? "bg-rose-500/10 text-rose-600 border-rose-500/20" : "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                        isPass ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" : isHold ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20" : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
                       )}>
                         {q.qcStatus || 'PENDING'}
                       </span>
@@ -895,7 +897,7 @@ export function CardQualityAndDispatch({
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-center p-3">
                 <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">QC Queue Clear</p>
-                <p className="text-[9.5px] text-slate-400 mt-0.5">Zero outstanding stage or PDI inspections</p>
+                <p className="text-[9.5px] text-slate-400 dark:text-slate-500 mt-0.5">Zero outstanding stage or PDI inspections</p>
               </div>
             )}
           </div>
@@ -911,22 +913,22 @@ export function CardQualityAndDispatch({
                   <div
                     key={`d-full-${d.challanNo}`}
                     onClick={() => onNavigateView?.('dispatch')}
-                    className="p-2 rounded-xl border border-slate-200/80 dark:border-white/10 bg-white/90 dark:bg-[#18181B] hover:border-[#5B75F8]/40 transition-all cursor-pointer flex items-center justify-between gap-2 shadow-2xs"
+                    className="p-2 rounded-xl border border-slate-200/80 dark:border-white/10 bg-white/90 dark:bg-[#121215] hover:border-[#5B75F8]/40 transition-all cursor-pointer flex items-center justify-between gap-2 shadow-2xs"
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         <span className="font-mono text-xs font-black text-slate-800 dark:text-slate-200">{d.challanNo}</span>
-                        <span className="text-[10px] text-slate-400">PO: {d.orderPo}</span>
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500">PO: {d.orderPo}</span>
                       </div>
-                      <div className="text-[10px] text-slate-500 truncate mt-0.5">{d.transporter || 'Direct Delivery'} • {d.vehicleNo || 'Vehicle TBD'}</div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">{d.transporter || 'Direct Delivery'} • {d.vehicleNo || 'Vehicle TBD'}</div>
                       {d.date && (
-                        <div className="text-[9px] text-slate-400 font-mono mt-0.5">{d.date}</div>
+                        <div className="text-[9px] text-slate-400 dark:text-slate-500 font-mono mt-0.5">{d.date}</div>
                       )}
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
                       <span className={cn(
                         "text-[9px] font-bold px-2 py-0.5 rounded-full border uppercase",
-                        isDelivered ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : isDispatched ? "bg-cyan-500/10 text-cyan-600 border-cyan-500/20" : "bg-purple-500/10 text-purple-600 border-purple-500/20"
+                        isDelivered ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" : isDispatched ? "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20" : "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20"
                       )}>
                         {d.status || 'PENDING'}
                       </span>
@@ -973,25 +975,6 @@ export function CardQualityAndDispatch({
 
 // Backward-compatibility alias
 export const Card3 = CardQualityAndDispatch;
-
-/* ─────────────────────────────────────────────
-   Card 4 – ERP & Vector Knowledge Base Namespaces
-   Live querying across drawings, QC SOPs, and customer POs
-   ───────────────────────────────────────────── */
-
-const NS_ICONS: Record<string, React.ElementType> = {
-  cad_drawings: FileCode,
-  qc_standards: ShieldCheck,
-  orders_db: Database,
-  telemetry: Gauge,
-};
-
-const NS_COLORS: Record<string, { bar: string; dot: string; badge: string; buttonBg: string; buttonBorder: string }> = {
-  cad_drawings: { bar: "from-violet-600 to-violet-400", dot: "bg-violet-500", badge: "bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20", buttonBg: "bg-violet-600", buttonBorder: "border-violet-500" },
-  qc_standards: { bar: "from-[#5B75F8] to-blue-400", dot: "bg-[#5B75F8]", badge: "bg-[#5B75F8]/10 text-[#5B75F8] dark:text-[#7B92FF] border-[#5B75F8]/20", buttonBg: "bg-[#5B75F8]", buttonBorder: "border-[#5B75F8]" },
-  orders_db: { bar: "from-cyan-600 to-cyan-400", dot: "bg-cyan-500", badge: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20", buttonBg: "bg-cyan-600", buttonBorder: "border-cyan-500" },
-  telemetry: { bar: "from-amber-600 to-amber-400", dot: "bg-amber-500", badge: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20", buttonBg: "bg-amber-600", buttonBorder: "border-amber-500" },
-};
 
 /* ─────────────────────────────────────────────
    Card 4 – Live Commercial Telemetry: Customer Invoices & Vendor Payables
@@ -1061,7 +1044,7 @@ export function CardFinance({
             <span className="text-sm font-extrabold font-mono text-slate-900 dark:text-white tracking-tight block">
               {currencySymbol}{totalReceivables.toLocaleString('en-IN')}
             </span>
-            <span className="text-[9.5px] text-slate-400 block truncate">
+            <span className="text-[9.5px] text-slate-400 dark:text-slate-500 block truncate">
               {invoices.length} inv • {overdueReceivablesCount} overdue
             </span>
           </div>
@@ -1082,7 +1065,7 @@ export function CardFinance({
             )}>
               {netLiquidity >= 0 ? '+' : ''}{currencySymbol}{netLiquidity.toLocaleString('en-IN')}
             </span>
-            <span className="text-[9.5px] text-slate-400 block truncate">
+            <span className="text-[9.5px] text-slate-400 dark:text-slate-500 block truncate">
               Cashflow Balance
             </span>
           </div>
@@ -1108,7 +1091,7 @@ export function CardFinance({
             <span className="text-sm font-extrabold font-mono text-slate-900 dark:text-white tracking-tight block">
               {currencySymbol}{totalPayables.toLocaleString('en-IN')}
             </span>
-            <span className="text-[9.5px] text-slate-400 block truncate">
+            <span className="text-[9.5px] text-slate-400 dark:text-slate-500 block truncate">
               {payables.length} bills • {overduePayablesCount} overdue
             </span>
           </div>
@@ -1122,7 +1105,7 @@ export function CardFinance({
       <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-2.5 min-h-[145px] max-h-[160px] overflow-hidden">
         
         {/* Column 1: Customer Invoices */}
-        <div className="flex flex-col justify-between rounded-2xl border border-slate-200/80 dark:border-white/10 bg-slate-50/70 dark:bg-black/30 p-2.5 min-w-0">
+        <div className="flex flex-col justify-between rounded-2xl border border-slate-200/80 dark:border-white/10 bg-slate-50/70 dark:bg-black/20 p-2.5 min-w-0">
           <div className="flex items-center justify-between gap-1 pb-1.5 border-b border-slate-200/60 dark:border-white/5">
             <div className="flex items-center gap-1.5 min-w-0">
               <Receipt weight="bold" className="w-3.5 h-3.5 text-[#5B75F8] dark:text-[#7B92FF] shrink-0" />
@@ -1146,7 +1129,7 @@ export function CardFinance({
                 <div
                   key={inv.invoiceNo || inv.id}
                   onClick={() => onNavigateView?.('invoices')}
-                  className="p-2 rounded-xl border border-slate-200/60 dark:border-white/5 bg-white/90 dark:bg-[#18181D] hover:bg-white dark:hover:bg-white/[0.06] transition-all flex items-center justify-between gap-2 cursor-pointer shadow-2xs group"
+                  className="p-2 rounded-xl border border-slate-200/60 dark:border-white/5 bg-white/90 dark:bg-[#121215] hover:bg-white dark:hover:bg-white/[0.04] transition-all flex items-center justify-between gap-2 cursor-pointer shadow-2xs group"
                 >
                   <div className="min-w-0 flex flex-col">
                     <div className="flex items-center gap-1.5">
@@ -1170,7 +1153,7 @@ export function CardFinance({
                     <span className="text-xs font-extrabold text-slate-900 dark:text-white block">
                       {currencySymbol}{Number(inv.totalAmount || inv.amount || 0).toLocaleString('en-IN')}
                     </span>
-                    <span className="text-[9px] text-slate-400 block">
+                    <span className="text-[9px] text-slate-400 dark:text-slate-500 block">
                       {inv.dueDate ? `Due ${inv.dueDate.slice(5)}` : 'On receipt'}
                     </span>
                   </div>
@@ -1179,14 +1162,14 @@ export function CardFinance({
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-center p-2">
                 <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">0 Open Invoices</p>
-                <p className="text-[9.5px] text-slate-400 mt-0.5">Commercial invoices auto-generate upon outbound dispatch</p>
+                <p className="text-[9.5px] text-slate-400 dark:text-slate-500 mt-0.5">Commercial invoices auto-generate upon outbound dispatch</p>
               </div>
             )}
           </div>
         </div>
 
         {/* Column 2: Vendor Bills */}
-        <div className="flex flex-col justify-between rounded-2xl border border-slate-200/80 dark:border-white/10 bg-slate-50/70 dark:bg-black/30 p-2.5 min-w-0">
+        <div className="flex flex-col justify-between rounded-2xl border border-slate-200/80 dark:border-white/10 bg-slate-50/70 dark:bg-black/20 p-2.5 min-w-0">
           <div className="flex items-center justify-between gap-1 pb-1.5 border-b border-slate-200/60 dark:border-white/5">
             <div className="flex items-center gap-1.5 min-w-0">
               <CreditCard weight="bold" className="w-3.5 h-3.5 text-violet-500 dark:text-violet-400 shrink-0" />
@@ -1210,7 +1193,7 @@ export function CardFinance({
                 <div
                   key={bill.billNo || bill.id}
                   onClick={() => onNavigateView?.('payables')}
-                  className="p-2 rounded-xl border border-slate-200/60 dark:border-white/5 bg-white/90 dark:bg-[#18181D] hover:bg-white dark:hover:bg-white/[0.06] transition-all flex items-center justify-between gap-2 cursor-pointer shadow-2xs group"
+                  className="p-2 rounded-xl border border-slate-200/60 dark:border-white/5 bg-white/90 dark:bg-[#121215] hover:bg-white dark:hover:bg-white/[0.04] transition-all flex items-center justify-between gap-2 cursor-pointer shadow-2xs group"
                 >
                   <div className="min-w-0 flex flex-col">
                     <div className="flex items-center gap-1.5">
@@ -1234,7 +1217,7 @@ export function CardFinance({
                     <span className="text-xs font-extrabold text-slate-900 dark:text-white block">
                       {currencySymbol}{Number(bill.amount || 0).toLocaleString('en-IN')}
                     </span>
-                    <span className="text-[9px] text-slate-400 block">
+                    <span className="text-[9px] text-slate-400 dark:text-slate-500 block">
                       {bill.dueDate ? `Due ${bill.dueDate.slice(5)}` : 'Net 30'}
                     </span>
                   </div>
@@ -1243,7 +1226,7 @@ export function CardFinance({
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-center p-2">
                 <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">0 Outstanding Bills</p>
-                <p className="text-[9.5px] text-slate-400 mt-0.5">Supplier bills 3-way matched against GRN inspection receipts</p>
+                <p className="text-[9.5px] text-slate-400 dark:text-slate-500 mt-0.5">Supplier bills 3-way matched against GRN inspection receipts</p>
               </div>
             )}
           </div>
@@ -1351,7 +1334,7 @@ export function Card5({
         {industryStats.map((st, i) => (
           <motion.div
             key={i}
-            className="relative rounded-xl border border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-[#121215] shadow-2xs hover:shadow-xs transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-300 flex flex-col justify-between p-3 group hover:border-slate-300 dark:hover:border-slate-700"
+            className="relative rounded-xl border border-slate-200/80 dark:border-white/10 bg-white/90 dark:bg-[#121215] shadow-2xs hover:shadow-xs transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-300 flex flex-col justify-between p-3 group hover:border-slate-300 dark:hover:border-white/20"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.08, type: "spring", stiffness: 300, damping: 25 }}
@@ -1378,7 +1361,7 @@ export function Card5({
                 <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 tracking-tight truncate">{st.name}</span>
                 <span className="text-[9.5px] font-medium text-slate-400 dark:text-slate-500 tabular-nums shrink-0">{st.sublabel}</span>
               </div>
-              <div className="w-full h-1.5 bg-slate-200/70 dark:bg-slate-800/70 rounded-full overflow-hidden shadow-inner relative">
+              <div className="w-full h-1.5 bg-slate-200/70 dark:bg-white/10 rounded-full overflow-hidden shadow-inner relative">
                 <motion.div
                   className={cn("absolute left-0 top-0 bottom-0 rounded-full", st.color)}
                   initial={{ width: "0%" }}
@@ -1451,7 +1434,7 @@ export function AgentBentoGrid({
         />
       ),
       colSpan: "lg:col-span-1",
-      height: "h-[340px]",
+      height: "min-h-[350px]",
     },
     {
       title: "Material Shortages & Deficit Stream",
@@ -1468,7 +1451,7 @@ export function AgentBentoGrid({
         />
       ),
       colSpan: "lg:col-span-1",
-      height: "h-[340px]",
+      height: "min-h-[350px]",
     },
     {
       title: "Quality & Dispatch Operations",
@@ -1489,7 +1472,7 @@ export function AgentBentoGrid({
         />
       ),
       colSpan: "lg:col-span-1",
-      height: "h-[340px]",
+      height: "min-h-[350px]",
     },
     {
       title: "Commercial Telemetry: Invoices & Vendor Payables",
@@ -1508,7 +1491,7 @@ export function AgentBentoGrid({
         />
       ),
       colSpan: "lg:col-span-2",
-      height: "h-[340px]",
+      height: "min-h-[350px]",
     },
     {
       title: "Shopfloor & Plant Industry Stats",
@@ -1523,7 +1506,7 @@ export function AgentBentoGrid({
         />
       ),
       colSpan: "lg:col-span-1",
-      height: "h-[340px]",
+      height: "min-h-[350px]",
     }
   ];
 
@@ -1567,6 +1550,7 @@ export function AgentBentoGrid({
             badge={card.badge}
             badgeColor={card.badgeColor}
             className={cn(card.colSpan, card.height)}
+            isDarkMode={isDarkMode}
           >
             {card.visual}
           </FeatCard>

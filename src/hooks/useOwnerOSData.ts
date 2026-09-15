@@ -1633,49 +1633,65 @@ export function useOwnerOSData(currentUser?: SystemUser) {
   };
 
   const handleImportOMGST = async (importedData: { customers?: CustomerMaster[]; vendors?: VendorMaster[]; machines?: MachineMaster[]; items?: MasterItem[] }) => {
-    let importedCount = 0;
-    if (importedData.customers?.length) {
-      for (const c of importedData.customers) {
-        try {
-          await insertCustomer(c);
-          importedCount++;
-        } catch (e) {
-          console.warn('Import customer error:', e);
+    // Previously this awaited one insert at a time in a sequential for-loop,
+    // so a 500-row spreadsheet became 500 serial HTTP round-trips, and every
+    // failure was swallowed into console.warn with no user-visible report.
+    //
+    // Bounded concurrency (not Promise.all over the whole array) is deliberate:
+    // firing hundreds of simultaneous inserts would just move the bottleneck
+    // onto the server / Supabase connection pool. Chunks of 5 keep it fast
+    // without stampeding the backend.
+    const CONCURRENCY = 5;
+
+    const importGroup = async <T,>(
+      rows: T[] | undefined,
+      insert: (row: T) => Promise<unknown>,
+      label: string
+    ): Promise<{ ok: number; failed: number }> => {
+      if (!rows?.length) return { ok: 0, failed: 0 };
+      let ok = 0;
+      let failed = 0;
+      for (let i = 0; i < rows.length; i += CONCURRENCY) {
+        const chunk = rows.slice(i, i + CONCURRENCY);
+        const results = await Promise.allSettled(chunk.map(insert));
+        for (const r of results) {
+          if (r.status === 'fulfilled') {
+            ok++;
+          } else {
+            failed++;
+            console.warn(`Import ${label} error:`, r.reason);
+          }
         }
       }
+      return { ok, failed };
+    };
+
+    const [customerRes, vendorRes, machineRes, itemRes] = [
+      await importGroup(importedData.customers, insertCustomer, 'customer'),
+      await importGroup(importedData.vendors, insertVendor, 'vendor'),
+      await importGroup(importedData.machines, insertMachine, 'machine'),
+      await importGroup(importedData.items, insertMaster, 'item master')
+    ];
+
+    const importedCount = customerRes.ok + vendorRes.ok + machineRes.ok + itemRes.ok;
+    const failedCount = customerRes.failed + vendorRes.failed + machineRes.failed + itemRes.failed;
+
+    await addAuditLog(
+      'masters',
+      'import_omgst',
+      `Imported ${importedCount} OMGST master records` + (failedCount ? ` (${failedCount} failed)` : '') + '.'
+    );
+
+    // Surface partial failures instead of silently reporting success.
+    if (failedCount > 0) {
+      toast.warning(
+        `${importedCount} record${importedCount === 1 ? '' : 's'} imported, ${failedCount} failed. Check the browser console for per-row details.`,
+        'Partial Import'
+      );
     }
-    if (importedData.vendors?.length) {
-      for (const v of importedData.vendors) {
-        try {
-          await insertVendor(v);
-          importedCount++;
-        } catch (e) {
-          console.warn('Import vendor error:', e);
-        }
-      }
-    }
-    if (importedData.machines?.length) {
-      for (const m of importedData.machines) {
-        try {
-          await insertMachine(m);
-          importedCount++;
-        } catch (e) {
-          console.warn('Import machine error:', e);
-        }
-      }
-    }
-    if (importedData.items?.length) {
-      for (const it of importedData.items) {
-        try {
-          await insertMaster(it);
-          importedCount++;
-        } catch (e) {
-          console.warn('Import item master error:', e);
-        }
-      }
-    }
-    await addAuditLog('masters', 'import_omgst', `Imported ${importedCount} OMGST master data tables in real-time.`);
+
     await loadAllData();
+    return { importedCount, failedCount };
   };
 
   return {

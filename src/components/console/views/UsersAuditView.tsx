@@ -328,36 +328,31 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
   };
 
   // Synchronize URL modals
+  // URL-driven hydration only: when the modal opens via URL navigation (not a
+  // direct button click), hydrate edit state from the userId param. The guard
+  // `!userToEdit` prevents re-initialization when handleOpenEditUser already set state.
   React.useEffect(() => {
     if (editUserModal.isOpen) {
       const { userId } = editUserModal.params;
-      if (userId) {
+      if (userId && !userToEdit) {
         const found = users.find(u => u.id === userId || u.userId === userId || u.code === userId);
         if (found) {
-          handleOpenEditUser(found);
+          setUserToEdit(found);
+          setEditFullName(found.name || found.fullName || '');
+          setEditEmail(found.email || '');
+          const rawRole = String(found.userRole || found.role || '');
+          setEditRole(tryNormalizeRole(rawRole) ?? (rawRole || 'Shop Floor Supervisor'));
+          setEditDepartment(found.department || 'Executive Management');
+          setEditMobile(found.mobile || found.phone || '');
+          setEditStatus(found.status === 'REVOKED' || found.status === 'Inactive' ? 'Inactive' : 'Active');
+          setEditReportingManager(found.reportingManager || '');
+          setEditUserErrors({});
         }
       }
     } else {
       setUserToEdit(null);
     }
-  }, [editUserModal.isOpen, editUserModal.params.userId, users]);
-
-  React.useEffect(() => {
-    if (editRoleModal.isOpen) {
-      const { userId } = editRoleModal.params;
-      if (userId) {
-        const found = users.find(u => u.id === userId || u.userId === userId || u.code === userId);
-        if (found) {
-          setUserToEditRole(found);
-          const rawRole = String(found.userRole || found.role || '');
-          // Prefill honestly: canonical when recognized, raw string otherwise.
-          setNewSelectedRole(tryNormalizeRole(rawRole) ?? rawRole);
-        }
-      }
-    } else {
-      setUserToEditRole(null);
-    }
-  }, [editRoleModal.isOpen, editRoleModal.params.userId, users]);
+  }, [editUserModal.isOpen, editUserModal.params.userId]);
 
   React.useEffect(() => {
     if (deleteUserModal.isOpen) {
@@ -753,7 +748,8 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
     setUserToEdit(usr);
     setEditFullName(usr.name || usr.fullName || '');
     setEditEmail(usr.email || '');
-    setEditRole(usr.userRole || usr.role || 'SUPER ADMIN');
+    const rawRole = String(usr.userRole || usr.role || '');
+    setEditRole(tryNormalizeRole(rawRole) ?? (rawRole || 'Shop Floor Supervisor'));
     setEditDepartment(usr.department || 'Executive Management');
     setEditMobile(usr.mobile || usr.phone || '');
     setEditStatus(usr.status === 'REVOKED' || usr.status === 'Inactive' ? 'Inactive' : 'Active');
@@ -802,7 +798,15 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
       }
     }
 
+    // Sync role change via the dedicated role update handler if role was changed
+    const originalRole = String(userToEdit.userRole || userToEdit.role || '');
+    const normalizedOriginal = tryNormalizeRole(originalRole) ?? originalRole;
+    if (editRole !== normalizedOriginal && onUpdateUserRole) {
+      onUpdateUserRole(userToEdit.id, editRole);
+    }
+
     editUserModal.close();
+    setUserToEdit(null);
   };
 
   return (
@@ -1527,21 +1531,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                         <span>Edit</span>
                       </button>
 
-                      <button
-                        onClick={() => {
-                          setUserToEditRole(usr);
-                          setNewSelectedRole(normRole ?? rawRoleStr);
-                          editRoleModal.open({ userId: usr.id });
-                        }}
-                        className={`flex-1 py-2 rounded-xl border font-mono text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-ui ${
-                          isDarkMode 
-                            ? 'bg-blue-500/15 text-blue-300 border-blue-500/30 hover:bg-blue-500/25' 
-                            : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
-                        }`}
-                      >
-                        <Shield className="w-3.5 h-3.5" />
-                        <span>Role</span>
-                      </button>
+
 
                       {!isRevoked ? (
                         <button
@@ -1683,22 +1673,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                               <span>Edit</span>
                             </button>
 
-                            <button
-                              onClick={() => {
-                                setUserToEditRole(usr);
-                                setNewSelectedRole(normRole ?? rawRoleStr);
-                                editRoleModal.open({ userId: usr.id });
-                              }}
-                              className={`p-1.5 px-2.5 rounded-xl border text-[11px] font-bold font-mono transition-ui cursor-pointer flex items-center gap-1 ${
-                                isDarkMode 
-                                  ? 'bg-blue-500/10 text-blue-300 border-blue-500/30 hover:bg-blue-500/20' 
-                                  : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
-                              }`}
-                              title="Modify Role"
-                            >
-                              <Shield className="w-3.5 h-3.5" />
-                              <span>Role</span>
-                            </button>
+
 
                             {!isRevoked ? (
                               <button
@@ -2305,8 +2280,8 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
         maxWidth="2xl"
         isDarkMode={isDarkMode}
         icon={<Edit className="w-5 h-5 text-indigo-400" />}
-        title="Edit User Master Record"
-        subtitle={`Update credentials & identity for ${userToEdit?.name || userToEdit?.email}`}
+        title="Edit User"
+        subtitle={`${userToEdit?.name || userToEdit?.email}`}
         footer={
           <div className="flex items-center justify-end gap-3 w-full">
             <button 
@@ -2326,7 +2301,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
               onClick={handleSaveEditUser}
               className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold text-xs font-mono shadow-lg shadow-indigo-500/25 cursor-pointer transition-ui hover:scale-[1.02] active:scale-[0.96]"
             >
-              Save Master Changes
+              Save Changes
             </button>
           </div>
         }
@@ -2367,24 +2342,50 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
               {editUserErrors.email && <p className="text-[10px] text-rose-500 mt-1">{editUserErrors.email}</p>}
             </div>
 
-            {/* Exact RBAC Role */}
-            <div>
-              <label className={`block text-[11px] uppercase font-mono font-bold mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                Exact RBAC Role <span className="text-rose-500">*</span>
+            {/* System Role — Apple-style grouped radio list */}
+            <div className="md:col-span-2">
+              <label className={`block text-[11px] uppercase font-mono font-bold mb-2 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                System Role <span className="text-rose-500">*</span>
               </label>
-              <select
-                value={editRole}
-                onChange={e => setEditRole(e.target.value)}
-                className={`w-full p-2.5 rounded-xl border text-xs font-mono ${
-                  isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-300 bg-white text-slate-900'
-                }`}
-              >
-                {Object.values(RBAC_ROLE_MATRIX).filter(r => r.role !== 'ServerAdmin').map(r => (
-                  <option key={r.role} value={r.role}>
-                    {r.label} ({r.role})
-                  </option>
-                ))}
-              </select>
+              <div className={`rounded-2xl border overflow-hidden max-h-56 overflow-y-auto ${
+                isDarkMode ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-slate-50/60'
+              }`}>
+                <div className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200/80'}`}>
+                  {Object.values(RBAC_ROLE_MATRIX).filter(r => r.role !== 'ServerAdmin').map((r) => {
+                    const isSelected = editRole === r.role;
+                    return (
+                      <div
+                        key={r.role}
+                        onClick={() => setEditRole(r.role)}
+                        className={`px-3.5 py-2.5 flex items-center gap-3 cursor-pointer transition-ui ${
+                          isSelected
+                            ? isDarkMode ? 'bg-indigo-500/10' : 'bg-indigo-50/80'
+                            : isDarkMode ? 'hover:bg-slate-800/40' : 'hover:bg-slate-100/60'
+                        }`}
+                      >
+                        <div className={`w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center shrink-0 transition-ui ${
+                          isSelected ? 'border-indigo-500 bg-indigo-500' : isDarkMode ? 'border-slate-600' : 'border-slate-300'
+                        }`}>
+                          {isSelected && <Check className="w-2.5 h-2.5 text-white stroke-[3]" />}
+                        </div>
+                        <div className="flex-1 min-w-0 flex items-center justify-between gap-2">
+                          <div>
+                            <div className={`text-xs font-semibold ${
+                              isSelected
+                                ? isDarkMode ? 'text-white' : 'text-slate-900'
+                                : isDarkMode ? 'text-slate-300' : 'text-slate-700'
+                            }`}>{r.label}</div>
+                            <div className="text-[9px] text-emerald-600 dark:text-emerald-400 font-medium">{r.approvalLimitDisplay}</div>
+                          </div>
+                          <span className={`px-2 py-0.5 rounded-lg text-[9px] font-mono font-bold uppercase border shrink-0 ${getRoleBadgeClasses(r.role)}`}>
+                            {r.role}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
             {/* Department */}

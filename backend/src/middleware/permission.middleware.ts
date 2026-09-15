@@ -15,7 +15,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { getDbClient } from '../config/database';
 import { permissionService } from '../services/permission.service';
-import { normalizeRole } from '../../../src/utils/rbacMatrix';
+import { tryNormalizeRole } from '../../../src/utils/rbacMatrix';
 
 export interface VerifiedActor {
   id: string;
@@ -61,7 +61,13 @@ async function verifySessionActor(req: Request): Promise<VerifiedActor | null> {
     return null;
   }
 
-  const normRole = normalizeRole(user.role);
+  const normRole = tryNormalizeRole(user.role);
+  // Fail-closed: an unrecognized DB role can never be a verified actor for
+  // the ServerAdmin/effective-permission pipeline — treat as unverified
+  // (upstream middleware responds 401).
+  if (!normRole) {
+    return null;
+  }
   const tier = await permissionService.getRoleTier(normRole);
 
   return {

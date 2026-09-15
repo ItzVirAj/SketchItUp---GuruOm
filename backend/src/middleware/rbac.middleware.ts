@@ -3,7 +3,7 @@ import {
   AccessLevel,
   SystemModule,
   ACCESS_LEVEL_RANK,
-  normalizeRole,
+  tryNormalizeRole,
   getRoleModulePermission,
   hasMinimumAccess,
   isWithinApprovalLimit,
@@ -185,7 +185,30 @@ export function requirePermission(
     }
 
     const rawRole = req.user.role || (req.user as any).userRole;
-    const normRole = normalizeRole(rawRole);
+    const normRole = tryNormalizeRole(rawRole);
+    // Fail-closed (RBAC audit): an unrecognized session role must never
+    // silently inherit Shop Floor Supervisor's tiers. Deny with 403.
+    if (!normRole) {
+      await auditService.recordAuditLog({
+        actorEmail: req.user.email,
+        actorRole: String(rawRole ?? ''),
+        action: 'RBAC_UNRECOGNIZED_ROLE_DENIED',
+        entityType: module,
+        entityId: req.params.id || 'N/A',
+        details: `Access Denied: session role "${String(rawRole ?? '')}" is not a recognized canonical role or alias.`,
+        metadata: {
+          path: req.originalUrl,
+          method: req.method,
+          requiredAccess,
+          module
+        }
+      }).catch(err => console.warn('Audit logging error:', err));
+
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'Access denied. The session role is not a recognized role. Contact an administrator.'
+      });
+    }
     // IMPORTANT: getRoleModulePermission() returns a direct reference into the
     // shared static RBAC_ROLE_MATRIX object, not a copy. We must shallow-copy
     // it before mutating accessLevel below, otherwise applying one user's
@@ -405,7 +428,7 @@ export function requirePermission(
  * conditionals — refactor only, no authorization outcome changes here.
  */
 function resolveUnconditionalBypass(
-  normRole: string,
+  normRole: string | null,
   allowedRoles: string[],
   allowSuperAdminBypass: boolean
 ): boolean {
@@ -413,9 +436,10 @@ function resolveUnconditionalBypass(
     (normRole === 'ServerAdmin' || normRole === 'Owner' || normRole === 'Admin (System)');
 
   // TESTER is allowed on all operational endpoints, but blocked on exclusively administrative endpoints
-  const isTesterAllowed = normRole === 'TESTER' && !allowedRoles.every(r => [
+  const adminList: (string | null)[] = [
     'ServerAdmin', 'Owner', 'Admin (System)', 'SUPER ADMIN', 'ADMIN_OWNER', 'ADMIN', 'Super Admin', 'Admin', 'Owner / Managing Director'
-  ].includes(normalizeRole(r)));
+  ];
+  const isTesterAllowed = normRole === 'TESTER' && !allowedRoles.every(r => adminList.includes(tryNormalizeRole(r)));
 
   return isSuperAdminBypass || isTesterAllowed;
 }
@@ -431,9 +455,13 @@ export function requireRole(allowedRoles: string[], options: { allowSuperAdminBy
     }
 
     const rawRole = req.user.role || (req.user as any).userRole;
-    const normRole = normalizeRole(rawRole);
+    const normRole = tryNormalizeRole(rawRole);
 
-    const isMatch = allowedRoles.some(r => normalizeRole(r) === normRole || r === rawRole);
+    // Fail-closed: an unrecognized session role matches nothing. Previously
+    // both sides of this comparison failed open to 'Shop Floor Supervisor',
+    // which could even match garbage list entries against garbage roles.
+    const isMatch = normRole !== null &&
+      allowedRoles.some(r => tryNormalizeRole(r) === normRole || r === rawRole);
     const hasBypass = resolveUnconditionalBypass(normRole, allowedRoles, allowSuperAdminBypass);
 
     if (!isMatch && !hasBypass) {
@@ -462,7 +490,25 @@ export function requireCtaPermission(ctaId: CtaId): RequestHandler {
     }
 
     const rawRole = req.user.role || (req.user as any).userRole;
-    const normRole = normalizeRole(rawRole);
+    const normRole = tryNormalizeRole(rawRole);
+    // Fail-closed: an unrecognized session role can never be CTA-authorized
+    // (previously it silently inherited Shop Floor Supervisor's CTA grants).
+    if (!normRole) {
+      await auditService.recordAuditLog({
+        actorEmail: req.user.email,
+        actorRole: String(rawRole ?? ''),
+        action: 'RBAC_CTA_ACCESS_DENIED',
+        entityType: 'CTA',
+        entityId: ctaId,
+        details: `Access Denied: session role "${String(rawRole ?? '')}" is not a recognized canonical role or alias.`,
+        metadata: { path: req.originalUrl, method: req.method, ctaId }
+      }).catch(err => console.warn('Audit logging error:', err));
+
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'Access denied. The session role is not a recognized role. Contact an administrator.'
+      });
+    }
     const userId = req.user.id || (req.user as any).userId;
 
     // 2. Fetch user's permission overrides

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from '../context/ToastContext';
 import { EmployeeMasterRecord } from '../types/console';
-import { normalizeRole } from '../utils/rbacMatrix';
+import { tryNormalizeRole } from '../utils/rbacMatrix';
 import { fetchEmployees, updateEmployee } from '../services/consoleApiServices';
 
 const EMPLOYEE_MASTER_MANAGERS = new Set(['ServerAdmin', 'Owner', 'Admin (System)', 'HR/Admin']);
@@ -11,7 +11,8 @@ export function useEmployees(canView: boolean, currentUserRole?: string | null) 
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(false);
 
   const canManageEmployees = useMemo(
-    () => EMPLOYEE_MASTER_MANAGERS.has(normalizeRole(currentUserRole || '')),
+    // Fail closed: an unrecognized role can never manage the employee master.
+    () => EMPLOYEE_MASTER_MANAGERS.has(tryNormalizeRole(currentUserRole || '') ?? ''),
     [currentUserRole]
   );
 
@@ -21,7 +22,9 @@ export function useEmployees(canView: boolean, currentUserRole?: string | null) 
     try {
       const data = await fetchEmployees(params);
       const visible = data.filter((employee) => {
-        const role = normalizeRole(employee.role);
+        // Unrecognized roles stay visible with their raw label (honest display);
+        // only the three privileged roles are filtered out.
+        const role = tryNormalizeRole(employee.role);
         return role !== 'ServerAdmin' && role !== 'Owner' && role !== 'Client';
       });
       setEmployees(visible);

@@ -78,8 +78,8 @@ import {
 } from '../../../utils/masterValidation';
 import { 
   RBAC_ROLE_MATRIX, 
-  normalizeRole, 
-  AccessLevel, 
+  tryNormalizeRole,
+  AccessLevel,
   SystemModule, 
   RoleDefinitionRecord 
 } from '../../../utils/rbacMatrix';
@@ -211,7 +211,11 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
   const deleteUserModal = useUrlModal('delete-user');
 
   // Role Gate Evaluation
-  const normalizedUserRole = normalizeRole(currentRole || '');
+  // NOTE: the array below contains legacy strings ('ADMIN_OWNER', 'ADMIN', …)
+  // that were NEVER aliases or matrix keys in rbacMatrix.ts, so they can never
+  // match a *normalized* role — the trailing raw-substring checks are what
+  // actually drive this gate. Preserved as-is (documented finding).
+  const normalizedUserRole = tryNormalizeRole(currentRole || '') ?? '';
   const isOwnerAdmin = [
     'Owner',
     'Admin (System)',
@@ -345,8 +349,9 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
         const found = users.find(u => u.id === userId || u.userId === userId || u.code === userId);
         if (found) {
           setUserToEditRole(found);
-          const normRole = normalizeRole(found.userRole || found.role);
-          setNewSelectedRole(normRole);
+          const rawRole = String(found.userRole || found.role || '');
+          // Prefill honestly: canonical when recognized, raw string otherwise.
+          setNewSelectedRole(tryNormalizeRole(rawRole) ?? rawRole);
         }
       }
     } else {
@@ -1438,8 +1443,11 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
               filteredUsers.map((usr) => {
                 const isCurrent = usr.id === currentUserId;
                 const isRevoked = usr.status === 'REVOKED' || usr.status === 'Inactive';
-                const normRole = normalizeRole(usr.userRole || usr.role);
-                const roleDef = RBAC_ROLE_MATRIX[normRole];
+                const rawRoleStr = String(usr.userRole || usr.role || '');
+                // Unrecognized roles render an honest "Unrecognized Role"
+                // badge below instead of masquerading as Shop Floor Supervisor.
+                const normRole = tryNormalizeRole(rawRoleStr);
+                const roleDef = normRole ? RBAC_ROLE_MATRIX[normRole] : undefined;
 
                 return (
                   <div
@@ -1487,8 +1495,8 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                     }`}>
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] text-slate-400">Role:</span>
-                        <span className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold uppercase border inline-flex items-center justify-center text-center leading-tight whitespace-normal break-words max-w-[200px] shrink-0 ${getRoleBadgeClasses(normRole)}`}>
-                          {normRole.replace(/\s+/g, ' ').trim()}
+                        <span className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold uppercase border inline-flex items-center justify-center text-center leading-tight whitespace-normal break-words max-w-[200px] shrink-0 ${getRoleBadgeClasses(normRole ?? '__unrecognized__')}`}>
+                          {(normRole ?? 'Unrecognized Role').replace(/\s+/g, ' ').trim()}
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-[11px]">
@@ -1522,7 +1530,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                       <button
                         onClick={() => {
                           setUserToEditRole(usr);
-                          setNewSelectedRole(normRole);
+                          setNewSelectedRole(normRole ?? rawRoleStr);
                           editRoleModal.open({ userId: usr.id });
                         }}
                         className={`flex-1 py-2 rounded-xl border font-mono text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-ui ${
@@ -1606,8 +1614,11 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                   {filteredUsers.map((usr) => {
                     const isCurrent = usr.id === currentUserId;
                     const isRevoked = usr.status === 'REVOKED' || usr.status === 'Inactive';
-                    const normRole = normalizeRole(usr.userRole || usr.role);
-                    const roleDef = RBAC_ROLE_MATRIX[normRole];
+                    const rawRoleStr = String(usr.userRole || usr.role || '');
+                    // Unrecognized roles render an honest "Unrecognized Role"
+                    // badge below instead of masquerading as Shop Floor Supervisor.
+                    const normRole = tryNormalizeRole(rawRoleStr);
+                    const roleDef = normRole ? RBAC_ROLE_MATRIX[normRole] : undefined;
 
                     return (
                       <tr key={usr.id} className={isDarkMode ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50/80'}>
@@ -1637,8 +1648,8 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                           <div className="text-[10px] text-slate-400 font-mono">{usr.shift || 'General-Day'}</div>
                         </td>
                         <td className="py-4 px-5">
-                          <span className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border inline-flex items-center justify-center text-center leading-tight whitespace-normal break-words max-w-[200px] shrink-0 ${getRoleBadgeClasses(normRole)}`}>
-                            {normRole.replace(/\s+/g, ' ').trim()}
+                          <span className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border inline-flex items-center justify-center text-center leading-tight whitespace-normal break-words max-w-[200px] shrink-0 ${getRoleBadgeClasses(normRole ?? '__unrecognized__')}`}>
+                            {(normRole ?? 'Unrecognized Role').replace(/\s+/g, ' ').trim()}
                           </span>
                         </td>
                         <td className="py-4 px-5 font-mono text-[11px]">
@@ -1675,7 +1686,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                             <button
                               onClick={() => {
                                 setUserToEditRole(usr);
-                                setNewSelectedRole(normRole);
+                                setNewSelectedRole(normRole ?? rawRoleStr);
                                 editRoleModal.open({ userId: usr.id });
                               }}
                               className={`p-1.5 px-2.5 rounded-xl border text-[11px] font-bold font-mono transition-ui cursor-pointer flex items-center gap-1 ${

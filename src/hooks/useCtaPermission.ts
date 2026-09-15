@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { CtaId, isRoleAuthorizedForCta, normalizeRole } from '../utils/rbacMatrix';
+import { CtaId, isRoleAuthorizedForCta, tryNormalizeRole } from '../utils/rbacMatrix';
 
 /**
  * Checks whether the given user object has permission for a specific CTA
@@ -37,8 +37,10 @@ export function checkCtaPermission(authUser: any, ctaId: CtaId): boolean {
 
   // 4. Otherwise fall back to isRoleAuthorizedForCta(role, ctaId) from rbacMatrix.ts
   const rawRole = authUser.role || authUser.userRole || '';
-  const normRole = normalizeRole(rawRole);
-  return isRoleAuthorizedForCta(normRole, ctaId);
+  // Fail toward hiding: an unrecognized role grants no CTA (the server
+  // independently enforces the real authorization decision).
+  const normRole = tryNormalizeRole(rawRole);
+  return normRole !== null && isRoleAuthorizedForCta(normRole, ctaId);
 }
 
 /**

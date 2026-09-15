@@ -1,5 +1,5 @@
 import { UserRole, ConsoleView, SystemUser } from '../types/console';
-import { normalizeRole, getRoleModulePermission, hasMinimumAccess, RBAC_ROLE_MATRIX } from './rbacMatrix';
+import { tryNormalizeRole, getRoleModulePermission, hasMinimumAccess, RBAC_ROLE_MATRIX } from './rbacMatrix';
 
 export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
   // ServerAdmin holds FULL_APPROVE on every module in RBAC_ROLE_MATRIX,
@@ -403,7 +403,10 @@ const VIEW_PERMISSION_KEYS: Partial<Record<ConsoleView, string[]>> = {
 };
 
 export function isViewAllowedForRole(role: string, view: ConsoleView): boolean {
-  const normRole = normalizeRole(role);
+  // Fail-closed: an unrecognized role grants no console views (unchanged from
+  // the prior fail-closed fix — null simply fails the lookups below).
+  const normRole = tryNormalizeRole(role);
+  if (!normRole) return false;
   const allowed = ROLE_PERMISSIONS[normRole] || ROLE_PERMISSIONS[role];
   // Fail CLOSED: an unrecognized/misspelled role must not default to full
   // access. Every real role is expected to have an explicit entry above —
@@ -427,7 +430,9 @@ export function isViewAllowedForUser(user: Pick<SystemUser, 'role' | 'effectiveP
 }
 
 export function getRoleColor(role: string): { bg: string; text: string; border: string } {
-  const normRole = normalizeRole(role);
+  // Unrecognized roles fall through to the neutral default styling instead of
+  // being colored as Shop Floor Supervisor (visual honesty only).
+  const normRole = tryNormalizeRole(role);
 
   switch (normRole) {
     case 'ServerAdmin':

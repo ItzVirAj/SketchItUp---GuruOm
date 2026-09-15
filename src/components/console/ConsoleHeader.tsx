@@ -28,7 +28,7 @@ import { CustomerOrder, StockItem, CustomerInvoice, JobCard, UserRole, ConsoleVi
 import { getViewTitle } from '../../utils/navigationConfig';
 import { NotificationDrawer } from './NotificationDrawer';
 import { useInAppNotifications } from '../../hooks/useInAppNotifications';
-import { normalizeRole } from '../../utils/rbacMatrix';
+import { tryNormalizeRole } from '../../utils/rbacMatrix';
 
 interface ConsoleHeaderProps {
   fiscalYear: string;
@@ -533,7 +533,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
           </div>
 
           {/* ServerAdmin Vault Link */}
-          {normalizeRole(currentRole) === 'ServerAdmin' && (
+          {tryNormalizeRole(currentRole) === 'ServerAdmin' && (
             <Link
               to="/admin"
               className="flex h-9 items-center gap-1.5 rounded-full border border-purple-500/30 bg-purple-500/15 px-3 text-xs font-semibold text-purple-300 hover:bg-purple-500/25 transition-all shadow-sm active:scale-95"

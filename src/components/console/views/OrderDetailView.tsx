@@ -47,7 +47,7 @@ import {
   Ban
 } from 'lucide-react';
 import { CustomerOrder, OrderStatus, QCInspection, PDIInspection, OrderLineItem, UserRole, VendorMaster, DispatchChallan, CustomerInvoice, OrderLineProgress, ShortageItem } from '../../../types/console';
-import { isRoleAuthorizedForCta, getCtaPermission, CtaId, normalizeRole } from '../../../utils/rbacMatrix';
+import { isRoleAuthorizedForCta, getCtaPermission, CtaId } from '../../../utils/rbacMatrix';
 import { useCanPerformCta } from '../../../hooks/useCtaPermission';
 import { executeOrderStageTransition, validatePodRequired, validateOrderClosure, normalizeOrderState, CanonicalOrderState } from '../../../utils/orderStateMachine';
 import { runMaterialCheckForOrder, overrideMaterialCheckForOrder } from '../../../services/supabaseServices';
@@ -280,7 +280,12 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   const editTotalGross = editLines.reduce((sum, l) => sum + (Number(l.orderQty || 0) * Number(l.rate || 0)), 0);
 
   const hasJobCards = (order.jobCards && order.jobCards.length > 0) || ['IN_PRODUCTION', 'QC_INSPECTION', 'READY_TO_DISPATCH', 'DISPATCHED'].includes(order.status || '');
-  const isOwner = normalizeRole(currentRole) === 'ADMIN_OWNER' || String(currentRole).toUpperCase().includes('OWNER') || String(currentRole).toUpperCase().includes('ADMIN');
+  // NOTE: this line previously began with `normalizeRole(currentRole) === 'ADMIN_OWNER'`.
+  // 'ADMIN_OWNER' has never been an alias or a matrix key in rbacMatrix.ts (verified via
+  // `git log -S "'ADMIN_OWNER'" -- src/utils/rbacMatrix.ts`, which returns nothing), so
+  // that comparison was dead code — isOwner was always driven by the raw-substring
+  // checks below, which are preserved unchanged.
+  const isOwner = String(currentRole).toUpperCase().includes('OWNER') || String(currentRole).toUpperCase().includes('ADMIN');
 
   const openEditModal = () => {
     setEditPoNo(order.poNo || '');

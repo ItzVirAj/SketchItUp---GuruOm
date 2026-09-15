@@ -10,7 +10,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { apiClient } from '../../lib/apiClient';
-import { normalizeRole, RBAC_ROLE_MATRIX, CTA_PERMISSION_TABLE, CtaId } from '../../utils/rbacMatrix';
+import { tryNormalizeRole, RBAC_ROLE_MATRIX, CTA_PERMISSION_TABLE, CtaId } from '../../utils/rbacMatrix';
 import {
   Shield,
   ShieldAlert,
@@ -373,7 +373,11 @@ interface Props {
 
 export function ServerAdminVault({ onSignOut }: Props) {
   const { user, profile } = useAuth();
-  const currentRole = normalizeRole(profile?.role || user?.role);
+  // Bucket C: an unrecognized role resolves to null here — isServerAdmin
+  // stays false (fail closed; the backend independently enforces this) and
+  // the raw string is kept so displays stay honest instead of masquerading
+  // as a real role.
+  const currentRole = tryNormalizeRole(profile?.role || user?.role) ?? String(profile?.role || user?.role || '');
   const isServerAdmin = currentRole === 'ServerAdmin';
 
   const [activeTab, setActiveTab] = useState<'users' | 'permissions' | 'audit'>('users');
@@ -917,7 +921,9 @@ export function ServerAdminVault({ onSignOut }: Props) {
                                 </div>
                               );
                             })() : (() => {
-                              const matrixPerms = RBAC_ROLE_MATRIX[normalizeRole(u.role)]?.permissions;
+                              const normRole = tryNormalizeRole(u.role);
+                              // Unrecognized role → no matrix row → renders "0 modules at default" honestly.
+                              const matrixPerms = normRole ? RBAC_ROLE_MATRIX[normRole]?.permissions : undefined;
                               const defaultModuleCount = matrixPerms ? Object.keys(matrixPerms).length : 0;
                               return (
                                 <div className="flex flex-col items-start gap-1">
@@ -939,7 +945,7 @@ export function ServerAdminVault({ onSignOut }: Props) {
                                 onClick={() => {
                                   setSelectedUserForRole(u);
                                   setNewRoleValue(
-                                    ASSIGNABLE_ROLES.find(r => normalizeRole(r) === normalizeRole(u.role)) || u.role
+                                    ASSIGNABLE_ROLES.find(r => { const nr = tryNormalizeRole(r); return nr !== null && nr === tryNormalizeRole(u.role); }) || u.role
                                   );
                                 }}
                                 disabled={u.normalizedRole === 'ServerAdmin'}
@@ -1156,7 +1162,9 @@ export function ServerAdminVault({ onSignOut }: Props) {
                   </div>
 
                   {(() => {
-                    const matrixPerms = RBAC_ROLE_MATRIX[normalizeRole(selectedUserForRole.role)]?.permissions;
+                    const normRole = tryNormalizeRole(selectedUserForRole.role);
+                    // Unrecognized role → renders "No standard matrix permissions found" honestly.
+                    const matrixPerms = normRole ? RBAC_ROLE_MATRIX[normRole]?.permissions : undefined;
                     if (!matrixPerms) {
                       return <p className="text-[11px] text-slate-500 italic mt-1">No standard matrix permissions found for this role.</p>;
                     }

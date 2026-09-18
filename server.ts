@@ -165,6 +165,7 @@ async function startServer() {
   app.use('/api/attendance', attendanceRoutes);
   // HR Module — Certifications & training expiry reminders
   app.use('/api/v1/certifications', certificationsRoutes);
+  app.use('/api/certifications', certificationsRoutes);
   // HR Module — Employee Certifications (distinct from QC/PDI certificates)
   app.use('/api/v1/employee-certifications', employeeCertificationsRoutes);
   app.use('/api/employee-certifications', employeeCertificationsRoutes);

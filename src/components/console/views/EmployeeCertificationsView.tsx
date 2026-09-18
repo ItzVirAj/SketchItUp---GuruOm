@@ -15,7 +15,13 @@ import {
   ShieldCheck,
   Filter,
   UploadCloud,
-  FileCheck
+  FileCheck,
+  Check,
+  X,
+  Sparkles,
+  ChevronRight,
+  ShieldAlert,
+  ArrowUpRight
 } from 'lucide-react';
 import { Modal } from '../../common/Modal';
 import { EmployeeCertification } from '../../../types/console';
@@ -128,7 +134,9 @@ export const EmployeeCertificationsView: React.FC<EmployeeCertificationsViewProp
       }
     });
 
-    return { total, active, expired, expiringSoon };
+    const complianceRate = total > 0 ? Math.round((active / total) * 100) : 100;
+
+    return { total, active, expired, expiringSoon, complianceRate };
   }, [displayedCertifications]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -164,7 +172,7 @@ export const EmployeeCertificationsView: React.FC<EmployeeCertificationsViewProp
   const handleAssignSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formEmployeeId) {
-      setFormError('Please select a valid employee.');
+      setFormError('Please select an employee.');
       return;
     }
     if (!formTitle.trim()) {
@@ -180,11 +188,11 @@ export const EmployeeCertificationsView: React.FC<EmployeeCertificationsViewProp
       return;
     }
     if (formHasExpiry && !formExpiryDate) {
-      setFormError('Please specify an expiry date or mark as lifetime credential.');
+      setFormError('Please specify an expiry date or select Lifetime credential.');
       return;
     }
     if (formHasExpiry && formExpiryDate && new Date(formExpiryDate) < new Date(formIssuedDate)) {
-      setFormError('Expiry date cannot be earlier than issued date.');
+      setFormError('Expiry date cannot be prior to the issued date.');
       return;
     }
 
@@ -208,209 +216,350 @@ export const EmployeeCertificationsView: React.FC<EmployeeCertificationsViewProp
     }
   };
 
+  const cardBase = isDarkMode
+    ? 'bg-[#09090B] border-white/10 text-white shadow-[0_16px_40px_rgba(0,0,0,0.6)]'
+    : 'bg-white border-slate-200/80 shadow-sm text-slate-900';
+
+  const elevatedCard = isDarkMode
+    ? 'bg-[#111115]/90 border-white/10 text-white shadow-[0_8px_24px_rgba(0,0,0,0.45)]'
+    : 'bg-white border-slate-200/80 shadow-2xs text-slate-900';
+
   return (
-    <div className={`p-6 max-w-7xl mx-auto space-y-6 ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>
-      {/* Top Banner & Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-2 border-b border-gray-200 dark:border-gray-800">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-500 dark:bg-amber-400/10 dark:text-amber-400">
+    <div className="space-y-4 sm:space-y-6 font-sans">
+      {/* ── TOP HERO HEADER (Apple HIG Materials & Typography) ── */}
+      <div className={`p-6 sm:p-7 rounded-3xl border transition-all ${cardBase}`}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 pb-6 border-b border-slate-200 dark:border-white/10">
+          <div className="flex items-start gap-4">
+            <div className="p-3.5 rounded-2xl bg-[var(--accent-soft-light)] dark:bg-[var(--accent-soft-dark)] text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-border-light)] dark:border-[var(--accent-border-dark)] shrink-0 shadow-xs">
               <Award className="w-6 h-6" />
             </div>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">Employee Certifications</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Staff professional credentials, training qualifications & compliance licenses
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide bg-[var(--accent-soft-light)] dark:bg-[var(--accent-soft-dark)] text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-border-light)] dark:border-[var(--accent-border-dark)]">
+                  HR Module
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  <span>Skills & Compliance</span>
+                </span>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+                Employee Certifications
+              </h1>
+              <p className={`text-xs max-w-2xl leading-relaxed ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                Verify technical proficiencies, ISO/NDT certifications, and compliance licenses across plant personnel.
               </p>
             </div>
           </div>
+
+          <div className="flex items-center gap-3 self-start sm:self-center">
+            <div
+              className={`p-3 sm:px-4 sm:py-2.5 rounded-2xl border font-mono text-right w-full sm:w-auto ${
+                isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-50 border-slate-200/80 shadow-2xs'
+              }`}
+            >
+              <div className="flex sm:flex-col justify-between items-center sm:items-end gap-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                  Compliance Rate
+                </span>
+                <span className="text-base sm:text-lg font-black tracking-tight text-emerald-600 dark:text-emerald-400">
+                  {stats.complianceRate}%
+                </span>
+              </div>
+            </div>
+
+            {canAssign && (
+              <button
+                id="assign-cert-btn"
+                type="button"
+                onClick={handleOpenAssignModal}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold tracking-tight transition-all duration-150 cursor-pointer active:scale-[0.98] bg-[var(--accent-primary)] hover:opacity-95 text-white shadow-md shadow-[var(--accent-shadow)] border border-white/20 shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Assign Certificate</span>
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Assign Certificate Button - ONLY rendered if canAssign (HR) */}
-        {canAssign && (
-          <button
-            id="assign-cert-btn"
-            onClick={handleOpenAssignModal}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-medium shadow-sm transition-all hover:shadow-md hover:scale-[1.01] active:scale-[0.99]"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Assign Certificate</span>
-          </button>
-        )}
+        {/* ── METRIC STATS CARDS (Apple HIG 4-Col KPI Grid) ── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 pt-6">
+          {/* Card 1: Total Listed */}
+          <div className={`p-4 sm:p-5 rounded-2xl border transition-all duration-200 ${elevatedCard}`}>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                Total Listed
+              </span>
+              <div className="p-2 rounded-xl bg-slate-500/10 text-slate-500 dark:text-slate-400">
+                <Award className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-3 flex items-baseline gap-2">
+              <span className="text-2xl sm:text-3xl font-black tracking-tight">
+                {stats.total}
+              </span>
+              <span className="text-[11px] font-medium text-slate-500">records</span>
+            </div>
+            <div className="mt-2 text-[11px] text-slate-400">
+              Documented competencies
+            </div>
+          </div>
+
+          {/* Card 2: Active & Verified */}
+          <div className={`p-4 sm:p-5 rounded-2xl border transition-all duration-200 ${elevatedCard}`}>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                Active & Verified
+              </span>
+              <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-3 flex items-baseline gap-2">
+              <span className="text-2xl sm:text-3xl font-black tracking-tight text-emerald-600 dark:text-emerald-400">
+                {stats.active}
+              </span>
+              <span className="text-[11px] font-medium text-emerald-600/70 dark:text-emerald-400/70">valid</span>
+            </div>
+            <div className="mt-2 text-[11px] text-slate-400">
+              Audit-ready qualifications
+            </div>
+          </div>
+
+          {/* Card 3: Expiring Soon */}
+          <div className={`p-4 sm:p-5 rounded-2xl border transition-all duration-200 ${elevatedCard}`}>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                Expiring Soon
+              </span>
+              <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                <Clock className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-3 flex items-baseline gap-2">
+              <span className="text-2xl sm:text-3xl font-black tracking-tight text-amber-600 dark:text-amber-400">
+                {stats.expiringSoon}
+              </span>
+              <span className="text-[11px] font-medium text-amber-600/70 dark:text-amber-400/70">within 30d</span>
+            </div>
+            <div className="mt-2 text-[11px] text-slate-400">
+              Renewal window open
+            </div>
+          </div>
+
+          {/* Card 4: Expired */}
+          <div className={`p-4 sm:p-5 rounded-2xl border transition-all duration-200 ${elevatedCard}`}>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-rose-600 dark:text-rose-400">
+                Expired
+              </span>
+              <div className="p-2 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400">
+                <ShieldAlert className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-3 flex items-baseline gap-2">
+              <span className="text-2xl sm:text-3xl font-black tracking-tight text-rose-600 dark:text-rose-400">
+                {stats.expired}
+              </span>
+              <span className="text-[11px] font-medium text-rose-600/70 dark:text-rose-400/70">overdue</span>
+            </div>
+            <div className="mt-2 text-[11px] text-slate-400">
+              Requires retraining / renewal
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Metric Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className={`p-4 rounded-xl border ${isDarkMode ? 'bg-gray-900/60 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Total Listed</span>
-            <Award className="w-4 h-4 text-gray-400" />
-          </div>
-          <div className="mt-2 text-2xl font-bold">{stats.total}</div>
-          <span className="text-xs text-gray-500 dark:text-gray-400">Recorded credentials</span>
-        </div>
-
-        <div className={`p-4 rounded-xl border ${isDarkMode ? 'bg-gray-900/60 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Active</span>
-            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-          </div>
-          <div className="mt-2 text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.active}</div>
-          <span className="text-xs text-gray-500 dark:text-gray-400">Compliant & verified</span>
-        </div>
-
-        <div className={`p-4 rounded-xl border ${isDarkMode ? 'bg-gray-900/60 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">Expiring Soon</span>
-            <Clock className="w-4 h-4 text-amber-500" />
-          </div>
-          <div className="mt-2 text-2xl font-bold text-amber-600 dark:text-amber-400">{stats.expiringSoon}</div>
-          <span className="text-xs text-gray-500 dark:text-gray-400">Within 30 calendar days</span>
-        </div>
-
-        <div className={`p-4 rounded-xl border ${isDarkMode ? 'bg-gray-900/60 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-rose-600 dark:text-rose-400">Expired</span>
-            <AlertTriangle className="w-4 h-4 text-rose-500" />
-          </div>
-          <div className="mt-2 text-2xl font-bold text-rose-600 dark:text-rose-400">{stats.expired}</div>
-          <span className="text-xs text-gray-500 dark:text-gray-400">Requires renewal / retrain</span>
-        </div>
-      </div>
-
-      {/* Tabs & Filter Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        {/* Tab Navigation: "My Certifications" vs "All Certifications" */}
-        <div className="inline-flex p-1 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+      {/* ── TABS & FILTER TOOLBAR (Apple HIG Segmented Control) ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+        {/* Apple-style Pill Segmented Control */}
+        <div className={`p-1 rounded-2xl border inline-flex items-center gap-1 ${
+          isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-100 border-slate-200'
+        }`}>
           <button
             id="tab-my-certifications"
+            type="button"
             onClick={() => onTabChange('my')}
-            className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-all ${
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'my'
-                ? 'bg-white dark:bg-gray-900 text-amber-600 dark:text-amber-400 shadow-sm'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                ? isDarkMode
+                  ? 'bg-white/15 text-white shadow-xs font-bold'
+                  : 'bg-white text-slate-900 shadow-xs font-bold'
+                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
-            My Certifications ({myCertifications.length})
+            <User className="w-3.5 h-3.5" />
+            <span>My Certifications</span>
+            <span className={`px-1.5 py-0.2 text-[10px] rounded-full ${
+              activeTab === 'my'
+                ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold'
+                : 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400'
+            }`}>
+              {myCertifications.length}
+            </span>
           </button>
 
-          {/* All Certifications tab ONLY rendered if user has ALL view scope (HR, Owner, ServerAdmin, Admin) */}
           {canViewAll && (
             <button
               id="tab-all-certifications"
+              type="button"
               onClick={() => onTabChange('all')}
-              className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-all ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === 'all'
-                  ? 'bg-white dark:bg-gray-900 text-amber-600 dark:text-amber-400 shadow-sm'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                  ? isDarkMode
+                    ? 'bg-white/15 text-white shadow-xs font-bold'
+                    : 'bg-white text-slate-900 shadow-xs font-bold'
+                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
-              All Staff Certifications ({certifications.length})
+              <Building2 className="w-3.5 h-3.5" />
+              <span>All Staff Certifications</span>
+              <span className={`px-1.5 py-0.2 text-[10px] rounded-full ${
+                activeTab === 'all'
+                  ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold'
+                  : 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400'
+              }`}>
+                {certifications.length}
+              </span>
             </button>
           )}
         </div>
 
-        {/* Search & Status Filters */}
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        {/* Search & Status Pill Filters */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Search Input */}
+          <div className="relative min-w-[220px] sm:w-64">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <input
               type="text"
-              placeholder="Search title, issuer, staff..."
+              placeholder="Search title, authority, staff..."
               value={searchQuery}
               onChange={e => onSearchChange(e.target.value)}
-              className={`pl-9 pr-3 py-1.5 text-sm rounded-lg border outline-none transition-all ${
+              className={`w-full pl-9 pr-8 py-2 rounded-xl text-xs border outline-none transition-all ${
                 isDarkMode
-                  ? 'bg-gray-900 border-gray-700 text-gray-200 focus:border-amber-500'
-                  : 'bg-white border-gray-300 text-gray-800 focus:border-amber-500'
+                  ? 'bg-[#111115] border-white/10 text-white placeholder:text-slate-600 focus:border-[var(--accent-primary)]'
+                  : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-[var(--accent-primary)] shadow-2xs'
               }`}
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => onSearchChange('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
-          <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 p-0.5 bg-gray-100 dark:bg-gray-800 text-xs">
-            {(['ALL', 'ACTIVE', 'EXPIRED'] as const).map(status => (
-              <button
-                key={status}
-                onClick={() => onStatusFilterChange(status)}
-                className={`px-2.5 py-1 rounded-md font-medium transition-all ${
-                  statusFilter === status
-                    ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-xs'
-                    : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
-                }`}
-              >
-                {status}
-              </button>
-            ))}
+          {/* Status Filter Segment */}
+          <div className={`p-1 rounded-xl border inline-flex items-center gap-1 ${
+            isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-100 border-slate-200'
+          }`}>
+            {(['ALL', 'ACTIVE', 'EXPIRED'] as const).map(st => {
+              const isSelected = statusFilter === st;
+              return (
+                <button
+                  key={st}
+                  type="button"
+                  onClick={() => onStatusFilterChange(st)}
+                  className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg transition-all cursor-pointer ${
+                    isSelected
+                      ? isDarkMode
+                        ? 'bg-white/20 text-white shadow-xs'
+                        : 'bg-white text-slate-900 shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
+                  }`}
+                >
+                  {st === 'ALL' ? 'All' : st === 'ACTIVE' ? 'Active' : 'Expired'}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
 
-      {/* Main List Table / Cards */}
-      <div className={`rounded-xl border overflow-hidden ${isDarkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+      {/* ── MAIN CONTENT LIST (Apple Elevated Surface Table) ── */}
+      <div className={`rounded-3xl border overflow-hidden transition-all ${cardBase}`}>
         {isLoading ? (
-          <div className="p-12 text-center text-gray-400 flex flex-col items-center gap-2">
-            <Clock className="w-8 h-8 animate-spin text-amber-500" />
-            <p className="text-sm">Loading certifications...</p>
+          <div className="p-16 text-center text-slate-400 flex flex-col items-center justify-center gap-3">
+            <div className="w-9 h-9 border-3 border-[var(--accent-primary)] border-t-transparent rounded-full animate-spin" />
+            <p className="text-xs font-semibold tracking-wide uppercase text-slate-400">Loading certifications...</p>
           </div>
         ) : filteredList.length === 0 ? (
-          <div className="p-12 text-center text-gray-400 flex flex-col items-center gap-3">
-            <Award className="w-12 h-12 text-gray-300 dark:text-gray-600" />
-            <div>
-              <p className="font-medium text-gray-700 dark:text-gray-300">No certifications found</p>
-              <p className="text-xs text-gray-500 mt-1">
+          <div className="p-14 text-center flex flex-col items-center justify-center gap-3.5">
+            <div className="p-4 rounded-2xl bg-slate-100 dark:bg-white/[0.04] text-slate-400 border border-slate-200/80 dark:border-white/10">
+              <Award className="w-8 h-8 stroke-[1.5]" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                No certifications found
+              </h3>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
                 {searchQuery || statusFilter !== 'ALL'
-                  ? 'Try modifying your search query or status filter.'
+                  ? 'No credential matched the active search filters. Try clearing your query.'
                   : activeTab === 'my'
-                  ? 'You currently have no certificates assigned to your profile.'
-                  : 'No employee certificates have been recorded yet.'}
+                  ? 'You currently have no training or skill certifications linked to your profile.'
+                  : 'No employee certificates have been recorded in the register yet.'}
               </p>
             </div>
             {canAssign && (
               <button
+                type="button"
                 onClick={handleOpenAssignModal}
-                className="mt-2 text-xs text-amber-600 dark:text-amber-400 hover:underline font-medium"
+                className="mt-2 inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-[var(--accent-primary)] text-white shadow-sm hover:opacity-95 transition-all cursor-pointer"
               >
-                + Assign the first certificate
+                <Plus className="w-3.5 h-3.5" />
+                <span>Assign the first credential</span>
               </button>
             )}
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-sm">
+            <table className="w-full text-left border-collapse text-xs sm:text-sm">
               <thead>
-                <tr className={`border-b text-xs font-semibold uppercase tracking-wider ${isDarkMode ? 'bg-gray-800/60 border-gray-800 text-gray-400' : 'bg-gray-50 border-gray-200 text-gray-500'}`}>
-                  {activeTab === 'all' && <th className="p-3.5">Employee</th>}
-                  <th className="p-3.5">Certificate & Issuer</th>
-                  <th className="p-3.5">Issued Date</th>
-                  <th className="p-3.5">Expiry Date</th>
-                  <th className="p-3.5">Status</th>
-                  <th className="p-3.5">Attachment</th>
-                  <th className="p-3.5">Assigned By</th>
-                  {canAssign && <th className="p-3.5 text-right">Actions</th>}
+                <tr className={`border-b text-[11px] font-bold uppercase tracking-wider ${
+                  isDarkMode ? 'bg-white/[0.02] border-white/10 text-slate-400' : 'bg-slate-50/80 border-slate-200 text-slate-500'
+                }`}>
+                  {activeTab === 'all' && <th className="py-3.5 px-4 font-bold">Employee</th>}
+                  <th className="py-3.5 px-4 font-bold">Certificate & Authority</th>
+                  <th className="py-3.5 px-4 font-bold">Issued</th>
+                  <th className="py-3.5 px-4 font-bold">Expires</th>
+                  <th className="py-3.5 px-4 font-bold">Status</th>
+                  <th className="py-3.5 px-4 font-bold">Document</th>
+                  <th className="py-3.5 px-4 font-bold">Assigned By</th>
+                  {canAssign && <th className="py-3.5 px-4 text-right font-bold">Action</th>}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+              <tbody className="divide-y divide-slate-200/70 dark:divide-white/[0.06]">
                 {filteredList.map(cert => {
-                  const isExpiringSoon = !cert.isExpired && cert.daysUntilExpiry !== null && cert.daysUntilExpiry !== undefined && cert.daysUntilExpiry >= 0 && cert.daysUntilExpiry <= 30;
+                  const isExpiringSoon =
+                    !cert.isExpired &&
+                    cert.daysUntilExpiry !== null &&
+                    cert.daysUntilExpiry !== undefined &&
+                    cert.daysUntilExpiry >= 0 &&
+                    cert.daysUntilExpiry <= 30;
 
                   return (
                     <tr
                       key={cert.id}
-                      className={`transition-colors ${isDarkMode ? 'hover:bg-gray-800/40' : 'hover:bg-gray-50/80'}`}
+                      className={`group transition-colors duration-150 ${
+                        isDarkMode ? 'hover:bg-white/[0.03]' : 'hover:bg-slate-50/70'
+                      }`}
                     >
-                      {/* Employee Column (shown on "All" tab) */}
+                      {/* Employee Column (shown on "All Staff" tab) */}
                       {activeTab === 'all' && (
-                        <td className="p-3.5 whitespace-nowrap">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold flex items-center justify-center text-xs">
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-[var(--accent-soft-light)] dark:bg-[var(--accent-soft-dark)] text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] font-bold flex items-center justify-center text-xs border border-[var(--accent-border-light)] dark:border-[var(--accent-border-dark)] shrink-0">
                               {(cert.employeeName || cert.employee?.name || 'U').charAt(0).toUpperCase()}
                             </div>
-                            <div>
-                              <div className="font-medium text-gray-900 dark:text-gray-100">
+                            <div className="space-y-0.5">
+                              <div className="font-semibold text-slate-900 dark:text-white">
                                 {cert.employeeName || cert.employee?.name || 'Staff Member'}
                               </div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400">
-                                {cert.employee?.department || 'Operations'} · {cert.employee?.role || 'User'}
+                              <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                                {cert.employee?.department || 'Operations'} · {cert.employee?.role || 'Staff'}
                               </div>
                             </div>
                           </div>
@@ -418,94 +567,99 @@ export const EmployeeCertificationsView: React.FC<EmployeeCertificationsViewProp
                       )}
 
                       {/* Certificate Title & Issuer */}
-                      <td className="p-3.5">
-                        <div className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-1.5">
-                          <Award className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                          <span>{cert.title}</span>
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          Issuing Body: <span className="font-medium">{cert.issuingBody}</span>
+                      <td className="py-3.5 px-4">
+                        <div className="space-y-0.5">
+                          <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                            <Award className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                            <span className="truncate max-w-[280px]">{cert.title}</span>
+                          </div>
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                            Authority: <span className="font-medium text-slate-700 dark:text-slate-300">{cert.issuingBody}</span>
+                          </div>
                         </div>
                       </td>
 
                       {/* Issued Date */}
-                      <td className="p-3.5 whitespace-nowrap text-gray-700 dark:text-gray-300 text-xs">
+                      <td className="py-3.5 px-4 whitespace-nowrap font-mono text-xs text-slate-600 dark:text-slate-300">
                         <div className="flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                          <Calendar className="w-3.5 h-3.5 text-slate-400" />
                           <span>{cert.issuedDate}</span>
                         </div>
                       </td>
 
                       {/* Expiry Date */}
-                      <td className="p-3.5 whitespace-nowrap text-xs">
+                      <td className="py-3.5 px-4 whitespace-nowrap font-mono text-xs">
                         {cert.expiryDate ? (
                           <div className="flex items-center gap-1.5">
-                            <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                            <span className={cert.isExpired ? 'text-rose-600 dark:text-rose-400 font-semibold' : 'text-gray-700 dark:text-gray-300'}>
+                            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                            <span className={cert.isExpired ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-slate-700 dark:text-slate-300'}>
                               {cert.expiryDate}
                             </span>
                           </div>
                         ) : (
-                          <span className="text-gray-400 italic">Lifetime credential</span>
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 dark:bg-white/[0.06] text-slate-500 dark:text-slate-400">
+                            Lifetime
+                          </span>
                         )}
                       </td>
 
                       {/* Status Badge */}
-                      <td className="p-3.5 whitespace-nowrap">
+                      <td className="py-3.5 px-4 whitespace-nowrap">
                         {cert.isExpired ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
                             <AlertTriangle className="w-3 h-3" />
                             Expired
                           </span>
                         ) : isExpiringSoon ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                             <Clock className="w-3 h-3" />
                             Expires in {cert.daysUntilExpiry}d
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                             <CheckCircle2 className="w-3 h-3" />
                             Active
                           </span>
                         )}
                       </td>
 
-                      {/* Attachment Document */}
-                      <td className="p-3.5 whitespace-nowrap text-xs">
+                      {/* Document Link */}
+                      <td className="py-3.5 px-4 whitespace-nowrap">
                         {cert.documentUrl ? (
                           <a
                             href={cert.documentUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 hover:underline font-medium"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-[var(--accent-soft-light)] dark:bg-[var(--accent-soft-dark)] text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] hover:opacity-80 transition-opacity"
                           >
                             <FileText className="w-3.5 h-3.5" />
                             <span>View Doc</span>
-                            <ExternalLink className="w-3 h-3" />
+                            <ArrowUpRight className="w-3 h-3 opacity-60" />
                           </a>
                         ) : (
-                          <span className="text-gray-400 text-xs">—</span>
+                          <span className="text-slate-400 text-xs">—</span>
                         )}
                       </td>
 
                       {/* Assigned By */}
-                      <td className="p-3.5 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
-                        <div className="flex items-center gap-1">
+                      <td className="py-3.5 px-4 whitespace-nowrap text-xs text-slate-500 dark:text-slate-400">
+                        <div className="flex items-center gap-1.5">
                           <ShieldCheck className="w-3.5 h-3.5 text-amber-500" />
                           <span>{cert.assignedByName || 'HR Admin'}</span>
                         </div>
                       </td>
 
-                      {/* Actions (Revoke) - ONLY HR (canAssign) */}
+                      {/* Actions */}
                       {canAssign && (
-                        <td className="p-3.5 text-right whitespace-nowrap">
+                        <td className="py-3.5 px-4 text-right whitespace-nowrap">
                           <button
+                            type="button"
                             onClick={() => {
                               if (window.confirm(`Are you sure you want to revoke "${cert.title}"?`)) {
                                 onDeleteCertification(cert.id, cert.title);
                               }
                             }}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-500/10 transition-colors"
+                            className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-500/10 transition-colors cursor-pointer"
                             title="Revoke certificate"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -521,34 +675,34 @@ export const EmployeeCertificationsView: React.FC<EmployeeCertificationsViewProp
         )}
       </div>
 
-      {/* Assign Certificate Modal (Rendered ONLY if canAssign is true) */}
+      {/* ── ASSIGN CERTIFICATE MODAL SHEET (Apple HIG Dialog) ── */}
       {canAssign && (
         <Modal
           isOpen={isAssignModalOpen}
           onClose={() => setIsAssignModalOpen(false)}
           title="Assign Professional Certificate"
         >
-          <form onSubmit={handleAssignSubmit} className="space-y-4 text-sm">
+          <form onSubmit={handleAssignSubmit} className="space-y-4 text-xs sm:text-sm">
             {formError && (
-              <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+              <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
                 <span>{formError}</span>
               </div>
             )}
 
             {/* Target Employee Selection */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                 Target Employee <span className="text-rose-500">*</span>
               </label>
               <select
                 value={formEmployeeId}
                 onChange={e => setFormEmployeeId(e.target.value)}
                 required
-                className={`w-full p-2 rounded-lg border text-sm outline-none transition-all ${
+                className={`w-full p-2.5 rounded-xl border text-xs sm:text-sm outline-none transition-all ${
                   isDarkMode
-                    ? 'bg-gray-900 border-gray-700 text-gray-100 focus:border-amber-500'
-                    : 'bg-white border-gray-300 text-gray-900 focus:border-amber-500'
+                    ? 'bg-[#111115] border-white/10 text-white focus:border-[var(--accent-primary)]'
+                    : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[var(--accent-primary)]'
                 }`}
               >
                 {employeesList.length === 0 ? (
@@ -556,7 +710,7 @@ export const EmployeeCertificationsView: React.FC<EmployeeCertificationsViewProp
                 ) : (
                   employeesList.map(emp => (
                     <option key={emp.id} value={emp.id}>
-                      {emp.name} ({emp.email}) — {emp.role || 'Staff'}
+                      {emp.name} ({emp.email}) — {emp.role || 'Staff'} {emp.department ? `[${emp.department}]` : ''}
                     </option>
                   ))
                 )}
@@ -565,27 +719,27 @@ export const EmployeeCertificationsView: React.FC<EmployeeCertificationsViewProp
 
             {/* Certificate Title */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Certificate Title / Qualification <span className="text-rose-500">*</span>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                Certificate Title / Competency <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
                 required
-                placeholder="e.g. ISO 9001 Lead Auditor, CNC Level-3 Operator"
+                placeholder="e.g. ISO 9001 Lead Auditor, CNC Lathe Level-3 Operator"
                 value={formTitle}
                 onChange={e => setFormTitle(e.target.value)}
-                className={`w-full p-2 rounded-lg border text-sm outline-none transition-all ${
+                className={`w-full p-2.5 rounded-xl border text-xs sm:text-sm outline-none transition-all ${
                   isDarkMode
-                    ? 'bg-gray-900 border-gray-700 text-gray-100 focus:border-amber-500'
-                    : 'bg-white border-gray-300 text-gray-900 focus:border-amber-500'
+                    ? 'bg-[#111115] border-white/10 text-white placeholder:text-slate-600 focus:border-[var(--accent-primary)]'
+                    : 'bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-[var(--accent-primary)]'
                 }`}
               />
             </div>
 
             {/* Issuing Body */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Issuing Body / Authority <span className="text-rose-500">*</span>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                Issuing Authority / Board <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
@@ -593,18 +747,18 @@ export const EmployeeCertificationsView: React.FC<EmployeeCertificationsViewProp
                 placeholder="e.g. TÜV SÜD, NSDC, American Welding Society"
                 value={formIssuingBody}
                 onChange={e => setFormIssuingBody(e.target.value)}
-                className={`w-full p-2 rounded-lg border text-sm outline-none transition-all ${
+                className={`w-full p-2.5 rounded-xl border text-xs sm:text-sm outline-none transition-all ${
                   isDarkMode
-                    ? 'bg-gray-900 border-gray-700 text-gray-100 focus:border-amber-500'
-                    : 'bg-white border-gray-300 text-gray-900 focus:border-amber-500'
+                    ? 'bg-[#111115] border-white/10 text-white placeholder:text-slate-600 focus:border-[var(--accent-primary)]'
+                    : 'bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-[var(--accent-primary)]'
                 }`}
               />
             </div>
 
-            {/* Dates Row */}
+            {/* Dates Grid */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Issued Date <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -612,25 +766,25 @@ export const EmployeeCertificationsView: React.FC<EmployeeCertificationsViewProp
                   required
                   value={formIssuedDate}
                   onChange={e => setFormIssuedDate(e.target.value)}
-                  className={`w-full p-2 rounded-lg border text-sm outline-none transition-all ${
+                  className={`w-full p-2.5 rounded-xl border text-xs sm:text-sm outline-none transition-all font-mono ${
                     isDarkMode
-                      ? 'bg-gray-900 border-gray-700 text-gray-100 focus:border-amber-500'
-                      : 'bg-white border-gray-300 text-gray-900 focus:border-amber-500'
+                      ? 'bg-[#111115] border-white/10 text-white focus:border-[var(--accent-primary)]'
+                      : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[var(--accent-primary)]'
                   }`}
                 />
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                     Expiry Date
                   </label>
-                  <label className="text-xs text-gray-500 flex items-center gap-1 cursor-pointer">
+                  <label className="text-[11px] text-slate-500 flex items-center gap-1.5 cursor-pointer select-none">
                     <input
                       type="checkbox"
                       checked={!formHasExpiry}
                       onChange={e => setFormHasExpiry(!e.target.checked)}
-                      className="rounded text-amber-600 focus:ring-amber-500"
+                      className="rounded text-[var(--accent-primary)] focus:ring-[var(--accent-primary)]"
                     />
                     <span>Lifetime</span>
                   </label>
@@ -641,26 +795,30 @@ export const EmployeeCertificationsView: React.FC<EmployeeCertificationsViewProp
                   value={formExpiryDate}
                   onChange={e => setFormExpiryDate(e.target.value)}
                   min={formIssuedDate}
-                  className={`w-full p-2 rounded-lg border text-sm outline-none transition-all ${
+                  className={`w-full p-2.5 rounded-xl border text-xs sm:text-sm outline-none transition-all font-mono ${
                     !formHasExpiry
-                      ? 'opacity-40 cursor-not-allowed bg-gray-100 dark:bg-gray-800'
+                      ? 'opacity-40 cursor-not-allowed bg-slate-100 dark:bg-white/[0.02]'
                       : isDarkMode
-                      ? 'bg-gray-900 border-gray-700 text-gray-100 focus:border-amber-500'
-                      : 'bg-white border-gray-300 text-gray-900 focus:border-amber-500'
+                      ? 'bg-[#111115] border-white/10 text-white focus:border-[var(--accent-primary)]'
+                      : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[var(--accent-primary)]'
                   }`}
                 />
               </div>
             </div>
 
-            {/* Document Upload */}
+            {/* Document Upload Dropzone */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                 Certificate Document (Optional PDF / Scan)
               </label>
               <div className="flex items-center gap-3">
-                <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-xs font-medium">
+                <label className={`cursor-pointer inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-semibold transition-all ${
+                  isDarkMode
+                    ? 'bg-[#111115] border-white/10 hover:bg-white/[0.05] text-white'
+                    : 'bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-800'
+                }`}>
                   <UploadCloud className="w-4 h-4 text-amber-500" />
-                  <span>{isUploading ? 'Uploading...' : 'Choose File'}</span>
+                  <span>{isUploading ? 'Uploading document...' : 'Upload Document'}</span>
                   <input
                     type="file"
                     className="hidden"
@@ -670,27 +828,27 @@ export const EmployeeCertificationsView: React.FC<EmployeeCertificationsViewProp
                   />
                 </label>
                 {uploadedFileName && (
-                  <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
-                    <FileCheck className="w-4 h-4" />
-                    {uploadedFileName}
+                  <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 font-medium truncate max-w-[200px]">
+                    <FileCheck className="w-4 h-4 shrink-0" />
+                    <span className="truncate">{uploadedFileName}</span>
                   </span>
                 )}
               </div>
             </div>
 
             {/* Modal Actions */}
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-800">
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-white/10">
               <button
                 type="button"
                 onClick={() => setIsAssignModalOpen(false)}
-                className="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-xs font-medium transition-colors"
+                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.05] text-xs font-semibold transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting || isUploading}
-                className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-medium text-xs shadow-sm transition-all disabled:opacity-50"
+                className="px-4 py-2 rounded-xl bg-[var(--accent-primary)] hover:opacity-90 text-white font-semibold text-xs shadow-md shadow-[var(--accent-shadow)] transition-all disabled:opacity-50 cursor-pointer active:scale-95"
               >
                 {isSubmitting ? 'Assigning...' : 'Confirm Assignment'}
               </button>

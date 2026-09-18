@@ -494,8 +494,8 @@ const VIEW_PERMISSION_KEYS: Partial<Record<ConsoleView, string[]>> = {
   'leave': ['leave:view'],
   'leave-requests': ['leave:view'],
   'attendance': ['attendance:view'],
-  'certifications': ['certifications:view'],
-  'employee-certifications': ['certifications:view'],
+  'certifications': ['certifications:view', 'employee_certifications:view'],
+  'employee-certifications': ['employee_certifications:view', 'certifications:view'],
   'announcements': ['announcements:view'],
   'employee-master': ['admin:view_users']
 };

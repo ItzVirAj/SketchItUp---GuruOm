@@ -63,7 +63,6 @@ import { useMeetings } from '../../hooks/useMeetings';
 import { useTasks } from '../../hooks/useTasks';
 import { useLeaveRequests } from '../../hooks/useLeaveRequests';
 import { useAttendance } from '../../hooks/useAttendance';
-import { useCertifications } from '../../hooks/useCertifications';
 import { useEmployeeCertifications } from '../../hooks/useEmployeeCertifications';
 import { useAnnouncements } from '../../hooks/useAnnouncements';
 import { useEmployees } from '../../hooks/useEmployees';
@@ -113,7 +112,8 @@ const getPathForView = (view: ConsoleView, orderId?: string | null): string => {
     case 'attendance':
       return '/hr/attendance';
     case 'certifications':
-      return '/hr/certifications';
+    case 'employee-certifications':
+      return '/hr/employee-certifications';
     case 'announcements':
       return '/hr/announcements';
     case 'employee-master':
@@ -349,9 +349,6 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
     currentUser?.effectivePermissions
   );
 
-  const { certifications, isLoadingCertifications, canManageCertifications, handleCreateCertification, handleDeleteCertification } =
-    useCertifications(isViewAllowedForUser(currentUser, 'certifications'), currentRole);
-
   const {
     certifications: empCertifications,
     myCertifications: myEmpCertifications,
@@ -512,15 +509,15 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
       setCurrentView('meetings');
     } else if (path === '/hr/tasks') {
       setCurrentView('tasks');
-    } else if (path === '/hr/leave') {
+    } else if (path === '/hr/leave' || path === '/hr/leave-requests') {
       setCurrentView('leave-requests');
     } else if (path === '/hr/attendance') {
       setCurrentView('attendance');
-    } else if (path === '/hr/certifications') {
-      setCurrentView('certifications');
+    } else if (path === '/hr/certifications' || path === '/hr/employee-certifications') {
+      setCurrentView('employee-certifications');
     } else if (path === '/hr/announcements') {
       setCurrentView('announcements');
-    } else if (path === '/hr/employees') {
+    } else if (path === '/hr/employees' || path === '/hr/employee-master') {
       setCurrentView('employee-master');
     } else if (path === '/invoices') {
       setCurrentView('invoices');

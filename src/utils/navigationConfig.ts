@@ -19,6 +19,10 @@ import {
   Layers,
   CircleDollarSign,
   ListTodo,
+  CalendarOff,
+  Fingerprint,
+  Award,
+  Megaphone,
   Settings,
   FlaskConical,
   CalendarClock,
@@ -95,8 +99,11 @@ export const NAVIGATION_SECTIONS: NavSectionConfig[] = [
     items: [
       { id: 'meetings', label: 'Meetings', shortLabel: 'Meetings', icon: CalendarClock, description: 'Team Meeting Schedule & Reminders', badgeKey: 'meetings' },
       { id: 'tasks', label: 'Tasks', shortLabel: 'Tasks', icon: ListTodo, description: 'Team Task Assignment & Reminders', badgeKey: 'tasks' },
+      { id: 'leave-requests', label: 'Leave Requests', shortLabel: 'Leave', icon: CalendarOff, description: 'Time-Off Requests & Approvals', badgeKey: 'leave' },
+      { id: 'attendance', label: 'Attendance', shortLabel: 'Attendance', icon: Fingerprint, description: 'Shift Check-In / Check-Out Log' },
+      { id: 'employee-certifications', label: 'Employee Certifications', shortLabel: 'Certifications', icon: Award, description: 'Staff Skills & Training Certifications' },
+      { id: 'announcements', label: 'Announcements', shortLabel: 'Announcements', icon: Megaphone, description: 'Company-Wide Notices', badgeKey: 'announcements' },
       { id: 'employee-master', label: 'Employee Management', shortLabel: 'Employees', icon: Users, description: 'Employee Master & Staff Profiles' },
-      // future HR submodules (attendance, leave requests, etc.) join this section
     ]
   }
 ];

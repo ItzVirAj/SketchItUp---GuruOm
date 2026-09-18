@@ -73,7 +73,14 @@ export class ApprovalsService {
         requested_by: validated.requestedBy,
         timestamp: validated.timestamp,
         amount: validated.amount,
-        details: validated.details
+        details: validated.details,
+        // BUGFIX: entityId was accepted by PendingApprovalSchema and read back
+        // out by getApprovalById/getPendingApprovals, but never actually
+        // written here — meaning the "cascade to source entity" logic in
+        // approveRequest/rejectRequest below could never fire for any
+        // approval created through this method. Leave Requests depend on
+        // this actually persisting.
+        entity_id: validated.entityId
       });
 
       if (error) throw error;
@@ -102,6 +109,9 @@ export class ApprovalsService {
           logger.warn(`Legacy approval type HIGH_VALUE_PO for ${existing.entityId}: no cascade target (purchasingService.approvePurchaseOrder removed).`);
         } else if (existing.type === 'ORDER_CANCEL') {
           await ordersService.updateOrderStageDirectly(existing.entityId, 'CANCELLED');
+        } else if (existing.type === 'LEAVE_REQUEST') {
+          const { leaveService } = await import('../leave/leave.service');
+          await leaveService.resolveLeaveRequest(existing.entityId, 'APPROVED', actorId, decision.comments);
         }
       } catch (entityErr) {
         logger.warn(`Could not cascade approval update to source entity ${existing.entityId}:`, entityErr);
@@ -139,7 +149,22 @@ export class ApprovalsService {
       throw new Error(`Approval request #${id} not found.`);
     }
 
-    // 1. Record audit log via AuditService (canonical AuditLogInput fields)
+    // 1. Update the underlying entity status (rejectRequest previously had no
+    // cascade at all — fine for order/PO types where "do nothing on reject"
+    // is correct, but LEAVE_REQUEST needs its own status flipped or it's
+    // stuck at PENDING forever with no record of the rejection).
+    if (existing.entityId) {
+      try {
+        if (existing.type === 'LEAVE_REQUEST') {
+          const { leaveService } = await import('../leave/leave.service');
+          await leaveService.resolveLeaveRequest(existing.entityId, 'REJECTED', actorId, decision.reason || decision.comments);
+        }
+      } catch (entityErr) {
+        logger.warn(`Could not cascade rejection to source entity ${existing.entityId}:`, entityErr);
+      }
+    }
+
+    // 2. Record audit log via AuditService (canonical AuditLogInput fields)
     await auditService.recordAuditLog({
       actorId: actorId,
       actorEmail: actorName,
@@ -149,7 +174,7 @@ export class ApprovalsService {
       metadata: { details: `Rejected "${existing.title}" (${existing.type}). Reason: ${decision.reason || decision.comments || 'Not specified'}` }
     });
 
-    // 2. Remove / Resolve pending approval
+    // 3. Remove / Resolve pending approval
     try {
       await this.db.from('pending_approvals').delete().eq('id', id);
     } catch (err) {

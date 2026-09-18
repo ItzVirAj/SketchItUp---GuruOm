@@ -23,6 +23,12 @@ export type ConsoleView =
   | 'route-cards'
   | 'meetings'
   | 'tasks'
+  | 'leave'
+  | 'leave-requests'
+  | 'attendance'
+  | 'certifications'
+  | 'employee-certifications'
+  | 'announcements'
   | 'employee-master';
 
 export type UserRole = 'ServerAdmin' | 'SUPER ADMIN' | 'OPERATOR' | 'QC_MANAGER' | 'DISPATCH_CLERK' | 'FINANCE_MANAGER' | 'TESTER';
@@ -929,5 +935,35 @@ export interface MachineDowntimeLog {
   resolvedAt?: string;
   status: 'OPEN' | 'RESOLVED';
   notes?: string;
+}
+
+export interface EmployeeCertification {
+  id: string;
+  employeeId: string;
+  title: string;
+  issuingBody: string;
+  issuedDate: string;
+  expiryDate?: string | null;
+  documentUrl?: string | null;
+  assignedBy: string;
+  assignedByName?: string;
+  orgId: string;
+  createdAt: string;
+  updatedAt: string;
+  isExpired: boolean;
+  daysUntilExpiry?: number | null;
+  employee?: {
+    id: string;
+    name: string;
+    email: string;
+    department?: string;
+    role?: string;
+  };
+  employeeName?: string;
+  assigner?: {
+    id: string;
+    name: string;
+    email: string;
+  };
 }
 

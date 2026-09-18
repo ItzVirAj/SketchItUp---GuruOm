@@ -28,7 +28,8 @@ import {
   RouteCard,
   RouteCardTemplateStep,
   PurchaseOrder,
-  PurchaseOrderItem
+  PurchaseOrderItem,
+  EmployeeCertification
 } from '../types/console';
 import { getCurrentFinancialYear, formatDocumentNumber } from '../utils/statutoryAccountingEngine';
 import { VendorPerformanceMetric } from '../utils/procurementEngine';
@@ -1475,6 +1476,339 @@ export async function cancelTask(id: string, reason?: string): Promise<Task> {
   return res.data;
 }
 
+// ----------------------------------------------------
+// Task Templates (apply a bundle of tasks at once — e.g. onboarding)
+// ----------------------------------------------------
+export interface TaskTemplateItem {
+  id: string;
+  title: string;
+  description?: string;
+  priority: TaskPriority;
+  dueDaysOffset: number;
+}
+
+export interface TaskTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  createdAt: string;
+  items: TaskTemplateItem[];
+}
+
+export async function fetchTaskTemplates(): Promise<TaskTemplate[]> {
+  try {
+    const res = await apiClient.get<{ data: TaskTemplate[] }>('/task-templates');
+    return res?.data || [];
+  } catch (err) {
+    console.warn('fetchTaskTemplates REST API error:', err);
+    return [];
+  }
+}
+
+export async function applyTaskTemplate(templateId: string, assigneeUserIds: string[]): Promise<{ templateName: string; createdCount: number }> {
+  const res = await apiClient.post<{ data: { templateName: string; createdCount: number } }>(`/task-templates/${templateId}/apply`, { assigneeUserIds });
+  return res.data;
+}
+
+// ----------------------------------------------------
+// Leave / Time-Off Requests (decisions route through the existing Approvals engine)
+// ----------------------------------------------------
+export type LeaveType = 'CASUAL' | 'SICK' | 'EARNED' | 'UNPAID';
+export type LeaveStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+
+export interface LeaveRequest {
+  id: string;
+  requesterId?: string;
+  employeeId: string;
+  employeeName?: string;
+  requester?: {
+    id: string;
+    name?: string;
+    email?: string;
+    department?: string;
+  };
+  leaveType: LeaveType;
+  startDate: string;
+  endDate: string;
+  reason?: string;
+  status: LeaveStatus;
+  approvalId?: string;
+  decidedBy?: string;
+  decidedAt?: string;
+  decisionNote?: string;
+  decisionNotes?: string;
+  decider?: {
+    id: string;
+    name?: string;
+    email?: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function fetchLeaveRequests(
+  params?: { scope?: 'mine' | 'all'; status?: string; requester?: string } | 'mine' | 'all'
+): Promise<LeaveRequest[]> {
+  try {
+    const qs = new URLSearchParams();
+    if (typeof params === 'string') {
+      qs.set('scope', params);
+    } else if (params) {
+      if (params.scope) qs.set('scope', params.scope);
+      if (params.status) qs.set('status', params.status);
+      if (params.requester) qs.set('requester', params.requester);
+    }
+    const query = qs.toString();
+    const res = await apiClient.get<{ data: LeaveRequest[] }>(`/leave${query ? `?${query}` : ''}`);
+    return res?.data || [];
+  } catch (err) {
+    console.warn('fetchLeaveRequests REST API error:', err);
+    return [];
+  }
+}
+
+export async function createLeaveRequest(payload: { leaveType: LeaveType; startDate: string; endDate: string; reason?: string }): Promise<LeaveRequest> {
+  const res = await apiClient.post<{ data: LeaveRequest }>('/leave', payload);
+  return res.data;
+}
+
+export async function decideLeaveRequest(
+  id: string, 
+  decision: { status: 'APPROVED' | 'REJECTED'; decision_note?: string; decisionNote?: string }
+): Promise<LeaveRequest> {
+  const res = await apiClient.patch<{ data: LeaveRequest }>(`/leave/${encodeURIComponent(id)}/decide`, decision);
+  return res.data;
+}
+
+export async function cancelLeaveRequest(id: string): Promise<LeaveRequest> {
+  const res = await apiClient.patch<{ data: LeaveRequest }>(`/leave/${encodeURIComponent(id)}/cancel`, {});
+  return res.data;
+}
+
+// ----------------------------------------------------
+// Attendance / Shift Log
+// ----------------------------------------------------
+export type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'HALF_DAY' | 'ON_LEAVE' | 'HOLIDAY' | 'LATE';
+
+export interface AttendanceLog {
+  id: string;
+  userId?: string;
+  employeeId: string;
+  employeeName?: string;
+  workDate?: string;
+  logDate: string;
+  shift?: string;
+  checkIn?: string;
+  checkInAt?: string;
+  checkOut?: string;
+  checkOutAt?: string;
+  status: AttendanceStatus;
+  source?: string;
+  notes?: string | null;
+  markedBy?: string;
+  createdBy?: string;
+  orgId?: string;
+  createdAt: string;
+  updatedAt?: string;
+  user?: {
+    id: string;
+    name?: string;
+    email?: string;
+    department?: string;
+    role?: string;
+  };
+}
+
+export async function fetchAttendance(paramsOrScope?: 'mine' | 'all' | {
+  scope?: 'mine' | 'all';
+  search?: string;
+  from?: string;
+  to?: string;
+  status?: AttendanceStatus;
+}): Promise<AttendanceLog[]> {
+  try {
+    const sp = new URLSearchParams();
+    if (typeof paramsOrScope === 'string') {
+      sp.set('scope', paramsOrScope);
+    } else if (paramsOrScope) {
+      if (paramsOrScope.scope) sp.set('scope', paramsOrScope.scope);
+      if (paramsOrScope.search) sp.set('search', paramsOrScope.search);
+      if (paramsOrScope.from) sp.set('from', paramsOrScope.from);
+      if (paramsOrScope.to) sp.set('to', paramsOrScope.to);
+      if (paramsOrScope.status) sp.set('status', paramsOrScope.status);
+    }
+    const qs = sp.toString();
+    const res = await apiClient.get<{ data: AttendanceLog[] }>(`/attendance${qs ? `?${qs}` : ''}`);
+    return res?.data || [];
+  } catch (err) {
+    console.warn('fetchAttendance REST API error:', err);
+    return [];
+  }
+}
+
+export async function fetchMyAttendance(params?: {
+  from?: string;
+  to?: string;
+  status?: AttendanceStatus;
+}): Promise<AttendanceLog[]> {
+  try {
+    const sp = new URLSearchParams();
+    if (params?.from) sp.set('from', params.from);
+    if (params?.to) sp.set('to', params.to);
+    if (params?.status) sp.set('status', params.status);
+    const qs = sp.toString();
+    const res = await apiClient.get<{ data: AttendanceLog[] }>(`/attendance/me${qs ? `?${qs}` : ''}`);
+    return res?.data || [];
+  } catch (err) {
+    console.warn('fetchMyAttendance REST API error:', err);
+    return [];
+  }
+}
+
+export async function checkInAttendance(shift?: string): Promise<AttendanceLog> {
+  const res = await apiClient.post<{ data: AttendanceLog }>('/attendance/check-in', { shift });
+  return res.data;
+}
+
+export async function checkOutAttendance(): Promise<AttendanceLog> {
+  const res = await apiClient.post<{ data: AttendanceLog }>('/attendance/check-out', {});
+  return res.data;
+}
+
+export async function createAttendanceRecord(payload: {
+  userId: string;
+  workDate: string;
+  status: AttendanceStatus;
+  checkIn?: string | null;
+  checkOut?: string | null;
+  source?: string;
+  notes?: string | null;
+}): Promise<AttendanceLog> {
+  const res = await apiClient.post<{ data: AttendanceLog }>('/attendance', payload);
+  return res.data;
+}
+
+export async function updateAttendanceRecord(
+  id: string,
+  payload: {
+    status?: AttendanceStatus;
+    checkIn?: string | null;
+    checkOut?: string | null;
+    source?: string;
+    notes?: string | null;
+  }
+): Promise<AttendanceLog> {
+  const res = await apiClient.patch<{ data: AttendanceLog }>(`/attendance/${encodeURIComponent(id)}`, payload);
+  return res.data;
+}
+
+export async function correctAttendance(payload: {
+  employeeId: string;
+  logDate: string;
+  status: AttendanceStatus;
+  notes?: string;
+}): Promise<AttendanceLog> {
+  return createAttendanceRecord({
+    userId: payload.employeeId,
+    workDate: payload.logDate,
+    status: payload.status,
+    notes: payload.notes
+  });
+}
+
+// ----------------------------------------------------
+// Certifications & training expiry reminders
+// ----------------------------------------------------
+export interface Certification {
+  id: string;
+  employeeId: string;
+  employeeName?: string;
+  name: string;
+  issuingBody?: string;
+  issuedDate?: string;
+  expiryDate?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function fetchCertifications(scope: 'mine' | 'all' = 'mine'): Promise<Certification[]> {
+  try {
+    const res = await apiClient.get<{ data: Certification[] }>(`/certifications?scope=${scope}`);
+    return res?.data || [];
+  } catch (err) {
+    console.warn('fetchCertifications REST API error:', err);
+    return [];
+  }
+}
+
+export async function createCertification(payload: {
+  employeeId: string;
+  name: string;
+  issuingBody?: string;
+  issuedDate?: string;
+  expiryDate?: string;
+  notes?: string;
+}): Promise<Certification> {
+  const res = await apiClient.post<{ data: Certification }>('/certifications', payload);
+  return res.data;
+}
+
+export async function deleteCertification(id: string): Promise<void> {
+  await apiClient.delete(`/certifications/${id}`);
+}
+
+// ----------------------------------------------------
+// Company Announcements
+// ----------------------------------------------------
+export interface Announcement {
+  id: string;
+  title: string;
+  body: string;
+  createdBy?: string;
+  postedBy?: string;
+  authorName?: string;
+  pinned?: boolean;
+  publishedAt?: string;
+  expiresAt?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export async function fetchAnnouncements(active?: boolean): Promise<Announcement[]> {
+  try {
+    const url = active ? '/announcements?active=true' : '/announcements';
+    const res = await apiClient.get<{ data: Announcement[] }>(url);
+    return res?.data || [];
+  } catch (err) {
+    console.warn('fetchAnnouncements REST API error:', err);
+    return [];
+  }
+}
+
+export async function createAnnouncement(payload: {
+  title: string;
+  body: string;
+  pinned?: boolean;
+  publishedAt?: string;
+  expiresAt?: string;
+}): Promise<Announcement> {
+  const res = await apiClient.post<{ data: Announcement }>('/announcements', payload);
+  return res.data;
+}
+
+export async function updateAnnouncement(
+  id: string,
+  payload: Partial<{ title: string; body: string; pinned: boolean; expiresAt: string | null }>
+): Promise<Announcement> {
+  const res = await apiClient.patch<{ data: Announcement }>(`/announcements/${id}`, payload);
+  return res.data;
+}
+
+export async function deleteAnnouncement(id: string): Promise<void> {
+  await apiClient.delete(`/announcements/${id}`);
+}
+
 export async function fetchAuditLogs(filters?: {
   actorEmail?: string;
   entityType?: string;
@@ -2128,6 +2462,74 @@ export async function fetchVendorScorecard(vendorCode: string): Promise<VendorPe
     vendorRatingTier: 'TIER_1_EXCELLENT',
     summaryBadge: 'Tier 1 - Excellent (100%)'
   };
+}
+
+// ----------------------------------------------------
+// Employee Certifications Services (distinct from QC/PDI product certificates)
+// ----------------------------------------------------
+export async function fetchEmployeeCertifications(params?: {
+  scope?: 'all' | 'mine';
+  employeeId?: string;
+  search?: string;
+  status?: 'ACTIVE' | 'EXPIRED' | 'ALL';
+}): Promise<EmployeeCertification[]> {
+  try {
+    const sp = new URLSearchParams();
+    if (params?.scope) sp.set('scope', params.scope);
+    if (params?.employeeId) sp.set('employee_id', params.employeeId);
+    if (params?.search) sp.set('search', params.search);
+    if (params?.status) sp.set('status', params.status);
+    const qs = sp.toString();
+    const res = await apiClient.get<{ data: EmployeeCertification[] }>(`/employee-certifications${qs ? `?${qs}` : ''}`);
+    return res?.data || [];
+  } catch (err) {
+    console.warn('fetchEmployeeCertifications REST API error:', err);
+    return [];
+  }
+}
+
+export async function fetchMyEmployeeCertifications(params?: {
+  search?: string;
+  status?: 'ACTIVE' | 'EXPIRED' | 'ALL';
+}): Promise<EmployeeCertification[]> {
+  try {
+    const sp = new URLSearchParams();
+    if (params?.search) sp.set('search', params.search);
+    if (params?.status) sp.set('status', params.status);
+    const qs = sp.toString();
+    const res = await apiClient.get<{ data: EmployeeCertification[] }>(`/employee-certifications/me${qs ? `?${qs}` : ''}`);
+    return res?.data || [];
+  } catch (err) {
+    console.warn('fetchMyEmployeeCertifications REST API error:', err);
+    return [];
+  }
+}
+
+export async function createEmployeeCertification(payload: {
+  employee_id: string;
+  title: string;
+  issuing_body: string;
+  issued_date: string;
+  expiry_date?: string | null;
+  document_url?: string | null;
+}): Promise<EmployeeCertification> {
+  const res = await apiClient.post<{ data: EmployeeCertification }>('/employee-certifications', payload);
+  return res.data;
+}
+
+export async function deleteEmployeeCertification(id: string): Promise<{ success: boolean; message: string }> {
+  const res = await apiClient.delete<{ success: boolean; message: string }>(`/employee-certifications/${encodeURIComponent(id)}`);
+  return res;
+}
+
+export async function uploadEmployeeCertificationDocument(file: File): Promise<{ storagePath: string; signedUrl: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await apiClient.post<{ data: { storagePath: string; signedUrl: string } }>(
+    '/employee-certifications/upload',
+    formData
+  );
+  return res.data;
 }
 
 

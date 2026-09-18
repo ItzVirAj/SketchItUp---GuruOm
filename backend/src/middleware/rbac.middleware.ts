@@ -245,7 +245,7 @@ export function requirePermission(
         actorRole: normRole,
         action: 'RBAC_ACCESS_DENIED',
         entityType: module,
-        entityId: req.params.id || 'N/A',
+        entityId: req.params?.id || 'N/A',
         details: `Access Denied: Role "${normRole}" has ${perm.accessLevel} access on module "${module}", but ${requiredAccess} is required.`,
         metadata: {
           path: req.originalUrl,
@@ -308,8 +308,8 @@ export function requirePermission(
     // 5. Monetary Approval Limit Check & Auto-Escalation Engine
     const isApprovalAction =
       options.checkApprovalLimit ||
-      req.path.includes('/approve') ||
-      req.body.status === 'APPROVED' ||
+      (req.path?.includes('/approve') ?? false) ||
+      (req.body?.status === 'APPROVED') ||
       (requiredAccess === 'FULL_APPROVE' && (req.method === 'POST' || req.method === 'PATCH'));
 
     if (isApprovalAction && perm.approvalLimit !== null && perm.approvalLimit !== undefined) {
@@ -385,7 +385,7 @@ export function requirePermission(
       actorRole: normRole,
       action: `RBAC_PERMITTED_${req.method}`,
       entityType: module,
-      entityId: req.params.id || req.body.id || 'N/A',
+      entityId: req.params?.id || req.body?.id || 'N/A',
       details: `Authorized ${req.method} action on module "${module}" for role "${normRole}".`,
       metadata: {
         accessLevel: perm.accessLevel,

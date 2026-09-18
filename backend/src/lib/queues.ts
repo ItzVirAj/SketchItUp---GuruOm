@@ -47,12 +47,21 @@ export interface TaskReminderJobData {
   offsetLabel: string; // e.g. '24h_before_due'
 }
 
+export interface CertificationReminderJobData {
+  certificationId: string;
+  name: string;
+  expiryDate: string; // ISO 8601
+  employeeId: string;
+  offsetLabel: string; // e.g. '30d_before_expiry'
+}
+
 export type OwnerOSJobData =
   | { type: 'generate-invoice-pdf'; payload: GenerateInvoicePdfJobData }
   | { type: 'send-email'; payload: SendEmailJobData }
   | { type: 'create-notification'; payload: CreateNotificationJobData }
   | { type: 'meeting-reminder'; payload: MeetingReminderJobData }
-  | { type: 'task-reminder'; payload: TaskReminderJobData };
+  | { type: 'task-reminder'; payload: TaskReminderJobData }
+  | { type: 'certification-reminder'; payload: CertificationReminderJobData };
 
 export const QUEUE_NAME = 'owner-os-jobs';
 
@@ -93,7 +102,7 @@ export function getQueueEvents(): QueueEvents {
  * Fail-safe: Does not throw if Redis is offline; logs warning so the DB record remains preserved.
  */
 export async function enqueueJob(
-  jobType: 'generate-invoice-pdf' | 'send-email' | 'create-notification' | 'meeting-reminder' | 'task-reminder',
+  jobType: 'generate-invoice-pdf' | 'send-email' | 'create-notification' | 'meeting-reminder' | 'task-reminder' | 'certification-reminder',
   payload: any,
   options?: JobsOptions
 ): Promise<{ enqueued: boolean; jobId?: string }> {

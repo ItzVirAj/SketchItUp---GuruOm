@@ -622,7 +622,11 @@ export class InventoryMovementsService {
           err.deficit = data.deficit;
           throw err;
         }
-        return data;
+        return {
+          ...data,
+          alreadyConsumed: Boolean(data.already_consumed ?? data.alreadyConsumed),
+          already_consumed: Boolean(data.already_consumed ?? data.alreadyConsumed)
+        };
       }
     } catch (rpcErr: any) {
       if (rpcErr.errorCode === 'ERR_INSUFFICIENT_STOCK' || rpcErr.statusCode === 400) {
@@ -835,7 +839,11 @@ export class InventoryMovementsService {
           err.deficit = data.deficit;
           throw err;
         }
-        return data;
+        return {
+          ...data,
+          alreadyConsumed: Boolean(data.already_consumed ?? data.alreadyConsumed),
+          already_consumed: Boolean(data.already_consumed ?? data.alreadyConsumed)
+        };
       }
     } catch (rpcErr: any) {
       if (

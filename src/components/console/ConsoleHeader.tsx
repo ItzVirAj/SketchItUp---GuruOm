@@ -17,11 +17,11 @@ import {
   SlidersHorizontal,
   Palette,
   CalendarRange,
-  CircleCheck,
   Bell,
   Terminal,
-  Layers,
-  Sparkles
+  Shield,
+  LogOut,
+  Check
 } from 'lucide-react';
 import { AccentColorSelector } from './AccentColorSelector';
 import { CustomerOrder, StockItem, CustomerInvoice, JobCard, UserRole, ConsoleView, SystemUser } from '../../types/console';
@@ -68,10 +68,8 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
   isDarkMode,
   setIsDarkMode,
   currentRole,
-  setCurrentRole,
   userName,
   currentUser,
-  onOpenSwitchUser,
   onSync,
   lastSynced,
   onToggleMobileMenu,
@@ -90,6 +88,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [showScopeDropdown, setShowScopeDropdown] = useState(false);
   const [showCustomizeMenu, setShowCustomizeMenu] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
@@ -109,8 +108,9 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
   const searchDropdownRef = useRef<HTMLDivElement>(null);
   const scopeDropdownRef = useRef<HTMLDivElement>(null);
   const customizeDropdownRef = useRef<HTMLDivElement>(null);
+  const userDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close search dropdown on click outside
+  // Close dropdowns on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -134,6 +134,12 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
         !customizeDropdownRef.current.contains(event.target as Node)
       ) {
         setShowCustomizeMenu(false);
+      }
+      if (
+        userDropdownRef.current &&
+        !userDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowUserMenu(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -215,91 +221,85 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
 
   const scopeOptions = ['FY 26-27', 'FY 25-26', 'Q3 2026', 'All-Time'];
   const activeTitle = getViewTitle(currentView as ConsoleView);
+  const normalizedRole = tryNormalizeRole(currentRole);
+  const displayName = currentUser?.name || userName || 'Sachin Gharbude';
+  const initial = displayName.charAt(0).toUpperCase();
 
   return (
-    <header className={`relative z-30 shrink-0 border-b px-4 font-sans transition-colors sm:px-6 lg:px-8 ${isDarkMode
-        ? 'border-white/15 bg-[#141418]/90 backdrop-blur-3xl text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12),0_8px_30px_rgba(0,0,0,0.4)]'
-        : 'border-slate-200/90 bg-white/95 backdrop-blur-3xl text-slate-900 shadow-xs'
-      }`}>
-      <div className="flex h-[74px] items-center justify-between gap-4">
+    <header className={`relative z-30 shrink-0 select-none font-sans transition-colors border-b ${
+      isDarkMode
+        ? 'bg-[#141416]/85 text-neutral-100 border-neutral-800/90 shadow-[inset_0_-1px_0_0_rgba(255,255,255,0.04)] backdrop-blur-2xl'
+        : 'bg-white/80 text-neutral-900 border-neutral-200 shadow-[inset_0_-1px_0_0_rgba(0,0,0,0.02)] backdrop-blur-2xl'
+    }`}>
+      {/* 1.10X height: 62px */}
+      <div className="flex h-[62px] items-center justify-between px-3.5 sm:px-6 lg:px-7 gap-3.5">
 
         {/* ========================================================================= */}
-        {/* ── LEFT: APPLE BRANDING & VIEW CONTEXT ──                                 */}
+        {/* ── LEADING: macOS BRANDING & PATH HIERARCHY (1.10X) ──                   */}
         {/* ========================================================================= */}
-        <div className="flex min-w-0 items-center gap-3.5 lg:shrink-0">
+        <div className="flex min-w-0 items-center gap-2.5 sm:gap-3.5 shrink-0">
           {onToggleMobileMenu && (
             <button
               type="button"
               onClick={onToggleMobileMenu}
-              aria-label="Open navigation"
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border transition-all active:scale-95 cursor-pointer lg:hidden ${isDarkMode
-                  ? 'border-white/10 bg-white/[0.06] text-white hover:bg-white/10'
-                  : 'border-slate-200 bg-slate-100 text-slate-800 hover:bg-slate-200'
-                }`}
+              aria-label="Toggle navigation menu"
+              className={`flex h-9 w-9 items-center justify-center rounded-lg transition-all cursor-pointer active:scale-95 lg:hidden ${
+                isDarkMode
+                  ? 'text-neutral-300 hover:bg-white/[0.08] hover:text-white'
+                  : 'text-neutral-600 hover:bg-black/[0.05] hover:text-neutral-900'
+              }`}
             >
-              <Menu className="h-5 w-5" />
+              <Menu className="h-4.5 w-4.5" />
             </button>
           )}
 
+          {/* App Brandmark & Title (1.10X) */}
           <button
             type="button"
             onClick={() => onNavigate?.('command-centre')}
-            className="group flex min-w-0 items-center gap-2.5 text-left transition-all active:scale-95 cursor-pointer lg:hidden"
+            className="group flex items-center gap-3 rounded-xl py-1 px-1.5 transition-all hover:bg-black/[0.04] dark:hover:bg-white/[0.06] cursor-pointer"
             title="Command Centre"
           >
-            <img src="/logo.png" alt="OwnerOS Logo" className="h-11 w-11 shrink-0 object-contain drop-shadow-sm" />
-            <div className="hidden min-w-0 flex-col leading-tight sm:flex">
-              <span className={`truncate text-sm font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                SketchItUp
-              </span>
-              <span className="truncate font-mono text-[9px] font-semibold text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] uppercase tracking-wider">
+            <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-gradient-to-b from-white to-neutral-100 dark:from-neutral-800 dark:to-neutral-900 p-1 shadow-[0_1px_3px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.2)] border border-black/[0.08] dark:border-white/[0.1]">
+              <img
+                src="/logo.png"
+                alt="OwnerOS"
+                className="h-full w-full object-contain drop-shadow-xs transition-transform duration-200 group-hover:scale-105"
+              />
+            </div>
+            <div className="flex flex-col text-left leading-tight">
+              <span className="text-[14.5px] font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
                 OwnerOS
+              </span>
+              <span className="text-[11px] font-medium tracking-normal text-neutral-400 dark:text-neutral-400">
+                SketchItUp
               </span>
             </div>
           </button>
 
-          {/* Desktop Apple HIG Title Strip */}
-          <div className="hidden min-w-0 lg:flex items-center gap-3">
-            <div
-              onClick={() => onNavigate?.('command-centre')}
-              className="flex items-center gap-2.5 cursor-pointer group"
-            >
-              <img
-                src="/logo.png"
-                alt="OwnerOS Logo"
-                className="h-12 w-12 shrink-0 object-contain drop-shadow-sm transition-transform group-hover:scale-105"
-              />
-              <div className="flex flex-col justify-center leading-tight">
-                <span className={`text-[15px] font-bold tracking-tight group-hover:text-[var(--accent-text-light)] dark:group-hover:text-[var(--accent-text-dark)] transition-colors ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                  SketchItUp
-                </span>
-                <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)]">
-                  OwnerOS
-                </span>
-              </div>
-            </div>
+          {/* macOS Subtle Separator */}
+          <div className="hidden sm:block h-5 w-px bg-black/[0.08] dark:bg-white/[0.12] mx-1" />
 
-            {/* Hairline vertical divider */}
-            <div className={`h-6 w-px shrink-0 mx-1 ${isDarkMode ? 'bg-white/15' : 'bg-slate-200'}`} />
-
-            {/* Breadcrumb pill */}
-            <div className={`min-w-0 flex items-center gap-1.5 px-3 py-1 rounded-full text-xs shadow-2xs border ${isDarkMode ? 'bg-white/[0.06] border-white/15' : 'bg-slate-100 border-slate-200'
-              }`}>
-              <span className={`${isDarkMode ? 'text-slate-300' : 'text-slate-600'} font-medium`}>Workspace</span>
-              <span className="text-slate-400">/</span>
-              <span className="font-semibold text-[#5B75F8] dark:text-[#7B92FF] truncate">{activeTitle}</span>
-            </div>
+          {/* Apple Breadcrumb / View Identity (1.10X) */}
+          <div className="hidden sm:flex items-center gap-2 text-[13px]">
+            <span className="font-normal text-neutral-400 dark:text-neutral-400">
+              Workspace
+            </span>
+            <span className="text-neutral-300 dark:text-neutral-500 text-xs">/</span>
+            <span className="font-semibold tracking-tight text-[#4763F5] dark:text-[#7A92FF] truncate max-w-[220px] xl:max-w-none">
+              {activeTitle}
+            </span>
           </div>
 
-          <div className={`min-w-0 border-l pl-3 lg:hidden ${isDarkMode ? 'border-white/15' : 'border-slate-200'}`}>
-            <div className={`truncate text-xs font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{activeTitle}</div>
+          <div className="sm:hidden text-[13px] font-semibold text-neutral-800 dark:text-neutral-200 truncate">
+            {activeTitle}
           </div>
         </div>
 
         {/* ========================================================================= */}
-        {/* ── CENTER: APPLE SPOTLIGHT SEARCH BAR ──                                  */}
+        {/* ── CENTER: macOS SPOTLIGHT SEARCH (1.10X) ──                              */}
         {/* ========================================================================= */}
-        <div className="relative hidden flex-1 items-center justify-center lg:flex px-4" ref={searchDropdownRef}>
+        <div className="relative hidden md:flex flex-1 items-center justify-center max-w-[506px] mx-auto" ref={searchDropdownRef}>
           <button
             type="button"
             onClick={() => {
@@ -310,101 +310,162 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
                 searchInputRef.current?.focus();
               }
             }}
-            className={`group relative flex h-10 w-full max-w-[560px] items-center justify-between rounded-full border px-4 transition-all duration-150 cursor-pointer active:scale-[0.99] ${isDarkMode
-                ? 'border-white/15 bg-white/[0.06] hover:border-white/25 hover:bg-white/[0.1] text-slate-200 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]'
-                : 'border-slate-200 bg-slate-50/90 hover:border-slate-300 hover:bg-slate-100 text-slate-700'
-              }`}
+            className={`group relative flex h-9 w-full items-center justify-between rounded-xl px-3 transition-all duration-150 cursor-pointer text-[13px] border ${
+              isDarkMode
+                ? 'border-white/[0.08] bg-white/[0.05] hover:bg-white/[0.08] hover:border-white/[0.14] text-neutral-300 shadow-[inset_0_1px_1px_rgba(0,0,0,0.2)]'
+                : 'border-black/[0.08] bg-black/[0.03] hover:bg-black/[0.05] hover:border-black/[0.14] text-neutral-600 shadow-[inset_0_1px_1px_rgba(0,0,0,0.03)]'
+            }`}
           >
             <div className="flex items-center gap-2.5 min-w-0">
-              <Search className="h-3.5 w-3.5 shrink-0 text-slate-400 group-hover:text-[#5B75F8] transition-colors" />
-              <span className={`text-xs font-normal truncate ${isDarkMode ? 'text-slate-300' : 'text-slate-500'}`}>
-                Search purchase orders, job cards, parts, invoices, customers...
+              <Search className="h-4 w-4 shrink-0 text-neutral-400 group-hover:text-[#4763F5] dark:group-hover:text-[#7A92FF] transition-colors" />
+              <span className="truncate text-[13px] font-normal text-neutral-400 dark:text-neutral-400">
+                Spotlight search orders, stock, jobs...
               </span>
             </div>
             <div className="flex items-center gap-1 shrink-0">
-              <span className={`rounded-full border px-2.5 py-0.5 font-mono text-[10px] font-semibold flex items-center gap-1 shadow-xs ${isDarkMode ? 'border-white/15 bg-white/[0.08] text-slate-300' : 'border-slate-300 bg-slate-200/80 text-slate-600'
-                }`}>
+              <kbd className={`flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[11px] font-medium font-mono border ${
+                isDarkMode
+                  ? 'border-white/[0.1] bg-white/[0.08] text-neutral-300'
+                  : 'border-black/[0.08] bg-white text-neutral-500 shadow-2xs'
+              }`}>
                 <span>⌘</span>
                 <span>K</span>
-              </span>
+              </kbd>
             </div>
           </button>
 
-          {/* Live Search Quick Results Dropdown */}
+          {/* Spotlight Search Results Menu (1.10X) */}
           {isSearchFocused && searchQuery.trim() !== '' && (
-            <div className={`absolute left-1/2 top-full mt-2 w-full max-w-[580px] -translate-x-1/2 overflow-hidden rounded-3xl border shadow-[0_24px_60px_rgba(0,0,0,0.8),inset_0_1px_0_0_rgba(255,255,255,0.15)] z-50 backdrop-blur-3xl ${isDarkMode ? 'bg-[#18181D]/98 border-white/15 text-white' : 'bg-white border-slate-200 text-slate-900'
+            <div className={`absolute left-0 right-0 top-full mt-2.5 overflow-hidden rounded-2xl border shadow-[0_20px_50px_rgba(0,0,0,0.25)] dark:shadow-[0_24px_60px_rgba(0,0,0,0.8)] z-50 backdrop-blur-3xl transition-all ${
+              isDarkMode ? 'bg-[#1C1C1E]/95 border-white/[0.12] text-white' : 'bg-white/95 border-black/[0.08] text-neutral-900'
+            }`}>
+              <div className={`flex items-center justify-between border-b px-4 py-3 text-xs font-medium ${
+                isDarkMode ? 'border-white/[0.08] text-neutral-400' : 'border-black/[0.06] text-neutral-500'
               }`}>
-              <div className="flex items-center justify-between border-b border-white/10 px-4 py-3 text-xs font-semibold text-slate-400">
-                <span>Search results ({totalResultsCount})</span>
-                <span className="font-mono text-[10px]">Orders • Parts • Finance</span>
+                <span>Spotlight results ({totalResultsCount})</span>
+                <span className="font-mono text-[11px] text-neutral-400">Esc to dismiss</span>
               </div>
-              <div className="max-h-80 overflow-y-auto p-2 space-y-1">
-                {matchingOrders.length > 0 && <div className="px-2 py-1 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">Customer Orders</div>}
+              <div className="max-h-84 overflow-y-auto p-2 space-y-1">
+                {matchingOrders.length > 0 && (
+                  <div className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+                    Orders
+                  </div>
+                )}
                 {matchingOrders.map(order => (
-                  <button key={order.id} type="button" onClick={() => handleSearchResultClick('order', order.id)} className="flex w-full items-center justify-between gap-3 rounded-2xl p-2.5 text-left transition hover:bg-white/[0.08] cursor-pointer">
-                    <span className="flex min-w-0 items-center gap-2.5">
-                      <div className="p-2 rounded-xl bg-[#5B75F8]/10 text-[#5B75F8]">
-                        <ShoppingCart className="h-3.5 w-3.5 shrink-0" />
+                  <button
+                    key={order.id}
+                    type="button"
+                    onClick={() => handleSearchResultClick('order', order.id)}
+                    className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left transition hover:bg-black/[0.04] dark:hover:bg-white/[0.08] cursor-pointer"
+                  >
+                    <span className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500 dark:text-blue-400">
+                        <ShoppingCart className="h-4 w-4" />
                       </div>
                       <span className="min-w-0">
-                        <span className="block truncate text-xs font-semibold">{order.poNo || 'PO'} - {order.customerName || 'Customer'}</span>
-                        <span className="block truncate font-mono text-[10px] text-slate-400">{(order.lines || []).length} items • ₹{(order.grossAmount || 0).toLocaleString()} • {order.status}</span>
+                        <span className="block truncate text-[13px] font-medium text-neutral-900 dark:text-neutral-100">
+                          {order.poNo || 'PO'} · {order.customerName || 'Customer'}
+                        </span>
+                        <span className="block truncate text-[11px] text-neutral-400 font-mono">
+                          {(order.lines || []).length} items · ₹{(order.grossAmount || 0).toLocaleString()} · {order.status}
+                        </span>
                       </span>
                     </span>
-                    <ArrowRight className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                    <ArrowRight className="h-4 w-4 shrink-0 text-neutral-400" />
                   </button>
                 ))}
 
-                {matchingStock.length > 0 && <div className="px-2 py-1 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">Inventory & Stock</div>}
+                {matchingStock.length > 0 && (
+                  <div className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+                    Inventory
+                  </div>
+                )}
                 {matchingStock.map(item => (
-                  <button key={item.code} type="button" onClick={() => handleSearchResultClick('stock', item.code)} className="flex w-full items-center justify-between gap-3 rounded-2xl p-2.5 text-left transition hover:bg-white/[0.08] cursor-pointer">
-                    <span className="flex min-w-0 items-center gap-2.5">
-                      <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
-                        <Package className="h-3.5 w-3.5 shrink-0" />
+                  <button
+                    key={item.code}
+                    type="button"
+                    onClick={() => handleSearchResultClick('stock', item.code)}
+                    className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left transition hover:bg-black/[0.04] dark:hover:bg-white/[0.08] cursor-pointer"
+                  >
+                    <span className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500 dark:text-emerald-400">
+                        <Package className="h-4 w-4" />
                       </div>
                       <span className="min-w-0">
-                        <span className="block truncate text-xs font-semibold">{item.code} - {item.description}</span>
-                        <span className="block truncate font-mono text-[10px] text-slate-400">Qty: {item.available ?? item.onHand ?? 0} {item.unit || 'PCS'} • {item.status}</span>
+                        <span className="block truncate text-[13px] font-medium text-neutral-900 dark:text-neutral-100">
+                          {item.code} · {item.description}
+                        </span>
+                        <span className="block truncate text-[11px] text-neutral-400 font-mono">
+                          Qty: {item.available ?? item.onHand ?? 0} {item.unit || 'PCS'} · {item.status}
+                        </span>
                       </span>
                     </span>
-                    <ArrowRight className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                    <ArrowRight className="h-4 w-4 shrink-0 text-neutral-400" />
                   </button>
                 ))}
 
-                {matchingInvoices.length > 0 && <div className="px-2 py-1 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">Tax Invoices</div>}
+                {matchingInvoices.length > 0 && (
+                  <div className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+                    Invoices
+                  </div>
+                )}
                 {matchingInvoices.map(inv => (
-                  <button key={inv.invoiceNo} type="button" onClick={() => handleSearchResultClick('invoice', inv.invoiceNo)} className="flex w-full items-center justify-between gap-3 rounded-2xl p-2.5 text-left transition hover:bg-white/[0.08] cursor-pointer">
-                    <span className="flex min-w-0 items-center gap-2.5">
-                      <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400">
-                        <FileText className="h-3.5 w-3.5 shrink-0" />
+                  <button
+                    key={inv.invoiceNo}
+                    type="button"
+                    onClick={() => handleSearchResultClick('invoice', inv.invoiceNo)}
+                    className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left transition hover:bg-black/[0.04] dark:hover:bg-white/[0.08] cursor-pointer"
+                  >
+                    <span className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-purple-500/10 text-purple-500 dark:text-purple-400">
+                        <FileText className="h-4 w-4" />
                       </div>
                       <span className="min-w-0">
-                        <span className="block truncate text-xs font-semibold">{inv.invoiceNo} - {inv.customerName}</span>
-                        <span className="block truncate font-mono text-[10px] text-slate-400">PO: {inv.orderPo} • ₹{Number(inv.totalAmount || 0).toLocaleString()} • {inv.status}</span>
+                        <span className="block truncate text-[13px] font-medium text-neutral-900 dark:text-neutral-100">
+                          {inv.invoiceNo} · {inv.customerName}
+                        </span>
+                        <span className="block truncate text-[11px] text-neutral-400 font-mono">
+                          PO: {inv.orderPo} · ₹{Number(inv.totalAmount || 0).toLocaleString()} · {inv.status}
+                        </span>
                       </span>
                     </span>
-                    <ArrowRight className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                    <ArrowRight className="h-4 w-4 shrink-0 text-neutral-400" />
                   </button>
                 ))}
 
-                {matchingJobs.length > 0 && <div className="px-2 py-1 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">Shopfloor Job Cards</div>}
+                {matchingJobs.length > 0 && (
+                  <div className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+                    Job Cards
+                  </div>
+                )}
                 {matchingJobs.map(job => (
-                  <button key={job.jobNo} type="button" onClick={() => handleSearchResultClick('job', job.jobNo)} className="flex w-full items-center justify-between gap-3 rounded-2xl p-2.5 text-left transition hover:bg-white/[0.08] cursor-pointer">
-                    <span className="flex min-w-0 items-center gap-2.5">
-                      <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400">
-                        <Wrench className="h-3.5 w-3.5 shrink-0" />
+                  <button
+                    key={job.jobNo}
+                    type="button"
+                    onClick={() => handleSearchResultClick('job', job.jobNo)}
+                    className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left transition hover:bg-black/[0.04] dark:hover:bg-white/[0.08] cursor-pointer"
+                  >
+                    <span className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500 dark:text-amber-400">
+                        <Wrench className="h-4 w-4" />
                       </div>
                       <span className="min-w-0">
-                        <span className="block truncate text-xs font-semibold">{job.jobNo} - {job.partCode || job.partDescription}</span>
-                        <span className="block truncate font-mono text-[10px] text-slate-400">Machine: {job.machine || 'CNC'} • Qty: {job.qty} • {job.status}</span>
+                        <span className="block truncate text-[13px] font-medium text-neutral-900 dark:text-neutral-100">
+                          {job.jobNo} · {job.partCode || job.partDescription}
+                        </span>
+                        <span className="block truncate text-[11px] text-neutral-400 font-mono">
+                          Machine: {job.machine || 'CNC'} · Qty: {job.qty} · {job.status}
+                        </span>
                       </span>
                     </span>
-                    <ArrowRight className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                    <ArrowRight className="h-4 w-4 shrink-0 text-neutral-400" />
                   </button>
                 ))}
 
                 {totalResultsCount === 0 && (
-                  <div className="py-8 text-center text-xs font-medium text-slate-400">No matching orders, items, invoices or jobs found.</div>
+                  <div className="py-7 text-center text-xs font-normal text-neutral-400">
+                    No matching results found.
+                  </div>
                 )}
               </div>
             </div>
@@ -412,40 +473,49 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
         </div>
 
         {/* ========================================================================= */}
-        {/* ── RIGHT: APPLE CONTROL DECK & ACTION PILLS ──                            */}
+        {/* ── TRAILING: APPLE UNIFIED TOOLBAR CONTROL DECK (1.10X) ──               */}
         {/* ========================================================================= */}
-        <div className="ml-auto flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
 
           {/* Mobile Search Button */}
           <button
             type="button"
             onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
-            aria-label="Toggle quick search"
-            className={`flex h-9 w-9 items-center justify-center rounded-full border transition-all active:scale-95 lg:hidden ${isDarkMode ? 'border-white/15 bg-white/[0.06] text-slate-200' : 'border-slate-200 bg-slate-100 text-slate-700'
-              }`}
+            aria-label="Toggle search"
+            className={`flex h-9 w-9 items-center justify-center rounded-lg md:hidden transition-all cursor-pointer ${
+              isDarkMode
+                ? 'text-neutral-300 hover:bg-white/[0.08]'
+                : 'text-neutral-600 hover:bg-black/[0.05]'
+            }`}
           >
-            <Search className="h-4 w-4" />
+            <Search className="h-4.5 w-4.5" />
           </button>
 
-          {/* Scope Selector */}
-          <div className="relative hidden xl:block" ref={scopeDropdownRef}>
+          {/* Apple Pop-up Button: Scope Selector (1.10X) */}
+          <div className="relative hidden lg:block" ref={scopeDropdownRef}>
             <button
               type="button"
               onClick={() => setShowScopeDropdown(!showScopeDropdown)}
-              className={`flex h-9 items-center gap-2 rounded-full border px-3.5 text-xs font-semibold transition-all active:scale-95 cursor-pointer shadow-2xs ${isDarkMode
-                  ? 'border-white/15 bg-white/[0.06] text-slate-200 hover:bg-white/[0.1] hover:border-white/25'
-                  : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-                }`}
-              title={`Reporting period: ${fiscalYear}`}
+              className={`flex h-9 items-center gap-2 rounded-xl px-3 text-[13px] font-medium transition-all duration-150 cursor-pointer border ${
+                showScopeDropdown
+                  ? isDarkMode
+                    ? 'border-white/[0.2] bg-white/[0.1] text-white'
+                    : 'border-black/[0.2] bg-black/[0.06] text-neutral-900'
+                  : isDarkMode
+                    ? 'border-white/[0.08] bg-white/[0.04] text-neutral-300 hover:bg-white/[0.08] hover:border-white/[0.14]'
+                    : 'border-black/[0.06] bg-black/[0.02] text-neutral-700 hover:bg-black/[0.05] hover:border-black/[0.12]'
+              }`}
+              title={`Reporting scope: ${fiscalYear}`}
             >
-              <CalendarRange className="h-3.5 w-3.5 text-[#5B75F8]" />
-              <span>{scope}</span>
-              <ChevronDown className={`h-3 w-3 text-slate-400 transition-transform ${showScopeDropdown ? 'rotate-180 text-[#5B75F8]' : ''}`} />
+              <CalendarRange className="h-4 w-4 text-[#4763F5] dark:text-[#7A92FF]" />
+              <span className="tracking-tight">{scope}</span>
+              <ChevronDown className={`h-3.5 w-3.5 text-neutral-400 transition-transform duration-150 ${showScopeDropdown ? 'rotate-180' : ''}`} />
             </button>
 
             {showScopeDropdown && (
-              <div className={`absolute right-0 top-full mt-2 w-44 rounded-2xl border p-1.5 text-xs shadow-[0_20px_50px_rgba(0,0,0,0.8),inset_0_1px_0_0_rgba(255,255,255,0.12)] z-50 backdrop-blur-3xl ${isDarkMode ? 'bg-[#18181D]/98 border-white/15 text-white' : 'bg-white border-slate-200 text-slate-900'
-                }`}>
+              <div className={`absolute right-0 top-full mt-2 w-44 overflow-hidden rounded-xl border p-1 text-xs shadow-[0_16px_36px_rgba(0,0,0,0.2)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.7)] z-50 backdrop-blur-3xl ${
+                isDarkMode ? 'bg-[#1C1C1E]/95 border-white/[0.12] text-white' : 'bg-white/95 border-black/[0.08] text-neutral-900'
+              }`}>
                 {scopeOptions.map(sc => (
                   <button
                     key={sc}
@@ -455,37 +525,72 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
                       if (sc.startsWith('FY')) setFiscalYear(sc);
                       setShowScopeDropdown(false);
                     }}
-                    className={`w-full rounded-xl px-3 py-2 text-left font-semibold transition-all cursor-pointer ${scope === sc
-                        ? 'bg-[#5B75F8] text-white shadow-sm'
-                        : isDarkMode ? 'hover:bg-white/[0.08] text-slate-200' : 'hover:bg-slate-100 text-slate-700'
-                      }`}
+                    className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-medium transition-colors cursor-pointer ${
+                      scope === sc
+                        ? 'bg-[#4763F5] text-white'
+                        : isDarkMode
+                          ? 'hover:bg-white/[0.08] text-neutral-300'
+                          : 'hover:bg-black/[0.05] text-neutral-700'
+                    }`}
                   >
-                    {sc}
+                    <span>{sc}</span>
+                    {scope === sc && <Check className="h-3.5 w-3.5 text-white" />}
                   </button>
                 ))}
               </div>
             )}
           </div>
 
-          {/* Theme and Dashboard Customizer */}
+          {/* Sync Control & Live Status (1.10X) */}
+          <div className="flex items-center">
+            <button
+              type="button"
+              onClick={handleSyncClick}
+              disabled={isSyncing}
+              title={`Synchronize system (Last: ${lastSynced})`}
+              className={`group flex h-9 items-center gap-2 rounded-xl px-3 text-[13px] font-medium transition-all duration-150 cursor-pointer border ${
+                isSyncing
+                  ? 'cursor-wait opacity-80 border-blue-500/30 bg-blue-500/10 text-blue-500'
+                  : isDarkMode
+                    ? 'border-white/[0.08] bg-white/[0.04] text-neutral-300 hover:bg-white/[0.08] hover:border-white/[0.14]'
+                    : 'border-black/[0.06] bg-black/[0.02] text-neutral-700 hover:bg-black/[0.05] hover:border-black/[0.12]'
+              }`}
+            >
+              <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin text-[#4763F5] dark:text-[#7A92FF]' : 'text-neutral-400 group-hover:text-neutral-700 dark:group-hover:text-neutral-200'}`} />
+              <span className="hidden xl:inline">{isSyncing ? 'Syncing...' : 'Sync'}</span>
+              <span className="hidden 2xl:inline text-[11px] text-neutral-400 dark:text-neutral-400 font-mono">
+                · {lastSynced}
+              </span>
+            </button>
+          </div>
+
+          {/* macOS Control Center Style: Appearance & Accent Popover (1.10X) */}
           <div className="relative" ref={customizeDropdownRef}>
             <button
               type="button"
               onClick={() => setShowCustomizeMenu(prev => !prev)}
-              className={`flex h-9 w-9 items-center justify-center rounded-full border text-xs font-semibold transition-all active:scale-95 cursor-pointer shadow-2xs ${showCustomizeMenu
-                  ? 'border-[#5B75F8] bg-[#5B75F8]/15 text-[#5B75F8]'
+              className={`flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-150 cursor-pointer border ${
+                showCustomizeMenu
+                  ? isDarkMode
+                    ? 'border-[#4763F5] bg-[#4763F5]/20 text-[#7A92FF]'
+                    : 'border-[#4763F5] bg-[#4763F5]/10 text-[#4763F5]'
                   : isDarkMode
-                    ? 'border-white/15 bg-white/[0.06] text-slate-200 hover:bg-white/[0.1] hover:border-white/25'
-                    : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
-                }`}
-              title="Theme and appearance"
+                    ? 'border-white/[0.08] bg-white/[0.04] text-neutral-300 hover:bg-white/[0.08] hover:border-white/[0.14]'
+                    : 'border-black/[0.06] bg-black/[0.02] text-neutral-600 hover:bg-black/[0.05] hover:border-black/[0.12]'
+              }`}
+              title="Theme and appearance settings"
             >
               <Palette className="h-4 w-4" />
             </button>
 
             {showCustomizeMenu && (
-              <div className={`absolute right-0 top-full mt-2 w-72 rounded-3xl border p-4 shadow-[0_20px_50px_rgba(0,0,0,0.8),inset_0_1px_0_0_rgba(255,255,255,0.12)] z-50 backdrop-blur-3xl ${isDarkMode ? 'bg-[#18181D]/98 border-white/15 text-white' : 'bg-white border-slate-200 text-slate-900'
-                }`}>
+              <div className={`absolute right-0 top-full mt-2 w-76 rounded-2xl border p-4 shadow-[0_20px_50px_rgba(0,0,0,0.25)] dark:shadow-[0_24px_60px_rgba(0,0,0,0.8)] z-50 backdrop-blur-3xl ${
+                isDarkMode ? 'bg-[#1C1C1E]/95 border-white/[0.12] text-white' : 'bg-white/95 border-black/[0.08] text-neutral-900'
+              }`}>
+                <div className="mb-3 flex items-center justify-between border-b pb-2.5 border-black/[0.06] dark:border-white/[0.08]">
+                  <span className="text-[13px] font-semibold tracking-tight">Appearance</span>
+                  <span className="text-[11px] font-medium text-neutral-400">macOS System Style</span>
+                </div>
                 <AccentColorSelector isDarkMode={isDarkMode} />
                 {onOpenCustomize && (
                   <button
@@ -494,96 +599,81 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
                       setShowCustomizeMenu(false);
                       onOpenCustomize();
                     }}
-                    className={`mt-4 flex w-full items-center justify-between rounded-full border px-4 py-2.5 text-xs font-semibold transition-all cursor-pointer ${isDarkMode ? 'border-white/15 bg-white/[0.06] hover:bg-white/10 text-white' : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800'
-                      }`}
+                    className={`mt-4 flex w-full items-center justify-between rounded-xl border px-3.5 py-2 text-xs font-medium transition-all cursor-pointer ${
+                      isDarkMode
+                        ? 'border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.08] text-neutral-200'
+                        : 'border-black/[0.06] bg-black/[0.02] hover:bg-black/[0.05] text-neutral-800'
+                    }`}
                   >
-                    <span className="flex items-center gap-2"><SlidersHorizontal className="h-3.5 w-3.5" /> Configure widgets</span>
-                    <ArrowRight className="h-3.5 w-3.5 text-slate-400" />
+                    <span className="flex items-center gap-2">
+                      <SlidersHorizontal className="h-4 w-4 text-neutral-400" />
+                      Configure console widgets
+                    </span>
+                    <ArrowRight className="h-3.5 w-3.5 text-neutral-400" />
                   </button>
                 )}
               </div>
             )}
           </div>
 
-          {/* Sync Button */}
-          <button
-            type="button"
-            onClick={handleSyncClick}
-            disabled={isSyncing}
-            title="Refresh and synchronize system data"
-            className={`flex h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold transition-all active:scale-95 cursor-pointer shadow-2xs ${isSyncing
-                ? 'cursor-wait opacity-80'
-                : isDarkMode
-                  ? 'border-white/15 bg-white/[0.06] text-slate-200 hover:bg-white/[0.1] hover:border-white/25'
-                  : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-              }`}
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin text-[#5B75F8]' : 'text-slate-400'}`} />
-            <span className="hidden sm:inline">{isSyncing ? 'Syncing' : 'Sync'}</span>
-          </button>
-
-          {/* Last Synced Badge (1.15X Scaled) */}
-          <div
-            className={`hidden items-center gap-2 rounded-full border px-3.5 py-1.5 xl:flex shadow-2xs transition-all ${isDarkMode ? 'border-white/15 bg-white/[0.06] hover:bg-white/[0.1]' : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
-              }`}
-            title={`Last synchronized: ${lastSynced}`}
-          >
-            <CircleCheck className="h-4 w-4 text-emerald-500 shrink-0" />
-            <span className={`font-mono text-[11px] font-semibold tracking-tight ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>{lastSynced}</span>
-          </div>
-
-          {/* ServerAdmin Vault Link */}
-          {tryNormalizeRole(currentRole) === 'ServerAdmin' && (
+          {/* Admin Vault Link (Only if role is ServerAdmin) */}
+          {normalizedRole === 'ServerAdmin' && (
             <Link
               to="/admin"
-              className="flex h-9 items-center gap-1.5 rounded-full border border-purple-500/30 bg-purple-500/15 px-3 text-xs font-semibold text-purple-300 hover:bg-purple-500/25 transition-all shadow-sm active:scale-95"
-              title="Enter ServerAdmin Maker Vault"
+              className="hidden sm:flex h-9 items-center gap-1.5 rounded-xl border border-purple-500/25 bg-purple-500/10 px-3 text-[13px] font-medium text-purple-600 dark:text-purple-300 hover:bg-purple-500/20 transition-all"
+              title="Maker Vault Admin Panel"
             >
-              <Terminal className="h-3.5 w-3.5 text-purple-400" />
-              <span className="hidden sm:inline">Admin Vault</span>
+              <Terminal className="h-4 w-4 text-purple-500 dark:text-purple-400" />
+              <span>Admin</span>
             </Link>
           )}
 
-          {/* Real-time Notifications Bell */}
+          {/* Notification Center Trigger (1.10X) */}
           <button
             type="button"
             onClick={() => setIsNotificationOpen(true)}
-            className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-all active:scale-95 cursor-pointer shadow-2xs ${isDarkMode
-                ? 'border-white/15 bg-white/[0.06] text-slate-200 hover:bg-white/[0.1] hover:border-white/25'
-                : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-              }`}
-            title={`Operations Alerts (${unreadCount} unread)`}
+            className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-150 cursor-pointer border ${
+              isDarkMode
+                ? 'border-white/[0.08] bg-white/[0.04] text-neutral-300 hover:bg-white/[0.08] hover:border-white/[0.14]'
+                : 'border-black/[0.06] bg-black/[0.02] text-neutral-600 hover:bg-black/[0.05] hover:border-black/[0.12]'
+            }`}
+            title={`Notifications (${unreadCount} unread)`}
           >
             <Bell className="h-4 w-4" />
             {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 font-mono text-[8px] font-bold text-white shadow-sm animate-pulse">
+              <span className="absolute -top-1 -right-1 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-[#FF3B30] px-1 font-sans text-[10px] font-bold text-white shadow-xs">
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}
           </button>
 
-          {/* Apple Segmented Dark/Light Mode Switch */}
+          {/* Apple Light / Dark Mode Segmented Toggle (1.10X) */}
           <button
             type="button"
             onClick={() => setIsDarkMode(!isDarkMode)}
-            className={`relative flex h-9 w-14 shrink-0 items-center rounded-full border p-0.5 transition-all cursor-pointer shadow-2xs ${isDarkMode ? 'border-white/15 bg-black/60 shadow-inner' : 'border-slate-200 bg-slate-100'
-              }`}
-            title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+            className={`relative flex h-9 w-14 shrink-0 items-center rounded-full p-0.5 transition-all duration-200 cursor-pointer border ${
+              isDarkMode
+                ? 'border-white/[0.12] bg-neutral-900/90 shadow-inner'
+                : 'border-black/[0.08] bg-neutral-200/80'
+            }`}
+            title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            aria-label="Toggle dark and light mode"
           >
             <motion.div
               layout
-              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-              className={`flex h-7 w-7 items-center justify-center rounded-full text-white shadow-sm ${isDarkMode ? 'ml-6 bg-[#5B75F8]' : 'ml-0 bg-slate-800'
-                }`}
+              transition={{ type: 'spring', stiffness: 500, damping: 32 }}
+              className={`flex h-7 w-7 items-center justify-center rounded-full shadow-xs ${
+                isDarkMode ? 'ml-6 bg-[#4763F5] text-white' : 'ml-0 bg-white text-neutral-800'
+              }`}
             >
               <AnimatePresence mode="popLayout" initial={false}>
                 <motion.div
                   key={isDarkMode ? 'moon' : 'sun'}
-                  initial={{ opacity: 0, scale: 0.25 }}
+                  initial={{ opacity: 0, scale: 0.4 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.25 }}
-                  transition={{ type: 'spring', duration: 0.25, bounce: 0 }}
-                  className="flex h-7 w-7 items-center justify-center"
+                  exit={{ opacity: 0, scale: 0.4 }}
+                  transition={{ duration: 0.15 }}
+                  className="flex items-center justify-center"
                 >
                   {isDarkMode ? <Moon className="h-3.5 w-3.5" /> : <Sun className="h-3.5 w-3.5" />}
                 </motion.div>
@@ -591,49 +681,151 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
             </motion.div>
           </button>
 
+          {/* Apple HIG Account Capsule & Menu (1.10X) */}
+          <div className="relative" ref={userDropdownRef}>
+            <button
+              type="button"
+              onClick={() => setShowUserMenu(prev => !prev)}
+              className={`flex h-9 items-center gap-2 rounded-xl pl-2 pr-2.5 transition-all duration-150 cursor-pointer border ${
+                showUserMenu
+                  ? isDarkMode
+                    ? 'border-white/[0.2] bg-white/[0.1]'
+                    : 'border-black/[0.2] bg-black/[0.06]'
+                  : isDarkMode
+                    ? 'border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.08]'
+                    : 'border-black/[0.06] bg-black/[0.02] hover:bg-black/[0.05]'
+              }`}
+              title="Account & Security"
+            >
+              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-tr from-[#4763F5] to-[#7A92FF] text-[11px] font-bold text-white shadow-2xs">
+                {initial}
+              </div>
+              <span className="hidden xl:inline text-[13px] font-medium text-neutral-700 dark:text-neutral-200 truncate max-w-[110px]">
+                {displayName.split(' ')[0]}
+              </span>
+              <ChevronDown className={`h-3.5 w-3.5 text-neutral-400 transition-transform duration-150 ${showUserMenu ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showUserMenu && (
+              <div className={`absolute right-0 top-full mt-2 w-60 overflow-hidden rounded-2xl border p-1.5 text-xs shadow-[0_20px_50px_rgba(0,0,0,0.25)] dark:shadow-[0_24px_60px_rgba(0,0,0,0.8)] z-50 backdrop-blur-3xl ${
+                isDarkMode ? 'bg-[#1C1C1E]/95 border-white/[0.12] text-white' : 'bg-white/95 border-black/[0.08] text-neutral-900'
+              }`}>
+                {/* User Info Header */}
+                <div className="px-3 py-2.5 border-b border-black/[0.06] dark:border-white/[0.08]">
+                  <div className="font-semibold text-[13px] text-neutral-900 dark:text-neutral-100 truncate">
+                    {displayName}
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    <span className="text-[11px] font-medium font-mono text-neutral-400">
+                      {normalizedRole}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="pt-1.5 space-y-0.5">
+                  {onOpenSecurityModal && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        onOpenSecurityModal();
+                      }}
+                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-medium transition hover:bg-black/[0.04] dark:hover:bg-white/[0.08] cursor-pointer"
+                    >
+                      <Shield className="h-4 w-4 text-neutral-400" />
+                      <span>Security & Access</span>
+                    </button>
+                  )}
+
+                  {onSignOut && (
+                    <div className="border-t pt-1 border-black/[0.06] dark:border-white/[0.08]">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          onSignOut();
+                        }}
+                        className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-medium text-[#FF3B30] transition hover:bg-[#FF3B30]/10 cursor-pointer"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        <span>Sign Out</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
         </div>
       </div>
 
-      {/* Mobile Search Overlay Bar */}
+      {/* Mobile Search Overlay Bar (1.10X) */}
       {isMobileSearchOpen && (
-        <div className={`absolute left-0 right-0 top-full z-40 border-b p-3 shadow-2xl lg:hidden ${isDarkMode ? 'border-white/15 bg-[#18181D]/98 backdrop-blur-3xl' : 'border-slate-200 bg-white'
-          }`}>
+        <div className={`absolute left-0 right-0 top-full z-40 border-b p-3 shadow-xl md:hidden ${
+          isDarkMode ? 'border-white/[0.1] bg-[#1C1C1E]/98 backdrop-blur-3xl' : 'border-black/[0.08] bg-white/98 backdrop-blur-3xl'
+        }`}>
           <div className="relative flex items-center">
-            <Search className="absolute left-3.5 h-4 w-4 text-slate-400" />
+            <Search className="absolute left-3 h-4 w-4 text-neutral-400" />
             <input
               ref={mobileSearchInputRef}
               autoFocus
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search orders, parts, invoices, jobs..."
-              className={`w-full rounded-full border py-2 pl-9 pr-9 text-xs font-medium outline-none ${isDarkMode
-                  ? 'border-white/15 bg-white/[0.06] text-white placeholder:text-slate-400 focus:border-[#5B75F8]'
-                  : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:border-[#5B75F8]'
-                }`}
+              placeholder="Search orders, stock, jobs, invoices..."
+              className={`w-full rounded-xl border py-2 pl-9 pr-9 text-xs font-normal outline-none ${
+                isDarkMode
+                  ? 'border-white/[0.1] bg-white/[0.06] text-white placeholder:text-neutral-500 focus:border-[#4763F5]'
+                  : 'border-black/[0.1] bg-neutral-100 text-neutral-900 placeholder:text-neutral-400 focus:border-[#4763F5]'
+              }`}
             />
             {searchQuery && (
-              <button type="button" onClick={() => setSearchQuery('')} className="absolute right-3 text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer">
-                <X className="h-3.5 w-3.5" />
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 text-neutral-400 hover:text-neutral-600 dark:hover:text-white cursor-pointer"
+              >
+                <X className="h-4 w-4" />
               </button>
             )}
           </div>
 
           {searchQuery.trim() !== '' && (
-            <div className="mt-2 max-h-64 overflow-y-auto space-y-1">
+            <div className="mt-2.5 max-h-64 overflow-y-auto space-y-1">
               {matchingOrders.map(order => (
-                <button key={order.id} type="button" onClick={() => handleSearchResultClick('order', order.id)} className={`flex w-full items-center justify-between gap-2 rounded-xl p-2 text-left text-xs font-semibold cursor-pointer ${isDarkMode ? 'hover:bg-white/[0.08] text-white' : 'hover:bg-slate-100 text-slate-800'}`}>
-                  <span className="truncate">{order.poNo || 'PO'} - {order.customerName}</span>
-                  <ArrowRight className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                <button
+                  key={order.id}
+                  type="button"
+                  onClick={() => handleSearchResultClick('order', order.id)}
+                  className={`flex w-full items-center justify-between gap-2.5 rounded-xl p-2.5 text-left text-xs font-medium cursor-pointer ${
+                    isDarkMode ? 'hover:bg-white/[0.08] text-white' : 'hover:bg-neutral-100 text-neutral-800'
+                  }`}
+                >
+                  <span className="truncate">{order.poNo || 'PO'} · {order.customerName}</span>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-neutral-400" />
                 </button>
               ))}
               {matchingStock.map(item => (
-                <button key={item.code} type="button" onClick={() => handleSearchResultClick('stock', item.code)} className={`flex w-full items-center justify-between gap-2 rounded-xl p-2 text-left text-xs font-semibold cursor-pointer ${isDarkMode ? 'hover:bg-white/[0.08] text-white' : 'hover:bg-slate-100 text-slate-800'}`}>
-                  <span className="truncate">{item.code} - {item.description}</span>
-                  <ArrowRight className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                <button
+                  key={item.code}
+                  type="button"
+                  onClick={() => handleSearchResultClick('stock', item.code)}
+                  className={`flex w-full items-center justify-between gap-2.5 rounded-xl p-2.5 text-left text-xs font-medium cursor-pointer ${
+                    isDarkMode ? 'hover:bg-white/[0.08] text-white' : 'hover:bg-neutral-100 text-neutral-800'
+                  }`}
+                >
+                  <span className="truncate">{item.code} · {item.description}</span>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-neutral-400" />
                 </button>
               ))}
-              {totalResultsCount === 0 && <div className="py-4 text-center text-xs text-slate-400">No matching results.</div>}
+              {totalResultsCount === 0 && (
+                <div className="py-4 text-center text-xs text-neutral-400">
+                  No matching results found.
+                </div>
+              )}
             </div>
           )}
         </div>

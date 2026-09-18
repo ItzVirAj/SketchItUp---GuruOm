@@ -40,8 +40,11 @@ import {
   CreditCard,
   Building2,
   Receipt,
-  FileText
+  FileText,
+  Megaphone,
+  Pin
 } from 'lucide-react';
+import { Announcement } from '../../../services/consoleApiServices';
 import {
   CustomerOrder,
   StockItem,
@@ -88,6 +91,7 @@ interface CommandCentreViewProps {
   users?: any[];
   auditLogs?: AuditLogEntry[];
   approvals?: PendingApproval[];
+  announcements?: Announcement[];
   containerScrollRef?: React.RefObject<HTMLElement | null>;
   isDarkMode?: boolean;
   isRealtimeStreaming?: boolean;
@@ -137,6 +141,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
   productionLogs = [],
   auditLogs = [],
   approvals = [],
+  announcements = [],
   containerScrollRef,
   isDarkMode = false,
   isRealtimeStreaming = true,
@@ -348,6 +353,9 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
 
   const recentOrders = metrics.scopedOrders.slice(0, 6);
   const pipelineTotal = (Object.values(metrics.pipeline) as number[]).reduce((a, b) => a + b, 0) || 1;
+  const pinnedAnnouncement = useMemo(() => {
+    return announcements.find((a) => a.pinned);
+  }, [announcements]);
 
   /* ─────────────────────────────  DESIGN TOKENS  ───────────────────────────── */
 
@@ -355,8 +363,8 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
     ? 'bg-[#18181B]/90 border border-white/15 backdrop-blur-2xl shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12),0_16px_36px_rgba(0,0,0,0.5)]'
     : 'bg-gradient-to-b from-white via-white to-slate-50/70 border border-slate-200/90 backdrop-blur-2xl shadow-[inset_0_1px_0_0_#ffffff,0_1px_3px_0_rgba(15,23,42,0.05),0_8px_20px_-3px_rgba(15,23,42,0.07)]';
 
-  const softInner = isDarkMode 
-    ? 'bg-white/[0.04] border border-white/10 hover:border-white/20' 
+  const softInner = isDarkMode
+    ? 'bg-white/[0.04] border border-white/10 hover:border-white/20'
     : 'bg-slate-50/80 border border-slate-200/80 hover:bg-slate-100/90 shadow-[inset_0_1px_1px_0_rgba(15,23,42,0.02)]';
   const textPrimary = isDarkMode ? 'text-white' : 'text-slate-900';
   const textMuted = isDarkMode ? 'text-slate-300' : 'text-slate-500';
@@ -396,16 +404,15 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
       }
     };
     const t = tones[tone] || tones.sky;
-    
+
     return (
       <button
         type="button"
         onClick={onClick}
-        className={`group relative flex min-w-[190px] shrink-0 items-center gap-3.5 rounded-2xl border px-4 py-3 text-left transition-all backdrop-blur-2xl hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
-          isDarkMode 
-            ? 'bg-[#18181B]/90 border-white/15 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08),0_8px_20px_rgba(0,0,0,0.35)] hover:bg-[#202026] hover:border-white/25' 
+        className={`group relative flex min-w-[190px] shrink-0 items-center gap-3.5 rounded-2xl border px-4 py-3 text-left transition-all backdrop-blur-2xl hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${isDarkMode
+            ? 'bg-[#18181B]/90 border-white/15 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08),0_8px_20px_rgba(0,0,0,0.35)] hover:bg-[#202026] hover:border-white/25'
             : 'bg-gradient-to-b from-white via-white to-slate-50/70 border-slate-200/90 shadow-[inset_0_1px_0_0_#ffffff,0_1px_3px_rgba(15,23,42,0.04),0_6px_16px_-2px_rgba(15,23,42,0.06)] hover:border-slate-300 hover:shadow-[inset_0_1px_0_0_#ffffff,0_4px_12px_rgba(15,23,42,0.08)]'
-        } ${t.border}`}
+          } ${t.border}`}
       >
         <div className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${t.icon} transition-transform`}>
           <Icon className="h-4.5 w-4.5 stroke-[2]" />
@@ -413,7 +420,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
             <span className="absolute -right-1 -top-1 flex h-2 w-2 animate-pulse rounded-full bg-current" />
           )}
         </div>
-        
+
         <div className="relative min-w-0 flex-1">
           <div className="flex items-center justify-between">
             <div className={`text-xl font-bold tracking-tight text-slate-900 dark:text-white`}>
@@ -464,11 +471,10 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
       <button
         type="button"
         onClick={onClick}
-        className={`group relative flex min-h-[140px] flex-col justify-between rounded-3xl border p-5 text-left transition-all backdrop-blur-2xl hover:scale-[1.01] active:scale-[0.99] cursor-pointer ${
-          isDarkMode 
-            ? 'bg-[#18181B]/90 border-white/15 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12),0_12px_32px_rgba(0,0,0,0.45)] hover:bg-[#202026] hover:border-white/25' 
+        className={`group relative flex min-h-[140px] flex-col justify-between rounded-3xl border p-5 text-left transition-all backdrop-blur-2xl hover:scale-[1.01] active:scale-[0.99] cursor-pointer ${isDarkMode
+            ? 'bg-[#18181B]/90 border-white/15 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12),0_12px_32px_rgba(0,0,0,0.45)] hover:bg-[#202026] hover:border-white/25'
             : 'bg-gradient-to-b from-white via-white to-slate-50/70 border-slate-200/90 shadow-[inset_0_1px_0_0_#ffffff,0_1px_3px_0_rgba(15,23,42,0.05),0_8px_20px_-3px_rgba(15,23,42,0.07)] hover:border-slate-300 hover:shadow-[inset_0_1px_0_0_#ffffff,0_4px_12px_rgba(15,23,42,0.08),0_16px_32px_-4px_rgba(15,23,42,0.1)]'
-        }`}
+          }`}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -526,13 +532,13 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
         {/* Top Center Radiant Glow (dynamic brand accent) */}
         <div className="absolute -top-32 left-1/2 h-[550px] w-full max-w-5xl -translate-x-1/2 bg-[radial-gradient(ellipse_75%_55%_at_50%_0%,rgba(0,122,255,0.20),transparent_70%)] blur-3xl" />
-        
+
         {/* Top-Right Secondary Atmospheric Orb (Electric Violet/Purple) */}
         <div className="absolute -top-12 -right-24 h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle_at_center,rgba(147,51,234,0.14),transparent_65%)] blur-3xl" />
-        
+
         {/* Mid-Left Emerald Factory Operations Aura */}
         <div className="absolute top-[38%] -left-28 h-[480px] w-[480px] rounded-full bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.10),transparent_65%)] blur-3xl" />
-        
+
         {/* Bottom-Right Sapphire Cashflow Glow */}
         <div className="absolute -bottom-24 right-1/4 h-[400px] w-[400px] rounded-full bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.12),transparent_65%)] blur-3xl" />
       </div>
@@ -550,12 +556,46 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
         </div>
       )}
 
+      {/* ── Pinned Company Announcement Banner ── */}
+      {pinnedAnnouncement && (
+        <div
+          onClick={() => handleNavigate('announcements')}
+          className={`relative cursor-pointer overflow-hidden rounded-2xl border p-4 transition-all duration-200 hover:scale-[1.005] active:scale-[0.995] ${isDarkMode
+              ? 'bg-amber-500/10 border-amber-500/30 text-white shadow-[0_4px_24px_rgba(245,158,11,0.15)]'
+              : 'bg-amber-50/90 border-amber-300 text-amber-950 shadow-sm'
+            }`}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 text-amber-500 border border-amber-500/30">
+                <Megaphone className="h-4.5 w-4.5" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-500 dark:text-amber-400 border border-amber-500/30">
+                    <Pin className="w-2.5 h-2.5 fill-amber-500" />
+                    <span>Company Notice</span>
+                  </span>
+                  <span className="text-xs font-bold truncate">{pinnedAnnouncement.title}</span>
+                </div>
+                <p className={`text-xs mt-0.5 truncate ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                  {pinnedAnnouncement.body}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 shrink-0 text-xs font-semibold text-amber-500 dark:text-amber-400">
+              <span className="hidden sm:inline">Read Notice</span>
+              <ChevronRight className="h-4 w-4" />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ══════════════  APPLE HIG EXECUTIVE WINDOW HEADER  ══════════════ */}
-      <section className={`relative overflow-hidden rounded-3xl border transition-all backdrop-blur-2xl ${
-        isDarkMode
+      <section className={`relative overflow-hidden rounded-3xl border transition-all backdrop-blur-2xl ${isDarkMode
           ? 'bg-gradient-to-b from-[#1c1c22]/95 via-[#16161b]/95 to-[#121216]/95 border-white/15 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.15),0_24px_60px_rgba(0,0,0,0.6)] text-white'
           : 'bg-gradient-to-b from-white via-white to-slate-50/80 border-slate-200/90 shadow-[inset_0_1px_0_0_#ffffff,0_2px_4px_rgba(15,23,42,0.04),0_12px_28px_-4px_rgba(15,23,42,0.08)] text-slate-900'
-      }`}>
+        }`}>
         {/* Apple Inset Specular Ambient Highlight */}
         <div className="pointer-events-none absolute -top-20 -right-20 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(0,122,255,0.22),transparent_70%)] blur-2xl" />
         <div className="pointer-events-none absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(147,51,234,0.15),transparent_70%)] blur-2xl" />
@@ -594,11 +634,10 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
               <select
                 value={scope}
                 onChange={e => setScope(e.target.value)}
-                className={`h-9 cursor-pointer rounded-full border px-3.5 text-xs font-semibold outline-none transition-all ${
-                  isDarkMode 
-                    ? 'border-white/10 bg-black/60 text-slate-200 hover:border-white/20' 
+                className={`h-9 cursor-pointer rounded-full border px-3.5 text-xs font-semibold outline-none transition-all ${isDarkMode
+                    ? 'border-white/10 bg-black/60 text-slate-200 hover:border-white/20'
                     : 'border-slate-200/90 bg-white text-slate-800 hover:border-slate-300 shadow-2xs'
-                }`}
+                  }`}
               >
                 <option value="All-Time">All-Time</option>
                 <option value="FY 26-27">FY 26-27</option>
@@ -607,9 +646,8 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
               </select>
 
               {/* Layout Switcher Pill Group */}
-              <div className={`flex items-center rounded-full border p-1 ${
-                isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200/90 bg-slate-100/90 shadow-2xs'
-              }`}>
+              <div className={`flex items-center rounded-full border p-1 ${isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200/90 bg-slate-100/90 shadow-2xs'
+                }`}>
                 {[
                   { id: 'executive', label: 'Executive', icon: LayoutDashboard },
                   { id: 'operations', label: 'Shopfloor', icon: Factory },
@@ -624,11 +662,10 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                       key={item.id}
                       type="button"
                       onClick={() => handleSetMode(item.id as any)}
-                      className={`flex h-7.5 px-3 items-center gap-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                        isActive
+                      className={`flex h-7.5 px-3 items-center gap-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${isActive
                           ? 'bg-[var(--accent-primary)] text-white shadow-sm shadow-[var(--accent-shadow)]'
                           : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
-                      }`}
+                        }`}
                     >
                       <Icon className="h-3.5 w-3.5" />
                       <span className="hidden md:inline">{item.label}</span>
@@ -640,11 +677,10 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
               <button
                 type="button"
                 onClick={() => setShowCustomizeModal(true)}
-                className={`flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border transition-all active:scale-95 ${
-                  isDarkMode 
-                    ? 'border-white/10 bg-black/60 text-slate-300 hover:text-white hover:bg-white/10' 
+                className={`flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border transition-all active:scale-95 ${isDarkMode
+                    ? 'border-white/10 bg-black/60 text-slate-300 hover:text-white hover:bg-white/10'
                     : 'border-slate-200/90 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-2xs'
-                }`}
+                  }`}
                 title="Customize Dashboard"
               >
                 <SlidersHorizontal className="h-4 w-4" />
@@ -673,9 +709,8 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
               return (
                 <div
                   key={item.label}
-                  className={`flex items-center gap-3.5 p-3.5 rounded-2xl border transition-all ${
-                    isDarkMode ? 'border-white/10 bg-black/50 hover:border-white/20' : 'border-slate-200/70 bg-slate-50/70 shadow-[inset_0_1px_1px_0_rgba(15,23,42,0.02)]'
-                  }`}
+                  className={`flex items-center gap-3.5 p-3.5 rounded-2xl border transition-all ${isDarkMode ? 'border-white/10 bg-black/50 hover:border-white/20' : 'border-slate-200/70 bg-slate-50/70 shadow-[inset_0_1px_1px_0_rgba(15,23,42,0.02)]'
+                    }`}
                 >
                   <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-xs ${item.bg}`}>
                     <Icon className="h-5 w-5 stroke-[2]" />
@@ -696,11 +731,10 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
         <button
           type="button"
           onClick={() => handleNavigate('approvals')}
-          className={`group w-full rounded-3xl border border-rose-500/30 p-4 text-left transition-all backdrop-blur-2xl flex items-center justify-between gap-3 cursor-pointer ${
-            isDarkMode 
-              ? 'bg-[#1c1417]/90 hover:bg-[#26191e] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1),0_12px_32px_rgba(0,0,0,0.4)]' 
+          className={`group w-full rounded-3xl border border-rose-500/30 p-4 text-left transition-all backdrop-blur-2xl flex items-center justify-between gap-3 cursor-pointer ${isDarkMode
+              ? 'bg-[#1c1417]/90 hover:bg-[#26191e] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1),0_12px_32px_rgba(0,0,0,0.4)]'
               : 'bg-gradient-to-r from-rose-50/90 via-rose-50/70 to-white border-rose-200/90 hover:border-rose-300 shadow-[inset_0_1px_0_0_#ffffff,0_2px_8px_rgba(244,63,94,0.08)]'
-          }`}
+            }`}
         >
           <div className="flex items-center gap-3.5">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400 shrink-0">
@@ -885,43 +919,43 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
         />
       )}
 
-          {/* ══════════════  AI AGENT GRID  ══════════════ */}
-          {widgetVisibility.showAgentBentoGrid && (
-            <section className="space-y-3">
-              <div className={`flex flex-wrap items-center justify-between gap-2 rounded-3xl border px-4 py-3.5 ${surface}`}>
-                <div className="flex min-w-0 items-center gap-2.5">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/12 text-violet-500">
-                    <Sparkles className="h-4 w-4" />
-                  </div>
-                  <h2 className={`truncate text-[15px] font-bold ${textPrimary}`}>Autonomous AI Agents</h2>
-                </div>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-500/10 px-2.5 py-1 text-[10px] font-bold text-violet-500">
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-500 opacity-75" />
-                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-violet-500" />
-                  </span>
-                  LIVE
-                </span>
+      {/* ══════════════  AI AGENT GRID  ══════════════ */}
+      {widgetVisibility.showAgentBentoGrid && (
+        <section className="space-y-3">
+          <div className={`flex flex-wrap items-center justify-between gap-2 rounded-3xl border px-4 py-3.5 ${surface}`}>
+            <div className="flex min-w-0 items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/12 text-violet-500">
+                <Sparkles className="h-4 w-4" />
               </div>
-              <AgentBentoGrid
-                orders={orders}
-                stock={stock}
-                shortages={shortages}
-                qcItems={qcItems}
-                pdiQueue={pdiQueue}
-                jobCards={jobCards}
-                dispatches={dispatches}
-                invoices={invoices}
-                payables={payables}
-                productionLogs={productionLogs}
-                auditLogs={auditLogs}
-                isRealtimeStreaming={isRealtimeStreaming}
-                currencySymbol={currencySymbol}
-                isDarkMode={isDarkMode}
-                onNavigateView={handleNavigate}
-              />
-            </section>
-          )}
+              <h2 className={`truncate text-[15px] font-bold ${textPrimary}`}>Autonomous AI Agents</h2>
+            </div>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-500/10 px-2.5 py-1 text-[10px] font-bold text-violet-500">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-500 opacity-75" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-violet-500" />
+              </span>
+              LIVE
+            </span>
+          </div>
+          <AgentBentoGrid
+            orders={orders}
+            stock={stock}
+            shortages={shortages}
+            qcItems={qcItems}
+            pdiQueue={pdiQueue}
+            jobCards={jobCards}
+            dispatches={dispatches}
+            invoices={invoices}
+            payables={payables}
+            productionLogs={productionLogs}
+            auditLogs={auditLogs}
+            isRealtimeStreaming={isRealtimeStreaming}
+            currencySymbol={currencySymbol}
+            isDarkMode={isDarkMode}
+            onNavigateView={handleNavigate}
+          />
+        </section>
+      )}
 
 
       {/* ══════════════  CUSTOMIZE MODAL  ══════════════ */}
@@ -967,13 +1001,12 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                         key={tab.id}
                         type="button"
                         onClick={() => handleSetMode(tab.id as any)}
-                        className={`flex min-h-[38px] items-center justify-center gap-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
-                          isActive
+                        className={`flex min-h-[38px] items-center justify-center gap-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${isActive
                             ? 'border-transparent bg-[#0F766E] text-white shadow-xs dark:bg-[#2DD4BF] dark:text-slate-950'
                             : isDarkMode
                               ? 'border-white/10 bg-slate-800/80 text-slate-300 hover:bg-slate-800'
                               : 'border-slate-200/80 bg-white text-slate-700 hover:bg-slate-50'
-                        }`}
+                          }`}
                       >
                         <Icon className="h-3.5 w-3.5" />
                         <span>{tab.label}</span>
@@ -1012,12 +1045,12 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                       type="button"
                       onClick={() => toggleWidget(key)}
                       className={`flex w-full items-center justify-between rounded-xl border p-2.5 text-xs font-medium transition-all cursor-pointer ${active
-                          ? isDarkMode 
-                            ? 'border-blue-500/30 bg-blue-500/10 text-white' 
-                            : 'border-blue-500/30 bg-blue-50/60 text-slate-900'
-                          : isDarkMode
-                            ? 'border-white/5 text-slate-400 hover:bg-white/[0.03]'
-                            : 'border-slate-100 text-slate-500 hover:bg-slate-50'
+                        ? isDarkMode
+                          ? 'border-blue-500/30 bg-blue-500/10 text-white'
+                          : 'border-blue-500/30 bg-blue-50/60 text-slate-900'
+                        : isDarkMode
+                          ? 'border-white/5 text-slate-400 hover:bg-white/[0.03]'
+                          : 'border-slate-100 text-slate-500 hover:bg-slate-50'
                         }`}
                     >
                       <span>{item.label}</span>

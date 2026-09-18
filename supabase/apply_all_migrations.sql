@@ -1,12 +1,12 @@
 -- ============================================================================
 -- GuruOm Owner OS (Stratum) — Consolidated Complete Database Migrations
--- Generated from supabase/migrations (001 through 034)
--- Total Migration Files: 34
+-- Generated from supabase/migrations (001 through 048)
+-- Total Migration Files: 48
 -- ============================================================================
 
 
 -- ============================================================================
--- Migration 01/34: 001_initial_schema.sql
+-- Migration 01/48: 001_initial_schema.sql
 -- ============================================================================
 
 -- ===================================================
@@ -299,7 +299,7 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
 
 
 -- ============================================================================
--- Migration 02/34: 002_rls_and_policies.sql
+-- Migration 02/48: 002_rls_and_policies.sql
 -- ============================================================================
 
 -- ===================================================
@@ -366,7 +366,7 @@ CREATE POLICY "Audit logs access" ON public.audit_logs FOR ALL USING (true);
 
 
 -- ============================================================================
--- Migration 03/34: 003_realtime_and_storage.sql
+-- Migration 03/48: 003_realtime_and_storage.sql
 -- ============================================================================
 
 -- ===================================================
@@ -417,22 +417,151 @@ WITH CHECK (bucket_id = 'owner-os-documents');
 
 
 -- ============================================================================
--- Migration 04/34: 004_seed_data.sql
+-- Migration 04/48: 004_seed_data.sql
 -- ============================================================================
 
 -- ===================================================
 -- Migration 004: Default Initial Seed Data
 -- ===================================================
--- Intentionally empty. This previously seeded dummy/demo business
--- records (fake orders, job cards, invoices, etc.) into every fresh
--- database. Removed so production and client deployments start clean.
--- The frontend already falls back to a default company profile label
--- ("GuruOm Industries LLP") when none exists in the DB, so no seed
--- row is required for that either.
+
+-- Company Profile
+INSERT INTO public.company_profile (id, legal_name, address, phone, email, gstin, pan, state, state_code)
+VALUES (
+  'main',
+  'GuruOm Industries LLP',
+  'Plot 42, GIDC Industrial Estate, Metoda, Rajkot, Gujarat - 360021',
+  '+91 98250 12345',
+  'contact@guruom.in',
+  '24AAAFG1234C1Z9',
+  'AAAFG1234C',
+  'Gujarat',
+  '24'
+) ON CONFLICT (id) DO NOTHING;
+
+-- Initial Profiles (Matching System Users)
+INSERT INTO public.profiles (full_name, email, role, department, phone, status, last_login)
+VALUES 
+  ('Pramod Parshi', 'user@guruom.in', 'SUPER ADMIN', 'Executive Management', '+91 98250 12345', 'ACTIVE', NOW()::text),
+  ('Rajesh Sharma', 'operator@guruom.in', 'OPERATOR', 'CNC Operations', '+91 98250 23456', 'ACTIVE', NOW()::text),
+  ('Anita Patel', 'qc@guruom.in', 'QC_MANAGER', 'Quality Assurance', '+91 98250 34567', 'ACTIVE', NOW()::text),
+  ('Vikram Singh', 'dispatch@guruom.in', 'DISPATCH_CLERK', 'Logistics & Dispatch', '+91 98250 45678', 'ACTIVE', NOW()::text),
+  ('Suresh Mehta', 'finance@guruom.in', 'FINANCE_MANAGER', 'Accounts & Finance', '+91 98250 56789', 'ACTIVE', NOW()::text)
+ON CONFLICT (email) DO NOTHING;
+
+-- Initial Masters Items
+INSERT INTO public.masters (id, code, part_no, description, unit, hsn_code, reorder_level, store_location, is_finished_goods, sale_rate, purchase_rate)
+VALUES
+  ('m-1', '00000001', '90812440', 'LOWER HOUSING FLANGE', 'NOS', '8483', 25, 'BAY-A1', true, 240, 180),
+  ('m-2', '00000002', '94900181', 'UPPER BLOCK', 'NOS', '8483', 50, 'BAY-A2', true, 123, 90),
+  ('m-3', '00000003', '90812450', 'TOWER PIVOTING SECTION', 'NOS', '8483', 30, 'BAY-B1', true, 123, 85),
+  ('m-4', '00000004', '90812460', 'ROTARY GEAR ADAPTER', 'NOS', '8483', 15, 'BAY-C1', true, 450, 320)
+ON CONFLICT (code) DO NOTHING;
+
+-- Initial Stock Items
+INSERT INTO public.stock_items (id, code, description, on_hand, reserved, available, demand, reorder_level, shortage, unit, status)
+VALUES
+  ('stk-1', '00000001', 'LOWER HOUSING FLANGE', 150, 40, 110, 50, 25, 0, 'NOS', 'OK'),
+  ('stk-2', '00000002', 'UPPER BLOCK', 80, 80, 0, 123, 50, 43, 'NOS', 'SHORTAGE'),
+  ('stk-3', '00000003', 'TOWER PIVOTING SECTION', 200, 120, 80, 123, 30, 0, 'NOS', 'OK'),
+  ('stk-4', '00000004', 'ROTARY GEAR ADAPTER', 10, 10, 0, 35, 15, 25, 'NOS', 'CRITICAL')
+ON CONFLICT (code) DO NOTHING;
+
+-- Initial Shortage Items
+INSERT INTO public.shortage_items (id, code, description, required_qty, available_qty, deficit, unit)
+VALUES
+  ('short-1', '00000002', 'UPPER BLOCK', 123, 80, 43, 'NOS'),
+  ('short-2', '00000004', 'ROTARY GEAR ADAPTER', 35, 10, 25, 'NOS')
+ON CONFLICT (id) DO NOTHING;
+
+-- Initial Customer Orders
+INSERT INTO public.customer_orders (id, po_no, customer_name, po_date, delivery_date, status, progress_step, gross_amount, tax_category, remark)
+VALUES
+  ('ord-1', 'neo123', 'Cust', '2026-07-23', '2026-07-25', 'PARTIALLY_DISPATCHED', 3, 15129.00, 'GST 18%', 'Priority dispatch requested for Tower Pivoting Section batch'),
+  ('ord-2', 'asdads123123', 'Cust', '2026-07-22', '2026-07-25', 'CLOSED', 6, 15129.00, 'GST 18%', 'Annual contract order fulfilled')
+ON CONFLICT (id) DO NOTHING;
+
+-- Initial Order Line Items
+INSERT INTO public.order_line_items (id, order_id, item_code, item_description, cust_part_no, order_qty, unit, dispatched_qty, pending_qty, rate)
+VALUES
+  ('line-1', 'ord-1', '00000003', 'TOWER PIVOTING SECTION', '90812450', 123, 'NOS', 3, 120, 123),
+  ('line-2', 'ord-2', '00000002', 'UPPER BLOCK', '94900181', 123, 'NOS', 123, 0, 123)
+ON CONFLICT (id) DO NOTHING;
+
+-- Initial Job Cards
+INSERT INTO public.job_cards (id, job_no, order_po, part_code, part_description, order_status, qty, machine, target_date, status)
+VALUES
+  ('jc-1', 'JC/0002/26-27', 'neo123', '00000003', 'TOWER PIVOTING SECTION', 'PARTIALLY_DISPATCHED', 123.00, 'VMC-01 CNC CENTRE', '2026-07-23', 'COMPLETED'),
+  ('jc-2', 'JC/0001/26-27', 'asdads123123', '00000002', 'UPPER BLOCK', 'CLOSED', 123.00, 'LMW VMC 850', '2026-07-25', 'COMPLETED')
+ON CONFLICT (id) DO NOTHING;
+
+-- Initial Finished Goods
+INSERT INTO public.finished_goods (id, order_po, part_code, part_description, pdi_passed_qty, physically_held_qty, dispatched_qty, variance)
+VALUES
+  ('fg-1', 'neo123', '00000003', 'TOWER PIVOTING SECTION', 123, 120, 3, 0),
+  ('fg-2', 'asdads123123', '00000002', 'UPPER BLOCK', 123, 0, 123, 0)
+ON CONFLICT (id) DO NOTHING;
+
+-- Initial Outwork Sendouts
+INSERT INTO public.outwork_sendouts (id, send_out_id, vendor_name, process, sent_qty, received_qty, rejected_qty, expected_date, status)
+VALUES
+  ('ow-1', 'OW-2026-001', 'Maruti Plating Works', 'Zinc Nickel Plating 12 Micron', 120, 120, 0, '2026-07-21', 'COMPLETED')
+ON CONFLICT (id) DO NOTHING;
+
+-- Initial Production Logs
+INSERT INTO public.production_logs (id, item_code, description, job_no, step_no, operation_name, qty_done, logged_timestamp)
+VALUES
+  ('pl-1', '00000003', 'TOWER PIVOTING SECTION', 'JC/0002/26-27', 1, 'CNC Turning & Facing', 123, '22/07/2026, 04:30:00 pm')
+ON CONFLICT (id) DO NOTHING;
+
+-- Initial QC Inspections
+INSERT INTO public.qc_inspections (id, job_no, order_po, part_code, part_description, qty, job_status, qc_status, inspector_notes, inspected_at)
+VALUES
+  ('qc-1', 'JC/0002/26-27', 'neo123', '00000003', 'TOWER PIVOTING SECTION', 123, 'COMPLETED', 'PASS', '100% CMM dimensional check verified within tolerance limits.', '2026-07-22T10:00:00Z')
+ON CONFLICT (id) DO NOTHING;
+
+-- Initial PDI Inspections
+INSERT INTO public.pdi_inspections (id, job_no, order_po, part_code, part_description, qty, pdi_status, certificate_no, report_date)
+VALUES
+  ('pdi-1', 'JC/0002/26-27', 'neo123', '00000003', 'TOWER PIVOTING SECTION', 123, 'PASS', 'PDI-2026-9012', '2026-07-22')
+ON CONFLICT (id) DO NOTHING;
+
+-- Initial Dispatch Challans
+INSERT INTO public.dispatch_challans (id, challan_no, order_po, status, date, transporter, vehicle_no, lines_count)
+VALUES
+  ('chl-1', 'CHL/0002/26-27', 'neo123', 'DELIVERED', '2026-07-22', 'VRL Logistics', 'GJ-03-BW-9912', 1),
+  ('chl-2', 'CHL/0001/26-27', 'asdads123123', 'DELIVERED', '2026-07-20', 'TCI Express', 'GJ-03-AX-1024', 1)
+ON CONFLICT (id) DO NOTHING;
+
+-- Initial Customer Invoices
+INSERT INTO public.customer_invoices (id, invoice_no, customer_name, order_po, challan_no, status, date, due_date, total_amount, paid_amount, balance_amount)
+VALUES
+  ('inv-1', 'INV/2026/0042', 'Cust', 'neo123', 'CHL/0002/26-27', 'PARTIAL', '2026-07-22', '2026-08-22', 17852.22, 5000.00, 12852.22),
+  ('inv-2', 'INV/2026/0039', 'Cust', 'asdads123123', 'CHL/0001/26-27', 'PAID', '2026-07-20', '2026-08-20', 17852.22, 17852.22, 0.00)
+ON CONFLICT (id) DO NOTHING;
+
+-- Initial Vendor Bills
+INSERT INTO public.vendor_bills (id, bill_no, vendor_name, po_no, status, date, due_date, amount, paid_amount, balance_amount)
+VALUES
+  ('vb-1', 'BILL-2026-881', 'Maruti Plating Works', 'PO-OUT-009', 'OPEN', '2026-07-21', '2026-08-21', 14400.00, 0.00, 14400.00)
+ON CONFLICT (id) DO NOTHING;
+
+-- Initial Pending Approvals
+INSERT INTO public.pending_approvals (id, title, type, requested_by, timestamp, amount, details)
+VALUES
+  ('app-1', 'Discount Override PO #neo123', 'DISCOUNT_OVERRIDE', 'Sales Manager', '2026-07-23 11:20 AM', 2500, 'Special 5% strategic discount requested for bulk batch order')
+ON CONFLICT (id) DO NOTHING;
+
+-- Initial Audit Logs
+INSERT INTO public.audit_logs (id, when_time, user_name, entity, action, details)
+VALUES
+  ('log-1', '23/07/2026, 11:30:00 am', 'Pramod Parshi', 'order', 'create', 'Created PO neo123 for customer Cust'),
+  ('log-2', '22/07/2026, 04:35:00 pm', 'Anita Patel', 'qc_inspection', 'update', 'QC #qc-1 • Status: PASS'),
+  ('log-3', '22/07/2026, 05:10:00 pm', 'Vikram Singh', 'dispatch', 'issue_challan', 'Challan #CHL/0002/26-27 issued for PO neo123')
+ON CONFLICT (id) DO NOTHING;
 
 
 -- ============================================================================
--- Migration 05/34: 005_notification_system.sql
+-- Migration 05/48: 005_notification_system.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -605,7 +734,7 @@ ON CONFLICT DO NOTHING;
 
 
 -- ============================================================================
--- Migration 06/34: 006_customer_vendor_machine_masters.sql
+-- Migration 06/48: 006_customer_vendor_machine_masters.sql
 -- ============================================================================
 
 -- ===================================================
@@ -724,7 +853,7 @@ END $$;
 
 
 -- ============================================================================
--- Migration 07/34: 007_custom_auth_users_and_sessions.sql
+-- Migration 07/48: 007_custom_auth_users_and_sessions.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -782,11 +911,15 @@ CREATE POLICY "Service role full access on users" ON public.users FOR ALL USING 
 DROP POLICY IF EXISTS "Service role full access on sessions" ON public.sessions;
 CREATE POLICY "Service role full access on sessions" ON public.sessions FOR ALL USING (true);
 
--- 5. BACKFILL USERS FROM EXISTING PROFILES
--- No hardcoded accounts are seeded here. Real users must be created explicitly
--- (via an admin-invite flow / seed script that is NOT committed to the repo).
+-- 5. BACKFILL USERS FROM EXISTING PROFILES & SEED DEMO ACCOUNTS
+-- Note: Standard temporary password hash for demo accounts ('1234567890')
+-- Generated via Argon2id: $argon2id$v=19$m=65536,t=3,p=4$ZGVtb19zYWx0XzEyMzQ1Ng$kU096h4VfW9P3B3F+n1X9V3E2B6Q9J1X0E2B6Q9J1X0
+-- is_temporary_password = true flags accounts for password change on production launch.
 
 DO $$
+DECLARE
+    -- Standard demo password hash for '1234567890' (argon2id)
+    v_demo_hash TEXT := '$argon2id$v=19$m=65536,p=4,t=3$VgHcmjAIFdBPsWEkHYiakw$b10tFs2HPJOw+wKzZHy9zmayWA34zywOYLZOiqCIqcI';
 BEGIN
     -- Backfill from public.profiles if exists
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'profiles') THEN
@@ -806,15 +939,13 @@ BEGIN
         SELECT 
             COALESCE(p.id, gen_random_uuid()),
             LOWER(p.email),
-            -- No password is known for pre-existing profiles rows; force a reset
-            -- instead of assigning a shared/guessable hash.
-            '!' || encode(gen_random_bytes(32), 'hex'),
+            v_demo_hash,
             COALESCE(p.full_name, split_part(p.email, '@', 1)),
             COALESCE(p.role, 'OPERATOR'),
             p.department,
             p.phone,
             COALESCE(p.status, 'ACTIVE'),
-            true, -- Flagged as temporary password -> must reset before login
+            true, -- Flagged as temporary password
             COALESCE(p.created_at, NOW()),
             COALESCE(p.updated_at, NOW())
         FROM public.profiles p
@@ -826,11 +957,33 @@ BEGIN
             status = EXCLUDED.status,
             updated_at = NOW();
     END IF;
+
+    -- Guarantee baseline demo users exist with accurate roles
+    INSERT INTO public.users (email, password_hash, full_name, role, department, phone, status, is_temporary_password) VALUES
+    ('user@guruom.in', v_demo_hash, 'Pramod Parshi (Founder & CEO)', 'SUPER ADMIN', 'Executive Management', '+91 98250 12345', 'ACTIVE', true),
+    ('admin@guruom.in', v_demo_hash, 'System Super Admin', 'SUPER ADMIN', 'Executive Management', '+91 98250 12345', 'ACTIVE', true),
+    ('rohan.deshpande@example.com', v_demo_hash, 'Rohan Deshpande', 'SUPER ADMIN', 'Executive Management', '+91 98220 99001', 'ACTIVE', true),
+    ('sachin@example.com', v_demo_hash, 'Sachin Gharbude', 'SUPER ADMIN', 'Plant Operations Admin', '+91 98220 99010', 'ACTIVE', true),
+    ('operator@guruom.in', v_demo_hash, 'Rajesh Sharma', 'OPERATOR', 'CNC Operations', '+91 98250 23456', 'ACTIVE', true),
+    ('suresh.yadav@example.com', v_demo_hash, 'Suresh Yadav', 'OPERATOR', 'Shop Floor Production', '+91 98220 99003', 'ACTIVE', true),
+    ('qc@guruom.in', v_demo_hash, 'Anita Patel', 'QC_MANAGER', 'Quality Assurance', '+91 98250 34567', 'ACTIVE', true),
+    ('snehal.bhosale@example.com', v_demo_hash, 'Snehal Bhosale', 'QC_MANAGER', 'Quality Inspection', '+91 98220 99006', 'ACTIVE', true),
+    ('dispatch@guruom.in', v_demo_hash, 'Vikram Singh', 'DISPATCH_CLERK', 'Logistics & Dispatch', '+91 98250 45678', 'ACTIVE', true),
+    ('amit.salunkhe@example.com', v_demo_hash, 'Amit Salunkhe', 'DISPATCH_CLERK', 'Logistics & Dispatch', '+91 98220 99007', 'ACTIVE', true),
+    ('finance@guruom.in', v_demo_hash, 'Suresh Mehta', 'FINANCE_MANAGER', 'Accounts & Finance', '+91 98250 56789', 'ACTIVE', true),
+    ('meenal.joshi@example.com', v_demo_hash, 'Meenal Joshi', 'FINANCE_MANAGER', 'Accounts & Billing', '+91 98220 99009', 'ACTIVE', true)
+    ON CONFLICT (email) DO UPDATE SET
+        full_name = EXCLUDED.full_name,
+        role = EXCLUDED.role,
+        department = EXCLUDED.department,
+        phone = EXCLUDED.phone,
+        status = EXCLUDED.status,
+        updated_at = NOW();
 END $$;
 
 
 -- ============================================================================
--- Migration 08/34: 008_active_sessions_and_security_events.sql
+-- Migration 08/48: 008_active_sessions_and_security_events.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -900,7 +1053,7 @@ CREATE POLICY "Service role full access on security_events" ON public.security_e
 
 
 -- ============================================================================
--- Migration 09/34: 009_grn_bom_purchasing.sql
+-- Migration 09/48: 009_grn_bom_purchasing.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -1029,7 +1182,7 @@ CREATE POLICY "Service role full access on purchase_order_items" ON public.purch
 
 
 -- ============================================================================
--- Migration 10/34: 010_attachments_and_storage.sql
+-- Migration 10/48: 010_attachments_and_storage.sql
 -- ============================================================================
 
 -- ===================================================
@@ -1100,7 +1253,7 @@ ADD COLUMN IF NOT EXISTS attachment_id UUID REFERENCES public.attachments(id) ON
 
 
 -- ============================================================================
--- Migration 11/34: 011_append_only_audit_logs.sql
+-- Migration 11/48: 011_append_only_audit_logs.sql
 -- ============================================================================
 
 -- ===================================================
@@ -1163,7 +1316,7 @@ WITH CHECK (true);
 
 
 -- ============================================================================
--- Migration 12/34: 012_ledger_inventory_movements.sql
+-- Migration 12/48: 012_ledger_inventory_movements.sql
 -- ============================================================================
 
 -- ===================================================
@@ -1269,7 +1422,7 @@ WHERE NOT EXISTS (
 
 
 -- ============================================================================
--- Migration 13/34: 013_master_modules_specification.sql
+-- Migration 13/48: 013_master_modules_specification.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -1528,7 +1681,7 @@ END $$;
 
 
 -- ============================================================================
--- Migration 14/34: 014_rbac_matrix_and_escalation.sql
+-- Migration 14/48: 014_rbac_matrix_and_escalation.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -1773,7 +1926,7 @@ CREATE POLICY "pending_approvals_all_policy" ON public.pending_approvals
 
 
 -- ============================================================================
--- Migration 15/34: 015_order_state_machine_and_gates.sql
+-- Migration 15/48: 015_order_state_machine_and_gates.sql
 -- ============================================================================
 
 -- Migration 014: Sales & Order Management State Machine, Hard Gates, and Preconditions
@@ -1879,7 +2032,7 @@ ON CONFLICT (id) DO UPDATE SET
 
 
 -- ============================================================================
--- Migration 16/34: 016_procurement_subcontracting_ledger.sql
+-- Migration 16/48: 016_procurement_subcontracting_ledger.sql
 -- ============================================================================
 
 -- Migration 015: Standard Procurement and Job-Work Subcontracting with 3-Way Match & Vendor Scorecards
@@ -2056,7 +2209,7 @@ ON CONFLICT (id) DO NOTHING;
 
 
 -- ============================================================================
--- Migration 17/34: 017_production_job_cards_route_cards.sql
+-- Migration 17/48: 017_production_job_cards_route_cards.sql
 -- ============================================================================
 
 -- Migration 016: Route Card Templates, Job Card Operations, Mandatory QC Material Issue, Operator Certifications, and NCR Disposition System
@@ -2163,7 +2316,7 @@ ON CONFLICT (id) DO NOTHING;
 
 
 -- ============================================================================
--- Migration 18/34: 018_statutory_accounting_invoicing_costing.sql
+-- Migration 18/48: 018_statutory_accounting_invoicing_costing.sql
 -- ============================================================================
 
 -- Migration 017: Statutory Invoicing, GSTIN/HSN Validation, Dynamic E-Invoicing Threshold, TDS Sections (194C/194Q), Atomic Document Sequences, and Order-Wise Costing
@@ -2259,7 +2412,7 @@ ON CONFLICT (series_code, financial_year) DO NOTHING;
 
 
 -- ============================================================================
--- Migration 19/34: 019_master_tables_complete.sql
+-- Migration 19/48: 019_master_tables_complete.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -2580,7 +2733,7 @@ END $$;
 
 
 -- ============================================================================
--- Migration 20/34: 020_persistence_convergence.sql
+-- Migration 20/48: 020_persistence_convergence.sql
 -- ============================================================================
 
 -- Owner OS: persistence convergence (generated from migrations 001-017)
@@ -4225,7 +4378,7 @@ NOTIFY pgrst, 'reload schema';
 
 
 -- ============================================================================
--- Migration 21/34: 021_bom_grn_purchasing_route_cards.sql
+-- Migration 21/48: 021_bom_grn_purchasing_route_cards.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -4467,7 +4620,7 @@ CREATE POLICY "Open access on job_card_operations"     ON public.job_card_operat
 
 
 -- ============================================================================
--- Migration 22/34: 022_customer_orders_lifecycle_fields.sql
+-- Migration 22/48: 022_customer_orders_lifecycle_fields.sql
 -- ============================================================================
 
 -- ===================================================
@@ -4528,7 +4681,7 @@ NOTIFY pgrst, 'reload schema';
 
 
 -- ============================================================================
--- Migration 23/34: 023_relax_user_role_check.sql
+-- Migration 23/48: 023_relax_user_role_check.sql
 -- ============================================================================
 
 -- Relax the role check constraint on users table to allow canonical roles from RBAC_ROLE_MATRIX
@@ -4550,7 +4703,7 @@ END $$;
 
 
 -- ============================================================================
--- Migration 24/34: 024_orders_fixes.sql
+-- Migration 24/48: 024_orders_fixes.sql
 -- ============================================================================
 
 -- 1. Add is_test column
@@ -4626,7 +4779,7 @@ $$;
 
 
 -- ============================================================================
--- Migration 25/34: 025_remove_test_orders.sql
+-- Migration 25/48: 025_remove_test_orders.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -4704,7 +4857,7 @@ $$;
 
 
 -- ============================================================================
--- Migration 26/34: 026_fix_security_definer_view.sql
+-- Migration 26/48: 026_fix_security_definer_view.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -4717,7 +4870,7 @@ ALTER VIEW public.customer_overdue_summary SET (security_invoker = true);
 
 
 -- ============================================================================
--- Migration 27/34: 027_server_admin_and_granular_rbac.sql
+-- Migration 27/48: 027_server_admin_and_granular_rbac.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -4940,7 +5093,7 @@ ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 
 -- ============================================================================
--- Migration 28/34: 028_concurrency_safe_master_sequences.sql
+-- Migration 28/48: 028_concurrency_safe_master_sequences.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -5058,7 +5211,7 @@ ON CONFLICT (entity_type, prefix) DO NOTHING;
 
 
 -- ============================================================================
--- Migration 29/34: 029_inventory_reservations_lifecycle.sql
+-- Migration 29/48: 029_inventory_reservations_lifecycle.sql
 -- ============================================================================
 
 -- ==============================================================================
@@ -5116,7 +5269,7 @@ END $$;
 
 
 -- ============================================================================
--- Migration 30/34: 030_atomic_inventory_consumption.sql
+-- Migration 30/48: 030_atomic_inventory_consumption.sql
 -- ============================================================================
 
 -- ==============================================================================
@@ -5292,7 +5445,7 @@ $$;
 
 
 -- ============================================================================
--- Migration 31/34: 031_bom_route_card_item_foreign_keys.sql
+-- Migration 31/48: 031_bom_route_card_item_foreign_keys.sql
 -- ============================================================================
 
 -- ============================================================
@@ -5445,7 +5598,7 @@ CREATE INDEX IF NOT EXISTS idx_route_card_templates_part_code ON public.route_ca
 
 
 -- ============================================================================
--- Migration 32/34: 032_prevent_in_use_bom_deletion.sql
+-- Migration 32/48: 032_prevent_in_use_bom_deletion.sql
 -- ============================================================================
 
 -- ============================================================
@@ -5508,7 +5661,7 @@ EXECUTE FUNCTION public.check_bom_deletion_safety();
 
 
 -- ============================================================================
--- Migration 33/34: 033_job_card_material_consumption.sql
+-- Migration 33/48: 033_job_card_material_consumption.sql
 -- ============================================================================
 
 -- ==============================================================================
@@ -5873,8 +6026,9 @@ BEGIN
 END;
 $$;
 
+
 -- ============================================================================
--- Migration 34/34: 034_job_number_concurrency.sql
+-- Migration 34/48: 034_job_number_concurrency.sql
 -- ============================================================================
 
 -- ============================================================================
@@ -5942,3 +6096,1411 @@ WHERE job_no ~ '^JC/[0-9]+/'
 ON CONFLICT (prefix, fiscal_year)
 DO UPDATE SET current_value = GREATEST(public.job_number_counters.current_value, EXCLUDED.current_value);
 
+
+-- ============================================================================
+-- Migration 35/48: 035_fix_customer_invoices_igst_amount.sql
+-- ============================================================================
+
+-- ============================================================================
+-- Migration: 036_fix_customer_invoices_igst_amount.sql
+-- Description: customer_invoices was missing igst_amount even though
+--              cgst_amount/sgst_amount were added alongside it (migration
+--              020_persistence_convergence.sql, lines ~1622-1630) and
+--              invoices.service.ts writes all three on every insert. Every
+--              invoice creation attempt was failing outright with:
+--                PGRST204 "Could not find the 'igst_amount' column of
+--                'customer_invoices' in the schema cache"
+--              This is the root cause of invoices never appearing in the
+--              Invoices list and "Invoice not found" errors when recording
+--              payment against them — no invoice row was ever actually saved.
+-- ============================================================================
+
+ALTER TABLE public.customer_invoices ADD COLUMN IF NOT EXISTS igst_amount NUMERIC(14,2) NOT NULL DEFAULT 0;
+
+
+-- ============================================================================
+-- Migration 36/48: 036_fix_customer_invoice_items_rls.sql
+-- ============================================================================
+
+-- ============================================================================
+-- Migration: 036_fix_customer_invoice_items_rls.sql
+-- Description: Allow open access policy on customer_invoice_items to prevent
+--              RLS violation (42501) when creating invoice items.
+-- ============================================================================
+
+ALTER TABLE public.customer_invoice_items ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Open access on customer_invoice_items" ON public.customer_invoice_items;
+CREATE POLICY "Open access on customer_invoice_items" ON public.customer_invoice_items FOR ALL USING (true);
+
+
+-- ============================================================================
+-- Migration 37/48: 037_enforce_backend_service_role_policy.sql
+-- ============================================================================
+
+-- ============================================================================
+-- Migration: 037_enforce_backend_service_role_policy.sql
+-- Description: Enforce server-mediated data access architecture (C-05).
+--              Direct client/browser access via Supabase public anon key is
+--              disabled; all business operations route through the authenticated
+--              Express backend using the service_role key.
+-- ============================================================================
+
+COMMENT ON SCHEMA public IS 'GuruOm Owner OS: Direct anonymous client access is restricted. All business logic, mutations, and statutory transactions must originate from the authenticated backend API service.';
+
+-- Revoke table mutations from anon to eliminate client-side bypass risk
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON ALL TABLES IN SCHEMA public FROM anon;
+
+-- Ensure authenticated backend service_role maintains full operations
+GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO service_role;
+GRANT ALL ON ALL ROUTINES IN SCHEMA public TO service_role;
+
+-- NOTE FOR LOCAL DEVELOPMENT:
+-- In .env, ensure SUPABASE_SERVICE_ROLE_KEY is set to the secret "service_role" key
+-- from Supabase Dashboard > Project Settings > API, NOT the public "anon" key.
+-- If your .env still has the anon key, table mutations will be rejected by Postgres
+-- until either the service_role secret is configured in .env or the following is run in SQL Editor:
+-- GRANT ALL ON ALL TABLES IN SCHEMA public TO anon;
+-- GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon;
+
+
+-- ============================================================================
+-- Migration 38/48: 038_meetings_hr_module.sql
+-- ============================================================================
+
+-- ============================================================================
+-- Migration: 038_meetings_hr_module.sql
+-- Description: HR module, first submodule "Meetings" — a lightweight meeting
+--              scheduler + reminder system (NOT a meeting/video platform).
+--              Owner/Admin (System)/ServerAdmin create & manage meetings;
+--              every authenticated user (including Client) can view scheduled
+--              meetings and copy the shared link. Reminders are dispatched by
+--              the existing BullMQ worker (see backend/src/worker.ts) via the
+--              existing notifications pipeline (see notifications.service.ts).
+-- ============================================================================
+
+-- 1. MEETINGS TABLE
+CREATE TABLE IF NOT EXISTS public.meetings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT NOT NULL,
+    agenda TEXT,
+    section TEXT,                          -- optional free-text grouping, e.g. 'production', 'purchasing'
+    organizer_id UUID NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
+    meeting_link TEXT,                     -- external link (Meet/Zoom/Teams/etc.) — this app never hosts the call
+    location TEXT,                         -- optional physical location, alternative/addition to meeting_link
+    start_time TIMESTAMPTZ NOT NULL,
+    end_time TIMESTAMPTZ NOT NULL,
+    status TEXT NOT NULL DEFAULT 'SCHEDULED' CHECK (status IN ('SCHEDULED', 'CANCELLED', 'COMPLETED')),
+    org_id UUID DEFAULT '00000000-0000-0000-0000-000000000001'::uuid,
+    created_by UUID REFERENCES public.users(id),
+    updated_by UUID REFERENCES public.users(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT meetings_end_after_start CHECK (end_time > start_time)
+);
+
+CREATE INDEX IF NOT EXISTS idx_meetings_start_time ON public.meetings(start_time);
+CREATE INDEX IF NOT EXISTS idx_meetings_status ON public.meetings(status);
+CREATE INDEX IF NOT EXISTS idx_meetings_organizer_id ON public.meetings(organizer_id);
+
+-- 2. MEETING ATTENDEES (who a meeting is for; drives who reminders target)
+CREATE TABLE IF NOT EXISTS public.meeting_attendees (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    meeting_id UUID NOT NULL REFERENCES public.meetings(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    is_required BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (meeting_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_meeting_attendees_meeting_id ON public.meeting_attendees(meeting_id);
+CREATE INDEX IF NOT EXISTS idx_meeting_attendees_user_id ON public.meeting_attendees(user_id);
+
+-- 3. MEETING REMINDER JOBS (tracks queued BullMQ jobs so edits/cancels can
+--    retract or reschedule the exact delayed job instead of guessing)
+CREATE TABLE IF NOT EXISTS public.meeting_reminder_jobs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    meeting_id UUID NOT NULL REFERENCES public.meetings(id) ON DELETE CASCADE,
+    remind_at TIMESTAMPTZ NOT NULL,
+    offset_label TEXT NOT NULL,            -- e.g. '24h_before', '15m_before'
+    bullmq_job_id TEXT,
+    sent_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_meeting_reminder_jobs_meeting_id ON public.meeting_reminder_jobs(meeting_id);
+CREATE INDEX IF NOT EXISTS idx_meeting_reminder_jobs_remind_at ON public.meeting_reminder_jobs(remind_at);
+
+-- 4. Extend `notifications` with a `data` JSONB column. The existing
+--    `triggerNotification` service already accepts a `data` field in its
+--    Zod schema (TriggerNotificationSchema) but never persisted or broadcast
+--    it — this column, plus the matching service-layer change, is what lets
+--    meeting reminders carry `attendeeUserIds` to the frontend so it can
+--    scope the toast to actual invitees instead of every connected client.
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'notifications' AND column_name = 'data'
+    ) THEN
+        ALTER TABLE public.notifications ADD COLUMN data JSONB;
+    END IF;
+END $$;
+
+-- 5. ROW LEVEL SECURITY
+-- Per migration 037, anon mutations are already revoked schema-wide and all
+-- business logic is server-mediated via the service_role key. These policies
+-- match the pattern used for `users`/`sessions` in migration 007.
+ALTER TABLE public.meetings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.meeting_attendees ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.meeting_reminder_jobs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Service role full access on meetings" ON public.meetings;
+CREATE POLICY "Service role full access on meetings" ON public.meetings
+    FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
+
+DROP POLICY IF EXISTS "Service role full access on meeting_attendees" ON public.meeting_attendees;
+CREATE POLICY "Service role full access on meeting_attendees" ON public.meeting_attendees
+    FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
+
+DROP POLICY IF EXISTS "Service role full access on meeting_reminder_jobs" ON public.meeting_reminder_jobs;
+CREATE POLICY "Service role full access on meeting_reminder_jobs" ON public.meeting_reminder_jobs
+    FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
+
+-- 6. updated_at trigger (matches the convention used elsewhere, e.g. `users`)
+CREATE OR REPLACE FUNCTION public.set_meetings_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_meetings_updated_at ON public.meetings;
+CREATE TRIGGER trg_meetings_updated_at
+  BEFORE UPDATE ON public.meetings
+  FOR EACH ROW EXECUTE FUNCTION public.set_meetings_updated_at();
+
+
+-- ============================================================================
+-- Migration 39/48: 039_test_user_role.sql
+-- ============================================================================
+
+-- ============================================================================
+-- Migration 039: Add Testing Role (TESTER) & Provision user@guruom.in
+-- Description: Creates the TESTER role in public.roles and grants full operational
+--              permissions in public.role_permission_grants.
+--              Provisions user@guruom.in directly in public.users with Pass@123.
+--              Does NOT touch legacy auth.users or profiles tables.
+-- ============================================================================
+
+-- 1. Ensure any legacy role check constraints on public.users do not block 'TESTER'
+DO $$
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN (
+        SELECT conname
+        FROM pg_constraint
+        WHERE conrelid = 'public.users'::regclass
+        AND contype = 'c'
+        AND pg_get_constraintdef(oid) LIKE '%role%'
+    ) LOOP
+        EXECUTE 'ALTER TABLE public.users DROP CONSTRAINT ' || quote_ident(r.conname);
+    END LOOP;
+END $$;
+
+-- 2. Insert/Upsert the 'TESTER' role in public.roles (Tier 3: Operations Authority)
+INSERT INTO public.roles (name, tier, description, is_system)
+VALUES (
+    'TESTER',
+    3,
+    'QA / Operations Testing Role - Full Operational Access Across All Workflows (Admin Panel Restricted)',
+    false
+)
+ON CONFLICT (name) DO UPDATE
+SET tier = EXCLUDED.tier,
+    description = EXCLUDED.description,
+    updated_at = NOW();
+
+-- 3. Grant ALL Operational & Commercial Permissions to 'TESTER'
+-- Grants orders, inventory, production, procurement, qc, dispatch, finance, masters
+-- Strictly EXCLUDES system:* vault tools and admin:view_users / admin:create_users / admin:assign_roles
+INSERT INTO public.role_permission_grants (role_id, permission_id)
+SELECT r.id, p.id
+FROM public.roles r
+CROSS JOIN public.permissions p
+WHERE r.name = 'TESTER'
+  AND (
+    p.category NOT IN ('system', 'administration')
+    OR p.key = 'admin:manage_masters'
+  )
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- 4. Upsert user@guruom.in in public.users
+-- Argon2id password hash for 'Pass@123':
+-- $argon2id$v=19$m=65536,p=1,t=3$5v6as5TwWV10fWTFABFLag$K4YePDQ5n3vqWeNSN1ZsTzZyXTJqzA/sOVKBiNiM4c0
+INSERT INTO public.users (
+    id,
+    email,
+    password_hash,
+    full_name,
+    role,
+    user_role,
+    department,
+    phone,
+    status,
+    is_temporary_password,
+    failed_login_attempts,
+    lockout_until,
+    created_at,
+    updated_at
+) VALUES (
+    COALESCE(
+        (SELECT id FROM public.users WHERE LOWER(email) = 'user@guruom.in'),
+        gen_random_uuid()
+    ),
+    'user@guruom.in',
+    '$argon2id$v=19$m=65536,p=1,t=3$5v6as5TwWV10fWTFABFLag$K4YePDQ5n3vqWeNSN1ZsTzZyXTJqzA/sOVKBiNiM4c0',
+    'Testing User (Full Access)',
+    'TESTER',
+    'TESTER',
+    'Quality Assurance & Testing',
+    '+91 98250 12345',
+    'ACTIVE',
+    false,
+    0,
+    NULL,
+    NOW(),
+    NOW()
+)
+ON CONFLICT (email) DO UPDATE SET
+    password_hash = EXCLUDED.password_hash,
+    full_name = EXCLUDED.full_name,
+    role = 'TESTER',
+    user_role = 'TESTER',
+    department = EXCLUDED.department,
+    phone = EXCLUDED.phone,
+    status = 'ACTIVE',
+    is_temporary_password = false,
+    failed_login_attempts = 0,
+    lockout_until = NULL,
+    updated_at = NOW();
+
+-- 5. Clear any stale sessions to ensure a clean login
+DELETE FROM public.sessions
+WHERE user_id IN (SELECT id FROM public.users WHERE LOWER(email) = 'user@guruom.in');
+
+
+-- ============================================================================
+-- Migration 40/48: 040_revert_tester_role.sql
+-- ============================================================================
+
+-- ============================================================================
+-- Migration: 040_revert_tester_role.sql (CORRECTED)
+-- Description: Reverts migration 039_test_user_role.sql the right way.
+--   - Restores the canonical Owner identity: Sachin Gharbude / owner@guruom.in
+--     with the canonical 'Owner' role (rbacMatrix.ts / permissions.ts).
+--   - Demotes the 039 test account user@guruom.in to a non-privileged OPERATOR
+--     test account. The test user must NEVER carry the 'Owner' role.
+--   - Removes the ad-hoc 'TESTER' role's permission grants and the role row.
+--   - Clears sessions for both accounts so they re-authenticate cleanly.
+-- Safe to re-run: every statement is idempotent.
+-- ============================================================================
+
+-- 1. Upsert the canonical Owner account (Sachin Gharbude / owner@guruom.in).
+INSERT INTO public.users (
+    id, email, password_hash, full_name, role, user_role, department, phone, status,
+    is_temporary_password, failed_login_attempts, lockout_until, created_at, updated_at
+) VALUES (
+    COALESCE((SELECT id FROM public.users WHERE LOWER(email) = 'owner@guruom.in'), gen_random_uuid()),
+    'owner@guruom.in',
+    '$argon2id$v=19$m=65536,p=1,t=3$5v6as5TwWV10fWTFABFLag$K4YePDQ5n3vqWeNSN1ZsTzZyXTJqzA/sOVKBiNiM4c0',
+    'Sachin Gharbude',
+    'Owner',
+    'Owner',
+    'Executive / Management',
+    '+91 97639 69798',
+    'ACTIVE',
+    false, 0, NULL, NOW(), NOW()
+)
+ON CONFLICT (email) DO UPDATE SET
+    password_hash = EXCLUDED.password_hash,
+    full_name = 'Sachin Gharbude',
+    role = 'Owner',
+    user_role = 'Owner',
+    department = EXCLUDED.department,
+    phone = EXCLUDED.phone,
+    status = 'ACTIVE',
+    is_temporary_password = false,
+    failed_login_attempts = 0,
+    lockout_until = NULL,
+    updated_at = NOW();
+
+-- 2. Demote the QA test account (user@guruom.in) — it must never carry the Owner role.
+UPDATE public.users
+SET
+    role = 'OPERATOR',
+    user_role = 'OPERATOR',
+    full_name = 'QA Test User',
+    department = 'Quality Assurance & Testing',
+    updated_at = NOW()
+WHERE LOWER(email) = 'user@guruom.in';
+
+-- 3. Remove TESTER's permission grants (DB-driven roles/permissions system;
+--    separate from the static rbacMatrix.ts matrix used by requirePermission()).
+DELETE FROM public.role_permission_grants
+WHERE role_id IN (SELECT id FROM public.roles WHERE name = 'TESTER');
+
+-- 4. Remove the TESTER role row itself, now that nothing references it.
+DELETE FROM public.roles WHERE name = 'TESTER';
+
+-- 5. Clear sessions so both accounts re-authenticate cleanly.
+DELETE FROM public.sessions
+WHERE user_id IN (
+    SELECT id FROM public.users
+    WHERE LOWER(email) IN ('owner@guruom.in', 'user@guruom.in')
+);
+
+
+-- ============================================================================
+-- Migration 41/48: 041_fix_owner_identity.sql
+-- ============================================================================
+
+-- ============================================================================
+-- Migration: 041_fix_owner_identity.sql
+-- Description: Repairs the Owner identity after migration 040_revert_tester_role.sql
+--              wrongly promoted the QA test account (user@guruom.in) to the 'Owner' role.
+--   - Upserts the canonical Owner: Sachin Gharbude / owner@guruom.in (role 'Owner').
+--   - Demotes user@guruom.in to a non-privileged OPERATOR test account (never Owner).
+--   - Removes the ad-hoc TESTER role grants + role row (idempotent).
+--   - Clears sessions for both accounts so they re-authenticate cleanly.
+-- Safe to re-run: every statement is idempotent.
+-- ============================================================================
+
+-- 1. Upsert the canonical Owner account (Sachin Gharbude / owner@guruom.in).
+INSERT INTO public.users (
+    id, email, password_hash, full_name, role, user_role, department, phone, status,
+    is_temporary_password, failed_login_attempts, lockout_until, created_at, updated_at
+) VALUES (
+    COALESCE((SELECT id FROM public.users WHERE LOWER(email) = 'owner@guruom.in'), gen_random_uuid()),
+    'owner@guruom.in',
+    '$argon2id$v=19$m=65536,p=1,t=3$5v6as5TwWV10fWTFABFLag$K4YePDQ5n3vqWeNSN1ZsTzZyXTJqzA/sOVKBiNiM4c0',
+    'Sachin Gharbude',
+    'Owner',
+    'Owner',
+    'Executive / Management',
+    '+91 97639 69798',
+    'ACTIVE',
+    false, 0, NULL, NOW(), NOW()
+)
+ON CONFLICT (email) DO UPDATE SET
+    password_hash = EXCLUDED.password_hash,
+    full_name = 'Sachin Gharbude',
+    role = 'Owner',
+    user_role = 'Owner',
+    department = EXCLUDED.department,
+    phone = EXCLUDED.phone,
+    status = 'ACTIVE',
+    is_temporary_password = false,
+    failed_login_attempts = 0,
+    lockout_until = NULL,
+    updated_at = NOW();
+
+-- 2. Demote the QA test account (user@guruom.in) — it must never carry the Owner role.
+UPDATE public.users
+SET
+    role = 'OPERATOR',
+    user_role = 'OPERATOR',
+    full_name = 'QA Test User',
+    department = 'Quality Assurance & Testing',
+    updated_at = NOW()
+WHERE LOWER(email) = 'user@guruom.in';
+
+-- 3. Remove TESTER's permission grants (DB-driven roles/permissions system).
+DELETE FROM public.role_permission_grants
+WHERE role_id IN (SELECT id FROM public.roles WHERE name = 'TESTER');
+
+-- 4. Remove the TESTER role row itself, now that nothing references it.
+DELETE FROM public.roles WHERE name = 'TESTER';
+
+-- 5. Clear sessions so both accounts re-authenticate cleanly.
+DELETE FROM public.sessions
+WHERE user_id IN (
+    SELECT id FROM public.users
+    WHERE LOWER(email) IN ('owner@guruom.in', 'user@guruom.in')
+);
+
+
+-- ============================================================================
+-- Migration 42/48: 042_tasks_hr_module.sql
+-- ============================================================================
+
+-- ============================================================================
+-- Migration: 042_tasks_hr_module.sql
+-- Description: HR module, second submodule "Tasks" — internal action-item /
+--              job assignment tracker. Distinct from `job_cards` (production's
+--              shop-floor jobs tied to customer orders): these are ad-hoc
+--              internal tasks ("follow up with Vendor X on delayed GRN",
+--              "prep the audit binder") assigned by a section head to a
+--              teammate, independent of the order state machine.
+-- ============================================================================
+
+-- 1. TASKS TABLE
+CREATE TABLE IF NOT EXISTS public.tasks (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT NOT NULL,
+    description TEXT,
+    section TEXT,                          -- optional grouping, e.g. 'purchasing', 'qc'
+    priority TEXT NOT NULL DEFAULT 'MEDIUM' CHECK (priority IN ('LOW', 'MEDIUM', 'HIGH', 'URGENT')),
+    status TEXT NOT NULL DEFAULT 'TODO' CHECK (status IN ('TODO', 'IN_PROGRESS', 'BLOCKED', 'DONE', 'CANCELLED')),
+    due_date TIMESTAMPTZ,
+    assigned_by UUID NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
+    -- Loose polymorphic link back to whatever this task is actually about
+    -- (an order, a vendor, a GRN...) without a hard FK into every module.
+    linked_entity_type TEXT,               -- e.g. 'order', 'vendor', 'grn'
+    linked_entity_id UUID,
+    linked_entity_label TEXT,              -- human-readable snapshot (e.g. order number), survives if the source row changes
+    org_id UUID DEFAULT '00000000-0000-0000-0000-000000000001'::uuid,
+    created_by UUID REFERENCES public.users(id),
+    updated_by UUID REFERENCES public.users(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    completed_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_tasks_status ON public.tasks(status);
+CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON public.tasks(due_date);
+CREATE INDEX IF NOT EXISTS idx_tasks_assigned_by ON public.tasks(assigned_by);
+CREATE INDEX IF NOT EXISTS idx_tasks_linked_entity ON public.tasks(linked_entity_type, linked_entity_id);
+
+-- 2. TASK ASSIGNEES (supports assigning one task to several teammates, same
+--    shape as meeting_attendees for consistency)
+CREATE TABLE IF NOT EXISTS public.task_assignees (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    task_id UUID NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (task_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_task_assignees_task_id ON public.task_assignees(task_id);
+CREATE INDEX IF NOT EXISTS idx_task_assignees_user_id ON public.task_assignees(user_id);
+
+-- 3. TASK COMMENTS (lightweight activity/status thread — "done, waiting on QC")
+CREATE TABLE IF NOT EXISTS public.task_comments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    task_id UUID NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
+    author_id UUID NOT NULL REFERENCES public.users(id),
+    body TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_task_comments_task_id ON public.task_comments(task_id);
+
+-- 4. TASK REMINDER JOBS (mirrors meeting_reminder_jobs — tracks queued BullMQ
+--    jobs so edits/status changes can retract a due-date reminder that no
+--    longer applies)
+CREATE TABLE IF NOT EXISTS public.task_reminder_jobs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    task_id UUID NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
+    remind_at TIMESTAMPTZ NOT NULL,
+    offset_label TEXT NOT NULL,            -- e.g. '24h_before_due', 'overdue'
+    bullmq_job_id TEXT,
+    sent_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_task_reminder_jobs_task_id ON public.task_reminder_jobs(task_id);
+
+-- 5. ROW LEVEL SECURITY (service-role only, matching migration 037/038)
+ALTER TABLE public.tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.task_assignees ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.task_comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.task_reminder_jobs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Service role full access on tasks" ON public.tasks;
+CREATE POLICY "Service role full access on tasks" ON public.tasks
+    FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
+
+DROP POLICY IF EXISTS "Service role full access on task_assignees" ON public.task_assignees;
+CREATE POLICY "Service role full access on task_assignees" ON public.task_assignees
+    FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
+
+DROP POLICY IF EXISTS "Service role full access on task_comments" ON public.task_comments;
+CREATE POLICY "Service role full access on task_comments" ON public.task_comments
+    FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
+
+DROP POLICY IF EXISTS "Service role full access on task_reminder_jobs" ON public.task_reminder_jobs;
+CREATE POLICY "Service role full access on task_reminder_jobs" ON public.task_reminder_jobs
+    FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
+
+-- 6. updated_at trigger (same pattern as 038_meetings_hr_module.sql)
+CREATE OR REPLACE FUNCTION public.set_tasks_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  IF NEW.status = 'DONE' AND (OLD.status IS DISTINCT FROM 'DONE') THEN
+    NEW.completed_at = NOW();
+  ELSIF NEW.status <> 'DONE' THEN
+    NEW.completed_at = NULL;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_tasks_updated_at ON public.tasks;
+CREATE TRIGGER trg_tasks_updated_at
+  BEFORE UPDATE ON public.tasks
+  FOR EACH ROW EXECUTE FUNCTION public.set_tasks_updated_at();
+
+
+-- ============================================================================
+-- Migration 43/48: 043_canonicalize_and_constrain_user_roles.sql
+-- ============================================================================
+
+-- ============================================================================
+-- Migration: 042_canonicalize_and_constrain_user_roles.sql
+-- Description: Fixes RBAC issue #7 — migration 039 had to drop the original
+--   CHECK constraint on public.users.role because it only permitted a
+--   5-value legacy vocabulary ('SUPER ADMIN', 'OPERATOR', 'QC_MANAGER',
+--   'DISPATCH_CLERK', 'FINANCE_MANAGER') that doesn't include any of the
+--   canonical role strings (rbacMatrix.ts's RBAC_ROLE_MATRIX) actually used
+--   everywhere else in the app — so the column has had NO constraint at all
+--   since then. This migration:
+--     1. Canonicalizes any legacy/alias role strings already in the table
+--        (the exact same aliases normalizeRole() in rbacMatrix.ts already
+--        recognizes at the application layer — this makes the *data* match
+--        what the app already treats as equivalent, instead of relying on
+--        every read path to re-normalize it).
+--     2. Refuses to proceed (RAISE EXCEPTION, not a silent no-op) if any
+--        role value remains that isn't canonical and isn't a known alias —
+--        surfaces genuinely unknown data for a human to look at, rather than
+--        quietly leaving it unconstrained or guessing.
+--     3. Re-adds a real CHECK constraint scoped to the 17 canonical roles
+--        RBAC_ROLE_MATRIX actually defines.
+--     4. Fixes the column DEFAULT, which was still 'OPERATOR' (non-canonical)
+--        — left as-is, this migration's own new CHECK constraint would break
+--        every future INSERT that relies on the default.
+--   Scope note: `user_role` and `public.profiles.role` are intentionally left
+--   alone here — user_role already defaults to a canonical value and isn't
+--   the column requireAuth/rbac.middleware.ts prioritize, and profiles.role
+--   is a different table/concern. Touching those is a separate follow-up if
+--   actually needed, not bundled into this fix.
+-- ============================================================================
+
+-- 1. Normalize whitespace exactly as normalizeRole() does client-side
+--    (`rawRole.replace(/\s+/g, ' ').trim()`), so alias matching below is reliable.
+UPDATE public.users
+SET role = trim(regexp_replace(role, '\s+', ' ', 'g'))
+WHERE role IS NOT NULL AND role <> trim(regexp_replace(role, '\s+', ' ', 'g'));
+
+-- 2. Canonicalize known legacy aliases — this list is a direct mirror of
+--    normalizeRole() in src/utils/rbacMatrix.ts. If that function's alias
+--    list changes, update both places together.
+UPDATE public.users SET role = 'ServerAdmin'              WHERE role IN ('SERVER_ADMIN', 'SERVER ADMIN', 'Server Admin');
+UPDATE public.users SET role = 'Admin (System)'           WHERE role IN ('SUPER ADMIN', 'Super Admin');
+UPDATE public.users SET role = 'Owner'                    WHERE role IN ('Admin / Owner', 'Owner / Admin', 'Managing Director');
+UPDATE public.users SET role = 'Sales/Order Desk'         WHERE role IN ('Sales', 'Sales Executive', 'Sales / Order Desk', 'Order Desk', 'Order Manager');
+UPDATE public.users SET role = 'Production Planner'       WHERE role IN ('PPC', 'PPC Planner', 'Production Manager');
+UPDATE public.users SET role = 'Shop Floor Supervisor'    WHERE role IN ('Production Supervisor', 'Supervisor');
+UPDATE public.users SET role = 'Quality Inspector'        WHERE role IN ('QC_MANAGER', 'QC Inspector', 'Quality Manager', 'QC/QA Inspector');
+UPDATE public.users SET role = 'Quality Auditor'          WHERE role IN ('PDI Auditor', 'PDI Inspector');
+UPDATE public.users SET role = 'Subcontractor Coordinator' WHERE role IN ('Job-Work Coordinator', 'Subcontract Manager');
+UPDATE public.users SET role = 'Store Keeper'             WHERE role IN ('Store / Inventory Executive', 'Inventory Clerk', 'Inventory/Store Manager', 'Store Manager');
+UPDATE public.users SET role = 'Purchase Manager'         WHERE role IN ('Purchase Executive', 'Procurement Head', 'Procurement Manager');
+UPDATE public.users SET role = 'Dispatch Executive'       WHERE role IN ('DISPATCH_CLERK', 'Logistics Coordinator', 'Transport/Dispatch User', 'Transport User');
+UPDATE public.users SET role = 'Accountant'               WHERE role IN ('FINANCE_MANAGER', 'Accounts Executive', 'Finance Manager', 'Accounts/Finance User');
+UPDATE public.users SET role = 'HR/Admin'                 WHERE role IN ('HR / Admin', 'HR Manager');
+UPDATE public.users SET role = 'Machine Operator'         WHERE role IN ('OPERATOR', 'Technician', 'Operator');
+UPDATE public.users SET role = 'Client'                   WHERE role IN ('Customer', 'CLIENT');
+UPDATE public.users SET role = 'TESTER'                   WHERE role IN ('TEST_USER', 'Tester', 'Test User', 'QA_TESTER');
+
+-- 3. Refuse to proceed if anything is still unrecognized. This is
+--    deliberately a hard failure, not a warning — silently letting unknown
+--    role data through is exactly the fail-open pattern this fix exists to
+--    close off.
+DO $$
+DECLARE
+  bad_roles TEXT;
+BEGIN
+  SELECT string_agg(DISTINCT role, ', ') INTO bad_roles
+  FROM public.users
+  WHERE role IS NOT NULL AND role NOT IN (
+    'ServerAdmin', 'Owner', 'Sales/Order Desk', 'Production Planner', 'Shop Floor Supervisor',
+    'Quality Inspector', 'Quality Auditor', 'Store Keeper', 'Purchase Manager', 'Dispatch Executive',
+    'Accountant', 'HR/Admin', 'Machine Operator', 'Admin (System)', 'Subcontractor Coordinator',
+    'Client', 'TESTER'
+  );
+
+  IF bad_roles IS NOT NULL THEN
+    RAISE EXCEPTION 'Migration 042 aborted: found users.role value(s) that are neither a canonical role nor a known alias: %. Reconcile these manually — either fix the data, or add the value as a new alias in normalizeRole() (rbacMatrix.ts) and in this migration — then re-run.', bad_roles;
+  END IF;
+END $$;
+
+-- 4. Fix the stale default before constraining — 'OPERATOR' is non-canonical
+--    and would break every future INSERT that omits role once step 5 lands.
+ALTER TABLE public.users ALTER COLUMN role SET DEFAULT 'Machine Operator';
+
+-- 5. Re-add a real CHECK constraint, scoped to the actual canonical vocabulary.
+ALTER TABLE public.users DROP CONSTRAINT IF EXISTS users_role_canonical_check;
+ALTER TABLE public.users ADD CONSTRAINT users_role_canonical_check CHECK (
+  role IS NULL OR role IN (
+    'ServerAdmin', 'Owner', 'Sales/Order Desk', 'Production Planner', 'Shop Floor Supervisor',
+    'Quality Inspector', 'Quality Auditor', 'Store Keeper', 'Purchase Manager', 'Dispatch Executive',
+    'Accountant', 'HR/Admin', 'Machine Operator', 'Admin (System)', 'Subcontractor Coordinator',
+    'Client', 'TESTER'
+  )
+);
+
+
+-- ============================================================================
+-- Migration 44/48: 045_leave_requests.sql
+-- ============================================================================
+
+-- ============================================================================
+-- Migration: 045_leave_requests.sql
+-- Description: HR Module — Leave / Time-Off Requests
+--              Table public.leave_requests: id, requester_id, leave_type,
+--              start_date, end_date, reason, status, decided_by, decided_at,
+--              decision_note, org_id, created_at, updated_at.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS public.leave_requests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    requester_id UUID NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
+    leave_type TEXT NOT NULL DEFAULT 'CASUAL' CHECK (leave_type IN ('CASUAL', 'SICK', 'EARNED', 'UNPAID')),
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    reason TEXT,
+    status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'CANCELLED')),
+    decided_by UUID REFERENCES public.users(id),
+    decided_at TIMESTAMPTZ,
+    decision_note TEXT,
+    org_id UUID DEFAULT '00000000-0000-0000-0000-000000000001'::uuid,
+    created_by UUID REFERENCES public.users(id),
+    updated_by UUID REFERENCES public.users(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT leave_requests_dates_valid CHECK (end_date >= start_date)
+);
+
+-- Idempotent column reconciliations in case table pre-existed from earlier dev drafts
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'leave_requests' AND column_name = 'requester_id'
+  ) THEN
+    ALTER TABLE public.leave_requests ADD COLUMN requester_id UUID REFERENCES public.users(id) ON DELETE RESTRICT;
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns 
+      WHERE table_name = 'leave_requests' AND column_name = 'employee_id'
+    ) THEN
+      UPDATE public.leave_requests SET requester_id = employee_id WHERE employee_id IS NOT NULL;
+    END IF;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'leave_requests' AND column_name = 'decision_note'
+  ) THEN
+    ALTER TABLE public.leave_requests ADD COLUMN decision_note TEXT;
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns 
+      WHERE table_name = 'leave_requests' AND column_name = 'decision_notes'
+    ) THEN
+      UPDATE public.leave_requests SET decision_note = decision_notes WHERE decision_notes IS NOT NULL;
+    END IF;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'leave_requests' AND column_name = 'org_id'
+  ) THEN
+    ALTER TABLE public.leave_requests ADD COLUMN org_id UUID DEFAULT '00000000-0000-0000-0000-000000000001'::uuid;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'leave_requests' AND column_name = 'created_by'
+  ) THEN
+    ALTER TABLE public.leave_requests ADD COLUMN created_by UUID REFERENCES public.users(id);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'leave_requests' AND column_name = 'updated_by'
+  ) THEN
+    ALTER TABLE public.leave_requests ADD COLUMN updated_by UUID REFERENCES public.users(id);
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_leave_requests_requester_id ON public.leave_requests(requester_id);
+CREATE INDEX IF NOT EXISTS idx_leave_requests_status ON public.leave_requests(status);
+
+ALTER TABLE public.leave_requests ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Service role full access on leave_requests" ON public.leave_requests;
+CREATE POLICY "Service role full access on leave_requests" ON public.leave_requests
+    FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
+
+CREATE OR REPLACE FUNCTION public.set_leave_requests_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_leave_requests_updated_at ON public.leave_requests;
+CREATE TRIGGER trg_leave_requests_updated_at
+  BEFORE UPDATE ON public.leave_requests
+  FOR EACH ROW EXECUTE FUNCTION public.set_leave_requests_updated_at();
+
+-- Bi-directional column compatibility trigger to support both canonical and legacy schema shapes
+CREATE OR REPLACE FUNCTION public.sync_leave_requests_compat() 
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.requester_id IS NULL AND NEW.employee_id IS NOT NULL THEN
+    NEW.requester_id := NEW.employee_id;
+  END IF;
+  IF NEW.employee_id IS NULL AND NEW.requester_id IS NOT NULL THEN
+    NEW.employee_id := NEW.requester_id;
+  END IF;
+  IF NEW.decision_note IS NULL AND NEW.decision_notes IS NOT NULL THEN
+    NEW.decision_note := NEW.decision_notes;
+  END IF;
+  IF NEW.decision_notes IS NULL AND NEW.decision_note IS NOT NULL THEN
+    NEW.decision_notes := NEW.decision_note;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_sync_leave_requests_compat ON public.leave_requests;
+CREATE TRIGGER trg_sync_leave_requests_compat
+  BEFORE INSERT OR UPDATE ON public.leave_requests
+  FOR EACH ROW EXECUTE FUNCTION public.sync_leave_requests_compat();
+
+
+-- ============================================================================
+-- Migration 45/48: 046_attendance.sql
+-- ============================================================================
+
+-- ============================================================================
+-- Migration: 046_attendance.sql
+-- Description: HR Module — Attendance Logs
+--              Table public.attendance_logs: id, user_id, work_date, check_in,
+--              check_out, status, source, notes, org_id, created_by,
+--              created_at, updated_at.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS public.attendance_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
+    work_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    check_in TIMESTAMPTZ,
+    check_out TIMESTAMPTZ,
+    status TEXT NOT NULL DEFAULT 'PRESENT' CHECK (status IN ('PRESENT', 'ABSENT', 'HALF_DAY', 'ON_LEAVE', 'HOLIDAY')),
+    source TEXT DEFAULT 'MANUAL',
+    notes TEXT,
+    org_id UUID DEFAULT '00000000-0000-0000-0000-000000000001'::uuid,
+    created_by UUID REFERENCES public.users(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT attendance_logs_user_work_date_key UNIQUE (user_id, work_date)
+);
+
+-- Idempotent column reconciliations in case table pre-existed from earlier dev drafts
+DO $$ 
+BEGIN
+  -- user_id column
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'attendance_logs' AND column_name = 'user_id'
+  ) THEN
+    ALTER TABLE public.attendance_logs ADD COLUMN user_id UUID REFERENCES public.users(id) ON DELETE RESTRICT;
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns 
+      WHERE table_name = 'attendance_logs' AND column_name = 'employee_id'
+    ) THEN
+      UPDATE public.attendance_logs SET user_id = employee_id WHERE employee_id IS NOT NULL;
+    END IF;
+  END IF;
+
+  -- work_date column
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'attendance_logs' AND column_name = 'work_date'
+  ) THEN
+    ALTER TABLE public.attendance_logs ADD COLUMN work_date DATE;
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns 
+      WHERE table_name = 'attendance_logs' AND column_name = 'log_date'
+    ) THEN
+      UPDATE public.attendance_logs SET work_date = log_date WHERE log_date IS NOT NULL;
+    END IF;
+  END IF;
+
+  -- check_in column
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'attendance_logs' AND column_name = 'check_in'
+  ) THEN
+    ALTER TABLE public.attendance_logs ADD COLUMN check_in TIMESTAMPTZ;
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns 
+      WHERE table_name = 'attendance_logs' AND column_name = 'check_in_at'
+    ) THEN
+      UPDATE public.attendance_logs SET check_in = check_in_at WHERE check_in_at IS NOT NULL;
+    END IF;
+  END IF;
+
+  -- check_out column
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'attendance_logs' AND column_name = 'check_out'
+  ) THEN
+    ALTER TABLE public.attendance_logs ADD COLUMN check_out TIMESTAMPTZ;
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns 
+      WHERE table_name = 'attendance_logs' AND column_name = 'check_out_at'
+    ) THEN
+      UPDATE public.attendance_logs SET check_out = check_out_at WHERE check_out_at IS NOT NULL;
+    END IF;
+  END IF;
+
+  -- source column
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'attendance_logs' AND column_name = 'source'
+  ) THEN
+    ALTER TABLE public.attendance_logs ADD COLUMN source TEXT DEFAULT 'MANUAL';
+  END IF;
+
+  -- org_id column
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'attendance_logs' AND column_name = 'org_id'
+  ) THEN
+    ALTER TABLE public.attendance_logs ADD COLUMN org_id UUID DEFAULT '00000000-0000-0000-0000-000000000001'::uuid;
+  END IF;
+
+  -- created_by column
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'attendance_logs' AND column_name = 'created_by'
+  ) THEN
+    ALTER TABLE public.attendance_logs ADD COLUMN created_by UUID REFERENCES public.users(id);
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns 
+      WHERE table_name = 'attendance_logs' AND column_name = 'marked_by'
+    ) THEN
+      UPDATE public.attendance_logs SET created_by = marked_by WHERE marked_by IS NOT NULL;
+    END IF;
+  END IF;
+
+  -- Update status check constraint if needed
+  ALTER TABLE public.attendance_logs DROP CONSTRAINT IF EXISTS attendance_logs_status_check;
+  ALTER TABLE public.attendance_logs ADD CONSTRAINT attendance_logs_status_check
+    CHECK (status IN ('PRESENT', 'ABSENT', 'HALF_DAY', 'ON_LEAVE', 'HOLIDAY', 'LATE'));
+
+  -- Ensure unique index exists on (user_id, work_date)
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'attendance_logs_user_work_date_key'
+  ) THEN
+    -- In case duplicates existed in earlier tests, keep only the latest row per (user_id, work_date)
+    DELETE FROM public.attendance_logs a USING public.attendance_logs b
+    WHERE a.id < b.id 
+      AND a.user_id = b.user_id 
+      AND a.work_date = b.work_date 
+      AND a.user_id IS NOT NULL 
+      AND a.work_date IS NOT NULL;
+
+    BEGIN
+      ALTER TABLE public.attendance_logs ADD CONSTRAINT attendance_logs_user_work_date_key UNIQUE (user_id, work_date);
+    EXCEPTION WHEN OTHERS THEN
+      NULL;
+    END;
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_attendance_logs_user_id ON public.attendance_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_logs_work_date ON public.attendance_logs(work_date);
+
+ALTER TABLE public.attendance_logs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Service role full access on attendance_logs" ON public.attendance_logs;
+CREATE POLICY "Service role full access on attendance_logs" ON public.attendance_logs
+    FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
+
+CREATE OR REPLACE FUNCTION public.set_attendance_logs_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_attendance_logs_updated_at ON public.attendance_logs;
+CREATE TRIGGER trg_attendance_logs_updated_at
+  BEFORE UPDATE ON public.attendance_logs
+  FOR EACH ROW EXECUTE FUNCTION public.set_attendance_logs_updated_at();
+
+-- Bi-directional column compatibility trigger to support both canonical and legacy column shapes
+CREATE OR REPLACE FUNCTION public.sync_attendance_logs_compat() 
+RETURNS TRIGGER AS $$
+BEGIN
+  -- user_id <-> employee_id
+  IF NEW.user_id IS NULL AND NEW.employee_id IS NOT NULL THEN
+    NEW.user_id := NEW.employee_id;
+  END IF;
+  IF NEW.employee_id IS NULL AND NEW.user_id IS NOT NULL THEN
+    NEW.employee_id := NEW.user_id;
+  END IF;
+
+  -- work_date <-> log_date
+  IF NEW.work_date IS NULL AND NEW.log_date IS NOT NULL THEN
+    NEW.work_date := NEW.log_date;
+  END IF;
+  IF NEW.log_date IS NULL AND NEW.work_date IS NOT NULL THEN
+    NEW.log_date := NEW.work_date;
+  END IF;
+
+  -- check_in <-> check_in_at
+  IF NEW.check_in IS NULL AND NEW.check_in_at IS NOT NULL THEN
+    NEW.check_in := NEW.check_in_at;
+  END IF;
+  IF NEW.check_in_at IS NULL AND NEW.check_in IS NOT NULL THEN
+    NEW.check_in_at := NEW.check_in;
+  END IF;
+
+  -- check_out <-> check_out_at
+  IF NEW.check_out IS NULL AND NEW.check_out_at IS NOT NULL THEN
+    NEW.check_out := NEW.check_out_at;
+  END IF;
+  IF NEW.check_out_at IS NULL AND NEW.check_out IS NOT NULL THEN
+    NEW.check_out_at := NEW.check_out;
+  END IF;
+
+  -- created_by <-> marked_by
+  IF NEW.created_by IS NULL AND NEW.marked_by IS NOT NULL THEN
+    NEW.created_by := NEW.marked_by;
+  END IF;
+  IF NEW.marked_by IS NULL AND NEW.created_by IS NOT NULL THEN
+    NEW.marked_by := NEW.created_by;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_sync_attendance_logs_compat ON public.attendance_logs;
+CREATE TRIGGER trg_sync_attendance_logs_compat
+  BEFORE INSERT OR UPDATE ON public.attendance_logs
+  FOR EACH ROW EXECUTE FUNCTION public.sync_attendance_logs_compat();
+
+
+-- ============================================================================
+-- Migration 46/48: 046_task_templates.sql
+-- ============================================================================
+
+-- ============================================================================
+-- Migration: 046_task_templates.sql
+-- Description: HR module — Task Templates. A named, reusable bundle of task
+--   definitions (e.g. "New Hire Onboarding") that gets "applied" to one or
+--   more people, creating real rows in the EXISTING `tasks`/`task_assignees`
+--   tables (038_meetings_hr_module.sql / 041_tasks_hr_module.sql) — this is
+--   not a parallel task system, just a factory for the one that exists.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS public.task_templates (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    description TEXT,
+    created_by UUID REFERENCES public.users(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.task_template_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    template_id UUID NOT NULL REFERENCES public.task_templates(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    description TEXT,
+    priority TEXT NOT NULL DEFAULT 'MEDIUM' CHECK (priority IN ('LOW', 'MEDIUM', 'HIGH', 'URGENT')),
+    due_days_offset INTEGER NOT NULL DEFAULT 3,  -- due_date = application date + this many days
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_task_template_items_template_id ON public.task_template_items(template_id);
+
+ALTER TABLE public.task_templates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.task_template_items ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Service role full access on task_templates" ON public.task_templates;
+CREATE POLICY "Service role full access on task_templates" ON public.task_templates
+    FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
+
+DROP POLICY IF EXISTS "Service role full access on task_template_items" ON public.task_template_items;
+CREATE POLICY "Service role full access on task_template_items" ON public.task_template_items
+    FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
+
+-- Seed one ready-to-use template so the feature isn't empty on first load.
+INSERT INTO public.task_templates (id, name, description)
+VALUES ('00000000-0000-0000-0000-000000000101', 'New Hire Onboarding', 'Standard checklist applied when a new employee joins.')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.task_template_items (template_id, title, description, priority, due_days_offset, sort_order)
+SELECT '00000000-0000-0000-0000-000000000101', title, description, priority, offset_days, ord
+FROM (VALUES
+  ('IT & system access setup', 'Create login, email, and grant baseline module access.', 'HIGH', 1, 1),
+  ('Issue ID card / safety gear', 'Factory ID, PPE, and site induction materials.', 'HIGH', 1, 2),
+  ('Safety briefing', 'Walk the shop floor safety procedures and emergency exits.', 'MEDIUM', 2, 3),
+  ('Assign reporting manager & shift', 'Confirm department, shift, and reporting line in Employee Management.', 'MEDIUM', 2, 4),
+  ('30-day check-in', 'Quick sync on how onboarding is going.', 'LOW', 30, 5)
+) AS t(title, description, priority, offset_days, ord)
+WHERE NOT EXISTS (SELECT 1 FROM public.task_template_items WHERE template_id = '00000000-0000-0000-0000-000000000101');
+
+
+-- ============================================================================
+-- Migration 47/48: 047_employee_certifications.sql
+-- ============================================================================
+
+-- ============================================================================
+-- Migration: 047_employee_certifications.sql
+-- Description: HR Module — Employee Certifications & Skills Qualification
+--              Table public.employee_certifications: id, employee_id, title,
+--              issuing_body, issued_date, expiry_date, document_url,
+--              assigned_by, org_id, created_at, updated_at.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS public.employee_certifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    employee_id UUID NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
+    title TEXT NOT NULL,
+    issuing_body TEXT,
+    issued_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    expiry_date DATE,
+    document_url TEXT,
+    assigned_by UUID NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
+    org_id UUID DEFAULT '00000000-0000-0000-0000-000000000001'::uuid,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Reconcile columns if the table already pre-existed
+DO $$ 
+BEGIN
+  -- id default
+  ALTER TABLE public.employee_certifications ALTER COLUMN id SET DEFAULT gen_random_uuid()::text;
+
+  -- Relax legacy NOT NULL columns
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'employee_certifications' AND column_name = 'employee_name'
+  ) THEN
+    ALTER TABLE public.employee_certifications ALTER COLUMN employee_name DROP NOT NULL;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'employee_certifications' AND column_name = 'certification_name'
+  ) THEN
+    ALTER TABLE public.employee_certifications ALTER COLUMN certification_name DROP NOT NULL;
+  END IF;
+
+  -- employee_id
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'employee_certifications' AND column_name = 'employee_id'
+  ) THEN
+    ALTER TABLE public.employee_certifications ADD COLUMN employee_id UUID REFERENCES public.users(id) ON DELETE RESTRICT;
+  END IF;
+
+  -- title
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'employee_certifications' AND column_name = 'title'
+  ) THEN
+    ALTER TABLE public.employee_certifications ADD COLUMN title TEXT;
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns 
+      WHERE table_name = 'employee_certifications' AND column_name = 'certification_name'
+    ) THEN
+      UPDATE public.employee_certifications SET title = certification_name WHERE title IS NULL AND certification_name IS NOT NULL;
+    END IF;
+  END IF;
+
+  -- issuing_body
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'employee_certifications' AND column_name = 'issuing_body'
+  ) THEN
+    ALTER TABLE public.employee_certifications ADD COLUMN issuing_body TEXT;
+  END IF;
+
+  -- issued_date
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'employee_certifications' AND column_name = 'issued_date'
+  ) THEN
+    ALTER TABLE public.employee_certifications ADD COLUMN issued_date DATE DEFAULT CURRENT_DATE;
+  END IF;
+
+  -- expiry_date
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'employee_certifications' AND column_name = 'expiry_date'
+  ) THEN
+    ALTER TABLE public.employee_certifications ADD COLUMN expiry_date DATE;
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns 
+      WHERE table_name = 'employee_certifications' AND column_name = 'valid_until'
+    ) THEN
+      UPDATE public.employee_certifications SET expiry_date = valid_until WHERE expiry_date IS NULL AND valid_until IS NOT NULL;
+    END IF;
+  END IF;
+
+  -- document_url
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'employee_certifications' AND column_name = 'document_url'
+  ) THEN
+    ALTER TABLE public.employee_certifications ADD COLUMN document_url TEXT;
+  END IF;
+
+  -- assigned_by
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'employee_certifications' AND column_name = 'assigned_by'
+  ) THEN
+    ALTER TABLE public.employee_certifications ADD COLUMN assigned_by UUID REFERENCES public.users(id) ON DELETE RESTRICT;
+  END IF;
+
+  -- org_id
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'employee_certifications' AND column_name = 'org_id'
+  ) THEN
+    ALTER TABLE public.employee_certifications ADD COLUMN org_id UUID DEFAULT '00000000-0000-0000-0000-000000000001'::uuid;
+  END IF;
+
+  -- updated_at
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'employee_certifications' AND column_name = 'updated_at'
+  ) THEN
+    ALTER TABLE public.employee_certifications ADD COLUMN updated_at TIMESTAMPTZ DEFAULT NOW();
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_employee_certifications_employee_id ON public.employee_certifications(employee_id);
+
+ALTER TABLE public.employee_certifications ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Service role full access on employee_certifications" ON public.employee_certifications;
+CREATE POLICY "Service role full access on employee_certifications" ON public.employee_certifications
+    FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
+
+CREATE OR REPLACE FUNCTION public.set_employee_certifications_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_employee_certifications_updated_at ON public.employee_certifications;
+CREATE TRIGGER trg_employee_certifications_updated_at
+  BEFORE UPDATE ON public.employee_certifications
+  FOR EACH ROW EXECUTE FUNCTION public.set_employee_certifications_updated_at();
+
+-- Bi-directional column compatibility trigger to support both title/certification_name and expiry_date/valid_until
+CREATE OR REPLACE FUNCTION public.sync_employee_certifications_compat() 
+RETURNS TRIGGER AS $$
+BEGIN
+  -- id default
+  IF NEW.id IS NULL THEN
+    NEW.id := gen_random_uuid()::text;
+  END IF;
+
+  -- employee_code <-> employee_id
+  IF NEW.employee_id IS NULL AND NEW.employee_code IS NOT NULL AND NEW.employee_code ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN
+    NEW.employee_id := NEW.employee_code::uuid;
+  END IF;
+  IF NEW.employee_code IS NULL AND NEW.employee_id IS NOT NULL THEN
+    NEW.employee_code := NEW.employee_id::text;
+  END IF;
+
+  -- title <-> certification_name
+  IF NEW.title IS NULL AND NEW.certification_name IS NOT NULL THEN
+    NEW.title := NEW.certification_name;
+  END IF;
+  IF NEW.certification_name IS NULL AND NEW.title IS NOT NULL THEN
+    NEW.certification_name := NEW.title;
+  END IF;
+
+  -- employee_name from users
+  IF NEW.employee_name IS NULL AND NEW.employee_id IS NOT NULL THEN
+    SELECT full_name INTO NEW.employee_name FROM public.users WHERE id = NEW.employee_id;
+  END IF;
+
+  -- expiry_date <-> valid_until
+  IF NEW.expiry_date IS NULL AND NEW.valid_until IS NOT NULL THEN
+    NEW.expiry_date := NEW.valid_until;
+  END IF;
+  IF NEW.valid_until IS NULL AND NEW.expiry_date IS NOT NULL THEN
+    NEW.valid_until := NEW.expiry_date;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_sync_employee_certifications_compat ON public.employee_certifications;
+CREATE TRIGGER trg_sync_employee_certifications_compat
+  BEFORE INSERT OR UPDATE ON public.employee_certifications
+  FOR EACH ROW EXECUTE FUNCTION public.sync_employee_certifications_compat();
+
+
+-- ============================================================================
+-- Migration 48/48: 048_announcements.sql
+-- ============================================================================
+
+-- ============================================================================
+-- Migration: 048_announcements.sql
+-- Description: HR Module — Company Announcements
+--              Table public.announcements: id, title, body, posted_by, pinned,
+--              published_at, expires_at, org_id, created_at, updated_at.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS public.announcements (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT NOT NULL,
+    body TEXT NOT NULL,
+    posted_by UUID REFERENCES public.users(id) ON DELETE RESTRICT,
+    pinned BOOLEAN NOT NULL DEFAULT false,
+    published_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMPTZ,
+    org_id UUID DEFAULT '00000000-0000-0000-0000-000000000001'::uuid,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Reconcile columns if table pre-existed
+DO $$ 
+BEGIN
+  -- posted_by
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'announcements' AND column_name = 'posted_by'
+  ) THEN
+    ALTER TABLE public.announcements ADD COLUMN posted_by UUID REFERENCES public.users(id) ON DELETE RESTRICT;
+  END IF;
+
+  -- pinned
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'announcements' AND column_name = 'pinned'
+  ) THEN
+    ALTER TABLE public.announcements ADD COLUMN pinned BOOLEAN NOT NULL DEFAULT false;
+  END IF;
+
+  -- published_at
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'announcements' AND column_name = 'published_at'
+  ) THEN
+    ALTER TABLE public.announcements ADD COLUMN published_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns 
+      WHERE table_name = 'announcements' AND column_name = 'created_at'
+    ) THEN
+      UPDATE public.announcements SET published_at = created_at WHERE published_at IS NULL;
+    END IF;
+  END IF;
+
+  -- org_id
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'announcements' AND column_name = 'org_id'
+  ) THEN
+    ALTER TABLE public.announcements ADD COLUMN org_id UUID DEFAULT '00000000-0000-0000-0000-000000000001'::uuid;
+  END IF;
+
+  -- updated_at
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'announcements' AND column_name = 'updated_at'
+  ) THEN
+    ALTER TABLE public.announcements ADD COLUMN updated_at TIMESTAMPTZ DEFAULT NOW();
+  END IF;
+
+  -- Sync posted_by from created_by if pre-existing
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'announcements' AND column_name = 'created_by'
+  ) THEN
+    UPDATE public.announcements SET posted_by = created_by WHERE posted_by IS NULL AND created_by IS NOT NULL;
+  END IF;
+END $$;
+
+-- Indexes on published_at and pinned
+CREATE INDEX IF NOT EXISTS idx_announcements_published_at ON public.announcements(published_at DESC);
+CREATE INDEX IF NOT EXISTS idx_announcements_pinned ON public.announcements(pinned);
+CREATE INDEX IF NOT EXISTS idx_announcements_posted_by ON public.announcements(posted_by);
+
+ALTER TABLE public.announcements ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Service role full access on announcements" ON public.announcements;
+CREATE POLICY "Service role full access on announcements" ON public.announcements
+    FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
+
+-- Bi-directional column compatibility trigger
+CREATE OR REPLACE FUNCTION public.sync_announcements_compat() 
+RETURNS TRIGGER AS $$
+BEGIN
+  -- id default
+  IF NEW.id IS NULL THEN
+    NEW.id := gen_random_uuid();
+  END IF;
+
+  -- posted_by <-> created_by
+  IF NEW.posted_by IS NULL AND NEW.created_by IS NOT NULL THEN
+    NEW.posted_by := NEW.created_by;
+  END IF;
+  IF NEW.created_by IS NULL AND NEW.posted_by IS NOT NULL THEN
+    NEW.created_by := NEW.posted_by;
+  END IF;
+
+  -- published_at <-> created_at
+  IF NEW.published_at IS NULL AND NEW.created_at IS NOT NULL THEN
+    NEW.published_at := NEW.created_at;
+  END IF;
+  IF NEW.created_at IS NULL AND NEW.published_at IS NOT NULL THEN
+    NEW.created_at := NEW.published_at;
+  END IF;
+  IF NEW.published_at IS NULL THEN
+    NEW.published_at := NOW();
+  END IF;
+
+  -- pinned default
+  IF NEW.pinned IS NULL THEN
+    NEW.pinned := false;
+  END IF;
+
+  -- updated_at
+  NEW.updated_at := NOW();
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_sync_announcements_compat ON public.announcements;
+CREATE TRIGGER trg_sync_announcements_compat
+  BEFORE INSERT OR UPDATE ON public.announcements
+  FOR EACH ROW EXECUTE FUNCTION public.sync_announcements_compat();

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, startTransition } from 'react';
 import { 
   ConsoleView, 
   UserRole, 
@@ -40,6 +40,11 @@ import { DispatchView } from './views/DispatchView';
 import { ApprovalsView } from './views/ApprovalsView';
 import { MeetingsView } from './views/MeetingsView';
 import { TasksView } from './views/TasksView';
+import { LeaveRequestsView } from './views/LeaveRequestsView';
+import { AttendanceView } from './views/AttendanceView';
+import { CertificationsView } from './views/CertificationsView';
+import { EmployeeCertificationsView } from './views/EmployeeCertificationsView';
+import { AnnouncementsView } from './views/AnnouncementsView';
 import { EmployeeMasterView } from './views/EmployeeMasterView';
 import { InvoicesView } from './views/InvoicesView';
 import { PayablesView } from './views/PayablesView';
@@ -56,6 +61,11 @@ import { useAuth } from '../../context/AuthContext';
 import { useOwnerOSData } from '../../hooks/useOwnerOSData';
 import { useMeetings } from '../../hooks/useMeetings';
 import { useTasks } from '../../hooks/useTasks';
+import { useLeaveRequests } from '../../hooks/useLeaveRequests';
+import { useAttendance } from '../../hooks/useAttendance';
+import { useCertifications } from '../../hooks/useCertifications';
+import { useEmployeeCertifications } from '../../hooks/useEmployeeCertifications';
+import { useAnnouncements } from '../../hooks/useAnnouncements';
 import { useEmployees } from '../../hooks/useEmployees';
 import { fetchOrderById, receiveOutworkReturn } from '../../services/supabaseServices';
 import { triggerOrderDelayed } from '../../services/notificationService';
@@ -97,6 +107,15 @@ const getPathForView = (view: ConsoleView, orderId?: string | null): string => {
       return '/hr/meetings';
     case 'tasks':
       return '/hr/tasks';
+    case 'leave':
+    case 'leave-requests':
+      return '/hr/leave';
+    case 'attendance':
+      return '/hr/attendance';
+    case 'certifications':
+      return '/hr/certifications';
+    case 'announcements':
+      return '/hr/announcements';
     case 'employee-master':
       return '/hr/employees';
     case 'invoices':
@@ -155,7 +174,11 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
 
   useEffect(() => {
     if (authProfile?.id && !currentUserId) {
-      setCurrentUserId(authProfile.id);
+      // Wrapped in startTransition — see useMeetings.ts for why (same
+      // react-hooks/set-state-in-effect fix as elsewhere in this session).
+      startTransition(() => {
+        setCurrentUserId(authProfile.id);
+      });
     }
   }, [authProfile?.id, currentUserId]);
 
@@ -289,6 +312,70 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
     handleAddComment,
     handleCancelTask
   } = useTasks(isViewAllowedForUser(currentUser, 'tasks'), currentRole);
+
+  const {
+    leaveRequests,
+    isLoadingLeave,
+    canViewAllLeave,
+    canApproveLeave,
+    handleCreateLeaveRequest,
+    handleDecideLeaveRequest,
+    handleCancelLeaveRequest
+  } = useLeaveRequests(
+    isViewAllowedForUser(currentUser, 'leave') || isViewAllowedForUser(currentUser, 'leave-requests'),
+    currentRole,
+    currentUser?.effectivePermissions
+  );
+
+  const {
+    attendanceLogs,
+    myAttendanceLogs,
+    isLoadingAttendance,
+    canManageAttendance,
+    canViewAllAttendance,
+    todayLog,
+    searchQuery: attendanceSearchQuery,
+    setSearchQuery: setAttendanceSearchQuery,
+    statusFilter: attendanceStatusFilter,
+    setStatusFilter: setAttendanceStatusFilter,
+    handleCheckIn,
+    handleCheckOut,
+    handleCreateAttendance,
+    handleUpdateAttendance
+  } = useAttendance(
+    isViewAllowedForUser(currentUser, 'attendance'),
+    currentUser?.id,
+    currentRole,
+    currentUser?.effectivePermissions
+  );
+
+  const { certifications, isLoadingCertifications, canManageCertifications, handleCreateCertification, handleDeleteCertification } =
+    useCertifications(isViewAllowedForUser(currentUser, 'certifications'), currentRole);
+
+  const {
+    certifications: empCertifications,
+    myCertifications: myEmpCertifications,
+    isLoadingCertifications: isLoadingEmpCertifications,
+    canViewAllCertifications: canViewAllEmpCertifications,
+    canAssignCertification,
+    searchQuery: empCertSearchQuery,
+    setSearchQuery: setEmpCertSearchQuery,
+    statusFilter: empCertStatusFilter,
+    setStatusFilter: setEmpCertStatusFilter,
+    activeTab: empCertActiveTab,
+    setActiveTab: setEmpCertActiveTab,
+    handleAssignCertification: handleAssignEmpCert,
+    handleDeleteCertification: handleDeleteEmpCert,
+    handleUploadDocument: handleUploadEmpCertDoc
+  } = useEmployeeCertifications(
+    isViewAllowedForUser(currentUser, 'employee-certifications'),
+    currentUser?.id,
+    currentRole,
+    currentUser?.effectivePermissions
+  );
+
+  const { announcements, isLoadingAnnouncements, canPostAnnouncements, handleCreateAnnouncement, handleDeleteAnnouncement } =
+    useAnnouncements(isViewAllowedForUser(currentUser, 'announcements'), currentRole);
   // Employee Master is a standalone HR submodule. It projects only internal
   // employee-role users from the existing users table; it does not create a
   // parallel employee identity store.
@@ -368,6 +455,10 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
 
   // URL History Sync Effect
   useEffect(() => {
+    // Wrapped in startTransition — same react-hooks/set-state-in-effect fix
+    // applied elsewhere this session; this effect's many setCurrentView(...)
+    // branches are all synchronous state writes.
+    startTransition(() => {
     const path = location.pathname;
 
     if (path === '/' || path === '/command-center' || path === '/command-centre') {
@@ -421,6 +512,14 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
       setCurrentView('meetings');
     } else if (path === '/hr/tasks') {
       setCurrentView('tasks');
+    } else if (path === '/hr/leave') {
+      setCurrentView('leave-requests');
+    } else if (path === '/hr/attendance') {
+      setCurrentView('attendance');
+    } else if (path === '/hr/certifications') {
+      setCurrentView('certifications');
+    } else if (path === '/hr/announcements') {
+      setCurrentView('announcements');
     } else if (path === '/hr/employees') {
       setCurrentView('employee-master');
     } else if (path === '/invoices') {
@@ -434,6 +533,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
     } else if (path === '/workflow-testing') {
       setCurrentView('workflow-testing');
     }
+    });
   }, [location.pathname, orders]);
 
   const handleNavigateView = (view: ConsoleView, orderId?: string | null) => {
@@ -607,6 +707,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
               users={users}
               auditLogs={auditLogs}
               approvals={approvals}
+              announcements={announcements}
               containerScrollRef={mainScrollRef}
               isDarkMode={isDarkMode}
               isRealtimeStreaming={isRealtimeStreaming}
@@ -970,6 +1071,80 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
               onCancelTask={handleCancelTask}
             />
           )}
+
+          {(currentView === 'leave' || currentView === 'leave-requests') && (
+            <LeaveRequestsView
+              leaveRequests={leaveRequests}
+              isLoadingLeave={isLoadingLeave}
+              canViewAllLeave={canViewAllLeave}
+              canApproveLeave={canApproveLeave}
+              currentUserId={currentUser?.id}
+              isDarkMode={isDarkMode}
+              onCreateLeaveRequest={handleCreateLeaveRequest}
+              onDecideLeaveRequest={handleDecideLeaveRequest}
+              onCancelLeaveRequest={handleCancelLeaveRequest}
+            />
+          )}
+
+          {currentView === 'attendance' && (
+            <AttendanceView
+              attendanceLogs={attendanceLogs}
+              myAttendanceLogs={myAttendanceLogs}
+              isLoadingAttendance={isLoadingAttendance}
+              canManageAttendance={canManageAttendance}
+              canViewAllAttendance={canViewAllAttendance}
+              todayLog={todayLog}
+              currentUserId={currentUser?.id}
+              isDarkMode={isDarkMode}
+              searchQuery={attendanceSearchQuery}
+              onSearchChange={setAttendanceSearchQuery}
+              statusFilter={attendanceStatusFilter}
+              onStatusFilterChange={setAttendanceStatusFilter}
+              onCheckIn={handleCheckIn}
+              onCheckOut={handleCheckOut}
+              onCreateAttendance={handleCreateAttendance}
+              onUpdateAttendance={handleUpdateAttendance}
+            />
+          )}
+
+          {(currentView === 'employee-certifications' || currentView === 'certifications') && (
+            <EmployeeCertificationsView
+              certifications={empCertifications}
+              myCertifications={myEmpCertifications}
+              isLoading={isLoadingEmpCertifications}
+              canViewAll={canViewAllEmpCertifications}
+              canAssign={canAssignCertification}
+              isDarkMode={isDarkMode}
+              searchQuery={empCertSearchQuery}
+              onSearchChange={setEmpCertSearchQuery}
+              statusFilter={empCertStatusFilter}
+              onStatusFilterChange={setEmpCertStatusFilter}
+              activeTab={empCertActiveTab}
+              onTabChange={setEmpCertActiveTab}
+              onAssignCertification={handleAssignEmpCert}
+              onDeleteCertification={handleDeleteEmpCert}
+              onUploadDocument={handleUploadEmpCertDoc}
+              employeesList={employees.map(e => ({
+                id: e.id,
+                name: e.name,
+                email: e.email,
+                department: e.department,
+                role: e.role
+              }))}
+            />
+          )}
+
+          {currentView === 'announcements' && (
+            <AnnouncementsView
+              announcements={announcements}
+              isLoadingAnnouncements={isLoadingAnnouncements}
+              canPostAnnouncements={canPostAnnouncements}
+              isDarkMode={isDarkMode}
+              onCreateAnnouncement={handleCreateAnnouncement}
+              onDeleteAnnouncement={handleDeleteAnnouncement}
+            />
+          )}
+
           {currentView === 'employee-master' && (
             <EmployeeMasterView
               employees={employees}

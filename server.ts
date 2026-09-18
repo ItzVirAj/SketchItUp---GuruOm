@@ -25,6 +25,12 @@ import approvalsRoutes from './backend/src/modules/approvals/approvals.routes';
 import notificationsRoutes from './backend/src/modules/notifications/notifications.routes';
 import meetingsRoutes from './backend/src/modules/meetings/meetings.routes';
 import tasksRoutes from './backend/src/modules/tasks/tasks.routes';
+import taskTemplatesRoutes from './backend/src/modules/tasks/task-templates.routes';
+import leaveRoutes from './backend/src/modules/leave/leave.routes';
+import attendanceRoutes from './backend/src/modules/attendance/attendance.routes';
+import certificationsRoutes from './backend/src/modules/certifications/certifications.routes';
+import employeeCertificationsRoutes from './backend/src/modules/employeeCertifications/employeeCertifications.routes';
+import announcementsRoutes from './backend/src/modules/announcements/announcements.routes';
 import employeesRoutes from './backend/src/modules/employees/employees.routes';
 import attachmentsRoutes from './backend/src/modules/attachments/attachments.routes';
 import testingRoutes from './backend/src/modules/testing/testing.routes';
@@ -149,6 +155,22 @@ async function startServer() {
 
   // Mount HR Module — Tasks submodule (internal action-item / job assignment tracker)
   app.use('/api/v1/tasks', tasksRoutes);
+  // HR Module — Task Templates (bundled task creation, e.g. onboarding checklists)
+  app.use('/api/v1/task-templates', taskTemplatesRoutes);
+  // HR Module — Leave/Time-Off Requests
+  app.use('/api/v1/leave', leaveRoutes);
+  app.use('/api/leave', leaveRoutes);
+  // HR Module — Attendance / Shift Log
+  app.use('/api/v1/attendance', attendanceRoutes);
+  app.use('/api/attendance', attendanceRoutes);
+  // HR Module — Certifications & training expiry reminders
+  app.use('/api/v1/certifications', certificationsRoutes);
+  // HR Module — Employee Certifications (distinct from QC/PDI certificates)
+  app.use('/api/v1/employee-certifications', employeeCertificationsRoutes);
+  app.use('/api/employee-certifications', employeeCertificationsRoutes);
+  // HR Module — Company Announcements
+  app.use('/api/v1/announcements', announcementsRoutes);
+  app.use('/api/announcements', announcementsRoutes);
   // HR Module — Employee Master (projection of internal users only)
   app.use('/api/v1/employees', employeesRoutes);
 

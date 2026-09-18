@@ -1,4 +1,4 @@
-import React, { useMemo, useState, startTransition } from 'react';
+import React, { useMemo, useState, useEffect, startTransition } from 'react';
 import {
   ListTodo,
   Plus,
@@ -20,7 +20,8 @@ import {
 } from 'lucide-react';
 import { Modal } from '../../common/Modal';
 import { useUrlModal } from '../../../hooks/useUrlModal';
-import { Task, TaskPriority, TaskStatus } from '../../../services/consoleApiServices';
+import { Task, TaskPriority, TaskStatus, TaskTemplate, fetchTaskTemplates, applyTaskTemplate } from '../../../services/consoleApiServices';
+import { toast } from '../../../context/ToastContext';
 import { SystemUser } from '../../../types/console';
 
 interface TasksViewProps {
@@ -111,6 +112,34 @@ export const TasksView: React.FC<TasksViewProps> = ({
   onCancelTask
 }) => {
   const taskModal = useUrlModal<{ id?: string }>('task-form');
+  const templateModal = useUrlModal('apply-template');
+  const [templates, setTemplates] = useState<TaskTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  const [templateAssigneeIds, setTemplateAssigneeIds] = useState<string[]>([]);
+  const [isApplyingTemplate, setIsApplyingTemplate] = useState(false);
+
+  useEffect(() => {
+    if (templateModal.isOpen && templates.length === 0) {
+      fetchTaskTemplates().then(setTemplates);
+    }
+  }, [templateModal.isOpen, templates.length]);
+
+  const handleApplyTemplate = async () => {
+    if (!selectedTemplateId || templateAssigneeIds.length === 0) return;
+    setIsApplyingTemplate(true);
+    try {
+      const result = await applyTaskTemplate(selectedTemplateId, templateAssigneeIds);
+      toast.success(`${result.createdCount} tasks created from "${result.templateName}".`, 'Template Applied');
+      templateModal.close();
+      setSelectedTemplateId('');
+      setTemplateAssigneeIds([]);
+    } catch (err: any) {
+      toast.error(err?.message || 'Could not apply the template.', 'Apply Failed');
+    } finally {
+      setIsApplyingTemplate(false);
+    }
+  };
+
   const detailModal = useUrlModal<{ id: string }>('task-detail');
   const cancelModal = useUrlModal<{ id: string }>('cancel-task');
   const [viewFilter, setViewFilter] = useState<'MINE' | 'ASSIGNED_BY_ME' | 'ALL'>(canManageTasks ? 'ALL' : 'MINE');
@@ -274,6 +303,17 @@ export const TasksView: React.FC<TasksViewProps> = ({
                 </div>
               </div>
             </div>
+
+            {canManageTasks && (
+              <button
+                type="button"
+                onClick={() => templateModal.open()}
+                className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-[var(--accent-primary)]/40 bg-[var(--accent-primary)]/10 hover:bg-[var(--accent-primary)]/20 px-4 text-xs font-extrabold text-[var(--accent-primary)] shadow-sm transition-ui active:scale-[0.96] cursor-pointer"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>Apply Template</span>
+              </button>
+            )}
 
             {canManageTasks && (
               <button
@@ -801,6 +841,77 @@ export const TasksView: React.FC<TasksViewProps> = ({
           </div>
         </div>
       </Modal>
+
+      {/* ============================ APPLY TASK TEMPLATE MODAL ============================ */}
+      {canManageTasks && (
+        <Modal
+          isOpen={templateModal.isOpen}
+          onClose={() => { templateModal.close(); setSelectedTemplateId(''); setTemplateAssigneeIds([]); }}
+          isDarkMode={isDarkMode}
+          maxWidth="lg"
+          icon={<Sparkles className="w-5 h-5" />}
+          title="Apply Task Template"
+          subtitle="Creates one Task per template item, assigned to everyone you pick below."
+          footer={
+            <div className="flex items-center justify-end gap-3 w-full">
+              <button
+                type="button"
+                onClick={() => templateModal.close()}
+                className={`min-h-[42px] px-4 py-2 rounded-xl text-xs font-bold transition-ui cursor-pointer ${isDarkMode ? 'text-slate-300 hover:text-white bg-slate-800/60 hover:bg-slate-800 border border-slate-750' : 'border border-slate-300 text-slate-700 hover:bg-slate-100'}`}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleApplyTemplate}
+                disabled={!selectedTemplateId || templateAssigneeIds.length === 0 || isApplyingTemplate}
+                className="min-h-[42px] px-6 py-2 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-white font-bold text-xs shadow-lg cursor-pointer transition-ui disabled:opacity-50"
+              >
+                {isApplyingTemplate ? 'Applying…' : 'Apply Template'}
+              </button>
+            </div>
+          }
+        >
+          <div className="space-y-4">
+            <div>
+              <label className={`text-xs font-semibold uppercase tracking-wide ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Template</label>
+              <select
+                value={selectedTemplateId}
+                onChange={(e) => setSelectedTemplateId(e.target.value)}
+                className={`w-full mt-1.5 p-3 rounded-xl border text-sm ${isDarkMode ? 'bg-slate-950/60 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'}`}
+              >
+                <option value="">Select a template…</option>
+                {templates.map((t) => <option key={t.id} value={t.id}>{t.name} ({t.items.length} tasks)</option>)}
+              </select>
+            </div>
+            {selectedTemplateId && (
+              <ul className={`text-xs space-y-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                {templates.find((t) => t.id === selectedTemplateId)?.items.map((item) => (
+                  <li key={item.id}>· {item.title} <span className="opacity-60">(due +{item.dueDaysOffset}d)</span></li>
+                ))}
+              </ul>
+            )}
+            <div>
+              <label className={`text-xs font-semibold uppercase tracking-wide ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                Assign To ({templateAssigneeIds.length})
+              </label>
+              <div className={`max-h-40 overflow-y-auto rounded-xl border divide-y mt-1.5 ${isDarkMode ? 'border-slate-800 divide-slate-800' : 'border-slate-200 divide-slate-100'}`}>
+                {users.map((u) => (
+                  <label key={u.id} className={`flex items-center gap-2.5 px-3 py-2 text-sm cursor-pointer ${isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}`}>
+                    <input
+                      type="checkbox"
+                      checked={templateAssigneeIds.includes(u.id)}
+                      onChange={() => setTemplateAssigneeIds((prev) => (prev.includes(u.id) ? prev.filter((id) => id !== u.id) : [...prev, u.id]))}
+                      className="rounded"
+                    />
+                    <span className={isDarkMode ? 'text-slate-200' : 'text-slate-800'}>{u.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };
@@ -845,11 +956,10 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
 
   React.useEffect(() => {
     if (!isOpen) return;
-    // Wrapped in startTransition — see useMeetings.ts for why (same
-    // react-hooks/set-state-in-effect fix; here it's several setState calls
-    // resetting the form instead of one, same root cause).
+    // Wrapped in startTransition — see useMeetings.ts (same
+    // react-hooks/set-state-in-effect fix, several setState calls here).
     startTransition(() => {
-      if (editingTask) {
+    if (editingTask) {
       setTitle(editingTask.title);
       setDescription(editingTask.description || '');
       setSection(editingTask.section || '');

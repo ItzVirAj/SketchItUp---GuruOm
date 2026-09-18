@@ -305,6 +305,47 @@ async function processTaskReminder(job: Job) {
 }
 
 /**
+ * Fires a certification/training expiry reminder. Same shape as
+ * processMeetingReminder/processTaskReminder — re-checks the record is still
+ * relevant (not deleted, expiry date hasn't changed) before notifying.
+ */
+async function processCertificationReminder(job: Job) {
+  const { certificationId, name, expiryDate, employeeId, offsetLabel } = job.data;
+
+  const { data: cert } = await db
+    .from('certifications')
+    .select('expiry_date, name')
+    .eq('id', certificationId)
+    .maybeSingle();
+
+  if (!cert || !cert.expiry_date || cert.expiry_date !== expiryDate.slice(0, 10)) {
+    logger.info(`⏭️ [Worker:Certifications] Skipping reminder for ${certificationId} — expiry changed or record gone.`);
+    return { status: 'skipped', certificationId };
+  }
+
+  const when = new Date(expiryDate).toLocaleDateString('en-IN', { dateStyle: 'medium' });
+
+  await notificationsService.triggerNotification({
+    eventType: 'certification_expiring',
+    entityType: 'certification',
+    entityId: certificationId,
+    title: `Expiring soon: ${name}`,
+    message: `"${name}" expires on ${when}.`,
+    severity: 'MEDIUM',
+    data: { employeeId, offsetLabel }
+  } as any);
+
+  await db
+    .from('certification_reminder_jobs')
+    .update({ sent_at: new Date().toISOString() })
+    .eq('certification_id', certificationId)
+    .eq('offset_label', offsetLabel);
+
+  logger.info(`🔔 [Worker:Certifications] Reminder sent for certification ${certificationId} (${offsetLabel}).`);
+  return { status: 'sent', certificationId, offsetLabel };
+}
+
+/**
  * Initializes BullMQ worker process.
  */
 export function startWorker(): Worker {
@@ -324,6 +365,8 @@ export function startWorker(): Worker {
           return await processMeetingReminder(job);
         case 'task-reminder':
           return await processTaskReminder(job);
+        case 'certification-reminder':
+          return await processCertificationReminder(job);
         default:
           throw new Error(`Unknown job type "${job.name}"`);
       }

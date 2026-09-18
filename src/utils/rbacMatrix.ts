@@ -29,7 +29,13 @@ export type SystemModule =
   | 'transport'
   | 'subcontracting'
   | 'meetings'
-  | 'tasks';
+  | 'tasks'
+  | 'leave'
+  | 'leave_requests'
+  | 'attendance'
+  | 'certifications'
+  | 'employee_certifications'
+  | 'announcements';
 
 export type ScopeRule = 
   | 'ALL'
@@ -92,7 +98,8 @@ export type CtaId =
   | 'EDIT_TASK'
   | 'CANCEL_TASK'
   | 'UPDATE_TASK_STATUS'
-  | 'ADD_TASK_COMMENT';
+  | 'ADD_TASK_COMMENT'
+  | 'POST_ANNOUNCEMENT';
 
 export interface CtaPermission {
   ctaId: CtaId;
@@ -146,6 +153,9 @@ export const CTA_PERMISSION_TABLE: CtaPermission[] = [
   { ctaId: 'CANCEL_TASK', label: 'Cancel Task', stage: 'HR', authorizedRoles: ['Owner', 'Admin (System)', 'ServerAdmin', 'TESTER'], preCondition: 'Task is not already DONE/CANCELLED', resultingStatus: 'CANCELLED' },
   { ctaId: 'UPDATE_TASK_STATUS', label: 'Update Task Status', stage: 'HR', authorizedRoles: ['Owner', 'Admin (System)', 'ServerAdmin', 'TESTER', 'Sales/Order Desk', 'Production Planner', 'Shop Floor Supervisor', 'Quality Inspector', 'Quality Auditor', 'Store Keeper', 'Purchase Manager', 'Dispatch Executive', 'Accountant', 'HR/Admin', 'Machine Operator', 'Subcontractor Coordinator'], preCondition: 'Requester is the assignee, the assigner, or Owner/Admin', resultingStatus: 'IN_PROGRESS' },
   { ctaId: 'ADD_TASK_COMMENT', label: 'Comment on Task', stage: 'HR', authorizedRoles: ['Owner', 'Admin (System)', 'ServerAdmin', 'TESTER', 'Sales/Order Desk', 'Production Planner', 'Shop Floor Supervisor', 'Quality Inspector', 'Quality Auditor', 'Store Keeper', 'Purchase Manager', 'Dispatch Executive', 'Accountant', 'HR/Admin', 'Machine Operator', 'Subcontractor Coordinator'], preCondition: 'Requester is the assignee, the assigner, or Owner/Admin', resultingStatus: 'TODO' },
+
+  // Announcements module CTAs — strictly HR-ONLY with NO exception (not even Owner / ServerAdmin per product policy)
+  { ctaId: 'POST_ANNOUNCEMENT', label: 'Post Announcement', stage: 'HR', authorizedRoles: ['HR/Admin'], preCondition: 'None', resultingStatus: 'PUBLISHED' },
 ];
 
 /**
@@ -158,6 +168,12 @@ export function isRoleAuthorizedForCta(role: string, ctaId: CtaId): boolean {
   if (!normRole) return false;
   const cta = CTA_PERMISSION_TABLE.find(c => c.ctaId === ctaId);
   if (!cta) return false;
+  // Explicit carve-out: Announcements posting is strictly HR-ONLY with NO exception,
+  // including Owner, Admin (System), and ServerAdmin (per product rules: announcements is broadcast, HR-only posting).
+  if (ctaId === 'POST_ANNOUNCEMENT') {
+    return cta.authorizedRoles.includes(normRole);
+  }
+
   // ServerAdmin, Owner, Admin (System), and TESTER can always act
   if (normRole === 'ServerAdmin' || normRole === 'Owner' || normRole === 'Admin (System)' || normRole === 'TESTER') return true;
   return cta.authorizedRoles.includes(normRole);
@@ -196,7 +212,13 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       transport: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
       subcontracting: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
       meetings: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
-      tasks: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' }
+      tasks: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      leave: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      leave_requests: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      attendance: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      certifications: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      employee_certifications: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
+      announcements: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' }
     }
   },
 
@@ -222,7 +244,13 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       transport: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
       subcontracting: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
       meetings: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
-      tasks: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' }
+      tasks: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      leave: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      leave_requests: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      attendance: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      certifications: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      employee_certifications: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
+      announcements: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' }
     }
   },
 
@@ -248,7 +276,13 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       transport: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       subcontracting: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       meetings: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
-      tasks: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' }
+      tasks: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      leave: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      leave_requests: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      attendance: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      certifications: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      employee_certifications: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      announcements: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' }
     }
   },
 
@@ -274,7 +308,13 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       transport: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       subcontracting: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
       meetings: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
-      tasks: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' }
+      tasks: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      leave: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      leave_requests: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      attendance: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      certifications: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      employee_certifications: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      announcements: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' }
     }
   },
 
@@ -300,7 +340,13 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       transport: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       subcontracting: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
       meetings: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
-      tasks: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' }
+      tasks: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      leave: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      leave_requests: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      attendance: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      certifications: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      employee_certifications: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      announcements: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' }
     }
   },
 
@@ -326,7 +372,13 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       transport: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       subcontracting: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       meetings: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
-      tasks: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' }
+      tasks: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      leave: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      leave_requests: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      attendance: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      certifications: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      employee_certifications: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      announcements: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' }
     }
   },
 
@@ -354,7 +406,13 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       transport: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       subcontracting: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       meetings: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
-      tasks: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' }
+      tasks: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      leave: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      leave_requests: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      attendance: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      certifications: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      employee_certifications: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      announcements: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' }
     }
   },
 
@@ -380,7 +438,13 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       transport: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       subcontracting: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       meetings: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
-      tasks: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' }
+      tasks: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      leave: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      leave_requests: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      attendance: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      certifications: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      employee_certifications: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      announcements: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' }
     }
   },
 
@@ -406,7 +470,13 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       transport: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       subcontracting: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       meetings: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
-      tasks: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' }
+      tasks: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      leave: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      leave_requests: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      attendance: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      certifications: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      employee_certifications: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      announcements: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' }
     }
   },
 
@@ -432,7 +502,13 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       transport: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'ALL' },
       subcontracting: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       meetings: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
-      tasks: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' }
+      tasks: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      leave: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      leave_requests: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      attendance: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      certifications: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      employee_certifications: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      announcements: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' }
     }
   },
 
@@ -458,7 +534,13 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       transport: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       subcontracting: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       meetings: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
-      tasks: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' }
+      tasks: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      leave: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      leave_requests: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      attendance: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      certifications: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      employee_certifications: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      announcements: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' }
     }
   },
 
@@ -484,7 +566,13 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       transport: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       subcontracting: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       meetings: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
-      tasks: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' }
+      tasks: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      leave: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      leave_requests: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      attendance: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      certifications: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      employee_certifications: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'ALL' },
+      announcements: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'ALL' }
     }
   },
 
@@ -510,7 +598,13 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       transport: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       subcontracting: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       meetings: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
-      tasks: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' }
+      tasks: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      leave: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      leave_requests: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      attendance: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      certifications: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      employee_certifications: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      announcements: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' }
     }
   },
 
@@ -536,7 +630,13 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       transport: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
       subcontracting: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
       meetings: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
-      tasks: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' }
+      tasks: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      leave: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      leave_requests: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      attendance: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      certifications: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      employee_certifications: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
+      announcements: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' }
     }
   },
 
@@ -563,7 +663,13 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       transport: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       subcontracting: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
       meetings: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' },
-      tasks: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' }
+      tasks: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      leave: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      leave_requests: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      attendance: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      certifications: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      employee_certifications: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      announcements: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' }
     }
   },
 
@@ -590,7 +696,13 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       transport: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       subcontracting: { accessLevel: 'NO_ACCESS', approvalLimit: null, scopeRule: 'ALL' },
       meetings: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
-      tasks: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' }
+      tasks: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      leave: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      leave_requests: { accessLevel: 'CREATE_EDIT', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      attendance: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      certifications: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      employee_certifications: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      announcements: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' }
     }
   },
 
@@ -616,7 +728,13 @@ export const RBAC_ROLE_MATRIX: Record<string, RoleDefinitionRecord> = {
       transport: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
       subcontracting: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
       meetings: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
-      tasks: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' }
+      tasks: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      leave: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      leave_requests: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      attendance: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      certifications: { accessLevel: 'FULL_APPROVE', approvalLimit: null, scopeRule: 'ALL' },
+      employee_certifications: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'OWN_RECORDS_ONLY' },
+      announcements: { accessLevel: 'VIEW_ONLY', approvalLimit: null, scopeRule: 'ALL' }
     }
   }
 };

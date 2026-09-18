@@ -263,6 +263,181 @@ describe('RBAC Role-Permission Matrix & Monetary Approvals Engine', () => {
       expect(isRoleAuthorizedForCta('Accountant', 'MARK_ORDER_CLOSED')).toBe(true);
       expect(isRoleAuthorizedForCta('Accountant', 'CREATE_JOB_CARD')).toBe(false);
     });
+
+    it('verifies leave_requests permissions across roles', () => {
+      // Owner, HR/Admin, ServerAdmin have FULL_APPROVE + ALL scope
+      expect(getRoleModulePermission('Owner', 'leave_requests')).toEqual({
+        accessLevel: 'FULL_APPROVE',
+        approvalLimit: null,
+        scopeRule: 'ALL'
+      });
+      expect(getRoleModulePermission('HR/Admin', 'leave_requests')).toEqual({
+        accessLevel: 'FULL_APPROVE',
+        approvalLimit: null,
+        scopeRule: 'ALL'
+      });
+      expect(getRoleModulePermission('ServerAdmin', 'leave_requests')).toEqual({
+        accessLevel: 'FULL_APPROVE',
+        approvalLimit: null,
+        scopeRule: 'ALL'
+      });
+
+      // Regular operational roles have CREATE_EDIT + OWN_RECORDS_ONLY
+      const regularRoles = [
+        'Sales/Order Desk',
+        'Production Planner',
+        'Shop Floor Supervisor',
+        'Quality Inspector',
+        'Quality Auditor',
+        'Store Keeper',
+        'Purchase Manager',
+        'Dispatch Executive',
+        'Accountant',
+        'Machine Operator',
+        'Subcontractor Coordinator'
+      ];
+      regularRoles.forEach(role => {
+        const perm = getRoleModulePermission(role, 'leave_requests');
+        expect(perm.accessLevel).toBe('CREATE_EDIT');
+        expect(perm.scopeRule).toBe('OWN_RECORDS_ONLY');
+      });
+    });
+
+    it('verifies employee_certifications permissions where HR/Admin is sole assigner and Owner is VIEW_ONLY', () => {
+      // HR/Admin is the ONLY role with CREATE_EDIT and ALL scope
+      const hrPerm = getRoleModulePermission('HR/Admin', 'employee_certifications');
+      expect(hrPerm).toEqual({
+        accessLevel: 'CREATE_EDIT',
+        approvalLimit: null,
+        scopeRule: 'ALL'
+      });
+      expect(hasMinimumAccess(hrPerm.accessLevel, 'CREATE_EDIT')).toBe(true);
+
+      // Owner is deliberately VIEW_ONLY + ALL (CANNOT create/assign)
+      const ownerPerm = getRoleModulePermission('Owner', 'employee_certifications');
+      expect(ownerPerm).toEqual({
+        accessLevel: 'VIEW_ONLY',
+        approvalLimit: null,
+        scopeRule: 'ALL'
+      });
+      expect(hasMinimumAccess(ownerPerm.accessLevel, 'CREATE_EDIT')).toBe(false);
+
+      // ServerAdmin and Admin (System) are also VIEW_ONLY + ALL
+      const serverAdminPerm = getRoleModulePermission('ServerAdmin', 'employee_certifications');
+      expect(serverAdminPerm).toEqual({
+        accessLevel: 'VIEW_ONLY',
+        approvalLimit: null,
+        scopeRule: 'ALL'
+      });
+      expect(hasMinimumAccess(serverAdminPerm.accessLevel, 'CREATE_EDIT')).toBe(false);
+
+      const sysAdminPerm = getRoleModulePermission('Admin (System)', 'employee_certifications');
+      expect(sysAdminPerm).toEqual({
+        accessLevel: 'VIEW_ONLY',
+        approvalLimit: null,
+        scopeRule: 'ALL'
+      });
+      expect(hasMinimumAccess(sysAdminPerm.accessLevel, 'CREATE_EDIT')).toBe(false);
+
+      // All other roles must be VIEW_ONLY + OWN_RECORDS_ONLY
+      const otherRoles = [
+        'Sales/Order Desk',
+        'Production Planner',
+        'Shop Floor Supervisor',
+        'Quality Inspector',
+        'Quality Auditor',
+        'Store Keeper',
+        'Purchase Manager',
+        'Dispatch Executive',
+        'Accountant',
+        'Machine Operator',
+        'Subcontractor Coordinator',
+        'Client',
+        'TESTER'
+      ];
+      otherRoles.forEach(role => {
+        const perm = getRoleModulePermission(role, 'employee_certifications');
+        expect(perm.accessLevel).toBe('VIEW_ONLY');
+        expect(perm.scopeRule).toBe('OWN_RECORDS_ONLY');
+        expect(hasMinimumAccess(perm.accessLevel, 'CREATE_EDIT')).toBe(false);
+      });
+    });
+
+    it('verifies attendance permissions across roles', () => {
+      // Management roles have FULL_APPROVE + ALL scope
+      const fullApproveRoles = ['Owner', 'HR/Admin', 'ServerAdmin', 'Admin (System)', 'TESTER'];
+      fullApproveRoles.forEach(role => {
+        const perm = getRoleModulePermission(role, 'attendance');
+        expect(perm.accessLevel).toBe('FULL_APPROVE');
+        expect(perm.scopeRule).toBe('ALL');
+      });
+
+      // Operational roles have VIEW_ONLY + OWN_RECORDS_ONLY
+      const regularRoles = [
+        'Sales/Order Desk',
+        'Production Planner',
+        'Shop Floor Supervisor',
+        'Quality Inspector',
+        'Quality Auditor',
+        'Store Keeper',
+        'Purchase Manager',
+        'Dispatch Executive',
+        'Accountant',
+        'Machine Operator',
+        'Subcontractor Coordinator',
+        'Client'
+      ];
+      regularRoles.forEach(role => {
+        const perm = getRoleModulePermission(role, 'attendance');
+        expect(perm.accessLevel).toBe('VIEW_ONLY');
+        expect(perm.scopeRule).toBe('OWN_RECORDS_ONLY');
+      });
+    });
+
+    it('verifies announcements permissions where HR/Admin is sole publisher and all others view', () => {
+      // HR/Admin is the ONLY role with CREATE_EDIT
+      const hrPerm = getRoleModulePermission('HR/Admin', 'announcements');
+      expect(hrPerm).toEqual({
+        accessLevel: 'CREATE_EDIT',
+        approvalLimit: null,
+        scopeRule: 'ALL'
+      });
+      expect(hasMinimumAccess(hrPerm.accessLevel, 'CREATE_EDIT')).toBe(true);
+
+      // All other roles must be VIEW_ONLY + ALL
+      const allRoles = Object.keys(RBAC_ROLE_MATRIX);
+      const viewerRoles = allRoles.filter(r => r !== 'HR/Admin');
+      viewerRoles.forEach(role => {
+        const perm = getRoleModulePermission(role, 'announcements');
+        expect(perm.accessLevel).toBe('VIEW_ONLY');
+        expect(perm.scopeRule).toBe('ALL');
+        expect(hasMinimumAccess(perm.accessLevel, 'CREATE_EDIT')).toBe(false);
+      });
+    });
+
+    it('verifies every single role of all 17 roles defines all four new HR module keys without undefined or missing entries', () => {
+      const roles = Object.keys(RBAC_ROLE_MATRIX);
+      expect(roles.length).toBe(17);
+
+      const requiredModules = ['leave_requests', 'attendance', 'employee_certifications', 'announcements'] as const;
+
+      roles.forEach(role => {
+        const roleDef = RBAC_ROLE_MATRIX[role];
+        expect(roleDef).toBeDefined();
+        expect(roleDef.permissions).toBeDefined();
+
+        requiredModules.forEach(mod => {
+          const perm = roleDef.permissions[mod];
+          expect(perm, `Role ${role} missing permission key: ${mod}`).toBeDefined();
+          expect(perm.accessLevel, `Role ${role} module ${mod} has invalid accessLevel`).toMatch(
+            /^(NO_ACCESS|VIEW_ONLY|CREATE_EDIT|FULL_APPROVE)$/
+          );
+          expect(perm.scopeRule, `Role ${role} module ${mod} has invalid scopeRule`).toMatch(
+            /^(ALL|OWN_RECORDS_ONLY|EMPLOYEE_MASTER_ONLY|QC_HOLDS_ONLY|PDI_ONLY|NO_COMMERCIAL_EDIT)$/
+          );
+        });
+      });
+    });
   });
 
 });

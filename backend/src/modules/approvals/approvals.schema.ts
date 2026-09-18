@@ -4,7 +4,8 @@ export const ApprovalTypeEnum = z.enum([
   'DISCOUNT_OVERRIDE',
   'ORDER_CANCEL',
   'HIGH_VALUE_PO',
-  'SCRAP_WRITE_OFF'
+  'SCRAP_WRITE_OFF',
+  'LEAVE_REQUEST'
 ]);
 
 export const PendingApprovalSchema = z.object({

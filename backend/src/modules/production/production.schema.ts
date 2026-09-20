@@ -26,6 +26,22 @@ export const JobCardCreateSchema = z.object({
   remarks: z.string().optional()
 });
 
+// Bulk release: one request releases job cards for many lines of a single order.
+// Unspecified per-line fields fall back to the order line / request-level defaults.
+export const BulkReleaseJobCardsSchema = z.object({
+  targetDate: z.string().min(1).optional(),
+  machine: z.string().optional(),
+  lines: z.array(z.object({
+    itemCode: z.string().trim().min(1, 'Item code is required'),
+    qty: z.coerce.number().positive('Quantity to produce must be greater than 0'),
+    drawingRevision: z.string().trim().min(1).optional(),
+    materialIssuedLot: z.string().trim().optional(),
+    targetDate: z.string().min(1).optional(),
+    machine: z.string().optional(),
+    remarks: z.string().optional()
+  })).min(1, 'Select at least one line to release').max(200, 'Release at most 200 lines per request')
+});
+
 export const StartOperationSchema = z.object({
   sequenceNo: z.coerce.number().int().positive('Sequence number is required'),
   machineId: z.string().min(1, 'Machine ID is required'),

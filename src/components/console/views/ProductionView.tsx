@@ -75,6 +75,11 @@ import {
   deleteRouteCard
 } from '../../../services/supabaseServices';
 import { JobCardDetailModal } from '../modals/JobCardDetailModal';
+import { BulkReleaseJobCardsModal } from '../modals/BulkReleaseJobCardsModal';
+import { countReleasableLines } from '../../../utils/bulkRelease';
+import { JobCardsGroupedList } from './JobCardsGroupedList';
+import { groupJobCardsByOrder, needsAttention } from '../../../utils/jobCardGroups';
+import type { BulkReleaseLineInput, BulkReleaseResult } from '../../../services/consoleApiServices';
 import { Modal } from '../../common/Modal';
 import { triggerMachineDowntime } from '../../../services/notificationService';
 import { MachineDowntimeLog } from '../../../types/console';
@@ -95,7 +100,8 @@ interface ProductionViewProps {
   companyProfile?: CompanyProfile | null;
   isDarkMode: boolean;
   initialSection?: ProductionSection;
-  onCreateJobCard: (newCard: Partial<JobCard>) => void;
+  onCreateJobCard: (newCard: Partial<JobCard>) => Promise<any> | void;
+  onBulkReleaseJobCards?: (orderRef: string, payload: { targetDate?: string; machine?: string; lines: BulkReleaseLineInput[] }) => Promise<BulkReleaseResult>;
   onStartOperation?: (jobNo: string, payload: { sequenceNo: number; machineId: string; operatorName: string; actualStartTime?: string }) => Promise<any>;
   onCompleteOperation?: (jobNo: string, payload: { sequenceNo: number; qtyProcessed: number; qtyRejected: number; actualMinutes: number; notes?: string; actualStartTime?: string; actualEndTime?: string }) => Promise<any>;
   onLogProduction?: (log: Partial<ProductionLogReport>) => void;
@@ -117,6 +123,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
   isDarkMode,
   initialSection = 'job-cards',
   onCreateJobCard,
+  onBulkReleaseJobCards,
   onStartOperation,
   onCompleteOperation,
   onLogProduction,
@@ -138,6 +145,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
 
   // URL-driven modal hooks
   const createJobModal = useUrlModal('create-job-card');
+  const bulkReleaseModal = useUrlModal('bulk-release-job-cards');
   const jobDetailModal = useUrlModal('job-card-detail');
   const logProdModal = useUrlModal('log-production');
   const travelerModal = useUrlModal('route-traveler');
@@ -151,7 +159,19 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
   const deleteRouteModal = useUrlModal('delete-route');
 
   // View mode for Job Cards (list / board)
-  const [viewMode, setViewMode] = useState<'list' | 'board'>('list');
+  // 'grouped' (one row per PO) is the default so 40-50 line POs don't flood the page; the choice is remembered.
+  const [viewMode, setViewModeState] = useState<'grouped' | 'list' | 'board'>(() => {
+    try {
+      const saved = window.localStorage.getItem('jobCardsViewMode');
+      if (saved === 'grouped' || saved === 'list' || saved === 'board') return saved;
+    } catch { /* storage unavailable: use default */ }
+    return 'grouped';
+  });
+  const setViewMode = (mode: 'grouped' | 'list' | 'board') => {
+    setViewModeState(mode);
+    try { window.localStorage.setItem('jobCardsViewMode', mode); } catch { /* ignore */ }
+  };
+  const [attentionOnly, setAttentionOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
@@ -314,8 +334,14 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
   const handleSelectFG = (m: MasterItem) => {
     setNewPartCode(m.code);
     setNewPartDesc(m.description || m.name || m.code);
-    // Use partNo as drawing revision hint if available
-    if (m.partNo) setNewDrawingRev(m.partNo);
+    // Take the drawing revision from the matching line on the selected PO (a PO can carry
+    // 40-50 lines and this dropdown is how a planner switches line). Never derive a revision
+    // from partNo: revision is now persisted on the card and locked at release.
+    const selOrder = eligibleOrders.find(o => o.poNo === newOrderPo || o.id === newOrderPo);
+    const selLine = selOrder?.lines?.find(
+      l => (l.itemCode || '').trim().toLowerCase() === (m.code || '').trim().toLowerCase()
+    );
+    setNewDrawingRev(selLine?.drawingRevision || selOrder?.drawingRevision || 'REV-A');
     setFgSearchQuery('');
     setFgDropdownOpen(false);
   };
@@ -386,6 +412,13 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
   useEffect(() => {
     if (!preselectedOrderPo || preselectHandled.current === preselectedOrderPo) return;
     preselectHandled.current = preselectedOrderPo;
+    // An order with several lines to release goes to bulk release instead of the one-card form.
+    const preOrder = eligibleOrders.find(o => o.poNo === preselectedOrderPo || o.id === preselectedOrderPo);
+    if (onBulkReleaseJobCards && preOrder && countReleasableLines(preOrder, jobCards, routeCards) > 1) {
+      bulkReleaseModal.open({ orderPo: preOrder.poNo });
+      onJobCardModalOpened?.();
+      return;
+    }
     if (eligibleOrders.some(o => o.poNo === preselectedOrderPo || o.id === preselectedOrderPo)) {
       handleSelectOrder(preselectedOrderPo);
     } else {
@@ -466,36 +499,29 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
   const [isSubmittingJobCard, setIsSubmittingJobCard] = useState(false);
   const [isCompletingAllSteps, setIsCompletingAllSteps] = useState(false);
 
+  const handleBulkRelease = async (
+    orderRef: string,
+    payload: { targetDate?: string; machine?: string; lines: BulkReleaseLineInput[] }
+  ): Promise<BulkReleaseResult> => {
+    if (!onBulkReleaseJobCards) throw new Error('Bulk release is not available.');
+    const res = await onBulkReleaseJobCards(orderRef, payload);
+    if (res.created.length > 0) {
+      setActionSuccess(
+        `Released ${res.created.length} job card${res.created.length === 1 ? '' : 's'} for PO ${res.orderPo}` +
+        (res.skipped.length ? ` (${res.skipped.length} skipped).` : '.')
+      );
+    }
+    return res;
+  };
+
   const handleCreateJobSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmittingJobCard(true);
     setActionError(null);
     setActionSuccess(null);
-    const newJobNo = `JC/${String(jobCards.length + 1).padStart(4, '0')}/26-27`;
-    
-    // Resolve operations from matched Route Card for this part
-    const operationsToAttach = (linkedRouteForNewJob?.operations && linkedRouteForNewJob.operations.length > 0)
-      ? linkedRouteForNewJob.operations.map(op => ({
-          id: `op-${newJobNo}-${op.sequenceNo}`,
-          jobNo: newJobNo,
-          sequenceNo: Number(op.sequenceNo),
-          operationName: op.operationName,
-          machineId: op.workCenter,
-          operatorName: '',
-          requiredCertification: op.requiredCertification || 'None',
-          standardTimeMinutes: Number(op.standardTimeMinutes || 15),
-          actualTimeMinutes: 0,
-          qtyProcessed: 0,
-          qtyRejected: 0,
-          inspectionRequired: Boolean(op.inspectionRequired),
-          inspectionPassed: false,
-          opStatus: 'PENDING'
-        }))
-      : undefined;
-
     try {
-      await onCreateJobCard({
-        jobNo: newJobNo,
+      // Job number is allocated server-side (atomic counter); never generated on the client.
+      const created: any = await onCreateJobCard({
         orderPo: newOrderPo,
         partCode: newPartCode,
         partDescription: newPartDesc,
@@ -506,11 +532,11 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
         targetQty: Number(newQty),
         machine: newMachine,
         targetDate: newTargetDate,
-        status: 'SCHEDULED',
-        operations: operationsToAttach as any
+        status: 'SCHEDULED'
       });
       createJobModal.close();
-      setActionSuccess(`Job Card ${newJobNo} created with ${operationsToAttach?.length || 0} routed operations.`);
+      const routedOps = linkedRouteForNewJob?.operations?.length || 0;
+      setActionSuccess(`Job Card${created?.jobNo ? ` ${created.jobNo}` : ''} created with ${routedOps} routed operations.`);
     } catch (err: any) {
       setActionError(err.message || 'Failed to release Job Card to shopfloor.');
     } finally {
@@ -1424,14 +1450,28 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
     });
   }, [selectedMatrixRoute, matrixBatchQty]);
 
-  // Filtered Job Cards
+  // Filtered Job Cards (search covers job #, PO, part code/description and customer)
+  const customerByPo = new Map<string, string>(orders.map(o => [o.poNo, o.customerName || '']));
+  const searchNeedle = searchQuery.trim().toLowerCase();
   const filteredCards = jobCards.filter(jc => {
-    const matchesSearch = jc.jobNo.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          jc.orderPo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          jc.partDescription.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = !searchNeedle ||
+      (jc.jobNo || '').toLowerCase().includes(searchNeedle) ||
+      (jc.orderPo || '').toLowerCase().includes(searchNeedle) ||
+      (jc.partCode || '').toLowerCase().includes(searchNeedle) ||
+      (jc.partDescription || '').toLowerCase().includes(searchNeedle) ||
+      (customerByPo.get(jc.orderPo) || '').toLowerCase().includes(searchNeedle);
     const matchesStatus = statusFilter === 'ALL' || jc.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesAttention = !attentionOnly || needsAttention(jc);
+    return matchesSearch && matchesStatus && matchesAttention;
   });
+
+  const attentionCount = jobCards.filter(jc => needsAttention(jc)).length;
+  const jobFiltersActive = !!searchNeedle || statusFilter !== 'ALL' || attentionOnly;
+  const filteredSet = new Set(filteredCards);
+  // Group summaries use ALL of a PO's cards; only the listed rows follow the filters.
+  const jobGroups = viewMode === 'grouped'
+    ? groupJobCardsByOrder(jobCards, { orders, matches: jc => filteredSet.has(jc) })
+    : [];
 
   const activeJobsCount = jobCards.filter(j => j.status === 'RUNNING' || j.status === 'SCHEDULED' || j.status === 'IN_PROGRESS').length;
   const runningMachinesCount = Array.from(new Set(jobCards.map(j => j.machine))).length;
@@ -1467,6 +1507,15 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
               >
                 <Plus className="w-4 h-4" />
                 <span>New Job</span>
+              </button>
+            )}
+            {activeSection === 'job-cards' && onBulkReleaseJobCards && (
+              <button
+                onClick={() => bulkReleaseModal.open()}
+                className="min-h-[44px] px-3 py-2 rounded-xl border border-[var(--accent-primary)]/40 text-[var(--accent-primary)] font-bold text-xs flex items-center gap-1.5 cursor-pointer active:scale-[0.96] transition-transform font-mono"
+              >
+                <Factory className="w-4 h-4" />
+                <span>Release PO</span>
               </button>
             )}
             <button
@@ -1572,6 +1621,16 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                 >
                   <Plus className="h-4 w-4" />
                   Create Job Card
+                </button>
+              )}
+              {activeSection === 'job-cards' && onBulkReleaseJobCards && (
+                <button
+                  onClick={() => bulkReleaseModal.open()}
+                  className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-[var(--accent-primary)]/40 px-4 text-xs font-extrabold text-[var(--accent-primary)] transition-ui hover:bg-[var(--accent-primary)]/10 active:scale-[0.96]"
+                  title="Release job cards for many lines of one PO at once"
+                >
+                  <Factory className="h-4 w-4" />
+                  Release PO
                 </button>
               )}
               {activeSection === 'route-cards' && (
@@ -1691,7 +1750,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
               <input
                 type="text"
                 placeholder={
-                  activeSection === 'job-cards' ? "Search Job #, Machine, Part..." :
+                  activeSection === 'job-cards' ? "Search Job #, PO, Part, Customer..." :
                   activeSection === 'route-cards' ? "Search Part Code, Route..." :
                   activeSection === 'bom' ? "Search BOM Code, SKU..." : "Search Finished Good SKU..."
                 }
@@ -1760,11 +1819,38 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                   </button>
                 );
               })}
+              <button
+                type="button"
+                onClick={() => setAttentionOnly(v => !v)}
+                aria-pressed={attentionOnly}
+                title="QC hold, open NCR, or past target date"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-ui cursor-pointer whitespace-nowrap border ${
+                  attentionOnly
+                    ? 'bg-rose-500 text-white border-rose-500 shadow-xs'
+                    : isDarkMode
+                      ? 'bg-rose-500/10 text-rose-400 border-rose-500/30 hover:bg-rose-500/20'
+                      : 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100'
+                }`}
+              >
+                <span>Needs attention</span>
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${attentionOnly ? 'bg-white/25 text-white' : 'bg-rose-500/15'}`}>{attentionCount}</span>
+              </button>
             </div>
 
             <div className={`flex items-center p-1 rounded-xl border shrink-0 ${
               isDarkMode ? 'bg-white/[0.04] border-white/[0.08]' : 'bg-slate-100 border-slate-200'
             }`}>
+              <button
+                onClick={() => setViewMode('grouped')}
+                className={`p-1.5 rounded-lg transition-ui cursor-pointer ${
+                  viewMode === 'grouped' ? (isDarkMode ? 'bg-white/[0.1] text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs') : 'text-slate-400 hover:text-slate-700 dark:hover:text-white'
+                }`}
+                title="Group by PO"
+                aria-label="Group by PO"
+                aria-pressed={viewMode === 'grouped'}
+              >
+                <Layers className="w-4 h-4" />
+              </button>
               <button
                 onClick={() => setViewMode('list')}
                 className={`p-1.5 rounded-lg transition-ui cursor-pointer ${
@@ -1786,7 +1872,18 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
             </div>
           </div>
 
+          {viewMode === 'grouped' && (
+            <JobCardsGroupedList
+              groups={jobGroups}
+              isDarkMode={isDarkMode}
+              filtersActive={jobFiltersActive}
+              onOpenJob={jc => setSelectedJobForDetail(jc)}
+              onReleaseMore={onBulkReleaseJobCards ? (po => bulkReleaseModal.open({ orderPo: po })) : undefined}
+            />
+          )}
+
           {/* Dedicated Mobile Job Cards (< md) */}
+          {viewMode !== 'grouped' && (
           <div className="block md:hidden space-y-3">
             {filteredCards.length === 0 ? (
               <div className={`p-8 rounded-3xl border text-center ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
@@ -1913,8 +2010,10 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
               })
             )}
           </div>
+          )}
 
           {/* Main Desktop Jobs Table / Kanban (≥ md) */}
+          {viewMode !== 'grouped' && (
           <div className="hidden md:block">
             {viewMode === 'list' ? (
               <div className={`overflow-hidden rounded-[22px] border transition-ui ${
@@ -2126,6 +2225,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
             </div>
           )}
         </div>
+          )}
       </div>
     )}
 
@@ -3754,6 +3854,23 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
           </div>
         </div>
       </Modal>
+
+      {onBulkReleaseJobCards && (
+        <BulkReleaseJobCardsModal
+          isOpen={bulkReleaseModal.isOpen}
+          onClose={() => bulkReleaseModal.close()}
+          isDarkMode={isDarkMode}
+          orders={eligibleOrders}
+          jobCards={jobCards}
+          routeCards={routeCards}
+          initialOrderPo={bulkReleaseModal.params.orderPo}
+          onRelease={handleBulkRelease}
+          onConfigureRouteCards={() => {
+            setActiveSection('route-cards');
+            onNavigate?.('route-cards');
+          }}
+        />
+      )}
 
       {/* ========================================================================================= */}
       {/* MODAL 7: CREATE SHOPFLOOR JOB CARD (INTEGRATED WITH ACTIVE BOM & ROUTE CARD) */}

@@ -46,6 +46,9 @@ import {
   adjustStockItem,
   fetchShortages,
   fetchJobCards,
+  bulkReleaseJobCards,
+  type BulkReleaseResult,
+  type BulkReleaseLineInput,
   createJobCardForOrder,
   startJobCardOperation,
   completeJobCardOperation,
@@ -722,8 +725,8 @@ export function useOwnerOSData(currentUser?: SystemUser) {
   const handleCreateJobCard = async (job: JobCard) => {
     try {
       // Manual creation from the Production floor form — posts to the job card release API
+      // jobNo is intentionally NOT sent: the backend allocates it from the atomic counter.
       const res = await createJobCardForOrder({
-        jobNo: job.jobNo,
         orderPo: job.orderPo,
         partCode: job.partCode,
         partDescription: job.partDescription,
@@ -738,8 +741,37 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       await addAuditLog('job_card', 'create', `Created job card ${res?.jobNo || job.jobNo} for PO ${job.orderPo} (${job.partCode} x ${Number(job.targetQty ?? job.qty ?? 0)})`);
       toast.success(`Created job card #${res?.jobNo || job.jobNo} for PO ${job.orderPo}`, 'Job Card Released');
       await loadAllData();
+      return res;
     } catch (err: any) {
       toast.error(err?.message || 'Failed to create job card', 'Job Card Error');
+      throw err;
+    }
+  };
+
+  // Bulk release: one API call for many lines of one order. Refreshes ONLY orders + job cards
+  // (2 requests) instead of loadAllData() (~21 requests), which matters at 40-50 lines per PO.
+  const handleBulkReleaseJobCards = async (
+    orderRef: string,
+    payload: { targetDate?: string; machine?: string; lines: BulkReleaseLineInput[] }
+  ): Promise<BulkReleaseResult> => {
+    try {
+      const result = await bulkReleaseJobCards(orderRef, payload);
+      const released = result.created.length;
+      if (released > 0) {
+        toast.success(
+          `Released ${released} job card${released === 1 ? '' : 's'} for PO ${result.orderPo}` +
+            (result.skipped.length ? ` (${result.skipped.length} skipped)` : ''),
+          'Job Cards Released'
+        );
+        // The release already succeeded; a failed refresh must not turn it into an error.
+        await Promise.all([
+          isAllowed('orders') ? fetchOrders().then(setOrders) : Promise.resolve(),
+          isAllowed('production') ? fetchJobCards().then(setJobCards) : Promise.resolve()
+        ]).catch(() => { });
+      }
+      return result;
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to release job cards', 'Bulk Release Error');
       throw err;
     }
   };
@@ -1726,6 +1758,7 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     handleCancelOrder,
     handleAdjustStock,
     handleCreateJobCard,
+    handleBulkReleaseJobCards,
     handleStartOperation,
     handleCompleteOperation,
     handleLogProduction,

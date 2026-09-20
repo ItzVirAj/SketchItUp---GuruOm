@@ -18,6 +18,7 @@ import { inventoryService } from '../inventory/inventory.service';
 import { inventoryMovementsService } from '../inventory/inventory_movements.service';
 import { inventoryReservationsService } from '../inventory/inventory_reservations.service';
 import { LockService } from '../../lib/lock';
+import { fetchAllRows, fetchAllByIn } from '../../utils/dbPaging';
 import { logAudit } from '../../services/auditLog';
 import { getNextDocumentNumber } from '../../utils/documentNumbers';
 import { logger } from '../../utils/logger';
@@ -32,34 +33,70 @@ export class OrdersService {
    */
   async getOrders() {
     try {
-      let query = this.db
+      // Every read below is paged/chunked: PostgREST silently caps one response at 1000 rows, and a
+      // single `.in()` with hundreds of ids can exceed the gateway URL limit. With 40-50 line POs the
+      // order_line_items table passes 1000 rows after ~20 orders.
+      const finalOrdersData = await fetchAllRows<any>((from, to) => this.db
         .from('customer_orders')
-        .select('*');
+        .select('*')
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .range(from, to));
 
-      const { data: ordersData, error: ordersErr } = await query.order('created_at', { ascending: false });
-
-      const finalOrdersData = ordersData || [];
-
-      if (!ordersErr && finalOrdersData.length > 0) {
+      if (finalOrdersData.length > 0) {
         const orderIds = finalOrdersData.map(o => o.id);
         const poNos = finalOrdersData.map(o => o.po_no);
 
-        const { data: linesData } = await this.db.from('order_line_items').select('*').in('order_id', orderIds);
-        const { data: jobsData } = await this.db.from('job_cards').select('*').in('order_po', poNos);
-        const { data: dispatchesData } = await this.db.from('dispatch_challans').select('*').in('order_po', poNos);
-        const { data: invoicesData } = await this.db.from('customer_invoices').select('*').in('order_po', poNos);
-        const { data: ncrsData } = await this.db.from('ncrs').select('*').in('status', ['OPEN', 'UNDER_REVIEW', 'REWORK_PLANNED']).in('order_po', poNos);
+        // Ancillary tables keep the previous resilience (an error shows "none" for them instead of failing
+        // the whole orders screen) but are now logged loudly instead of being silently ignored.
+        const ancillary = async <T,>(label: string, run: () => Promise<T[]>): Promise<T[]> => {
+          try {
+            return await run();
+          } catch (err) {
+            logger.error(`getOrders: failed to load ${label}; affected orders will show none:`, err);
+            return [];
+          }
+        };
 
-        const challanNos = (dispatchesData || []).map(d => d.challan_no).filter(Boolean);
-        const { data: dispatchMovementsData } = challanNos.length > 0
-          ? await this.db
-              .from('inventory_movements')
-              .select('*')
-              .in('reference_id', challanNos)
-          : { data: [] };
+        const [linesData, jobsData, dispatchesData, invoicesData, ncrsData] = await Promise.all([
+          ancillary<any>('order lines', () => fetchAllByIn(orderIds, (chunk, from, to) =>
+            this.db.from('order_line_items').select('*').in('order_id', chunk)
+              .order('order_id', { ascending: true }).order('id', { ascending: true }).range(from, to))),
+          ancillary<any>('job cards', () => fetchAllByIn(poNos, (chunk, from, to) =>
+            this.db.from('job_cards').select('*').in('order_po', chunk)
+              .order('id', { ascending: true }).range(from, to))),
+          ancillary<any>('dispatch challans', () => fetchAllByIn(poNos, (chunk, from, to) =>
+            this.db.from('dispatch_challans').select('*').in('order_po', chunk)
+              .order('id', { ascending: true }).range(from, to))),
+          ancillary<any>('customer invoices', () => fetchAllByIn(poNos, (chunk, from, to) =>
+            this.db.from('customer_invoices').select('*').in('order_po', chunk)
+              .order('id', { ascending: true }).range(from, to))),
+          ancillary<any>('open NCRs', () => fetchAllByIn(poNos, (chunk, from, to) =>
+            this.db.from('ncrs').select('*').in('status', ['OPEN', 'UNDER_REVIEW', 'REWORK_PLANNED']).in('order_po', chunk)
+              .order('id', { ascending: true }).range(from, to)))
+        ]);
+
+        const challanNos = (dispatchesData || []).map((d: any) => d.challan_no).filter(Boolean);
+        const dispatchMovementsData = await ancillary<any>('dispatch movements', () => fetchAllByIn(challanNos, (chunk, from, to) =>
+          this.db.from('inventory_movements').select('*').in('reference_id', chunk)
+            .order('id', { ascending: true }).range(from, to)));
+
+        // Index by order once instead of re-filtering every line / card for every order.
+        // ids are text ("line-<ts>-10"), so sort numerically-aware to keep creation order (…-2 before …-10).
+        const byId = (a: any, b: any) => String(a.id).localeCompare(String(b.id), undefined, { numeric: true });
+        const linesByOrder = new Map<string, any[]>();
+        for (const l of linesData) {
+          const list = linesByOrder.get(l.order_id);
+          if (list) list.push(l); else linesByOrder.set(l.order_id, [l]);
+        }
+        const jobsByPo = new Map<string, any[]>();
+        for (const j of jobsData) {
+          const list = jobsByPo.get(j.order_po);
+          if (list) list.push(j); else jobsByPo.set(j.order_po, [j]);
+        }
 
         const combined = finalOrdersData.map(o => {
-          const lines = (linesData || []).filter(l => l.order_id === o.id).map(l => ({
+          const lines = [...(linesByOrder.get(o.id) || [])].sort(byId).map(l => ({
             id: l.id,
             itemCode: l.item_code,
             itemDescription: l.item_description,
@@ -72,7 +109,7 @@ export class OrdersService {
             drawingRevision: l.drawing_revision || o.drawing_revision || 'REV-A'
           }));
 
-          const jobCards = (jobsData || []).filter(j => j.order_po === o.po_no).map(j => ({
+          const jobCards = [...(jobsByPo.get(o.po_no) || [])].sort(byId).map(j => ({
             id: j.id,
             jobNo: j.job_no,
             partCode: j.part_code,

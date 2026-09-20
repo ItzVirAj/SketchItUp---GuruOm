@@ -1289,21 +1289,30 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
       </Modal>
 
       {/* Challan Detail View Modal (View, Edit while Draft, Print, PDF) */}
-      <ChallanDetailModal
-        isOpen={challanDetailModal.isOpen && selectedChallan !== null}
-        onClose={() => {
-          setSelectedChallan(null);
-          challanDetailModal.close();
-        }}
-        challan={selectedChallan}
-        order={orders.find(o => o.poNo === selectedChallan?.orderPo || o.id === selectedChallan?.orderPo)}
-        isDarkMode={isDarkMode}
-        onUpdateChallan={onUpdateChallan}
-        onCancelChallan={onCancelChallan}
-        onDispatchChallan={onDispatchChallan}
-        onMarkDelivered={onMarkDelivered}
-        onNavigateToOrder={onNavigateToOrder}
-      />
+      {(() => {
+        // Derive challan synchronously from URL params to avoid the async gap
+        // between setSearchParams (router update) and setSelectedChallan (React state).
+        const urlChallanNo = challanDetailModal.params.challanNo;
+        const resolvedChallan = selectedChallan
+          || (urlChallanNo ? dispatches.find(d => d.challanNo === urlChallanNo || d.id === urlChallanNo) ?? null : null);
+        return (
+          <ChallanDetailModal
+            isOpen={challanDetailModal.isOpen && resolvedChallan !== null}
+            onClose={() => {
+              setSelectedChallan(null);
+              challanDetailModal.close();
+            }}
+            challan={resolvedChallan}
+            order={orders.find(o => o.poNo === resolvedChallan?.orderPo || o.id === resolvedChallan?.orderPo)}
+            isDarkMode={isDarkMode}
+            onUpdateChallan={onUpdateChallan}
+            onCancelChallan={onCancelChallan}
+            onDispatchChallan={onDispatchChallan}
+            onMarkDelivered={onMarkDelivered}
+            onNavigateToOrder={onNavigateToOrder}
+          />
+        );
+      })()}
 
     </div>
   );

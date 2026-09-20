@@ -233,6 +233,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
     handleCancelOrder: serviceCancelOrder,
     handleAdjustStock,
     handleCreateJobCard,
+    handleBulkReleaseJobCards,
     handleStartOperation,
     handleCompleteOperation,
     handleLogProduction,
@@ -887,6 +888,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
               isDarkMode={isDarkMode}
               initialSection={currentView === 'bom' ? 'bom' : currentView === 'route-cards' ? 'route-cards' : 'job-cards'}
               onCreateJobCard={handleCreateJobCard}
+              onBulkReleaseJobCards={handleBulkReleaseJobCards}
               onStartOperation={handleStartOperation}
               onCompleteOperation={handleCompleteOperation}
               onLogProduction={handleLogProduction}

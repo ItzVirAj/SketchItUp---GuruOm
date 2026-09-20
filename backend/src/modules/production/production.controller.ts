@@ -82,6 +82,27 @@ export class ProductionController {
     }
   }
 
+  async bulkReleaseJobCards(req: Request, res: Response) {
+    try {
+      const plannerName = req.rbacScope?.userName || req.user?.name || 'Production Planner';
+      const data = await productionService.bulkReleaseJobCards(req.params.orderRef, req.body, plannerName);
+      const released = data.created.length;
+      // 201 when at least one card was created; 200 (with per-line reasons) when nothing could be released.
+      return res.status(released > 0 ? 201 : 200).json({
+        message: released > 0
+          ? `${released} job card(s) released${data.skipped.length ? `, ${data.skipped.length} line(s) skipped` : ''}`
+          : 'No job cards were released',
+        data
+      });
+    } catch (err: any) {
+      if (err?.name === 'ZodError' && Array.isArray(err.issues)) {
+        return res.status(400).json({ error: 'ValidationError', message: err.issues.map((i: any) => i.message).join('; ') });
+      }
+      const statusCode = err.statusCode || 400;
+      return res.status(statusCode).json({ error: err.code || 'ValidationError', message: err.message });
+    }
+  }
+
   async consumeJobCardMaterials(req: Request, res: Response) {
     try {
       const actorName = req.rbacScope?.userName || req.user?.name || 'Stores';

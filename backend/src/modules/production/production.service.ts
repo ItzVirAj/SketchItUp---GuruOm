@@ -6,7 +6,8 @@ import {
   CompleteOperationSchema,
   RaiseNcrSchema,
   NcrDispositionSchema,
-  ProductionLogSchema
+  ProductionLogSchema,
+  BulkReleaseJobCardsSchema
 } from './production.schema';
 import { auditService } from '../audit/audit.service';
 import { inventoryService } from '../inventory/inventory.service';
@@ -30,7 +31,11 @@ import { notificationsService } from '../notifications/notifications.service';
 import { qcService } from '../qc/qc.service';
 import { getNextDocumentNumber } from '../../utils/documentNumbers';
 import { LockService } from '../../lib/lock';
+import { fetchAllRows } from '../../utils/dbPaging';
 import { logger } from '../../utils/logger';
+
+// Order stages in which a Job Card must NOT be released (shared by single + bulk release).
+const RELEASE_BLOCKED_STAGES = ['DRAFT', 'SUBMITTED', 'PO_RECEIVED', 'CONFIRMED', 'MATERIAL_SHORT', 'PARTIALLY_DISPATCHED', 'DISPATCHED', 'IN_TRANSIT', 'DELIVERED', 'PAYMENT_PENDING', 'INVOICED', 'INVOICE_GENERATED', 'COMPLETED', 'CLOSED', 'CANCELLED', 'PAID'];
 
 const SEED_ROUTE_CARDS: RouteCardTemplateStep[] = [];
 const SEED_CERTIFIED_EMPLOYEES: EmployeeCertification[] = [];
@@ -304,9 +309,84 @@ export class ProductionService {
     return { success: true, partCode };
   }
 
+  /** NCR statuses that keep a job card on hold (same set the orders module uses). */
+  private static readonly OPEN_NCR_STATUSES = ['OPEN', 'UNDER_REVIEW', 'REWORK_PLANNED'];
+
+  /** Job numbers that currently have an open NCR. Failure degrades to "none" (as before) but is logged. */
+  private async loadOpenNcrJobNos(onlyJobNo?: string): Promise<Set<string>> {
+    try {
+      const rows = await fetchAllRows<any>((from, to) => {
+        let q = this.db.from('ncrs').select('job_no').in('status', ProductionService.OPEN_NCR_STATUSES);
+        if (onlyJobNo) q = q.eq('job_no', onlyJobNo);
+        return q.order('id', { ascending: true }).range(from, to);
+      });
+      return new Set(rows.map(r => r.job_no).filter(Boolean));
+    } catch (err) {
+      logger.warn('Open NCR lookup failed; hasOpenNcr defaults to false:', err);
+      return new Set();
+    }
+  }
+
+  /** Maps a job_cards row + its operation rows to the API shape (single source of truth for list and by-number reads). */
+  private mapJobCardRow(jc: any, opRows: any[], openNcrJobNos: Set<string>) {
+    const operations = opRows
+      .map(o => ({
+        id: o.id,
+        jobCardId: jc.id,
+        jobNo: jc.job_no,
+        sequenceNo: Number(o.sequence_no),
+        operationName: o.operation_name,
+        machineId: o.machine_id,
+        operatorName: o.operator_name,
+        requiredCertification: o.required_certification,
+        isCertificationVerified: o.is_certification_verified,
+        standardTimeMinutes: Number(o.standard_time_minutes),
+        actualStartTime: o.actual_start_time,
+        actualEndTime: o.actual_end_time,
+        actualTimeMinutes: Number(o.actual_time_minutes || 0),
+        qtyProcessed: Number(o.qty_processed || 0),
+        qtyRejected: Number(o.qty_rejected || 0),
+        inspectionRequired: o.inspection_required,
+        inspectionPassed: o.inspection_passed,
+        opStatus: o.op_status,
+        notes: o.notes
+      }))
+      .sort((a, b) => a.sequenceNo - b.sequenceNo);
+
+    // Real current step: the first operation that is not finished (last one if all are done).
+    // Cards with no operation rows keep the previous placeholder values.
+    const current = operations.find(o => o.opStatus !== 'COMPLETED') ?? operations[operations.length - 1];
+
+    return {
+      id: jc.id,
+      jobNo: jc.job_no,
+      orderId: jc.order_po,
+      orderPo: jc.order_po,
+      partCode: jc.part_code,
+      partDescription: jc.part_description,
+      drawingRevision: jc.drawing_revision || 'REV-A',
+      targetQty: Number(jc.qty || 0),
+      qty: Number(jc.qty || 0),
+      machine: jc.machine || 'CNC-01',
+      materialIssuedLot: jc.material_issued_lot || 'NOT-TRACKED',
+      materialQcStatus: (jc.material_qc_status || 'ACCEPTED') as 'PENDING_INSPECTION' | 'ACCEPTED' | 'QUALITY_HOLD',
+      currentStepNo: current ? current.sequenceNo : Number(jc.current_step_no ?? 10),
+      currentOperation: current ? current.operationName : (jc.current_operation || 'CNC Machining'),
+      jobStatus: jc.status === 'SCHEDULED' ? 'NOT_STARTED' : (jc.status || 'NOT_STARTED'),
+      status: jc.status || 'SCHEDULED',
+      hasOpenNcr: openNcrJobNos.has(jc.job_no),
+      targetDate: jc.target_date,
+      operations
+    };
+  }
+
+  /**
+   * All job cards, newest first. Reads are paged: PostgREST silently caps one response at 1000 rows,
+   * so an unpaged select dropped every card past the newest 1000 (and their operations).
+   */
   async getJobCards() {
     try {
-      const { data: jcData, error } = await this.db
+      const jcData = await fetchAllRows<any>((from, to) => this.db
         .from('job_cards')
         .select('*')
         .not('order_po', 'like', 'PO-GOLDEN-%')
@@ -317,51 +397,32 @@ export class ProductionService {
         .not('order_po', 'like', '__TEST__%')
         .not('job_no', 'like', 'JC/6%')
         .not('job_no', 'like', 'JC/TEST%')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .range(from, to));
 
-      if (!error && jcData && jcData.length > 0) {
-        const { data: opsData } = await this.db.from('job_card_operations').select('*');
-        return jcData.map(jc => ({
-          id: jc.id,
-          jobNo: jc.job_no,
-          orderId: jc.order_po,
-          orderPo: jc.order_po,
-          partCode: jc.part_code,
-          partDescription: jc.part_description,
-          drawingRevision: jc.drawing_revision || 'REV-A',
-          targetQty: Number(jc.qty || 0),
-          qty: Number(jc.qty || 0),
-          machine: jc.machine || 'CNC-01',
-          materialIssuedLot: jc.material_issued_lot || 'NOT-TRACKED',
-          materialQcStatus: (jc.material_qc_status || 'ACCEPTED') as 'PENDING_INSPECTION' | 'ACCEPTED' | 'QUALITY_HOLD',
-          currentStepNo: 10,
-          currentOperation: 'CNC Machining',
-          jobStatus: jc.status === 'SCHEDULED' ? 'NOT_STARTED' : (jc.status || 'NOT_STARTED'),
-          status: jc.status || 'SCHEDULED',
-          hasOpenNcr: false,
-          targetDate: jc.target_date,
-          operations: (opsData || []).filter(o => o.job_no === jc.job_no || o.job_card_id === jc.id).map(o => ({
-            id: o.id,
-            jobCardId: jc.id,
-            jobNo: jc.job_no,
-            sequenceNo: Number(o.sequence_no),
-            operationName: o.operation_name,
-            machineId: o.machine_id,
-            operatorName: o.operator_name,
-            requiredCertification: o.required_certification,
-            isCertificationVerified: o.is_certification_verified,
-            standardTimeMinutes: Number(o.standard_time_minutes),
-            actualStartTime: o.actual_start_time,
-            actualEndTime: o.actual_end_time,
-            actualTimeMinutes: Number(o.actual_time_minutes || 0),
-            qtyProcessed: Number(o.qty_processed || 0),
-            qtyRejected: Number(o.qty_rejected || 0),
-            inspectionRequired: o.inspection_required,
-            inspectionPassed: o.inspection_passed,
-            opStatus: o.op_status,
-            notes: o.notes
-          }))
-        }));
+      if (jcData.length > 0) {
+        const [opsData, openNcrJobNos] = await Promise.all([
+          fetchAllRows<any>((from, to) => this.db.from('job_card_operations').select('*').order('id', { ascending: true }).range(from, to)),
+          this.loadOpenNcrJobNos()
+        ]);
+
+        // Index operations once (by card id and by job no) instead of scanning the whole table per card.
+        const opsByCardId = new Map<string, any[]>();
+        const opsByJobNo = new Map<string, any[]>();
+        const push = (m: Map<string, any[]>, k: any, o: any) => {
+          if (k == null) return;
+          const list = m.get(k);
+          if (list) list.push(o); else m.set(k, [o]);
+        };
+        for (const o of opsData) { push(opsByCardId, o.job_card_id, o); push(opsByJobNo, o.job_no, o); }
+
+        return jcData.map(jc => {
+          const seen = new Set<string>();
+          const rows = [...(opsByCardId.get(jc.id) || []), ...(opsByJobNo.get(jc.job_no) || [])]
+            .filter(o => (seen.has(o.id) ? false : (seen.add(o.id), true)));
+          return this.mapJobCardRow(jc, rows, openNcrJobNos);
+        });
       }
     } catch (err) {
       logger.warn('DB getJobCards fallback:', err);
@@ -369,9 +430,37 @@ export class ProductionService {
     return [];
   }
 
+  /**
+   * One job card by job number (or id) with its operations. Queries the single card directly:
+   * the old implementation loaded EVERY card, so with more than 1000 cards an older card could not
+   * be found at all, and every start/complete operation on the shop floor paid for a full table read.
+   */
   async getJobCardByJobNo(jobNo: string) {
-    const list = await this.getJobCards();
-    return list.find(j => j.jobNo === jobNo || j.id === jobNo) || null;
+    try {
+      const byNo = await this.db.from('job_cards').select('*').eq('job_no', jobNo).maybeSingle();
+      if (byNo.error) throw byNo.error;
+      let jc: any = byNo.data;
+      if (!jc) {
+        const byId = await this.db.from('job_cards').select('*').eq('id', jobNo).maybeSingle();
+        if (byId.error) throw byId.error;
+        jc = byId.data;
+      }
+      if (!jc) return null;
+
+      const [byCard, byNoOps, openNcrJobNos] = await Promise.all([
+        this.db.from('job_card_operations').select('*').eq('job_card_id', jc.id),
+        this.db.from('job_card_operations').select('*').eq('job_no', jc.job_no),
+        this.loadOpenNcrJobNos(jc.job_no)
+      ]);
+      if (byCard.error) throw byCard.error;
+      if (byNoOps.error) throw byNoOps.error;
+      const seen = new Set<string>();
+      const rows = [...(byCard.data || []), ...(byNoOps.data || [])].filter(o => (seen.has(o.id) ? false : (seen.add(o.id), true)));
+      return this.mapJobCardRow(jc, rows, openNcrJobNos);
+    } catch (err) {
+      logger.warn('DB getJobCardByJobNo fallback:', err);
+      return null;
+    }
   }
 
   /**
@@ -427,11 +516,15 @@ export class ProductionService {
     }
 
     // Server-side Gate (7-stage flow): linked order must be Confirmed and material-verified (MATERIAL_READY / IN_PRODUCTION)
+    // resolvedOrderId is ONLY ever taken from a real order row (never from client input), so
+    // job_cards.order_id is a trustworthy link back to customer_orders.
+    let resolvedOrderId: string | null = null;
     if (validated.orderPo || validated.orderId) {
       const order = await ordersService.getOrderById(validated.orderId || validated.orderPo);
       if (order) {
+        resolvedOrderId = order.id || null;
         const st = (order.status || order.stage || '').toUpperCase();
-        const blockedStages = ['DRAFT', 'SUBMITTED', 'PO_RECEIVED', 'CONFIRMED', 'MATERIAL_SHORT', 'PARTIALLY_DISPATCHED', 'DISPATCHED', 'IN_TRANSIT', 'DELIVERED', 'PAYMENT_PENDING', 'INVOICED', 'INVOICE_GENERATED', 'COMPLETED', 'CLOSED', 'CANCELLED', 'PAID'];
+        const blockedStages = RELEASE_BLOCKED_STAGES;
         if (blockedStages.includes(st)) {
           const err: any = new Error(`Job Card creation blocked for Order #${order.poNo}: Order must complete Stage 3 Material Verification and be in MATERIAL_READY or IN_PRODUCTION before release (currently in "${st}").`);
           err.statusCode = 400;
@@ -533,8 +626,15 @@ export class ProductionService {
           id: jobCard.id,
           job_no: jobCard.jobNo,
           order_po: jobCard.orderPo,
+          order_id: resolvedOrderId,
           part_code: jobCard.partCode,
           part_description: jobCard.partDescription,
+          // LOCKED AT RELEASE: these were validated above but previously never persisted,
+          // so every card read back as REV-A / NOT-TRACKED.
+          drawing_revision: jobCard.drawingRevision,
+          material_issued_lot: jobCard.materialIssuedLot,
+          material_qc_status: jobCard.materialQcStatus,
+          target_qty: jobCard.targetQty || 1,
           order_status: 'IN_PRODUCTION',
           qty: jobCard.targetQty || 1,
           machine: rawData.machine || 'CNC-01',
@@ -644,6 +744,325 @@ export class ProductionService {
     notificationsService.broadcastEvent('job_card_created', jobCard);
 
     return jobCard;
+  }
+
+  /**
+   * Resolves an order header by PO number or id (job cards may carry either).
+   * Queries a single row instead of loading every order like ordersService.getOrderById.
+   */
+  private async resolveOrderRow(
+    orderRef: string
+  ): Promise<{ id: string; po_no: string; status?: string; stage?: string } | null> {
+    const cols = 'id, po_no, status, stage';
+    const byPo = await this.db.from('customer_orders').select(cols).eq('po_no', orderRef).maybeSingle();
+    if (byPo.error) throw byPo.error;
+    if (byPo.data) return byPo.data as any;
+    const byId = await this.db.from('customer_orders').select(cols).eq('id', orderRef).maybeSingle();
+    if (byId.error) throw byId.error;
+    return (byId.data as any) || null;
+  }
+
+  /**
+   * BULK RELEASE: releases Job Cards for many lines of ONE order in a single request.
+   *
+   * Compared with calling createJobCard once per line (50 lines = 50 round trips, 50 order
+   * updates, 50 broadcasts and 50 full UI reloads) this does ONE lookup each for the order,
+   * its lines, existing cards, item masters and route cards, then ONE insert for all cards and
+   * ONE for all operations, ONE order transition and ONE order broadcast.
+   *
+   * Lines that cannot be released (no route card, unknown item, already fully released...) are
+   * reported back in `skipped` with a reason instead of failing the whole batch. Lines whose qty
+   * is already fully released are skipped, so re-submitting the same request cannot duplicate cards.
+   * If the insert of operations fails, the inserted cards are removed again (no partial state).
+   */
+  async bulkReleaseJobCards(orderRef: string, data: unknown, plannerName = 'Production Planner') {
+    const input = BulkReleaseJobCardsSchema.parse(data || {});
+    const norm = (v: unknown) => String(v ?? '').trim().toUpperCase();
+    const httpErr = (statusCode: number, message: string, code?: string) => {
+      const e: any = new Error(message);
+      e.statusCode = statusCode;
+      if (code) e.code = code;
+      return e;
+    };
+
+    const orderRow = await this.resolveOrderRow(orderRef);
+    if (!orderRow) throw httpErr(404, `Order ${orderRef} not found`, 'ORDER_NOT_FOUND');
+
+    const stage = norm(orderRow.status || orderRow.stage);
+    if (RELEASE_BLOCKED_STAGES.includes(stage)) {
+      throw httpErr(
+        400,
+        `Job Card creation blocked for Order #${orderRow.po_no}: Order must complete Stage 3 Material Verification and be in MATERIAL_READY or IN_PRODUCTION before release (currently in "${stage}").`
+      );
+    }
+    const poNo = orderRow.po_no;
+    const refs = Array.from(new Set([poNo, orderRow.id].filter(Boolean)));
+
+    // ---- one read each: order lines, existing cards, item masters, route cards ----
+    const { data: lineRows, error: lineErr } = await this.db
+      .from('order_line_items')
+      .select('id, item_code, item_description, order_qty, drawing_revision')
+      .eq('order_id', orderRow.id);
+    if (lineErr) throw httpErr(500, `Failed to read order lines: ${lineErr.message}`);
+
+    const { data: cardRows, error: cardErr } = await this.db
+      .from('job_cards')
+      .select('part_code, qty, status')
+      .in('order_po', refs);
+    if (cardErr) throw httpErr(500, `Failed to read existing job cards: ${cardErr.message}`);
+
+    const codes = Array.from(new Set(input.lines.map(l => l.itemCode)));
+    const { data: masterRows, error: masterErr } = await this.db
+      .from('masters')
+      .select('code, name, description')
+      .in('code', codes);
+    if (masterErr) throw httpErr(500, `Failed to verify Items Master: ${masterErr.message}`);
+
+    const { data: routeRows, error: routeErr } = await this.db
+      .from('route_card_templates')
+      .select('*')
+      .in('part_code', codes)
+      .order('sequence_no', { ascending: true });
+    if (routeErr) {
+      throw httpErr(500, 'Failed to verify Route Card configuration. Bulk release aborted.', 'ROUTE_CARD_LOOKUP_FAILED');
+    }
+
+    const orderedByKey = new Map<string, { qty: number; description: string; revision?: string }>();
+    for (const l of lineRows || []) {
+      const key = norm((l as any).item_code);
+      const prev = orderedByKey.get(key);
+      orderedByKey.set(key, {
+        qty: (prev?.qty || 0) + Number((l as any).order_qty || 0),
+        description: prev?.description || (l as any).item_description,
+        revision: prev?.revision || (l as any).drawing_revision || undefined
+      });
+    }
+    const releasedByKey = new Map<string, number>();
+    for (const c of cardRows || []) {
+      if (norm((c as any).status) === 'CANCELLED') continue;
+      const key = norm((c as any).part_code);
+      releasedByKey.set(key, (releasedByKey.get(key) || 0) + Number((c as any).qty || 0));
+    }
+    const masterByCode = new Map<string, any>((masterRows || []).map((m: any) => [m.code, m]));
+    const stepsByCode = new Map<string, RouteCardTemplateStep[]>();
+    for (const r of routeRows || []) {
+      const step: RouteCardTemplateStep = {
+        id: (r as any).id,
+        partCode: (r as any).part_code,
+        partDescription: (r as any).part_description,
+        sequenceNo: Number((r as any).sequence_no),
+        operationName: (r as any).operation_name,
+        workCenter: (r as any).work_center,
+        standardTimeMinutes: Number((r as any).standard_time_minutes),
+        inspectionRequired: Boolean((r as any).inspection_required),
+        requiredCertification: (r as any).required_certification || 'None'
+      };
+      const list = stepsByCode.get(step.partCode) || [];
+      list.push(step);
+      stepsByCode.set(step.partCode, list);
+    }
+
+    // ---- validate every requested line; nothing is written for a skipped line ----
+    type Skipped = { itemCode: string; qty: number; code: string; reason: string };
+    type Planned = {
+      line: (typeof input.lines)[number];
+      description: string;
+      revision: string;
+      steps: RouteCardTemplateStep[];
+    };
+    const skipped: Skipped[] = [];
+    const planned: Planned[] = [];
+    const plannedByKey = new Map<string, number>();
+
+    for (const line of input.lines) {
+      const key = norm(line.itemCode);
+      const skip = (code: string, reason: string) => skipped.push({ itemCode: line.itemCode, qty: line.qty, code, reason });
+
+      const ordered = orderedByKey.get(key);
+      if (!ordered) { skip('NOT_ON_ORDER', `Part '${line.itemCode}' is not a line item on order ${poNo}.`); continue; }
+
+      const remaining = ordered.qty - (releasedByKey.get(key) || 0) - (plannedByKey.get(key) || 0);
+      if (remaining <= 1e-9) { skip('ALREADY_RELEASED', `Part '${line.itemCode}' is already fully released to job cards (${ordered.qty} ordered).`); continue; }
+
+      const master = masterByCode.get(line.itemCode);
+      if (!master) { skip('MASTER_NOT_FOUND', `Part item '${line.itemCode}' does not exist in Items Master.`); continue; }
+
+      const steps = stepsByCode.get(line.itemCode);
+      if (!steps || steps.length === 0) {
+        skip('ROUTE_CARD_REQUIRED', `No Route Card is configured for part '${line.itemCode}'. Configure one in Production → Route Cards.`);
+        continue;
+      }
+
+      plannedByKey.set(key, (plannedByKey.get(key) || 0) + line.qty);
+      planned.push({
+        line,
+        description: ordered.description || master.description || master.name || line.itemCode,
+        revision: line.drawingRevision || ordered.revision || 'REV-A',
+        steps
+      });
+    }
+
+    const summary = () => ({ requested: input.lines.length, created: built.length, skipped: skipped.length });
+    const built: Array<{ jc: JobCard; machine: string; remarks?: string }> = [];
+
+    if (planned.length === 0) {
+      return { orderPo: poNo, orderId: orderRow.id, created: [] as JobCard[], skipped, summary: summary() };
+    }
+
+    // ---- build cards. Ids are assigned here: the engine's ids are `ms + 4-digit random`, which
+    // collides ~13% of the time when 50 cards are generated in the same millisecond. ----
+    const defaultTarget = input.targetDate || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0];
+    const batchTs = Date.now();
+    for (let i = 0; i < planned.length; i++) {
+      const p = planned[i];
+      const jobNo = await this.getNextJobNumber();
+      const result = generateJobCardFromRouteCard({
+        jobNo,
+        orderId: orderRow.id,
+        orderPo: poNo,
+        partCode: p.line.itemCode,
+        partDescription: p.description,
+        drawingRevision: p.revision, // LOCKED
+        targetQty: p.line.qty,
+        materialIssuedLot: p.line.materialIssuedLot || 'NOT-TRACKED',
+        materialQcStatus: 'ACCEPTED',
+        targetDate: p.line.targetDate || defaultTarget,
+        routeSteps: p.steps
+      });
+      if (result.error || !result.jobCard) {
+        skipped.push({
+          itemCode: p.line.itemCode,
+          qty: p.line.qty,
+          code: result.error?.code || 'RELEASE_BLOCKED',
+          reason: result.error?.message || 'Job Card could not be generated.'
+        });
+        continue;
+      }
+      const jc: JobCard = { ...result.jobCard, qty: p.line.qty } as JobCard;
+      const idSuffix = String(jc.id).split('-').pop();
+      jc.id = `jc-${batchTs}-${i}-${idSuffix}`;
+      (jc.operations || []).forEach((op, idx) => {
+        op.id = `jco-${batchTs}-${i}-${idx}-${op.sequenceNo}`;
+      });
+      built.push({
+        jc,
+        machine: p.line.machine || input.machine || p.steps[0]?.workCenter || 'CNC-01',
+        remarks: p.line.remarks
+      });
+    }
+
+    if (built.length === 0) {
+      return { orderPo: poNo, orderId: orderRow.id, created: [] as JobCard[], skipped, summary: summary() };
+    }
+
+    // ---- ONE insert for all cards (retry with fresh numbers on a job_no collision) ----
+    const toCardRow = (b: (typeof built)[number]) => ({
+      id: b.jc.id,
+      job_no: b.jc.jobNo,
+      order_po: b.jc.orderPo,
+      order_id: orderRow.id,
+      part_code: b.jc.partCode,
+      part_description: b.jc.partDescription,
+      drawing_revision: b.jc.drawingRevision,
+      material_issued_lot: b.jc.materialIssuedLot,
+      material_qc_status: b.jc.materialQcStatus,
+      target_qty: b.jc.targetQty || 1,
+      order_status: 'IN_PRODUCTION',
+      qty: b.jc.targetQty || 1,
+      machine: b.machine,
+      target_date: b.jc.targetDate,
+      status: 'SCHEDULED',
+      ...(b.remarks ? { remarks: b.remarks } : {})
+    });
+
+    for (let attempt = 1; ; attempt++) {
+      const { error: insertErr } = await this.db.from('job_cards').insert(built.map(toCardRow));
+      if (!insertErr) break;
+      const isDup = insertErr.code === '23505' || /duplicate key|unique constraint/i.test(String(insertErr.message));
+      if (isDup && attempt < 3) {
+        for (const b of built) {
+          const nextNo = await this.getNextJobNumber();
+          b.jc.jobNo = nextNo;
+          (b.jc.operations || []).forEach(op => { op.jobNo = nextNo; });
+        }
+        continue;
+      }
+      logger.error('Database bulk job card insert error:', insertErr);
+      throw httpErr(500, `Failed to write Job Cards to database: ${insertErr.message}`);
+    }
+
+    // ---- ONE insert for all operations; on failure remove the cards again (no partial state) ----
+    const opPayloads = built.flatMap(({ jc }) =>
+      (jc.operations || []).map(op => ({
+        id: op.id,
+        job_card_id: jc.id,
+        job_no: jc.jobNo,
+        sequence_no: op.sequenceNo,
+        operation_name: op.operationName,
+        machine_id: op.machineId,
+        required_certification: op.requiredCertification || 'None',
+        is_certification_verified: true,
+        standard_time_minutes: op.standardTimeMinutes,
+        qty_processed: 0,
+        qty_rejected: 0,
+        inspection_required: op.inspectionRequired || false,
+        inspection_passed: false,
+        op_status: 'PENDING'
+      }))
+    );
+    if (opPayloads.length > 0) {
+      const { error: opErr } = await this.db.from('job_card_operations').insert(opPayloads);
+      if (opErr) {
+        logger.error('Database bulk job_card_operations insert error:', opErr);
+        await this.db.from('job_cards').delete().in('id', built.map(b => b.jc.id));
+        throw httpErr(500, `Failed to write Job Card operations to database: ${opErr.message}`);
+      }
+    }
+
+    // ---- ONE order transition + broadcast (Step 5: IN_PRODUCTION) ----
+    const nowIso = new Date().toISOString();
+    // supabase-js returns { error } instead of throwing, so check it (a bare try/catch never fires).
+    const { error: orderUpdateErr } = await this.db.from('customer_orders').update({
+      status: 'IN_PRODUCTION',
+      stage: 'IN_PRODUCTION',
+      progress_step: 5,
+      updated_at: nowIso
+    }).eq('id', orderRow.id);
+    if (orderUpdateErr) {
+      logger.warn(`Bulk release: job cards created for ${poNo} but order stage update failed:`, orderUpdateErr);
+    }
+    notificationsService.broadcastEvent('order_transitioned', {
+      orderId: poNo, poNo, status: 'IN_PRODUCTION', stage: 'IN_PRODUCTION', progressStep: 5, updatedAt: nowIso
+    });
+    notificationsService.broadcastEvent('order_updated', {
+      id: poNo, orderId: poNo, poNo, status: 'IN_PRODUCTION', stage: 'IN_PRODUCTION', progressStep: 5, updatedAt: nowIso
+    });
+
+    // ---- audit trail: one row per card (same shape as single release) + one batch summary ----
+    await Promise.allSettled([
+      ...built.map(({ jc }) => auditService.recordAuditLog({
+        actorEmail: plannerName,
+        actorRole: 'Production Planner',
+        action: 'JOB_CARD_RELEASED',
+        entityType: 'job_cards',
+        entityId: jc.jobNo,
+        details: `Job Card ${jc.jobNo} released for ${jc.targetQty} units of ${jc.partCode} (Rev ${jc.drawingRevision}, Heat ${jc.materialIssuedLot}) via bulk release of PO ${poNo}`
+      })),
+      auditService.recordAuditLog({
+        actorEmail: plannerName,
+        actorRole: 'Production Planner',
+        action: 'JOB_CARDS_BULK_RELEASED',
+        entityType: 'customer_orders',
+        entityId: poNo,
+        details: `Bulk released ${built.length} job card(s) for PO ${poNo}` +
+          (skipped.length ? `; ${skipped.length} line(s) skipped (${Array.from(new Set(skipped.map(x => x.code))).join(', ')})` : '')
+      })
+    ]);
+
+    // Real-time push so other open consoles see each new card (same event as single release)
+    for (const { jc } of built) notificationsService.broadcastEvent('job_card_created', jc);
+
+    return { orderPo: poNo, orderId: orderRow.id, created: built.map(b => b.jc), skipped, summary: summary() };
   }
 
   /**
@@ -888,19 +1307,7 @@ export class ProductionService {
 
       if (result.jobCard.orderPo) {
         // Multi-Job-Card check: Check whether all job cards under this parent order are now complete
-        let allOrderJobsCompleted = true;
-        try {
-          const allJobCards = await this.getJobCards();
-          const siblingJobs = allJobCards.filter(j => 
-            (j.orderPo === result.jobCard.orderPo || j.orderId === result.jobCard.orderPo) && 
-            j.jobNo !== result.jobCard.jobNo
-          );
-          if (siblingJobs.length > 0) {
-            allOrderJobsCompleted = siblingJobs.every(j => j.status === 'COMPLETED' || j.jobStatus === 'COMPLETED');
-          }
-        } catch (jErr) {
-          logger.warn('Job card siblings check fallback:', jErr);
-        }
+        const allOrderJobsCompleted = await this.isOrderProductionComplete(result.jobCard.orderPo, result.jobCard.jobNo);
 
         if (allOrderJobsCompleted) {
           // Route through the shared ordersService.transitionOrderStage function
@@ -1142,6 +1549,87 @@ export class ProductionService {
   }
 
   /**
+   * Multi-line order completion gate, used before auto-advancing an order to READY_FOR_QC.
+   *
+   * An order is production-complete only when BOTH hold:
+   *  1. every non-cancelled Job Card on the order is COMPLETED (the card that just
+   *     completed counts as complete even if its row is not yet flushed), and
+   *  2. for every part on the order's line items, the qty released on Job Cards
+   *     covers the qty ordered (summed per part code, so a part repeated on two
+   *     lines is handled).
+   *
+   * Rule 2 is what makes 40-50 line POs safe: cards are released gradually, so the
+   * first few finished cards must not push the whole order to QC while other lines
+   * have no card yet. Rule 2 is skipped when the order has no line items
+   * (legacy / header-only orders) so those keep their previous behaviour.
+   *
+   * Fail-closed: if the check cannot be evaluated the order is NOT advanced. The
+   * owner can still advance it manually from the order screen.
+   */
+  private async isOrderProductionComplete(orderRef: string, sourceJobNo: string): Promise<boolean> {
+    if (!orderRef || orderRef === 'PO') return false;
+    const norm = (v: unknown) => String(v ?? '').trim().toUpperCase();
+
+    try {
+      // Job cards may carry either the PO number or the order id in order_po.
+      const orderRow = await this.resolveOrderRow(orderRef);
+      const refs = Array.from(new Set([orderRef, orderRow?.po_no, orderRow?.id].filter(Boolean) as string[]));
+
+      const { data: cardRows, error: cardErr } = await this.db
+        .from('job_cards')
+        .select('job_no, part_code, qty, status')
+        .in('order_po', refs);
+      if (cardErr) throw cardErr;
+
+      // 'CANCELLED' is defensive: no code path sets it today.
+      const cards = (cardRows || []).filter((c: any) => norm(c.status) !== 'CANCELLED');
+
+      // Rule 1: nothing else may still be open.
+      const openCard = cards.find((c: any) => c.job_no !== sourceJobNo && norm(c.status) !== 'COMPLETED');
+      if (openCard) return false;
+
+      // Rule 2: released qty must cover ordered qty on every part.
+      if (orderRow) {
+        const { data: lineRows, error: lineErr } = await this.db
+          .from('order_line_items')
+          .select('item_code, order_qty')
+          .eq('order_id', orderRow.id);
+        if (lineErr) throw lineErr;
+
+        const required = new Map<string, number>();
+        for (const l of lineRows || []) {
+          const code = norm((l as any).item_code);
+          const qty = Number((l as any).order_qty || 0);
+          if (code && qty > 0) required.set(code, (required.get(code) || 0) + qty);
+        }
+
+        if (required.size > 0) {
+          const released = new Map<string, number>();
+          for (const c of cards) {
+            const code = norm((c as any).part_code);
+            released.set(code, (released.get(code) || 0) + Number((c as any).qty || 0));
+          }
+          const short: string[] = [];
+          required.forEach((need, code) => {
+            if ((released.get(code) || 0) + 1e-9 < need) short.push(code);
+          });
+          if (short.length > 0) {
+            logger.info(
+              `Order ${orderRef} NOT advanced to READY_FOR_QC: ${short.length} of ${required.size} part(s) ` +
+              `not fully released to job cards yet (${short.slice(0, 5).join(', ')}${short.length > 5 ? ', …' : ''}).`
+            );
+            return false;
+          }
+        }
+      }
+      return true;
+    } catch (err) {
+      logger.warn(`isOrderProductionComplete check failed for ${orderRef}; order NOT auto-advanced:`, err);
+      return false;
+    }
+  }
+
+  /**
    * Shared real-time bridge: when a Job Card reaches COMPLETED, advance the parent
    * Order to READY_FOR_QC (step 6) ONLY once EVERY job card under that order is
    * complete, routing through the same shared broadcast used by Confirmed /
@@ -1154,19 +1642,7 @@ export class ProductionService {
     actorName: string
   ): Promise<void> {
     // Multi-Job-Card gate: do not advance while any sibling job for this order is open.
-    let allOrderJobsCompleted = true;
-    try {
-      const allJobCards = await this.getJobCards();
-      const siblingJobs = allJobCards.filter(j =>
-        (j.orderPo === orderPo || j.orderId === orderPo) &&
-        j.jobNo !== sourceJobNo
-      );
-      if (siblingJobs.length > 0) {
-        allOrderJobsCompleted = siblingJobs.every(j => j.status === 'COMPLETED' || j.jobStatus === 'COMPLETED');
-      }
-    } catch (jErr) {
-      logger.warn('Job card siblings check fallback:', jErr);
-    }
+    const allOrderJobsCompleted = await this.isOrderProductionComplete(orderPo, sourceJobNo);
 
     if (!allOrderJobsCompleted) return;
     if (!orderPo || orderPo === 'PO') return;
@@ -1438,19 +1914,7 @@ export class ProductionService {
       notificationsService.broadcastEvent('job_card_updated', { ...job, status: payload.status, jobStatus: payload.status });
 
       if (payload.status === 'COMPLETED' && job.orderPo) {
-        let allOrderJobsCompleted = true;
-        try {
-          const allJobCards = await this.getJobCards();
-          const siblingJobs = allJobCards.filter(j => 
-            (j.orderPo === job.orderPo || j.orderId === job.orderPo) && 
-            j.jobNo !== job.jobNo
-          );
-          if (siblingJobs.length > 0) {
-            allOrderJobsCompleted = siblingJobs.every(j => j.status === 'COMPLETED' || j.jobStatus === 'COMPLETED');
-          }
-        } catch (jErr) {
-          logger.warn('Job card siblings check fallback:', jErr);
-        }
+        const allOrderJobsCompleted = await this.isOrderProductionComplete(job.orderPo, job.jobNo);
 
         if (allOrderJobsCompleted) {
           try {

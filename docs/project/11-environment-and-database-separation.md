@@ -1,7 +1,7 @@
 # Environment & Database Separation Guide
 
 This document establishes the architecture, credential management, and dual-database configuration for **GuruOm Owner OS** across **Local Development** and **Render Production**.
-
+https://guruom-staging.onrender.com/ - RENDER DEPLOYMENT
 ---
 
 ## 1. Dual-Environment Architecture

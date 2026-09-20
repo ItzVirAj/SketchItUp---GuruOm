@@ -26,4 +26,4 @@ router.post('/', requirePermission('tasks', 'FULL_APPROVE'), (req, res) => tasks
 router.patch('/:id', requirePermission('tasks', 'FULL_APPROVE'), (req, res) => tasksController.updateTask(req, res));
 router.post('/:id/cancel', requirePermission('tasks', 'FULL_APPROVE'), (req, res) => tasksController.cancelTask(req, res));
 
-export default router;
+export default router;  

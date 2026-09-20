@@ -748,6 +748,45 @@ export async function createJobCardForOrder(payload: {
   return res.data;
 }
 
+export interface BulkReleaseLineInput {
+  itemCode: string;
+  qty: number;
+  drawingRevision?: string;
+  materialIssuedLot?: string;
+  targetDate?: string;
+  machine?: string;
+  remarks?: string;
+}
+
+export interface BulkReleaseSkippedLine {
+  itemCode: string;
+  qty: number;
+  code: string; // ROUTE_CARD_REQUIRED | MASTER_NOT_FOUND | NOT_ON_ORDER | ALREADY_RELEASED | ...
+  reason: string;
+}
+
+export interface BulkReleaseResult {
+  orderPo: string;
+  orderId: string;
+  created: JobCard[];
+  skipped: BulkReleaseSkippedLine[];
+  summary: { requested: number; created: number; skipped: number };
+}
+
+// Releases job cards for many lines of ONE order in a single request (one round trip,
+// one order transition). Lines that cannot be released come back in `skipped` with reasons.
+// Pass the order id (not the PO number) so PO numbers containing '/' never hit the URL path.
+export async function bulkReleaseJobCards(
+  orderRef: string,
+  payload: { targetDate?: string; machine?: string; lines: BulkReleaseLineInput[] }
+): Promise<BulkReleaseResult> {
+  const res = await apiClient.post<{ data: BulkReleaseResult }>(
+    `/production/orders/${encodeURIComponent(orderRef)}/release-job-cards`,
+    payload
+  );
+  return res.data;
+}
+
 // CRITICAL ISSUE #9: Issues & consumes the BOM-derived material requirement for a
 // single Job Card. The consumed quantity corresponds to the Job Card target
 // quantity (× BOM qty-per-unit + scrap allowance), NOT the commercial order qty.

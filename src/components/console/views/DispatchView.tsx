@@ -64,10 +64,12 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
   onDispatchModalOpened
 }) => {
   const canPerformCta = useCanPerformCta();
-  // URL-driven modal hooks
+  // URL-driven modal hooks (create + delivery only; detail uses plain state to avoid router race conditions)
   const createChallanModal = useUrlModal('issue-delivery-challan');
-  const challanDetailModal = useUrlModal('challan-detail');
   const deliveryModal = useUrlModal('record-delivery');
+
+  // Plain-state modal for challan detail — avoids setSearchParams/setState race conditions
+  const [isChallanDetailOpen, setIsChallanDetailOpen] = useState(false);
 
   const [selectedChallan, setSelectedChallan] = useState<DispatchChallan | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -83,15 +85,6 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
   const [isDelivering, setIsDelivering] = useState(false);
   const [deliveryError, setDeliveryError] = useState<string | null>(null);
 
-  // Sync modal states from URL
-  useEffect(() => {
-    if (challanDetailModal.isOpen && challanDetailModal.params.challanNo) {
-      const found = dispatches.find(d => d.challanNo === challanDetailModal.params.challanNo || d.id === challanDetailModal.params.challanNo);
-      if (found && (!selectedChallan || selectedChallan.challanNo !== found.challanNo)) {
-        setSelectedChallan(found);
-      }
-    }
-  }, [challanDetailModal.isOpen, challanDetailModal.params.challanNo, dispatches, selectedChallan]);
 
   useEffect(() => {
     if (deliveryModal.isOpen && deliveryModal.params.challanNo) {
@@ -204,7 +197,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
 
   const handleRowClick = (challan: DispatchChallan) => {
     setSelectedChallan(challan);
-    challanDetailModal.open({ challanNo: challan.challanNo });
+    setIsChallanDetailOpen(true);
   };
 
   const handleOpenDeliveryModal = (disp: DispatchChallan, e: React.MouseEvent) => {
@@ -1289,30 +1282,21 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
       </Modal>
 
       {/* Challan Detail View Modal (View, Edit while Draft, Print, PDF) */}
-      {(() => {
-        // Derive challan synchronously from URL params to avoid the async gap
-        // between setSearchParams (router update) and setSelectedChallan (React state).
-        const urlChallanNo = challanDetailModal.params.challanNo;
-        const resolvedChallan = selectedChallan
-          || (urlChallanNo ? dispatches.find(d => d.challanNo === urlChallanNo || d.id === urlChallanNo) ?? null : null);
-        return (
-          <ChallanDetailModal
-            isOpen={challanDetailModal.isOpen && resolvedChallan !== null}
-            onClose={() => {
-              setSelectedChallan(null);
-              challanDetailModal.close();
-            }}
-            challan={resolvedChallan}
-            order={orders.find(o => o.poNo === resolvedChallan?.orderPo || o.id === resolvedChallan?.orderPo)}
-            isDarkMode={isDarkMode}
-            onUpdateChallan={onUpdateChallan}
-            onCancelChallan={onCancelChallan}
-            onDispatchChallan={onDispatchChallan}
-            onMarkDelivered={onMarkDelivered}
-            onNavigateToOrder={onNavigateToOrder}
-          />
-        );
-      })()}
+      <ChallanDetailModal
+        isOpen={isChallanDetailOpen && selectedChallan !== null}
+        onClose={() => {
+          setIsChallanDetailOpen(false);
+          setSelectedChallan(null);
+        }}
+        challan={selectedChallan}
+        order={orders.find(o => o.poNo === selectedChallan?.orderPo || o.id === selectedChallan?.orderPo)}
+        isDarkMode={isDarkMode}
+        onUpdateChallan={onUpdateChallan}
+        onCancelChallan={onCancelChallan}
+        onDispatchChallan={onDispatchChallan}
+        onMarkDelivered={onMarkDelivered}
+        onNavigateToOrder={onNavigateToOrder}
+      />
 
     </div>
   );

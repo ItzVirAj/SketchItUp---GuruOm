@@ -473,7 +473,9 @@ export class ProductionService {
     const rawData = data || {};
     const normalizedData = {
       jobNo: rawData.jobNo,
-      orderId: rawData.orderId || rawData.id,
+      // NOT `|| rawData.id`: that is the job card's own id, and treating it as an order id made the order lookup miss
+      // (which silently skipped the release gate below) for any client that sent an `id` field.
+      orderId: rawData.orderId,
       orderPo: rawData.orderPo || rawData.order_po || 'PO-DEFAULT',
       partCode: rawData.partCode || rawData.part_code || 'PART-001',
       partDescription: rawData.partDescription || rawData.part_description || rawData.partCode || 'Manufactured Item',
@@ -520,7 +522,11 @@ export class ProductionService {
     // job_cards.order_id is a trustworthy link back to customer_orders.
     let resolvedOrderId: string | null = null;
     if (validated.orderPo || validated.orderId) {
-      const order = await ordersService.getOrderById(validated.orderId || validated.orderPo);
+      // Evaluate the gate for the PO this card will be stored under. Looking up a client-supplied orderId first
+      // let a request with a real orderPo but a junk orderId skip the gate.
+      const order =
+        (validated.orderPo ? await ordersService.getOrderById(validated.orderPo) : null) ||
+        (validated.orderId ? await ordersService.getOrderById(validated.orderId) : null);
       if (order) {
         resolvedOrderId = order.id || null;
         const st = (order.status || order.stage || '').toUpperCase();
@@ -1311,42 +1317,7 @@ export class ProductionService {
 
         if (allOrderJobsCompleted) {
           // Route through the shared ordersService.transitionOrderStage function
-          try {
-            await ordersService.transitionOrderStage(
-              result.jobCard.orderPo,
-              'READY_FOR_QC',
-              {},
-              { role: 'Production Planner', name: operatorName }
-            );
-          } catch (transErr) {
-            logger.warn('ordersService.transitionOrderStage in completeOperation fallback:', transErr);
-            try {
-              await this.db.from('customer_orders').update({
-                status: 'READY_FOR_QC',
-                stage: 'READY_FOR_QC',
-                progress_step: 6,
-                updated_at: new Date().toISOString()
-              }).or(`po_no.eq.${result.jobCard.orderPo},id.eq.${result.jobCard.orderPo}`);
-            } catch (_) {}
-
-            notificationsService.broadcastEvent('order_transitioned', {
-              orderId: result.jobCard.orderPo,
-              poNo: result.jobCard.orderPo,
-              status: 'READY_FOR_QC',
-              stage: 'READY_FOR_QC',
-              progressStep: 6,
-              updatedAt: new Date().toISOString()
-            });
-            notificationsService.broadcastEvent('order_updated', {
-              id: result.jobCard.orderPo,
-              orderId: result.jobCard.orderPo,
-              poNo: result.jobCard.orderPo,
-              status: 'READY_FOR_QC',
-              stage: 'READY_FOR_QC',
-              progressStep: 6,
-              updatedAt: new Date().toISOString()
-            });
-          }
+          await this.moveOrderToReadyForQc(result.jobCard.orderPo, { role: 'Production Planner', name: operatorName });
         }
       }
     }
@@ -1630,6 +1601,61 @@ export class ProductionService {
   }
 
   /**
+   * Moves an order to READY_FOR_QC through the order state machine (single implementation for the
+   * three places a completed job card can trigger it).
+   *
+   * - Success: transitionOrderStage persists and broadcasts.
+   * - Rejected by a rule (HTTP 400: a gate said no, or the order is in a stage that may not move to
+   *   QC, e.g. dispatched / cancelled / in PDI): NEVER overridden. It is logged and audited so a stuck
+   *   order is explainable; the owner can still act from the order screen.
+   * - Any other failure (order lookup miss, lock timeout, concurrent edit, DB error): the previous
+   *   resilience is kept, but the direct write is conditional on the order really being in a stage from
+   *   which QC is legal (IN_PRODUCTION / QC_HOLD), and it is only announced if a row actually moved.
+   *   (A 404 still broadcasts, as before, because job cards can exist for POs without an order row.)
+   */
+  private async moveOrderToReadyForQc(orderRef: string, actor: { role: string; name: string }): Promise<void> {
+    try {
+      await ordersService.transitionOrderStage(orderRef, 'READY_FOR_QC', {}, actor);
+      return;
+    } catch (err: any) {
+      const status = err?.statusCode;
+
+      if (status === 400) {
+        logger.warn(`Order ${orderRef} not advanced to READY_FOR_QC: ${err.message}`);
+        await auditService.recordAuditLog({
+          actorEmail: actor.name,
+          actorRole: actor.role,
+          action: 'ORDER_QC_ADVANCE_BLOCKED',
+          entityType: 'customer_orders',
+          entityId: orderRef,
+          details: `Automatic advance to READY_FOR_QC blocked: ${err.message}${err.errorCode ? ` (${err.errorCode})` : ''}`
+        }).catch(() => {});
+        return;
+      }
+
+      logger.warn(`transitionOrderStage(READY_FOR_QC) failed for ${orderRef}; using guarded fallback:`, err);
+      const nowIso = new Date().toISOString();
+      const { data: moved, error: updErr } = await this.db
+        .from('customer_orders')
+        .update({ status: 'READY_FOR_QC', stage: 'READY_FOR_QC', progress_step: 6, updated_at: nowIso })
+        .or(`po_no.eq.${orderRef},id.eq.${orderRef}`)
+        .in('status', ['IN_PRODUCTION', 'QC_HOLD'])
+        .select('id');
+      if (updErr) logger.warn(`Guarded READY_FOR_QC fallback update failed for ${orderRef}:`, updErr);
+
+      const didMove = !updErr && (moved?.length || 0) > 0;
+      if (!didMove && status !== 404) return; // nothing changed, nothing to announce
+
+      notificationsService.broadcastEvent('order_transitioned', {
+        orderId: orderRef, poNo: orderRef, status: 'READY_FOR_QC', stage: 'READY_FOR_QC', progressStep: 6, updatedAt: nowIso
+      });
+      notificationsService.broadcastEvent('order_updated', {
+        id: orderRef, orderId: orderRef, poNo: orderRef, status: 'READY_FOR_QC', stage: 'READY_FOR_QC', progressStep: 6, updatedAt: nowIso
+      });
+    }
+  }
+
+  /**
    * Shared real-time bridge: when a Job Card reaches COMPLETED, advance the parent
    * Order to READY_FOR_QC (step 6) ONLY once EVERY job card under that order is
    * complete, routing through the same shared broadcast used by Confirmed /
@@ -1649,42 +1675,7 @@ export class ProductionService {
 
     // Route through the SHARED ordersService.transitionOrderStage helper (broadcasts
     // order_transitioned + order_updated), with a consistent raw fallback.
-    try {
-      await ordersService.transitionOrderStage(
-        orderPo,
-        'READY_FOR_QC',
-        {},
-        { role: 'Production Planner', name: actorName }
-      );
-    } catch (transErr) {
-      logger.warn('advanceOrderToReadyForQcWhenAllJobsComplete fallback:', transErr);
-      try {
-        await this.db.from('customer_orders').update({
-          status: 'READY_FOR_QC',
-          stage: 'READY_FOR_QC',
-          progress_step: 6,
-          updated_at: new Date().toISOString()
-        }).or(`po_no.eq.${orderPo},id.eq.${orderPo}`);
-      } catch (_) {}
-
-      notificationsService.broadcastEvent('order_transitioned', {
-        orderId: orderPo,
-        poNo: orderPo,
-        status: 'READY_FOR_QC',
-        stage: 'READY_FOR_QC',
-        progressStep: 6,
-        updatedAt: new Date().toISOString()
-      });
-      notificationsService.broadcastEvent('order_updated', {
-        id: orderPo,
-        orderId: orderPo,
-        poNo: orderPo,
-        status: 'READY_FOR_QC',
-        stage: 'READY_FOR_QC',
-        progressStep: 6,
-        updatedAt: new Date().toISOString()
-      });
-    }
+    await this.moveOrderToReadyForQc(orderPo, { role: 'Production Planner', name: actorName });
   }
 
   /**
@@ -1917,42 +1908,7 @@ export class ProductionService {
         const allOrderJobsCompleted = await this.isOrderProductionComplete(job.orderPo, job.jobNo);
 
         if (allOrderJobsCompleted) {
-          try {
-            await ordersService.transitionOrderStage(
-              job.orderPo,
-              'READY_FOR_QC',
-              {},
-              { role: 'Production Planner', name: 'System / PPC' }
-            );
-          } catch (transErr) {
-            logger.warn('ordersService.transitionOrderStage in updateJobStatus fallback:', transErr);
-            try {
-              await this.db.from('customer_orders').update({
-                status: 'READY_FOR_QC',
-                stage: 'READY_FOR_QC',
-                progress_step: 6,
-                updated_at: new Date().toISOString()
-              }).or(`po_no.eq.${job.orderPo},id.eq.${job.orderPo}`);
-            } catch (_) {}
-
-            notificationsService.broadcastEvent('order_transitioned', {
-              orderId: job.orderPo,
-              poNo: job.orderPo,
-              status: 'READY_FOR_QC',
-              stage: 'READY_FOR_QC',
-              progressStep: 6,
-              updatedAt: new Date().toISOString()
-            });
-            notificationsService.broadcastEvent('order_updated', {
-              id: job.orderPo,
-              orderId: job.orderPo,
-              poNo: job.orderPo,
-              status: 'READY_FOR_QC',
-              stage: 'READY_FOR_QC',
-              progressStep: 6,
-              updatedAt: new Date().toISOString()
-            });
-          }
+          await this.moveOrderToReadyForQc(job.orderPo, { role: 'Production Planner', name: 'System / PPC' });
         }
       }
     }

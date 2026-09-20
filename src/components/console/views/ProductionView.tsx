@@ -76,7 +76,7 @@ import {
 } from '../../../services/supabaseServices';
 import { JobCardDetailModal } from '../modals/JobCardDetailModal';
 import { BulkReleaseJobCardsModal } from '../modals/BulkReleaseJobCardsModal';
-import { countReleasableLines } from '../../../utils/bulkRelease';
+import { countReleasableLines, computeBulkLineStates } from '../../../utils/bulkRelease';
 import { JobCardsGroupedList } from './JobCardsGroupedList';
 import { groupJobCardsByOrder, needsAttention } from '../../../utils/jobCardGroups';
 import type { BulkReleaseLineInput, BulkReleaseResult } from '../../../services/consoleApiServices';
@@ -342,6 +342,10 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
       l => (l.itemCode || '').trim().toLowerCase() === (m.code || '').trim().toLowerCase()
     );
     setNewDrawingRev(selLine?.drawingRevision || selOrder?.drawingRevision || 'REV-A');
+    // Switching part on a PO: offer what is still unreleased for that part.
+    const remaining = computeBulkLineStates(selOrder, jobCards, routeCards)
+      .find(l => l.itemCode.trim().toLowerCase() === (m.code || '').trim().toLowerCase() && l.remainingQty > 0);
+    if (remaining) setNewQty(remaining.remainingQty);
     setFgSearchQuery('');
     setFgDropdownOpen(false);
   };
@@ -379,12 +383,16 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
     setNewOrderPo(poNo);
     const ord = eligibleOrders.find(o => o.poNo === poNo || o.id === poNo);
     if (ord) {
+      // Prefill the first line that can still be released (not line 1 every time): otherwise a PO
+      // whose first line already has a job card opens with a duplicate ready to submit.
+      const states = computeBulkLineStates(ord, jobCards, routeCards);
+      const next = states.find(l => l.releasable) ?? states.find(l => l.remainingQty > 0) ?? states[0];
       const primaryLine = ord.lines?.[0];
-      if (primaryLine) {
-        setNewPartCode(primaryLine.itemCode || '');
-        setNewPartDesc(primaryLine.itemDescription || 'MANUFACTURED COMPONENT');
-        setNewQty(Number(primaryLine.pendingQty ?? primaryLine.orderQty ?? 100));
-        setNewDrawingRev(primaryLine.drawingRevision || ord.drawingRevision || 'REV-A');
+      if (next) {
+        setNewPartCode(next.itemCode || '');
+        setNewPartDesc(next.description || 'MANUFACTURED COMPONENT');
+        setNewQty(next.remainingQty > 0 ? next.remainingQty : Number(primaryLine?.pendingQty ?? primaryLine?.orderQty ?? 100));
+        setNewDrawingRev(next.drawingRevision);
       }
       if (ord.heatLotNumber) {
         setNewHeatLot(ord.heatLotNumber);

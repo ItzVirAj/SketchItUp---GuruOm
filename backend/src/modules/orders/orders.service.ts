@@ -44,6 +44,21 @@ export class OrdersService {
         .range(from, to));
 
       if (finalOrdersData.length > 0) {
+        return await this.assembleOrders(finalOrdersData);
+      }
+    } catch (err) {
+      logger.warn('Database getOrders error:', err);
+    }
+
+    return [];
+  }
+
+  /**
+   * Loads the rows related to the given customer_orders rows (lines, job cards, dispatches, invoices, NCRs)
+   * and maps them to API orders. Shared by getOrders (all orders) and getOrderById (one order) so the two can
+   * never drift apart.
+   */
+  private async assembleOrders(finalOrdersData: any[]) {
         const orderIds = finalOrdersData.map(o => o.id);
         const poNos = finalOrdersData.map(o => o.po_no);
 
@@ -213,12 +228,6 @@ export class OrdersService {
         });
 
         return combined;
-      }
-    } catch (err) {
-      logger.warn('Database getOrders error:', err);
-    }
-
-    return [];
   }
 
   /**
@@ -302,9 +311,31 @@ export class OrdersService {
   /**
    * Fetches a single customer order by ID with full traceability.
    */
+  /**
+   * One order by id or PO number. Reads ONLY that order and its related rows: the previous version built
+   * every order (all lines, cards, dispatches...) and searched the list, and it runs on every stage
+   * transition and every single job card release.
+   */
   async getOrderById(orderId: string) {
-    const orders = await this.getOrders();
-    return orders.find(o => o.id === orderId || o.poNo === orderId) || null;
+    try {
+      const find = async (col: 'id' | 'po_no') => {
+        const { data, error } = await this.db
+          .from('customer_orders')
+          .select('*')
+          .eq(col, orderId)
+          .order('created_at', { ascending: false })
+          .limit(1);
+        if (error) throw error;
+        return (data && data[0]) || null;
+      };
+      const row = (await find('id')) || (await find('po_no'));
+      if (!row) return null;
+      const [order] = await this.assembleOrders([row]);
+      return order || null;
+    } catch (err) {
+      logger.warn('Database getOrderById error:', err);
+      return null;
+    }
   }
 
 

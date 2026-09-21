@@ -44,8 +44,13 @@ import {
   Info,
   BarChart3,
   Maximize2,
-  Ban
+  Ban,
+  Wallet,
+  Landmark,
+  Smartphone,
+  Hash
 } from 'lucide-react';
+import { Modal } from '../../common/Modal';
 import { CustomerOrder, OrderStatus, QCInspection, PDIInspection, OrderLineItem, UserRole, VendorMaster, DispatchChallan, CustomerInvoice, OrderLineProgress, ShortageItem } from '../../../types/console';
 import { isRoleAuthorizedForCta, getCtaPermission, CtaId } from '../../../utils/rbacMatrix';
 import { useCanPerformCta } from '../../../hooks/useCtaPermission';
@@ -4433,188 +4438,386 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         </div>
       )}
 
-      {/* 6. RECORD PAYMENT & SETTLE MODAL */}
-      {paymentModal.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className={`relative w-full max-w-lg rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-ui ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-            }`}>
-            <div className={`flex items-center justify-between border-b pb-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-500 dark:text-emerald-400">
-                  <CreditCard className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-sm uppercase text-emerald-500 dark:text-emerald-400 tracking-tight">Record Commercial Payment</h3>
-                  <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    {order.poNo || order.id} • {order.customerName}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => paymentModal.close()}
-                className={`p-1 rounded-xl transition-ui cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      {/* 6. RECORD PAYMENT & SETTLE MODAL (Apple HIG Design) */}
+      <Modal
+        isOpen={paymentModal.isOpen}
+        onClose={() => !isConfirming && paymentModal.close()}
+        maxWidth="2xl"
+        isDarkMode={isDarkMode}
+        icon={<Wallet className="w-5 h-5 text-[var(--accent-primary)]" />}
+        title="Record Commercial Payment"
+        subtitle={
+          <div className="flex flex-wrap items-center gap-2 mt-0.5">
+            <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-lg bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] border border-[var(--accent-primary)]/20 shadow-2xs">
+              {order.poNo || order.id}
+            </span>
+            <span className="text-xs text-slate-400 font-medium truncate max-w-[280px]">
+              {order.customerName}
+            </span>
+          </div>
+        }
+      >
+        {(() => {
+          const newBalance = Math.max(0, remainingOutstanding - paymentAmount);
+          const willBeFullyPaid = newBalance <= 0;
+          const currentPercent = gross > 0 ? Math.min(100, Math.round((currentPaid / gross) * 100)) : 0;
+          const projectedPercent = gross > 0 ? Math.min(100, Math.round(((currentPaid + paymentAmount) / gross) * 100)) : 0;
+          const activeSettlePercent = Math.max(0, Math.min(100 - currentPercent, projectedPercent - currentPercent));
 
-            {paymentError && (
-              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-500 dark:text-rose-400 text-xs">
-                {paymentError}
-              </div>
-            )}
+          const paymentModes: { id: 'NEFT' | 'RTGS' | 'UPI' | 'CHEQUE'; label: string; badge: string; icon: any }[] = [
+            { id: 'NEFT', label: 'Bank NEFT', badge: 'RBI Clearing', icon: Landmark },
+            { id: 'RTGS', label: 'Bank RTGS', badge: 'High Value', icon: Landmark },
+            { id: 'UPI', label: 'Corporate UPI', badge: 'Instant VPA', icon: Smartphone },
+            { id: 'CHEQUE', label: 'Cheque / DD', badge: 'Clearing Voucher', icon: Receipt },
+          ];
 
-            {/* Linked Invoice Badge */}
-            {effectiveInvoiceNo && (
-              <div className={`p-2.5 rounded-xl border flex items-center justify-between font-mono text-xs ${isDarkMode ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300' : 'bg-indigo-50 border-indigo-200 text-indigo-800'
+          const modalInputClass = `h-11 w-full rounded-xl border px-3.5 text-xs font-medium outline-none transition-[border-color,box-shadow,background-color] duration-150 focus:border-[var(--accent-primary)] focus:ring-4 focus:ring-[var(--accent-primary)]/15 ${
+            isDarkMode 
+              ? 'border-white/10 bg-black/50 text-white placeholder:text-slate-500 hover:border-white/20 focus:bg-black/70' 
+              : 'border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-400 focus:bg-white shadow-2xs'
+          }`;
+
+          return (
+            <div className="space-y-4 text-xs font-sans">
+              {paymentError && (
+                <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-center gap-2.5 shadow-2xs">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                  <span className="font-medium">{paymentError}</span>
+                </div>
+              )}
+
+              {/* Linked Invoice Badge */}
+              {effectiveInvoiceNo && (
+                <div className={`p-3 rounded-2xl border flex items-center justify-between font-mono text-xs transition-all ${
+                  isDarkMode ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-300' : 'bg-indigo-50 border-indigo-200 text-indigo-800'
                 }`}>
-                <div className="flex items-center gap-2">
-                  <Receipt className="w-4 h-4 text-indigo-400" />
-                  <span>Linked Tax Invoice: <strong>{effectiveInvoiceNo}</strong></span>
+                  <div className="flex items-center gap-2">
+                    <Receipt className="w-4 h-4 text-indigo-400 shrink-0" />
+                    <span>Linked Tax Invoice: <strong className="font-bold">{effectiveInvoiceNo}</strong></span>
+                  </div>
+                  {onNavigate && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        paymentModal.close();
+                        onNavigate('invoices');
+                      }}
+                      className="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer transition-colors"
+                    >
+                      <span>View in Invoices</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </button>
+                  )}
                 </div>
-                {onNavigate && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      paymentModal.close();
-                      onNavigate('invoices');
-                    }}
-                    className="text-[11px] font-bold text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>View in Invoices & Payments</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </button>
-                )}
-              </div>
-            )}
+              )}
 
-            <div className={`p-3 rounded-2xl border space-y-1.5 font-mono text-xs ${isDarkMode ? 'bg-slate-900/70 border-slate-800' : 'bg-slate-50 border-slate-200'
+              {/* 1. Commercial Summary Apple Bento Card */}
+              <div className={`relative overflow-hidden rounded-2xl p-4 sm:p-5 border transition-all ${
+                isDarkMode
+                  ? 'bg-gradient-to-br from-white/[0.05] via-white/[0.02] to-transparent border-white/[0.12] shadow-inner'
+                  : 'bg-gradient-to-br from-slate-50 via-white to-slate-100/70 border-slate-200/90 shadow-2xs'
               }`}>
-              <div className="flex justify-between">
-                <span className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>Gross Invoice Total:</span>
-                <span className="font-bold">₹{gross.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>Already Realized / Paid:</span>
-                <span className="font-bold text-emerald-500">₹{currentPaid.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-              </div>
-              <div className={`flex justify-between pt-1 border-t font-bold ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
-                <span className="text-amber-500">Outstanding Receivable Balance:</span>
-                <span className="text-amber-500">₹{remainingOutstanding.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-              </div>
-            </div>
+                {/* Ambient radial lighting glow */}
+                <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full blur-3xl pointer-events-none bg-[var(--accent-primary)]/10" />
+                <div className="absolute -bottom-12 -left-12 w-40 h-40 rounded-full blur-3xl pointer-events-none bg-emerald-500/10" />
 
-            <div className="space-y-3">
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className={`block text-[11px] font-bold uppercase ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                    Payment Amount ₹ *
+                {/* Top Badge Strip */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-3.5 border-b border-white/[0.08] dark:border-white/[0.08] text-[11px] font-mono">
+                  <span className={`px-2 py-0.5 rounded-md border text-[10px] font-semibold ${
+                    isDarkMode ? 'bg-white/5 border-white/10 text-slate-300' : 'bg-white border-slate-200 text-slate-700'
+                  }`}>
+                    PO: <strong>{order.poNo || 'Direct'}</strong>
+                  </span>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                    currentPercent === 100
+                      ? isDarkMode ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300' : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                      : currentPercent > 0
+                        ? isDarkMode ? 'bg-amber-500/15 border-amber-500/30 text-amber-300' : 'bg-amber-50 border-amber-200 text-amber-700'
+                        : isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-500'
+                  }`}>
+                    {currentPercent === 100 ? 'Fully Cleared' : currentPercent > 0 ? `${currentPercent}% Realized` : 'Uncollected'}
+                  </span>
+                </div>
+
+                {/* Bento Metrics 3-Col Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mt-3.5 font-mono">
+                  <div className={`p-3 rounded-xl border flex flex-col justify-between ${
+                    isDarkMode ? 'bg-black/40 border-white/[0.08]' : 'bg-white border-slate-200/90 shadow-2xs'
+                  }`}>
+                    <div className="flex items-center justify-between text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                      <span>Total Gross</span>
+                      <Receipt className="w-3.5 h-3.5 opacity-60" />
+                    </div>
+                    <div className="text-sm sm:text-base font-extrabold font-mono mt-1.5 truncate text-slate-900 dark:text-white">
+                      ₹{gross.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                    </div>
+                  </div>
+
+                  <div className={`p-3 rounded-xl border flex flex-col justify-between ${
+                    isDarkMode ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-emerald-50/70 border-emerald-200/80 shadow-2xs'
+                  }`}>
+                    <div className="flex items-center justify-between text-[10px] uppercase font-bold tracking-wider text-emerald-600 dark:text-emerald-400">
+                      <span>Realized to Date</span>
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="text-sm sm:text-base font-extrabold font-mono mt-1.5 truncate text-emerald-600 dark:text-emerald-400">
+                      ₹{currentPaid.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                    </div>
+                  </div>
+
+                  <div className={`p-3 rounded-xl border flex flex-col justify-between ${
+                    isDarkMode ? 'bg-amber-500/10 border-amber-500/20' : 'bg-amber-50/70 border-amber-200/80 shadow-2xs'
+                  }`}>
+                    <div className="flex items-center justify-between text-[10px] uppercase font-bold tracking-wider text-amber-600 dark:text-amber-400">
+                      <span>Outstanding Due</span>
+                      <Clock className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="text-sm sm:text-base font-extrabold font-mono mt-1.5 truncate text-amber-600 dark:text-amber-400">
+                      ₹{remainingOutstanding.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Apple Multi-Segment Progress Track */}
+                <div className="mt-3.5 pt-3 border-t border-white/[0.08] dark:border-white/[0.08] space-y-1.5">
+                  <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
+                    <span>Realization Progress</span>
+                    <span>{projectedPercent}% of ₹{gross.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="w-full h-2 rounded-full overflow-hidden flex bg-black/20 dark:bg-white/10">
+                    <div
+                      className="h-full bg-emerald-500 transition-all duration-300"
+                      style={{ width: `${currentPercent}%` }}
+                      title={`Realized: ₹${currentPaid.toLocaleString('en-IN')} (${currentPercent}%)`}
+                    />
+                    <div
+                      className="h-full bg-[var(--accent-primary)] transition-all duration-300"
+                      style={{ width: `${activeSettlePercent}%` }}
+                      title={`Now Settling: ₹${paymentAmount.toLocaleString('en-IN')} (${activeSettlePercent}%)`}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Hero Payment Amount Card */}
+              <div className={`p-4 rounded-2xl border space-y-2.5 transition-all ${
+                isDarkMode ? 'bg-white/[0.03] border-white/[0.10]' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <label className={`block text-xs font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Payment Amount (₹) *
                   </label>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <button
                       type="button"
                       onClick={() => setPaymentAmount(remainingOutstanding)}
-                      className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg border transition-ui cursor-pointer ${paymentAmount === remainingOutstanding
-                        ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
-                        : isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
-                        }`}
+                      className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer active:scale-95 ${
+                        paymentAmount === remainingOutstanding 
+                          ? 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)] shadow-2xs'
+                          : isDarkMode 
+                            ? 'bg-white/[0.05] text-slate-300 border-white/10 hover:bg-white/10'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100 shadow-2xs'
+                      }`}
                     >
                       ⚡ Full (₹{remainingOutstanding.toLocaleString('en-IN')})
                     </button>
+                    {remainingOutstanding > 500 && (
+                      <button
+                        type="button"
+                        onClick={() => setPaymentAmount(Math.round(remainingOutstanding * 0.75))}
+                        className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer active:scale-95 ${
+                          paymentAmount === Math.round(remainingOutstanding * 0.75)
+                            ? 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)] shadow-2xs'
+                            : isDarkMode 
+                              ? 'bg-white/[0.05] text-slate-300 border-white/10 hover:bg-white/10'
+                              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100 shadow-2xs'
+                        }`}
+                      >
+                        75%
+                      </button>
+                    )}
                     {remainingOutstanding > 100 && (
                       <button
                         type="button"
                         onClick={() => setPaymentAmount(Math.round(remainingOutstanding / 2))}
-                        className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg border transition-ui cursor-pointer ${paymentAmount === Math.round(remainingOutstanding / 2)
-                          ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
-                          : isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
-                          }`}
+                        className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer active:scale-95 ${
+                          paymentAmount === Math.round(remainingOutstanding / 2)
+                            ? 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)] shadow-2xs'
+                            : isDarkMode 
+                              ? 'bg-white/[0.05] text-slate-300 border-white/10 hover:bg-white/10'
+                              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100 shadow-2xs'
+                        }`}
                       >
                         50% Partial
                       </button>
                     )}
+                    {remainingOutstanding > 1000 && (
+                      <button
+                        type="button"
+                        onClick={() => setPaymentAmount(Math.round(remainingOutstanding * 0.25))}
+                        className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer active:scale-95 ${
+                          paymentAmount === Math.round(remainingOutstanding * 0.25)
+                            ? 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)] shadow-2xs'
+                            : isDarkMode 
+                              ? 'bg-white/[0.05] text-slate-300 border-white/10 hover:bg-white/10'
+                              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100 shadow-2xs'
+                        }`}
+                      >
+                        25%
+                      </button>
+                    )}
                   </div>
                 </div>
+
                 <div className="relative">
-                  <span className="absolute left-3.5 top-2.5 font-mono font-bold text-slate-400">₹</span>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 font-mono font-bold text-xl sm:text-2xl text-slate-400 pointer-events-none select-none">
+                    ₹
+                  </span>
                   <input
                     type="number"
+                    min={1}
+                    max={remainingOutstanding}
                     step="0.01"
-                    value={paymentAmount}
-                    onChange={(e) => setPaymentAmount(Number(e.target.value))}
-                    className={`w-full pl-8 pr-3.5 py-2.5 rounded-xl border font-mono font-bold text-sm outline-none transition-ui ${isDarkMode
-                      ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500'
-                      : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
-                      }`}
+                    value={paymentAmount || ''}
+                    onChange={(e) => setPaymentAmount(parseFloat(e.target.value) || 0)}
+                    className={`w-full pl-10 pr-4 py-3 rounded-xl border font-mono font-black text-xl sm:text-2xl outline-none transition-all ${
+                      isDarkMode
+                        ? 'bg-black/50 border-white/[0.12] text-emerald-400 focus:border-[var(--accent-primary)] focus:ring-4 focus:ring-[var(--accent-primary)]/15'
+                        : 'bg-white border-slate-300 text-emerald-600 focus:border-[var(--accent-primary)] focus:ring-4 focus:ring-[var(--accent-primary)]/15 shadow-2xs'
+                    }`}
+                    placeholder="0.00"
                     required
                   />
                 </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Payment Mode</label>
-                  <select
-                    value={paymentMode}
-                    onChange={(e) => setPaymentMode(e.target.value as any)}
-                    className={`w-full p-2.5 rounded-xl border text-xs outline-none cursor-pointer transition-ui ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
-                      }`}
-                  >
-                    <option value="NEFT">Bank NEFT</option>
-                    <option value="RTGS">Bank RTGS</option>
-                    <option value="UPI">UPI Direct</option>
-                    <option value="CHEQUE">Cheque / DD</option>
-                  </select>
-                </div>
-                <div>
-                  <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Payment Date</label>
-                  <input
-                    type="date"
-                    value={paymentDate}
-                    onChange={(e) => setPaymentDate(e.target.value)}
-                    className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none transition-ui ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
-                      }`}
-                  />
+                <div className="flex items-center justify-between text-[11px] font-mono px-1">
+                  <span className="text-slate-400">
+                    Allowable limit: <strong>₹{remainingOutstanding.toLocaleString('en-IN')}</strong>
+                  </span>
+                  {paymentAmount > remainingOutstanding && (
+                    <span className="text-rose-400 font-bold">
+                      Exceeds balance by ₹{(paymentAmount - remainingOutstanding).toLocaleString('en-IN')}
+                    </span>
+                  )}
                 </div>
               </div>
 
+              {/* 3. Payment Mode Segmented Grid */}
               <div>
-                <label className={`block text-[11px] font-bold uppercase mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Reference / UTR No *</label>
-                <input
-                  type="text"
-                  placeholder="e.g. UTR-HDFC98234723 or CHQ-004521"
-                  value={paymentRefNo}
-                  onChange={(e) => setPaymentRefNo(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border font-mono text-xs outline-none transition-ui ${isDarkMode ? 'border-slate-800 bg-slate-900 text-white focus:border-emerald-500' : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-emerald-600 focus:bg-white'
-                    }`}
-                />
+                <label className={`block text-xs font-semibold mb-2 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Payment Mode *
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {paymentModes.map((mode) => {
+                    const isSelected = paymentMode === mode.id;
+                    const ModeIcon = mode.icon;
+                    return (
+                      <button
+                        key={mode.id}
+                        type="button"
+                        onClick={() => setPaymentMode(mode.id)}
+                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer relative active:scale-[0.98] ${
+                          isSelected
+                            ? isDarkMode
+                              ? 'bg-[var(--accent-primary)]/15 border-[var(--accent-primary)] text-white ring-1 ring-[var(--accent-primary)]/30 shadow-[0_4px_16px_var(--accent-shadow)]'
+                              : 'bg-[var(--accent-primary)]/10 border-[var(--accent-primary)] text-slate-900 ring-1 ring-[var(--accent-primary)]/30 shadow-2xs'
+                            : isDarkMode
+                              ? 'bg-white/[0.02] border-white/[0.08] hover:border-white/20 text-slate-300 hover:bg-white/[0.04]'
+                              : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700 hover:bg-slate-50 shadow-2xs'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1.5">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className={`p-1.5 rounded-lg border shrink-0 ${
+                              isSelected
+                                ? 'bg-[var(--accent-primary)] text-white border-transparent'
+                                : isDarkMode
+                                  ? 'bg-white/5 border-white/10 text-slate-400'
+                                  : 'bg-slate-100 border-slate-200 text-slate-600'
+                            }`}>
+                              <ModeIcon className="w-3.5 h-3.5" />
+                            </div>
+                            <div className="min-w-0">
+                              <span className="font-bold text-[11px] block truncate leading-tight">{mode.label}</span>
+                              <span className="text-[9px] font-mono opacity-70 block truncate">{mode.badge}</span>
+                            </div>
+                          </div>
+                          {isSelected && (
+                            <div className="w-4 h-4 rounded-full bg-[var(--accent-primary)] text-white flex items-center justify-center shrink-0">
+                              <Check className="w-2.5 h-2.5 stroke-[3]" />
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 4. Date & Reference Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Payment Date *
+                  </label>
+                  <div className="relative">
+                    <Calendar className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <input
+                      type="date"
+                      value={paymentDate}
+                      onChange={(e) => setPaymentDate(e.target.value)}
+                      className={`${modalInputClass} pl-10 font-mono`}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Reference / UTR No *
+                  </label>
+                  <div className="relative">
+                    <Hash className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <input
+                      type="text"
+                      placeholder="e.g. UTR-HDFC98234723 or CHQ-004521"
+                      value={paymentRefNo}
+                      onChange={(e) => setPaymentRefNo(e.target.value)}
+                      className={`${modalInputClass} pl-10 font-mono`}
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 6. Modal Actions Footer */}
+              <div className={`pt-4 border-t flex items-center justify-end gap-2.5 font-sans ${
+                isDarkMode ? 'border-white/[0.08]' : 'border-slate-200'
+              }`}>
+                <button
+                  type="button"
+                  onClick={() => paymentModal.close()}
+                  disabled={isConfirming}
+                  className={`px-4 py-2.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer active:scale-95 ${
+                    isDarkMode ? 'border-white/10 text-slate-300 hover:bg-white/10' : 'border-slate-200 text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRecordPaymentSubmit}
+                  disabled={isConfirming || paymentAmount <= 0 || paymentAmount > remainingOutstanding}
+                  className="px-5 py-2.5 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] active:scale-[0.97] text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-[0_4px_16px_var(--accent-shadow)] disabled:opacity-50 transition-all"
+                >
+                  <CreditCard className="w-4 h-4" />
+                  <span>{isConfirming ? 'Recording Settlement...' : `Confirm & Settle ₹${paymentAmount.toLocaleString('en-IN')}`}</span>
+                </button>
               </div>
             </div>
-
-            <div className={`pt-3 flex justify-end gap-2.5 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
-              <button
-                type="button"
-                onClick={() => paymentModal.close()}
-                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-ui cursor-pointer ${isDarkMode ? 'border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900' : 'border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleRecordPaymentSubmit}
-                disabled={isConfirming || paymentAmount <= 0}
-                className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-teal-600 hover:to-emerald-600 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-500/25 disabled:opacity-50 transition-ui"
-              >
-                <CreditCard className="w-4 h-4" />
-                <span>{isConfirming ? 'Recording...' : `Confirm & Settle ₹${paymentAmount.toLocaleString('en-IN')}`}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Owner Override Material Check Modal */}
+          );
+        })()}
+      </Modal>
       {overrideModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
           <div className={`relative w-full max-w-md rounded-3xl border p-6 space-y-4 font-sans text-xs z-10 shadow-2xl transition-ui ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'

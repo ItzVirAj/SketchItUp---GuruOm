@@ -26,7 +26,10 @@ import {
   RotateCcw,
   FileDiff,
   TrendingUp,
-  Sparkles
+  Sparkles,
+  Minus,
+  Check,
+  Filter
 } from 'lucide-react';
 import {
   StockItem,
@@ -108,6 +111,9 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   const [selectedStockForAdjust, setSelectedStockForAdjust] = useState<StockItem | null>(null);
   const [adjustQty, setAdjustQty] = useState<number>(0);
   const [adjustReason, setAdjustReason] = useState<string>('Physical Audit Adjustment');
+  const [adjustItemSearch, setAdjustItemSearch] = useState<string>('');
+  const [adjustCategoryFilter, setAdjustCategoryFilter] = useState<InventoryCategoryKey>('ALL');
+  const [isItemPickerOpen, setIsItemPickerOpen] = useState<boolean>(false);
 
   // Async states for Purchasing, GRN, Movements & Reconciliation
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
@@ -320,6 +326,24 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
     });
   }, [stockMasterRows, selectedCategory, searchQuery]);
 
+  // Filtered stock list specifically for the Adjust Stock modal search and category pills
+  const modalFilteredStocks = useMemo(() => {
+    return stockMasterRows.filter(s => {
+      const matchesCategory = adjustCategoryFilter === 'ALL' || s.category === adjustCategoryFilter;
+      if (!matchesCategory) return false;
+
+      if (!adjustItemSearch.trim()) return true;
+      const q = adjustItemSearch.toLowerCase().trim();
+      return (
+        s.code.toLowerCase().includes(q) ||
+        (s.rawCode && s.rawCode.toLowerCase().includes(q)) ||
+        (s.partNo && s.partNo.toLowerCase().includes(q)) ||
+        (s.categoryLabel && s.categoryLabel.toLowerCase().includes(q)) ||
+        s.description.toLowerCase().includes(q)
+      );
+    });
+  }, [stockMasterRows, adjustCategoryFilter, adjustItemSearch]);
+
   // Filtered reconciliation based on search query
   const filteredReconciliation = useMemo(() => {
     if (!searchQuery.trim()) return reconciliationReport;
@@ -364,6 +388,15 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
     }
   }, [correctMovementModal.isOpen, correctMovementModal.params.movementId, selectedMovementForCorrection, movements]);
 
+  const handleCloseAdjustModal = () => {
+    setSelectedStockForAdjust(null);
+    setAdjustQty(0);
+    setAdjustItemSearch('');
+    setAdjustCategoryFilter('ALL');
+    setIsItemPickerOpen(false);
+    adjustStockModal.close();
+  };
+
   const handleAdjustSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedStockForAdjust) return;
@@ -373,9 +406,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       const targetCode = selectedStockForAdjust.rawCode || selectedStockForAdjust.code;
       await onAdjustStock(targetCode, newOnHand, adjustReason);
       setActionSuccess(`Stock adjusted for ${selectedStockForAdjust.code} (${selectedStockForAdjust.description}) to ${newOnHand} ${selectedStockForAdjust.unit}`);
-      setSelectedStockForAdjust(null);
-      setAdjustQty(0);
-      adjustStockModal.close();
+      handleCloseAdjustModal();
     } catch (err: any) {
       setActionError(err?.message || 'Failed to adjust stock. Check your role permissions.');
     }
@@ -1615,128 +1646,468 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
       {/* Modal 1: Physical Stock Audit Adjustment */}
       <Modal
-        isOpen={adjustStockModal.isOpen && Boolean(selectedStockForAdjust)}
-        onClose={() => {
-          setSelectedStockForAdjust(null);
-          adjustStockModal.close();
-        }}
-        maxWidth="lg"
+        isOpen={adjustStockModal.isOpen}
+        onClose={handleCloseAdjustModal}
+        maxWidth="2xl"
         isDarkMode={isDarkMode}
-        icon={<Boxes className="w-5 h-5" />}
-        title="Physical Stock Audit Adjustment"
-        subtitle="Reconcile physical store inventory delta"
+        icon={<Boxes className="w-5 h-5 text-[var(--accent-primary)]" />}
+        title="Stock Inventory Adjustment"
+        subtitle="Reconcile physical floor counts with digital inventory balances"
       >
-        {selectedStockForAdjust && (
-          <form onSubmit={handleAdjustSubmit} className="space-y-4 font-sans text-xs">
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className={`block text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                  Target SKU / Material Component *
-                </label>
-                {renderCategoryBadge(selectedStockForAdjust.category, selectedStockForAdjust.categoryLabel)}
+        <form onSubmit={handleAdjustSubmit} className="space-y-4 font-sans text-xs">
+          {/* Section 1: Integrated Search Box & Category Filters */}
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between">
+              <label className={`text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Select Target Stock Item *
+              </label>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono text-slate-400">
+                  {modalFilteredStocks.length} matching {modalFilteredStocks.length === 1 ? 'part' : 'parts'}
+                </span>
+                {selectedStockForAdjust && (
+                  <button
+                    type="button"
+                    onClick={() => setIsItemPickerOpen(prev => !prev)}
+                    className="text-[10px] font-mono font-bold text-[var(--accent-primary)] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    {isItemPickerOpen ? 'Hide Picker' : 'Browse All SKUs'}
+                    <ChevronDown className={`w-3 h-3 transition-transform ${isItemPickerOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                )}
               </div>
-              <select
-                value={selectedStockForAdjust.code}
+            </div>
+
+            {/* Apple Search Input */}
+            <div className={`relative flex items-center rounded-2xl border transition-all ${
+              isDarkMode 
+                ? 'bg-black/30 border-white/[0.08] focus-within:border-[var(--accent-primary)] focus-within:ring-2 focus-within:ring-[var(--accent-ring)]' 
+                : 'bg-slate-50 border-slate-200/90 focus-within:border-[var(--accent-primary)] focus-within:ring-2 focus-within:ring-[var(--accent-ring)] shadow-xs'
+            }`}>
+              <Search className="w-4 h-4 text-slate-400 shrink-0 ml-3.5" />
+              <input
+                type="text"
+                value={adjustItemSearch}
                 onChange={(e) => {
-                  const found = stockMasterRows.find(s => s.code === e.target.value);
-                  if (found) setSelectedStockForAdjust(found);
+                  setAdjustItemSearch(e.target.value);
+                  if (!isItemPickerOpen) setIsItemPickerOpen(true);
                 }}
-                className={`h-11 w-full rounded-xl border px-3 text-xs font-mono font-bold outline-none transition-ui cursor-pointer ${
-                  isDarkMode 
-                    ? 'bg-[#09090B] border-slate-700/80 text-[var(--accent-text-dark)] focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
-                    : 'bg-slate-50 border-slate-300 text-[var(--accent-text-light)] focus:border-[var(--accent-primary)] shadow-xs'
-                }`}
-              >
-                {stockMasterRows.map((s) => (
-                  <option key={s.code} value={s.code} className={isDarkMode ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>
-                    [{s.categoryLabel || 'Item'}] {s.code} — {s.description} ({formatDecimal(s.onHand)} {s.unit || 'units'} on hand)
-                  </option>
-                ))}
-              </select>
-              {selectedStockForAdjust.rawCode && selectedStockForAdjust.rawCode !== selectedStockForAdjust.code && (
-                <div className="text-[10px] font-mono text-slate-400 flex items-center gap-1.5 pt-0.5">
-                  <span>Catalog Reference:</span>
-                  <span className={`px-2 py-0.5 rounded-md font-bold border ${
-                    isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-200'
-                  }`}>
-                    {selectedStockForAdjust.rawCode}
-                  </span>
-                </div>
+                onFocus={() => {
+                  if (!isItemPickerOpen) setIsItemPickerOpen(true);
+                }}
+                placeholder="Search by part code, description, catalog reference..."
+                className="w-full bg-transparent px-3 py-2.5 text-xs font-mono outline-none placeholder:font-sans placeholder:text-slate-400"
+              />
+              {adjustItemSearch && (
+                <button
+                  type="button"
+                  onClick={() => setAdjustItemSearch('')}
+                  className="mr-3 p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-white/10 transition-colors cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-3.5">
-              <div>
-                <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                  Current On Hand
-                </label>
-                <div className={`h-11 px-3 flex items-center rounded-xl border font-mono font-bold text-xs ${
-                  isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 shadow-xs'
-                }`}>
-                  {formatDecimal(selectedStockForAdjust.onHand)} {selectedStockForAdjust.unit}
-                </div>
+            {/* Category Filter Pills (Apple Segmented Control) */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+              {INVENTORY_CATEGORIES.map(cat => {
+                const count = categoryCounts[cat.key] ?? 0;
+                const isSelected = adjustCategoryFilter === cat.key;
+                return (
+                  <button
+                    key={cat.key}
+                    type="button"
+                    onClick={() => {
+                      setAdjustCategoryFilter(cat.key);
+                      if (!isItemPickerOpen) setIsItemPickerOpen(true);
+                    }}
+                    className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                      isSelected
+                        ? 'bg-[var(--accent-primary)] text-white shadow-xs scale-[1.02]'
+                        : isDarkMode
+                          ? 'bg-white/[0.05] text-slate-400 hover:text-white hover:bg-white/[0.08] border border-white/[0.05]'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80 border border-slate-200/60'
+                    }`}
+                  >
+                    <span>{cat.label}</span>
+                    <span className={`px-1 rounded text-[9px] ${
+                      isSelected ? 'bg-black/20 text-white' : isDarkMode ? 'bg-white/10 text-slate-400' : 'bg-slate-200 text-slate-700'
+                    }`}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Interactive Item Picker Results List (shown when searching, picking, or toggled) */}
+          {(isItemPickerOpen || !selectedStockForAdjust || adjustItemSearch.trim().length > 0) && (
+            <div className={`overflow-hidden rounded-2xl border transition-all ${
+              isDarkMode ? 'border-white/[0.08] bg-[#0E0E11]' : 'border-slate-200 bg-white shadow-sm'
+            }`}>
+              <div className={`px-3.5 py-2 border-b flex items-center justify-between text-[10px] font-mono font-bold uppercase tracking-wider ${
+                isDarkMode ? 'border-white/[0.07] bg-white/[0.02] text-slate-400' : 'border-slate-100 bg-slate-50 text-slate-500'
+              }`}>
+                <span>Catalog Items ({modalFilteredStocks.length})</span>
+                <span className="text-[9px] text-slate-400 font-normal">Click to select item for delta adjustment</span>
               </div>
-              <div>
-                <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                  Adjustment Delta (+/-) *
-                </label>
-                <input
-                  type="number"
-                  required
-                  value={adjustQty}
-                  onChange={(e) => setAdjustQty(Number(e.target.value))}
-                  className={`h-11 w-full rounded-xl border px-3 text-xs font-mono font-bold outline-none transition-ui ${
-                    isDarkMode 
-                      ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
-                      : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
-                  }`}
-                  placeholder="e.g. +10 or -5"
-                />
+              <div className="max-h-48 overflow-y-auto divide-y divide-slate-100 dark:divide-white/[0.05] scrollbar-thin">
+                {modalFilteredStocks.length === 0 ? (
+                  <div className="py-6 px-4 text-center">
+                    <Package className="w-6 h-6 text-slate-400 mx-auto mb-1.5 opacity-60" />
+                    <p className="text-xs font-semibold text-slate-400">No inventory parts match your filter</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Try clearing the search query or choosing "All" categories.</p>
+                  </div>
+                ) : (
+                  modalFilteredStocks.map(item => {
+                    const isCurrent = selectedStockForAdjust?.code === item.code;
+                    return (
+                      <button
+                        key={item.code}
+                        type="button"
+                        onClick={() => {
+                          setSelectedStockForAdjust(item);
+                          setIsItemPickerOpen(false);
+                          if (adjustStockModal.params.itemId !== item.code) {
+                            adjustStockModal.open({ itemId: item.code });
+                          }
+                        }}
+                        className={`w-full text-left px-3.5 py-2.5 flex items-center justify-between gap-3 transition-all cursor-pointer ${
+                          isCurrent
+                            ? isDarkMode
+                              ? 'bg-[var(--accent-primary)]/15 border-l-2 border-l-[var(--accent-primary)]'
+                              : 'bg-[var(--accent-soft-light)] border-l-2 border-l-[var(--accent-primary)]'
+                            : isDarkMode
+                              ? 'hover:bg-white/[0.04]'
+                              : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="min-w-0 flex items-center gap-2.5">
+                          {renderCategoryBadge(item.category, item.categoryLabel)}
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className={`font-mono font-bold text-xs ${
+                                isCurrent ? 'text-[var(--accent-primary)]' : isDarkMode ? 'text-white' : 'text-slate-900'
+                              }`}>
+                                {item.code}
+                              </span>
+                              {item.rawCode && item.rawCode !== item.code && (
+                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono border ${
+                                  isDarkMode ? 'bg-white/[0.06] border-white/[0.08] text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'
+                                }`}>
+                                  {item.rawCode}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-[280px] sm:max-w-md">
+                              {item.description}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="shrink-0 flex items-center gap-3 text-right">
+                          <div>
+                            <div className="font-mono font-bold text-xs text-slate-900 dark:text-white">
+                              {formatDecimal(item.onHand)} <span className="text-[10px] text-slate-400 font-normal">{item.unit}</span>
+                            </div>
+                            <div className="text-[9px] font-mono text-slate-400">On Hand</div>
+                          </div>
+                          {isCurrent && (
+                            <div className="w-5 h-5 rounded-full bg-[var(--accent-primary)] flex items-center justify-center text-white shrink-0 shadow-xs">
+                              <Check className="w-3 h-3 stroke-[3]" />
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
               </div>
             </div>
+          )}
 
-            <div>
-              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                Audit Reason *
+          {/* Active Selected SKU Hero Card */}
+          {selectedStockForAdjust && (
+            <div className={`relative overflow-hidden rounded-2xl border p-4 transition-all ${
+              isDarkMode
+                ? 'border-white/[0.08] bg-gradient-to-br from-white/[0.04] to-black/20'
+                : 'border-slate-200/90 bg-gradient-to-br from-slate-50 to-white shadow-xs'
+            }`}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {renderCategoryBadge(selectedStockForAdjust.category, selectedStockForAdjust.categoryLabel)}
+                    <span className="font-mono text-sm font-extrabold text-slate-900 dark:text-white">
+                      {selectedStockForAdjust.code}
+                    </span>
+                    {selectedStockForAdjust.rawCode && selectedStockForAdjust.rawCode !== selectedStockForAdjust.code && (
+                      <span className={`px-2 py-0.5 rounded-md font-mono text-[10px] font-bold border ${
+                        isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-200'
+                      }`}>
+                        Catalog Ref: {selectedStockForAdjust.rawCode}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs font-medium text-slate-600 dark:text-slate-300 line-clamp-2">
+                    {selectedStockForAdjust.description}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsItemPickerOpen(prev => !prev)}
+                  className={`shrink-0 px-2.5 py-1.5 rounded-xl border text-[11px] font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    isDarkMode
+                      ? 'border-white/[0.1] bg-white/[0.06] text-slate-300 hover:text-white hover:bg-white/[0.1]'
+                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 shadow-xs'
+                  }`}
+                >
+                  <span>{isItemPickerOpen ? 'Close Picker' : 'Switch Item'}</span>
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isItemPickerOpen ? 'rotate-180' : ''}`} />
+                </button>
+              </div>
+
+              {/* Stock telemetry summary chips */}
+              <div className="mt-3 pt-3 border-t border-slate-200/60 dark:border-white/[0.06] flex items-center gap-3 text-[10px] font-mono flex-wrap text-slate-500 dark:text-slate-400">
+                <span>Unit: <strong className="text-slate-700 dark:text-slate-200">{selectedStockForAdjust.unit || 'units'}</strong></span>
+                <span>•</span>
+                <span>Current Ledger: <strong className="text-slate-700 dark:text-slate-200">{formatDecimal(selectedStockForAdjust.onHand)}</strong></span>
+                <span>•</span>
+                <span>Reorder Point: <strong className="text-slate-700 dark:text-slate-200">{formatDecimal(selectedStockForAdjust.reorderLevel)}</strong></span>
+                <span>•</span>
+                <span className={`font-bold ${
+                  (selectedStockForAdjust.onHand || 0) <= (selectedStockForAdjust.reorderLevel || 0)
+                    ? 'text-amber-500'
+                    : 'text-emerald-500'
+                }`}>
+                  {(selectedStockForAdjust.onHand || 0) <= 0 ? 'Out of Stock' : (selectedStockForAdjust.onHand || 0) <= (selectedStockForAdjust.reorderLevel || 0) ? 'Reorder Needed' : 'Healthy Stock'}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Section 2: 3-Column Recalculation Bento Grid */}
+          {selectedStockForAdjust && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* 1: Current On Hand */}
+                <div className={`p-3.5 rounded-2xl border flex flex-col justify-between ${
+                  isDarkMode 
+                    ? 'bg-black/30 border-white/[0.08]' 
+                    : 'bg-slate-50 border-slate-200 shadow-xs'
+                }`}>
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                    Current Balance
+                  </span>
+                  <div className="my-2">
+                    <div className="text-2xl font-extrabold font-mono text-slate-900 dark:text-white">
+                      {formatDecimal(selectedStockForAdjust.onHand)}
+                      <span className="text-xs font-normal text-slate-400 ml-1.5">{selectedStockForAdjust.unit}</span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-mono">System ledger figure</span>
+                </div>
+
+                {/* 2: Adjustment Delta Stepper */}
+                <div className={`p-3.5 rounded-2xl border flex flex-col justify-between ${
+                  isDarkMode 
+                    ? 'bg-[var(--accent-primary)]/10 border-[var(--accent-primary)]/30' 
+                    : 'bg-[var(--accent-soft-light)] border-[var(--accent-primary)]/30 shadow-xs'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--accent-primary)]">
+                      Delta (+ / -) *
+                    </span>
+                    <span className="text-[9px] font-mono text-slate-400">Step ±1</span>
+                  </div>
+
+                  {/* Stepper Input Row */}
+                  <div className="my-2 flex items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setAdjustQty(prev => prev - 1)}
+                      className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-all active:scale-95 cursor-pointer ${
+                        isDarkMode
+                          ? 'bg-white/10 hover:bg-white/20 border-white/10 text-white'
+                          : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-700 shadow-xs'
+                      }`}
+                      title="Decrease delta by 1"
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                    </button>
+                    <input
+                      type="number"
+                      required
+                      value={adjustQty}
+                      onChange={(e) => setAdjustQty(Number(e.target.value))}
+                      className={`h-9 w-20 text-center rounded-xl border text-base font-mono font-black outline-none transition-ui ${
+                        isDarkMode 
+                          ? 'bg-[#09090B] border-white/20 text-white focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
+                          : 'bg-white border-slate-300 text-slate-900 focus:border-[var(--accent-primary)] shadow-xs'
+                      }`}
+                      placeholder="0"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setAdjustQty(prev => prev + 1)}
+                      className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-all active:scale-95 cursor-pointer ${
+                        isDarkMode
+                          ? 'bg-white/10 hover:bg-white/20 border-white/10 text-white'
+                          : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-700 shadow-xs'
+                      }`}
+                      title="Increase delta by 1"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Delta Shortcut Chips */}
+                  <div className="flex items-center justify-center gap-1 flex-wrap">
+                    {[-10, -5, -1, 0, 1, 5, 10, 50].map(val => (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => setAdjustQty(val === 0 ? 0 : val)}
+                        className={`px-1.5 py-0.5 rounded-md font-mono text-[9px] font-bold transition-all cursor-pointer ${
+                          (val === 0 && adjustQty === 0) || (val !== 0 && adjustQty === val)
+                            ? 'bg-[var(--accent-primary)] text-white'
+                            : isDarkMode
+                              ? 'bg-white/5 hover:bg-white/10 text-slate-400'
+                              : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200/60'
+                        }`}
+                      >
+                        {val > 0 ? `+${val}` : val}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 3: Projected New On Hand */}
+                {(() => {
+                  const currentOnHand = Number(selectedStockForAdjust.onHand) || 0;
+                  const newOnHand = Math.max(0, currentOnHand + adjustQty);
+                  return (
+                    <div className={`p-3.5 rounded-2xl border flex flex-col justify-between ${
+                      isDarkMode 
+                    ? 'bg-black/30 border-white/[0.08]' 
+                    : 'bg-slate-50 border-slate-200 shadow-xs'
+                    }`}>
+                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                        Projected Balance
+                      </span>
+                      <div className="my-2">
+                        <div className="text-2xl font-extrabold font-mono text-slate-900 dark:text-white">
+                          {formatDecimal(newOnHand)}
+                          <span className="text-xs font-normal text-slate-400 ml-1.5">{selectedStockForAdjust.unit}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {adjustQty > 0 ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20">
+                            <TrendingUp className="w-3 h-3" /> +{adjustQty} {selectedStockForAdjust.unit}
+                          </span>
+                        ) : adjustQty < 0 ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded-lg border border-rose-500/20">
+                            <TrendingDown className="w-3 h-3" /> {adjustQty} {selectedStockForAdjust.unit}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-slate-400 bg-slate-100 dark:bg-white/[0.04] px-2 py-0.5 rounded-lg border border-slate-200 dark:border-white/[0.08]">
+                            No variance
+                          </span>
+                        )}
+                        {newOnHand === 0 && (
+                          <span className="text-[9px] font-mono text-amber-500 font-bold">Zero alert</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
+
+          {/* Section 3: Audit Reason & Traceability */}
+          {selectedStockForAdjust && (
+            <div className="space-y-2 pt-1">
+              <label className={`block text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Audit Reason & Compliance Note *
               </label>
+
+              {/* Preset reason pills */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {[
+                  'Physical Count Mismatch',
+                  'Damaged / Scrapped',
+                  'Vendor Return',
+                  'Assembly Spoilage',
+                  'Found Unrecorded Stock',
+                  'Cycle Count Calibration'
+                ].map(reason => {
+                  const isMatch = adjustReason === reason;
+                  return (
+                    <button
+                      key={reason}
+                      type="button"
+                      onClick={() => setAdjustReason(reason)}
+                      className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                        isMatch
+                          ? 'bg-[var(--accent-primary)] text-white shadow-xs'
+                          : isDarkMode
+                            ? 'bg-white/[0.05] text-slate-400 hover:text-white border border-white/[0.06]'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80 border border-slate-200'
+                      }`}
+                    >
+                      {reason}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Audit Reason Text Input */}
               <input
                 type="text"
                 required
                 value={adjustReason}
                 onChange={(e) => setAdjustReason(e.target.value)}
-                className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-ui ${
+                className={`h-11 w-full rounded-2xl border px-3.5 text-xs outline-none transition-ui ${
                   isDarkMode 
-                    ? 'bg-[#09090B] border-slate-700/80 text-white placeholder:text-slate-500 focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
+                    ? 'bg-[#09090B] border-white/[0.1] text-white placeholder:text-slate-500 focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-ring)]' 
                     : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-[var(--accent-primary)] shadow-xs'
                 }`}
-                placeholder="e.g. Physical count reconciliation"
+                placeholder="e.g. Semi-annual physical verification variance in Bay 4..."
               />
             </div>
+          )}
 
-            <div className={`pt-4 border-t flex items-center justify-end gap-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedStockForAdjust(null);
-                  adjustStockModal.close();
-                }}
-                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-ui cursor-pointer ${
-                  isDarkMode 
-                    ? 'border-slate-700 text-slate-300 hover:bg-slate-800' 
-                    : 'border-slate-300 text-slate-700 hover:bg-slate-100'
-                }`}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-5 py-2 rounded-xl bg-[var(--accent-primary)] hover:brightness-110 text-white font-bold text-xs cursor-pointer shadow-lg shadow-[var(--accent-shadow)] transition-ui hover:scale-[1.01] active:scale-[0.96]"
-              >
-                Confirm Adjustment
-              </button>
-            </div>
-          </form>
-        )}
+          {/* Section 4: Modal Actions Footer */}
+          <div className={`pt-4 border-t flex items-center justify-end gap-3 ${isDarkMode ? 'border-white/[0.08]' : 'border-slate-200'}`}>
+            <button
+              type="button"
+              onClick={handleCloseAdjustModal}
+              className={`px-4 py-2.5 rounded-xl border text-xs font-bold transition-ui cursor-pointer ${
+                isDarkMode 
+                  ? 'border-white/[0.1] text-slate-300 hover:bg-white/[0.06]' 
+                  : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!selectedStockForAdjust}
+              className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-xs cursor-pointer shadow-lg shadow-[var(--accent-shadow)] transition-all active:scale-[0.97] ${
+                !selectedStockForAdjust
+                  ? 'opacity-40 cursor-not-allowed bg-slate-500 text-white'
+                  : 'bg-[var(--accent-primary)] hover:brightness-110 text-white hover:scale-[1.01]'
+              }`}
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              Confirm Adjustment
+            </button>
+          </div>
+        </form>
       </Modal>
 
       {/* Modal 2: Create Purchase Order */}

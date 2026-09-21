@@ -326,14 +326,14 @@ export const OrderStageDetailModal: React.FC<OrderStageDetailModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/50 backdrop-blur-2xl animate-fade-in overflow-y-auto">
       <div
-        className={`relative w-full max-w-5xl my-auto rounded-[28px] border transition-all duration-200 overflow-hidden ${
+        className={`relative w-full max-w-5xl h-[88vh] sm:h-[84vh] max-h-[860px] min-h-[580px] my-auto rounded-[28px] border transition-all duration-200 overflow-hidden flex flex-col ${
           isDarkMode
             ? 'bg-[#1c1c1e]/98 border-white/[0.12] text-slate-100 shadow-[0_32px_96px_rgba(0,0,0,0.85)]'
             : 'bg-[#fafafc]/98 border-black/[0.08] text-slate-900 shadow-[0_24px_80px_rgba(0,0,0,0.14)]'
         }`}
       >
         {/* Apple-styled Modal Header */}
-        <div className={`p-5 sm:p-6 border-b ${isDarkMode ? 'border-white/[0.06] bg-white/[0.02]' : 'border-slate-200/60 bg-white/60'} backdrop-blur-md`}>
+        <div className={`p-5 sm:p-6 border-b shrink-0 ${isDarkMode ? 'border-white/[0.06] bg-white/[0.02]' : 'border-slate-200/60 bg-white/60'} backdrop-blur-md`}>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3.5">
               <div className={`w-12 h-12 rounded-[18px] flex items-center justify-center shrink-0 transition-transform ${theme.iconBgClass}`}>
@@ -479,7 +479,7 @@ export const OrderStageDetailModal: React.FC<OrderStageDetailModalProps> = ({
         </div>
 
         {/* Modal Body Container */}
-        <div className="p-4 sm:p-6 max-h-[66vh] overflow-y-auto space-y-6">
+        <div className="flex-1 min-h-0 p-4 sm:p-6 overflow-y-auto overscroll-contain space-y-6 scrollbar-thin">
           {/* Structured Bento Box Stage Detailed Views */}
           <>
             {selectedStage === 'materials' && (
@@ -1058,7 +1058,7 @@ export const OrderStageDetailModal: React.FC<OrderStageDetailModalProps> = ({
         </div>
 
         {/* Apple-styled Modal Footer */}
-        <div className={`px-6 py-4 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+        <div className={`px-6 py-4 border-t shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
           isDarkMode ? 'bg-white/[0.02] border-white/[0.06]' : 'bg-slate-50/80 border-slate-200/70'
         }`}>
           <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">

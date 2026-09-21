@@ -27,11 +27,14 @@ import {
   Check,
   Printer,
   Copy,
-  FileText
+  FileText,
+  Layers
 } from 'lucide-react';
 import { PDIInspection } from '../../../types/console';
 import { triggerPDIFailure } from '../../../services/notificationService';
 import { useUrlModal } from '../../../hooks/useUrlModal';
+import { GroupedByPoList } from '../../common/GroupedByPoList';
+import { groupByPo, inspectionBucket } from '../../../utils/poGroups';
 import { printElementById } from '../../../utils/printDocument';
 
 interface PDIViewProps {
@@ -96,7 +99,18 @@ export const PDIView: React.FC<PDIViewProps> = ({
   // Page filters
   const [searchQuery, setSearchQuery] = useState(preselectedOrderPo || preselectedJobNo || '');
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'PASS' | 'PENDING' | 'FAIL'>('ALL');
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  // 'grouped' (one row per PO) is the default so a 50-line PO does not flood the queue; the choice is remembered.
+  const [viewMode, setViewModeState] = useState<'grouped' | 'table' | 'grid'>(() => {
+    try {
+      const saved = window.localStorage.getItem('pdiViewMode');
+      if (saved === 'grouped' || saved === 'table' || saved === 'grid') return saved;
+    } catch { /* storage unavailable: use default */ }
+    return 'grouped';
+  });
+  const setViewMode = (mode: 'grouped' | 'table' | 'grid') => {
+    setViewModeState(mode);
+    try { window.localStorage.setItem('pdiViewMode', mode); } catch { /* ignore */ }
+  };
 
   // Revoke CoC confirmation dialog state
   const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
@@ -400,6 +414,115 @@ export const PDIView: React.FC<PDIViewProps> = ({
   const pendingCount = activePdiItems.filter(p => p.pdiStatus === 'PENDING').length;
   const passedCount = activePdiItems.filter(p => p.pdiStatus === 'PASS').length;
   const failedCount = activePdiItems.filter(p => p.pdiStatus === 'FAIL').length;
+
+  // Grouped-by-PO view: aggregates cover every PDI of the PO, only the listed rows follow the filters.
+  const pdiFiltersActive = filterStatus !== 'ALL' || !!searchQuery.trim();
+  const filteredPdiSet = new Set(filteredPdi);
+  const pdiGroups = viewMode === 'grouped'
+    ? groupByPo<PDIInspection>(activePdiItems, {
+        getPo: p => p.orderPo,
+        bucketOf: p => inspectionBucket(p.pdiStatus),
+        matches: p => filteredPdiSet.has(p)
+      })
+    : [];
+
+  // Compact row for the grouped view, with the same actions as the table row: a passed lot opens
+  // re-inspection (+ CoC), a pending lot opens inspection, a failed lot offers "Re-Audit Failed".
+  const renderPdiGroupRow = (pdi: PDIInspection) => {
+    const isPassed = pdi.pdiStatus === 'PASS';
+    const isFailed = pdi.pdiStatus === 'FAIL';
+    const openRow = () => {
+      if (isPassed) {
+        handleOpenReinspect(pdi);
+        reinspectModal.open({ pdiNo: pdi.id, jobNo: pdi.jobNo, orderPo: pdi.orderPo });
+      } else {
+        handleOpenInspect(pdi);
+        inspectModal.open({ pdiNo: pdi.id, jobNo: pdi.jobNo, orderPo: pdi.orderPo });
+      }
+    };
+    return (
+      <div className={`flex flex-wrap items-center gap-3 px-5 py-2.5 transition-colors ${isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'}`}>
+        <button
+          type="button"
+          onClick={openRow}
+          className="group flex flex-1 min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-left cursor-pointer"
+        >
+          <div className="w-7 h-7 rounded-lg bg-[var(--accent-primary)]/15 text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/20 flex items-center justify-center shrink-0">
+            <Package className="w-3.5 h-3.5" />
+          </div>
+          <span className="font-mono font-bold text-xs text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)] w-[130px] shrink-0 truncate group-hover:underline">{pdi.jobNo}</span>
+          <span className={`min-w-0 flex-1 basis-[180px] text-xs truncate ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
+            <span className="font-mono font-bold">{pdi.partCode}</span>
+            {pdi.partDescription && <span className="text-slate-400"> — {pdi.partDescription}</span>}
+          </span>
+          <span className={`font-mono font-bold text-xs tabular-nums w-[70px] shrink-0 ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+            {pdi.qty} <span className="text-[10px] text-slate-400 uppercase font-medium">NOS</span>
+          </span>
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border shrink-0 ${
+            isPassed
+              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+              : isFailed
+              ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+              : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+          }`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${isPassed ? 'bg-emerald-500' : isFailed ? 'bg-rose-500' : 'bg-amber-500'}`} />
+            <span>{pdi.pdiStatus || 'PENDING'}</span>
+          </span>
+        </button>
+        <div className="w-[216px] flex items-center justify-end gap-2 shrink-0">
+          {isPassed ? (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  handleOpenReinspect(pdi);
+                  reinspectModal.open({ pdiNo: pdi.id, jobNo: pdi.jobNo, orderPo: pdi.orderPo });
+                }}
+                className="w-[128px] h-8 px-3 py-1.5 rounded-xl text-white text-xs font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 shadow-xs active:scale-[0.96] bg-amber-600 hover:bg-amber-500 shadow-amber-600/25 shrink-0"
+                title={`Re-Inspect PDI for ${pdi.jobNo}`}
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Re-Inspect</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedReport(pdi);
+                  certModal.open({ pdiNo: pdi.id, jobNo: pdi.jobNo, orderPo: pdi.orderPo });
+                }}
+                className={`w-[80px] h-8 px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 active:scale-[0.96] shadow-xs shrink-0 ${
+                  isDarkMode
+                    ? 'bg-white/[0.06] border-white/10 text-slate-200 hover:bg-[#5B75F8]/20 hover:border-[#5B75F8]/50 hover:text-blue-300'
+                    : 'bg-white border-slate-200 text-slate-700 hover:bg-blue-50 hover:border-[#5B75F8]/60 hover:text-[#5B75F8]'
+                }`}
+                title="View Compliance Certificate"
+              >
+                <FileCheck className="w-3.5 h-3.5" />
+                <span>CoC</span>
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                handleOpenInspect(pdi);
+                inspectModal.open({ pdiNo: pdi.id, jobNo: pdi.jobNo, orderPo: pdi.orderPo });
+              }}
+              className={`w-full h-8 px-4 py-1.5 rounded-xl text-white text-xs font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 shadow-xs active:scale-[0.96] ${
+                isFailed
+                  ? 'bg-rose-600 hover:bg-rose-500 shadow-rose-600/25'
+                  : 'bg-[#5B75F8] hover:bg-[#4E67F0] shadow-[#5B75F8]/25'
+              }`}
+              title={isFailed ? `Re-Audit Failed PDI for ${pdi.jobNo}` : `Inspect PDI for ${pdi.jobNo}`}
+            >
+              {isFailed ? <RotateCcw className="w-3.5 h-3.5" /> : <ClipboardCheck className="w-3.5 h-3.5" />}
+              <span>{isFailed ? 'Re-Audit Failed' : 'Inspect PDI'}</span>
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
   const totalPassedQty = activePdiItems.filter(p => p.pdiStatus === 'PASS').reduce((acc, p) => acc + (p.acceptedQty || p.qty || 0), 0);
   const complianceRate = totalCount > 0 ? Math.round((passedCount / totalCount) * 100) : 100;
 
@@ -497,7 +620,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
                 setIsGlobalAuditOpen(true);
                 setGlobalAuditSearch('');
               }}
-              className="flex h-10 items-center gap-2.5 px-4 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-[#4E67F0] hover:to-indigo-700 text-white text-xs font-bold shadow-md shadow-[#5B75F8]/25 cursor-pointer transition-all active:scale-[0.96]"
+              className="flex h-10 items-center gap-2.5 px-4 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-white text-xs font-bold shadow-md shadow-[var(--accent-primary)]/25 cursor-pointer transition-all active:scale-[0.96]"
               title="Open Global PDI Audit Box"
             >
               <ClipboardCheck className="w-4 h-4 stroke-[2.2]" />
@@ -650,6 +773,20 @@ export const PDIView: React.FC<PDIViewProps> = ({
           }`}>
             <button
               type="button"
+              onClick={() => setViewMode('grouped')}
+              className={`p-1.5 rounded-lg text-xs transition-all cursor-pointer ${
+                viewMode === 'grouped'
+                  ? isDarkMode ? 'bg-white/15 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
+                  : isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+              }`}
+              title="Group by PO"
+              aria-label="Group by PO"
+              aria-pressed={viewMode === 'grouped'}
+            >
+              <Layers className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
               onClick={() => setViewMode('table')}
               className={`p-1.5 rounded-lg text-xs transition-all cursor-pointer ${
                 viewMode === 'table'
@@ -679,6 +816,20 @@ export const PDIView: React.FC<PDIViewProps> = ({
       {/* ========================================================================= */}
       {/* ── MOBILE CARD LIST (Viewport < md) ──                                    */}
       {/* ========================================================================= */}
+      {viewMode === 'grouped' && (
+        <GroupedByPoList
+          groups={pdiGroups}
+          isDarkMode={isDarkMode}
+          getKey={(p: PDIInspection) => p.id}
+          bucketOf={(p: PDIInspection) => inspectionBucket(p.pdiStatus)}
+          renderRow={renderPdiGroupRow}
+          rejectedLabel="failed"
+          filtersActive={pdiFiltersActive}
+          emptyTitle="No PDI inspections matching your query."
+        />
+      )}
+
+      {viewMode !== 'grouped' && (
       <div className="md:hidden space-y-3">
         {filteredPdi.length === 0 ? (
           <div className={`p-8 text-center rounded-2xl border text-xs ${
@@ -800,6 +951,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
           })
         )}
       </div>
+      )}
 
       {/* ========================================================================= */}
       {/* ── DESKTOP PDI VIEW: TABLE OR INSPECTOR CARD GRID (Viewport >= md) ──      */}
@@ -980,7 +1132,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
             </table>
           </div>
         </div>
-      ) : (
+      ) : viewMode === 'grid' ? (
         /* Grid Inspector Cards View */
         <div className="hidden md:grid grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredPdi.length === 0 ? (
@@ -1111,7 +1263,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
             })
           )}
         </div>
-      )}
+      ) : null}
 
       {/* ========================================================================= */}
       {/* ── GLOBAL PDI AUDIT BOX MODAL (Apple Sheet Presentation) ──               */}
@@ -1263,7 +1415,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
                           handleOpenInspect(item);
                           inspectModal.open({ pdiNo: item.id, jobNo: item.jobNo, orderPo: item.orderPo });
                         }}
-                        className="w-full sm:w-auto px-4 py-2 rounded-xl bg-[#5B75F8] hover:bg-[#4E67F0] text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-[#5B75F8]/25 cursor-pointer transition-all active:scale-[0.96]"
+                        className="w-full sm:w-auto px-4 py-2 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-[var(--accent-primary)]/25 cursor-pointer transition-all active:scale-[0.96]"
                       >
                         <ClipboardCheck className="w-3.5 h-3.5" />
                         <span>Audit This JC</span>
@@ -1586,7 +1738,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
                   type="button"
                   onClick={() => handleInspectSubmit('PASS')}
                   disabled={isSubmitting || acceptedQty <= 0}
-                  className="flex-1 sm:flex-initial px-6 py-2.5 rounded-xl bg-[#5B75F8] hover:bg-[#4E67F0] text-white font-extrabold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-[#5B75F8]/25 transition-all active:scale-[0.96] disabled:opacity-50"
+                  className="flex-1 sm:flex-initial px-6 py-2.5 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-white font-extrabold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-[var(--accent-primary)]/25 transition-all active:scale-[0.96] disabled:opacity-50"
                 >
                   <ShieldCheck className="w-4 h-4" />
                   <span>{isSubmitting ? 'Processing...' : 'Complete PDI (Pass & Release)'}</span>

@@ -29,7 +29,10 @@ import {
   Landmark, 
   BadgePercent, 
   Check,
-  Printer
+  Printer,
+  Wallet,
+  Smartphone,
+  Zap
 } from 'lucide-react';
 import { 
   CustomerInvoice, 
@@ -822,7 +825,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                   {isInvoiceSettled(inv) ? (
                     <button
                       onClick={() => handleOpenViewInvoiceModal(inv)}
-                      className="flex-1 min-h-[38px] py-1.5 px-4 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-[0_4px_12px_var(--accent-shadow)] transition-ui cursor-pointer active:scale-[0.96]"
+                      className="flex-1 min-h-[36px] py-1.5 px-4 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-[0_2px_8px_var(--accent-shadow)] transition-all cursor-pointer active:scale-[0.96] whitespace-nowrap"
                     >
                       <FileText className="w-3.5 h-3.5" />
                       <span>View Invoice</span>
@@ -832,7 +835,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                       {inv.status !== 'DRAFT' && canPerformCta('RECORD_PAYMENT') && (
                         <button
                           onClick={() => handleOpenPaymentModal(inv)}
-                          className="flex-1 min-h-[38px] py-1.5 px-4 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-[0_4px_12px_var(--accent-shadow)] transition-ui cursor-pointer active:scale-[0.96]"
+                          className="flex-1 min-h-[36px] py-1.5 px-3.5 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-[0_2px_8px_var(--accent-shadow)] transition-all cursor-pointer active:scale-[0.96] whitespace-nowrap"
                         >
                           <CreditCard className="w-3.5 h-3.5" />
                           <span>Record Payment</span>
@@ -840,10 +843,10 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                       )}
                       <button
                         onClick={() => handleOpenViewInvoiceModal(inv)}
-                        className={`min-h-[38px] px-3 py-1.5 rounded-xl border text-xs font-bold transition-ui cursor-pointer inline-flex items-center gap-1.5 active:scale-[0.96] shadow-xs ${
+                        className={`min-h-[36px] px-3.5 py-1.5 rounded-xl border text-xs font-medium transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 active:scale-[0.96] shadow-2xs whitespace-nowrap ${
                           isDarkMode 
-                            ? 'border-[var(--accent-primary)]/30 bg-[var(--accent-primary)]/10 text-[var(--accent-text-dark)] hover:bg-[var(--accent-primary)]/20' 
-                            : 'border-[var(--accent-primary)]/30 bg-[var(--accent-primary)]/5 text-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/10'
+                            ? 'border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/[0.08] hover:text-white' 
+                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900 shadow-2xs'
                         }`}
                         title="View Invoice"
                       >
@@ -891,7 +894,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                 <th className="py-4 px-5 text-right">Paid Amount</th>
                 <th className="py-4 px-5 text-right">Balance Due</th>
                 <th className="py-4 px-5 text-center">Status</th>
-                <th className="py-4 px-5 text-center">Action</th>
+                <th className="py-4 px-5 text-center whitespace-nowrap w-[240px]">Action</th>
               </tr>
             </thead>
             <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
@@ -976,11 +979,11 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                         <span>{inv.status}</span>
                       </span>
                     </td>
-                    <td className="py-4 px-5 text-center" onClick={(e) => e.stopPropagation()}>
-                      <div className="w-[228px] mx-auto flex items-center justify-center gap-2">
+                    <td className="py-4 px-5 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      <div className="w-[220px] mx-auto flex items-center justify-center gap-2">
                         {inv.status === 'DRAFT' ? (
                           <>
-                            {onIssueInvoice && (
+                            {onIssueInvoice ? (
                               <button
                                 type="button"
                                 onClick={async () => {
@@ -988,61 +991,94 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                                   setActionSuccessMsg(`Invoice ${inv.invoiceNo} issued successfully.`);
                                   setTimeout(() => setActionSuccessMsg(null), 4000);
                                 }}
-                                className="w-[136px] h-8 px-3 py-1.5 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 text-blue-500 dark:text-blue-400 border border-blue-500/30 text-xs font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 active:scale-[0.96] shadow-xs shrink-0"
+                                className="flex-1 h-8 px-2.5 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 text-blue-500 dark:text-blue-400 border border-blue-500/30 text-xs font-semibold whitespace-nowrap transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 active:scale-[0.96] shadow-2xs"
                                 title={`Issue Invoice ${inv.invoiceNo}`}
                               >
-                                <Send className="w-3.5 h-3.5" />
+                                <Send className="w-3.5 h-3.5 shrink-0" />
                                 <span>Issue</span>
                               </button>
+                            ) : (
+                              <div className={`flex-1 h-8 px-2.5 rounded-xl border text-xs font-semibold inline-flex items-center justify-center gap-1.5 select-none font-mono ${
+                                isDarkMode ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-700'
+                              }`}>
+                                <Clock className="w-3.5 h-3.5 shrink-0" />
+                                <span>Draft</span>
+                              </div>
                             )}
                             <button
                               type="button"
                               onClick={() => handleOpenViewInvoiceModal(inv)}
-                              className={`w-[82px] h-8 px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 active:scale-[0.96] shadow-xs shrink-0 ${
+                              className={`w-[72px] h-8 px-2 rounded-xl border text-xs font-medium whitespace-nowrap transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 active:scale-[0.96] shadow-2xs shrink-0 ${
                                 isDarkMode 
-                                  ? 'border-white/10 bg-white/[0.06] text-slate-200 hover:bg-[#5B75F8]/20 hover:border-[#5B75F8]/50 hover:text-blue-300' 
-                                  : 'border-slate-200 bg-white text-slate-700 hover:bg-blue-50 hover:border-[#5B75F8]/60 hover:text-[#5B75F8]'
+                                  ? 'border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/[0.08] hover:text-white' 
+                                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900 shadow-2xs'
                               }`}
                               title={`View Invoice ${inv.invoiceNo}`}
                             >
-                              <FileText className="w-3.5 h-3.5" />
+                              <FileText className="w-3.5 h-3.5 shrink-0" />
                               <span>View</span>
                             </button>
                           </>
                         ) : isInvoiceSettled(inv) ? (
-                          <button
-                            type="button"
-                            onClick={() => handleOpenViewInvoiceModal(inv)}
-                            className="w-[180px] h-8 px-3.5 py-1.5 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-white text-xs font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 shadow-[0_4px_12px_var(--accent-shadow)] active:scale-[0.96] shrink-0"
-                            title="View full Tax Invoice & Print"
-                          >
-                            <FileText className="w-3.5 h-3.5" />
-                            <span>View Invoice</span>
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenViewInvoiceModal(inv)}
+                              className={`flex-1 h-8 px-2.5 rounded-xl border text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-[0.96] shadow-2xs ${
+                                isDarkMode 
+                                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/15' 
+                                  : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100/80'
+                              }`}
+                              title="Invoice fully paid • View invoice details"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-500 dark:text-emerald-400" />
+                              <span>Realized</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenViewInvoiceModal(inv)}
+                              className={`w-[72px] h-8 px-2 rounded-xl border text-xs font-medium whitespace-nowrap transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 active:scale-[0.96] shadow-2xs shrink-0 ${
+                                isDarkMode 
+                                  ? 'border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/[0.08] hover:text-white' 
+                                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900 shadow-2xs'
+                              }`}
+                              title={`View Invoice ${inv.invoiceNo}`}
+                            >
+                              <FileText className="w-3.5 h-3.5 shrink-0" />
+                              <span>View</span>
+                            </button>
+                          </>
                         ) : (
                           <>
-                            {canPerformCta('RECORD_PAYMENT') && (
+                            {canPerformCta('RECORD_PAYMENT') ? (
                               <button
                                 type="button"
                                 onClick={() => handleOpenPaymentModal(inv)}
-                                className="w-[136px] h-8 px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-white text-xs font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 shadow-[0_4px_12px_var(--accent-shadow)] active:scale-[0.96] shrink-0"
+                                className="flex-1 h-8 px-2.5 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-white text-xs font-semibold whitespace-nowrap transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 shadow-[0_2px_8px_var(--accent-shadow)] active:scale-[0.96]"
                                 title={`Record Payment for ${inv.invoiceNo}`}
                               >
-                                <CreditCard className="w-3.5 h-3.5" />
+                                <CreditCard className="w-3.5 h-3.5 shrink-0" />
                                 <span>Record Payment</span>
                               </button>
+                            ) : (
+                              <div className={`flex-1 h-8 px-2.5 rounded-xl border text-xs font-semibold inline-flex items-center justify-center gap-1.5 select-none font-mono ${
+                                isDarkMode ? 'bg-white/[0.03] border-white/[0.08] text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-500'
+                              }`}>
+                                <Lock className="w-3.5 h-3.5 shrink-0" />
+                                <span>Pending</span>
+                              </div>
                             )}
                             <button
                               type="button"
                               onClick={() => handleOpenViewInvoiceModal(inv)}
-                              className={`w-[82px] h-8 px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 active:scale-[0.96] shadow-xs shrink-0 ${
+                              className={`w-[72px] h-8 px-2 rounded-xl border text-xs font-medium whitespace-nowrap transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 active:scale-[0.96] shadow-2xs shrink-0 ${
                                 isDarkMode 
-                                  ? 'border-white/10 bg-white/[0.06] text-slate-200 hover:bg-[#5B75F8]/20 hover:border-[#5B75F8]/50 hover:text-blue-300' 
-                                  : 'border-slate-200 bg-white text-slate-700 hover:bg-blue-50 hover:border-[#5B75F8]/60 hover:text-[#5B75F8]'
+                                  ? 'border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/[0.08] hover:text-white' 
+                                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900 shadow-2xs'
                               }`}
                               title={`View Invoice ${inv.invoiceNo}`}
                             >
-                              <FileText className="w-3.5 h-3.5" />
+                              <FileText className="w-3.5 h-3.5 shrink-0" />
                               <span>View</span>
                             </button>
                           </>
@@ -1380,15 +1416,20 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
       <Modal
         isOpen={paymentModal.isOpen && Boolean(selectedInvoiceForPayment)}
         onClose={() => !isSubmittingPayment && paymentModal.close()}
-        maxWidth="xl"
+        maxWidth="2xl"
         isDarkMode={isDarkMode}
-        icon={<CreditCard className="w-5 h-5" />}
+        icon={<Wallet className="w-5 h-5 text-[var(--accent-primary)]" />}
         title="Record Payment Realization"
         subtitle={
           selectedInvoiceForPayment ? (
-            <span className="font-mono text-xs text-slate-400">
-              {selectedInvoiceForPayment.invoiceNo} • {selectedInvoiceForPayment.customerName}
-            </span>
+            <div className="flex flex-wrap items-center gap-2 mt-0.5">
+              <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-lg bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] border border-[var(--accent-primary)]/20 shadow-2xs">
+                {selectedInvoiceForPayment.invoiceNo}
+              </span>
+              <span className="text-xs text-slate-400 font-medium truncate max-w-[280px]">
+                {selectedInvoiceForPayment.customerName}
+              </span>
+            </div>
           ) : undefined
         }
       >
@@ -1398,63 +1439,143 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
           const balance = Number(selectedInvoiceForPayment.balanceAmount !== undefined ? selectedInvoiceForPayment.balanceAmount : total);
           const newBalance = Math.max(0, balance - payAmount);
           const willBeFullyPaid = newBalance <= 0;
+          const currentPercent = total > 0 ? Math.min(100, Math.round((alreadyPaid / total) * 100)) : 0;
+          const projectedPercent = total > 0 ? Math.min(100, Math.round(((alreadyPaid + payAmount) / total) * 100)) : 0;
+          const activeSettlePercent = Math.max(0, Math.min(100 - currentPercent, projectedPercent - currentPercent));
+
+          const paymentModes = [
+            { id: 'NEFT_RTGS', label: 'NEFT / RTGS', badge: 'RBI Clearing', icon: Landmark },
+            { id: 'UPI', label: 'Corporate UPI', badge: 'Instant VPA', icon: Smartphone },
+            { id: 'IMPS', label: 'Instant IMPS', badge: '24x7 Realtime', icon: Zap },
+            { id: 'CHEQUE', label: 'Cheque / DD', badge: 'Bank Voucher', icon: Receipt },
+            { id: 'BANK_TRANSFER', label: 'Direct Transfer', badge: 'Ledger Credit', icon: Building2 },
+            { id: 'CASH', label: 'Cash Deposit', badge: 'Direct Desk', icon: DollarSign },
+          ];
 
           return (
             <div className="space-y-4 text-xs font-sans">
               {paymentModalError && (
-                <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-center gap-2.5">
+                <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-center gap-2.5 shadow-2xs">
                   <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
                   <span className="font-medium">{paymentModalError}</span>
                 </div>
               )}
 
-              {/* Commercial Summary Apple Inset Box */}
-              <div className={`p-4 rounded-2xl border space-y-3 ${
-                isDarkMode ? 'bg-black/30 border-white/[0.08]' : 'bg-slate-50 border-slate-200'
+              {/* 1. Commercial Summary Apple Bento Card */}
+              <div className={`relative overflow-hidden rounded-2xl p-4 sm:p-5 border transition-all ${
+                isDarkMode
+                  ? 'bg-gradient-to-br from-white/[0.05] via-white/[0.02] to-transparent border-white/[0.12] shadow-inner'
+                  : 'bg-gradient-to-br from-slate-50 via-white to-slate-100/70 border-slate-200/90 shadow-2xs'
               }`}>
-                <div className="grid grid-cols-3 gap-2.5 text-center font-mono">
-                  <div className={`p-3 rounded-xl border ${isDarkMode ? 'bg-white/[0.03] border-white/[0.08]' : 'bg-white border-slate-200 shadow-2xs'}`}>
-                    <span className="text-[9px] uppercase font-bold tracking-wider block text-slate-400">Total Invoice</span>
-                    <span className="text-xs sm:text-sm font-extrabold mt-1 block truncate text-slate-900 dark:text-white">
+                {/* Ambient radial lighting glow */}
+                <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full blur-3xl pointer-events-none bg-[var(--accent-primary)]/10" />
+                <div className="absolute -bottom-12 -left-12 w-40 h-40 rounded-full blur-3xl pointer-events-none bg-emerald-500/10" />
+
+                {/* Top Badge Strip */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-3.5 border-b border-white/[0.08] dark:border-white/[0.08] text-[11px] font-mono">
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2 py-0.5 rounded-md border text-[10px] font-semibold ${
+                      isDarkMode ? 'bg-white/5 border-white/10 text-slate-300' : 'bg-white border-slate-200 text-slate-700'
+                    }`}>
+                      PO: <strong>{selectedInvoiceForPayment.orderPo || 'Direct'}</strong>
+                    </span>
+                    {selectedInvoiceForPayment.challanNo && (
+                      <span className={`px-2 py-0.5 rounded-md border text-[10px] font-semibold ${
+                        isDarkMode ? 'bg-cyan-500/10 border-cyan-500/20 text-cyan-300' : 'bg-cyan-50 border-cyan-200 text-cyan-700'
+                      }`}>
+                        Challan: <strong>{selectedInvoiceForPayment.challanNo}</strong>
+                      </span>
+                    )}
+                  </div>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                    currentPercent === 100
+                      ? isDarkMode ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300' : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                      : currentPercent > 0
+                        ? isDarkMode ? 'bg-amber-500/15 border-amber-500/30 text-amber-300' : 'bg-amber-50 border-amber-200 text-amber-700'
+                        : isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-500'
+                  }`}>
+                    {currentPercent === 100 ? 'Fully Cleared' : currentPercent > 0 ? `${currentPercent}% Realized` : 'Uncollected'}
+                  </span>
+                </div>
+
+                {/* Bento Metrics 3-Col Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mt-3.5 font-mono">
+                  <div className={`p-3 rounded-xl border flex flex-col justify-between ${
+                    isDarkMode ? 'bg-black/40 border-white/[0.08]' : 'bg-white border-slate-200/90 shadow-2xs'
+                  }`}>
+                    <div className="flex items-center justify-between text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                      <span>Total Invoice</span>
+                      <Receipt className="w-3.5 h-3.5 opacity-60" />
+                    </div>
+                    <div className="text-sm sm:text-base font-extrabold font-mono mt-1.5 truncate text-slate-900 dark:text-white">
                       ₹{total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                    </span>
+                    </div>
                   </div>
-                  <div className={`p-3 rounded-xl border ${isDarkMode ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-emerald-50/80 border-emerald-200 shadow-2xs'}`}>
-                    <span className="text-[9px] uppercase font-bold tracking-wider block text-emerald-600 dark:text-emerald-400">Realized</span>
-                    <span className="text-xs sm:text-sm font-extrabold mt-1 block truncate text-emerald-600 dark:text-emerald-400">
+
+                  <div className={`p-3 rounded-xl border flex flex-col justify-between ${
+                    isDarkMode ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-emerald-50/70 border-emerald-200/80 shadow-2xs'
+                  }`}>
+                    <div className="flex items-center justify-between text-[10px] uppercase font-bold tracking-wider text-emerald-600 dark:text-emerald-400">
+                      <span>Realized to Date</span>
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="text-sm sm:text-base font-extrabold font-mono mt-1.5 truncate text-emerald-600 dark:text-emerald-400">
                       ₹{alreadyPaid.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                    </span>
+                    </div>
                   </div>
-                  <div className={`p-3 rounded-xl border ${isDarkMode ? 'bg-amber-500/10 border-amber-500/20' : 'bg-amber-50/80 border-amber-200 shadow-2xs'}`}>
-                    <span className="text-[9px] uppercase font-bold tracking-wider block text-amber-600 dark:text-amber-400">Pending Due</span>
-                    <span className="text-xs sm:text-sm font-extrabold mt-1 block truncate text-amber-600 dark:text-amber-400">
+
+                  <div className={`p-3 rounded-xl border flex flex-col justify-between ${
+                    isDarkMode ? 'bg-amber-500/10 border-amber-500/20' : 'bg-amber-50/70 border-amber-200/80 shadow-2xs'
+                  }`}>
+                    <div className="flex items-center justify-between text-[10px] uppercase font-bold tracking-wider text-amber-600 dark:text-amber-400">
+                      <span>Pending Due</span>
+                      <Clock className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="text-sm sm:text-base font-extrabold font-mono mt-1.5 truncate text-amber-600 dark:text-amber-400">
                       ₹{balance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                    </span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="pt-2.5 border-t border-slate-200 dark:border-white/[0.08] flex flex-wrap items-center justify-between text-[11px] font-mono text-slate-500 dark:text-slate-400">
-                  <span>PO Reference: <strong className="text-slate-900 dark:text-white">{selectedInvoiceForPayment.orderPo || 'Direct'}</strong></span>
-                  {selectedInvoiceForPayment.challanNo && (
-                    <span>Challan: <strong className="text-cyan-600 dark:text-cyan-400">{selectedInvoiceForPayment.challanNo}</strong></span>
-                  )}
+                {/* Apple Multi-Segment Progress Track */}
+                <div className="mt-3.5 pt-3 border-t border-white/[0.08] dark:border-white/[0.08] space-y-1.5">
+                  <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
+                    <span>Realization Progress</span>
+                    <span>{projectedPercent}% of ₹{total.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="w-full h-2 rounded-full overflow-hidden flex bg-black/20 dark:bg-white/10">
+                    <div
+                      className="h-full bg-emerald-500 transition-all duration-300"
+                      style={{ width: `${currentPercent}%` }}
+                      title={`Realized: ₹${alreadyPaid.toLocaleString('en-IN')} (${currentPercent}%)`}
+                    />
+                    <div
+                      className="h-full bg-[var(--accent-primary)] transition-all duration-300"
+                      style={{ width: `${activeSettlePercent}%` }}
+                      title={`Now Settling: ₹${payAmount.toLocaleString('en-IN')} (${activeSettlePercent}%)`}
+                    />
+                  </div>
                 </div>
               </div>
 
               {/* Form Controls */}
-              <form id="payment-form" onSubmit={handlePaymentSubmit} className="space-y-3.5">
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
+              <form id="payment-form" onSubmit={handlePaymentSubmit} className="space-y-4">
+                
+                {/* 2. Hero Payment Realization Amount Card */}
+                <div className={`p-4 rounded-2xl border space-y-2.5 transition-all ${
+                  isDarkMode ? 'bg-white/[0.03] border-white/[0.10]' : 'bg-slate-50 border-slate-200'
+                }`}>
+                  <div className="flex items-center justify-between">
                     <label className={`block text-xs font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                       Payment Amount (₹) *
                     </label>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <button
                         type="button"
                         onClick={() => setPayAmount(balance)}
                         className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer active:scale-95 ${
                           payAmount === balance 
-                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
+                            ? 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)] shadow-2xs'
                             : isDarkMode 
                               ? 'bg-white/[0.05] text-slate-300 border-white/10 hover:bg-white/10'
                               : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100 shadow-2xs'
@@ -1462,13 +1583,28 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                       >
                         ⚡ Full (₹{balance.toLocaleString('en-IN')})
                       </button>
+                      {balance > 500 && (
+                        <button
+                          type="button"
+                          onClick={() => setPayAmount(Math.round(balance * 0.75))}
+                          className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer active:scale-95 ${
+                            payAmount === Math.round(balance * 0.75)
+                              ? 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)] shadow-2xs'
+                              : isDarkMode 
+                                ? 'bg-white/[0.05] text-slate-300 border-white/10 hover:bg-white/10'
+                                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100 shadow-2xs'
+                          }`}
+                        >
+                          75%
+                        </button>
+                      )}
                       {balance > 100 && (
                         <button
                           type="button"
                           onClick={() => setPayAmount(Math.round(balance / 2))}
                           className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer active:scale-95 ${
                             payAmount === Math.round(balance / 2)
-                              ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
+                              ? 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)] shadow-2xs'
                               : isDarkMode 
                                 ? 'bg-white/[0.05] text-slate-300 border-white/10 hover:bg-white/10'
                                 : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100 shadow-2xs'
@@ -1477,112 +1613,164 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                           50% Partial
                         </button>
                       )}
+                      {balance > 1000 && (
+                        <button
+                          type="button"
+                          onClick={() => setPayAmount(Math.round(balance * 0.25))}
+                          className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer active:scale-95 ${
+                            payAmount === Math.round(balance * 0.25)
+                              ? 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)] shadow-2xs'
+                              : isDarkMode 
+                                ? 'bg-white/[0.05] text-slate-300 border-white/10 hover:bg-white/10'
+                                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100 shadow-2xs'
+                          }`}
+                        >
+                          25%
+                        </button>
+                      )}
                     </div>
                   </div>
-                  <input
-                    type="number"
-                    min={1}
-                    max={balance}
-                    step="0.01"
-                    value={payAmount || ''}
-                    onChange={(e) => setPayAmount(parseFloat(e.target.value) || 0)}
-                    className={`${inputClass} font-mono font-bold text-sm text-emerald-500 dark:text-emerald-400`}
-                    required
-                  />
-                </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                      Payment Instrument Mode *
-                    </label>
-                    <select
-                      value={payMode}
-                      onChange={(e) => setPayMode(e.target.value)}
-                      className={`${inputClass} cursor-pointer`}
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-mono font-bold text-xl sm:text-2xl text-slate-400 pointer-events-none select-none">
+                      ₹
+                    </span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={balance}
+                      step="0.01"
+                      value={payAmount || ''}
+                      onChange={(e) => setPayAmount(parseFloat(e.target.value) || 0)}
+                      className={`w-full pl-10 pr-4 py-3 rounded-xl border font-mono font-black text-xl sm:text-2xl outline-none transition-all ${
+                        isDarkMode
+                          ? 'bg-black/50 border-white/[0.12] text-emerald-400 focus:border-[var(--accent-primary)] focus:ring-4 focus:ring-[var(--accent-primary)]/15'
+                          : 'bg-white border-slate-300 text-emerald-600 focus:border-[var(--accent-primary)] focus:ring-4 focus:ring-[var(--accent-primary)]/15 shadow-2xs'
+                      }`}
+                      placeholder="0.00"
                       required
-                    >
-                      <option value="NEFT_RTGS">NEFT / RTGS Bank Transfer</option>
-                      <option value="UPI">UPI / Digital Remittance</option>
-                      <option value="CHEQUE">Bank Cheque / DD</option>
-                      <option value="IMPS">IMPS Instant Transfer</option>
-                      <option value="BANK_TRANSFER">Direct Account Transfer</option>
-                      <option value="CASH">Cash Deposit</option>
-                    </select>
+                    />
                   </div>
 
+                  <div className="flex items-center justify-between text-[11px] font-mono px-1">
+                    <span className="text-slate-400">
+                      Allowable limit: <strong>₹{balance.toLocaleString('en-IN')}</strong>
+                    </span>
+                    {payAmount > balance && (
+                      <span className="text-rose-400 font-bold">
+                        Exceeds balance by ₹{(payAmount - balance).toLocaleString('en-IN')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* 3. Payment Instrument Segmented Grid */}
+                <div>
+                  <label className={`block text-xs font-semibold mb-2 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Payment Instrument Mode *
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {paymentModes.map((mode) => {
+                      const isSelected = payMode === mode.id;
+                      const ModeIcon = mode.icon;
+                      return (
+                        <button
+                          key={mode.id}
+                          type="button"
+                          onClick={() => setPayMode(mode.id)}
+                          className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer relative active:scale-[0.98] ${
+                            isSelected
+                              ? isDarkMode
+                                ? 'bg-[var(--accent-primary)]/15 border-[var(--accent-primary)] text-white ring-1 ring-[var(--accent-primary)]/30 shadow-[0_4px_16px_var(--accent-shadow)]'
+                                : 'bg-[var(--accent-primary)]/10 border-[var(--accent-primary)] text-slate-900 ring-1 ring-[var(--accent-primary)]/30 shadow-2xs'
+                              : isDarkMode
+                                ? 'bg-white/[0.02] border-white/[0.08] hover:border-white/20 text-slate-300 hover:bg-white/[0.04]'
+                                : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700 hover:bg-slate-50 shadow-2xs'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-1.5">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className={`p-1.5 rounded-lg border shrink-0 ${
+                                isSelected
+                                  ? 'bg-[var(--accent-primary)] text-white border-transparent'
+                                  : isDarkMode
+                                    ? 'bg-white/5 border-white/10 text-slate-400'
+                                    : 'bg-slate-100 border-slate-200 text-slate-600'
+                              }`}>
+                                <ModeIcon className="w-3.5 h-3.5" />
+                              </div>
+                              <div className="min-w-0">
+                                <span className="font-bold text-[11px] block truncate leading-tight">{mode.label}</span>
+                                <span className="text-[9px] font-mono opacity-70 block truncate">{mode.badge}</span>
+                              </div>
+                            </div>
+                            {isSelected && (
+                              <div className="w-4 h-4 rounded-full bg-[var(--accent-primary)] text-white flex items-center justify-center shrink-0">
+                                <Check className="w-2.5 h-2.5 stroke-[3]" />
+                              </div>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 4. Date & UTR Reference 2-Col Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                       Realization Date *
                     </label>
+                    <div className="relative">
+                      <Calendar className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                      <input
+                        type="date"
+                        value={payDate}
+                        onChange={(e) => setPayDate(e.target.value)}
+                        className={`${inputClass} pl-10 font-mono`}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                      UTR / Transaction Ref # *
+                    </label>
+                    <div className="relative">
+                      <Hash className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                      <input
+                        type="text"
+                        placeholder="e.g. UTR-HDFC98234723"
+                        value={payRefNo}
+                        onChange={(e) => setPayRefNo(e.target.value)}
+                        className={`${inputClass} pl-10 font-mono`}
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 5. Settlement Remarks */}
+                <div>
+                  <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Settlement Remarks / Bank Ledger Note
+                  </label>
+                  <div className="relative">
+                    <FileText className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                     <input
-                      type="date"
-                      value={payDate}
-                      onChange={(e) => setPayDate(e.target.value)}
-                      className={`${inputClass} font-mono`}
-                      required
+                      type="text"
+                      placeholder="e.g. HDFC Current A/c • Verified against bank statement"
+                      value={payNotes}
+                      onChange={(e) => setPayNotes(e.target.value)}
+                      className={`${inputClass} pl-10`}
                     />
                   </div>
                 </div>
-
-                <div>
-                  <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                    UTR / Transaction Ref # *
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. UTR-HDFC98234723 or CHQ-004521"
-                    value={payRefNo}
-                    onChange={(e) => setPayRefNo(e.target.value)}
-                    className={`${inputClass} font-mono`}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                    Settlement Remarks
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. HDFC Current A/c • Verified with Bank Statement"
-                    value={payNotes}
-                    onChange={(e) => setPayNotes(e.target.value)}
-                    className={inputClass}
-                  />
-                </div>
-
-                {/* Live Settlement Outcome Preview */}
-                <div className={`p-3.5 rounded-2xl border flex items-center justify-between font-mono text-xs ${
-                  willBeFullyPaid 
-                    ? isDarkMode 
-                      ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300' 
-                      : 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                    : isDarkMode 
-                      ? 'bg-black/30 border-white/[0.08] text-slate-300' 
-                      : 'bg-slate-50 border-slate-200 text-slate-700'
-                }`}>
-                  <div className="flex items-center gap-2">
-                    {willBeFullyPaid 
-                      ? <CheckCircle2 className={`w-4 h-4 ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`} /> 
-                      : <Clock className={`w-4 h-4 ${isDarkMode ? 'text-amber-400' : 'text-amber-600'}`} />}
-                    <span>Remaining Due: <strong className="text-slate-900 dark:text-white">₹{newBalance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</strong></span>
-                  </div>
-                  <span className={`px-2.5 py-0.5 rounded-xl font-bold text-[10px] uppercase border ${
-                    willBeFullyPaid 
-                      ? isDarkMode 
-                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
-                        : 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                      : isDarkMode 
-                        ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' 
-                        : 'bg-amber-100 text-amber-800 border-amber-300'
-                  }`}>
-                    {willBeFullyPaid ? 'Fully Paid' : 'Partial Realization'}
-                  </span>
-                </div>
               </form>
 
-              {/* Actions */}
+              {/* 7. Modal Actions Footer */}
               <div className={`pt-4 border-t flex items-center justify-end gap-2.5 font-sans ${
                 isDarkMode ? 'border-white/[0.08]' : 'border-slate-200'
               }`}>
@@ -1590,7 +1778,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                   type="button"
                   onClick={() => paymentModal.close()}
                   disabled={isSubmittingPayment}
-                  className={`px-4 py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer active:scale-95 ${
+                  className={`px-4 py-2.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer active:scale-95 ${
                     isDarkMode ? 'border-white/10 text-slate-300 hover:bg-white/10' : 'border-slate-200 text-slate-700 hover:bg-slate-100'
                   }`}
                 >
@@ -1601,10 +1789,10 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                     type="submit"
                     form="payment-form"
                     disabled={isSubmittingPayment || payAmount <= 0 || payAmount > balance}
-                    className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.96] text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50 transition-ui"
+                    className="px-5 py-2.5 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] active:scale-[0.97] text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-[0_4px_16px_var(--accent-shadow)] disabled:opacity-50 transition-all"
                   >
-                    <CreditCard className="w-3.5 h-3.5" />
-                    <span>{isSubmittingPayment ? 'Recording...' : `Settle ₹${payAmount.toLocaleString('en-IN')}`}</span>
+                    <CreditCard className="w-4 h-4" />
+                    <span>{isSubmittingPayment ? 'Recording Settlement...' : `Confirm & Settle ₹${payAmount.toLocaleString('en-IN')}`}</span>
                   </button>
                 )}
               </div>

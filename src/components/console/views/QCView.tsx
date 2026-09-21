@@ -23,6 +23,8 @@ import { QCInspection } from '../../../types/console';
 import { triggerQCFailure } from '../../../services/notificationService';
 import { useUrlModal } from '../../../hooks/useUrlModal';
 import { useCanPerformCta } from '../../../hooks/useCtaPermission';
+import { GroupedByPoList } from '../../common/GroupedByPoList';
+import { groupByPo, inspectionBucket } from '../../../utils/poGroups';
 
 interface QCViewProps {
   qcItems?: QCInspection[];
@@ -44,7 +46,18 @@ export const QCView: React.FC<QCViewProps> = ({
   const [localQc, setLocalQc] = useState<QCInspection[]>(initialItems);
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  // 'grouped' (one row per PO) is the default so a 50-line PO does not flood the queue; the choice is remembered.
+  const [viewMode, setViewModeState] = useState<'grouped' | 'table' | 'grid'>(() => {
+    try {
+      const saved = window.localStorage.getItem('qcViewMode');
+      if (saved === 'grouped' || saved === 'table' || saved === 'grid') return saved;
+    } catch { /* storage unavailable: use default */ }
+    return 'grouped';
+  });
+  const setViewMode = (mode: 'grouped' | 'table' | 'grid') => {
+    setViewModeState(mode);
+    try { window.localStorage.setItem('qcViewMode', mode); } catch { /* ignore */ }
+  };
   const inspectModal = useUrlModal('inspect-qc');
   const [inspectingItem, setInspectingItem] = useState<QCInspection | null>(null);
   const [qcDecision, setQcDecision] = useState<'PASS' | 'QC_HOLD' | 'REJECTED'>('PASS');
@@ -175,6 +188,61 @@ export const QCView: React.FC<QCViewProps> = ({
     setQcDecision(current as any);
     setQcNotes(item.inspectorNotes || '');
     inspectModal.open({ qcId: item.id, jobNo: item.jobNo, orderPo: item.orderPo });
+  };
+
+  // Grouped-by-PO view: aggregates cover every inspection of the PO, only the listed rows follow the filters.
+  const qcFiltersActive = filterStatus !== 'ALL' || !!searchQuery.trim();
+  const filteredQcSet = new Set(filteredQc);
+  const qcGroups = viewMode === 'grouped'
+    ? groupByPo<QCInspection>(deduplicatedItems, {
+        getPo: q => q.orderPo,
+        bucketOf: q => inspectionBucket(q.qcStatus),
+        matches: q => filteredQcSet.has(q)
+      })
+    : [];
+
+  // Compact row for the grouped view. Same actions and the same permission check as the table row.
+  const renderQcGroupRow = (qc: QCInspection) => {
+    const bucket = inspectionBucket(qc.qcStatus);
+    const pill =
+      bucket === 'PASS' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+      : bucket === 'HOLD' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+      : bucket === 'REJECTED' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+      : 'bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF] border-blue-500/20';
+    return (
+      <div className={`flex flex-wrap items-center gap-3 px-5 py-2.5 transition-colors ${isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'}`}>
+        <button
+          type="button"
+          onClick={() => openInspection(qc)}
+          className="group flex flex-1 min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-left cursor-pointer"
+        >
+          <div className="w-7 h-7 rounded-lg bg-[var(--accent-primary)]/15 text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/20 flex items-center justify-center shrink-0">
+            <Package className="w-3.5 h-3.5" />
+          </div>
+          <span className="font-mono font-bold text-xs text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)] w-[130px] shrink-0 truncate group-hover:underline">{qc.jobNo}</span>
+          <span className={`min-w-0 flex-1 basis-[180px] text-xs truncate ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
+            <span className="font-mono font-bold">{qc.partCode}</span>
+            {qc.partDescription && <span className="text-slate-400"> — {qc.partDescription}</span>}
+          </span>
+          <span className={`font-mono font-bold text-xs tabular-nums w-[70px] shrink-0 ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+            {qc.qty} <span className="text-[10px] text-slate-400 uppercase font-medium">NOS</span>
+          </span>
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase border shrink-0 ${pill}`}>
+            {qc.qcStatus || 'PENDING'}
+          </span>
+        </button>
+        {canPerformCta('UPLOAD_QC_REPORT') && (
+          <button
+            type="button"
+            onClick={() => openInspection(qc)}
+            className="h-8 px-3.5 py-1.5 rounded-xl bg-[#5B75F8] hover:bg-[#4E67F0] text-white text-xs font-bold shadow-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shrink-0"
+          >
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span>Audit Decision</span>
+          </button>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -483,6 +551,20 @@ export const QCView: React.FC<QCViewProps> = ({
             }`}>
               <button
                 type="button"
+                onClick={() => setViewMode('grouped')}
+                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                  viewMode === 'grouped'
+                    ? isDarkMode ? 'bg-white/10 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                }`}
+                title="Group by PO"
+                aria-label="Group by PO"
+                aria-pressed={viewMode === 'grouped'}
+              >
+                <Layers className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
                 onClick={() => setViewMode('table')}
                 className={`p-1.5 rounded-lg transition-all cursor-pointer ${
                   viewMode === 'table'
@@ -517,6 +599,19 @@ export const QCView: React.FC<QCViewProps> = ({
       {/* ========================================================================= */}
       {/* ── MOBILE QC CARDS (Viewport < md) ──                                     */}
       {/* ========================================================================= */}
+      {viewMode === 'grouped' && (
+        <GroupedByPoList
+          groups={qcGroups}
+          isDarkMode={isDarkMode}
+          getKey={(q: QCInspection) => q.id}
+          bucketOf={(q: QCInspection) => inspectionBucket(q.qcStatus)}
+          renderRow={renderQcGroupRow}
+          filtersActive={qcFiltersActive}
+          emptyTitle="No QC inspection records matching your query."
+        />
+      )}
+
+      {viewMode !== 'grouped' && (
       <div className="block md:hidden space-y-3">
         {filteredQc.length === 0 ? (
           <div className={`p-8 text-center rounded-2xl border text-xs ${
@@ -621,6 +716,7 @@ export const QCView: React.FC<QCViewProps> = ({
           })
         )}
       </div>
+      )}
 
       {/* ========================================================================= */}
       {/* ── DESKTOP VIEW: TABLE OR INSPECTOR CARD GRID (Viewport >= md) ──         */}
@@ -751,7 +847,7 @@ export const QCView: React.FC<QCViewProps> = ({
             </table>
           </div>
         </div>
-      ) : (
+      ) : viewMode === 'grid' ? (
         /* Grid Inspector Cards View */
         <div className="hidden md:grid grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredQc.length === 0 ? (
@@ -851,7 +947,7 @@ export const QCView: React.FC<QCViewProps> = ({
             })
           )}
         </div>
-      )}
+      ) : null}
 
       {/* ========================================================================= */}
       {/* ── APPLE SHEET INSPECTION AUDIT MODAL ──                                  */}

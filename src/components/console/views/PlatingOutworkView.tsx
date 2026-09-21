@@ -652,8 +652,10 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
                         </div>
                       </div>
                     </td>
-                    <td className={`py-4 px-5 font-mono text-xs ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                      {s.jobNo || 'JC/0001/26-27'}
+                    <td className="py-4 px-5">
+                      <span className="font-bold text-xs font-mono text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">
+                        {s.jobNo || 'JC/0001/26-27'}
+                      </span>
                     </td>
                     <td className={`py-4 px-5 font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
                       {meta.vendor}

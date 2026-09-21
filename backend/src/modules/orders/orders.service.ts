@@ -161,7 +161,8 @@ export class OrdersService {
           const deliveryChallanNo = o.delivery_challan_no || dispatches[dispatches.length - 1]?.challanNo || null;
           const invoiceNo = o.invoice_no || linkedInv?.invoice_no || null;
           const paidAmount = Number(o.paid_amount !== undefined && o.paid_amount !== null ? o.paid_amount : (linkedInv?.paid_amount || 0));
-          const grossAmount = Number(o.gross_amount || linkedInv?.total_amount || 0);
+          const linesGross = lines.reduce((sum, l) => sum + (Number(l.orderQty || 0) * Number(l.rate || 0)), 0);
+          const grossAmount = Number(o.gross_amount || linesGross || linkedInv?.total_amount || 0);
           const paymentStatus = o.payment_status || (linkedInv?.status === 'PAID' ? 'PAID' : (paidAmount >= grossAmount && grossAmount > 0 ? 'PAID' : (paidAmount > 0 ? 'PARTIAL' : undefined)));
 
           let paymentHistory: any[] = [];

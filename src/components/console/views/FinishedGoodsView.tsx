@@ -131,7 +131,7 @@ export const FinishedGoodsView: React.FC<FinishedGoodsViewProps> = ({
     );
   };
 
-  const thBase = `py-3.5 px-5 font-mono font-bold uppercase tracking-[0.12em] text-[9px] cursor-pointer select-none ${isDarkMode ? "text-slate-500" : "text-slate-400"}`;
+  const thBase = `py-4 px-5 font-mono font-bold uppercase tracking-[0.12em] text-[9px] cursor-pointer select-none ${isDarkMode ? "text-slate-500" : "text-slate-400"}`;
 
   const renderTh = (col: SortKey, label: string, right?: boolean) => (
     <th key={col} className={`${thBase} ${right ? "text-right" : ""}`} onClick={() => toggleSort(col)}>
@@ -233,7 +233,7 @@ export const FinishedGoodsView: React.FC<FinishedGoodsViewProps> = ({
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className={`border-b ${isDarkMode ? "border-white/[0.07] bg-black/20" : "border-slate-200 bg-slate-50/80"}`}>
+              <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${isDarkMode ? "border-white/[0.07] bg-black/20 text-slate-500" : "border-slate-200 bg-slate-50/80 text-slate-400"}`}>
                 {renderTh("code", "FG Code")}
                 {renderTh("name", "Description")}
                 <th className={thBase}>HSN / UoM</th>

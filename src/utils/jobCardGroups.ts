@@ -1,5 +1,5 @@
 import type { CustomerOrder, JobCard } from '../types/console';
-import { computeBulkLineStates } from './bulkRelease';
+import { computeBulkLineStates, type BulkLineState } from './bulkRelease';
 
 /**
  * Groups job cards by purchase order for the Job Cards screen, so a 50-line PO is ONE row
@@ -17,7 +17,7 @@ export function bucketOf(jc: Pick<JobCard, 'jobStatus' | 'status'>): JobCardBuck
   const st = String(jc.status || '').toUpperCase();
   if (js === 'QC_HOLD' || st === 'QC_HOLD') return 'QC_HOLD';
   if (js === 'IN_PROGRESS' || st === 'RUNNING' || st === 'IN_PROGRESS') return 'RUNNING';
-  if (js === 'COMPLETED' || st === 'COMPLETED') return 'COMPLETED';
+  if (js === 'COMPLETED' || st === 'COMPLETED' || js === 'DONE' || st === 'DONE') return 'COMPLETED';
   return 'NOT_STARTED';
 }
 
@@ -53,6 +53,7 @@ export interface JobCardGroup {
   needsAttention: boolean;
   /** order lines that still have quantity not released to job cards (only when the order is known) */
   unreleasedLines?: number;
+  unreleasedLineItems?: BulkLineState[];
 }
 
 export type GroupSort = 'recent' | 'due' | 'attention';
@@ -102,9 +103,9 @@ export function groupJobCardsByOrder(cards: JobCard[], opts: GroupOptions = {}):
 
     const order = orderByRef.get(key);
     // Route cards are irrelevant here: only "how many lines still have unreleased quantity".
-    const unreleasedLines = order
-      ? computeBulkLineStates(order, all, []).filter(l => l.remainingQty > 0).length
-      : undefined;
+    const lineStates = order ? computeBulkLineStates(order, all, []) : [];
+    const unreleasedLineItems = lineStates.filter(l => l.remainingQty > 0);
+    const unreleasedLines = unreleasedLineItems.length;
 
     groups.push({
       key,
@@ -120,9 +121,11 @@ export function groupJobCardsByOrder(cards: JobCard[], opts: GroupOptions = {}):
       ncr,
       nextDue,
       needsAttention: counts.QC_HOLD > 0 || ncr > 0 || overdue > 0,
-      unreleasedLines
+      unreleasedLines,
+      unreleasedLineItems
     });
   });
+
   return groups;
 }
 

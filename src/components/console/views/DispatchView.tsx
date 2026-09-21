@@ -636,28 +636,38 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
       {/* DESKTOP DISPATCH: TABLE OR INSPECTOR CARD GRID (Viewport >= md)            */}
       {/* ========================================================================= */}
       {viewMode === 'table' ? (
-        <div className={`hidden md:block rounded-2xl border overflow-hidden transition-all shadow-xs ${
-          isDarkMode ? 'bg-[#09090B] border-white/10' : 'bg-white border-slate-200/80'
+        <div className={`hidden md:block overflow-hidden rounded-[22px] border transition-ui ${
+          isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
         }`}>
+          <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+            <div>
+              <div className="text-xs font-extrabold text-slate-900 dark:text-white">Delivery Challan & Dispatch Register</div>
+              <div className="mt-0.5 text-[10px] text-slate-400">Goods delivery documentation, vehicle logs, and POD delivery receipts</div>
+            </div>
+            <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>
+              {filteredDispatches.length} challans
+            </span>
+          </div>
+
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className={`border-b text-xs font-semibold ${
-                  isDarkMode ? 'bg-black/60 border-white/10 text-slate-400' : 'bg-slate-50/80 border-slate-200/80 text-slate-500'
+                <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${
+                  isDarkMode ? 'border-white/[0.07] bg-black/20 text-slate-500' : 'border-slate-200 bg-slate-50/80 text-slate-400'
                 }`}>
-                  <th className="py-3.5 px-5">Challan #</th>
-                  <th className="py-3.5 px-5">Customer Order PO</th>
-                  <th className="py-3.5 px-5 text-center">Status</th>
-                  <th className="py-3.5 px-5">Dispatch Date</th>
-                  <th className="py-3.5 px-5">Transporter Partner</th>
-                  <th className="py-3.5 px-5">Vehicle #</th>
-                  <th className="py-3.5 px-5 text-right">Actions</th>
+                  <th className="py-4 px-5">Challan #</th>
+                  <th className="py-4 px-5">Customer Order PO</th>
+                  <th className="py-4 px-5 text-center">Status</th>
+                  <th className="py-4 px-5">Dispatch Date</th>
+                  <th className="py-4 px-5">Transporter Partner</th>
+                  <th className="py-4 px-5">Vehicle #</th>
+                  <th className="py-4 px-5 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className={`divide-y ${isDarkMode ? 'divide-white/5' : 'divide-slate-100'}`}>
+              <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
                 {filteredDispatches.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-400 text-xs">
+                    <td colSpan={7} className="py-12 text-center text-slate-400 font-mono text-xs">
                       No delivery challans found. Click "Issue Delivery Challan" to create one.
                     </td>
                   </tr>
@@ -667,27 +677,33 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                       key={disp.challanNo} 
                       onClick={() => handleRowClick(disp)}
                       className={`group transition-colors cursor-pointer ${
-                        isDarkMode ? 'hover:bg-white/[0.04]' : 'hover:bg-slate-50/70'
+                        isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'
                       }`}
                     >
-                      <td className="py-3.5 px-5">
+                      <td className="py-4 px-5">
                         <div className="flex items-center gap-2.5">
-                          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF] shrink-0">
+                          <div className={`p-2 rounded-xl transition-transform group-hover:scale-105 shrink-0 ${
+                            isDarkMode 
+                              ? 'bg-[var(--accent-primary)]/20 text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/30' 
+                              : 'bg-[var(--accent-primary)]/10 text-[var(--accent-text-light)] border border-[var(--accent-primary)]/20'
+                          }`}>
                             <Truck className="w-3.5 h-3.5 stroke-[2]" />
                           </div>
-                          <span className="font-bold text-[#5B75F8] dark:text-[#7B92FF]">
-                            {disp.challanNo}
-                          </span>
-                          <ChevronRight className="w-3 h-3 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <div className="min-w-0">
+                            <span className="font-bold text-xs font-mono text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">
+                              {disp.challanNo}
+                            </span>
+                          </div>
+                          <ChevronRight className="w-3 h-3 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
                         </div>
                       </td>
-                      <td className={`py-3.5 px-5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                        <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF] border border-blue-500/20">
+                      <td className={`py-4 px-5 font-mono text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">
                           {disp.orderPo}
                         </span>
                       </td>
-                      <td className="py-3.5 px-5 text-center">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                      <td className="py-4 px-5 text-center">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
                           ['DRAFT', 'GENERATED', 'DISPATCH_READY'].includes(disp.status)
                             ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
                             : disp.status === 'DELIVERED'
@@ -708,19 +724,19 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                           <span>{disp.status}</span>
                         </span>
                       </td>
-                      <td className={`py-3.5 px-5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                      <td className={`py-4 px-5 font-mono text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                         {disp.date}
                       </td>
-                      <td className={`py-3.5 px-5 font-medium ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
+                      <td className={`py-4 px-5 font-medium ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
                         {disp.transporter || 'Self Pick-up'}
                       </td>
-                      <td className="py-3.5 px-5 font-semibold text-purple-600 dark:text-purple-400">
+                      <td className="py-4 px-5 font-mono font-semibold text-purple-600 dark:text-purple-400">
                         {disp.vehicleNo || '—'}
                       </td>
-                      <td className="py-3.5 px-5 text-right" onClick={(e) => e.stopPropagation()}>
+                      <td className="py-4 px-5 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-2">
                           {disp.status === 'DELIVERED' ? (
-                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                            <span className="px-2.5 py-1 rounded-xl text-[11px] font-semibold font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
                               <CheckCircle2 className="w-3 h-3" />
                               <span>POD</span>
                             </span>
@@ -728,16 +744,16 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                             <button
                               type="button"
                               onClick={(e) => handleOpenDeliveryModal(disp, e)}
-                              className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-semibold hover:bg-emerald-500/20 transition-all flex items-center gap-1 cursor-pointer"
+                              className="h-8 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-xs flex items-center justify-center gap-1.5 transition-all active:scale-[0.96] cursor-pointer"
                             >
-                              <CheckCircle2 className="w-3 h-3" />
-                              <span>Delivered</span>
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Mark Delivered</span>
                             </button>
                           ) : null}
                           <button
                             type="button"
                             onClick={() => handleRowClick(disp)}
-                            className={`px-3 py-1 rounded-full border transition-all inline-flex items-center gap-1 text-xs font-semibold cursor-pointer ${
+                            className={`h-8 px-3 py-1.5 rounded-xl border transition-all inline-flex items-center gap-1.5 text-xs font-bold active:scale-[0.96] cursor-pointer ${
                               isDarkMode 
                                 ? 'border-white/10 bg-black/60 text-slate-200 hover:bg-white/10' 
                                 : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200'

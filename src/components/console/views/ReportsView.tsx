@@ -358,8 +358,10 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                   <td className={`py-4 px-5 font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
                     {log.description}
                   </td>
-                  <td className={`py-4 px-5 font-mono text-xs ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                    {log.jobNo}
+                  <td className="py-4 px-5">
+                    <span className="font-bold text-xs font-mono text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">
+                      {log.jobNo}
+                    </span>
                   </td>
                   <td className="py-4 px-5 text-center font-bold font-mono text-purple-400">
                     <span className="px-2 py-0.5 rounded-md bg-purple-500/10 border border-purple-500/20 text-[10px]">

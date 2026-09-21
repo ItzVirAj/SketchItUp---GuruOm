@@ -661,17 +661,15 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
       {/* ========================================================================= */}
       {/* ── 4. DESKTOP PAYABLES TABLE (≥ md) ──                                   */}
       {/* ========================================================================= */}
-      <div className={`hidden md:block rounded-3xl border overflow-hidden transition-all shadow-xl ${
-        isDarkMode ? 'bg-[#09090B] border-white/10 text-white' : 'bg-white border-slate-200/80 text-slate-900'
+      <div className={`hidden md:block overflow-hidden rounded-[22px] border transition-ui ${
+        isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
       }`}>
-        <div className={`flex items-center justify-between border-b ${isDarkMode ? 'border-white/10' : 'border-slate-200'} px-6 py-4`}>
+        <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
           <div>
-            <h2 className="text-sm font-bold tracking-tight">Vendor Bills Register</h2>
-            <p className={`text-[11px] mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Supplier invoices, 3-way matching validation, and disbursement records</p>
+            <div className="text-xs font-extrabold text-slate-900 dark:text-white">Vendor Bills Register</div>
+            <div className="mt-0.5 text-[10px] text-slate-400">Supplier invoices, 3-way matching validation, and disbursement records</div>
           </div>
-          <span className={`rounded-full border px-3 py-1 font-mono text-[10px] font-semibold ${
-            isDarkMode ? 'border-white/10 text-slate-400' : 'border-slate-200 text-slate-600'
-          }`}>
+          <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>
             {filtered.length} bills
           </span>
         </div>
@@ -679,22 +677,22 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className={`border-b font-mono font-semibold uppercase tracking-wider text-[10px] ${
-                isDarkMode ? 'border-white/10 bg-black/40 text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'
+              <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${
+                isDarkMode ? 'border-white/[0.07] bg-black/20 text-slate-500' : 'border-slate-200 bg-slate-50/80 text-slate-400'
               }`}>
-                <th className="py-3.5 px-5">Bill #</th>
-                <th className="py-3.5 px-5">Vendor / Supplier Name</th>
-                <th className="py-3.5 px-5">Purchase Order</th>
-                <th className="py-3.5 px-5">Date</th>
-                <th className="py-3.5 px-5 text-right">Bill Amount</th>
-                <th className="py-3.5 px-5 text-right">Paid Amount</th>
-                <th className="py-3.5 px-5 text-right">Outstanding Dues</th>
-                <th className="py-3.5 px-5 text-center">3-Way Match</th>
-                <th className="py-3.5 px-5 text-center">Status</th>
-                <th className="py-3.5 px-5 text-center">Action</th>
+                <th className="py-4 px-5">Bill #</th>
+                <th className="py-4 px-5">Vendor / Supplier Name</th>
+                <th className="py-4 px-5">Purchase Order</th>
+                <th className="py-4 px-5">Date</th>
+                <th className="py-4 px-5 text-right">Bill Amount</th>
+                <th className="py-4 px-5 text-right">Paid Amount</th>
+                <th className="py-4 px-5 text-right">Outstanding Dues</th>
+                <th className="py-4 px-5 text-center">3-Way Match</th>
+                <th className="py-4 px-5 text-center">Status</th>
+                <th className="py-4 px-5 text-center">Action</th>
               </tr>
             </thead>
-            <tbody className={`divide-y ${isDarkMode ? 'divide-white/5' : 'divide-slate-200'}`}>
+            <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
               {filtered.length === 0 ? (
                 <tr>
                   <td colSpan={10} className="py-16 text-center">
@@ -745,14 +743,18 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                 </tr>
               ) : (
                 filtered.map((bill) => (
-                <tr key={bill.billNo} className={`transition-colors ${isDarkMode ? 'hover:bg-white/[0.025]' : 'hover:bg-slate-50'}`}>
+                <tr key={bill.billNo} className={`group transition-colors ${isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'}`}>
                   <td className="py-4 px-5">
                     <div className="flex items-center gap-2.5">
-                      <div className="p-2 rounded-xl bg-[#5B75F8]/10 text-[#5B75F8] border border-[#5B75F8]/20 shrink-0">
+                      <div className={`p-2 rounded-xl transition-transform group-hover:scale-105 shrink-0 ${
+                        isDarkMode 
+                          ? 'bg-[var(--accent-primary)]/20 text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/30' 
+                          : 'bg-[var(--accent-primary)]/10 text-[var(--accent-text-light)] border border-[var(--accent-primary)]/20'
+                      }`}>
                         <Building2 className="w-3.5 h-3.5" />
                       </div>
                       <div className="flex flex-col">
-                        <span className="font-mono font-bold text-xs text-[#5B75F8]">
+                        <span className="font-mono font-bold text-xs text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">
                           {bill.billNo}
                         </span>
                         {bill.attachmentId && (

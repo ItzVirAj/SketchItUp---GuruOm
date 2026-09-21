@@ -1010,10 +1010,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
               }}
               onNavigateToOrder={(po) => {
                 const ord = orders.find(o => o.poNo === po || o.id === po);
-                if (ord) {
-                  setSelectedOrderId(ord.id);
-                  handleNavigateView('order-detail');
-                }
+                handleSelectOrder(ord ? ord.id : po);
               }}
             />
           )}
@@ -1038,6 +1035,8 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
                   handleNavigateView('order-detail');
                 }
               }}
+              currentUser={currentUser}
+              currentRole={currentRole}
             />
           )}
 

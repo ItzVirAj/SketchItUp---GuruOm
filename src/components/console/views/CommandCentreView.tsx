@@ -794,7 +794,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
           <div className={`overflow-x-auto rounded-2xl border ${isDarkMode ? 'border-white/10 bg-white/[0.02]' : 'border-slate-200/80 bg-white'}`}>
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className={`border-b text-xs font-semibold ${isDarkMode ? 'border-white/10 bg-white/[0.05] text-slate-300' : 'border-slate-200/80 bg-slate-50/80 text-slate-600'}`}>
+                <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${isDarkMode ? 'border-white/10 bg-white/[0.05] text-slate-400' : 'border-slate-200/80 bg-slate-50/80 text-slate-500'}`}>
                   <th className="px-4 py-3">Code</th>
                   <th className="px-4 py-3">Metric</th>
                   <th className="px-4 py-3">Category</th>
@@ -806,7 +806,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
               <tbody className={`divide-y ${isDarkMode ? 'divide-white/5' : 'divide-slate-100'}`}>
                 {filteredTabularMetrics.map(m => (
                   <tr key={m.code} className={`transition-all ${isDarkMode ? 'hover:bg-white/[0.05]' : 'hover:bg-slate-50/70'}`}>
-                    <td className="px-4 py-3 font-mono text-slate-400">{m.code}</td>
+                    <td className="px-4 py-3 font-mono font-bold text-xs text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{m.code}</td>
                     <td className={`px-4 py-3 font-medium ${textPrimary}`}>{m.name}</td>
                     <td className="px-4 py-3 text-slate-400 dark:text-slate-400">{m.category}</td>
                     <td className={`px-4 py-3 font-bold ${textPrimary}`}>{m.valueStr}</td>

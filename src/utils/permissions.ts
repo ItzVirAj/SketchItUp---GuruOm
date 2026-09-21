@@ -185,7 +185,6 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
     'grn',
     'payables',
     'reports',
-    'approvals',
     'masters'
   ],
   'Dispatch Executive': [
@@ -220,7 +219,6 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
     'purchasing',
     'grn',
     'reports',
-    'approvals',
     'invoices',
     'payables',
     'masters'
@@ -234,6 +232,7 @@ export const ROLE_PERMISSIONS: Record<string, ConsoleView[]> = {
     'certifications',
     'announcements',
     'employee-master',
+    'approvals',
     'masters',
     'users-audit',
     'company-profile'

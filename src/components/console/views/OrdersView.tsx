@@ -1151,27 +1151,23 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
       {/* ========================================================================= */}
       <div className="hidden md:block">
         {viewMode === 'table' ? (
-          <div className={`overflow-hidden rounded-2xl border transition-all backdrop-blur-xl ${
-            isDarkMode 
-              ? 'border-white/10 bg-slate-900/80 shadow-[0_4px_24px_rgba(0,0,0,0.3)]' 
-              : 'border-slate-200/80 bg-white/90 shadow-[0_4px_20px_rgba(0,0,0,0.04)]'
+          <div className={`overflow-hidden rounded-[22px] border transition-ui ${
+            isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
           }`}>
-            <div className={`flex items-center justify-between border-b px-5 py-3.5 ${isDarkMode ? 'border-white/10' : 'border-slate-100'}`}>
+            <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
               <div>
-                <div className="text-xs font-semibold text-slate-900 dark:text-white">Order Lifecycle Queue</div>
-                <div className="mt-0.5 text-[11px] text-slate-400">Commercial status and manufacturing progress in one view</div>
+                <div className="text-xs font-extrabold text-slate-900 dark:text-white">Order Lifecycle Queue</div>
+                <div className="mt-0.5 text-[10px] text-slate-400">Commercial status and manufacturing progress in one view</div>
               </div>
-              <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${
-                isDarkMode ? 'border-white/10 bg-slate-800 text-slate-300' : 'border-slate-200 bg-slate-100 text-slate-600'
-              }`}>
+              <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>
                 {sortedOrders.length} records
               </span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse font-sans">
                 <thead>
-                  <tr className={`border-b text-[11px] font-semibold ${
-                    isDarkMode ? 'border-white/10 bg-slate-950/40 text-slate-400' : 'border-slate-100 bg-slate-50/75 text-slate-500'
+                  <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${
+                    isDarkMode ? 'border-white/[0.07] bg-black/20 text-slate-500' : 'border-slate-200 bg-slate-50/80 text-slate-400'
                   }`}>
                     <th
                       onClick={() => {
@@ -1182,12 +1178,12 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                           setSortDirection('DESC');
                         }
                       }}
-                      className="py-3 px-5 cursor-pointer hover:text-[#5B75F8] select-none transition-colors"
+                      className="py-4 px-5 cursor-pointer hover:text-[#5B75F8] select-none transition-colors"
                     >
                       <div className="flex items-center gap-1.5">
                         <span>Purchase Order & Date</span>
                         {sortField === 'RECENCY' && (
-                          <span className="text-[#5B75F8] text-[10px] bg-blue-500/10 px-1.5 py-0.5 rounded-full font-medium">
+                          <span className="text-[#5B75F8] text-[9px] bg-blue-500/10 px-1.5 py-0.5 rounded-md font-bold font-mono">
                             {sortDirection === 'DESC' ? '↓ Recent' : '↑ Oldest'}
                           </span>
                         )}
@@ -1205,14 +1201,14 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                           setSortDirection('ASC');
                         }
                       }}
-                      className="py-3 px-5 cursor-pointer hover:text-[#5B75F8] select-none transition-colors"
+                      className="py-4 px-5 cursor-pointer hover:text-[#5B75F8] select-none transition-colors"
                     >
                       <div className="flex items-center gap-1.5">
                         <span>Customer & Credit Status</span>
                         {sortField === 'CUSTOMER' && <span className="text-[#5B75F8]">{sortDirection === 'ASC' ? '↑' : '↓'}</span>}
                       </div>
                     </th>
-                    <th className="py-3 px-5">Lifecycle Progress</th>
+                    <th className="py-4 px-5">Lifecycle Progress</th>
                     <th
                       onClick={() => {
                         if (sortField === 'AMOUNT') {
@@ -1222,17 +1218,17 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                           setSortDirection('DESC');
                         }
                       }}
-                      className="py-3 px-5 text-right cursor-pointer hover:text-[#5B75F8] select-none transition-colors"
+                      className="py-4 px-5 text-right cursor-pointer hover:text-[#5B75F8] select-none transition-colors"
                     >
                       <div className="flex items-center justify-end gap-1.5">
                         <span>Gross Amount</span>
                         {sortField === 'AMOUNT' && <span className="text-[#5B75F8]">{sortDirection === 'ASC' ? '↑' : '↓'}</span>}
                       </div>
                     </th>
-                    <th className="py-3 px-5 text-center">Action</th>
+                    <th className="py-4 px-5 text-center">Action</th>
                   </tr>
                 </thead>
-                <tbody className={`divide-y ${isDarkMode ? 'divide-white/5' : 'divide-slate-100'}`}>
+                <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
                   {sortedOrders.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="py-12 text-center">
@@ -1279,23 +1275,25 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                           key={ord.id}
                           onClick={() => onSelectOrder(ord)}
                           className={`group cursor-pointer transition-colors ${
-                            isDarkMode ? 'hover:bg-white/[0.03]' : 'hover:bg-slate-50/80'
+                            isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'
                           }`}
                         >
-                          <td className="py-3.5 px-5">
+                          <td className="py-4 px-5">
                             <div className="flex items-center gap-3">
                               <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${
                                 prog.isCancelled
                                   ? isDarkMode ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30' : 'bg-rose-50 text-rose-600 border border-rose-200'
                                   : subType === 'BLANKET_CALLOFF'
                                   ? isDarkMode ? 'bg-purple-500/15 text-purple-300 border border-purple-500/20' : 'bg-purple-50 text-purple-700 border border-purple-100'
-                                  : isDarkMode ? 'bg-blue-500/15 text-[#7B92FF] border border-blue-500/20' : 'bg-blue-50 text-[#5B75F8] border border-blue-100'
+                                  : isDarkMode ? 'bg-[var(--accent-primary)]/20 text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/30' : 'bg-[var(--accent-primary)]/10 text-[var(--accent-text-light)] border border-[var(--accent-primary)]/20'
                               }`}>
                                 <ShoppingCart className="w-4 h-4 stroke-[1.8]" />
                               </div>
                               <div>
-                                <div className="text-xs font-semibold flex items-center gap-1.5 text-slate-900 dark:text-white">
-                                  <span className={prog.isCancelled ? 'line-through opacity-70 text-slate-400' : ''}>{ord.poNo}</span>
+                                <div className="text-xs flex items-center gap-1.5">
+                                  <span className={`font-mono font-bold ${prog.isCancelled ? 'line-through opacity-70 text-slate-400' : 'text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]'}`}>
+                                    {ord.poNo}
+                                  </span>
                                   {prog.isCancelled ? (
                                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30">
                                       Cancelled
@@ -1319,7 +1317,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                             </div>
                           </td>
 
-                          <td className="py-3.5 px-5">
+                          <td className="py-4 px-5">
                             <div className="font-semibold text-slate-800 dark:text-slate-200">{ord.customerName}</div>
                             {hasCreditHold ? (
                               <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-medium mt-1 border ${

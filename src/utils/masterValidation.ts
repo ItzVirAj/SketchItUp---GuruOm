@@ -235,7 +235,7 @@ export const ROLE_DEFAULT_MODULES: Record<string, string[]> = {
   'Purchase Executive': ['command-centre', 'purchasing', 'grn', 'payables', 'inventory', 'masters', 'plating-outwork'],
   'Production Supervisor': ['command-centre', 'production', 'finished-goods', 'plating-outwork', 'qc', 'bom', 'masters'],
   'Store/Inventory Executive': ['command-centre', 'inventory', 'grn', 'dispatch', 'finished-goods', 'masters'],
-  'Accounts Executive': ['command-centre', 'invoices', 'payables', 'reports', 'approvals', 'masters'],
+  'Accounts Executive': ['command-centre', 'invoices', 'payables', 'reports', 'masters'],
   'Machine Operator': ['production'],
   'Quality Inspector': ['qc', 'pdi', 'finished-goods', 'plating-outwork'],
   'Dispatch Executive': ['dispatch', 'finished-goods', 'orders'],

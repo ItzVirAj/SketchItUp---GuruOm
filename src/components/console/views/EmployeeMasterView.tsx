@@ -389,14 +389,23 @@ export const EmployeeMasterView: React.FC<Props> = ({
       {/* ========================================================================= */}
       {viewMode === 'table' && (
         <div className={`overflow-hidden rounded-3xl border transition-ui ${cardBase}`}>
+          <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+            <div>
+              <div className="text-xs font-extrabold text-slate-900 dark:text-white">Staff Roster Directory</div>
+              <div className="mt-0.5 text-[10px] text-slate-400">Canonical personnel & credential ledger</div>
+            </div>
+            <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>
+              {filtered.length} Staff Members
+            </span>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[980px] text-left border-collapse">
               <thead>
                 <tr
-                  className={`border-b text-[10px] font-mono font-bold uppercase tracking-[0.15em] select-none ${
+                  className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] select-none ${
                     isDarkMode
-                      ? 'border-white/[0.08] bg-white/[0.025] text-slate-400'
-                      : 'border-slate-200/80 bg-slate-50/75 text-slate-500'
+                      ? 'border-white/[0.08] bg-black/20 text-slate-400'
+                      : 'border-slate-200 bg-slate-50/80 text-slate-500'
                   }`}
                 >
                   <th className="px-5 py-4">Employee</th>
@@ -476,7 +485,7 @@ export const EmployeeMasterView: React.FC<Props> = ({
                             </div>
                             <div className="min-w-0">
                               <div
-                                className={`text-sm font-semibold truncate ${
+                                className={`text-sm font-bold truncate ${
                                   isDarkMode ? 'text-white' : 'text-slate-900'
                                 }`}
                               >
@@ -487,7 +496,7 @@ export const EmployeeMasterView: React.FC<Props> = ({
                                   type="button"
                                   onClick={() => handleCopy(e.employeeCode, e.id, 'Employee code')}
                                   title="Click to copy employee code"
-                                  className="inline-flex items-center gap-1 font-mono text-[10px] text-slate-400 hover:text-[var(--accent-text-dark)] transition-ui group-hover:text-slate-300 cursor-pointer"
+                                  className="inline-flex items-center gap-1 font-mono font-bold text-[10px] text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)] hover:opacity-80 transition-ui cursor-pointer"
                                 >
                                   <span>{e.employeeCode}</span>
                                   {isCopied ? (

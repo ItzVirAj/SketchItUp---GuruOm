@@ -440,7 +440,15 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
   // URL sync effects
   useEffect(() => {
     if (jobDetailModal.isOpen && jobDetailModal.params.jobNo) {
-      const found = jobCards.find(j => j.jobNo === jobDetailModal.params.jobNo || j.id === jobDetailModal.params.jobNo);
+      const raw = jobDetailModal.params.jobNo;
+      const decoded = decodeURIComponent(raw);
+      const found = jobCards.find(j => 
+        j.jobNo === raw || 
+        j.jobNo === decoded || 
+        j.id === raw || 
+        j.id === decoded ||
+        j.jobNo?.toLowerCase() === decoded.toLowerCase()
+      );
       if (found && (!selectedJobForDetail || selectedJobForDetail.jobNo !== found.jobNo)) {
         setSelectedJobForDetail(found);
       }
@@ -520,6 +528,56 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
       );
     }
     return res;
+  };
+
+  const handleCompleteJobCardQuick = async (jobNo: string) => {
+    const card = jobCards.find(j => j.jobNo === jobNo);
+    if (!card) return;
+    try {
+      const ops = card.operations || [];
+      const targetQty = Number(card.targetQty || card.qty || 1);
+      const now = Date.now();
+      const total = ops.length;
+      if (total > 0 && onCompleteOperation) {
+        for (let idx = 0; idx < total; idx++) {
+          const op = ops[idx];
+          if (op.opStatus !== 'COMPLETED') {
+            const stdMinutes = Number(op.standardTimeMinutes || 15);
+            const startIso = op.actualStartTime || new Date(now - (total - idx) * stdMinutes * 60000).toISOString();
+            const endIso = new Date(now - (total - 1 - idx) * stdMinutes * 60000).toISOString();
+            if (onStartOperation && (op.opStatus === 'PENDING' || !op.opStatus)) {
+              try {
+                await onStartOperation(card.jobNo, {
+                  sequenceNo: op.sequenceNo,
+                  machineId: op.machineId || card.machine || 'CNC-01',
+                  operatorName: op.operatorName || 'Lead Machinist',
+                  actualStartTime: startIso
+                });
+              } catch {}
+            }
+            await onCompleteOperation(card.jobNo, {
+              sequenceNo: op.sequenceNo,
+              qtyProcessed: targetQty,
+              qtyRejected: 0,
+              actualMinutes: stdMinutes,
+              notes: 'Quick-completed from Job Cards Grouped Ledger',
+              actualStartTime: startIso,
+              actualEndTime: endIso
+            });
+          }
+        }
+      } else if (onLogProduction) {
+        onLogProduction({
+          jobNo: card.jobNo,
+          itemCode: card.partCode,
+          qtyDone: targetQty,
+          status: 'COMPLETED'
+        });
+      }
+      setActionSuccess(`Job Card ${jobNo} marked Done!`);
+    } catch (err: any) {
+      setActionError(err.message || `Failed to mark ${jobNo} as Done.`);
+    }
   };
 
   const handleCreateJobSubmit = async (e: React.FormEvent) => {
@@ -1885,7 +1943,19 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
               groups={jobGroups}
               isDarkMode={isDarkMode}
               filtersActive={jobFiltersActive}
-              onOpenJob={jc => setSelectedJobForDetail(jc)}
+              onOpenJob={jc => {
+                setSelectedJobForDetail(jc);
+                jobDetailModal.open({ jobNo: jc.jobNo });
+              }}
+              onCreateJob={(po, partCode) => {
+                handleSelectOrder(po);
+                if (partCode) {
+                  setNewPartCode(partCode);
+                  const m = masters.find(mi => mi.code.toLowerCase() === partCode.toLowerCase());
+                  if (m) setNewPartDesc(m.description || m.name || partCode);
+                }
+                createJobModal.open({ orderPo: po, partCode });
+              }}
               onReleaseMore={onBulkReleaseJobCards ? (po => bulkReleaseModal.open({ orderPo: po })) : undefined}
             />
           )}
@@ -5207,27 +5277,39 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
       {/* ========================================================================= */}
       {/* MODAL 10: FULL JOB CARD DETAIL VIEW (DRILL-DOWN SOURCE OF TRUTH) */}
       {/* ========================================================================= */}
-      <JobCardDetailModal
-        isOpen={jobDetailModal.isOpen && Boolean(selectedJobForDetail)}
-        onClose={() => {
-          setSelectedJobForDetail(null);
-          jobDetailModal.close();
-        }}
-        jobCard={jobCards.find(j => j.jobNo === selectedJobForDetail?.jobNo || j.id === selectedJobForDetail?.id) || selectedJobForDetail}
-        orders={orders}
-        boms={boms}
-        routeCards={routeCards}
-        stock={stock}
-        masters={masters}
-        productionLogs={productionLogs}
-        companyProfile={companyProfile}
-        isDarkMode={isDarkMode}
-        onLogProduction={onLogProduction}
-        onStartOperation={onStartOperation}
-        onCompleteOperation={onCompleteOperation}
-        onNavigate={onNavigate}
-        onSelectOrder={onSelectOrder}
-      />
+      {(() => {
+        const activeDetailCard = (selectedJobForDetail
+          ? (jobCards.find(j => j.jobNo === selectedJobForDetail.jobNo || j.id === selectedJobForDetail.id) || selectedJobForDetail)
+          : null) || (jobDetailModal.params.jobNo ? jobCards.find(j => {
+            const raw = jobDetailModal.params.jobNo;
+            const decoded = decodeURIComponent(raw);
+            return j.jobNo === raw || j.jobNo === decoded || j.id === raw || j.id === decoded || j.jobNo?.toLowerCase() === decoded.toLowerCase();
+          }) : null);
+
+        return (
+          <JobCardDetailModal
+            isOpen={jobDetailModal.isOpen && Boolean(activeDetailCard)}
+            onClose={() => {
+              setSelectedJobForDetail(null);
+              jobDetailModal.close();
+            }}
+            jobCard={activeDetailCard}
+            orders={orders}
+            boms={boms}
+            routeCards={routeCards}
+            stock={stock}
+            masters={masters}
+            productionLogs={productionLogs}
+            companyProfile={companyProfile}
+            isDarkMode={isDarkMode}
+            onLogProduction={onLogProduction}
+            onStartOperation={onStartOperation}
+            onCompleteOperation={onCompleteOperation}
+            onNavigate={onNavigate}
+            onSelectOrder={onSelectOrder}
+          />
+        );
+      })()}
 
       {/* ========================================================================= */}
       {/* MODAL 11: MACHINE BREAKDOWN & DOWNTIME ALERT REPORTING */}

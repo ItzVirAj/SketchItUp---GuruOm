@@ -112,7 +112,7 @@ export const Modal: React.FC<ModalProps> = ({
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 bg-slate-950/60 backdrop-blur-md animate-in fade-in duration-150 font-sans ${containerClassName}`}
+      className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 bg-slate-950/60 backdrop-blur-xl animate-in fade-in duration-200 font-sans ${containerClassName}`}
       data-lenis-prevent="true"
       onMouseDown={(e) => {
         isMouseDownOnBackdrop.current = e.target === e.currentTarget;
@@ -129,30 +129,33 @@ export const Modal: React.FC<ModalProps> = ({
         data-lenis-prevent="true"
         onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
-        className={`relative w-full ${maxWidthClass} max-h-[92vh] sm:max-h-[88vh] flex flex-col rounded-t-3xl sm:rounded-[28px] border shadow-2xl backdrop-blur-2xl transition-all overflow-hidden overscroll-contain modal-animate-enter ${
+        className={`relative w-full ${maxWidthClass} max-h-[92vh] sm:max-h-[88vh] flex flex-col rounded-t-[32px] sm:rounded-[26px] border shadow-[0_32px_100px_rgba(0,0,0,0.5),0_10px_40px_rgba(0,0,0,0.3)] dark:shadow-[0_40px_120px_rgba(0,0,0,0.9),0_12px_48px_rgba(0,0,0,0.7)] backdrop-blur-2xl transition-all overflow-hidden overscroll-contain modal-animate-enter ${
           isDarkMode
-            ? 'bg-[#121215]/95 border-white/[0.12] text-white shadow-[0_32px_96px_rgba(0,0,0,0.85)]'
-            : 'bg-white/95 border-slate-200/80 text-slate-900 shadow-[0_24px_60px_rgba(0,0,0,0.15)]'
+            ? 'bg-[#141416]/98 border-white/[0.14] text-white ring-1 ring-white/[0.08]'
+            : 'bg-[#FCFCFD]/98 border-slate-200/90 text-slate-900 ring-1 ring-black/[0.04]'
         } ${className}`}
       >
+        {/* Apple Top Specular Highlight Line */}
+        <div className="h-px bg-gradient-to-r from-transparent via-white/25 dark:via-white/15 to-transparent absolute top-0 inset-x-0 pointer-events-none z-10" />
+
         {/* Mobile Grab Handle */}
-        <div className="pt-2.5 pb-0 block sm:hidden">
-          <div className="w-10 h-1 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto" />
+        <div className="pt-3 pb-1 block sm:hidden">
+          <div className="w-10 h-1.2 bg-slate-300 dark:bg-white/20 rounded-full mx-auto" />
         </div>
 
         {/* Region 1: Apple Sheet Header */}
         {(title || icon || !hideCloseButton || headerRight) && (
           <div
-            className={`shrink-0 px-5 sm:px-6 py-4 border-b flex items-center justify-between gap-4 select-none ${
+            className={`shrink-0 px-5 sm:px-6 py-4.5 border-b flex items-center justify-between gap-4 select-none ${
               isDarkMode
                 ? 'border-white/[0.08] bg-white/[0.02] text-white'
-                : 'border-slate-200/80 bg-slate-50/50 text-slate-900'
+                : 'border-slate-200/80 bg-slate-50/60 text-slate-900'
             } ${headerClassName}`}
           >
-            <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center gap-3.5 min-w-0">
               {icon && (
                 <div
-                  className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF] shrink-0"
+                  className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--accent-primary)]/15 text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/25 shadow-xs shrink-0"
                 >
                   {icon}
                 </div>
@@ -160,7 +163,7 @@ export const Modal: React.FC<ModalProps> = ({
               <div className="min-w-0">
                 {title && (
                   <h3
-                    className={`font-bold text-base tracking-tight truncate ${
+                    className={`font-extrabold text-[15px] sm:text-base tracking-tight truncate ${
                       isDarkMode ? 'text-white' : 'text-slate-900'
                     }`}
                   >
@@ -169,7 +172,7 @@ export const Modal: React.FC<ModalProps> = ({
                 )}
                 {subtitle && (
                   <p
-                    className={`text-xs truncate mt-0.5 ${
+                    className={`text-xs truncate mt-0.5 font-normal ${
                       isDarkMode ? 'text-slate-400' : 'text-slate-500'
                     }`}
                   >
@@ -179,20 +182,20 @@ export const Modal: React.FC<ModalProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2.5 shrink-0">
               {headerRight}
               {!hideCloseButton && (
                 <button
                   type="button"
                   onClick={onClose}
-                  className={`w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+                  className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 ${
                     isDarkMode 
-                      ? 'bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border border-white/5' 
-                      : 'bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 border border-slate-200/50'
+                      ? 'bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white border border-white/10 shadow-xs' 
+                      : 'bg-black/5 hover:bg-black/10 text-slate-500 hover:text-slate-800 border border-black/5 shadow-2xs'
                   }`}
                   aria-label="Close modal"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
@@ -202,7 +205,7 @@ export const Modal: React.FC<ModalProps> = ({
         {/* Region 2: Scrollable Body */}
         <div
           data-lenis-prevent="true"
-          className={`flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 overscroll-contain space-y-4 text-xs font-sans ${bodyClassName}`}
+          className={`flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 overscroll-contain space-y-4.5 text-xs font-sans ${bodyClassName}`}
         >
           {children}
         </div>
@@ -212,8 +215,8 @@ export const Modal: React.FC<ModalProps> = ({
           <div
             className={`shrink-0 px-5 sm:px-6 py-4 border-t flex flex-wrap items-center justify-between gap-3 select-none ${
               isDarkMode
-                ? 'border-white/10 bg-black/60 text-slate-300'
-                : 'border-slate-200/80 bg-slate-50/50 text-slate-700'
+                ? 'border-white/[0.08] bg-[#111114]/90 text-slate-300 backdrop-blur-md'
+                : 'border-slate-200/80 bg-slate-50/80 text-slate-700 backdrop-blur-md'
             } ${footerClassName}`}
           >
             {footer}

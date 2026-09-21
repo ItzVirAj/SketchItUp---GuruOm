@@ -518,17 +518,17 @@ export const EmployeeCertificationsView: React.FC<EmployeeCertificationsViewProp
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs sm:text-sm">
               <thead>
-                <tr className={`border-b text-[11px] font-bold uppercase tracking-wider ${
-                  isDarkMode ? 'bg-white/[0.02] border-white/10 text-slate-400' : 'bg-slate-50/80 border-slate-200 text-slate-500'
+                <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${
+                  isDarkMode ? 'bg-black/20 border-white/10 text-slate-400' : 'bg-slate-50/80 border-slate-200 text-slate-500'
                 }`}>
-                  {activeTab === 'all' && <th className="py-3.5 px-4 font-bold">Employee</th>}
-                  <th className="py-3.5 px-4 font-bold">Certificate & Authority</th>
-                  <th className="py-3.5 px-4 font-bold">Issued</th>
-                  <th className="py-3.5 px-4 font-bold">Expires</th>
-                  <th className="py-3.5 px-4 font-bold">Status</th>
-                  <th className="py-3.5 px-4 font-bold">Document</th>
-                  <th className="py-3.5 px-4 font-bold">Assigned By</th>
-                  {canAssign && <th className="py-3.5 px-4 text-right font-bold">Action</th>}
+                  {activeTab === 'all' && <th className="py-4 px-5">Employee</th>}
+                  <th className="py-4 px-5">Certificate & Authority</th>
+                  <th className="py-4 px-5">Issued</th>
+                  <th className="py-4 px-5">Expires</th>
+                  <th className="py-4 px-5">Status</th>
+                  <th className="py-4 px-5">Document</th>
+                  <th className="py-4 px-5">Assigned By</th>
+                  {canAssign && <th className="py-4 px-5 text-right">Action</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200/70 dark:divide-white/[0.06]">
@@ -549,13 +549,13 @@ export const EmployeeCertificationsView: React.FC<EmployeeCertificationsViewProp
                     >
                       {/* Employee Column (shown on "All Staff" tab) */}
                       {activeTab === 'all' && (
-                        <td className="py-3.5 px-4 whitespace-nowrap">
+                        <td className="py-4 px-5 whitespace-nowrap">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-[var(--accent-soft-light)] dark:bg-[var(--accent-soft-dark)] text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] font-bold flex items-center justify-center text-xs border border-[var(--accent-border-light)] dark:border-[var(--accent-border-dark)] shrink-0">
                               {(cert.employeeName || cert.employee?.name || 'U').charAt(0).toUpperCase()}
                             </div>
                             <div className="space-y-0.5">
-                              <div className="font-semibold text-slate-900 dark:text-white">
+                              <div className="font-bold text-sm text-slate-900 dark:text-white">
                                 {cert.employeeName || cert.employee?.name || 'Staff Member'}
                               </div>
                               <div className="text-[11px] text-slate-500 dark:text-slate-400">

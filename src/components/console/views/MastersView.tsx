@@ -1363,8 +1363,8 @@ export const MastersView: React.FC<MastersViewProps> = ({
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className={`border-b font-mono font-bold uppercase tracking-wider text-[11px] ${
-                    isDarkMode ? 'bg-slate-800/80 border-slate-700/80 text-slate-300' : 'bg-slate-100/90 border-slate-200 text-slate-700'
+                  <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${
+                    isDarkMode ? 'border-white/[0.07] bg-black/20 text-slate-400' : 'border-slate-200 bg-slate-50/80 text-slate-500'
                   }`}>
                     <th className="py-4 px-5">Customer ID</th>
                     <th className="py-4 px-5">Customer Name & Type</th>
@@ -1397,7 +1397,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
                             : isDarkMode ? 'hover:bg-slate-800/40 text-slate-200' : 'hover:bg-slate-50 text-slate-900'
                         }`}
                       >
-                        <td className="py-4 px-5 font-mono font-bold text-blue-600 dark:text-blue-400">{cust.code}</td>
+                        <td className="py-4 px-5 font-mono font-bold text-xs text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{cust.code}</td>
                         <td className="py-4 px-5">
                           <div className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{cust.name}</div>
                           <div className="text-[10px] font-mono flex items-center gap-1.5 mt-1">
@@ -1677,8 +1677,8 @@ export const MastersView: React.FC<MastersViewProps> = ({
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className={`border-b font-mono font-bold uppercase tracking-wider text-[11px] ${
-                    isDarkMode ? 'bg-slate-800/80 border-slate-700/80 text-slate-300' : 'bg-slate-100/90 border-slate-200 text-slate-700'
+                  <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${
+                    isDarkMode ? 'border-white/[0.07] bg-black/20 text-slate-400' : 'border-slate-200 bg-slate-50/80 text-slate-500'
                   }`}>
                     <th className="py-4 px-5">Vendor ID</th>
                     <th className="py-4 px-5">Vendor Name & Category</th>
@@ -1711,7 +1711,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
                             : isDarkMode ? 'hover:bg-slate-800/40 text-slate-200' : 'hover:bg-slate-50 text-slate-900'
                         }`}
                       >
-                        <td className="py-4 px-5 font-mono font-bold text-indigo-600 dark:text-indigo-400">{vend.code}</td>
+                        <td className="py-4 px-5 font-mono font-bold text-xs text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{vend.code}</td>
                         <td className="py-4 px-5">
                           <div className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{vend.name}</div>
                           <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-mono mt-1">
@@ -2000,8 +2000,8 @@ export const MastersView: React.FC<MastersViewProps> = ({
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className={`border-b font-mono font-bold uppercase tracking-wider text-[11px] ${
-                    isDarkMode ? 'bg-slate-800/80 border-slate-700/80 text-slate-300' : 'bg-slate-100/90 border-slate-200 text-slate-700'
+                  <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${
+                    isDarkMode ? 'border-white/[0.07] bg-black/20 text-slate-400' : 'border-slate-200 bg-slate-50/80 text-slate-500'
                   }`}>
                     <th className="py-4 px-5">Item Code</th>
                     <th className="py-4 px-5">Item Name / Part Description</th>
@@ -2034,7 +2034,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
                             : isDarkMode ? 'hover:bg-slate-800/40 text-slate-200' : 'hover:bg-slate-50 text-slate-900'
                         }`}
                       >
-                        <td className="py-4 px-5 font-mono font-bold text-emerald-600 dark:text-emerald-400">{item.code}</td>
+                        <td className="py-4 px-5 font-mono font-bold text-xs text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{item.code}</td>
                         <td className="py-4 px-5">
                           <div className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{item.name || item.description}</div>
                           {item.partNo && <div className={`text-[11px] font-mono mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Part: {item.partNo}</div>}
@@ -2232,8 +2232,8 @@ export const MastersView: React.FC<MastersViewProps> = ({
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className={`border-b font-mono font-bold uppercase tracking-wider text-[11px] ${
-                    isDarkMode ? 'bg-slate-800/80 border-slate-700/80 text-slate-300' : 'bg-slate-100/90 border-slate-200 text-slate-700'
+                  <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${
+                    isDarkMode ? 'border-white/[0.07] bg-black/20 text-slate-400' : 'border-slate-200 bg-slate-50/80 text-slate-500'
                   }`}>
                     <th className="py-4 px-5">Machine ID</th>
                     <th className="py-4 px-5">Machine Name (Job Card Ref)</th>
@@ -2266,7 +2266,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
                             : isDarkMode ? 'hover:bg-slate-800/40 text-slate-200' : 'hover:bg-slate-50 text-slate-900'
                         }`}
                       >
-                        <td className="py-4 px-5 font-mono font-bold text-amber-600 dark:text-amber-400">{mch.code}</td>
+                        <td className="py-4 px-5 font-mono font-bold text-xs text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{mch.code}</td>
                         <td className={`py-4 px-5 font-bold font-mono text-sm ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                           {mch.name}
                         </td>

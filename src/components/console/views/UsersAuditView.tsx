@@ -1247,8 +1247,8 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse font-sans">
                     <thead>
-                      <tr className={`border-b font-mono font-bold text-[10px] uppercase tracking-wider ${
-                        isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'
+                      <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${
+                        isDarkMode ? 'bg-black/20 border-white/[0.07] text-slate-400' : 'bg-slate-50/80 border-slate-200 text-slate-500'
                       }`}>
                         <th className="py-4 px-4 w-10 text-center"></th>
                         <th className="py-4 px-4">Timestamp (WHEN)</th>
@@ -1292,7 +1292,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                               <td className="py-3.5 px-4 text-center text-slate-500 font-mono text-[10px]">
                                 {isExpanded ? '▼' : '▶'}
                               </td>
-                              <td className="py-3.5 px-4 font-mono text-[11px] text-slate-400 whitespace-nowrap">
+                              <td className="py-3.5 px-4 font-mono font-bold text-[11px] text-slate-200 dark:text-slate-200 whitespace-nowrap">
                                 {log.when || (log as any).timestamp || (log.createdAt ? new Date(log.createdAt).toLocaleString('en-IN', { hour12: true }) : 'Recent')}
                               </td>
                               <td className="py-3.5 px-4">
@@ -1589,8 +1589,8 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse font-sans">
                 <thead>
-                  <tr className={`border-b font-mono font-bold text-[10px] uppercase tracking-wider ${
-                    isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'
+                  <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${
+                    isDarkMode ? 'bg-black/20 border-white/[0.07] text-slate-400' : 'bg-slate-50/80 border-slate-200 text-slate-500'
                   }`}>
                     <th className="py-4 px-5">User ID & Name</th>
                     <th className="py-4 px-5">Department & Shift</th>

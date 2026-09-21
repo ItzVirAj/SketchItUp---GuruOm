@@ -16,7 +16,8 @@ import {
   Filter,
   Layers,
   ChevronRight,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Package
 } from 'lucide-react';
 import { QCInspection } from '../../../types/console';
 import { triggerQCFailure } from '../../../services/notificationService';
@@ -625,28 +626,38 @@ export const QCView: React.FC<QCViewProps> = ({
       {/* ── DESKTOP VIEW: TABLE OR INSPECTOR CARD GRID (Viewport >= md) ──         */}
       {/* ========================================================================= */}
       {viewMode === 'table' ? (
-        <div className={`hidden md:block rounded-2xl border overflow-hidden transition-all shadow-xs ${
-          isDarkMode ? 'bg-[#09090B] border-white/10' : 'bg-white border-slate-200/80'
+        <div className={`hidden md:block overflow-hidden rounded-[22px] border transition-ui ${
+          isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
         }`}>
+          <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+            <div>
+              <div className="text-xs font-extrabold text-slate-900 dark:text-white">Quality Control (QC) Metrology Register</div>
+              <div className="mt-0.5 text-[10px] text-slate-400">Incoming, in-process, and final inspection clearance tracking</div>
+            </div>
+            <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>
+              {filteredQc.length} records
+            </span>
+          </div>
+
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className={`border-b text-xs font-semibold ${
-                  isDarkMode ? 'bg-black/60 border-white/10 text-slate-400' : 'bg-slate-50/80 border-slate-200/80 text-slate-500'
+                <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${
+                  isDarkMode ? 'border-white/[0.07] bg-black/20 text-slate-500' : 'border-slate-200 bg-slate-50/80 text-slate-400'
                 }`}>
-                  <th className="py-3.5 px-5">Job Card #</th>
-                  <th className="py-3.5 px-5">Customer PO</th>
-                  <th className="py-3.5 px-5">Part Description</th>
-                  <th className="py-3.5 px-5 text-right">Inspect Qty</th>
-                  <th className="py-3.5 px-5 text-center">QC Status</th>
-                  <th className="py-3.5 px-5">Inspector Notes</th>
-                  <th className="py-3.5 px-5 text-right">Action</th>
+                  <th className="py-4 px-5">Job Card #</th>
+                  <th className="py-4 px-5">Customer PO</th>
+                  <th className="py-4 px-5">Part Description</th>
+                  <th className="py-4 px-5 text-right">Inspect Qty</th>
+                  <th className="py-4 px-5 text-center">QC Status</th>
+                  <th className="py-4 px-5">Inspector Notes</th>
+                  <th className="py-4 px-5 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className={`divide-y ${isDarkMode ? 'divide-white/5' : 'divide-slate-100'}`}>
+              <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
                 {filteredQc.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-400 text-xs">
+                    <td colSpan={7} className="py-12 text-center text-slate-400 font-mono text-xs">
                       No QC inspection records matching your query.
                     </td>
                   </tr>
@@ -661,33 +672,48 @@ export const QCView: React.FC<QCViewProps> = ({
                         key={qc.id} 
                         onClick={() => openInspection(qc)}
                         className={`group transition-colors cursor-pointer ${
-                          isDarkMode ? 'hover:bg-white/[0.04]' : 'hover:bg-blue-500/[0.04]'
+                          isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'
                         }`}
                       >
-                        <td className="py-3.5 px-5 font-bold text-[#5B75F8] dark:text-[#7B92FF]">
-                          <div className="flex items-center gap-2">
-                            <span>{qc.jobNo}</span>
-                            <ChevronRight className="w-3 h-3 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <td className="py-4 px-5">
+                          <div className="flex items-center gap-2.5">
+                            <div className={`p-2 rounded-xl transition-transform group-hover:scale-105 shrink-0 ${
+                              isDarkMode 
+                                ? 'bg-[var(--accent-primary)]/20 text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/30' 
+                                : 'bg-[var(--accent-primary)]/10 text-[var(--accent-text-light)] border border-[var(--accent-primary)]/20'
+                            }`}>
+                              <Package className="w-3.5 h-3.5" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-bold text-xs font-mono text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">
+                                  {qc.jobNo}
+                                </span>
+                              </div>
+                            </div>
+                            <ChevronRight className="w-3 h-3 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
                           </div>
                         </td>
-                        <td className={`py-3.5 px-5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                        <td className="py-4 px-5 font-mono text-xs">
                           {qc.orderPo ? (
-                            <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF] border border-blue-500/20">
+                            <span className="font-bold text-slate-800 dark:text-slate-200">
                               {qc.orderPo}
                             </span>
-                          ) : '—'}
+                          ) : (
+                            <span className="text-slate-400">—</span>
+                          )}
                         </td>
-                        <td className={`py-3.5 px-5 font-medium ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
+                        <td className={`py-4 px-5 font-medium ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
                           <span className="font-semibold text-slate-900 dark:text-white">{qc.partCode}</span>
                           {qc.partDescription && (
                             <span className="text-slate-400 dark:text-slate-500"> — {qc.partDescription}</span>
                           )}
                         </td>
-                        <td className={`py-3.5 px-5 text-right font-bold tabular-nums ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                        <td className={`py-4 px-5 text-right font-bold font-mono tabular-nums ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                           {qc.qty} NOS
                         </td>
-                        <td className="py-3.5 px-5 text-center">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                        <td className="py-4 px-5 text-center">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
                             isPassed
                               ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                               : isHold
@@ -702,15 +728,15 @@ export const QCView: React.FC<QCViewProps> = ({
                             <span>{qc.qcStatus || 'PENDING'}</span>
                           </span>
                         </td>
-                        <td className={`py-3.5 px-5 text-xs truncate max-w-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                        <td className={`py-4 px-5 text-xs truncate max-w-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                           {qc.inspectorNotes || <span className="text-slate-400/60 italic">Awaiting audit notes</span>}
                         </td>
-                        <td className="py-3.5 px-5 text-right" onClick={(e) => e.stopPropagation()}>
+                        <td className="py-4 px-5 text-right" onClick={(e) => e.stopPropagation()}>
                           {canPerformCta('UPLOAD_QC_REPORT') && (
                             <button
                               type="button"
                               onClick={() => openInspection(qc)}
-                              className="px-3.5 py-1 rounded-full bg-[#5B75F8] hover:bg-[#435BE8] text-white text-xs font-semibold shadow-xs flex items-center gap-1 ml-auto transition-all active:scale-[0.98] cursor-pointer"
+                              className="h-8 px-3.5 py-1.5 rounded-xl bg-[#5B75F8] hover:bg-[#4E67F0] text-white text-xs font-bold shadow-xs flex items-center justify-center gap-1.5 ml-auto transition-all active:scale-[0.96] cursor-pointer shrink-0"
                             >
                               <CheckCircle2 className="w-3.5 h-3.5" />
                               <span>Audit Decision</span>

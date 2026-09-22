@@ -60,6 +60,7 @@ import { getCurrentFinancialYear, formatDocumentNumber } from '../../../utils/st
 import { ChallanDetailModal } from '../modals/ChallanDetailModal';
 import { OrderStageDetailModal, StageKey } from '../modals/OrderStageDetailModal';
 import { useUrlModal } from '../../../hooks/useUrlModal';
+import { useRevealMore } from '../../../hooks/useRevealMore';
 import { LineItemProgressBadge } from '../LineItemProgressBadge';
 import { OrderClosureSummaryCard } from '../OrderClosureSummaryCard';
 
@@ -399,6 +400,13 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       };
     });
   }, [order.lines, order.jobCards, order.poNo, order.id, order.paymentStatus, order.dispatches, qcQueue, pdiQueue, dispatches, linkedDispatches, latestInvoice]);
+
+  // Order Line Items section (view mode) can run to 40-50+ rows for a
+  // large PO, so page it the same way Job Cards does. Keyed by order.id
+  // so navigating to a different order's detail page starts back at page 1.
+  const orderLines = order.lines || [];
+  const mobileLineItemsPage = useRevealMore(orderLines, 20, order.id);
+  const desktopLineItemsPage = useRevealMore(orderLines, 50, order.id);
 
   // Active step index calculation matching the 8-stage lifecycle
   let activeStepIndex = 0;
@@ -3202,7 +3210,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
         {/* Mobile Line Items Cards (< md) */}
         <div className="block md:hidden space-y-2.5">
-          {order.lines.map((ln, idx) => (
+          {mobileLineItemsPage.shown.map((ln, idx) => (
             <div key={ln.id} className={`p-3.5 rounded-2xl border transition-ui space-y-2.5 ${isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
               }`}>
               <div className="flex items-start justify-between gap-2">
@@ -3266,6 +3274,16 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               </div>
             </div>
           ))}
+          {mobileLineItemsPage.hasMore && (
+            <button
+              onClick={() => mobileLineItemsPage.showMore()}
+              className={`w-full py-2.5 rounded-xl border font-mono text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-ui ${
+                isDarkMode ? 'border-slate-800 bg-slate-900 text-slate-400 hover:text-white hover:border-slate-700' : 'border-slate-200 bg-white text-slate-500 hover:text-slate-900 hover:border-slate-300'
+              }`}
+            >
+              Show {Math.min(20, mobileLineItemsPage.remaining)} more ({mobileLineItemsPage.remaining} left)
+            </button>
+          )}
         </div>
 
         {/* Desktop Line Items Table (>= md) */}
@@ -3286,7 +3304,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
-              {order.lines.map((ln, idx) => (
+              {desktopLineItemsPage.shown.map((ln, idx) => (
                 <tr key={ln.id} className={isDarkMode ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}>
                   <td className="py-3.5 px-4 font-bold text-slate-400">{idx + 1}</td>
                   <td className="py-3.5 px-4 font-bold">
@@ -3319,6 +3337,20 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                   <td className="py-3.5 px-4 text-right font-bold text-emerald-500">₹{(Number(ln.orderQty) * Number(ln.rate)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                 </tr>
               ))}
+              {desktopLineItemsPage.hasMore && (
+                <tr>
+                  <td colSpan={9} className="py-4 px-4 text-center">
+                    <button
+                      onClick={() => desktopLineItemsPage.showMore()}
+                      className={`px-4 py-2 rounded-xl border font-mono text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-ui ${
+                        isDarkMode ? 'border-slate-800 bg-slate-900 text-slate-400 hover:text-white hover:border-slate-700' : 'border-slate-200 bg-white text-slate-500 hover:text-slate-900 hover:border-slate-300'
+                      }`}
+                    >
+                      Show {Math.min(50, desktopLineItemsPage.remaining)} more ({desktopLineItemsPage.remaining} left)
+                    </button>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

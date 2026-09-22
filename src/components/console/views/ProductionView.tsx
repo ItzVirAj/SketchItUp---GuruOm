@@ -84,6 +84,7 @@ import { Modal } from '../../common/Modal';
 import { triggerMachineDowntime } from '../../../services/notificationService';
 import { MachineDowntimeLog } from '../../../types/console';
 import { useUrlModal } from '../../../hooks/useUrlModal';
+import { useRevealMore } from '../../../hooks/useRevealMore';
 
 export const DEFAULT_ROUTE_CARDS: RouteCard[] = [];
 
@@ -1533,6 +1534,23 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
 
   const attentionCount = jobCards.filter(jc => needsAttention(jc)).length;
   const jobFiltersActive = !!searchNeedle || statusFilter !== 'ALL' || attentionOnly;
+  const jobCardsFilterKey = `${searchNeedle}|${statusFilter}|${attentionOnly}|${viewMode}`;
+  const mobileJobCardsPage = useRevealMore(filteredCards, 20, jobCardsFilterKey);
+  const desktopJobCardsPage = useRevealMore(filteredCards, 50, jobCardsFilterKey);
+  // Kanban columns are a fixed, always-3-status set, so it's safe to call the
+  // hook once per column directly (not inside the render .map()) rather than
+  // in a loop — each column still paginates independently.
+  const kanbanScheduledJobs = filteredCards.filter(j => j.status === 'SCHEDULED');
+  const kanbanRunningJobs = filteredCards.filter(j => j.status === 'RUNNING' || j.status === 'IN_PROGRESS');
+  const kanbanCompletedJobs = filteredCards.filter(j => j.status === 'COMPLETED');
+  const kanbanScheduledPage = useRevealMore(kanbanScheduledJobs, 15, jobCardsFilterKey);
+  const kanbanRunningPage = useRevealMore(kanbanRunningJobs, 15, jobCardsFilterKey);
+  const kanbanCompletedPage = useRevealMore(kanbanCompletedJobs, 15, jobCardsFilterKey);
+  const kanbanPageByStatus: Record<string, ReturnType<typeof useRevealMore<typeof filteredCards[number]>>> = {
+    SCHEDULED: kanbanScheduledPage,
+    RUNNING: kanbanRunningPage,
+    COMPLETED: kanbanCompletedPage,
+  };
   const filteredSet = new Set(filteredCards);
   // Group summaries use ALL of a PO's cards; only the listed rows follow the filters.
   const jobGroups = viewMode === 'grouped'
@@ -1970,7 +1988,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                 <p className="text-[10px] text-slate-400 mt-0.5">Try adjusting your filters</p>
               </div>
             ) : (
-              filteredCards.map((jc) => {
+              mobileJobCardsPage.shown.map((jc) => {
                 const isRunning = jc.jobStatus === 'IN_PROGRESS' || jc.status === 'RUNNING' || jc.status === 'IN_PROGRESS';
                 const isHold = jc.jobStatus === 'QC_HOLD' || jc.status === 'QC_HOLD';
                 const isDone = jc.jobStatus === 'COMPLETED' || jc.status === 'COMPLETED';
@@ -2087,6 +2105,16 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                 );
               })
             )}
+            {mobileJobCardsPage.hasMore && (
+              <button
+                onClick={() => mobileJobCardsPage.showMore()}
+                className={`w-full py-2.5 rounded-xl border font-mono text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-ui ${
+                  isDarkMode ? 'border-slate-800 bg-slate-900 text-slate-400 hover:text-white hover:border-slate-700' : 'border-slate-200 bg-white text-slate-500 hover:text-slate-900 hover:border-slate-300'
+                }`}
+              >
+                Show {Math.min(20, mobileJobCardsPage.remaining)} more ({mobileJobCardsPage.remaining} left)
+              </button>
+            )}
           </div>
           )}
 
@@ -2128,7 +2156,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                           </td>
                         </tr>
                       ) : null}
-                      {filteredCards.map((jc) => (
+                      {desktopJobCardsPage.shown.map((jc) => (
                         <tr 
                           key={jc.jobNo} 
                           onClick={() => {
@@ -2240,6 +2268,20 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                           </td>
                         </tr>
                       ))}
+                      {desktopJobCardsPage.hasMore && (
+                        <tr>
+                          <td colSpan={8} className="py-4 px-5 text-center">
+                            <button
+                              onClick={() => desktopJobCardsPage.showMore()}
+                              className={`px-4 py-2 rounded-xl border font-mono text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-ui ${
+                                isDarkMode ? 'border-slate-800 bg-slate-900 text-slate-400 hover:text-white hover:border-slate-700' : 'border-slate-200 bg-white text-slate-500 hover:text-slate-900 hover:border-slate-300'
+                              }`}
+                            >
+                              Show {Math.min(50, desktopJobCardsPage.remaining)} more ({desktopJobCardsPage.remaining} left)
+                            </button>
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -2247,8 +2289,9 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
             ) : (
               /* Kanban Board View */
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {['SCHEDULED', 'RUNNING', 'COMPLETED'].map((colStatus) => {
-                  const colJobs = filteredCards.filter(j => j.status === colStatus || (colStatus === 'RUNNING' && j.status === 'IN_PROGRESS'));
+                {(['SCHEDULED', 'RUNNING', 'COMPLETED'] as const).map((colStatus) => {
+                  const colPage = kanbanPageByStatus[colStatus];
+                  const colJobs = colPage.shown;
                 return (
                   <div key={colStatus} className={`p-4 rounded-3xl border ${
                     isDarkMode ? 'bg-slate-900/60 border-slate-800/80' : 'bg-slate-50 border-slate-200'
@@ -2258,7 +2301,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
                         isDarkMode ? 'bg-slate-800 text-slate-300' : 'bg-slate-200 text-slate-700'
                       }`}>
-                        {colJobs.length}
+                        {colPage.total}
                       </span>
                     </div>
 
@@ -2297,6 +2340,16 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                         </div>
                       ))}
                     </div>
+                    {colPage.hasMore && (
+                      <button
+                        onClick={() => colPage.showMore()}
+                        className={`mt-3 w-full py-2 rounded-xl border font-mono text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-ui ${
+                          isDarkMode ? 'border-slate-800 bg-slate-900 text-slate-400 hover:text-white hover:border-slate-700' : 'border-slate-200 bg-white text-slate-500 hover:text-slate-900 hover:border-slate-300'
+                        }`}
+                      >
+                        Show {Math.min(15, colPage.remaining)} more ({colPage.remaining} left)
+                      </button>
+                    )}
                   </div>
                 );
               })}

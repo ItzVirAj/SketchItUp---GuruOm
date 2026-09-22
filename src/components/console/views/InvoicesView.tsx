@@ -53,6 +53,7 @@ import { TaxInvoicePrint } from '../shared/TaxInvoicePrint';
 import { printElementById } from '../../../utils/printDocument';
 
 import { useUrlModal } from '../../../hooks/useUrlModal';
+import { useRevealMore } from '../../../hooks/useRevealMore';
 
 interface InvoicesViewProps {
   invoices: CustomerInvoice[];
@@ -420,6 +421,12 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
       ...taxSplit
     };
   }, [invoiceLines, customerGstin]);
+
+  // The invoice line-items table is read-only display (auto-populated from
+  // the selected dispatch/order), so it's safe to page it the same way as
+  // the other line-item views. Keyed by selectedDispatchNo so switching the
+  // source dispatch resets back to page 1.
+  const invoiceLinesPage = useRevealMore(invoiceLines, 20, selectedDispatchNo);
 
   // Handle Save Invoice
   const handleSaveInvoice = async (status: 'DRAFT' | 'ISSUED') => {
@@ -1302,7 +1309,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                       </tr>
                     </thead>
                     <tbody className={`divide-y ${isDarkMode ? 'divide-white/[0.05] bg-black/20' : 'divide-slate-200 bg-white'}`}>
-                      {invoiceLines.map((line, idx) => (
+                      {invoiceLinesPage.shown.map((line, idx) => (
                         <tr key={idx} className={isDarkMode ? 'hover:bg-white/[0.02]' : 'hover:bg-slate-50'}>
                           <td className="py-3 px-4 font-mono font-bold text-xs text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">
                             {line.itemCode}
@@ -1324,6 +1331,20 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                           </td>
                         </tr>
                       ))}
+                      {invoiceLinesPage.hasMore && (
+                        <tr>
+                          <td colSpan={6} className="py-3 px-4 text-center">
+                            <button
+                              onClick={() => invoiceLinesPage.showMore()}
+                              className={`px-4 py-2 rounded-xl border font-mono text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-ui ${
+                                isDarkMode ? 'border-white/[0.08] bg-black/30 text-slate-400 hover:text-white hover:border-white/20' : 'border-slate-200 bg-white text-slate-500 hover:text-slate-900 hover:border-slate-300'
+                              }`}
+                            >
+                              Show {Math.min(20, invoiceLinesPage.remaining)} more ({invoiceLinesPage.remaining} left)
+                            </button>
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>

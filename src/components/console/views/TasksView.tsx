@@ -23,6 +23,7 @@ import { useUrlModal } from '../../../hooks/useUrlModal';
 import { Task, TaskPriority, TaskStatus, TaskTemplate, fetchTaskTemplates, applyTaskTemplate } from '../../../services/consoleApiServices';
 import { toast } from '../../../context/ToastContext';
 import { SystemUser } from '../../../types/console';
+import { TaskScheduleCalendar } from './tasks/TaskScheduleCalendar';
 
 interface TasksViewProps {
   tasks: Task[];
@@ -142,6 +143,7 @@ export const TasksView: React.FC<TasksViewProps> = ({
 
   const detailModal = useUrlModal<{ id: string }>('task-detail');
   const cancelModal = useUrlModal<{ id: string }>('cancel-task');
+  const [mainView, setMainView] = useState<'board' | 'calendar'>('calendar');
   const [viewFilter, setViewFilter] = useState<'MINE' | 'ASSIGNED_BY_ME' | 'ALL'>(canManageTasks ? 'ALL' : 'MINE');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
@@ -275,7 +277,43 @@ export const TasksView: React.FC<TasksViewProps> = ({
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center flex-wrap gap-3">
+            {/* Primary View Switcher: Schedule & Calendar vs Board */}
+            <div
+              className={`flex items-center p-1 rounded-2xl border ${
+                isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-100 border-slate-200'
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() => setMainView('calendar')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-ui cursor-pointer ${
+                  mainView === 'calendar'
+                    ? 'bg-[var(--accent-primary)] text-white shadow-sm'
+                    : isDarkMode
+                      ? 'text-slate-400 hover:text-white'
+                      : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                <span>Schedule & Calendar</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setMainView('board')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-ui cursor-pointer ${
+                  mainView === 'board'
+                    ? 'bg-[var(--accent-primary)] text-white shadow-sm'
+                    : isDarkMode
+                      ? 'text-slate-400 hover:text-white'
+                      : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <ListTodo className="w-3.5 h-3.5" />
+                <span>Board View</span>
+              </button>
+            </div>
+
             {/* Dual Summary Metrics Pill */}
             <div
               className={`flex items-center gap-3.5 p-3 sm:px-4 sm:py-2.5 rounded-2xl border font-mono w-full sm:w-auto ${
@@ -329,9 +367,26 @@ export const TasksView: React.FC<TasksViewProps> = ({
         </div>
       </div>
 
-      {/* ========================================================================= */}
-      {/* ── APPLE SEGMENTED FILTER BAR ──                                        */}
-      {/* ========================================================================= */}
+      {mainView === 'calendar' ? (
+        <TaskScheduleCalendar
+          tasks={tasks}
+          isLoadingTasks={isLoadingTasks}
+          users={users}
+          currentUser={currentUser}
+          canManageTasks={canManageTasks}
+          isDarkMode={isDarkMode}
+          onCreateTask={onCreateTask}
+          onUpdateTask={onUpdateTask}
+          onUpdateStatus={onUpdateStatus}
+          onAddComment={onAddComment}
+          onCancelTask={onCancelTask}
+          onOpenCancelModal={(taskToCancel) => cancelModal.open({ id: taskToCancel.id })}
+        />
+      ) : (
+        <>
+          {/* ========================================================================= */}
+          {/* ── APPLE SEGMENTED FILTER BAR ──                                        */}
+          {/* ========================================================================= */}
       <div className={`p-2.5 sm:p-3 rounded-3xl border transition-ui flex items-center justify-between gap-3 overflow-x-auto scrollbar-none ${cardBase}`}>
         <div
           className={`p-1 rounded-2xl border flex items-center overflow-x-auto scrollbar-none w-full sm:w-auto ${
@@ -558,6 +613,8 @@ export const TasksView: React.FC<TasksViewProps> = ({
           })}
         </div>
       )}
+    </>
+  )}
 
       {/* ========================================================================= */}
       {/* ── CREATE / EDIT TASK MODAL ──                                          */}

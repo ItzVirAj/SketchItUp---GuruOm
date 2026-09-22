@@ -32,7 +32,7 @@ export function loadSessionSecuritySettings(): SessionSecuritySettings {
         enableIdleWarning: typeof parsed.enableIdleWarning === 'boolean' ? parsed.enableIdleWarning : DEFAULT_SESSION_SETTINGS.enableIdleWarning
       };
     }
-  } catch (_) {}
+  } catch (_) { }
   return DEFAULT_SESSION_SETTINGS;
 }
 
@@ -49,6 +49,7 @@ interface AuthContextType {
   session: any | null;
   profile: SystemUser | null;
   loading: boolean;
+  isLoggingOut: boolean;
   sessionSettings: SessionSecuritySettings;
   updateSessionSettings: (updates: Partial<SessionSecuritySettings>) => void;
   lastActivityAt: number;
@@ -69,6 +70,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<any | null>(null);
   const [profile, setProfile] = useState<SystemUser | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
   const [sessionSettings, setSessionSettings] = useState<SessionSecuritySettings>(loadSessionSecuritySettings);
   const [sessionStartedAt, setSessionStartedAt] = useState<number>(() => {
     const saved = localStorage.getItem(SESSION_START_KEY);
@@ -131,7 +133,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.removeItem(SESSION_EXPIRY_KEY);
       localStorage.removeItem(SESSION_START_KEY);
       localStorage.removeItem(LAST_ACTIVITY_KEY);
-    } catch (_) {}
+    } catch (_) { }
     setAccessToken(null);
     setUser(null);
     setSession(null);
@@ -206,8 +208,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(res.user));
                 }
               })
-              .catch(() => {});
-          } catch (_) {}
+              .catch(() => { });
+          } catch (_) { }
         } else if (savedUserStr) {
           // Expired
           purgeSession();
@@ -342,8 +344,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user]);
 
   const signIn = useCallback(async (email: string, password?: string) => {
-    setLoading(true);
     const cleanEmail = email.trim().toLowerCase();
+    const startTime = Date.now();
 
     try {
       const res = await apiClient.post<{ access_token: string; user: SystemUser }>('/auth/login', {
@@ -352,17 +354,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (res?.access_token && res?.user) {
+        // Enforce 4-5 seconds of loading animation before transition, strictly on successful login
+        const elapsed = Date.now() - startTime;
+        const targetDuration = 3500; // 3.5 seconds
+        if (elapsed < targetDuration) {
+          await new Promise(resolve => setTimeout(resolve, targetDuration - elapsed));
+        }
+
         persistSession(res.user, res.access_token);
         setUser(res.user);
         setSession({ access_token: res.access_token });
         setProfile(res.user);
-        setLoading(false);
         return { error: null };
       }
 
       throw new Error('Invalid response received from authentication server.');
     } catch (err: any) {
-      setLoading(false);
       return { error: err instanceof Error ? err : new Error(err?.message || 'Failed to sign in.') };
     }
   }, []);
@@ -388,14 +395,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signOut = useCallback(async () => {
+    setIsLoggingOut(true);
     setLoading(true);
+    const startTime = Date.now();
     try {
       await apiClient.post('/auth/logout');
     } catch (err) {
       console.warn('Logout notification error:', err);
     } finally {
+      // Keep logout animation visible for ~3.0s to match the smooth login experience
+      const elapsed = Date.now() - startTime;
+      const targetDuration = 3000;
+      if (elapsed < targetDuration) {
+        await new Promise(resolve => setTimeout(resolve, targetDuration - elapsed));
+      }
       purgeSession();
       setLoading(false);
+      setIsLoggingOut(false);
     }
   }, []);
 
@@ -441,6 +457,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     session,
     profile,
     loading,
+    isLoggingOut,
     sessionSettings,
     updateSessionSettings,
     lastActivityAt,
@@ -457,6 +474,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     session,
     profile,
     loading,
+    isLoggingOut,
     sessionSettings,
     updateSessionSettings,
     lastActivityAt,

@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { ConsoleContainer } from './components/console/ConsoleContainer';
 import { ServerAdminVault } from './components/admin/ServerAdminVault';
 import { LoginPage } from './components/auth/LoginPage';
@@ -9,6 +10,8 @@ import { ToastProvider } from './context/ToastContext';
 
 import { setDarkModeWithoutTransitions } from './utils/themeTransitions';
 import { Agentation } from 'agentation';
+
+import { AuthTransitionScreen } from './components/auth/AuthTransitionScreen';
 
 // Helper component to reset scroll position on page route changes
 function ScrollToTop() {
@@ -22,8 +25,9 @@ function ScrollToTop() {
 }
 
 function MainApp() {
-  const { user, loading, signOut } = useAuth();
-
+  const { user, loading, isLoggingOut, signOut } = useAuth();
+  const reduceMotion = useReducedMotion();
+  const wasUnauthenticatedRef = useRef(false);
 
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     try {
@@ -35,39 +39,87 @@ function MainApp() {
   });
 
   useEffect(() => {
+    if (!loading && !user) {
+      wasUnauthenticatedRef.current = true;
+    }
+  }, [loading, user]);
+
+  useEffect(() => {
     // Switch instantly (no global transition smear) — see utils/themeTransitions.ts
     setDarkModeWithoutTransitions(isDarkMode);
     localStorage.setItem('stratum_darkMode', JSON.stringify(isDarkMode));
   }, [isDarkMode]);
 
-  if (loading) {
-    return (
-      <div className="h-screen w-full bg-[#09090B] flex flex-col items-center justify-center text-white font-sans">
-        <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-sm font-medium text-slate-300">Authenticating with Owner OS...</p>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <LoginPage 
-        isDarkMode={isDarkMode}
-        onToggleTheme={() => setIsDarkMode(!isDarkMode)}
-      />
-    );
-  }
+  const isFreshLogin = wasUnauthenticatedRef.current && Boolean(user);
 
   return (
-    <Router>
-      <ScrollToTop />
-      <div className={`min-h-screen font-sans ${isDarkMode ? 'bg-[#09090B] text-[#F4F4F5]' : 'bg-white text-slate-900'}`}>
-        <Routes>
-          <Route path="/admin/*" element={<ServerAdminVault onSignOut={signOut} />} />
-          <Route path="*" element={<ConsoleContainer onSignOut={signOut} />} />
-        </Routes>
-      </div>
-    </Router>
+    <AnimatePresence mode="wait" initial={false}>
+      {loading ? (
+        <motion.div
+          key="auth-transition-screen"
+          initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.985 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.985 }}
+          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          className="h-screen w-full"
+        >
+          <AuthTransitionScreen
+            mode={isLoggingOut ? 'logout' : 'connecting'}
+            isDarkMode={isDarkMode}
+          />
+        </motion.div>
+      ) : !user ? (
+        <motion.div
+          key="login-screen"
+          initial={false}
+          exit={
+            reduceMotion
+              ? { opacity: 0 }
+              : { opacity: 0, scale: 0.985 }
+          }
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="w-full"
+        >
+          <LoginPage 
+            isDarkMode={isDarkMode}
+            onToggleTheme={() => setIsDarkMode(!isDarkMode)}
+          />
+        </motion.div>
+      ) : (
+        <motion.div
+          key="authenticated-screen"
+          initial={
+            reduceMotion
+              ? { opacity: 0 }
+              : isFreshLogin
+              ? { opacity: 0, scale: 0.988 }
+              : false
+          }
+          animate={{ opacity: 1, scale: 1 }}
+          transition={
+            reduceMotion
+              ? { duration: 0.2 }
+              : isFreshLogin
+              ? { duration: 0.7, ease: [0.16, 1, 0.3, 1] }
+              : { duration: 0 }
+          }
+          className="w-full"
+          onAnimationComplete={() => {
+            wasUnauthenticatedRef.current = false;
+          }}
+        >
+          <Router>
+            <ScrollToTop />
+            <div className={`min-h-screen font-sans ${isDarkMode ? 'bg-[#09090B] text-[#F4F4F5]' : 'bg-white text-slate-900'}`}>
+              <Routes>
+                <Route path="/admin/*" element={<ServerAdminVault onSignOut={signOut} />} />
+                <Route path="*" element={<ConsoleContainer onSignOut={signOut} />} />
+              </Routes>
+            </div>
+          </Router>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   AlertCircle,
+  AlertTriangle,
   ArrowRight,
   ArrowUpRight,
   Building2,
@@ -36,7 +37,7 @@ interface LoginPageProps {
   variant?: 'split' | 'centered';
 }
 
-type Notice = {
+export type Notice = {
   type: 'error' | 'warning' | 'success';
   message: string;
 };
@@ -126,6 +127,88 @@ function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback;
 }
 
+export function getLoginNotice(error: unknown): Notice {
+  // Check browser online status
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    return {
+      type: 'error',
+      message: "We couldn't connect to OwnerOS. Check your connection and try again.",
+    };
+  }
+
+  const statusCode =
+    error instanceof ApiError
+      ? error.statusCode
+      : typeof error === 'object' && error !== null && 'statusCode' in error && typeof (error as any).statusCode === 'number'
+      ? (error as any).statusCode
+      : undefined;
+
+  const rawMessage =
+    error instanceof Error
+      ? error.message
+      : typeof error === 'object' && error !== null && 'message' in error && typeof (error as any).message === 'string'
+      ? (error as any).message
+      : '';
+
+  // 1. Network / connectivity failure
+  if (
+    statusCode === 0 ||
+    /failed to fetch|network failure|network error|connection refused|network/i.test(rawMessage)
+  ) {
+    return {
+      type: 'error',
+      message: "We couldn't connect to OwnerOS. Check your connection and try again.",
+    };
+  }
+
+  // 2. Account state: Suspended / revoked / deactivated
+  // Sanitize message: never expose user full names or internal server errors
+  if (
+    statusCode === 403 ||
+    /revoked|suspended|deactivated|disabled|inactive/i.test(rawMessage)
+  ) {
+    return {
+      type: 'error',
+      message: 'Your account is currently unavailable. Please contact your administrator.',
+    };
+  }
+
+  // 3. Rate limiting / Too many attempts (HTTP 429)
+  if (statusCode === 429 || /too many|rate limit/i.test(rawMessage)) {
+    return {
+      type: 'warning',
+      message: 'Too many sign-in attempts. Please wait a moment and try again.',
+    };
+  }
+
+  // 4. Invalid credentials: Unknown email or wrong password (HTTP 401, 404, or 400)
+  // Maintains account enumeration protection — identical message for unknown email vs wrong password
+  if (statusCode === 401 || statusCode === 404 || statusCode === 400) {
+    return {
+      type: 'error',
+      message: 'Invalid email or password. Please check your details and try again.',
+    };
+  }
+
+  // 5. Server error / unexpected server response (HTTP 5xx)
+  if (typeof statusCode === 'number' && statusCode >= 500 && statusCode < 600) {
+    return {
+      type: 'error',
+      message: 'Sign-in is temporarily unavailable. Please try again shortly.',
+    };
+  }
+
+  // 6. Generic safe fallback
+  return {
+    type: 'error',
+    message: 'Sign-in is temporarily unavailable. Please try again shortly.',
+  };
+}
+
+export function getLoginErrorMessage(error: unknown): string {
+  return getLoginNotice(error).message;
+}
+
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
@@ -150,7 +233,7 @@ function BrandMark({
   );
 }
 
-function NoticeBanner({
+export function NoticeBanner({
   notice,
   onDismiss,
   isDarkMode,
@@ -163,34 +246,46 @@ function NoticeBanner({
 }) {
   const styles = {
     error: isDarkMode
-      ? 'border-rose-500/30 bg-rose-500/10 text-rose-200'
-      : 'border-rose-200 bg-rose-50 text-rose-800',
+      ? 'border-rose-500/30 bg-rose-500/10 text-rose-200 shadow-[0_4px_16px_rgba(0,0,0,0.2)]'
+      : 'border-rose-200 bg-rose-50 text-rose-800 shadow-[0_2px_8px_rgba(15,23,42,0.05)]',
     warning: isDarkMode
-      ? 'border-amber-500/30 bg-amber-500/10 text-amber-200'
-      : 'border-amber-200 bg-amber-50 text-amber-900',
+      ? 'border-amber-500/30 bg-amber-500/10 text-amber-200 shadow-[0_4px_16px_rgba(0,0,0,0.2)]'
+      : 'border-amber-200 bg-amber-50 text-amber-900 shadow-[0_2px_8px_rgba(15,23,42,0.05)]',
     success: isDarkMode
-      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'
-      : 'border-emerald-200 bg-emerald-50 text-emerald-800',
+      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200 shadow-[0_4px_16px_rgba(0,0,0,0.2)]'
+      : 'border-emerald-200 bg-emerald-50 text-emerald-800 shadow-[0_2px_8px_rgba(15,23,42,0.05)]',
   };
 
-  const Icon = notice.type === 'success' ? CheckCircle2 : AlertCircle;
+  const iconColors = {
+    error: isDarkMode ? 'text-rose-400' : 'text-rose-600',
+    warning: isDarkMode ? 'text-amber-400' : 'text-amber-600',
+    success: isDarkMode ? 'text-emerald-400' : 'text-emerald-600',
+  };
+
+  const Icon =
+    notice.type === 'success'
+      ? CheckCircle2
+      : notice.type === 'warning'
+      ? AlertTriangle
+      : AlertCircle;
 
   return (
     <div
       id={id}
       role={notice.type === 'success' ? 'status' : 'alert'}
-      className={`flex items-start gap-2.5 rounded-2xl border p-3.5 backdrop-blur-sm ${styles[notice.type]}`}
+      aria-live={notice.type === 'success' ? 'polite' : 'assertive'}
+      className={`flex items-start gap-2.5 rounded-2xl border p-3.5 backdrop-blur-sm transition-colors ${styles[notice.type]}`}
     >
-      <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+      <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${iconColors[notice.type]}`} aria-hidden="true" />
 
-      <p className="flex-1 text-[12.5px] leading-relaxed">{notice.message}</p>
+      <p className="flex-1 text-[13px] font-medium leading-relaxed">{notice.message}</p>
 
       {onDismiss && (
         <button
           type="button"
           onClick={onDismiss}
-          aria-label="Dismiss message"
-          className="shrink-0 cursor-pointer rounded-md p-1 opacity-60 transition-opacity hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+          aria-label="Dismiss alert"
+          className="shrink-0 cursor-pointer rounded-md p-1 opacity-60 transition-opacity hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
         >
           <X className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
@@ -460,27 +555,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       const { error } = await signIn(normalizedEmail, password);
 
       if (error) {
-        const status = error instanceof ApiError ? error.statusCode : undefined;
-
-        if (status === 401 || status === 404) {
-          setNotice({
-            type: 'error',
-            message:
-              'We couldn’t sign you in with those details. Check your email and password, then try again.',
-          });
-        } else if (status === 429) {
-          setNotice({
-            type: 'warning',
-            message: 'Too many sign-in attempts. Please wait a moment before trying again.',
-          });
-        } else {
-          setNotice({
-            type: 'error',
-            message:
-              'Sign-in is currently unavailable. Please try again shortly or contact your administrator.',
-          });
-        }
-
+        setNotice(getLoginNotice(error));
         return;
       }
 
@@ -492,14 +567,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
       authenticated = true;
       setPassword('');
-    } catch {
-      setNotice({
-        type: 'error',
-        message: 'We couldn’t connect to OwnerOS. Check your connection and try again.',
-      });
+      setNotice(null);
+    } catch (err: unknown) {
+      setNotice(getLoginNotice(err));
     } finally {
       loginInFlight.current = false;
-      setIsLoading(false);
+      if (!authenticated) {
+        setIsLoading(false);
+      }
     }
 
     if (authenticated) {
@@ -568,7 +643,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     'h-[46px] w-full rounded-2xl border bg-[var(--input)] pl-11 pr-4 text-[13.5px] text-[var(--text)] outline-none transition-all duration-200 placeholder:text-[var(--subtle)] focus:border-[var(--accent)] focus:ring-4 focus:ring-[color:var(--ring)] disabled:cursor-not-allowed disabled:opacity-60';
 
   const primaryButtonClassName =
-    'group flex h-[46px] w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(180deg,var(--btn-from),var(--btn-to))] px-4 text-[14px] font-semibold text-[var(--btn-text)] shadow-[0_6px_18px_-4px_rgba(77,142,255,0.45),inset_0_1px_1px_rgba(255,255,255,0.35)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--accent)] disabled:cursor-wait disabled:opacity-60';
+    'group relative overflow-hidden flex h-[46px] w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(180deg,var(--btn-from),var(--btn-to))] px-4 text-[14px] font-semibold text-[var(--btn-text)] shadow-[0_6px_18px_-4px_rgba(77,142,255,0.45),inset_0_1px_1px_rgba(255,255,255,0.35)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--accent)] disabled:cursor-wait disabled:opacity-90';
 
   const labelClassName =
     'text-[11px] font-semibold uppercase tracking-[0.05em] text-[var(--muted)]';
@@ -650,6 +725,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 className="mt-5"
               >
                 <NoticeBanner
+                  id="login-notice-banner"
                   notice={notice}
                   onDismiss={() => setNotice(null)}
                   isDarkMode={isDarkMode}
@@ -691,7 +767,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     clearFieldError('email');
                   }}
                   aria-invalid={Boolean(fieldErrors.email)}
-                  aria-describedby={fieldErrors.email ? 'owneros-email-error' : undefined}
+                  aria-describedby={
+                    fieldErrors.email
+                      ? 'owneros-email-error'
+                      : notice
+                      ? 'login-notice-banner'
+                      : undefined
+                  }
                   placeholder="name@company.com"
                   className={`${inputClassName} ${fieldErrors.email ? 'border-rose-500' : 'border-[var(--line)]'
                     }`}
@@ -741,7 +823,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     clearFieldError('password');
                   }}
                   aria-invalid={Boolean(fieldErrors.password)}
-                  aria-describedby={fieldErrors.password ? 'owneros-password-error' : undefined}
+                  aria-describedby={
+                    fieldErrors.password
+                      ? 'owneros-password-error'
+                      : notice
+                      ? 'login-notice-banner'
+                      : undefined
+                  }
                   placeholder="Enter your password"
                   className={`${inputClassName} pr-12 ${fieldErrors.password ? 'border-rose-500' : 'border-[var(--line)]'
                     }`}
@@ -803,24 +891,104 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               </label>
             </div>
 
-            <button type="submit" disabled={isLoading} className={`${primaryButtonClassName} mt-1`}>
-              {isLoading ? (
-                <>
-                  <Loader2
-                    className="h-4 w-4 animate-spin motion-reduce:animate-none"
-                    aria-hidden="true"
-                  />
-                  <span>Signing you in…</span>
-                </>
-              ) : (
-                <>
-                  <span>Sign in</span>
-                  <ArrowRight
-                    className="h-4 w-4 transition-transform group-hover:translate-x-1 motion-reduce:transform-none"
-                    aria-hidden="true"
-                  />
-                </>
+            <button
+              type="submit"
+              disabled={isLoading}
+              aria-busy={isLoading}
+              aria-live="polite"
+              className={`${primaryButtonClassName} mt-1`}
+            >
+              {/* Premium Apple specular sheen gliding through the button */}
+              {isLoading && !reduceMotion && (
+                <motion.span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 -skew-x-12 bg-gradient-to-r from-transparent via-white/[0.22] to-transparent"
+                  initial={{ x: '-120%' }}
+                  animate={{ x: '220%' }}
+                  transition={{
+                    repeat: Infinity,
+                    duration: 1.5,
+                    ease: [0.4, 0, 0.2, 1],
+                  }}
+                />
               )}
+
+              {/* Subdued Apple-style luminous progress trace along the bottom edge */}
+              {isLoading && !reduceMotion && (
+                <motion.span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-white/70 to-transparent"
+                  initial={{ x: '-100%' }}
+                  animate={{ x: '100%' }}
+                  transition={{
+                    repeat: Infinity,
+                    duration: 1.25,
+                    ease: 'easeInOut',
+                  }}
+                />
+              )}
+
+              <AnimatePresence mode="wait" initial={false}>
+                {isLoading ? (
+                  <motion.span
+                    key="loading-state"
+                    initial={reduceMotion ? false : { opacity: 0, y: 3 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={reduceMotion ? false : { opacity: 0, y: -3 }}
+                    transition={{ duration: 0.16 }}
+                    className="relative z-10 flex items-center justify-center gap-2.5 text-[var(--btn-text)]"
+                  >
+                    {/* Apple harmonic pulsing dots */}
+                    <span className="flex items-center gap-1.5" aria-hidden="true">
+                      {[0, 1, 2].map((i) => (
+                        <motion.span
+                          key={i}
+                          className="h-1.5 w-1.5 rounded-full bg-white shadow-[0_0_6px_rgba(255,255,255,0.7)]"
+                          initial={
+                            reduceMotion
+                              ? { opacity: 0.9, scale: 1 }
+                              : { opacity: 0.35, scale: 0.75 }
+                          }
+                          animate={
+                            reduceMotion
+                              ? { opacity: 0.9, scale: 1 }
+                              : {
+                                  opacity: [0.35, 1, 0.35],
+                                  scale: [0.75, 1.2, 0.75],
+                                }
+                          }
+                          transition={
+                            reduceMotion
+                              ? { duration: 0 }
+                              : {
+                                  duration: 0.9,
+                                  repeat: Infinity,
+                                  delay: i * 0.18,
+                                  ease: 'easeInOut',
+                                }
+                          }
+                        />
+                      ))}
+                    </span>
+                    <span className="font-semibold tracking-[-0.01em]">Signing in…</span>
+                  </motion.span>
+                ) : (
+                  <motion.span
+                    key="idle-state"
+                    initial={reduceMotion ? false : { opacity: 0, y: -3 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={reduceMotion ? false : { opacity: 0, y: 3 }}
+                    transition={{ duration: 0.16 }}
+                    className="relative z-10 flex items-center justify-center gap-2"
+                  >
+                    <span>Sign in</span>
+                    <ArrowRight
+                      className="h-4 w-4 transition-transform group-hover:translate-x-1 motion-reduce:transform-none"
+                      aria-hidden="true"
+                    />
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </button>
           </form>
 

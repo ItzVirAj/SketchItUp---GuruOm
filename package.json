@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
+    "@paper-design/shaders-react": "^0.0.81",
     "@phosphor-icons/react": "^2.1.10",
     "@supabase/supabase-js": "^2.112.3",
     "@tailwindcss/vite": "^4.1.14",

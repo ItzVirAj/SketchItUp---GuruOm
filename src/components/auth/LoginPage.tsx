@@ -1,18 +1,19 @@
-import React, { useEffect, useRef, useState } from 'react';
+"use client";
+
+import React, { useEffect, useRef, useState, Component } from 'react';
 import { createPortal } from 'react-dom';
+import type { ReactNode, ErrorInfo } from 'react';
+import { GrainGradient } from '@paper-design/shaders-react';
 import {
   AlertCircle,
   AlertTriangle,
   ArrowRight,
-  ArrowUpRight,
   Building2,
-  Check,
   CheckCircle2,
   ChevronRight,
   Eye,
   EyeOff,
   KeyRound,
-  Layers3,
   Loader2,
   Lock,
   Mail,
@@ -29,11 +30,10 @@ const REMEMBERED_EMAIL_KEY = 'owneros_remembered_email_v1';
 const LEGACY_CREDENTIALS_KEY = 'guruom_remember_me_7d';
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
-interface LoginPageProps {
+export interface LoginPageProps {
   onLoginSuccess?: (email: string) => void;
   isDarkMode?: boolean;
   onToggleTheme?: () => void;
-  /** "split" shows the OwnerOS showcase panel. "centered" matches the original single-card layout. */
   variant?: 'split' | 'centered';
 }
 
@@ -47,68 +47,15 @@ type FieldErrors = {
   password?: string;
 };
 
-type ThemeVariables = React.CSSProperties & {
-  [key: `--${string}`]: string;
-};
-
 /* -------------------------------------------------------------------------- */
-/* Design tokens — matched to the original obsidian + cobalt system            */
-/* -------------------------------------------------------------------------- */
-
-const getThemeVariables = (isDarkMode: boolean): ThemeVariables =>
-  isDarkMode
-    ? {
-      colorScheme: 'dark',
-      '--page': '#090a0f',
-      '--surface': 'rgba(15, 17, 24, 0.85)',
-      '--surface-soft': 'rgba(255, 255, 255, 0.04)',
-      '--surface-hover': 'rgba(255, 255, 255, 0.07)',
-      '--input': 'rgba(0, 0, 0, 0.35)',
-      '--text': '#e8e9f0',
-      '--muted': '#98a1b3',
-      '--subtle': '#6b7484',
-      '--line': 'rgba(255, 255, 255, 0.12)',
-      '--line-soft': 'rgba(255, 255, 255, 0.07)',
-      '--accent': '#4d8eff',
-      '--accent-cyan': '#4cd7f6',
-      '--accent-soft': 'rgba(77, 142, 255, 0.12)',
-      '--accent-line': 'rgba(77, 142, 255, 0.28)',
-      '--ring': 'rgba(77, 142, 255, 0.18)',
-      '--btn-from': '#4d8eff',
-      '--btn-to': '#005ac2',
-      '--btn-text': '#ffffff',
-    }
-    : {
-      colorScheme: 'light',
-      '--page': '#f4f5f8',
-      '--surface': 'rgba(255, 255, 255, 0.95)',
-      '--surface-soft': '#f6f8fb',
-      '--surface-hover': '#eef2f8',
-      '--input': '#f8fafc',
-      '--text': '#0f172a',
-      '--muted': '#5a677d',
-      '--subtle': '#94a3b8',
-      '--line': '#e2e8f0',
-      '--line-soft': '#eef2f7',
-      '--accent': '#0055d4',
-      '--accent-cyan': '#0891b2',
-      '--accent-soft': 'rgba(0, 85, 212, 0.08)',
-      '--accent-line': 'rgba(0, 85, 212, 0.18)',
-      '--ring': 'rgba(0, 85, 212, 0.14)',
-      '--btn-from': '#4d8eff',
-      '--btn-to': '#005ac2',
-      '--btn-text': '#ffffff',
-    };
-
-/* -------------------------------------------------------------------------- */
-/* Storage helpers — email only, never the password                           */
+/* Storage helpers                                                            */
 /* -------------------------------------------------------------------------- */
 
 function removeRememberedEmail() {
   try {
     localStorage.removeItem(REMEMBERED_EMAIL_KEY);
   } catch {
-    // Storage may be unavailable in restricted browsing modes.
+    // Storage may be unavailable in private browsing mode.
   }
 }
 
@@ -128,7 +75,6 @@ function getErrorMessage(error: unknown, fallback: string) {
 }
 
 export function getLoginNotice(error: unknown): Notice {
-  // Check browser online status
   if (typeof navigator !== 'undefined' && navigator.onLine === false) {
     return {
       type: 'error',
@@ -140,17 +86,16 @@ export function getLoginNotice(error: unknown): Notice {
     error instanceof ApiError
       ? error.statusCode
       : typeof error === 'object' && error !== null && 'statusCode' in error && typeof (error as any).statusCode === 'number'
-      ? (error as any).statusCode
-      : undefined;
+        ? (error as any).statusCode
+        : undefined;
 
   const rawMessage =
     error instanceof Error
       ? error.message
       : typeof error === 'object' && error !== null && 'message' in error && typeof (error as any).message === 'string'
-      ? (error as any).message
-      : '';
+        ? (error as any).message
+        : '';
 
-  // 1. Network / connectivity failure
   if (
     statusCode === 0 ||
     /failed to fetch|network failure|network error|connection refused|network/i.test(rawMessage)
@@ -161,8 +106,6 @@ export function getLoginNotice(error: unknown): Notice {
     };
   }
 
-  // 2. Account state: Suspended / revoked / deactivated
-  // Sanitize message: never expose user full names or internal server errors
   if (
     statusCode === 403 ||
     /revoked|suspended|deactivated|disabled|inactive/i.test(rawMessage)
@@ -173,7 +116,6 @@ export function getLoginNotice(error: unknown): Notice {
     };
   }
 
-  // 3. Rate limiting / Too many attempts (HTTP 429)
   if (statusCode === 429 || /too many|rate limit/i.test(rawMessage)) {
     return {
       type: 'warning',
@@ -181,8 +123,6 @@ export function getLoginNotice(error: unknown): Notice {
     };
   }
 
-  // 4. Invalid credentials: Unknown email or wrong password (HTTP 401, 404, or 400)
-  // Maintains account enumeration protection — identical message for unknown email vs wrong password
   if (statusCode === 401 || statusCode === 404 || statusCode === 400) {
     return {
       type: 'error',
@@ -190,7 +130,6 @@ export function getLoginNotice(error: unknown): Notice {
     };
   }
 
-  // 5. Server error / unexpected server response (HTTP 5xx)
   if (typeof statusCode === 'number' && statusCode >= 500 && statusCode < 600) {
     return {
       type: 'error',
@@ -198,7 +137,6 @@ export function getLoginNotice(error: unknown): Notice {
     };
   }
 
-  // 6. Generic safe fallback
   return {
     type: 'error',
     message: 'Sign-in is temporarily unavailable. Please try again shortly.',
@@ -214,78 +152,52 @@ function isValidEmail(value: string) {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Shared UI                                                                  */
+/* Notice Banner                                                              */
 /* -------------------------------------------------------------------------- */
-
-function BrandMark({
-  className = '',
-}: {
-  className?: string;
-  isDarkMode?: boolean;
-}) {
-  return (
-    <img
-      src="/logo.png"
-      alt="GuruOm Logo"
-      aria-hidden="true"
-      className={`shrink-0 object-contain drop-shadow-sm transition-transform hover:scale-105 ${className}`}
-    />
-  );
-}
 
 export function NoticeBanner({
   notice,
   onDismiss,
-  isDarkMode,
   id,
 }: {
   notice: Notice;
   onDismiss?: () => void;
-  isDarkMode: boolean;
   id?: string;
 }) {
   const styles = {
-    error: isDarkMode
-      ? 'border-rose-500/30 bg-rose-500/10 text-rose-200 shadow-[0_4px_16px_rgba(0,0,0,0.2)]'
-      : 'border-rose-200 bg-rose-50 text-rose-800 shadow-[0_2px_8px_rgba(15,23,42,0.05)]',
-    warning: isDarkMode
-      ? 'border-amber-500/30 bg-amber-500/10 text-amber-200 shadow-[0_4px_16px_rgba(0,0,0,0.2)]'
-      : 'border-amber-200 bg-amber-50 text-amber-900 shadow-[0_2px_8px_rgba(15,23,42,0.05)]',
-    success: isDarkMode
-      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200 shadow-[0_4px_16px_rgba(0,0,0,0.2)]'
-      : 'border-emerald-200 bg-emerald-50 text-emerald-800 shadow-[0_2px_8px_rgba(15,23,42,0.05)]',
+    error: 'border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-200',
+    warning: 'border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200',
+    success: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200',
   };
 
   const iconColors = {
-    error: isDarkMode ? 'text-rose-400' : 'text-rose-600',
-    warning: isDarkMode ? 'text-amber-400' : 'text-amber-600',
-    success: isDarkMode ? 'text-emerald-400' : 'text-emerald-600',
+    error: 'text-rose-500 dark:text-rose-400',
+    warning: 'text-amber-500 dark:text-amber-400',
+    success: 'text-emerald-500 dark:text-emerald-400',
   };
 
   const Icon =
     notice.type === 'success'
       ? CheckCircle2
       : notice.type === 'warning'
-      ? AlertTriangle
-      : AlertCircle;
+        ? AlertTriangle
+        : AlertCircle;
 
   return (
     <div
       id={id}
       role={notice.type === 'success' ? 'status' : 'alert'}
       aria-live={notice.type === 'success' ? 'polite' : 'assertive'}
-      className={`flex items-start gap-2.5 rounded-2xl border p-3.5 backdrop-blur-sm transition-colors ${styles[notice.type]}`}
+      className={`flex items-start gap-2.5 rounded-[10px] border p-3.5 backdrop-blur-sm transition-colors ${styles[notice.type]}`}
     >
       <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${iconColors[notice.type]}`} aria-hidden="true" />
-
       <p className="flex-1 text-[13px] font-medium leading-relaxed">{notice.message}</p>
-
       {onDismiss && (
         <button
           type="button"
           onClick={onDismiss}
           aria-label="Dismiss alert"
-          className="shrink-0 cursor-pointer rounded-md p-1 opacity-60 transition-opacity hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+          className="shrink-0 cursor-pointer rounded-md p-1 opacity-60 transition-opacity hover:opacity-100"
         >
           <X className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
@@ -294,16 +206,19 @@ export function NoticeBanner({
   );
 }
 
+/* -------------------------------------------------------------------------- */
+/* Modal Dialog                                                               */
+/* -------------------------------------------------------------------------- */
+
 interface DialogProps {
   title: string;
   description: string;
   icon: React.ReactNode;
   onClose: () => void;
-  isDarkMode: boolean;
   children: React.ReactNode;
 }
 
-function Dialog({ title, description, icon, onClose, isDarkMode, children }: DialogProps) {
+function Dialog({ title, description, icon, onClose, children }: DialogProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
   const titleId = React.useId();
@@ -317,13 +232,11 @@ function Dialog({ title, description, icon, onClose, isDarkMode, children }: Dia
   useEffect(() => {
     const previousFocus = document.activeElement as HTMLElement | null;
     const previousOverflow = document.body.style.overflow;
-
     document.body.style.overflow = 'hidden';
 
     const frame = requestAnimationFrame(() => {
       const panel = panelRef.current;
       const initialInput = panel?.querySelector<HTMLInputElement>('input');
-
       if (initialInput) {
         initialInput.focus();
       } else {
@@ -335,41 +248,6 @@ function Dialog({ title, description, icon, onClose, isDarkMode, children }: Dia
       if (event.key === 'Escape') {
         event.preventDefault();
         closeRef.current();
-        return;
-      }
-
-      if (event.key !== 'Tab') return;
-
-      const panel = panelRef.current;
-      if (!panel) return;
-
-      const elements: HTMLElement[] = Array.from(
-        panel.querySelectorAll(
-          'button:not([disabled]), input:not([disabled]), a[href], select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-        ),
-      ).filter((element): element is HTMLElement => element instanceof HTMLElement && element.getClientRects().length > 0);
-
-      const first: HTMLElement | undefined = elements[0];
-      const last: HTMLElement | undefined = elements[elements.length - 1];
-
-      if (!first || !last) {
-        event.preventDefault();
-        panel.focus();
-        return;
-      }
-
-      const activeElement = document.activeElement;
-      const isOutsidePanel = !panel.contains(activeElement);
-
-      if (event.shiftKey && (activeElement === first || activeElement === panel || isOutsidePanel)) {
-        event.preventDefault();
-        last.focus();
-      } else if (
-        !event.shiftKey &&
-        (activeElement === last || activeElement === panel || isOutsidePanel)
-      ) {
-        event.preventDefault();
-        first.focus();
       }
     };
 
@@ -379,7 +257,6 @@ function Dialog({ title, description, icon, onClose, isDarkMode, children }: Dia
       cancelAnimationFrame(frame);
       document.body.style.overflow = previousOverflow;
       document.removeEventListener('keydown', handleKeyDown);
-
       if (previousFocus?.isConnected) {
         previousFocus.focus();
       }
@@ -390,8 +267,7 @@ function Dialog({ title, description, icon, onClose, isDarkMode, children }: Dia
 
   return createPortal(
     <div
-      style={getThemeVariables(isDarkMode)}
-      className="fixed inset-0 z-50 overflow-y-auto bg-black/75 p-4 font-sans text-[var(--text)] backdrop-blur-md sm:p-6"
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/75 p-4 font-sans text-black backdrop-blur-md dark:text-white sm:p-6"
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -406,30 +282,27 @@ function Dialog({ title, description, icon, onClose, isDarkMode, children }: Dia
           tabIndex={-1}
           initial={reduceMotion ? false : { opacity: 0, y: 14, scale: 0.97 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.22 }}
-          className={`pointer-events-auto relative w-full max-w-[440px] rounded-[28px] border border-[var(--line)] bg-[var(--surface)] p-6 outline-none backdrop-blur-3xl sm:p-8 ${isDarkMode
-              ? 'shadow-[0_30px_70px_rgba(0,0,0,0.85),inset_0_1px_1px_rgba(255,255,255,0.12)]'
-              : 'shadow-[0_24px_70px_-15px_rgba(15,23,42,0.22)]'
-            }`}
+          transition={{ duration: 0.2 }}
+          className="pointer-events-auto relative w-full max-w-[480px] rounded-[16px] border border-black/20 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-[#0d0d0d] sm:p-8"
         >
           <button
             type="button"
             onClick={onClose}
             aria-label="Close dialog"
-            className="absolute right-4 top-4 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-[var(--subtle)] transition-colors hover:bg-[var(--surface-soft)] hover:text-[var(--text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+            className="absolute right-4 top-4 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-black/40 transition-colors hover:bg-black/5 hover:text-black dark:text-white/40 dark:hover:bg-white/10 dark:hover:text-white"
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
 
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--accent-line)] bg-[var(--accent-soft)] text-[var(--accent)]">
+          <div className="flex h-12 w-12 items-center justify-center rounded-[10px] border border-black/20 bg-black/5 text-black dark:border-white/20 dark:bg-white/10 dark:text-white">
             {icon}
           </div>
 
-          <h2 id={titleId} className="mt-5 pr-6 text-[21px] font-bold tracking-[-0.03em]">
+          <h2 id={titleId} className="mt-5 pr-6 text-2xl font-medium tracking-tight">
             {title}
           </h2>
 
-          <p id={descriptionId} className="mt-2.5 text-[12.5px] leading-relaxed text-[var(--muted)]">
+          <p id={descriptionId} className="mt-2 text-sm leading-relaxed text-black/60 dark:text-white/60">
             {description}
           </p>
 
@@ -442,19 +315,175 @@ function Dialog({ title, description, icon, onClose, isDarkMode, children }: Dia
 }
 
 /* -------------------------------------------------------------------------- */
-/* Login page                                                                 */
+/* Input Field Box matching the requested UI specification                   */
+/* -------------------------------------------------------------------------- */
+
+interface FieldBoxProps {
+  label: string;
+  value: string;
+  type?: string;
+  placeholder?: string;
+  onChange: (val: string) => void;
+  error?: string;
+  inputRef?: React.RefObject<HTMLInputElement | null>;
+  rightElement?: React.ReactNode;
+  autoComplete?: string;
+  disabled?: boolean;
+  name?: string;
+  id?: string;
+  required?: boolean;
+}
+
+function FieldBox({
+  label,
+  value,
+  type = 'text',
+  placeholder,
+  onChange,
+  error,
+  inputRef,
+  rightElement,
+  autoComplete,
+  disabled,
+  name,
+  id,
+  required,
+}: FieldBoxProps) {
+  const [isFocused, setIsFocused] = useState(false);
+
+  return (
+    <div>
+      <label
+        htmlFor={id}
+        className={`flex h-14 items-center justify-between gap-4 rounded-[10px] border bg-white px-5 text-lg leading-none transition-all dark:bg-white/5 xl:text-xl ${error
+          ? 'border-rose-500 ring-1 ring-rose-500/20'
+          : isFocused
+            ? 'border-black dark:border-white shadow-sm'
+            : 'border-black/25 dark:border-white/15'
+          }`}
+      >
+        <input
+          ref={inputRef}
+          id={id}
+          name={name}
+          type={type}
+          value={value}
+          required={required}
+          disabled={disabled}
+          autoComplete={autoComplete}
+          aria-label={label}
+          placeholder={placeholder || label}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          onChange={(event) => onChange(event.target.value)}
+          className="min-w-0 flex-1 truncate bg-transparent text-black outline-none placeholder:text-black/30 dark:text-white dark:placeholder:text-white/35"
+        />
+        {rightElement ? (
+          <div className="shrink-0">{rightElement}</div>
+        ) : (
+          !value && !isFocused && (
+            <span className="shrink-0 text-sm font-medium text-black/50 dark:text-white/50">{label}</span>
+          )
+        )}
+      </label>
+      {error && (
+        <p className="mt-1.5 px-1 text-xs font-medium text-rose-500 dark:text-rose-400">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Checkbox matching the requested UI specification                           */
+/* -------------------------------------------------------------------------- */
+
+function CheckboxLine({
+  children,
+  checked,
+  onChange,
+  disabled,
+}: {
+  children: ReactNode;
+  checked?: boolean;
+  onChange?: (checked: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <label className="flex items-start gap-3 cursor-pointer select-none">
+      <span className="relative mt-1 size-3.5 shrink-0">
+        <input
+          type="checkbox"
+          checked={checked}
+          disabled={disabled}
+          onChange={(e) => onChange?.(e.target.checked)}
+          className="peer size-full appearance-none rounded-[2px] border border-black/25 bg-white checked:border-black checked:bg-black dark:border-white/30 dark:bg-white/5 dark:checked:border-white dark:checked:bg-white transition-colors"
+        />
+        <svg
+          viewBox="0 0 12 12"
+          className="pointer-events-none absolute inset-0 hidden size-full p-0.5 text-white peer-checked:block dark:text-black"
+          fill="none"
+          aria-hidden="true"
+        >
+          <path
+            d="M3 6.2 5 8.1 9 3.9"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </span>
+      <span className="text-black/70 dark:text-white/70">{children}</span>
+    </label>
+  );
+}
+
+function WindowsIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M3 4.7 10.7 3.6v7.7H3V4.7Zm8.8-1.25L21 2.1v9.2h-9.2V3.45ZM3 12.7h7.7v7.7L3 19.3v-6.6Zm8.8 0H21v9.2l-9.2-1.3v-7.9Z" />
+    </svg>
+  );
+}
+
+const termsText = (
+  <>
+    By signing in, you agree to our{' '}
+    <a
+      href="#"
+      onClick={(e) => e.preventDefault()}
+      className="font-medium text-black/60 underline underline-offset-2 hover:text-black dark:text-white/60 dark:hover:text-white"
+    >
+      Terms and Services
+    </a>{' '}
+    and{' '}
+    <a
+      href="#"
+      onClick={(e) => e.preventDefault()}
+      className="font-medium text-black/60 underline underline-offset-2 hover:text-black dark:text-white/60 dark:hover:text-white"
+    >
+      Privacy Policy
+    </a>
+  </>
+);
+
+/* -------------------------------------------------------------------------- */
+/* Main Login Page Component                                                  */
 /* -------------------------------------------------------------------------- */
 
 export const LoginPage: React.FC<LoginPageProps> = ({
   onLoginSuccess,
   isDarkMode = true,
   onToggleTheme,
-  variant = 'split',
 }) => {
   const { signIn, resetPassword } = useAuth();
-  const reduceMotion = useReducedMotion();
-  const isCentered = variant === 'centered';
-
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -478,9 +507,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
   useEffect(() => {
     try {
-      // Purge credentials written by the previous build. Base64 is encoding, not encryption.
       localStorage.removeItem(LEGACY_CREDENTIALS_KEY);
-
       const raw = localStorage.getItem(REMEMBERED_EMAIL_KEY);
       if (!raw) return;
 
@@ -507,7 +534,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   }, []);
 
   const clearFieldError = (field: keyof FieldErrors) => {
-    setFieldErrors((previous) => ({ ...previous, [field]: undefined }));
+    setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
     setNotice(null);
   };
 
@@ -618,8 +645,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       setActiveDialog(null);
       setNotice({
         type: 'success',
-        message:
-          'If an account matches that email, you’ll receive password reset instructions shortly.',
+        message: 'If an account matches that email, you will receive password reset instructions shortly.',
       });
     } catch (error: unknown) {
       setResetNotice({
@@ -635,693 +661,268 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     }
   };
 
-  /* ---------------------------------------------------------------- */
-  /* Reusable class strings                                           */
-  /* ---------------------------------------------------------------- */
-
-  const inputClassName =
-    'h-[46px] w-full rounded-2xl border bg-[var(--input)] pl-11 pr-4 text-[13.5px] text-[var(--text)] outline-none transition-all duration-200 placeholder:text-[var(--subtle)] focus:border-[var(--accent)] focus:ring-4 focus:ring-[color:var(--ring)] disabled:cursor-not-allowed disabled:opacity-60';
-
-  const primaryButtonClassName =
-    'group relative overflow-hidden flex h-[46px] w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(180deg,var(--btn-from),var(--btn-to))] px-4 text-[14px] font-semibold text-[var(--btn-text)] shadow-[0_6px_18px_-4px_rgba(77,142,255,0.45),inset_0_1px_1px_rgba(255,255,255,0.35)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--accent)] disabled:cursor-wait disabled:opacity-90';
-
-  const labelClassName =
-    'text-[11px] font-semibold uppercase tracking-[0.05em] text-[var(--muted)]';
-
-  const errorTextClassName = `mt-1.5 text-[11px] font-medium ${isDarkMode ? 'text-rose-300' : 'text-rose-700'
-    }`;
-
-  /* ---------------------------------------------------------------- */
-  /* Auth card                                                         */
-  /* ---------------------------------------------------------------- */
-
-  const authPanel = (
-    <motion.section
-      aria-labelledby="signin-heading"
-      initial={reduceMotion ? false : { opacity: 0, y: 18 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: reduceMotion || isCentered ? 0 : 0.1, ease: 'easeOut' }}
-      className={`w-full max-w-[470px] ${isCentered ? 'mx-auto' : 'mx-auto lg:ml-auto lg:mr-0'}`}
-    >
-      <div
-        className={`overflow-hidden rounded-[32px] border border-[var(--line)] bg-[var(--surface)] backdrop-blur-3xl ${isDarkMode
-            ? 'shadow-[0_30px_90px_-15px_rgba(0,0,0,0.9),0_0_120px_-40px_rgba(77,142,255,0.25),inset_0_1px_1px_rgba(255,255,255,0.13)]'
-            : 'shadow-[0_24px_70px_-15px_rgba(15,23,42,0.15),0_4px_16px_rgba(15,23,42,0.04),inset_0_1px_1px_rgba(255,255,255,1)]'
-          }`}
-      >
-        {/* Workspace strip */}
-        <div className="flex items-center justify-between gap-3 border-b border-[var(--line-soft)] px-6 py-2.5 sm:px-8">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--surface-soft)]">
-              <Building2 className="h-3.5 w-3.5 text-[var(--accent)]" aria-hidden="true" />
-            </span>
-            <span className="text-[12px] font-semibold tracking-[-0.01em]">GuruOm Industries</span>
-          </div>
-
-          <span className="text-[9.5px] font-semibold uppercase tracking-[0.16em] text-[var(--subtle)]">
-            Workspace
-          </span>
-        </div>
-
-        <div className="px-6 pb-6 pt-5 sm:px-8 sm:pb-7 sm:pt-6">
-          {/* Emblem + heading */}
-          <div className="flex flex-col items-center text-center">
-            <div
-              className={`group relative mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border text-[var(--accent)] transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:scale-105 ${isDarkMode
-                  ? 'border-white/20 bg-gradient-to-b from-white/[0.14] to-white/[0.02] shadow-[0_8px_24px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.4)]'
-                  : 'border-slate-200 bg-gradient-to-b from-slate-100 to-white shadow-[0_8px_20px_rgba(15,23,42,0.06)]'
-                }`}
-            >
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-[var(--accent)]/15 to-[var(--accent-cyan)]/15 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-              <ShieldCheck className="h-5 w-5" strokeWidth={2} aria-hidden="true" />
-            </div>
-
-            <h2
-              id="signin-heading"
-              className="text-[21px] font-bold leading-tight tracking-[-0.03em] sm:text-[23px]"
-            >
-              Sign in to <span className="text-[var(--accent)]">OwnerOS</span>
-            </h2>
-
-            <p className="mt-1 text-[12.5px] font-medium text-[var(--muted)]">
-              The owner’s operating system, by SketchitUp
-            </p>
-
-            <div className="mt-2.5 inline-flex items-center gap-1.5 rounded-full border border-[var(--accent-line)] bg-[var(--accent-soft)] px-3 py-0.5 text-[11px] font-semibold tracking-tight text-[var(--accent)]">
-              <KeyRound className="h-3 w-3" aria-hidden="true" />
-              <span>Welcome back</span>
-            </div>
-          </div>
-
-          {/* Alerts */}
-          <AnimatePresence mode="wait">
-            {notice && (
-              <motion.div
-                key={notice.message}
-                initial={reduceMotion ? false : { opacity: 0, y: -8, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -8, scale: 0.98 }}
-                transition={{ duration: 0.2 }}
-                className="mt-5"
-              >
-                <NoticeBanner
-                  id="login-notice-banner"
-                  notice={notice}
-                  onDismiss={() => setNotice(null)}
-                  isDarkMode={isDarkMode}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Form */}
-          <form onSubmit={handleLogin} noValidate aria-busy={isLoading} className="mt-4 space-y-3.5">
-            {/* Email */}
-            <div>
-              <div className="mb-1.5 flex items-center justify-between px-1">
-                <label htmlFor="owneros-email" className={labelClassName}>
-                  Work email
-                </label>
-              </div>
-
-              <div className="relative">
-                <Mail
-                  className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--subtle)]"
-                  aria-hidden="true"
-                />
-
-                <input
-                  ref={emailRef}
-                  id="owneros-email"
-                  name="email"
-                  type="email"
-                  autoComplete="username"
-                  inputMode="email"
-                  autoCapitalize="none"
-                  spellCheck={false}
-                  required
-                  disabled={isLoading}
-                  value={email}
-                  onChange={(event) => {
-                    setEmail(event.target.value);
-                    clearFieldError('email');
-                  }}
-                  aria-invalid={Boolean(fieldErrors.email)}
-                  aria-describedby={
-                    fieldErrors.email
-                      ? 'owneros-email-error'
-                      : notice
-                      ? 'login-notice-banner'
-                      : undefined
-                  }
-                  placeholder="name@company.com"
-                  className={`${inputClassName} ${fieldErrors.email ? 'border-rose-500' : 'border-[var(--line)]'
-                    }`}
-                />
-              </div>
-
-              {fieldErrors.email && (
-                <p id="owneros-email-error" role="alert" className={errorTextClassName}>
-                  {fieldErrors.email}
-                </p>
-              )}
-            </div>
-
-            {/* Password */}
-            <div>
-              <div className="mb-1.5 flex items-center justify-between gap-3 px-1">
-                <label htmlFor="owneros-password" className={labelClassName}>
-                  Password
-                </label>
-
+  return (
+    <section className="min-h-screen bg-white p-3 text-black antialiased [font-synthesis:none] dark:bg-[#050505] dark:text-white">
+      <div className="grid min-h-[calc(100vh-1.5rem)] gap-6 lg:grid-cols-[0.94fr_1.06fr]">
+        {/* Left Side: Authentication Form */}
+        <div className="flex min-h-[760px] items-start rounded-md border border-black/20 bg-white px-6 py-12 sm:px-10 dark:border-white/10 dark:bg-[#0a0a0a] lg:min-h-0 lg:px-14 lg:py-16 xl:px-20">
+          <div className="mx-auto w-full max-w-[590px]">
+            {/* Top Theme Toggle */}
+            {onToggleTheme && (
+              <div className="mb-8 flex justify-end">
                 <button
                   type="button"
-                  onClick={openRecovery}
-                  className="cursor-pointer rounded-md text-[11.5px] font-medium text-[var(--accent)] underline-offset-2 transition-opacity hover:underline hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--accent)]"
+                  onClick={onToggleTheme}
+                  aria-label={isDarkMode ? 'Switch to light theme' : 'Switch to dark theme'}
+                  title={isDarkMode ? 'Light theme' : 'Dark theme'}
+                  className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-black/15 bg-black/[0.03] text-black/60 transition-colors hover:border-black/30 hover:text-black dark:border-white/15 dark:bg-white/5 dark:text-white/60 dark:hover:border-white/30 dark:hover:text-white"
                 >
-                  Forgot password?
-                </button>
-              </div>
-
-              <div className="relative">
-                <Lock
-                  className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--subtle)]"
-                  aria-hidden="true"
-                />
-
-                <input
-                  ref={passwordRef}
-                  id="owneros-password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  required
-                  disabled={isLoading}
-                  value={password}
-                  onChange={(event) => {
-                    setPassword(event.target.value);
-                    clearFieldError('password');
-                  }}
-                  aria-invalid={Boolean(fieldErrors.password)}
-                  aria-describedby={
-                    fieldErrors.password
-                      ? 'owneros-password-error'
-                      : notice
-                      ? 'login-notice-banner'
-                      : undefined
-                  }
-                  placeholder="Enter your password"
-                  className={`${inputClassName} pr-12 ${fieldErrors.password ? 'border-rose-500' : 'border-[var(--line)]'
-                    }`}
-                />
-
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((previous) => !previous)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  aria-pressed={showPassword}
-                  className="absolute right-1.5 top-1/2 flex h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-xl text-[var(--subtle)] transition-colors hover:text-[var(--text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" aria-hidden="true" />
+                  {isDarkMode ? (
+                    <Sun className="h-4 w-4 text-amber-400" aria-hidden="true" />
                   ) : (
-                    <Eye className="h-4 w-4" aria-hidden="true" />
+                    <Moon className="h-4 w-4" aria-hidden="true" />
                   )}
                 </button>
               </div>
+            )}
 
-              {fieldErrors.password && (
-                <p id="owneros-password-error" role="alert" className={errorTextClassName}>
-                  {fieldErrors.password}
-                </p>
-              )}
+            {/* Heading */}
+            <div>
+              <h1 className="whitespace-nowrap text-3xl font-medium tracking-[-0.04em] sm:text-4xl lg:text-[42px] lg:leading-[1.05] xl:text-[50px]">
+                Welcome Back
+              </h1>
+              <p className="mt-3 whitespace-nowrap text-lg leading-snug text-black/60 dark:text-white/55 sm:text-xl lg:text-2xl xl:text-3xl">
+                Sign In to GuruOm OwnerOS
+              </p>
             </div>
 
-            {/* Remember email — password is never stored */}
-            <div className="px-1 pt-0.5">
-              <label className="group inline-flex cursor-pointer items-center gap-2.5">
-                <span className="relative flex h-[18px] w-[18px] shrink-0">
-                  <input
-                    type="checkbox"
-                    name="rememberEmail"
-                    checked={rememberEmail}
-                    disabled={isLoading}
-                    onChange={(event) => handleRememberChange(event.target.checked)}
-                    className="peer sr-only"
-                  />
-
-                  <span
-                    className={`flex h-[18px] w-[18px] items-center justify-center rounded-[6px] border transition-all duration-200 peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4 peer-focus-visible:outline-[var(--accent)] peer-disabled:opacity-50 ${rememberEmail
-                        ? 'border-[var(--accent)] bg-[var(--accent)] text-white shadow-[0_2px_8px_rgba(77,142,255,0.4)]'
-                        : 'border-[var(--line)] bg-[var(--surface-soft)] group-hover:border-[var(--subtle)]'
-                      }`}
-                  >
-                    {rememberEmail && (
-                      <Check className="h-3 w-3" strokeWidth={2.8} aria-hidden="true" />
-                    )}
-                  </span>
-                </span>
-
-                <span
-                  className={`text-[12px] font-medium transition-colors ${rememberEmail ? 'text-[var(--text)]' : 'text-[var(--muted)]'
-                    }`}
+            {/* Feedback Notice Banner */}
+            <AnimatePresence mode="wait">
+              {notice && (
+                <motion.div
+                  key={notice.message}
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.2 }}
+                  className="mt-6"
                 >
-                  Remember my email on this device (7 days)
-                </span>
-              </label>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              aria-busy={isLoading}
-              aria-live="polite"
-              className={`${primaryButtonClassName} mt-1`}
-            >
-              {/* Premium Apple specular sheen gliding through the button */}
-              {isLoading && !reduceMotion && (
-                <motion.span
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-0 -skew-x-12 bg-gradient-to-r from-transparent via-white/[0.22] to-transparent"
-                  initial={{ x: '-120%' }}
-                  animate={{ x: '220%' }}
-                  transition={{
-                    repeat: Infinity,
-                    duration: 1.5,
-                    ease: [0.4, 0, 0.2, 1],
-                  }}
-                />
+                  <NoticeBanner
+                    id="login-notice-banner"
+                    notice={notice}
+                    onDismiss={() => setNotice(null)}
+                  />
+                </motion.div>
               )}
+            </AnimatePresence>
 
-              {/* Subdued Apple-style luminous progress trace along the bottom edge */}
-              {isLoading && !reduceMotion && (
-                <motion.span
-                  aria-hidden="true"
-                  className="pointer-events-none absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-white/70 to-transparent"
-                  initial={{ x: '-100%' }}
-                  animate={{ x: '100%' }}
-                  transition={{
-                    repeat: Infinity,
-                    duration: 1.25,
-                    ease: 'easeInOut',
+            {/* Login Form */}
+            <form onSubmit={handleLogin} noValidate className="mt-8 space-y-5">
+              {/* Work Email Field */}
+              <FieldBox
+                id="owneros-email"
+                name="email"
+                type="email"
+                label="Work email"
+                placeholder="name@company.com"
+                value={email}
+                autoComplete="username"
+                disabled={isLoading}
+                inputRef={emailRef}
+                error={fieldErrors.email}
+                onChange={(val) => {
+                  setEmail(val);
+                  clearFieldError('email');
+                }}
+                rightElement={
+                  <Mail className="h-5 w-5 text-black/40 dark:text-white/40" aria-hidden="true" />
+                }
+              />
+
+              {/* Password Field */}
+              <div>
+                <FieldBox
+                  id="owneros-password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  label="Password"
+                  placeholder="Enter your password"
+                  value={password}
+                  autoComplete="current-password"
+                  disabled={isLoading}
+                  inputRef={passwordRef}
+                  error={fieldErrors.password}
+                  onChange={(val) => {
+                    setPassword(val);
+                    clearFieldError('password');
                   }}
+                  rightElement={
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      className="cursor-pointer p-1 text-black/40 transition-colors hover:text-black dark:text-white/40 dark:hover:text-white"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-5 w-5" aria-hidden="true" />
+                      ) : (
+                        <Eye className="h-5 w-5" aria-hidden="true" />
+                      )}
+                    </button>
+                  }
                 />
-              )}
 
-              <AnimatePresence mode="wait" initial={false}>
-                {isLoading ? (
-                  <motion.span
-                    key="loading-state"
-                    initial={reduceMotion ? false : { opacity: 0, y: 3 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={reduceMotion ? false : { opacity: 0, y: -3 }}
-                    transition={{ duration: 0.16 }}
-                    className="relative z-10 flex items-center justify-center gap-2.5 text-[var(--btn-text)]"
+                <div className="mt-2 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={openRecovery}
+                    className="cursor-pointer text-xs font-medium text-black/60 underline underline-offset-2 transition-colors hover:text-black dark:text-white/60 dark:hover:text-white"
                   >
-                    {/* Apple harmonic pulsing dots */}
-                    <span className="flex items-center gap-1.5" aria-hidden="true">
-                      {[0, 1, 2].map((i) => (
-                        <motion.span
-                          key={i}
-                          className="h-1.5 w-1.5 rounded-full bg-white shadow-[0_0_6px_rgba(255,255,255,0.7)]"
-                          initial={
-                            reduceMotion
-                              ? { opacity: 0.9, scale: 1 }
-                              : { opacity: 0.35, scale: 0.75 }
-                          }
-                          animate={
-                            reduceMotion
-                              ? { opacity: 0.9, scale: 1 }
-                              : {
-                                  opacity: [0.35, 1, 0.35],
-                                  scale: [0.75, 1.2, 0.75],
-                                }
-                          }
-                          transition={
-                            reduceMotion
-                              ? { duration: 0 }
-                              : {
-                                  duration: 0.9,
-                                  repeat: Infinity,
-                                  delay: i * 0.18,
-                                  ease: 'easeInOut',
-                                }
-                          }
-                        />
-                      ))}
-                    </span>
-                    <span className="font-semibold tracking-[-0.01em]">Signing in…</span>
-                  </motion.span>
-                ) : (
-                  <motion.span
-                    key="idle-state"
-                    initial={reduceMotion ? false : { opacity: 0, y: -3 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={reduceMotion ? false : { opacity: 0, y: 3 }}
-                    transition={{ duration: 0.16 }}
-                    className="relative z-10 flex items-center justify-center gap-2"
-                  >
-                    <span>Sign in</span>
-                    <ArrowRight
-                      className="h-4 w-4 transition-transform group-hover:translate-x-1 motion-reduce:transform-none"
-                      aria-hidden="true"
-                    />
-                  </motion.span>
-                )}
-              </AnimatePresence>
-            </button>
-          </form>
-
-          {/* Request access */}
-          <div
-            className={`mt-6 flex items-center justify-between gap-3 rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-soft)] p-3.5 transition-colors hover:bg-[var(--surface-hover)] sm:p-4`}
-          >
-            <div className="flex min-w-0 items-center gap-3 pr-1">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--surface-soft)]">
-                <Building2 className="h-4 w-4 text-[var(--accent)]" aria-hidden="true" />
+                    Forgot password?
+                  </button>
+                </div>
               </div>
 
-              <div className="min-w-0">
-                <div className="text-[12px] font-semibold">Need an account?</div>
-                <div className="truncate text-[11px] text-[var(--muted)]">
+              {/* Checkboxes & Terms */}
+              <div className="space-y-4 pt-2 text-sm leading-5 text-black/60 dark:text-white/55 sm:text-[15px]">
+                <CheckboxLine
+                  checked={rememberEmail}
+                  onChange={handleRememberChange}
+                  disabled={isLoading}
+                >
+                  Remember my email on this device (7 days)
+                </CheckboxLine>
+                <div className="text-xs leading-relaxed text-black/45 dark:text-white/45">
+                  {termsText}
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="mt-9 flex h-12 w-full cursor-pointer items-center justify-center rounded-[10px] border border-black/40 bg-black text-xl font-medium text-white transition-colors hover:bg-black/85 disabled:cursor-wait disabled:opacity-75 dark:border-white/40 dark:bg-white dark:text-black dark:hover:bg-white/85"
+              >
+                {isLoading ? (
+                  <span className="flex items-center gap-2.5">
+                    <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                    <span>Signing in…</span>
+                  </span>
+                ) : (
+                  <span>Submit</span>
+                )}
+              </button>
+            </form>
+
+            {/* Need an account / Request access strip */}
+            <div className="mt-8 flex items-center justify-between gap-3 rounded-[10px] border border-black/10 bg-black/[0.02] p-4 dark:border-white/10 dark:bg-white/[0.03]">
+              <div className="min-w-0 pr-2">
+                <div className="text-sm font-semibold text-black dark:text-white">
+                  Need an account?
+                </div>
+                <div className="truncate text-xs text-black/55 dark:text-white/50">
                   Provisioned by your GuruOm administrator
                 </div>
               </div>
-            </div>
 
-            <button
-              type="button"
-              onClick={() => setActiveDialog('access')}
-              className="group inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface-soft)] px-3.5 py-2 text-[11.5px] font-semibold tracking-tight transition-all hover:bg-[var(--surface-hover)] active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--accent)]"
-            >
-              <span>Request access</span>
-              <ChevronRight
-                className="h-3.5 w-3.5 text-[var(--accent)] transition-transform group-hover:translate-x-0.5"
-                aria-hidden="true"
-              />
-            </button>
-          </div>
-
-          {/* Signature line */}
-          <div className="mt-6 flex items-center justify-center border-t border-[var(--line-soft)] pt-4 text-[11px] text-[var(--muted)]">
-            <span className="flex items-center gap-1.5 font-mono">
-              <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" aria-hidden="true" />
-              <span>Encrypted session · Authorized personnel only</span>
-            </span>
-          </div>
-        </div>
-      </div>
-    </motion.section>
-  );
-
-  /* ---------------------------------------------------------------- */
-  /* Showcase panel                                                    */
-  /* ---------------------------------------------------------------- */
-
-  const showcasePanel = (
-    <motion.section
-      aria-labelledby="product-heading"
-      initial={reduceMotion ? false : { opacity: 0, y: 18 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: 'easeOut' }}
-      className="hidden lg:block"
-    >
-      <div className="mb-9 flex items-center gap-3">
-        <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--surface-soft)]">
-          <Layers3 className="h-4 w-4 text-[var(--accent)]" strokeWidth={1.9} aria-hidden="true" />
-        </span>
-
-        <span className="text-[14px] font-bold tracking-[-0.02em]">OwnerOS</span>
-
-        <span className="h-4 w-px bg-[var(--line)]" />
-
-        <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-          Built for your business
-        </span>
-      </div>
-
-      <h1
-        id="product-heading"
-        className="max-w-[560px] text-[clamp(2.6rem,4.8vw,4.4rem)] font-bold leading-[1.05] tracking-[-0.045em]"
-      >
-        Your operation.
-        <br />
-        <span className="bg-gradient-to-r from-[var(--accent)] to-[var(--accent-cyan)] bg-clip-text text-transparent">
-          In focus.
-        </span>
-      </h1>
-
-      <p className="mt-6 max-w-[400px] text-[15px] leading-7 text-[var(--muted)]">
-        Less switching. More clarity. One workspace for the people, processes, and decisions that
-        move your business forward.
-      </p>
-
-      <div className="mt-10 max-w-[440px]">
-        <div className="mb-3.5 flex items-center justify-between px-1">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--subtle)]">
-            Connected by design
-          </span>
-
-          <span aria-hidden="true" className="flex items-center gap-1.5">
-            <span className="h-1 w-1 rounded-full bg-[var(--accent)]" />
-            <span className="h-1 w-1 rounded-full bg-[var(--line)]" />
-            <span className="h-1 w-1 rounded-full bg-[var(--line)]" />
-          </span>
-        </div>
-
-        <div
-          className={`rounded-[26px] border border-[var(--line)] bg-[var(--surface)] p-5 backdrop-blur-2xl ${isDarkMode
-              ? 'shadow-[0_24px_60px_-25px_rgba(0,0,0,0.9),inset_0_1px_1px_rgba(255,255,255,0.1)]'
-              : 'shadow-[0_18px_50px_-25px_rgba(15,23,42,0.2)]'
-            }`}
-        >
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--line)] bg-[var(--surface-soft)]">
-                <Building2 className="h-5 w-5 text-[var(--accent)]" strokeWidth={1.7} aria-hidden="true" />
-              </span>
-
-              <div>
-                <p className="text-[13.5px] font-bold tracking-[-0.02em]">GuruOm Industries</p>
-                <p className="mt-0.5 text-[11.5px] text-[var(--muted)]">
-                  Your business. One shared view.
-                </p>
-              </div>
-            </div>
-
-            <ArrowUpRight className="h-4 w-4 text-[var(--subtle)]" aria-hidden="true" />
-          </div>
-
-          <div className="my-5 h-px bg-[var(--line-soft)]" />
-
-          <div className="grid grid-cols-3 gap-2.5">
-            {[
-              { number: '01', title: 'Production', subtitle: 'Plan & execute' },
-              { number: '02', title: 'Quality', subtitle: 'Review & refine' },
-              { number: '03', title: 'Dispatch', subtitle: 'Deliver & track' },
-            ].map((item) => (
-              <div
-                key={item.number}
-                className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-soft)] px-3 py-3.5"
-              >
-                <span className="font-mono text-[10px] text-[var(--accent)]">{item.number}</span>
-                <p className="mt-3 text-[12px] font-semibold">{item.title}</p>
-                <p className="mt-1 text-[10.5px] text-[var(--muted)]">{item.subtitle}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <p className="mt-4 px-1 text-[11.5px] text-[var(--muted)]">
-          A little more connected. A lot more in control.
-        </p>
-      </div>
-    </motion.section>
-  );
-
-  /* ---------------------------------------------------------------- */
-  /* Render                                                            */
-  /* ---------------------------------------------------------------- */
-
-  return (
-    <div
-      style={getThemeVariables(isDarkMode)}
-      className="relative isolate flex min-h-screen min-h-[100dvh] w-full flex-col overflow-x-hidden bg-[var(--page)] font-sans text-[var(--text)] antialiased transition-colors duration-300"
-    >
-      {/* Minimal atmospheric field — two soft washes only */}
-      <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-        <div
-          className="absolute -top-[22%] left-1/2 h-[520px] w-[900px] -translate-x-1/2 rounded-full blur-[140px]"
-          style={{
-            background: isDarkMode
-              ? 'radial-gradient(circle, rgba(28, 53, 105, 0.38) 0%, rgba(0, 78, 92, 0.12) 45%, transparent 72%)'
-              : 'radial-gradient(circle, rgba(147, 197, 253, 0.28) 0%, rgba(165, 243, 252, 0.12) 45%, transparent 72%)',
-          }}
-        />
-        <div
-          className="absolute -bottom-[22%] right-[-12%] h-[480px] w-[620px] rounded-full blur-[150px]"
-          style={{
-            background: isDarkMode
-              ? 'radial-gradient(circle, rgba(44, 19, 84, 0.28) 0%, transparent 70%)'
-              : 'radial-gradient(circle, rgba(199, 210, 254, 0.30) 0%, transparent 70%)',
-          }}
-        />
-      </div>
-
-      {/* ------------------------------------------------------------------ */}
-      {/* Header                                                              */}
-      {/* ------------------------------------------------------------------ */}
-
-      <header className="relative z-10">
-        <div className="mx-auto flex w-full max-w-[1320px] items-center justify-between gap-4 px-5 py-3 sm:px-8 lg:px-12 lg:py-4">
-          <div
-            className={`inline-flex items-center gap-3.5 rounded-full border border-[var(--line)] bg-[var(--surface)] py-1.5 pl-2.5 pr-5 backdrop-blur-xl transition-all hover:bg-[var(--surface-hover)] hover:shadow-md ${isDarkMode ? 'shadow-lg shadow-black/40' : 'shadow-sm'
-              }`}
-          >
-            <BrandMark className="h-12 w-12" isDarkMode={isDarkMode} />
-
-            <div className="flex items-center gap-2.5">
-              <span className="text-[15px] font-bold tracking-[-0.03em]">SketchitUp</span>
-              <span className="hidden h-3.5 w-px bg-[var(--line)] sm:block" />
-              <span className="hidden text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)] sm:block">
-                Business, by design
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 sm:gap-5">
-            <div className="hidden items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[11.5px] font-medium text-[var(--muted)] backdrop-blur-xl md:flex">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--accent-cyan)] opacity-75 motion-reduce:animate-none" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--accent-cyan)]" />
-              </span>
-              GuruOm Industries workspace
-            </div>
-
-            {onToggleTheme && (
               <button
                 type="button"
-                onClick={onToggleTheme}
-                aria-label={isDarkMode ? 'Switch to light theme' : 'Switch to dark theme'}
-                title={isDarkMode ? 'Light theme' : 'Dark theme'}
-                className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] backdrop-blur-xl transition-all hover:bg-[var(--surface-hover)] hover:text-[var(--text)] active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--accent)]"
+                onClick={() => setActiveDialog('access')}
+                className="group inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-[8px] border border-black/25 bg-white px-3.5 py-1.5 text-xs font-semibold text-black transition-colors hover:bg-black/[0.04] dark:border-white/20 dark:bg-white/10 dark:text-white dark:hover:bg-white/15"
               >
-                <AnimatePresence mode="popLayout" initial={false}>
-                  <motion.span
-                    key={isDarkMode ? 'sun' : 'moon'}
-                    initial={{ opacity: 0, scale: 0.5, rotate: -30 }}
-                    animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                    exit={{ opacity: 0, scale: 0.5, rotate: 30 }}
-                    transition={{ duration: 0.2 }}
-                    className="flex items-center justify-center"
-                  >
-                    {isDarkMode ? (
-                      <Sun className="h-4 w-4 text-amber-400" aria-hidden="true" />
-                    ) : (
-                      <Moon className="h-4 w-4" aria-hidden="true" />
-                    )}
-                  </motion.span>
-                </AnimatePresence>
+                <span>Request access</span>
+                <ChevronRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
               </button>
-            )}
+            </div>
+
+            {/* Security Note */}
+            <div className="mt-8 flex items-center justify-center gap-1.5 text-xs text-black/40 dark:text-white/40">
+              <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" aria-hidden="true" />
+              <span>Encrypted session · Authorized personnel only</span>
+            </div>
           </div>
         </div>
-      </header>
 
-      {/* ------------------------------------------------------------------ */}
-      {/* Main                                                                */}
-      {/* ------------------------------------------------------------------ */}
+        {/* Right Side: Grain Shader Showcase Panel */}
+        <div className="relative flex min-h-[720px] overflow-hidden rounded-md bg-black p-8 text-white sm:p-12 lg:min-h-0">
+          <GrainGradient
+            speed={1}
+            scale={1}
+            rotation={0}
+            offsetX={0}
+            offsetY={0}
+            softness={0.5}
+            intensity={0.5}
+            noise={0.25}
+            shape="corners"
+            frame={2854.5}
+            colors={['#FFFFFF', '#FC7819', '#FC7819', '#FFFFFF']}
+            colorBack="#00000000"
+            className="absolute inset-0 bg-black"
+          />
 
-      <main className="relative z-10 mx-auto flex w-full max-w-[1320px] flex-1 items-center px-5 py-2 sm:px-8 lg:px-12 lg:py-4">
-        {isCentered ? (
-          <div className="mx-auto w-full">{authPanel}</div>
-        ) : (
-          <div className="grid w-full items-center gap-12 lg:grid-cols-[1.05fr_1fr] lg:gap-16 xl:gap-24">
-            {showcasePanel}
-            {authPanel}
-          </div>
-        )}
-      </main>
+          <div className="relative z-10 flex h-full w-full flex-col justify-between">
+            <div>
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1 text-xs font-medium text-white/90 backdrop-blur-md">
+                <span className="h-2 w-2 rounded-full bg-[#FC7819] animate-pulse" />
+                <span>GuruOm Industries · OwnerOS</span>
+              </div>
 
-      {/* ------------------------------------------------------------------ */}
-      {/* Footer                                                              */}
-      {/* ------------------------------------------------------------------ */}
-
-      <footer className="relative z-10">
-        <div className="mx-auto flex w-full max-w-[1320px] flex-col items-center justify-between gap-2 border-t border-[var(--line-soft)] px-5 py-3 text-center sm:flex-row sm:px-8 sm:text-left lg:px-12">
-          <p className="text-[11.5px] text-[var(--muted)]">
-            © {new Date().getFullYear()}{' '}
-            <span className="font-semibold text-[var(--text)]">SketchitUp</span>
-            <span className="mx-2 text-[var(--subtle)]">/</span>
-            Thoughtfully built for GuruOm Industries.
-          </p>
-
-          <div className="flex items-center gap-2 text-[11.5px]">
-            <span className="font-bold tracking-[-0.02em] text-[var(--accent)]">OwnerOS</span>
-            <span className="text-[var(--subtle)]">—</span>
-            <span className="text-[var(--muted)]">The owner’s operating system</span>
+              <h2 className="max-w-[620px] pt-0 text-5xl font-medium tracking-[-0.05em] text-white sm:text-6xl lg:pt-16 lg:text-[64px] lg:leading-[0.98] xl:text-[70px]">
+                SketchitUp
+                <br />
+                Solutions
+              </h2>
+            </div>
           </div>
         </div>
-      </footer>
+      </div>
 
       {/* ------------------------------------------------------------------ */}
-      {/* Password recovery                                                   */}
+      {/* Password Recovery Dialog                                            */}
       {/* ------------------------------------------------------------------ */}
-
       {activeDialog === 'recovery' && (
         <Dialog
-          title="Let’s get you back in."
-          description="Enter your work email and we’ll send instructions to reset your OwnerOS password."
-          icon={<KeyRound className="h-5 w-5" aria-hidden="true" />}
+          title="Reset your password"
+          description="Enter your work email and we will send instructions to reset your OwnerOS password."
+          icon={<KeyRound className="h-6 w-6" aria-hidden="true" />}
           onClose={() => {
             if (!resetInFlight.current) setActiveDialog(null);
           }}
-          isDarkMode={isDarkMode}
         >
-          <form onSubmit={handleResetPassword} noValidate aria-busy={isResetting} className="space-y-4">
+          <form onSubmit={handleResetPassword} noValidate className="space-y-4">
             {resetNotice && (
-              <NoticeBanner id="owneros-reset-notice" notice={resetNotice} isDarkMode={isDarkMode} />
+              <NoticeBanner id="owneros-reset-notice" notice={resetNotice} />
             )}
 
             <div>
-              <label htmlFor="owneros-recovery-email" className={`${labelClassName} mb-1.5 block px-1`}>
+              <label htmlFor="owneros-recovery-email" className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-black/60 dark:text-white/60">
                 Work email
               </label>
-
-              <div className="relative">
-                <Mail
-                  className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--subtle)]"
-                  aria-hidden="true"
-                />
-
-                <input
-                  id="owneros-recovery-email"
-                  name="recoveryEmail"
-                  type="email"
-                  autoComplete="email"
-                  inputMode="email"
-                  autoCapitalize="none"
-                  spellCheck={false}
-                  required
-                  disabled={isResetting}
-                  value={forgotEmail}
-                  onChange={(event) => {
-                    setForgotEmail(event.target.value);
-                    setResetNotice(null);
-                  }}
-                  aria-describedby={resetNotice ? 'owneros-reset-notice' : undefined}
-                  placeholder="name@company.com"
-                  className={`${inputClassName} border-[var(--line)]`}
-                />
-              </div>
+              <FieldBox
+                id="owneros-recovery-email"
+                name="recoveryEmail"
+                type="email"
+                label="name@company.com"
+                value={forgotEmail}
+                autoComplete="email"
+                disabled={isResetting}
+                onChange={(val) => {
+                  setForgotEmail(val);
+                  setResetNotice(null);
+                }}
+                rightElement={
+                  <Mail className="h-5 w-5 text-black/40 dark:text-white/40" aria-hidden="true" />
+                }
+              />
             </div>
 
-            <div className="flex items-center gap-3 pt-1">
+            <div className="flex items-center gap-3 pt-2">
               <button
                 type="button"
                 disabled={isResetting}
                 onClick={() => setActiveDialog(null)}
-                className="h-[52px] flex-1 cursor-pointer rounded-2xl border border-[var(--line)] bg-[var(--surface-soft)] text-[13px] font-semibold text-[var(--muted)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--accent)] disabled:opacity-50"
+                className="flex-1 h-12 cursor-pointer rounded-[10px] border border-black/20 bg-transparent text-sm font-medium text-black/70 transition-colors hover:bg-black/5 dark:border-white/20 dark:text-white/70 dark:hover:bg-white/5"
               >
                 Cancel
               </button>
@@ -1329,16 +930,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               <button
                 type="submit"
                 disabled={isResetting}
-                className={`${primaryButtonClassName} flex-1`}
+                className="flex-1 h-12 cursor-pointer rounded-[10px] border border-black/40 bg-black text-sm font-medium text-white transition-colors hover:bg-black/85 disabled:cursor-wait dark:border-white/40 dark:bg-white dark:text-black dark:hover:bg-white/85"
               >
                 {isResetting ? (
-                  <>
-                    <Loader2
-                      className="h-4 w-4 animate-spin motion-reduce:animate-none"
-                      aria-hidden="true"
-                    />
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                     <span>Sending…</span>
-                  </>
+                  </span>
                 ) : (
                   <span>Send reset link</span>
                 )}
@@ -1349,53 +947,44 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       )}
 
       {/* ------------------------------------------------------------------ */}
-      {/* Request access                                                      */}
+      {/* Request Access Dialog                                               */}
       {/* ------------------------------------------------------------------ */}
-
       {activeDialog === 'access' && (
         <Dialog
-          title="Your workspace starts here."
-          description="OwnerOS access is managed by GuruOm Industries. Your administrator can create your account and assign the right permissions."
-          icon={<Building2 className="h-5 w-5" aria-hidden="true" />}
+          title="GuruOm Industries Workspace"
+          description="OwnerOS access is managed internally by GuruOm Industries. Your administrator can create your account and assign permissions."
+          icon={<Building2 className="h-6 w-6" aria-hidden="true" />}
           onClose={() => setActiveDialog(null)}
-          isDarkMode={isDarkMode}
         >
-          <div className="space-y-5">
-            <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface-soft)] p-4">
-              <p className="text-[12.5px] font-bold">Contact your department head or IT admin</p>
-              <p className="mt-1.5 text-[11.5px] leading-relaxed text-[var(--muted)]">
-                Share your full name, work email, and department. They’ll help you join the GuruOm
-                Industries workspace with the access you need.
+          <div className="space-y-4">
+            <div className="rounded-[10px] border border-black/10 bg-black/[0.02] p-4 dark:border-white/10 dark:bg-white/[0.03]">
+              <p className="text-sm font-semibold text-black dark:text-white">
+                Contact your department lead or IT administrator
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-black/60 dark:text-white/60">
+                Share your full name, work email, and department. They will provision your account with the appropriate roles and permissions.
               </p>
             </div>
 
-            <div className="flex items-start gap-3 px-1">
-              <ShieldCheck
-                className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent)]"
-                aria-hidden="true"
-              />
-              <p className="text-[11.5px] leading-relaxed text-[var(--muted)]">
-                Accounts are provisioned internally. Public self-registration isn’t available for
-                this workspace.
+            <div className="flex items-start gap-2.5">
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" aria-hidden="true" />
+              <p className="text-xs leading-relaxed text-black/60 dark:text-white/60">
+                Accounts are provisioned internally. Public self-registration is disabled for security and regulatory compliance.
               </p>
             </div>
 
             <button
               type="button"
               onClick={() => setActiveDialog(null)}
-              className={primaryButtonClassName}
+              className="mt-2 flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-[10px] border border-black/40 bg-black text-sm font-medium text-white transition-colors hover:bg-black/85 dark:border-white/40 dark:bg-white dark:text-black dark:hover:bg-white/85"
             >
-              Got it
+              <span>Got it</span>
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </button>
-
-            <p className="text-center text-[10.5px] text-[var(--subtle)]">
-              OwnerOS by SketchitUp · For GuruOm Industries
-            </p>
           </div>
         </Dialog>
       )}
-    </div>
+    </section>
   );
 };
 

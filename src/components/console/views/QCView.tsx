@@ -235,7 +235,11 @@ export const QCView: React.FC<QCViewProps> = ({
           <button
             type="button"
             onClick={() => openInspection(qc)}
-            className="h-8 px-3.5 py-1.5 rounded-xl bg-[#5B75F8] hover:bg-[#4E67F0] text-white text-xs font-bold shadow-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shrink-0"
+            className={`h-8 px-3.5 py-1.5 rounded-xl text-xs font-bold shadow-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shrink-0 ${
+              isDarkMode 
+                ? 'bg-white text-slate-900 hover:bg-slate-100 shadow-sm' 
+                : 'bg-[#181920] text-white hover:bg-[#252730] shadow-sm'
+            }`}
           >
             <CheckCircle2 className="w-3.5 h-3.5" />
             <span>Audit Decision</span>
@@ -251,50 +255,51 @@ export const QCView: React.FC<QCViewProps> = ({
       {/* ========================================================================= */}
       {/* ── TOP HEADER & TELEMETRY (macOS Executive Window) ──                     */}
       {/* ========================================================================= */}
-      <div className={`p-5 sm:p-6 rounded-2xl border transition-all ${
-        isDarkMode 
-          ? 'bg-[#09090B] border-white/10 text-white shadow-[0_4px_24px_rgba(0,0,0,0.4)]' 
-          : 'bg-white/90 border-slate-200/80 shadow-xs text-slate-900 backdrop-blur-xl'
+      <section className={`overflow-hidden rounded-2xl border transition-all ${
+        isDarkMode
+          ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]'
+          : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
       }`}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-start sm:items-center gap-3.5">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF] shrink-0">
-              <ShieldCheck className="w-6 h-6 stroke-[2]" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 px-6 py-6 sm:py-7">
+          <div className="min-w-0 space-y-1.5">
+            <div className="flex items-center gap-2.5">
+              <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wide ${
+                isDarkMode
+                  ? 'bg-white/10 border border-white/15 text-white'
+                  : 'bg-white/20 border border-white/30 backdrop-blur-md text-white shadow-xs'
+              }`}>
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Quality Assurance &amp; Metrology</span>
+              </span>
+              <span className="text-sm font-semibold text-white/80">•</span>
+              <span className="text-xs sm:text-sm font-semibold text-white/95">
+                {totalCount} Inspection Lots
+              </span>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF] border border-blue-500/20">
-                  Quality Assurance
-                </span>
-                <span className="text-xs text-slate-400 dark:text-slate-500">
-                  • Drawing Compliance & Metrology Verification
-                </span>
-              </div>
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white mt-1">
-                Quality Control & Metrology
-              </h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 max-w-xl">
-                Inspect manufactured components against engineering tolerances, record defect root-causes, and clear passed batches for Pre-Dispatch Inspection (PDI).
-              </p>
-            </div>
+
+            <h1 className="text-3xl sm:text-[32px] font-black tracking-tight text-white leading-tight">
+              Quality Control &amp; Metrology
+            </h1>
+
+            <p className="text-xs sm:text-sm text-white/95 font-medium leading-relaxed max-w-2xl">
+              Inspect manufactured components against engineering tolerances, record defect root-causes, and clear passed batches for Pre-Dispatch Inspection (PDI).
+            </p>
           </div>
 
-          <div className="flex items-center gap-2.5 shrink-0">
-            {/* Export CSV Button */}
+          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={handleExportCSV}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-full border text-xs font-semibold transition-all cursor-pointer ${
-                isDarkMode 
-                  ? 'border-white/10 bg-black/60 text-slate-200 hover:bg-white/10' 
-                  : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 shadow-xs'
+              className={`inline-flex items-center gap-2 px-4 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
+                isDarkMode
+                  ? 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
+                  : 'bg-white/20 hover:bg-white/30 text-white border border-white/30 backdrop-blur-md'
               }`}
             >
-              <Download className="w-3.5 h-3.5" />
+              <Download className="w-4 h-4 stroke-[2.5]" />
               <span>Export CSV</span>
             </button>
 
-            {/* Quick First Pending CTA */}
             {pendingCount > 0 && canPerformCta('UPLOAD_QC_REPORT') && (
               <button
                 type="button"
@@ -302,129 +307,111 @@ export const QCView: React.FC<QCViewProps> = ({
                   const firstPending = deduplicatedItems.find(q => q.qcStatus === 'PENDING') || deduplicatedItems[0];
                   if (firstPending) openInspection(firstPending);
                 }}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#5B75F8] hover:bg-[#435BE8] text-white text-xs font-semibold shadow-xs cursor-pointer transition-all active:scale-[0.98]"
+                className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
+                  isDarkMode
+                    ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
+                    : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
+                }`}
               >
-                <CheckCircle2 className="w-3.5 h-3.5" />
+                <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
                 <span>Audit Next Pending ({pendingCount})</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* Telemetry Stat Cards Grid - Apple Desktop Widgets */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-5">
-          {/* Total Queue */}
-          <div className={`p-4 rounded-2xl border transition-all ${
-            isDarkMode 
-              ? 'bg-[#09090B] border-white/10 hover:border-white/20' 
-              : 'bg-white/80 border-slate-200/80 hover:border-slate-300 shadow-xs'
-          }`}>
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Total Lots in Queue</span>
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF]">
-                <ShieldCheck className="w-4 h-4 stroke-[2]" />
+        {/* Integrated 4-Column Metric Strip (border-t) */}
+        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t ${
+          isDarkMode
+            ? 'border-white/10 bg-gradient-to-b from-black/40 to-black/70 backdrop-blur-md'
+            : 'border-white/20 bg-white/[0.06] backdrop-blur-sm'
+        }`}>
+          {[
+            {
+              label: 'Total Lots in Queue',
+              value: String(totalCount),
+              detail: 'Batches registered in queue',
+              icon: ShieldCheck,
+              iconColor: 'text-blue-600',
+              iconBg: 'bg-white shadow-md shadow-black/10',
+            },
+            {
+              label: 'Pending Metrology',
+              value: String(pendingCount),
+              detail: 'Awaiting QC clearance',
+              icon: Clock,
+              iconColor: 'text-white',
+              iconBg: pendingCount > 0 ? 'bg-amber-500 shadow-xs' : 'bg-emerald-500 shadow-xs',
+            },
+            {
+              label: 'First-Pass Yield',
+              value: `${yieldRate}%`,
+              detail: `${passCount} lots cleared clean`,
+              icon: CheckCircle2,
+              iconColor: 'text-white',
+              iconBg: 'bg-emerald-500 shadow-xs',
+            },
+            {
+              label: 'QC Hold / Defect',
+              value: String(holdCount + rejectCount),
+              detail: holdCount > 0 ? `${holdCount} on hold` : 'Zero defect clearance',
+              icon: AlertTriangle,
+              iconColor: 'text-white',
+              iconBg: (holdCount + rejectCount > 0) ? 'bg-rose-500 shadow-xs' : 'bg-emerald-500 shadow-xs',
+            },
+          ].map((metric, index) => {
+            const MetricIcon = metric.icon;
+            return (
+              <div
+                key={metric.label}
+                className={`flex items-center gap-4 px-6 py-5 transition-all ${
+                  index > 0 ? (isDarkMode ? 'lg:border-l border-white/10' : 'lg:border-l border-white/20') : ''
+                }`}
+              >
+                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${metric.iconBg} ${metric.iconColor}`}>
+                  <MetricIcon className="h-5 w-5 stroke-[2.5]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-bold uppercase tracking-wider text-white/85">
+                    {metric.label}
+                  </div>
+                  <div className="text-2xl sm:text-[26px] font-black tracking-tight text-white tabular-nums my-0.5 leading-tight">
+                    {metric.value}
+                  </div>
+                  <div className="text-xs font-medium text-white/90 truncate">
+                    {metric.detail}
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="mt-2 flex items-baseline justify-between">
-              <span className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{totalCount}</span>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF]">Batches</span>
-            </div>
-          </div>
-
-          {/* Pending QC */}
-          <div className={`p-4 rounded-2xl border transition-all ${
-            isDarkMode 
-              ? 'bg-[#09090B] border-white/10 hover:border-white/20' 
-              : 'bg-white/80 border-slate-200/80 hover:border-slate-300 shadow-xs'
-          }`}>
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Pending Metrology</span>
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                <Clock className="w-4 h-4 stroke-[2]" />
-              </div>
-            </div>
-            <div className="mt-2 flex items-baseline justify-between">
-              <span className="text-2xl font-bold tracking-tight text-amber-600 dark:text-amber-400">{pendingCount}</span>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">Awaiting Audit</span>
-            </div>
-          </div>
-
-          {/* Passed First-Pass Quality */}
-          <div className={`p-4 rounded-2xl border transition-all ${
-            isDarkMode 
-              ? 'bg-[#09090B] border-white/10 hover:border-white/20' 
-              : 'bg-white/80 border-slate-200/80 hover:border-slate-300 shadow-xs'
-          }`}>
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Passed Quality</span>
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                <CheckCircle2 className="w-4 h-4 stroke-[2]" />
-              </div>
-            </div>
-            <div className="mt-2 flex items-baseline justify-between">
-              <span className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">{passCount}</span>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                {yieldRate}% Yield
-              </span>
-            </div>
-          </div>
-
-          {/* Quarantine / Reject */}
-          <div className={`p-4 rounded-2xl border transition-all ${
-            isDarkMode 
-              ? 'bg-[#09090B] border-white/10 hover:border-white/20' 
-              : 'bg-white/80 border-slate-200/80 hover:border-slate-300 shadow-xs'
-          }`}>
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Quarantine / Reject</span>
-              <div className={`flex h-8 w-8 items-center justify-center rounded-xl ${
-                holdCount + rejectCount > 0 
-                  ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' 
-                  : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-              }`}>
-                <AlertTriangle className="w-4 h-4 stroke-[2]" />
-              </div>
-            </div>
-            <div className="mt-2 flex items-baseline justify-between">
-              <span className={`text-2xl font-bold tracking-tight ${holdCount + rejectCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-white'}`}>
-                {holdCount + rejectCount}
-              </span>
-              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                holdCount + rejectCount > 0 
-                  ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' 
-                  : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-              }`}>
-                {holdCount > 0 ? `${holdCount} Hold` : 'Zero Defect'}
-              </span>
-            </div>
-          </div>
+            );
+          })}
         </div>
 
-        {/* ── Apple Quality Metrology Distribution Bar ── */}
-        <div className={`p-4 rounded-2xl border transition-all mt-4 ${
-          isDarkMode ? 'bg-[#09090B] border-white/10' : 'bg-slate-50 border-slate-200/70'
+        {/* Apple Quality Metrology Distribution Bar */}
+        <div className={`px-6 py-4 border-t ${
+          isDarkMode ? 'border-white/10 bg-black/40' : 'border-white/20 bg-black/10'
         }`}>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
             <div className="flex items-center gap-2">
-              <Activity className="w-4 h-4 text-[#5B75F8] dark:text-[#7B92FF]" />
-              <span className="text-xs font-bold tracking-tight text-slate-900 dark:text-white">
-                Quality Assurance Distribution & First-Pass Yield (FPY)
+              <Activity className="w-4 h-4 text-white" />
+              <span className="text-xs font-bold tracking-tight text-white">
+                Quality Assurance Distribution &amp; First-Pass Yield (FPY)
               </span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                 {yieldRate}% First-Pass Yield
               </span>
             </div>
-            <span className="text-xs text-slate-400 dark:text-slate-500">
+            <span className="text-xs text-white/70">
               {inspectedCount} of {totalCount} lots audited
             </span>
           </div>
 
           {/* Multi-Segmented Pro Bar */}
-          <div className="h-2.5 w-full rounded-full bg-slate-200/60 dark:bg-black/60 overflow-hidden flex p-0.5 gap-0.5 border border-slate-200/40 dark:border-white/5">
+          <div className="h-2.5 w-full rounded-full bg-white/20 overflow-hidden flex p-0.5 gap-0.5 border border-white/15">
             {passCount > 0 && (
               <div 
                 style={{ width: `${(passCount / (totalCount || 1)) * 100}%` }} 
-                className="h-full bg-emerald-500 rounded-full transition-all duration-500" 
+                className="h-full bg-emerald-400 rounded-full transition-all duration-500" 
                 title={`Passed: ${passCount} (${passPct}%)`}
               />
             )}
@@ -438,59 +425,61 @@ export const QCView: React.FC<QCViewProps> = ({
             {holdCount > 0 && (
               <div 
                 style={{ width: `${(holdCount / (totalCount || 1)) * 100}%` }} 
-                className="h-full bg-amber-600 rounded-full transition-all duration-500" 
+                className="h-full bg-orange-400 rounded-full transition-all duration-500" 
                 title={`Hold: ${holdCount} (${holdPct}%)`}
               />
             )}
             {rejectCount > 0 && (
               <div 
                 style={{ width: `${(rejectCount / (totalCount || 1)) * 100}%` }} 
-                className="h-full bg-rose-500 rounded-full transition-all duration-500" 
+                className="h-full bg-rose-400 rounded-full transition-all duration-500" 
                 title={`Rejected: ${rejectCount} (${rejectPct}%)`}
               />
             )}
           </div>
 
           {/* Legend Pills */}
-          <div className="flex items-center flex-wrap gap-3 sm:gap-5 mt-3 text-xs">
+          <div className="flex items-center flex-wrap gap-3 sm:gap-5 mt-2.5 text-xs">
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span className="text-slate-500 dark:text-slate-400 font-medium">Passed:</span>
-              <span className="font-bold text-slate-900 dark:text-white tabular-nums">{passCount} ({passPct}%)</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span className="text-white/70 font-medium">Passed:</span>
+              <span className="font-bold text-white tabular-nums">{passCount} ({passPct}%)</span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-amber-400" />
-              <span className="text-slate-500 dark:text-slate-400 font-medium">Pending:</span>
-              <span className="font-bold text-slate-900 dark:text-white tabular-nums">{pendingCount} ({pendingPct}%)</span>
+              <span className="text-white/70 font-medium">Pending:</span>
+              <span className="font-bold text-white tabular-nums">{pendingCount} ({pendingPct}%)</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-amber-600" />
-              <span className="text-slate-500 dark:text-slate-400 font-medium">QC Hold:</span>
-              <span className="font-bold text-slate-900 dark:text-white tabular-nums">{holdCount} ({holdPct}%)</span>
+              <span className="w-2 h-2 rounded-full bg-orange-400" />
+              <span className="text-white/70 font-medium">QC Hold:</span>
+              <span className="font-bold text-white tabular-nums">{holdCount} ({holdPct}%)</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-rose-500" />
-              <span className="text-slate-500 dark:text-slate-400 font-medium">Rejected:</span>
-              <span className="font-bold text-slate-900 dark:text-white tabular-nums">{rejectCount} ({rejectPct}%)</span>
+              <span className="w-2 h-2 rounded-full bg-rose-400" />
+              <span className="text-white/70 font-medium">Rejected:</span>
+              <span className="font-bold text-white tabular-nums">{rejectCount} ({rejectPct}%)</span>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* ========================================================================= */}
       {/* ── FILTER & SEARCH TOOLBAR (Apple Segmented Control & View Mode) ──       */}
       {/* ========================================================================= */}
-      <div className={`p-3 sm:p-4 rounded-2xl border transition-all space-y-3 ${
-        isDarkMode ? 'bg-[#09090B] border-white/10' : 'bg-white/90 border-slate-200/80 shadow-xs'
+      <div className={`rounded-2xl border p-3.5 space-y-3 transition-all ${
+        isDarkMode
+          ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] shadow-[0_8px_28px_rgba(0,0,0,0.5)]'
+          : 'border-slate-200/80 bg-gradient-to-b from-white/95 via-slate-50/90 to-slate-100/70 shadow-[0_4px_20px_rgba(0,0,0,0.03)]'
       }`}>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          {/* Apple Segmented Control */}
-          <div className={`flex items-center gap-1 p-1 rounded-xl border overflow-x-auto no-scrollbar shrink-0 ${
-            isDarkMode ? 'bg-black/60 border-white/10' : 'bg-slate-100/80 border-slate-200/80'
+          {/* Tier 1: Apple Segmented Pill Rail */}
+          <div className={`inline-flex items-center gap-1 rounded-xl p-1 border overflow-x-auto no-scrollbar shrink-0 ${
+            isDarkMode ? 'border-white/10 bg-black/40' : 'border-slate-200/80 bg-slate-100/80'
           }`}>
             {[
               { id: 'ALL', label: 'All Lots', count: totalCount },
-              { id: 'PENDING', label: 'Pending', count: pendingCount },
+              { id: 'PENDING', label: 'Pending', count: pendingCount, isAlert: pendingCount > 0 },
               { id: 'PASS', label: 'Passed', count: passCount },
               { id: 'QC_HOLD', label: 'QC Hold', count: holdCount, isAlert: holdCount > 0 },
               { id: 'REJECTED', label: 'Rejected', count: rejectCount, isAlert: rejectCount > 0 },
@@ -501,21 +490,23 @@ export const QCView: React.FC<QCViewProps> = ({
                   key={tab.id}
                   type="button"
                   onClick={() => setFilterStatus(tab.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
                     isActive
-                      ? isDarkMode ? 'bg-white/10 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
+                      ? isDarkMode
+                        ? 'bg-white/15 text-white shadow-xs border border-white/20'
+                        : 'bg-white text-slate-900 shadow-xs border border-slate-200/90'
                       : tab.isAlert
                       ? 'text-rose-500 hover:text-rose-600'
-                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   <span>{tab.label}</span>
-                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-semibold ${
-                    isActive 
-                      ? isDarkMode ? 'bg-white/15 text-white' : 'bg-slate-100 text-slate-700' 
+                  <span className={`rounded-full px-1.5 py-0.5 font-mono text-[10px] font-bold ${
+                    isActive
+                      ? isDarkMode ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-900'
                       : tab.isAlert
                       ? 'bg-rose-500/10 text-rose-500'
-                      : isDarkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-200 text-slate-600'
+                      : isDarkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-200/70 text-slate-600'
                   }`}>
                     {tab.count}
                   </span>
@@ -524,37 +515,44 @@ export const QCView: React.FC<QCViewProps> = ({
             })}
           </div>
 
-          {/* Search Field & View Mode Switcher */}
+          {/* Tier 2: Spotlight search & View switchers */}
           <div className="flex items-center gap-2.5">
-            {/* macOS Finder Capsule */}
-            <div className={`relative flex items-center rounded-full border px-3.5 py-1.5 transition-all w-full sm:w-80 ${
-              isDarkMode ? 'bg-black/60 border-white/10 text-white focus-within:border-[#5B75F8]' : 'bg-slate-50 border-slate-200 text-slate-900 focus-within:border-[#5B75F8]'
+            <div className={`relative flex items-center rounded-xl border px-3.5 py-1.5 transition-all w-full sm:w-80 ${
+              isDarkMode
+                ? 'border-white/10 bg-black/40 text-white focus-within:border-blue-500'
+                : 'border-slate-200/90 bg-white text-slate-900 focus-within:border-blue-500 shadow-2xs'
             }`}>
-              <Search className="w-3.5 h-3.5 text-slate-400 shrink-0 mr-2" />
+              <Search className="w-4 h-4 text-slate-400 shrink-0 mr-2" />
               <input
                 type="text"
                 placeholder="Search Job #, Part Code, PO..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-transparent outline-none text-xs w-full placeholder:text-slate-400"
+                className="bg-transparent outline-none text-xs w-full placeholder:text-slate-400 font-medium"
               />
-              {searchQuery && (
+              {searchQuery ? (
                 <button type="button" onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-600 dark:hover:text-white ml-2">
                   <X className="w-3.5 h-3.5" />
                 </button>
+              ) : (
+                <kbd className={`hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono font-bold rounded border ${
+                  isDarkMode ? 'border-white/10 bg-white/5 text-slate-400' : 'border-slate-200 bg-slate-100 text-slate-500'
+                }`}>
+                  ⌘F
+                </kbd>
               )}
             </div>
 
-            {/* Apple View Mode Switcher (Table vs Grid) */}
+            {/* Apple View Mode Switcher */}
             <div className={`hidden sm:flex items-center p-0.5 rounded-xl border shrink-0 ${
-              isDarkMode ? 'bg-black/60 border-white/10' : 'bg-slate-100/80 border-slate-200/80'
+              isDarkMode ? 'border-white/10 bg-black/40' : 'border-slate-200/80 bg-slate-100/80'
             }`}>
               <button
                 type="button"
                 onClick={() => setViewMode('grouped')}
                 className={`p-1.5 rounded-lg transition-all cursor-pointer ${
                   viewMode === 'grouped'
-                    ? isDarkMode ? 'bg-white/10 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
+                    ? isDarkMode ? 'bg-white/15 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
                     : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                 }`}
                 title="Group by PO"
@@ -568,7 +566,7 @@ export const QCView: React.FC<QCViewProps> = ({
                 onClick={() => setViewMode('table')}
                 className={`p-1.5 rounded-lg transition-all cursor-pointer ${
                   viewMode === 'table'
-                    ? isDarkMode ? 'bg-white/10 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
+                    ? isDarkMode ? 'bg-white/15 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
                     : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                 }`}
                 title="Table Register View"
@@ -580,7 +578,7 @@ export const QCView: React.FC<QCViewProps> = ({
                 onClick={() => setViewMode('grid')}
                 className={`p-1.5 rounded-lg transition-all cursor-pointer ${
                   viewMode === 'grid'
-                    ? isDarkMode ? 'bg-white/10 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
+                    ? isDarkMode ? 'bg-white/15 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
                     : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                 }`}
                 title="Inspector Card Grid"
@@ -589,7 +587,7 @@ export const QCView: React.FC<QCViewProps> = ({
               </button>
             </div>
 
-            <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0 hidden lg:inline">
+            <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0 hidden lg:inline font-mono">
               {filteredQc.length} of {totalCount}
             </span>
           </div>
@@ -705,7 +703,11 @@ export const QCView: React.FC<QCViewProps> = ({
                       e.stopPropagation();
                       openInspection(qc);
                     }}
-                    className="w-full py-2 rounded-full bg-[#5B75F8] hover:bg-[#435BE8] text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition-all active:scale-[0.98]"
+                    className={`w-full py-2 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition-all active:scale-[0.98] ${
+                      isDarkMode 
+                        ? 'bg-white text-slate-900 hover:bg-slate-100 shadow-sm' 
+                        : 'bg-[#181920] text-white hover:bg-[#252730] shadow-sm'
+                    }`}
                   >
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     <span>Audit QC Decision</span>
@@ -722,9 +724,12 @@ export const QCView: React.FC<QCViewProps> = ({
       {/* ── DESKTOP VIEW: TABLE OR INSPECTOR CARD GRID (Viewport >= md) ──         */}
       {/* ========================================================================= */}
       {viewMode === 'table' ? (
-        <div className={`hidden md:block overflow-hidden rounded-[22px] border transition-ui ${
-          isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
+        <div className={`hidden md:block overflow-hidden rounded-3xl border transition-all ${
+          isDarkMode
+            ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#08090c] to-[#010203] shadow-[0_16px_40px_rgba(0,0,0,0.5)]'
+            : 'border-slate-200/90 bg-gradient-to-b from-white via-slate-50/40 to-[#f6f8fc] shadow-[0_4px_24px_rgba(0,0,0,0.04)]'
         }`}>
+          <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-white/70 dark:via-white/10 to-transparent" />
           <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
             <div>
               <div className="text-xs font-extrabold text-slate-900 dark:text-white">Quality Control (QC) Metrology Register</div>
@@ -738,7 +743,7 @@ export const QCView: React.FC<QCViewProps> = ({
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${
+                <tr className={`border-b font-mono text-[10px] font-bold uppercase tracking-[0.14em] ${
                   isDarkMode ? 'border-white/[0.07] bg-black/20 text-slate-500' : 'border-slate-200 bg-slate-50/80 text-slate-400'
                 }`}>
                   <th className="py-4 px-5">Job Card #</th>
@@ -771,23 +776,23 @@ export const QCView: React.FC<QCViewProps> = ({
                           isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'
                         }`}
                       >
-                        <td className="py-4 px-5">
-                          <div className="flex items-center gap-2.5">
-                            <div className={`p-2 rounded-xl transition-transform group-hover:scale-105 shrink-0 ${
+                        <td className="py-4 px-6">
+                          <div className="flex items-center gap-3.5">
+                            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-2xs border ${
                               isDarkMode 
-                                ? 'bg-[var(--accent-primary)]/20 text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/30' 
-                                : 'bg-[var(--accent-primary)]/10 text-[var(--accent-text-light)] border border-[var(--accent-primary)]/20'
+                                ? 'bg-white/10 text-white border-white/15' 
+                                : 'bg-slate-100 text-slate-800 border-slate-200'
                             }`}>
-                              <Package className="w-3.5 h-3.5" />
+                              <ShieldCheck className="w-5 h-5 stroke-[2]" />
                             </div>
                             <div className="min-w-0">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="font-bold text-xs font-mono text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">
-                                  {qc.jobNo}
-                                </span>
+                              <div className="font-mono text-sm tracking-tight text-slate-900 dark:text-white font-black">
+                                {qc.jobNo}
+                              </div>
+                              <div className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate mt-0.5">
+                                {qc.partCode}
                               </div>
                             </div>
-                            <ChevronRight className="w-3 h-3 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
                           </div>
                         </td>
                         <td className="py-4 px-5 font-mono text-xs">
@@ -832,7 +837,11 @@ export const QCView: React.FC<QCViewProps> = ({
                             <button
                               type="button"
                               onClick={() => openInspection(qc)}
-                              className="h-8 px-3.5 py-1.5 rounded-xl bg-[#5B75F8] hover:bg-[#4E67F0] text-white text-xs font-bold shadow-xs flex items-center justify-center gap-1.5 ml-auto transition-all active:scale-[0.96] cursor-pointer shrink-0"
+                              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold shadow-xs active:scale-95 cursor-pointer shrink-0 ${
+                                isDarkMode 
+                                  ? 'bg-white text-slate-900 hover:bg-slate-100 shadow-sm' 
+                                  : 'bg-[#181920] text-white hover:bg-[#252730] shadow-sm'
+                              }`}
                             >
                               <CheckCircle2 className="w-3.5 h-3.5" />
                               <span>Audit Decision</span>
@@ -935,7 +944,11 @@ export const QCView: React.FC<QCViewProps> = ({
                       <button
                         type="button"
                         onClick={() => openInspection(qc)}
-                        className="px-3.5 py-1.5 rounded-full bg-[#5B75F8] hover:bg-[#435BE8] text-white text-xs font-semibold shadow-xs flex items-center gap-1 transition-all active:scale-[0.98]"
+                        className={`px-3.5 py-1.5 rounded-full text-xs font-semibold shadow-xs flex items-center gap-1 transition-all active:scale-[0.98] cursor-pointer ${
+                          isDarkMode 
+                            ? 'bg-white text-slate-900 hover:bg-slate-100 shadow-sm' 
+                            : 'bg-[#181920] text-white hover:bg-[#252730] shadow-sm'
+                        }`}
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         <span>Audit QC</span>
@@ -954,27 +967,21 @@ export const QCView: React.FC<QCViewProps> = ({
       {/* ========================================================================= */}
       {inspectModal.isOpen && inspectingItem && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-md font-sans overflow-y-auto">
-          <div className={`relative w-full max-w-lg max-h-[92vh] sm:max-h-[90vh] flex flex-col rounded-t-2xl sm:rounded-2xl border shadow-2xl backdrop-blur-2xl transition-all overflow-hidden ${
-            isDarkMode 
-              ? 'bg-[#09090B] border-white/10 text-white shadow-[0_24px_60px_rgba(0,0,0,0.8)]' 
-              : 'bg-white/95 border-slate-200/80 text-slate-900 shadow-[0_24px_60px_rgba(0,0,0,0.15)]'
-          }`}>
+          <div className="relative w-full max-w-lg max-h-[92vh] sm:max-h-[90vh] flex flex-col rounded-t-2xl sm:rounded-2xl border border-white/10 bg-[#181920] text-white shadow-[0_24px_60px_rgba(0,0,0,0.85)] backdrop-blur-2xl transition-all overflow-hidden font-sans">
             {/* Mobile Grab Handle */}
             <div className="pt-2.5 pb-0 block sm:hidden">
-              <div className="w-10 h-1 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto" />
+              <div className="w-10 h-1 bg-white/20 rounded-full mx-auto" />
             </div>
 
             {/* Modal Window Header */}
-            <div className={`flex items-center justify-between px-5 sm:px-6 py-4 border-b shrink-0 ${
-              isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200/80 bg-slate-50/50'
-            }`}>
+            <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-white/10 bg-[#181920] shrink-0">
               <div className="flex items-center gap-3">
                 <div className={`flex h-10 w-10 items-center justify-center rounded-xl shrink-0 ${
                   qcDecision === 'PASS'
-                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                     : qcDecision === 'QC_HOLD'
-                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                    : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                    : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
                 }`}>
                   {qcDecision === 'PASS' ? (
                     <ShieldCheck className="w-5 h-5 stroke-[2]" />
@@ -985,10 +992,10 @@ export const QCView: React.FC<QCViewProps> = ({
                   )}
                 </div>
                 <div>
-                  <h3 className="font-bold text-base tracking-tight text-slate-900 dark:text-white">
+                  <h3 className="font-bold text-base tracking-tight text-white">
                     Record QC Metrology Audit
                   </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                  <p className="text-xs text-white/60">
                     Drawing compliance & dimensional tolerances
                   </p>
                 </div>
@@ -999,7 +1006,7 @@ export const QCView: React.FC<QCViewProps> = ({
                   setInspectingItem(null);
                   inspectModal.close();
                 }} 
-                className="rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-200 transition-all cursor-pointer"
+                className="rounded-full p-2 text-white/60 hover:bg-white/10 hover:text-white transition-all cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1008,30 +1015,28 @@ export const QCView: React.FC<QCViewProps> = ({
             <form onSubmit={handleInspectSave} className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
               
               {/* Batch Metadata Card */}
-              <div className={`p-4 rounded-2xl border space-y-2 ${
-                isDarkMode ? 'bg-black/60 border-white/10' : 'bg-slate-50/80 border-slate-200/80'
-              }`}>
+              <div className="p-4 rounded-2xl border border-white/[0.08] bg-white/[0.04] space-y-2">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-[#5B75F8] dark:text-[#7B92FF]">{inspectingItem.jobNo}</span>
+                  <span className="font-bold text-white font-mono">{inspectingItem.jobNo}</span>
                   {inspectingItem.orderPo && (
-                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF] border border-blue-500/20">
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-white/10 text-white/90 border border-white/15">
                       PO: {inspectingItem.orderPo}
                     </span>
                   )}
                 </div>
-                <div className={`text-xs font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
-                  <span className="font-bold text-slate-900 dark:text-white">{inspectingItem.partCode}</span>
+                <div className="text-xs font-semibold text-white/90">
+                  <span className="font-bold text-white">{inspectingItem.partCode}</span>
                   {inspectingItem.partDescription && ` — ${inspectingItem.partDescription}`}
                 </div>
-                <div className="flex items-center justify-between text-xs text-slate-400 dark:text-slate-500 pt-2 border-t border-slate-200/60 dark:border-white/5">
+                <div className="flex items-center justify-between text-xs text-white/60 pt-2 border-t border-white/10">
                   <span>Inspection Batch Quantity:</span>
-                  <span className="font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{inspectingItem.qty} NOS</span>
+                  <span className="font-bold text-emerald-400 tabular-nums">{inspectingItem.qty} NOS</span>
                 </div>
               </div>
 
               {/* Inspection Decision Buttons (Apple HIG Radio Cards) */}
               <div className="space-y-2">
-                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400">
+                <label className="block text-xs font-semibold text-white/60">
                   Inspection Decision *
                 </label>
                 <div className="grid grid-cols-3 gap-2.5 text-xs">
@@ -1042,13 +1047,13 @@ export const QCView: React.FC<QCViewProps> = ({
                       onClick={() => setQcDecision('PASS')}
                       className={`p-3 rounded-2xl border transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer ${
                         qcDecision === 'PASS' 
-                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/40 shadow-xs ring-1 ring-emerald-500/30' 
-                          : isDarkMode ? 'bg-black/40 border-white/10 text-slate-400 hover:text-white hover:bg-white/5' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-xs ring-1 ring-emerald-500/30 font-bold' 
+                          : 'bg-white/[0.03] border-white/10 text-white/60 hover:text-white hover:bg-white/[0.06]'
                       }`}
                     >
-                      <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 stroke-[2]" />
+                      <CheckCircle2 className="w-5 h-5 text-emerald-400 stroke-[2]" />
                       <span className="font-semibold text-xs">Pass QC</span>
-                      <span className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80 font-medium">Approved</span>
+                      <span className="text-[10px] text-emerald-400/80 font-medium">Approved</span>
                     </button>
                   )}
 
@@ -1058,13 +1063,13 @@ export const QCView: React.FC<QCViewProps> = ({
                     onClick={() => setQcDecision('QC_HOLD')}
                     className={`p-3 rounded-2xl border transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer ${
                       qcDecision === 'QC_HOLD' 
-                        ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/40 shadow-xs ring-1 ring-amber-500/30' 
-                        : isDarkMode ? 'bg-black/40 border-white/10 text-slate-400 hover:text-white hover:bg-white/5' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-xs ring-1 ring-amber-500/30 font-bold' 
+                        : 'bg-white/[0.03] border-white/10 text-white/60 hover:text-white hover:bg-white/[0.06]'
                     }`}
                   >
-                    <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400 stroke-[2]" />
+                    <Clock className="w-5 h-5 text-amber-400 stroke-[2]" />
                     <span className="font-semibold text-xs">QC Hold</span>
-                    <span className="text-[10px] text-amber-600/80 dark:text-amber-400/80 font-medium">Quarantine</span>
+                    <span className="text-[10px] text-amber-400/80 font-medium">Quarantine</span>
                   </button>
 
                   {/* REJECT */}
@@ -1074,13 +1079,13 @@ export const QCView: React.FC<QCViewProps> = ({
                       onClick={() => setQcDecision('REJECTED')}
                       className={`p-3 rounded-2xl border transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer ${
                         qcDecision === 'REJECTED' 
-                          ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/40 shadow-xs ring-1 ring-rose-500/30' 
-                          : isDarkMode ? 'bg-black/40 border-white/10 text-slate-400 hover:text-white hover:bg-white/5' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                          ? 'bg-rose-500/20 text-rose-300 border-rose-500/50 shadow-xs ring-1 ring-rose-500/30 font-bold' 
+                          : 'bg-white/[0.03] border-white/10 text-white/60 hover:text-white hover:bg-white/[0.06]'
                       }`}
                     >
-                      <XCircle className="w-5 h-5 text-rose-600 dark:text-rose-400 stroke-[2]" />
+                      <XCircle className="w-5 h-5 text-rose-400 stroke-[2]" />
                       <span className="font-semibold text-xs">Reject</span>
-                      <span className="text-[10px] text-rose-600/80 dark:text-rose-400/80 font-medium">Defect</span>
+                      <span className="text-[10px] text-rose-400/80 font-medium">Defect</span>
                     </button>
                   )}
                 </div>
@@ -1088,7 +1093,7 @@ export const QCView: React.FC<QCViewProps> = ({
 
               {/* Quick Tap Defect / Verification Chips */}
               <div className="space-y-1.5">
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block">
+                <span className="text-xs font-semibold text-white/60 block">
                   Quick Remarks Preset:
                 </span>
                 <div className="flex flex-wrap gap-1.5">
@@ -1107,11 +1112,7 @@ export const QCView: React.FC<QCViewProps> = ({
                       onClick={() => {
                         setQcNotes(prev => prev ? `${prev}, ${preset}` : preset);
                       }}
-                      className={`px-3 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer ${
-                        isDarkMode
-                          ? 'bg-black/40 border-white/10 text-slate-300 hover:bg-white/10 hover:text-white'
-                          : 'bg-slate-100/80 border-slate-200/80 text-slate-700 hover:bg-slate-200'
-                      }`}
+                      className="px-3 py-1 rounded-full text-xs font-medium border border-white/10 bg-white/[0.06] text-white hover:bg-white/15 transition-all cursor-pointer"
                     >
                       + {preset}
                     </button>
@@ -1121,7 +1122,7 @@ export const QCView: React.FC<QCViewProps> = ({
 
               {/* Remarks Textarea */}
               <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">
+                <label className="block text-xs font-semibold text-white/60 mb-1.5">
                   Inspector Remarks & Notes
                 </label>
                 <textarea
@@ -1129,41 +1130,29 @@ export const QCView: React.FC<QCViewProps> = ({
                   value={qcNotes}
                   onChange={(e) => setQcNotes(e.target.value)}
                   placeholder="Record drawing compliance, surface finish, dimensional tolerances..."
-                  className={`w-full rounded-xl border px-3.5 py-2.5 text-xs outline-none transition-all ${
-                    isDarkMode 
-                      ? 'bg-black/60 border-white/10 text-white focus:border-[#5B75F8]' 
-                      : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#5B75F8]'
-                  }`}
+                  className="w-full rounded-xl border border-white/15 bg-white/[0.05] text-white placeholder-white/40 px-3.5 py-2.5 text-xs outline-none transition-all focus:border-white/40"
                 />
               </div>
 
               {/* Submit Buttons */}
-              <div className={`pt-3.5 border-t flex items-center justify-end gap-2.5 shrink-0 ${
-                isDarkMode ? 'border-white/10' : 'border-slate-100'
-              }`}>
+              <div className="pt-3.5 border-t border-white/10 flex items-center justify-end gap-2.5 shrink-0">
                 <button 
                   type="button" 
                   onClick={() => {
                     setInspectingItem(null);
                     inspectModal.close();
                   }} 
-                  className={`flex-1 sm:flex-initial px-5 py-2 rounded-full border text-xs font-semibold cursor-pointer transition-all ${
-                    isDarkMode 
-                      ? 'border-white/10 bg-black/60 text-slate-300 hover:bg-white/10' 
-                      : 'border-slate-200/80 bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
+                  className="flex-1 sm:flex-initial px-5 py-2 rounded-full border border-white/15 bg-white/[0.06] text-white hover:bg-white/15 text-xs font-semibold cursor-pointer transition-all"
                 >
                   Cancel
                 </button>
                 {canPerformCta('UPLOAD_QC_REPORT') && (
                   <button 
                     type="submit" 
-                    className={`flex-1 sm:flex-initial px-6 py-2 rounded-full text-white font-semibold text-xs cursor-pointer shadow-xs transition-all active:scale-[0.98] ${
-                      qcDecision === 'PASS'
-                        ? 'bg-emerald-600 hover:bg-emerald-500'
-                        : qcDecision === 'QC_HOLD'
-                        ? 'bg-amber-600 hover:bg-amber-500'
-                        : 'bg-rose-600 hover:bg-rose-500'
+                    className={`flex-1 sm:flex-initial px-6 py-2 rounded-full text-xs font-bold cursor-pointer shadow-md transition-all active:scale-[0.96] ${
+                      isDarkMode
+                        ? 'bg-[#181920] hover:bg-[#252730] text-white border border-white/25'
+                        : 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/20'
                     }`}
                   >
                     Save QC Audit ({qcDecision})

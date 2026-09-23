@@ -226,54 +226,50 @@ export const EmployeeCertificationsView: React.FC<EmployeeCertificationsViewProp
 
   return (
     <div className="space-y-4 sm:space-y-6 font-sans">
-      {/* ── TOP HERO HEADER (Apple HIG Materials & Typography) ── */}
-      <div className={`p-6 sm:p-7 rounded-3xl border transition-all ${cardBase}`}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 pb-6 border-b border-slate-200 dark:border-white/10">
-          <div className="flex items-start gap-4">
-            <div className="p-3.5 rounded-2xl bg-[var(--accent-soft-light)] dark:bg-[var(--accent-soft-dark)] text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-border-light)] dark:border-[var(--accent-border-dark)] shrink-0 shadow-xs">
-              <Award className="w-6 h-6" />
+      {/* 1. Luminous Dual-Mode Hero & Integrated Mini Dashboard */}
+      <div className={`relative overflow-hidden rounded-[28px] border transition-all duration-300 p-6 sm:p-8 ${
+        isDarkMode
+          ? 'bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] border-white/10 shadow-[0_24px_50px_rgba(0,0,0,0.7)] text-white'
+          : 'bg-gradient-to-r from-[#1b64ff] via-[#155dfc] to-[#0f52dc] border-blue-400/30 shadow-[0_16px_36px_rgba(21,93,252,0.28)] text-white'
+      }`}>
+        {/* Ambient Top Glow */}
+        <div
+          aria-hidden="true"
+          className={`pointer-events-none absolute -top-24 -right-10 w-96 h-96 rounded-full blur-3xl transition-opacity duration-500 ${
+            isDarkMode ? 'bg-blue-500/10' : 'bg-white/20'
+          }`}
+        />
+
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold tracking-wide backdrop-blur-md border bg-white/15 text-white border-white/20 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>HR Module • Compliance Rate: {stats.complianceRate}% Active</span>
             </div>
-            <div className="space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide bg-[var(--accent-soft-light)] dark:bg-[var(--accent-soft-dark)] text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-border-light)] dark:border-[var(--accent-border-dark)]">
-                  HR Module
-                </span>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                  <span>Skills & Compliance</span>
-                </span>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 text-white shadow-inner">
+                <Award className="h-5 w-5" />
               </div>
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
-                Employee Certifications
-              </h1>
-              <p className={`text-xs max-w-2xl leading-relaxed ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                Verify technical proficiencies, ISO/NDT certifications, and compliance licenses across plant personnel.
-              </p>
-            </div>
+              Employee Certifications
+            </h1>
+            <p className={`text-xs sm:text-sm max-w-2xl font-normal leading-relaxed ${
+              isDarkMode ? 'text-white/60' : 'text-blue-100'
+            }`}>
+              Verify technical qualifications, ISO/NDT certifications, and compliance credentials across factory personnel.
+            </p>
           </div>
 
-          <div className="flex items-center gap-3 self-start sm:self-center">
-            <div
-              className={`p-3 sm:px-4 sm:py-2.5 rounded-2xl border font-mono text-right w-full sm:w-auto ${
-                isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-50 border-slate-200/80 shadow-2xs'
-              }`}
-            >
-              <div className="flex sm:flex-col justify-between items-center sm:items-end gap-1">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                  Compliance Rate
-                </span>
-                <span className="text-base sm:text-lg font-black tracking-tight text-emerald-600 dark:text-emerald-400">
-                  {stats.complianceRate}%
-                </span>
-              </div>
-            </div>
-
+          <div className="flex flex-wrap items-center gap-3 shrink-0 self-start lg:self-center">
             {canAssign && (
               <button
                 id="assign-cert-btn"
                 type="button"
                 onClick={handleOpenAssignModal}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold tracking-tight transition-all duration-150 cursor-pointer active:scale-[0.98] bg-[var(--accent-primary)] hover:opacity-95 text-white shadow-md shadow-[var(--accent-shadow)] border border-white/20 shrink-0"
+                className={`flex h-11 shrink-0 items-center gap-2 rounded-full px-5 text-xs font-bold transition-all active:scale-[0.96] cursor-pointer shadow-lg ${
+                  isDarkMode
+                    ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
+                    : 'bg-white hover:bg-blue-50 text-blue-700 shadow-blue-900/30'
+                }`}
               >
                 <Plus className="w-4 h-4" />
                 <span>Assign Certificate</span>
@@ -282,89 +278,85 @@ export const EmployeeCertificationsView: React.FC<EmployeeCertificationsViewProp
           </div>
         </div>
 
-        {/* ── METRIC STATS CARDS (Apple HIG 4-Col KPI Grid) ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 pt-6">
+        {/* Mini Metric Dashboard Strip with SOLID VIBRANT ICON SQUIRCLES */}
+        <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-3">
           {/* Card 1: Total Listed */}
-          <div className={`p-4 sm:p-5 rounded-2xl border transition-all duration-200 ${elevatedCard}`}>
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
+            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+          }`}>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-md shadow-black/10">
+              <Award className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
                 Total Listed
               </span>
-              <div className="p-2 rounded-xl bg-slate-500/10 text-slate-500 dark:text-slate-400">
-                <Award className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-black tracking-tight">
+              <span className="text-xl sm:text-2xl font-bold font-mono text-white block tabular-nums">
                 {stats.total}
               </span>
-              <span className="text-[11px] font-medium text-slate-500">records</span>
-            </div>
-            <div className="mt-2 text-[11px] text-slate-400">
-              Documented competencies
+              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
+                Documented credentials
+              </span>
             </div>
           </div>
 
           {/* Card 2: Active & Verified */}
-          <div className={`p-4 sm:p-5 rounded-2xl border transition-all duration-200 ${elevatedCard}`}>
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                Active & Verified
-              </span>
-              <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                <CheckCircle2 className="w-4 h-4" />
-              </div>
+          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
+            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+          }`}>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-md shadow-emerald-500/30">
+              <CheckCircle2 className="w-5 h-5" />
             </div>
-            <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-black tracking-tight text-emerald-600 dark:text-emerald-400">
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
+                Active &amp; Verified
+              </span>
+              <span className="text-xl sm:text-2xl font-bold font-mono text-white block tabular-nums">
                 {stats.active}
               </span>
-              <span className="text-[11px] font-medium text-emerald-600/70 dark:text-emerald-400/70">valid</span>
-            </div>
-            <div className="mt-2 text-[11px] text-slate-400">
-              Audit-ready qualifications
+              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
+                Audit-ready qualifications
+              </span>
             </div>
           </div>
 
           {/* Card 3: Expiring Soon */}
-          <div className={`p-4 sm:p-5 rounded-2xl border transition-all duration-200 ${elevatedCard}`}>
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
+            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+          }`}>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-md shadow-amber-500/30">
+              <Clock className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
                 Expiring Soon
               </span>
-              <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                <Clock className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-black tracking-tight text-amber-600 dark:text-amber-400">
+              <span className="text-xl sm:text-2xl font-bold font-mono text-white block tabular-nums">
                 {stats.expiringSoon}
               </span>
-              <span className="text-[11px] font-medium text-amber-600/70 dark:text-amber-400/70">within 30d</span>
-            </div>
-            <div className="mt-2 text-[11px] text-slate-400">
-              Renewal window open
+              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
+                Within 30 days
+              </span>
             </div>
           </div>
 
           {/* Card 4: Expired */}
-          <div className={`p-4 sm:p-5 rounded-2xl border transition-all duration-200 ${elevatedCard}`}>
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-rose-600 dark:text-rose-400">
+          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
+            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+          }`}>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-600 text-white shadow-md shadow-rose-500/30">
+              <ShieldAlert className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
                 Expired
               </span>
-              <div className="p-2 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400">
-                <ShieldAlert className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-black tracking-tight text-rose-600 dark:text-rose-400">
+              <span className="text-xl sm:text-2xl font-bold font-mono text-white block tabular-nums">
                 {stats.expired}
               </span>
-              <span className="text-[11px] font-medium text-rose-600/70 dark:text-rose-400/70">overdue</span>
-            </div>
-            <div className="mt-2 text-[11px] text-slate-400">
-              Requires retraining / renewal
+              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
+                Requires renewal
+              </span>
             </div>
           </div>
         </div>
@@ -373,27 +365,29 @@ export const EmployeeCertificationsView: React.FC<EmployeeCertificationsViewProp
       {/* ── TABS & FILTER TOOLBAR (Apple HIG Segmented Control) ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         {/* Apple-style Pill Segmented Control */}
-        <div className={`p-1 rounded-2xl border inline-flex items-center gap-1 ${
-          isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-100 border-slate-200'
+        <div className={`p-1 rounded-full border inline-flex items-center gap-1 overflow-x-auto scrollbar-none ${
+          isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-slate-100/80 border-slate-200/80'
         }`}>
           <button
             id="tab-my-certifications"
             type="button"
             onClick={() => onTabChange('my')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'my'
                 ? isDarkMode
-                  ? 'bg-white/15 text-white shadow-xs font-bold'
-                  : 'bg-white text-slate-900 shadow-xs font-bold'
-                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  ? 'bg-white text-slate-950 shadow-sm'
+                  : 'bg-[#155dfc] text-white shadow-sm'
+                : isDarkMode
+                  ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
             }`}
           >
             <User className="w-3.5 h-3.5" />
             <span>My Certifications</span>
-            <span className={`px-1.5 py-0.2 text-[10px] rounded-full ${
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] tabular-nums font-bold ${
               activeTab === 'my'
-                ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold'
-                : 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400'
+                ? isDarkMode ? 'bg-slate-900 text-white' : 'bg-white/20 text-white'
+                : isDarkMode ? 'bg-white/10 text-slate-400' : 'bg-slate-200 text-slate-700'
             }`}>
               {myCertifications.length}
             </span>
@@ -404,20 +398,22 @@ export const EmployeeCertificationsView: React.FC<EmployeeCertificationsViewProp
               id="tab-all-certifications"
               type="button"
               onClick={() => onTabChange('all')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                 activeTab === 'all'
                   ? isDarkMode
-                    ? 'bg-white/15 text-white shadow-xs font-bold'
-                    : 'bg-white text-slate-900 shadow-xs font-bold'
-                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                    ? 'bg-white text-slate-950 shadow-sm'
+                    : 'bg-[#155dfc] text-white shadow-sm'
+                  : isDarkMode
+                    ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
               }`}
             >
               <Building2 className="w-3.5 h-3.5" />
               <span>All Staff Certifications</span>
-              <span className={`px-1.5 py-0.2 text-[10px] rounded-full ${
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] tabular-nums font-bold ${
                 activeTab === 'all'
-                  ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold'
-                  : 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400'
+                  ? isDarkMode ? 'bg-slate-900 text-white' : 'bg-white/20 text-white'
+                  : isDarkMode ? 'bg-white/10 text-slate-400' : 'bg-slate-200 text-slate-700'
               }`}>
                 {certifications.length}
               </span>
@@ -435,7 +431,7 @@ export const EmployeeCertificationsView: React.FC<EmployeeCertificationsViewProp
               placeholder="Search title, authority, staff..."
               value={searchQuery}
               onChange={e => onSearchChange(e.target.value)}
-              className={`w-full pl-9 pr-8 py-2 rounded-xl text-xs border outline-none transition-all ${
+              className={`w-full pl-9 pr-8 py-2 rounded-full text-xs border outline-none transition-all ${
                 isDarkMode
                   ? 'bg-[#111115] border-white/10 text-white placeholder:text-slate-600 focus:border-[var(--accent-primary)]'
                   : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-[var(--accent-primary)] shadow-2xs'
@@ -445,7 +441,7 @@ export const EmployeeCertificationsView: React.FC<EmployeeCertificationsViewProp
               <button
                 type="button"
                 onClick={() => onSearchChange('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -453,8 +449,8 @@ export const EmployeeCertificationsView: React.FC<EmployeeCertificationsViewProp
           </div>
 
           {/* Status Filter Segment */}
-          <div className={`p-1 rounded-xl border inline-flex items-center gap-1 ${
-            isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-100 border-slate-200'
+          <div className={`p-1 rounded-full border inline-flex items-center gap-1 ${
+            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-slate-100/80 border-slate-200/80'
           }`}>
             {(['ALL', 'ACTIVE', 'EXPIRED'] as const).map(st => {
               const isSelected = statusFilter === st;
@@ -463,12 +459,14 @@ export const EmployeeCertificationsView: React.FC<EmployeeCertificationsViewProp
                   key={st}
                   type="button"
                   onClick={() => onStatusFilterChange(st)}
-                  className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg transition-all cursor-pointer ${
+                  className={`px-3 py-1.5 text-xs font-bold rounded-full transition-all cursor-pointer whitespace-nowrap ${
                     isSelected
                       ? isDarkMode
-                        ? 'bg-white/20 text-white shadow-xs'
-                        : 'bg-white text-slate-900 shadow-xs'
-                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
+                        ? 'bg-white text-slate-950 shadow-sm'
+                        : 'bg-[#155dfc] text-white shadow-sm'
+                      : isDarkMode
+                        ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                   }`}
                 >
                   {st === 'ALL' ? 'All' : st === 'ACTIVE' ? 'Active' : 'Expired'}

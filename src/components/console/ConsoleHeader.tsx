@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { AccentColorSelector } from './AccentColorSelector';
 import { CustomerOrder, StockItem, CustomerInvoice, JobCard, UserRole, ConsoleView, SystemUser } from '../../types/console';
-import { getViewTitle } from '../../utils/navigationConfig';
+import { getViewTitle, getBreadcrumbsForView } from '../../utils/navigationConfig';
 import { NotificationDrawer } from './NotificationDrawer';
 import { useInAppNotifications } from '../../hooks/useInAppNotifications';
 import { tryNormalizeRole } from '../../utils/rbacMatrix';
@@ -221,21 +221,18 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
 
   const scopeOptions = ['FY 26-27', 'FY 25-26', 'Q3 2026', 'All-Time'];
   const activeTitle = getViewTitle(currentView as ConsoleView);
+  const breadcrumb = getBreadcrumbsForView(currentView as ConsoleView);
   const normalizedRole = tryNormalizeRole(currentRole);
   const displayName = currentUser?.name || userName || 'Sachin Gharbude';
   const initial = displayName.charAt(0).toUpperCase();
 
   return (
-    <header className={`relative z-30 shrink-0 select-none font-sans transition-colors border-b ${
-      isDarkMode
-        ? 'bg-[#141416]/85 text-neutral-100 border-neutral-800/90 shadow-[inset_0_-1px_0_0_rgba(255,255,255,0.04)] backdrop-blur-2xl'
-        : 'bg-white/80 text-neutral-900 border-neutral-200 shadow-[inset_0_-1px_0_0_rgba(0,0,0,0.02)] backdrop-blur-2xl'
-    }`}>
+    <header className="relative z-30 shrink-0 select-none font-sans bg-[#101317] text-white border-b border-white/[0.08]">
       {/* 1.10X height: 62px */}
       <div className="flex h-[62px] items-center justify-between px-3.5 sm:px-6 lg:px-7 gap-3.5">
 
         {/* ========================================================================= */}
-        {/* ── LEADING: macOS BRANDING & PATH HIERARCHY (1.10X) ──                   */}
+        {/* ── LEADING: BRANDING (MOBILE) & ERP BREADCRUMBS ──                       */}
         {/* ========================================================================= */}
         <div className="flex min-w-0 items-center gap-2.5 sm:gap-3.5 shrink-0">
           {onToggleMobileMenu && (
@@ -243,56 +240,91 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
               type="button"
               onClick={onToggleMobileMenu}
               aria-label="Toggle navigation menu"
-              className={`flex h-9 w-9 items-center justify-center rounded-lg transition-all cursor-pointer active:scale-95 lg:hidden ${
-                isDarkMode
-                  ? 'text-neutral-300 hover:bg-white/[0.08] hover:text-white'
-                  : 'text-neutral-600 hover:bg-black/[0.05] hover:text-neutral-900'
-              }`}
+              className="flex h-9 w-9 items-center justify-center rounded-lg transition-all cursor-pointer active:scale-95 lg:hidden text-neutral-300 hover:bg-white/[0.08] hover:text-white"
             >
               <Menu className="h-4.5 w-4.5" />
             </button>
           )}
 
-          {/* App Brandmark & Title (1.10X) */}
+          {/* App Brandmark & Title (shown on mobile, sidebar handles desktop) */}
           <button
             type="button"
             onClick={() => onNavigate?.('command-centre')}
-            className="group flex items-center gap-3 rounded-xl py-1 px-1.5 transition-all hover:bg-black/[0.04] dark:hover:bg-white/[0.06] cursor-pointer"
+            className="group flex items-center gap-2.5 rounded-xl py-1 px-1.5 transition-all hover:bg-white/[0.06] cursor-pointer lg:hidden"
             title="Command Centre"
           >
-            <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-gradient-to-b from-white to-neutral-100 dark:from-neutral-800 dark:to-neutral-900 p-1 shadow-[0_1px_3px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.2)] border border-black/[0.08] dark:border-white/[0.1]">
+            <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 p-1 shadow-sm text-white">
               <img
                 src="/logo.png"
                 alt="OwnerOS"
-                className="h-full w-full object-contain drop-shadow-xs transition-transform duration-200 group-hover:scale-105"
+                className="h-full w-full object-contain"
               />
             </div>
             <div className="flex flex-col text-left leading-tight">
-              <span className="text-[14.5px] font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
+              <span className="text-[14px] font-bold tracking-tight text-white">
                 OwnerOS
               </span>
-              <span className="text-[11px] font-medium tracking-normal text-neutral-400 dark:text-neutral-400">
+              <span className="text-[10px] font-medium tracking-normal text-slate-400">
                 SketchItUp
               </span>
             </div>
           </button>
 
-          {/* macOS Subtle Separator */}
-          <div className="hidden sm:block h-5 w-px bg-black/[0.08] dark:bg-white/[0.12] mx-1" />
+          {/* Canonical ERP Breadcrumb Hierarchy */}
+          <div className="hidden lg:flex items-center gap-2 text-[13px]">
+            {breadcrumb.modulePath && breadcrumb.moduleLabel !== 'Workspace' ? (
+              <button
+                type="button"
+                onClick={() => {
+                  const targetView: ConsoleView =
+                    breadcrumb.modulePath?.includes('operations') ? 'orders' :
+                    breadcrumb.modulePath?.includes('quality') ? 'qc' :
+                    breadcrumb.modulePath?.includes('finance') ? 'invoices' :
+                    breadcrumb.modulePath?.includes('admin') ? 'masters' :
+                    breadcrumb.modulePath?.includes('hr') ? 'tasks' : 'command-centre';
+                  onNavigate?.(targetView);
+                }}
+                className="font-medium text-slate-400 hover:text-white transition-colors cursor-pointer truncate"
+              >
+                {breadcrumb.moduleLabel}
+              </button>
+            ) : (
+              <span className="font-medium text-slate-400">
+                {breadcrumb.moduleLabel}
+              </span>
+            )}
 
-          {/* Apple Breadcrumb / View Identity (1.10X) */}
-          <div className="hidden sm:flex items-center gap-2 text-[13px]">
-            <span className="font-normal text-neutral-400 dark:text-neutral-400">
-              Workspace
-            </span>
-            <span className="text-neutral-300 dark:text-neutral-500 text-xs">/</span>
-            <span className="font-semibold tracking-tight text-[#4763F5] dark:text-[#7A92FF] truncate max-w-[220px] xl:max-w-none">
-              {activeTitle}
-            </span>
+            {breadcrumb.submoduleLabel && (
+              <>
+                <span className="text-slate-600 text-xs">/</span>
+                {breadcrumb.detailLabel ? (
+                  <button
+                    type="button"
+                    onClick={() => onNavigate?.('orders')}
+                    className="font-medium text-slate-400 hover:text-white transition-colors cursor-pointer truncate"
+                  >
+                    {breadcrumb.submoduleLabel}
+                  </button>
+                ) : (
+                  <span className="font-semibold tracking-tight text-blue-400 truncate max-w-[220px] xl:max-w-none">
+                    {breadcrumb.submoduleLabel}
+                  </span>
+                )}
+              </>
+            )}
+
+            {breadcrumb.detailLabel && (
+              <>
+                <span className="text-slate-600 text-xs">/</span>
+                <span className="font-semibold tracking-tight text-blue-400 truncate max-w-[180px]">
+                  {breadcrumb.detailLabel}
+                </span>
+              </>
+            )}
           </div>
 
-          <div className="sm:hidden text-[13px] font-semibold text-neutral-800 dark:text-neutral-200 truncate">
-            {activeTitle}
+          <div className="lg:hidden text-[13px] font-semibold text-neutral-200 truncate">
+            {breadcrumb.submoduleLabel || breadcrumb.moduleLabel}
           </div>
         </div>
 
@@ -619,7 +651,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
           {/* Admin Vault Link (Only if role is ServerAdmin) */}
           {normalizedRole === 'ServerAdmin' && (
             <Link
-              to="/admin"
+              to="/server-admin"
               className="hidden sm:flex h-9 items-center gap-1.5 rounded-xl border border-purple-500/25 bg-purple-500/10 px-3 text-[13px] font-medium text-purple-600 dark:text-purple-300 hover:bg-purple-500/20 transition-all"
               title="Maker Vault Admin Panel"
             >

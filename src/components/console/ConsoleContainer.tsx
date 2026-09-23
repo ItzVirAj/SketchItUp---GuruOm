@@ -21,7 +21,6 @@ import {
   PendingApproval 
 } from '../../types/console';
 
-import { ConsoleHeader } from './ConsoleHeader';
 import { ConsoleSidebar } from './ConsoleSidebar';
 import { MobileDrawer } from './MobileDrawer';
 import { MobileBottomTabBar } from './MobileBottomTabBar';
@@ -56,6 +55,8 @@ import { AccessRestrictedGate } from '../common/AccessRestrictedGate';
 import { SwitchUserModal } from '../common/SwitchUserModal';
 import { SecuritySessionsModal } from './modals/SecuritySessionsModal';
 import { CommandPaletteModal } from './modals/CommandPaletteModal';
+import { NotificationDrawer } from '../NotificationDrawer';
+import { useInAppNotifications } from '../../hooks/useInAppNotifications';
 import { isViewAllowedForUser } from '../../utils/permissions';
 import { useAuth } from '../../context/AuthContext';
 import { useOwnerOSData } from '../../hooks/useOwnerOSData';
@@ -69,6 +70,7 @@ import { useEmployees } from '../../hooks/useEmployees';
 import { fetchOrderById, receiveOutworkReturn } from '../../services/supabaseServices';
 import { triggerOrderDelayed } from '../../services/notificationService';
 import { toast } from '../../context/ToastContext';
+import { getCanonicalPathForView } from '../../utils/navigationConfig';
 
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -77,66 +79,7 @@ interface ConsoleContainerProps {
 }
 
 const getPathForView = (view: ConsoleView, orderId?: string | null): string => {
-  switch (view) {
-    case 'command-centre':
-      return '/command-center';
-    case 'orders':
-      return '/orders';
-    case 'order-detail':
-      return `/orders/${orderId || 'ord-1'}`;
-    case 'inventory':
-      return '/inventory';
-    case 'production':
-      return '/production';
-    case 'finished-goods':
-      return '/finished-goods';
-    case 'plating-outwork':
-      return '/plating-outwork';
-    case 'reports':
-      return '/reports';
-    case 'qc':
-      return '/qc';
-    case 'pdi':
-      return '/pdi';
-    case 'dispatch':
-      return '/dispatch';
-    case 'approvals':
-      return '/approvals';
-    case 'meetings':
-      return '/hr/meetings';
-    case 'tasks':
-      return '/hr/tasks';
-    case 'leave':
-    case 'leave-requests':
-      return '/hr/leave';
-    case 'attendance':
-      return '/hr/attendance';
-    case 'certifications':
-    case 'employee-certifications':
-      return '/hr/employee-certifications';
-    case 'announcements':
-      return '/hr/announcements';
-    case 'employee-master':
-      return '/hr/employees';
-    case 'invoices':
-      return '/invoices';
-    case 'payables':
-      return '/payables';
-    case 'masters':
-      return '/masters';
-    case 'users-audit':
-      return '/users-audit';
-    case 'company-profile':
-      return '/company-profile';
-    case 'workflow-testing':
-      return '/workflow-testing';
-    case 'bom':
-      return '/production?tab=bom';
-    case 'route-cards':
-      return '/production?tab=route-cards';
-    default:
-      return '/command-center';
-  }
+  return getCanonicalPathForView(view, orderId);
 };
 
 export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut }) => {
@@ -168,6 +111,19 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
   const [isSecurityModalOpen, setIsSecurityModalOpen] = useState<boolean>(false);
   const [currentUserId, setCurrentUserId] = useState<string>(authProfile?.id || '');
   const [isRealtimeStreaming, setIsRealtimeStreaming] = useState<boolean>(true);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState<boolean>(false);
+
+  // In-app notifications
+  const {
+    notifications,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+    clearAll,
+    isSoundEnabled,
+    toggleSound,
+  } = useInAppNotifications();
 
   // Main scrollable workspace canvas ref
   const mainScrollRef = useRef<HTMLElement | null>(null);
@@ -290,6 +246,19 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
     activeUserFallback;
 
   const currentRole: UserRole = currentUser?.role || authProfile?.role || 'SUPER ADMIN';
+
+  const handleManualSync = async () => {
+    if (isSyncing) return;
+    setIsSyncing(true);
+    try {
+      await handleSync();
+      toast.success('Live operations data synchronized', 'System Synced');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to synchronize data', 'Sync Error');
+    } finally {
+      setTimeout(() => setIsSyncing(false), 600);
+    }
+  };
 
   // Meetings (HR module) — kept as its own hook rather than folded into
   // useOwnerOSData; see src/hooks/useMeetings.ts for why.
@@ -459,10 +428,19 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
     startTransition(() => {
     const path = location.pathname;
 
+    // Command Centre
     if (path === '/' || path === '/command-center' || path === '/command-centre') {
       setCurrentView('command-centre');
-    } else if (path.startsWith('/orders/')) {
-      const rawId = path.replace('/orders/', '');
+      if (path === '/command-centre') {
+        navigate('/command-center', { replace: true });
+      }
+    }
+    // Operations & Reports (Canonical: /operations/*)
+    else if (path === '/operations' || path === '/operations/') {
+      navigate('/operations/orders', { replace: true });
+      setCurrentView('orders');
+    } else if (path.startsWith('/operations/orders/')) {
+      const rawId = path.replace('/operations/orders/', '');
       if (rawId) {
         const matched = orders.find(o => o.id === rawId || o.poNo === rawId);
         if (matched) {
@@ -478,34 +456,64 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
       } else {
         setCurrentView('orders');
       }
-    } else if (path === '/orders') {
+    } else if (path === '/operations/orders') {
       setCurrentView('orders');
-    } else if (path.startsWith('/masters')) {
-      setCurrentView('masters');
-    } else if (path === '/inventory') {
+    } else if (path === '/operations/inventory') {
       setCurrentView('inventory');
-    } else if (path === '/production' || path === '/bom' || path === '/route-cards') {
-      if (path === '/bom') {
+    } else if (path === '/operations/production') {
+      const params = new URLSearchParams(location.search);
+      const tab = params.get('tab');
+      if (tab === 'bom') {
         setCurrentView('bom');
-      } else if (path === '/route-cards') {
+      } else if (tab === 'route-cards') {
         setCurrentView('route-cards');
       } else {
         setCurrentView('production');
       }
-    } else if (path === '/finished-goods') {
+    } else if (path === '/operations/finished-goods') {
       setCurrentView('finished-goods');
-    } else if (path === '/plating-outwork') {
+    } else if (path === '/operations/plating-outwork') {
       setCurrentView('plating-outwork');
-    } else if (path === '/reports') {
+    } else if (path === '/operations/reports') {
       setCurrentView('reports');
-    } else if (path === '/qc') {
+    }
+    // Quality & Dispatch (Canonical: /quality-dispatch/*)
+    else if (path === '/quality-dispatch' || path === '/quality-dispatch/') {
+      navigate('/quality-dispatch/qc-inspection', { replace: true });
       setCurrentView('qc');
-    } else if (path === '/pdi') {
+    } else if (path === '/quality-dispatch/qc-inspection') {
+      setCurrentView('qc');
+    } else if (path === '/quality-dispatch/pdi-inspection') {
       setCurrentView('pdi');
-    } else if (path === '/dispatch') {
+    } else if (path === '/quality-dispatch/dispatch-logistics') {
       setCurrentView('dispatch');
-    } else if (path === '/approvals') {
+    }
+    // Finance & Accounts (Canonical: /finance/*)
+    else if (path === '/finance' || path === '/finance/') {
+      navigate('/finance/invoices-payments', { replace: true });
+      setCurrentView('invoices');
+    } else if (path === '/finance/invoices-payments') {
+      setCurrentView('invoices');
+    } else if (path === '/finance/vendor-payables') {
+      setCurrentView('payables');
+    } else if (path === '/finance/management-approvals') {
       setCurrentView('approvals');
+    }
+    // Admin & Systems (Canonical: /admin/*)
+    else if (path === '/admin' || path === '/admin/') {
+      navigate('/admin/master-catalogs', { replace: true });
+      setCurrentView('masters');
+    } else if (path.startsWith('/admin/master-catalogs')) {
+      setCurrentView('masters');
+    } else if (path === '/admin/users-audit-logs') {
+      setCurrentView('users-audit');
+    } else if (path === '/admin/company-profile') {
+      setCurrentView('company-profile');
+    }
+    // HR Module (Canonical: /hr/*)
+    else if (path === '/hr' || path === '/hr/') {
+      navigate('/hr/tasks', { replace: true });
+      setCurrentView('tasks');
     } else if (path === '/hr/meetings') {
       setCurrentView('meetings');
     } else if (path === '/hr/tasks') {
@@ -520,19 +528,53 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
       setCurrentView('announcements');
     } else if (path === '/hr/employees' || path === '/hr/employee-master') {
       setCurrentView('employee-master');
-    } else if (path === '/invoices') {
-      setCurrentView('invoices');
-    } else if (path === '/payables') {
-      setCurrentView('payables');
-    } else if (path === '/users-audit') {
-      setCurrentView('users-audit');
-    } else if (path === '/company-profile') {
-      setCurrentView('company-profile');
-    } else if (path === '/workflow-testing') {
+    }
+    // General / Utility
+    else if (path === '/workflow-testing') {
       setCurrentView('workflow-testing');
     }
+    // Legacy Routes -> Canonical Redirects
+    else if (path.startsWith('/orders/')) {
+      const rawId = path.replace('/orders/', '');
+      navigate(`/operations/orders/${rawId}`, { replace: true });
+    } else if (path === '/orders') {
+      navigate('/operations/orders', { replace: true });
+    } else if (path.startsWith('/masters')) {
+      const sub = path.replace('/masters', '');
+      navigate(`/admin/master-catalogs${sub}`, { replace: true });
+    } else if (path === '/inventory') {
+      navigate('/operations/inventory', { replace: true });
+    } else if (path === '/production') {
+      navigate('/operations/production', { replace: true });
+    } else if (path === '/bom') {
+      navigate('/operations/production?tab=bom', { replace: true });
+    } else if (path === '/route-cards') {
+      navigate('/operations/production?tab=route-cards', { replace: true });
+    } else if (path === '/finished-goods') {
+      navigate('/operations/finished-goods', { replace: true });
+    } else if (path === '/plating-outwork') {
+      navigate('/operations/plating-outwork', { replace: true });
+    } else if (path === '/reports') {
+      navigate('/operations/reports', { replace: true });
+    } else if (path === '/qc') {
+      navigate('/quality-dispatch/qc-inspection', { replace: true });
+    } else if (path === '/pdi') {
+      navigate('/quality-dispatch/pdi-inspection', { replace: true });
+    } else if (path === '/dispatch') {
+      navigate('/quality-dispatch/dispatch-logistics', { replace: true });
+    } else if (path === '/invoices') {
+      navigate('/finance/invoices-payments', { replace: true });
+    } else if (path === '/payables') {
+      navigate('/finance/vendor-payables', { replace: true });
+    } else if (path === '/approvals') {
+      navigate('/finance/management-approvals', { replace: true });
+    } else if (path === '/users-audit') {
+      navigate('/admin/users-audit-logs', { replace: true });
+    } else if (path === '/company-profile') {
+      navigate('/admin/company-profile', { replace: true });
+    }
     });
-  }, [location.pathname, orders]);
+  }, [location.pathname, location.search, orders, navigate]);
 
   const handleNavigateView = (view: ConsoleView, orderId?: string | null) => {
     setCurrentView(view);
@@ -554,7 +596,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
     setSelectedOrderId(orderId);
     setDynamicFetchedOrder(null);
     setCurrentView('order-detail');
-    const targetPath = `/orders/${orderId}`;
+    const targetPath = `/operations/orders/${orderId}`;
     if (location.pathname !== targetPath) {
       navigate(targetPath);
     }
@@ -612,53 +654,27 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
   const pendingApprovalsCount = (approvals || []).filter(a => a.status === 'PENDING').length;
 
   return (
-    <div className={`h-screen flex flex-col font-sans transition-colors overflow-hidden ${
-      isDarkMode ? 'bg-[#09090B] text-[#F4F4F5]' : 'bg-white text-slate-900'
-    }`}>
-      {/* Console Header */}
-      <ConsoleHeader
-        fiscalYear={fiscalYear}
-        setFiscalYear={setFiscalYear}
-        scope={scope}
-        setScope={setScope}
-        onOpenCustomize={() => setShowCustomizeModal(true)}
-        onOpenSecurityModal={() => setIsSecurityModalOpen(true)}
+    <div className="h-screen w-screen flex font-sans overflow-hidden bg-black text-white p-2.5 sm:p-3 lg:p-3.5 gap-3 lg:gap-3.5 select-none">
+      {/* Desktop Persistent Full-Height Sidebar (≥1024px) */}
+      <ConsoleSidebar
+        currentView={currentView}
+        setCurrentView={(view) => handleNavigateView(view)}
+        currentRole={currentRole}
         isDarkMode={isDarkMode}
         setIsDarkMode={setIsDarkMode}
-        currentRole={currentRole}
-        setCurrentRole={(role) => handleUpdateUserRole(currentUserId, role)}
-        userName={currentUser ? currentUser.name : "Sachin Gharbude"}
         currentUser={currentUser}
-        onOpenSwitchUser={isSwitchUserAllowed ? () => setIsSwitchUserOpen(true) : undefined}
-        onSync={handleSync}
-        lastSynced={lastSynced}
-        onToggleMobileMenu={() => setIsOpenMobile(!isOpenMobile)}
-        orders={orders}
-        stock={stock}
-        invoices={invoices}
-        jobCards={jobCards}
-        onNavigate={(view) => handleNavigateView(view)}
-        onSelectOrder={handleSelectOrder}
+        userName={currentUser ? currentUser.name : "Sachin Gharbude"}
         onSignOut={onSignOut}
-        currentView={currentView}
+        onOpenSecurityModal={() => setIsSecurityModalOpen(true)}
+        isOpenMobile={isOpenMobile}
+        setIsOpenMobile={setIsOpenMobile}
         onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+        onSync={handleManualSync}
+        isSyncing={isSyncing}
+        lastSynced={lastSynced}
+        onOpenNotifications={() => setIsNotificationOpen(true)}
+        unreadNotificationsCount={unreadCount}
       />
-
-      {/* Main Workspace Body */}
-      <div className="flex-1 flex overflow-hidden relative min-h-0">
-        {/* Desktop Persistent Sidebar (≥1024px) */}
-        <ConsoleSidebar
-          currentView={currentView}
-          setCurrentView={(view) => handleNavigateView(view)}
-          currentRole={currentRole}
-          isDarkMode={isDarkMode}
-          currentUser={currentUser}
-          userName={currentUser ? currentUser.name : "Sachin Gharbude"}
-          onSignOut={onSignOut}
-          onOpenSecurityModal={() => setIsSecurityModalOpen(true)}
-          isOpenMobile={isOpenMobile}
-          setIsOpenMobile={setIsOpenMobile}
-        />
 
         {/* Mobile Off-canvas Drawer Navigation (<1024px) */}
         <MobileDrawer
@@ -676,9 +692,17 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
           pendingApprovalsCount={pendingApprovalsCount}
         />
 
-        {/* Dynamic View Canvas with safe bottom padding for mobile tab bar */}
-        <main ref={mainScrollRef} className="flex-1 min-h-0 min-w-0 overflow-y-auto scroll-smooth overscroll-y-contain overscroll-x-hidden p-3 sm:p-4 md:p-6 lg:p-8 pb-24 lg:pb-8 dark:bg-[#09090B] bg-white">
-          <div key={currentView} className="space-y-6">
+        {/* Main Content: Large white rounded container, inset from the outer shell with generous margins and rounded corners */}
+        <div className="flex-1 min-h-0 min-w-0 h-full rounded-2xl lg:rounded-3xl bg-white dark:bg-[#09090B] text-slate-900 dark:text-[#F4F4F5] shadow-2xl overflow-hidden flex flex-col border border-white/10 dark:border-white/10">
+          <main
+            ref={mainScrollRef}
+            className={`flex-1 min-h-0 min-w-0 ${
+              currentView === 'command-centre'
+                ? 'overflow-hidden p-2.5 sm:p-3.5 lg:p-4 pb-2.5 lg:pb-3.5 flex flex-col'
+                : 'overflow-y-auto scroll-smooth overscroll-y-contain overscroll-x-hidden p-3 sm:p-4 md:p-6 lg:p-8 pb-24 lg:pb-8'
+            } bg-transparent`}
+          >
+          <div key={currentView} className={currentView === 'command-centre' ? 'h-full flex-1 flex flex-col overflow-hidden' : 'space-y-6'}>
             {!isViewAllowedForUser(currentUser, currentView) ? (
               <AccessRestrictedGate
                 currentUser={currentUser}
@@ -718,6 +742,15 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
               setScope={setScope}
               showCustomizeModal={showCustomizeModal}
               setShowCustomizeModal={setShowCustomizeModal}
+              tasks={tasks}
+              isLoadingTasks={isLoadingTasks}
+              onUpdateTaskStatus={handleUpdateStatus}
+              onCreateTask={handleCreateTask}
+              todayLog={todayLog}
+              onCheckIn={handleCheckIn}
+              onCheckOut={handleCheckOut}
+              meetings={meetings}
+              currentUser={currentUser}
             />
           )}
 
@@ -731,11 +764,11 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
               onSelectOrder={handleSelectOrder}
               onCreateOrder={handleCreateOrder}
               onNavigateToCustomers={() => {
-                navigate('/masters?tab=customers');
+                navigate('/admin/master-catalogs?tab=customers');
                 handleNavigateView('masters');
               }}
               onNavigateToMasters={() => {
-                navigate('/masters?tab=items');
+                navigate('/admin/master-catalogs?tab=items');
                 handleNavigateView('masters');
               }}
             />
@@ -1311,6 +1344,20 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
         dispatches={dispatches}
         onNavigate={handleNavigateView}
         onSelectOrder={handleSelectOrder}
+        isDarkMode={isDarkMode}
+      />
+
+      {/* Apple HIG Bottom-to-Top Notification Sheet */}
+      <NotificationDrawer
+        isOpen={isNotificationOpen}
+        onClose={() => setIsNotificationOpen(false)}
+        notifications={notifications}
+        unreadCount={unreadCount}
+        onMarkAsRead={markAsRead}
+        onMarkAllAsRead={markAllAsRead}
+        onClearAll={clearAll}
+        isSoundEnabled={isSoundEnabled}
+        onToggleSound={toggleSound}
         isDarkMode={isDarkMode}
       />
     </div>

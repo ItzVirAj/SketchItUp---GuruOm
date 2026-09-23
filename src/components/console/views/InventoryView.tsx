@@ -415,13 +415,52 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   const renderCategoryBadge = (categoryKey?: string, categoryLabel?: string) => {
     const cat = INVENTORY_CATEGORIES.find(c => c.key === categoryKey) || INVENTORY_CATEGORIES[6];
     return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase tracking-wider border ${
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border ${
         isDarkMode 
           ? `${cat.badgeBgDark} ${cat.badgeTextDark} ${cat.badgeBorderDark}`
           : `${cat.badgeBgLight} ${cat.badgeTextLight} ${cat.badgeBorderLight}`
       }`}>
         <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80" />
         <span>{categoryLabel || cat.label}</span>
+      </span>
+    );
+  };
+
+  const renderStockStatusBadge = (stk: StockItem) => {
+    const isShortage = stk.status === 'SHORTAGE' || (stk.shortage || 0) > 0 || (stk.available || 0) < 0;
+    const isReorder = !isShortage && (stk.reorderLevel || 0) > 0 && (stk.available || 0) <= (stk.reorderLevel || 0);
+
+    if (isShortage) {
+      return (
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border ${
+          isDarkMode ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
+        }`}>
+          <span className="relative flex h-1.5 w-1.5 shrink-0">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500" />
+          </span>
+          <span>Shortage Alert</span>
+        </span>
+      );
+    }
+
+    if (isReorder) {
+      return (
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border ${
+          isDarkMode ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-200'
+        }`}>
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+          <span>Reorder Soon</span>
+        </span>
+      );
+    }
+
+    return (
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border ${
+        isDarkMode ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+      }`}>
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+        <span>In Stock</span>
       </span>
     );
   };
@@ -671,33 +710,35 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       {/* ── DESKTOP HEADER & KPI ROW (≥ md) ──                                      */}
       {/* ========================================================================= */}
       <div className="hidden md:block space-y-4">
-        <section className={`overflow-hidden rounded-[24px] border transition-all ${
-          isBrandAccent
-            ? isDarkMode
-              ? 'border-emerald-500/20 bg-[#121815] shadow-[0_12px_36px_rgba(0,0,0,0.5)]'
-              : 'border-emerald-600/20 bg-[#F2F8F6] shadow-[0_12px_36px_rgba(10,126,88,0.06)]'
-            : isDarkMode
-              ? 'border-white/[0.08] bg-[#121215]'
-              : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
+        {/* Apple macOS Frosted Header & Integrated Metrics */}
+        <section className={`overflow-hidden rounded-2xl border transition-all ${
+          isDarkMode
+            ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]'
+            : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
         }`}>
-          <div className="flex items-center justify-between gap-6 px-6 py-5">
-            <div className="min-w-0">
-              <div className="mb-1.5 flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                Store & Material Telemetry
-                <span className="text-slate-300 dark:text-slate-700">/</span>
-                <span>{stockMasterRows.length} active SKUs</span>
-              </div>
-              <div className="flex items-baseline gap-3">
-                <h1 className="truncate text-[25px] font-extrabold tracking-[-0.04em] text-slate-950 dark:text-white">
-                  Inventory & Store Ledger
-                </h1>
-                <span className="hidden font-mono text-[10px] font-semibold text-slate-400 xl:inline">
-                  STOCK • MOVEMENTS • RECONCILIATION • SHORTAGES • PO • GRN
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 px-6 py-6 sm:py-7">
+            <div className="min-w-0 space-y-1.5">
+              <div className="flex items-center gap-2.5">
+                <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wide ${
+                  isDarkMode
+                    ? 'bg-white/10 border border-white/15 text-white'
+                    : 'bg-white/20 border border-white/30 backdrop-blur-md text-white shadow-xs'
+                }`}>
+                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>Store & Material Telemetry</span>
+                </span>
+                <span className="text-sm font-semibold text-white/80">•</span>
+                <span className="text-xs sm:text-sm font-semibold text-white/95">
+                  {stockMasterRows.length} Active SKUs
                 </span>
               </div>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                Monitor physical store inventory, execute Goods Receipt (GRN), audit real-time stock movements, and govern Purchase Orders.
+
+              <h1 className="text-3xl sm:text-[32px] font-black tracking-tight text-white leading-tight">
+                Inventory & Store Ledger
+              </h1>
+
+              <p className="text-xs sm:text-sm text-white/95 font-medium leading-relaxed max-w-2xl">
+                Physical store inventory, Goods Receipt (GRN), immutable stock movements, and governed Purchase Orders.
               </p>
             </div>
 
@@ -711,63 +752,106 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                       adjustStockModal.open({ itemId: target.code });
                     }
                   }}
-                  className={`flex h-11 shrink-0 items-center gap-2 rounded-xl px-4 text-xs font-extrabold text-white transition-ui active:scale-[0.96] cursor-pointer ${
-                    isBrandAccent
-                      ? 'brand-btn-primary'
-                      : 'bg-[var(--accent-primary)] shadow-[0_8px_20px_var(--accent-shadow)] hover:bg-[var(--accent-hover)]'
+                  className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
+                    isDarkMode
+                      ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
+                      : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
                   }`}
                 >
-                  <SlidersHorizontal className="h-4 w-4" />
-                  Adjust Stock
+                  <SlidersHorizontal className="h-4 w-4 stroke-[2.5]" />
+                  <span>Adjust Stock</span>
                 </button>
               )}
               {subTab === 'purchases' && (
                 <button
                   onClick={() => createPoModal.open()}
-                  className={`flex h-11 shrink-0 items-center gap-2 rounded-xl px-4 text-xs font-extrabold text-white transition-ui active:scale-[0.96] cursor-pointer ${
-                    isBrandAccent
-                      ? 'brand-btn-primary'
-                      : 'bg-[var(--accent-primary)] shadow-[0_8px_20px_var(--accent-shadow)] hover:bg-[var(--accent-hover)]'
+                  className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
+                    isDarkMode
+                      ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
+                      : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
                   }`}
                 >
-                  <Plus className="h-4 w-4" />
-                  Create Purchase Order
+                  <Plus className="h-4 w-4 stroke-[3]" />
+                  <span>Create Purchase Order</span>
                 </button>
               )}
               {subTab === 'grn' && (
                 <button
                   onClick={() => createGrnModal.open()}
-                  className={`flex h-11 shrink-0 items-center gap-2 rounded-xl px-4 text-xs font-extrabold text-white transition-ui active:scale-[0.96] cursor-pointer ${
-                    isBrandAccent
-                      ? 'brand-btn-primary'
-                      : 'bg-[var(--accent-primary)] shadow-[0_8px_20px_var(--accent-shadow)] hover:bg-[var(--accent-hover)]'
+                  className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
+                    isDarkMode
+                      ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
+                      : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
                   }`}
                 >
-                  <Truck className="h-4 w-4" />
-                  Receive Material (GRN)
+                  <Truck className="h-4 w-4 stroke-[2.5]" />
+                  <span>Receive Material (GRN)</span>
                 </button>
               )}
             </div>
           </div>
 
           {/* Integrated 4-Column Metric Strip (border-t) */}
-          <div className={`grid grid-cols-4 border-t ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+          <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t ${
+            isDarkMode
+              ? 'border-white/10 bg-gradient-to-b from-black/40 to-black/70 backdrop-blur-md'
+              : 'border-white/20 bg-white/[0.06] backdrop-blur-sm'
+          }`}>
             {[
-              { label: 'Total SKUs', value: String(stockMasterRows.length), detail: 'Active catalog parts', icon: Package, tone: 'text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)]', iconBg: 'bg-[var(--accent-soft-light)] dark:bg-[var(--accent-soft-dark)]' },
-              { label: 'Total On-Hand Qty', value: formatDecimal(totalOnHand), detail: 'Physical warehouse units', icon: Box, tone: 'text-emerald-600 dark:text-emerald-400', iconBg: 'bg-emerald-500/10' },
-              { label: 'Shortage Items', value: String(shortageCount), detail: 'Production deficit alerts', icon: AlertTriangle, tone: 'text-rose-600 dark:text-rose-400', iconBg: 'bg-rose-500/10' },
-              { label: 'Below Reorder Point', value: String(reorderCount), detail: 'Procurement action req', icon: TrendingDown, tone: 'text-amber-600 dark:text-amber-400', iconBg: 'bg-amber-500/10' },
+              {
+                label: 'Total SKUs',
+                value: String(stockMasterRows.length),
+                detail: 'Active catalog parts',
+                icon: Package,
+                iconColor: isDarkMode ? 'text-white' : 'text-[#155dfc]',
+                iconBg: isDarkMode ? 'bg-blue-600 shadow-xs' : 'bg-white shadow-xs',
+              },
+              {
+                label: 'Total On-Hand Qty',
+                value: formatDecimal(totalOnHand),
+                detail: 'Physical warehouse units',
+                icon: Box,
+                iconColor: 'text-white',
+                iconBg: 'bg-emerald-500 shadow-xs',
+              },
+              {
+                label: 'Shortage Items',
+                value: String(shortageCount),
+                detail: 'Production deficit alerts',
+                icon: AlertTriangle,
+                iconColor: 'text-white',
+                iconBg: 'bg-rose-500 shadow-xs',
+              },
+              {
+                label: 'Below Reorder Point',
+                value: String(reorderCount),
+                detail: 'Procurement action req',
+                icon: TrendingDown,
+                iconColor: 'text-white',
+                iconBg: 'bg-amber-500 shadow-xs',
+              },
             ].map((metric, index) => {
               const MetricIcon = metric.icon;
               return (
-                <div key={metric.label} className={`flex items-center gap-3 px-5 py-4 ${index > 0 ? isDarkMode ? 'border-l border-white/[0.07]' : 'border-l border-slate-200' : ''}`}>
-                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${metric.iconBg} ${metric.tone}`}>
-                    <MetricIcon className="h-4 w-4" />
+                <div
+                  key={metric.label}
+                  className={`flex items-center gap-4 px-6 py-5 transition-all ${
+                    index > 0 ? (isDarkMode ? 'lg:border-l border-white/10' : 'lg:border-l border-white/20') : ''
+                  }`}
+                >
+                  <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${metric.iconBg} ${metric.iconColor}`}>
+                    <MetricIcon className="h-5 w-5 stroke-[2.5]" />
                   </div>
-                  <div className="min-w-0">
-                    <div className="font-mono text-[9px] font-bold uppercase tracking-[0.13em] text-slate-400">{metric.label}</div>
-                    <div className={`mt-0.5 truncate text-lg font-extrabold tracking-[-0.03em] ${metric.tone}`}>{metric.value}</div>
-                    <div className="truncate text-[10px] text-slate-400">{metric.detail}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-bold uppercase tracking-wider text-white/85">
+                      {metric.label}
+                    </div>
+                    <div className="text-2xl sm:text-[26px] font-black tracking-tight text-white tabular-nums my-0.5 leading-tight">
+                      {metric.value}
+                    </div>
+                    <div className="text-xs font-medium text-white/90 truncate">
+                      {metric.detail}
+                    </div>
                   </div>
                 </div>
               );
@@ -775,69 +859,88 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
           </div>
         </section>
 
-        {/* Desktop Sub-Tabs Navigation & Search Toolbar */}
-        <div className={`rounded-2xl border p-3 ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
-          <div className="flex items-center gap-2">
-            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${isDarkMode ? 'bg-white/[0.05] text-slate-400' : 'bg-slate-100 text-slate-500'}`} title="Modules">
-              <Layers className="h-4 w-4" />
-            </div>
-
-            <div className="flex items-center gap-1.5 overflow-x-auto">
+        {/* Apple macOS Style Pro Command Deck / Filters */}
+        <div className={`rounded-2xl border p-3.5 space-y-3 transition-all backdrop-blur-xl ${
+          isDarkMode
+            ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] shadow-[0_8px_28px_rgba(0,0,0,0.5),inset_0_1px_0_0_rgba(255,255,255,0.06)]'
+            : 'border-slate-200/80 bg-gradient-to-b from-white/95 via-slate-50/90 to-slate-100/70 shadow-[0_2px_12px_rgba(0,0,0,0.03),inset_0_1px_0_0_rgba(255,255,255,0.9)]'
+        }`}>
+          {/* Top Tier: Apple Segmented Module Tabs Rail */}
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className={`inline-flex items-center p-1 rounded-xl border text-xs overflow-x-auto max-w-full ${
+              isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200/80 bg-slate-200/50 shadow-inner'
+            }`}>
               {[
                 { id: 'stock', label: 'Stock Master', count: stockMasterRows.length },
                 { id: 'movements', label: 'Movement Ledger', count: movements.length },
                 { id: 'reconciliation', label: 'Stock Reconciliation', count: reconciliationReport.length },
-                { id: 'shortages', label: 'Shortages', count: shortageCount },
+                { id: 'shortages', label: 'Shortages', count: shortageCount, alert: shortageCount > 0 },
                 { id: 'purchases', label: 'Purchase Orders', count: purchaseOrders.length },
                 { id: 'grn', label: 'Goods-in (GRN)', count: grnList.length },
               ].map(t => (
                 <button
                   key={t.id}
+                  type="button"
                   onClick={() => setSubTab(t.id as any)}
-                  className={`flex items-center gap-1.5 h-10 px-3.5 rounded-xl text-xs font-bold transition-ui cursor-pointer whitespace-nowrap border ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                     subTab === t.id
-                      ? isDarkMode
-                        ? 'bg-[var(--accent-primary)]/20 text-[var(--accent-text-dark)] border-[var(--accent-primary)]/40 shadow-xs'
-                        : 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)] shadow-sm shadow-[var(--accent-shadow)]'
-                      : isDarkMode
-                        ? 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/[0.06]'
-                        : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                      ? isDarkMode ? 'bg-white/15 text-white shadow-xs border border-white/10' : 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   <span>{t.label}</span>
-                  {t.count !== undefined && (
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${
-                      subTab === t.id
-                        ? isDarkMode ? 'bg-[var(--accent-primary)]/30 text-white' : 'bg-white/25 text-white'
-                        : isDarkMode ? 'bg-white/[0.06] text-slate-400' : 'bg-slate-200 text-slate-600'
-                    }`}>
-                      {t.count}
-                    </span>
-                  )}
+                  <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
+                    subTab === t.id
+                      ? t.alert ? (isDarkMode ? 'bg-rose-500/30 text-rose-300' : 'bg-rose-50 text-rose-700') : (isDarkMode ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-800')
+                      : isDarkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-300/60 text-slate-600'
+                  }`}>
+                    {t.count}
+                  </span>
                 </button>
               ))}
             </div>
 
-            <div className={`flex h-10 min-w-[240px] flex-1 items-center gap-2 rounded-xl border px-3 ml-auto ${isDarkMode ? 'border-white/[0.08] bg-black/20 text-white focus-within:border-[var(--accent-border-dark)]' : 'border-slate-200 bg-slate-50 text-slate-900 focus-within:border-[var(--accent-primary)]'}`}>
-              <Search className="h-4 w-4 shrink-0 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search Part Code, Description, Catalog ID..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-full w-full bg-transparent text-xs font-semibold outline-none placeholder:font-normal placeholder:text-slate-400 font-mono"
-              />
+            {/* Quick status counter & clear search */}
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+              <span className="hidden sm:inline">
+                Showing <strong className="text-slate-900 dark:text-white">{subTab === 'stock' ? filteredStock.length : (subTab === 'shortages' ? shortages.length : (subTab === 'purchases' ? purchaseOrders.length : (subTab === 'grn' ? grnList.length : (subTab === 'movements' ? movements.length : filteredReconciliation.length))))}</strong> records
+              </span>
               {searchQuery && (
-                <button type="button" onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-700 dark:hover:text-white">
-                  <X className="h-3.5 w-3.5" />
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                  <span>Clear Search</span>
                 </button>
               )}
             </div>
           </div>
 
-          <div className="mt-2.5 flex items-center justify-between px-1 font-mono text-[9px] font-semibold uppercase tracking-wider text-slate-400">
-            <span>Showing {subTab === 'stock' ? filteredStock.length : (subTab === 'shortages' ? shortages.length : (subTab === 'purchases' ? purchaseOrders.length : (subTab === 'grn' ? grnList.length : (subTab === 'movements' ? movements.length : filteredReconciliation.length))))} records</span>
-            <span>Physical Store & Append-Only Ledger Control</span>
+          {/* Bottom Tier: Apple Spotlight Search Bar */}
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <div className={`flex h-10 min-w-[280px] flex-1 items-center gap-2.5 rounded-xl border px-3 transition-all ${
+              isDarkMode
+                ? 'border-white/10 bg-black/60 text-white focus-within:border-white/30 focus-within:bg-black/90'
+                : 'border-slate-200/90 bg-white text-slate-900 shadow-2xs focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-200/60'
+            }`}>
+              <Search className="h-4 w-4 shrink-0 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search Part Code, Description, Catalog ID, PO, Vendor..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-full w-full bg-transparent text-xs font-medium outline-none placeholder:text-slate-400"
+              />
+              <span className="hidden sm:inline-block text-[10px] font-mono text-slate-400 border border-slate-200 dark:border-white/10 px-1.5 py-0.5 rounded bg-slate-50 dark:bg-white/5">
+                ⌘F
+              </span>
+              {searchQuery && (
+                <button type="button" onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-0.5 cursor-pointer">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -846,99 +949,136 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       {subTab === 'stock' && (
         <div className="space-y-4">
           {/* Category Filter Tabs Bar */}
-          <div className={`p-2.5 rounded-2xl border flex items-center gap-1.5 overflow-x-auto scrollbar-none transition-ui ${
-            isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'
+          <div className={`p-2 rounded-2xl border flex items-center gap-1.5 overflow-x-auto scrollbar-none transition-all ${
+            isDarkMode
+              ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204]'
+              : 'border-slate-200/80 bg-gradient-to-b from-white/95 via-slate-50/90 to-slate-100/70 shadow-[0_2px_12px_rgba(0,0,0,0.03)]'
           }`}>
-            <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 px-2 shrink-0">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-2 shrink-0">
               Category:
             </div>
-            {INVENTORY_CATEGORIES.map(cat => {
-              const isActive = selectedCategory === cat.key;
-              const count = categoryCounts[cat.key] || 0;
-              return (
-                <button
-                  key={cat.key}
-                  onClick={() => setSelectedCategory(cat.key)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-ui cursor-pointer whitespace-nowrap border ${
-                    isActive
-                      ? isDarkMode 
-                        ? 'bg-[var(--accent-soft-dark)] text-[var(--accent-text-dark)] border-[var(--accent-border-dark)] shadow-xs'
-                        : 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)] shadow-xs'
-                      : isDarkMode
-                        ? 'bg-white/[0.04] text-slate-400 border-white/[0.06] hover:text-slate-200 hover:bg-white/[0.08]'
-                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
-                >
-                  <span>{cat.label}</span>
-                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-                    isActive
-                      ? isDarkMode ? 'bg-white/20 text-white' : 'bg-white/25 text-white'
-                      : isDarkMode ? 'bg-white/[0.06] text-slate-400' : 'bg-slate-200 text-slate-700'
-                  }`}>
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
+            <div className="flex items-center gap-1.5">
+              {INVENTORY_CATEGORIES.map(cat => {
+                const isActive = selectedCategory === cat.key;
+                const count = categoryCounts[cat.key] || 0;
+                return (
+                  <button
+                    key={cat.key}
+                    onClick={() => setSelectedCategory(cat.key)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap border ${
+                      isActive
+                        ? isDarkMode 
+                          ? 'bg-white/15 text-white border-white/20 shadow-xs'
+                          : 'bg-white text-slate-900 border-slate-200/90 shadow-xs'
+                        : isDarkMode
+                          ? 'bg-white/[0.03] text-slate-400 border-white/[0.05] hover:text-white hover:bg-white/[0.08]'
+                          : 'bg-slate-100/70 text-slate-600 border-slate-200/60 hover:text-slate-900 hover:bg-slate-100'
+                    }`}
+                  >
+                    <span>{cat.label}</span>
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                      isActive
+                        ? isDarkMode ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-900'
+                        : isDarkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-200/80 text-slate-600'
+                    }`}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Desktop Stock Master Table */}
-          <div className={`hidden md:block overflow-hidden rounded-[22px] border transition-ui ${
-            isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
+          <div className={`hidden md:block overflow-hidden rounded-3xl border transition-all ${
+            isDarkMode
+              ? 'border-white/[0.08] bg-gradient-to-b from-[#111318] via-[#08090c] to-[#010203] shadow-[0_20px_50px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]'
+              : 'border-slate-200/90 bg-gradient-to-b from-white via-slate-50/40 to-[#f6f8fc] shadow-[0_16px_40px_rgba(15,23,42,0.05),inset_0_1px_0_0_rgba(255,255,255,1)]'
           }`}>
-            <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
-              <div>
-                <div className="text-xs font-extrabold text-slate-900 dark:text-white">Store Inventory Master</div>
-                <div className="mt-0.5 text-[10px] text-slate-400">Real-time on-hand, reserved, and available material balance</div>
+            <div className={`flex items-center justify-between border-b px-6 py-4.5 transition-all ${
+              isDarkMode
+                ? 'border-white/[0.08] bg-gradient-to-r from-black/60 via-black/30 to-black/60'
+                : 'border-slate-200/80 bg-gradient-to-r from-slate-50/90 via-white/60 to-slate-50/90'
+            }`}>
+              <div className="flex items-center gap-3.5">
+                <div className={`flex h-10 w-10 items-center justify-center rounded-2xl shadow-xs ${
+                  isDarkMode ? 'bg-white/10 text-white border border-white/10' : 'bg-slate-900 text-white shadow-2xs'
+                }`}>
+                  <Package className="h-5 w-5 stroke-[2]" />
+                </div>
+                <div>
+                  <div className="text-base font-black tracking-tight text-slate-900 dark:text-white">
+                    Store Inventory Master
+                  </div>
+                  <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                    Real-time on-hand, reserved, and available material balance
+                  </div>
+                </div>
               </div>
-              <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>{filteredStock.length} items</span>
+              <span className={`rounded-full border px-3 py-1 font-mono text-xs font-bold tracking-tight ${
+                isDarkMode ? 'border-white/10 bg-black/60 text-slate-300' : 'border-slate-200 bg-white text-slate-700 shadow-2xs'
+              }`}>
+                {filteredStock.length} items
+              </span>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
+              <table className="w-full text-left text-xs border-collapse font-sans">
                 <thead>
-                  <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${
-                    isDarkMode ? 'border-white/[0.07] bg-black/20 text-slate-500' : 'border-slate-200 bg-slate-50/80 text-slate-400'
+                  <tr className={`border-b text-[11px] font-bold uppercase tracking-wider transition-all ${
+                    isDarkMode
+                      ? 'border-white/[0.07] bg-gradient-to-b from-black/80 to-black/60 text-slate-400'
+                      : 'border-slate-200/90 bg-gradient-to-b from-slate-100/90 to-slate-50/90 text-slate-600'
                   }`}>
-                    <th className="py-4 px-5">Part Code</th>
-                    <th className="py-4 px-5">Category</th>
-                    <th className="py-4 px-5">Description</th>
-                    <th className="py-4 px-5 text-right">On Hand</th>
-                    <th className="py-4 px-5 text-right">Reserved</th>
-                    <th className="py-4 px-5 text-right">Available</th>
-                    <th className="py-4 px-5 text-right">Demand</th>
-                    <th className="py-4 px-5 text-right">Reorder Level</th>
-                    <th className="py-4 px-5 text-center">Status</th>
-                    <th className="py-4 px-5 text-center">Action</th>
+                    <th className="py-4 px-6">Part Code</th>
+                    <th className="py-4 px-6">Category</th>
+                    <th className="py-4 px-6">Description</th>
+                    <th className="py-4 px-6 text-right">On Hand</th>
+                    <th className="py-4 px-6 text-right">Reserved</th>
+                    <th className="py-4 px-6 text-right">Available</th>
+                    <th className="py-4 px-6 text-right">Demand</th>
+                    <th className="py-4 px-6 text-right">Reorder Level</th>
+                    <th className="py-4 px-6 text-center">Status</th>
+                    <th className="py-4 px-6 text-center">Action</th>
                   </tr>
                 </thead>
-                <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
+                <tbody className={`divide-y text-xs transition-colors ${
+                  isDarkMode ? 'divide-white/[0.04]' : 'divide-slate-200/70'
+                }`}>
                   {filteredStock.map((stk) => {
                     const isShort = stk.status === 'SHORTAGE' || (stk.shortage || 0) > 0;
                     return (
                       <tr 
                         key={stk.code}
-                        className={`group transition-colors ${isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'}`}
+                        className={`group transition-all duration-150 ${
+                          isDarkMode
+                            ? 'even:bg-white/[0.015] hover:bg-gradient-to-r hover:from-white/[0.06] hover:via-white/[0.02] hover:to-transparent'
+                            : 'even:bg-slate-50/50 hover:bg-gradient-to-r hover:from-blue-500/[0.05] hover:via-indigo-500/[0.03] hover:to-transparent'
+                        }`}
                       >
-                        <td className="py-4 px-5">
-                          <div className="flex items-center gap-2.5">
-                            <div className={`p-2 rounded-xl transition-transform group-hover:scale-105 shrink-0 ${
-                              isDarkMode 
-                                ? 'bg-[var(--accent-primary)]/20 text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/30' 
-                                : 'bg-[var(--accent-primary)]/10 text-[var(--accent-text-light)] border border-[var(--accent-primary)]/20'
+                        <td className="py-4.5 px-6">
+                          <div className="flex items-center gap-3.5">
+                            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 shadow-2xs ${
+                              isShort
+                                ? isDarkMode ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30' : 'bg-rose-50 text-rose-600 border border-rose-200'
+                                : isDarkMode ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-blue-50 text-blue-600 border border-blue-200/70'
                             }`}>
-                              <Package className="w-3.5 h-3.5" />
+                              <Package className="w-5 h-5 stroke-[2]" />
                             </div>
                             <div className="min-w-0">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className={`font-mono font-bold text-xs ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className={`font-mono text-sm tracking-tight ${
+                                  isShort 
+                                    ? 'text-rose-600 dark:text-rose-400 font-black' 
+                                    : 'text-slate-900 dark:text-white font-black'
+                                }`}>
                                   {stk.code}
                                 </span>
                                 {stk.rawCode && stk.rawCode !== stk.code && (
                                   <span 
-                                    className={`px-1.5 py-0.5 rounded-md text-[9px] font-mono font-bold uppercase tracking-wider border ${
+                                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border ${
                                       isDarkMode 
-                                        ? 'bg-white/[0.06] text-slate-400 border-white/[0.08]' 
-                                        : 'bg-slate-100 text-slate-600 border-slate-200'
+                                        ? 'bg-white/[0.06] text-slate-300 border-white/10' 
+                                        : 'bg-slate-100 text-slate-700 border-slate-200'
                                     }`} 
                                     title={`Catalog Master Code: ${stk.rawCode}`}
                                   >
@@ -947,64 +1087,59 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                                 )}
                               </div>
                               {stk.partNo && stk.partNo !== stk.code && (
-                                <div className={`text-[10px] font-mono truncate mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                                <div className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate max-w-[320px] mt-1">
                                   Part #{stk.partNo}
                                 </div>
                               )}
                             </div>
                           </div>
                         </td>
-                        <td className="py-4 px-5">
+                        <td className="py-4 px-6">
                           {renderCategoryBadge(stk.category, stk.categoryLabel)}
                         </td>
-                        <td className={`py-4 px-5 font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
+                        <td className={`py-4 px-6 font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
                           <div>{stk.description}</div>
                           {stk.partNo && stk.partNo !== stk.description && (
                             <div className="text-[11px] text-slate-400 font-mono mt-0.5">{stk.partNo}</div>
                           )}
                         </td>
-                        <td className={`py-4 px-5 text-right font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                        <td className={`py-4 px-6 text-right font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                           {formatDecimal(stk.onHand)} {stk.unit}
                         </td>
-                        <td className="py-4 px-5 text-right font-mono text-slate-400">
+                        <td className="py-4 px-6 text-right font-mono text-slate-400">
                           {formatDecimal(stk.reserved)}
                         </td>
-                        <td className="py-4 px-5 text-right font-bold font-mono text-emerald-500">
+                        <td className="py-4 px-6 text-right font-bold font-mono text-emerald-500">
                           {formatDecimal(stk.available)}
                         </td>
-                        <td className="py-4 px-5 text-right font-mono text-amber-500 font-semibold">
+                        <td className="py-4 px-6 text-right font-mono text-amber-500 font-semibold">
                           {formatDecimal(stk.demand)}
                         </td>
-                        <td className="py-4 px-5 text-right font-mono text-slate-400">
+                        <td className="py-4 px-6 text-right font-mono text-slate-400">
                           {formatDecimal(stk.reorderLevel)}
                         </td>
-                        <td className="py-4 px-5 text-center">
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
-                            isShort
-                              ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-                              : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                          }`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${isShort ? 'bg-rose-500' : 'bg-emerald-500'}`} />
-                            <span>{stk.status}</span>
-                          </span>
+                        <td className="py-4.5 px-6 text-center">
+                          {renderStockStatusBadge(stk)}
                         </td>
-                        <td className="py-4 px-5 text-center">
+                        <td className="py-4 px-6 text-center">
                           <div className="flex items-center justify-center gap-2">
                             <button
                               onClick={() => {
                                 setSelectedStockForAdjust(stk);
                                 adjustStockModal.open({ itemId: stk.code });
                               }}
-                              className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-ui cursor-pointer ${
-                                isDarkMode ? 'bg-[var(--accent-soft-dark)] text-[var(--accent-text-dark)] hover:brightness-125 border border-[var(--accent-border-dark)]' : 'bg-[var(--accent-soft-light)] text-[var(--accent-text-light)] hover:brightness-95 border border-[var(--accent-border-light)]'
+                              className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer ${
+                                isDarkMode 
+                                  ? 'bg-white/10 hover:bg-white/15 text-white border border-white/15' 
+                                  : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200'
                               }`}
                             >
                               Adjust
                             </button>
                             <button
                               onClick={() => handleOpenItemHistory(stk)}
-                              className={`p-1.5 rounded-xl border transition-ui cursor-pointer ${
-                                isDarkMode ? 'border-slate-800 bg-black/20 text-slate-400 hover:text-white' : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
+                              className={`p-1.5 rounded-xl border transition-all cursor-pointer ${
+                                isDarkMode ? 'border-white/10 bg-white/5 text-slate-400 hover:text-white hover:bg-white/10' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                               }`}
                               title="View Running Ledger Movements"
                             >
@@ -1038,27 +1173,22 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono font-bold text-sm text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">
-                        {stk.code}
-                      </span>
-                      {renderCategoryBadge(stk.category, stk.categoryLabel)}
-                      {stk.rawCode && stk.rawCode !== stk.code && (
-                        <span className={`text-[9px] px-1.5 py-0.5 rounded-md border font-mono font-bold uppercase tracking-wider ${
-                          isDarkMode ? 'bg-white/[0.06] text-slate-400 border-white/[0.08]' : 'bg-slate-100 text-slate-600 border-slate-200'
-                        }`}>
-                          {stk.rawCode}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-sm tracking-tight text-slate-900 dark:text-white font-black">
+                          {stk.code}
                         </span>
-                      )}
+                        {renderCategoryBadge(stk.category, stk.categoryLabel)}
+                        {stk.rawCode && stk.rawCode !== stk.code && (
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border ${
+                            isDarkMode ? 'bg-white/[0.06] text-slate-300 border-white/10' : 'bg-slate-100 text-slate-700 border-slate-200'
+                          }`}>
+                            {stk.rawCode}
+                          </span>
+                        )}
+                      </div>
+                      {renderStockStatusBadge(stk)}
                     </div>
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold uppercase border shrink-0 ${
-                      isShort ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                    }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${isShort ? 'bg-rose-500' : 'bg-emerald-500'}`} />
-                      {stk.status}
-                    </span>
-                  </div>
 
                   <div>
                     <h4 className={`text-xs font-bold ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>
@@ -1122,45 +1252,109 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
       {/* 2. Material Shortages Sub-View */}
       {subTab === 'shortages' && (
-        <div className={`overflow-hidden rounded-[22px] border transition-ui ${
-          isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
+        <div className={`overflow-hidden rounded-3xl border transition-all ${
+          isDarkMode
+            ? 'border-white/[0.08] bg-gradient-to-b from-[#111318] via-[#08090c] to-[#010203] shadow-[0_20px_50px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]'
+            : 'border-slate-200/90 bg-gradient-to-b from-white via-slate-50/40 to-[#f6f8fc] shadow-[0_16px_40px_rgba(15,23,42,0.05),inset_0_1px_0_0_rgba(255,255,255,1)]'
         }`}>
-          <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
-            <div>
-              <div className="text-xs font-extrabold text-slate-900 dark:text-white">Material Shortages & Deficit Queue</div>
-              <div className="mt-0.5 text-[10px] text-slate-400">Components with active BOM deficit required for releasing jobs</div>
+          <div className={`flex items-center justify-between border-b px-6 py-4.5 transition-all ${
+            isDarkMode
+              ? 'border-white/[0.08] bg-gradient-to-r from-black/60 via-black/30 to-black/60'
+              : 'border-slate-200/80 bg-gradient-to-r from-slate-50/90 via-white/60 to-slate-50/90'
+          }`}>
+            <div className="flex items-center gap-3.5">
+              <div className={`flex h-10 w-10 items-center justify-center rounded-2xl shadow-xs ${
+                isDarkMode ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-rose-600 text-white shadow-2xs'
+              }`}>
+                <AlertTriangle className="h-5 w-5 stroke-[2]" />
+              </div>
+              <div>
+                <div className="text-base font-black tracking-tight text-slate-900 dark:text-white">
+                  Material Shortages & Deficit Queue
+                </div>
+                <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                  Components with active BOM deficit required for releasing jobs
+                </div>
+              </div>
             </div>
-            <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>{shortages.length} shortages</span>
+            <span className={`rounded-full border px-3 py-1 font-mono text-xs font-bold tracking-tight ${
+              shortages.length > 0
+                ? 'border-rose-500/30 bg-rose-500/10 text-rose-400'
+                : isDarkMode ? 'border-white/10 bg-black/60 text-slate-300' : 'border-slate-200 bg-white text-slate-700 shadow-2xs'
+            }`}>
+              {shortages.length} shortages
+            </span>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full text-left text-xs border-collapse font-sans">
               <thead>
-                <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${
-                  isDarkMode ? 'border-white/[0.07] bg-black/20 text-slate-500' : 'border-slate-200 bg-slate-50/80 text-slate-400'
+                <tr className={`border-b text-[11px] font-bold uppercase tracking-wider transition-all ${
+                  isDarkMode
+                    ? 'border-white/[0.07] bg-gradient-to-b from-black/80 to-black/60 text-slate-400'
+                    : 'border-slate-200/90 bg-gradient-to-b from-slate-100/90 to-slate-50/90 text-slate-600'
                 }`}>
-                  <th className="py-4 px-5">Material SKU</th>
-                  <th className="py-4 px-5">Description</th>
-                  <th className="py-4 px-5 text-right">Required Qty</th>
-                  <th className="py-4 px-5 text-right">Available Qty</th>
-                  <th className="py-4 px-5 text-right">Deficit / Alert</th>
-                  <th className="py-4 px-5 text-center">Action</th>
+                  <th className="py-4 px-6">Material SKU</th>
+                  <th className="py-4 px-6">Description</th>
+                  <th className="py-4 px-6 text-right">Required Qty</th>
+                  <th className="py-4 px-6 text-right">Available Qty</th>
+                  <th className="py-4 px-6 text-right">Deficit / Alert</th>
+                  <th className="py-4 px-6 text-center">Action</th>
                 </tr>
               </thead>
-              <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
+              <tbody className={`divide-y text-xs transition-colors ${
+                isDarkMode ? 'divide-white/[0.04]' : 'divide-slate-200/70'
+              }`}>
                 {shortages.map(sh => (
-                  <tr key={sh.code} className={`transition-colors ${isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'}`}>
-                    <td className="py-4 px-5 font-bold font-mono text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{sh.code}</td>
-                    <td className={`py-4 px-5 font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>{sh.description}</td>
-                    <td className="py-4 px-5 text-right font-mono font-bold text-amber-500">{formatDecimal(sh.requiredQty)} {sh.unit}</td>
-                    <td className="py-4 px-5 text-right font-mono text-slate-400">{formatDecimal(sh.availableQty)} {sh.unit}</td>
-                    <td className="py-4 px-5 text-right font-mono font-bold text-rose-400">-{formatDecimal(sh.deficit)} {sh.unit}</td>
-                    <td className="py-4 px-5 text-center">
+                  <tr
+                    key={sh.code}
+                    className={`group transition-all duration-150 ${
+                      isDarkMode
+                        ? 'even:bg-white/[0.015] hover:bg-gradient-to-r hover:from-white/[0.06] hover:via-white/[0.02] hover:to-transparent'
+                        : 'even:bg-slate-50/50 hover:bg-gradient-to-r hover:from-blue-500/[0.05] hover:via-indigo-500/[0.03] hover:to-transparent'
+                    }`}
+                  >
+                    <td className="py-4.5 px-6">
+                      <div className="flex items-center gap-3.5">
+                        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 shadow-2xs ${
+                          isDarkMode ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30' : 'bg-rose-50 text-rose-600 border border-rose-200'
+                        }`}>
+                          <AlertTriangle className="w-5 h-5 stroke-[2]" />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="font-mono text-sm tracking-tight text-slate-900 dark:text-white font-black">
+                            {sh.code}
+                          </span>
+                          <div className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate max-w-[280px] mt-1">
+                            {sh.description}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className={`py-4 px-6 font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>{sh.description}</td>
+                    <td className="py-4 px-6 text-right font-mono font-bold text-amber-500">{formatDecimal(sh.requiredQty)} {sh.unit}</td>
+                    <td className="py-4 px-6 text-right font-mono text-slate-400">{formatDecimal(sh.availableQty)} {sh.unit}</td>
+                    <td className="py-4.5 px-6 text-right font-mono">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border ${
+                        isDarkMode ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
+                      }`}>
+                        <span className="relative flex h-1.5 w-1.5 shrink-0">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500" />
+                        </span>
+                        <span>-{formatDecimal(sh.deficit)} {sh.unit}</span>
+                      </span>
+                    </td>
+                    <td className="py-4 px-6 text-center">
                       <button
                         onClick={() => {
                           setSubTab('purchases');
                           createPoModal.open();
                         }}
-                        className="px-3 py-1.5 rounded-xl bg-[var(--accent-primary)]/10 hover:bg-[var(--accent-primary)]/20 text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/30 text-xs font-mono font-bold cursor-pointer transition-ui"
+                        className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer ${
+                          isDarkMode
+                            ? 'bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 border border-blue-500/30'
+                            : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'
+                        }`}
                       >
                         Raise PO
                       </button>
@@ -1182,121 +1376,196 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
       {/* 3. Purchase Orders Sub-View */}
       {subTab === 'purchases' && (
-        <div className={`overflow-hidden rounded-[22px] border transition-ui ${
-          isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
+        <div className={`overflow-hidden rounded-3xl border transition-all ${
+          isDarkMode
+            ? 'border-white/[0.08] bg-gradient-to-b from-[#111318] via-[#08090c] to-[#010203] shadow-[0_20px_50px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]'
+            : 'border-slate-200/90 bg-gradient-to-b from-white via-slate-50/40 to-[#f6f8fc] shadow-[0_16px_40px_rgba(15,23,42,0.05),inset_0_1px_0_0_rgba(255,255,255,1)]'
         }`}>
-          <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
-            <div>
-              <div className="text-xs font-extrabold text-slate-900 dark:text-white">Procurement & Purchase Orders</div>
-              <div className="mt-0.5 text-[10px] text-slate-400">Supplier purchase orders, delivery milestones, and management approvals</div>
+          <div className={`flex items-center justify-between border-b px-6 py-4.5 transition-all ${
+            isDarkMode
+              ? 'border-white/[0.08] bg-gradient-to-r from-black/60 via-black/30 to-black/60'
+              : 'border-slate-200/80 bg-gradient-to-r from-slate-50/90 via-white/60 to-slate-50/90'
+          }`}>
+            <div className="flex items-center gap-3.5">
+              <div className={`flex h-10 w-10 items-center justify-center rounded-2xl shadow-xs ${
+                isDarkMode ? 'bg-white/10 text-white border border-white/10' : 'bg-slate-900 text-white shadow-2xs'
+              }`}>
+                <ShoppingCart className="h-5 w-5 stroke-[2]" />
+              </div>
+              <div>
+                <div className="text-base font-black tracking-tight text-slate-900 dark:text-white">
+                  Procurement & Purchase Orders
+                </div>
+                <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                  Supplier purchase orders, delivery milestones, and management approvals
+                </div>
+              </div>
             </div>
             <div className="flex items-center gap-2">
-              <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>{purchaseOrders.length} orders</span>
+              <span className={`rounded-full border px-3 py-1 font-mono text-xs font-bold tracking-tight ${
+                isDarkMode ? 'border-white/10 bg-black/60 text-slate-300' : 'border-slate-200 bg-white text-slate-700 shadow-2xs'
+              }`}>
+                {purchaseOrders.length} orders
+              </span>
               {overduePoCount > 0 && (
-                <span className="rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider bg-rose-500/10 text-rose-400 border-rose-500/30">
+                <span className="rounded-full border px-3 py-1 font-mono text-xs font-bold tracking-tight bg-rose-500/10 text-rose-400 border-rose-500/30">
                   {overduePoCount} overdue
                 </span>
               )}
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full text-left text-xs border-collapse font-sans">
               <thead>
-                <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${
-                  isDarkMode ? 'border-white/[0.07] bg-black/20 text-slate-500' : 'border-slate-200 bg-slate-50/80 text-slate-400'
+                <tr className={`border-b text-[11px] font-bold uppercase tracking-wider transition-all ${
+                  isDarkMode
+                    ? 'border-white/[0.07] bg-gradient-to-b from-black/80 to-black/60 text-slate-400'
+                    : 'border-slate-200/90 bg-gradient-to-b from-slate-100/90 to-slate-50/90 text-slate-600'
                 }`}>
-                  <th className="py-4 px-5">PO Number</th>
-                  <th className="py-4 px-5">Supplier Name</th>
-                  <th className="py-4 px-5">Order Date</th>
-                  <th className="py-4 px-5">Exp. Delivery</th>
-                  <th className="py-4 px-5 text-right">Total Amount</th>
-                  <th className="py-4 px-5 text-center">Approval</th>
-                  <th className="py-4 px-5 text-center">Status</th>
-                  <th className="py-4 px-5 text-center">Governance Actions</th>
+                  <th className="py-4 px-6">PO Number</th>
+                  <th className="py-4 px-6">Supplier Name</th>
+                  <th className="py-4 px-6">Order Date</th>
+                  <th className="py-4 px-6">Exp. Delivery</th>
+                  <th className="py-4 px-6 text-right">Total Amount</th>
+                  <th className="py-4 px-6 text-center">Approval</th>
+                  <th className="py-4 px-6 text-center">Status</th>
+                  <th className="py-4 px-6 text-center">Governance Actions</th>
                 </tr>
               </thead>
-              <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
+              <tbody className={`divide-y text-xs transition-colors ${
+                isDarkMode ? 'divide-white/[0.04]' : 'divide-slate-200/70'
+              }`}>
                 {purchaseOrders.map(po => {
                   const aging = evaluatePoAging(po);
                   const isClosed = po.status === 'RECEIVED' || po.status === 'CANCELLED';
 
                   return (
-                    <tr key={po.id || po.poNo} className={`transition-colors ${isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'}`}>
-                      <td className="py-4 px-5 font-bold font-mono text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{po.poNo}</td>
-                      <td className={`py-4 px-5 font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
-                        <div>{po.supplierName}</div>
-                        <div className="text-[10px] text-slate-500 font-mono">{po.supplierCode}</div>
+                    <tr
+                      key={po.id || po.poNo}
+                      className={`group transition-all duration-150 ${
+                        isDarkMode
+                          ? 'even:bg-white/[0.015] hover:bg-gradient-to-r hover:from-white/[0.06] hover:via-white/[0.02] hover:to-transparent'
+                          : 'even:bg-slate-50/50 hover:bg-gradient-to-r hover:from-blue-500/[0.05] hover:via-indigo-500/[0.03] hover:to-transparent'
+                      }`}
+                    >
+                      <td className="py-4.5 px-6">
+                        <div className="flex items-center gap-3.5">
+                          <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 shadow-2xs ${
+                            po.status === 'CANCELLED'
+                              ? isDarkMode ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30' : 'bg-rose-50 text-rose-600 border border-rose-200'
+                              : isDarkMode ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-blue-50 text-blue-600 border border-blue-200/70'
+                          }`}>
+                            <FileText className="w-5 h-5 stroke-[2]" />
+                          </div>
+                          <div className="min-w-0">
+                            <span className="font-mono text-sm tracking-tight text-slate-900 dark:text-white font-black">
+                              {po.poNo}
+                            </span>
+                            <div className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate max-w-[280px] mt-1">
+                              {po.supplierName}
+                            </div>
+                          </div>
+                        </div>
                       </td>
-                      <td className="py-4 px-5 font-mono text-slate-400">{po.orderDate}</td>
-                      <td className="py-4 px-5 font-mono">
+                      <td className={`py-4 px-6 font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
+                        <div>{po.supplierName}</div>
+                        <div className="text-[10px] text-slate-500 font-mono mt-0.5">{po.supplierCode}</div>
+                      </td>
+                      <td className="py-4 px-6 font-mono text-slate-400">{po.orderDate}</td>
+                      <td className="py-4 px-6 font-mono">
                         <div className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>
                           {po.expectedDeliveryDate || '—'}
                         </div>
                         {!isClosed && (
                           <div className="mt-1">
                             {aging.agingBucket === 'SEVERELY_OVERDUE' ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-mono font-bold uppercase border bg-rose-500/20 text-rose-400 border-rose-500/40">
-                                <AlertTriangle className="w-3 h-3 text-rose-400" />
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border ${
+                                isDarkMode ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
+                              }`}>
+                                <AlertTriangle className="w-3 h-3 text-rose-500 shrink-0" />
                                 <span>Overdue (+{aging.daysOverdue}d)</span>
                               </span>
                             ) : aging.agingBucket === 'OVERDUE' ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-mono font-bold uppercase border bg-rose-500/10 text-rose-400 border-rose-500/30">
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border ${
+                                isDarkMode ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
+                              }`}>
+                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
                                 <span>Overdue (+{aging.daysOverdue}d)</span>
                               </span>
                             ) : aging.agingBucket === 'DUE_SOON' ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-mono font-bold uppercase border bg-amber-500/10 text-amber-400 border-amber-500/30">
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border ${
+                                isDarkMode ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-200'
+                              }`}>
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
                                 <span>Due Soon</span>
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-mono font-bold uppercase border bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border ${
+                                isDarkMode ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              }`}>
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
                                 <span>On Track</span>
                               </span>
                             )}
                           </div>
                         )}
                       </td>
-                      <td className="py-4 px-5 text-right font-mono font-bold text-emerald-400">
+                      <td className="py-4 px-6 text-right font-mono font-bold text-emerald-500">
                         ₹{formatDecimal(po.totalAmount, 2)}
                       </td>
-                    <td className="py-4 px-5 text-center">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
-                        po.approvalStatus === 'APPROVED'
-                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                          : po.approvalStatus === 'REJECTED'
-                          ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-                          : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                      }`}>
-                        {po.approvalStatus}
-                      </span>
-                    </td>
-                    <td className="py-4 px-5 text-center">
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase bg-slate-800 text-slate-300 border border-slate-700">
-                        {po.status}
-                      </span>
-                    </td>
-                    <td className="py-4 px-5 text-center">
-                      {po.approvalStatus === 'PENDING' ? (
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => handlePoApproval(po.id || po.poNo, 'APPROVE')}
-                            className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[11px] font-mono font-bold cursor-pointer"
-                          >
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => handlePoApproval(po.id || po.poNo, 'REJECT')}
-                            className="px-2.5 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-[11px] font-mono font-bold cursor-pointer"
-                          >
-                            Reject
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="text-[11px] font-mono text-slate-500">
-                          {po.approvedBy ? `By ${po.approvedBy.split(' ')[0]}` : '—'}
+                      <td className="py-4.5 px-6 text-center">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border ${
+                          po.approvalStatus === 'APPROVED'
+                            ? isDarkMode ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : po.approvalStatus === 'REJECTED'
+                            ? isDarkMode ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
+                            : isDarkMode ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-200'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                            po.approvalStatus === 'APPROVED' ? 'bg-emerald-500' : po.approvalStatus === 'REJECTED' ? 'bg-rose-500' : 'bg-amber-500'
+                          }`} />
+                          <span>{po.approvalStatus === 'APPROVED' ? 'Approved' : po.approvalStatus === 'REJECTED' ? 'Rejected' : 'Pending Approval'}</span>
                         </span>
-                      )}
-                    </td>
-                  </tr>
+                      </td>
+                      <td className="py-4.5 px-6 text-center">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border ${
+                          po.status === 'RECEIVED'
+                            ? isDarkMode ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : po.status === 'CANCELLED'
+                            ? isDarkMode ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
+                            : po.status === 'ISSUED'
+                            ? isDarkMode ? 'bg-blue-500/15 text-blue-400 border-blue-500/30' : 'bg-blue-50 text-blue-700 border-blue-200'
+                            : isDarkMode ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-200'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                            po.status === 'RECEIVED' ? 'bg-emerald-500' : po.status === 'CANCELLED' ? 'bg-rose-500' : po.status === 'ISSUED' ? 'bg-blue-500' : 'bg-amber-500'
+                          }`} />
+                          <span>{po.status === 'RECEIVED' ? 'Received' : po.status === 'CANCELLED' ? 'Cancelled' : po.status === 'ISSUED' ? 'Issued' : 'Draft'}</span>
+                        </span>
+                      </td>
+                      <td className="py-4 px-6 text-center">
+                        {po.approvalStatus === 'PENDING' ? (
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => handlePoApproval(po.id || po.poNo, 'APPROVE')}
+                              className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[11px] font-mono font-bold cursor-pointer"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handlePoApproval(po.id || po.poNo, 'REJECT')}
+                              className="px-2.5 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-[11px] font-mono font-bold cursor-pointer"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-[11px] font-mono text-slate-500">
+                            {po.approvedBy ? `By ${po.approvedBy.split(' ')[0]}` : '—'}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
                   );
                 })}
                 {purchaseOrders.length === 0 && (
@@ -1314,58 +1583,115 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
       {/* 4. Goods Receipt Notes (GRN) Sub-View */}
       {subTab === 'grn' && (
-        <div className={`overflow-hidden rounded-[22px] border transition-ui ${
-          isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
+        <div className={`overflow-hidden rounded-3xl border transition-all ${
+          isDarkMode
+            ? 'border-white/[0.08] bg-gradient-to-b from-[#111318] via-[#08090c] to-[#010203] shadow-[0_20px_50px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]'
+            : 'border-slate-200/90 bg-gradient-to-b from-white via-slate-50/40 to-[#f6f8fc] shadow-[0_16px_40px_rgba(15,23,42,0.05),inset_0_1px_0_0_rgba(255,255,255,1)]'
         }`}>
-          <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
-            <div>
-              <div className="text-xs font-extrabold text-slate-900 dark:text-white">Goods Receipt Notes (GRN)</div>
-              <div className="mt-0.5 text-[10px] text-slate-400">Inward gate logs, vehicle manifests, and QC verification check-ins</div>
+          <div className={`flex items-center justify-between border-b px-6 py-4.5 transition-all ${
+            isDarkMode
+              ? 'border-white/[0.08] bg-gradient-to-r from-black/60 via-black/30 to-black/60'
+              : 'border-slate-200/80 bg-gradient-to-r from-slate-50/90 via-white/60 to-slate-50/90'
+          }`}>
+            <div className="flex items-center gap-3.5">
+              <div className={`flex h-10 w-10 items-center justify-center rounded-2xl shadow-xs ${
+                isDarkMode ? 'bg-white/10 text-white border border-white/10' : 'bg-slate-900 text-white shadow-2xs'
+              }`}>
+                <Truck className="h-5 w-5 stroke-[2]" />
+              </div>
+              <div>
+                <div className="text-base font-black tracking-tight text-slate-900 dark:text-white">
+                  Goods Receipt Notes (GRN)
+                </div>
+                <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                  Inward gate logs, vehicle manifests, and QC verification check-ins
+                </div>
+              </div>
             </div>
-            <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>{grnList.length} receipts</span>
+            <span className={`rounded-full border px-3 py-1 font-mono text-xs font-bold tracking-tight ${
+              isDarkMode ? 'border-white/10 bg-black/60 text-slate-300' : 'border-slate-200 bg-white text-slate-700 shadow-2xs'
+            }`}>
+              {grnList.length} receipts
+            </span>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full text-left text-xs border-collapse font-sans">
               <thead>
-                <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${
-                  isDarkMode ? 'border-white/[0.07] bg-black/20 text-slate-500' : 'border-slate-200 bg-slate-50/80 text-slate-400'
+                <tr className={`border-b text-[11px] font-bold uppercase tracking-wider transition-all ${
+                  isDarkMode
+                    ? 'border-white/[0.07] bg-gradient-to-b from-black/80 to-black/60 text-slate-400'
+                    : 'border-slate-200/90 bg-gradient-to-b from-slate-100/90 to-slate-50/90 text-slate-600'
                 }`}>
-                  <th className="py-4 px-5">GRN Number</th>
-                  <th className="py-4 px-5">PO Reference</th>
-                  <th className="py-4 px-5">Vendor</th>
-                  <th className="py-4 px-5">Challan / Vehicle</th>
-                  <th className="py-4 px-5">Received Date</th>
-                  <th className="py-4 px-5 text-center">QC Status</th>
-                  <th className="py-4 px-5 text-center">Gate Action</th>
+                  <th className="py-4 px-6">GRN Number</th>
+                  <th className="py-4 px-6">PO Reference</th>
+                  <th className="py-4 px-6">Vendor</th>
+                  <th className="py-4 px-6">Challan / Vehicle</th>
+                  <th className="py-4 px-6">Received Date</th>
+                  <th className="py-4 px-6 text-center">QC Status</th>
+                  <th className="py-4 px-6 text-center">Gate Action</th>
                 </tr>
               </thead>
-              <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
+              <tbody className={`divide-y text-xs transition-colors ${
+                isDarkMode ? 'divide-white/[0.04]' : 'divide-slate-200/70'
+              }`}>
                 {grnList.map(g => (
-                  <tr key={g.id || g.grnNo} className={`transition-colors ${isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'}`}>
-                    <td className="py-4 px-5 font-bold font-mono text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{g.grnNo}</td>
-                    <td className="py-4 px-5 font-mono text-slate-300">{g.poNo}</td>
-                    <td className={`py-4 px-5 font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>{g.vendorName}</td>
-                    <td className="py-4 px-5 font-mono text-slate-400">
+                  <tr
+                    key={g.id || g.grnNo}
+                    className={`group transition-all duration-150 ${
+                      isDarkMode
+                        ? 'even:bg-white/[0.015] hover:bg-gradient-to-r hover:from-white/[0.06] hover:via-white/[0.02] hover:to-transparent'
+                        : 'even:bg-slate-50/50 hover:bg-gradient-to-r hover:from-blue-500/[0.05] hover:via-indigo-500/[0.03] hover:to-transparent'
+                    }`}
+                  >
+                    <td className="py-4.5 px-6">
+                      <div className="flex items-center gap-3.5">
+                        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 shadow-2xs ${
+                          g.status === 'REJECTED'
+                            ? isDarkMode ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30' : 'bg-rose-50 text-rose-600 border border-rose-200'
+                            : isDarkMode ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-blue-50 text-blue-600 border border-blue-200/70'
+                        }`}>
+                          <Truck className="w-5 h-5 stroke-[2]" />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="font-mono text-sm tracking-tight text-slate-900 dark:text-white font-black">
+                            {g.grnNo}
+                          </span>
+                          <div className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate max-w-[280px] mt-1">
+                            PO: {g.poNo}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-4 px-6 font-mono text-slate-400">{g.poNo}</td>
+                    <td className={`py-4 px-6 font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>{g.vendorName}</td>
+                    <td className="py-4 px-6 font-mono text-slate-400">
                       <div>{g.challanNo}</div>
                       <div className="text-[10px] text-slate-500">{g.vehicleNo || 'Courier'}</div>
                     </td>
-                    <td className="py-4 px-5 font-mono text-slate-300">{g.receivedDate}</td>
-                    <td className="py-4 px-5 text-center">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
+                    <td className="py-4 px-6 font-mono text-slate-400">{g.receivedDate}</td>
+                    <td className="py-4.5 px-6 text-center">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border ${
                         g.status === 'QC_VERIFIED'
-                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                          ? isDarkMode ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                           : g.status === 'REJECTED'
-                          ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-                          : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                          ? isDarkMode ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
+                          : isDarkMode ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-200'
                       }`}>
-                        {g.status}
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                          g.status === 'QC_VERIFIED' ? 'bg-emerald-500' : g.status === 'REJECTED' ? 'bg-rose-500' : 'bg-amber-500'
+                        }`} />
+                        <span>{g.status === 'QC_VERIFIED' ? 'QC Verified' : g.status === 'REJECTED' ? 'QC Rejected' : 'Pending QC'}</span>
                       </span>
                     </td>
-                    <td className="py-4 px-5 text-center">
+                    <td className="py-4 px-6 text-center">
                       {g.status === 'RECEIVED' ? (
                         <button
                           onClick={() => handleGrnStatusChange(g.id || g.grnNo, 'QC_VERIFIED')}
-                          className="px-3 py-1.5 rounded-xl bg-[var(--accent-primary)]/20 hover:bg-[var(--accent-primary)]/30 text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/40 text-xs font-mono font-bold cursor-pointer transition-ui"
+                          className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer ${
+                            isDarkMode
+                              ? 'bg-white/10 hover:bg-white/15 text-white border border-white/15'
+                              : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200'
+                          }`}
                         >
                           QC Verify
                         </button>
@@ -1392,11 +1718,15 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       {subTab === 'movements' && (
         <div className="space-y-4">
           {/* Security & Immutability Badge Banner */}
-          <div className={`p-4 rounded-2xl border flex items-center justify-between gap-4 ${
-            isDarkMode ? 'border-white/[0.08] bg-[#121215] text-white' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)] text-slate-900'
+          <div className={`p-4 rounded-2xl border flex items-center justify-between gap-4 flex-wrap transition-all ${
+            isDarkMode
+              ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] text-white shadow-[0_8px_28px_rgba(0,0,0,0.5)]'
+              : 'border-slate-200/80 bg-gradient-to-b from-white/95 via-slate-50/90 to-slate-100/70 shadow-[0_2px_12px_rgba(0,0,0,0.03)] text-slate-900'
           }`}>
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-2xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+              <div className={`p-2.5 rounded-2xl ${
+                isDarkMode ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+              }`}>
                 <ShieldCheck className="w-5 h-5" />
               </div>
               <div>
@@ -1413,10 +1743,10 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 <button
                   key={t}
                   onClick={() => setMovementTypeFilter(t)}
-                  className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold transition-ui cursor-pointer whitespace-nowrap ${
+                  className={`px-3 py-1.5 rounded-xl text-[10px] font-mono font-bold transition-all cursor-pointer whitespace-nowrap border ${
                     movementTypeFilter === t
-                      ? 'bg-[var(--accent-primary)] text-white shadow-xs'
-                      : isDarkMode ? 'bg-white/[0.06] text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      ? isDarkMode ? 'bg-white/15 text-white border-white/20 shadow-xs' : 'bg-white text-slate-900 border-slate-200/90 shadow-xs'
+                      : isDarkMode ? 'bg-white/[0.04] text-slate-400 border-white/[0.06] hover:text-white' : 'bg-slate-100/70 text-slate-600 border-slate-200/60 hover:text-slate-900'
                   }`}
                 >
                   {t.replace('_', ' ')}
@@ -1425,34 +1755,59 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             </div>
           </div>
 
-          <div className={`overflow-hidden rounded-[22px] border transition-ui ${
-            isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
+          <div className={`overflow-hidden rounded-3xl border transition-all ${
+            isDarkMode
+              ? 'border-white/[0.08] bg-gradient-to-b from-[#111318] via-[#08090c] to-[#010203] shadow-[0_20px_50px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]'
+              : 'border-slate-200/90 bg-gradient-to-b from-white via-slate-50/40 to-[#f6f8fc] shadow-[0_16px_40px_rgba(15,23,42,0.05),inset_0_1px_0_0_rgba(255,255,255,1)]'
           }`}>
-            <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
-              <div>
-                <div className="text-xs font-extrabold text-slate-900 dark:text-white">Immutable Movement Ledger</div>
-                <div className="mt-0.5 text-[10px] text-slate-400">Cryptographically verifiable sequence of store additions and subtractions</div>
+            <div className={`flex items-center justify-between border-b px-6 py-4.5 transition-all ${
+              isDarkMode
+                ? 'border-white/[0.08] bg-gradient-to-r from-black/60 via-black/30 to-black/60'
+                : 'border-slate-200/80 bg-gradient-to-r from-slate-50/90 via-white/60 to-slate-50/90'
+            }`}>
+              <div className="flex items-center gap-3.5">
+                <div className={`flex h-10 w-10 items-center justify-center rounded-2xl shadow-xs ${
+                  isDarkMode ? 'bg-white/10 text-white border border-white/10' : 'bg-slate-900 text-white shadow-2xs'
+                }`}>
+                  <History className="h-5 w-5 stroke-[2]" />
+                </div>
+                <div>
+                  <div className="text-base font-black tracking-tight text-slate-900 dark:text-white">
+                    Immutable Movement Ledger
+                  </div>
+                  <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                    Cryptographically verifiable sequence of store additions and subtractions
+                  </div>
+                </div>
               </div>
-              <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>{movements.length} ledger events</span>
+              <span className={`rounded-full border px-3 py-1 font-mono text-xs font-bold tracking-tight ${
+                isDarkMode ? 'border-white/10 bg-black/60 text-slate-300' : 'border-slate-200 bg-white text-slate-700 shadow-2xs'
+              }`}>
+                {movements.length} ledger events
+              </span>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse font-mono">
+              <table className="w-full text-left text-xs border-collapse font-sans">
                 <thead>
-                  <tr className={`border-b font-bold uppercase tracking-[0.12em] text-[9px] ${
-                    isDarkMode ? 'border-white/[0.07] bg-black/20 text-slate-500' : 'border-slate-200 bg-slate-50/80 text-slate-400'
+                  <tr className={`border-b text-[11px] font-bold uppercase tracking-wider transition-all ${
+                    isDarkMode
+                      ? 'border-white/[0.07] bg-gradient-to-b from-black/80 to-black/60 text-slate-400'
+                      : 'border-slate-200/90 bg-gradient-to-b from-slate-100/90 to-slate-50/90 text-slate-600'
                   }`}>
-                    <th className="py-3.5 px-4">Timestamp</th>
-                    <th className="py-3.5 px-4">Part Code</th>
-                    <th className="py-3.5 px-4">Movement Type</th>
-                    <th className="py-3.5 px-4 text-right">Qty Delta</th>
-                    <th className="py-3.5 px-4 text-right">Balance After</th>
-                    <th className="py-3.5 px-4">Reference Doc</th>
-                    <th className="py-3.5 px-4">Actor</th>
-                    <th className="py-3.5 px-4">Notes</th>
-                    <th className="py-3.5 px-4 text-center">Action</th>
+                    <th className="py-4 px-6">Timestamp</th>
+                    <th className="py-4 px-6">Part Code</th>
+                    <th className="py-4 px-6">Movement Type</th>
+                    <th className="py-4 px-6 text-right">Qty Delta</th>
+                    <th className="py-4 px-6 text-right">Balance After</th>
+                    <th className="py-4 px-6">Reference Doc</th>
+                    <th className="py-4 px-6">Actor</th>
+                    <th className="py-4 px-6">Notes</th>
+                    <th className="py-4 px-6 text-center">Action</th>
                   </tr>
                 </thead>
-                <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
+                <tbody className={`divide-y text-xs transition-colors ${
+                  isDarkMode ? 'divide-white/[0.04]' : 'divide-slate-200/70'
+                }`}>
                   {(Array.isArray(movements) ? movements : [])
                     .filter(m => movementTypeFilter === 'ALL' || m.movementType === movementTypeFilter)
                     .filter(m => !searchQuery || m.itemCode.toLowerCase().includes(searchQuery.toLowerCase()) || m.referenceId?.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -1462,52 +1817,79 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                       const isAdjustment = mov.movementType === 'ADJUSTMENT';
 
                       return (
-                        <tr key={mov.id} className={`transition-colors ${isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'}`}>
-                          <td className="py-3 px-4 text-slate-400 text-[11px]">
+                        <tr
+                          key={mov.id}
+                          className={`group transition-all duration-150 ${
+                            isDarkMode
+                              ? 'even:bg-white/[0.015] hover:bg-gradient-to-r hover:from-white/[0.06] hover:via-white/[0.02] hover:to-transparent'
+                              : 'even:bg-slate-50/50 hover:bg-gradient-to-r hover:from-blue-500/[0.05] hover:via-indigo-500/[0.03] hover:to-transparent'
+                          }`}
+                        >
+                          <td className="py-4.5 px-6 text-slate-400 font-mono text-xs">
                             {new Date(mov.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
                           </td>
-                          <td className="py-3 px-4 font-bold text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">
-                            {mov.itemCode}
-                          </td>
-                          <td className="py-3 px-4">
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase border ${
-                              isCorrection
-                                ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                                : isAdjustment
-                                  ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                          <td className="py-4.5 px-6">
+                            <div className="flex items-center gap-3.5">
+                              <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 shadow-2xs ${
+                                isCorrection
+                                  ? isDarkMode ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' : 'bg-amber-50 text-amber-700 border border-amber-200'
                                   : isInbound
-                                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                                    : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                                  ? isDarkMode ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  : isDarkMode ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-blue-50 text-blue-600 border border-blue-200/70'
+                              }`}>
+                                <History className="w-5 h-5 stroke-[2]" />
+                              </div>
+                              <div className="min-w-0">
+                                <span className="font-mono text-sm tracking-tight text-slate-900 dark:text-white font-black">
+                                  {mov.itemCode}
+                                </span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-4.5 px-6">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border ${
+                              isCorrection
+                                ? isDarkMode ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-200'
+                                : isAdjustment
+                                ? isDarkMode ? 'bg-blue-500/15 text-blue-400 border-blue-500/30' : 'bg-blue-50 text-blue-700 border-blue-200'
+                                : isInbound
+                                ? isDarkMode ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                : isDarkMode ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
                             }`}>
-                              {mov.movementType}
+                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                isCorrection ? 'bg-amber-500' : isAdjustment ? 'bg-blue-500' : isInbound ? 'bg-emerald-500' : 'bg-rose-500'
+                              }`} />
+                              <span>{mov.movementType}</span>
                             </span>
                           </td>
-                          <td className={`py-3 px-4 text-right font-bold text-xs ${
+                          <td className={`py-4 px-6 text-right font-mono font-bold text-xs ${
                             isCorrection
-                              ? 'text-amber-400'
-                              : isInbound ? 'text-emerald-400' : 'text-rose-400'
+                              ? 'text-amber-500'
+                              : isInbound ? 'text-emerald-500' : 'text-rose-500'
                           }`}>
                             {isInbound ? `+${formatDecimal(mov.quantityChange)}` : formatDecimal(mov.quantityChange)}
                           </td>
-                          <td className={`py-3 px-4 text-right font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                          <td className={`py-4 px-6 text-right font-mono font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                             {formatDecimal(mov.balanceAfter)}
                           </td>
-                          <td className="py-3 px-4 text-slate-300">
+                          <td className="py-4 px-6 text-slate-400 font-mono">
                             {mov.referenceId ? (
-                              <span className="px-2 py-0.5 rounded bg-slate-800 text-[10px] text-slate-300 border border-slate-700">
+                              <span className={`px-2 py-0.5 rounded border text-[10px] ${
+                                isDarkMode ? 'bg-white/5 border-white/10 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'
+                              }`}>
                                 {mov.referenceId}
                               </span>
                             ) : (
                               <span className="text-slate-500">—</span>
                             )}
                           </td>
-                          <td className="py-3 px-4 text-slate-400 text-[11px] truncate max-w-[140px]" title={mov.actorEmail}>
+                          <td className="py-4 px-6 text-slate-400 text-[11px] truncate max-w-[140px]" title={mov.actorEmail}>
                             {mov.actorEmail}
                           </td>
-                          <td className="py-3 px-4 text-slate-400 text-[11px] truncate max-w-[200px]" title={mov.notes || ''}>
+                          <td className="py-4 px-6 text-slate-400 text-[11px] truncate max-w-[200px]" title={mov.notes || ''}>
                             {mov.notes || '—'}
                           </td>
-                          <td className="py-3 px-4 text-center">
+                          <td className="py-4 px-6 text-center">
                             {mov.movementType !== 'CORRECTION' && (
                               <button
                                 onClick={() => {
@@ -1516,7 +1898,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                                   correctMovementModal.open({ movementId: mov.id });
                                 }}
                                 title="Record Offset Reversal Movement"
-                                className="px-2 py-1 rounded-lg text-[10px] font-bold bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/30 cursor-pointer"
+                                className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border border-amber-500/30 cursor-pointer transition-all"
                               >
                                 Reversal
                               </button>
@@ -1543,50 +1925,87 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       {subTab === 'reconciliation' && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className={`p-4 rounded-2xl border ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">Audited Items</div>
-              <div className="text-2xl font-extrabold font-mono mt-1 text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{(filteredReconciliation || []).length}</div>
+            <div className={`p-4 rounded-2xl border transition-all ${
+              isDarkMode
+                ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] shadow-[0_8px_28px_rgba(0,0,0,0.5)]'
+                : 'border-slate-200/80 bg-gradient-to-b from-white/95 via-slate-50/90 to-slate-100/70 shadow-[0_2px_12px_rgba(0,0,0,0.03)]'
+            }`}>
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 font-mono">Audited Items</div>
+              <div className="text-2xl font-black font-mono mt-1 text-slate-900 dark:text-white">{(filteredReconciliation || []).length}</div>
             </div>
-            <div className={`p-4 rounded-2xl border ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">100% Ledger Matched</div>
-              <div className="text-2xl font-extrabold font-mono mt-1 text-emerald-400">
+            <div className={`p-4 rounded-2xl border transition-all ${
+              isDarkMode
+                ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] shadow-[0_8px_28px_rgba(0,0,0,0.5)]'
+                : 'border-slate-200/80 bg-gradient-to-b from-white/95 via-slate-50/90 to-slate-100/70 shadow-[0_2px_12px_rgba(0,0,0,0.03)]'
+            }`}>
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 font-mono">100% Ledger Matched</div>
+              <div className="text-2xl font-black font-mono mt-1 text-emerald-500">
                 {(filteredReconciliation || []).filter(r => r.status === 'MATCHED').length}
               </div>
             </div>
-            <div className={`p-4 rounded-2xl border ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">Discrepancies Flagged</div>
-              <div className="text-2xl font-extrabold font-mono mt-1 text-rose-400">
+            <div className={`p-4 rounded-2xl border transition-all ${
+              isDarkMode
+                ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] shadow-[0_8px_28px_rgba(0,0,0,0.5)]'
+                : 'border-slate-200/80 bg-gradient-to-b from-white/95 via-slate-50/90 to-slate-100/70 shadow-[0_2px_12px_rgba(0,0,0,0.03)]'
+            }`}>
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 font-mono">Discrepancies Flagged</div>
+              <div className="text-2xl font-black font-mono mt-1 text-rose-500">
                 {(filteredReconciliation || []).filter(r => r.status === 'DISCREPANCY').length}
               </div>
             </div>
           </div>
 
-          <div className={`overflow-hidden rounded-[22px] border transition-ui ${
-            isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
+          <div className={`overflow-hidden rounded-3xl border transition-all ${
+            isDarkMode
+              ? 'border-white/[0.08] bg-gradient-to-b from-[#111318] via-[#08090c] to-[#010203] shadow-[0_20px_50px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]'
+              : 'border-slate-200/90 bg-gradient-to-b from-white via-slate-50/40 to-[#f6f8fc] shadow-[0_16px_40px_rgba(15,23,42,0.05),inset_0_1px_0_0_rgba(255,255,255,1)]'
           }`}>
-            <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
-              <div>
-                <div className="text-xs font-extrabold text-slate-900 dark:text-white">Physical vs. Derived Ledger Reconciliation</div>
-                <div className="mt-0.5 text-[10px] text-slate-400">Audit report comparing fast cache count against immutable ledger transaction sum</div>
+            <div className={`flex items-center justify-between border-b px-6 py-4.5 transition-all ${
+              isDarkMode
+                ? 'border-white/[0.08] bg-gradient-to-r from-black/60 via-black/30 to-black/60'
+                : 'border-slate-200/80 bg-gradient-to-r from-slate-50/90 via-white/60 to-slate-50/90'
+            }`}>
+              <div className="flex items-center gap-3.5">
+                <div className={`flex h-10 w-10 items-center justify-center rounded-2xl shadow-xs ${
+                  isDarkMode ? 'bg-white/10 text-white border border-white/10' : 'bg-slate-900 text-white shadow-2xs'
+                }`}>
+                  <Boxes className="h-5 w-5 stroke-[2]" />
+                </div>
+                <div>
+                  <div className="text-base font-black tracking-tight text-slate-900 dark:text-white">
+                    Physical vs. Derived Ledger Reconciliation
+                  </div>
+                  <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                    Audit report comparing fast cache count against immutable ledger transaction sum
+                  </div>
+                </div>
               </div>
-              <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>{filteredReconciliation.length} items</span>
+              <span className={`rounded-full border px-3 py-1 font-mono text-xs font-bold tracking-tight ${
+                isDarkMode ? 'border-white/10 bg-black/60 text-slate-300' : 'border-slate-200 bg-white text-slate-700 shadow-2xs'
+              }`}>
+                {filteredReconciliation.length} items
+              </span>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse font-mono">
+              <table className="w-full text-left text-xs border-collapse font-sans">
                 <thead>
-                  <tr className={`border-b font-bold uppercase tracking-[0.12em] text-[9px] ${
-                    isDarkMode ? 'border-white/[0.07] bg-black/20 text-slate-500' : 'border-slate-200 bg-slate-50/80 text-slate-400'
+                  <tr className={`border-b text-[11px] font-bold uppercase tracking-wider transition-all ${
+                    isDarkMode
+                      ? 'border-white/[0.07] bg-gradient-to-b from-black/80 to-black/60 text-slate-400'
+                      : 'border-slate-200/90 bg-gradient-to-b from-slate-100/90 to-slate-50/90 text-slate-600'
                   }`}>
-                    <th className="py-3.5 px-5">Part Code</th>
-                    <th className="py-3.5 px-5">Description</th>
-                    <th className="py-3.5 px-5 text-right">Ledger Derived Sum</th>
-                    <th className="py-3.5 px-5 text-right">Physical / Cache Count</th>
-                    <th className="py-3.5 px-5 text-right">Discrepancy (Δ)</th>
-                    <th className="py-3.5 px-5 text-center">Status</th>
-                    <th className="py-3.5 px-5 text-center">Action</th>
+                    <th className="py-4 px-6">Part Code</th>
+                    <th className="py-4 px-6">Description</th>
+                    <th className="py-4 px-6 text-right">Ledger Derived Sum</th>
+                    <th className="py-4 px-6 text-right">Physical / Cache Count</th>
+                    <th className="py-4 px-6 text-right">Discrepancy (Δ)</th>
+                    <th className="py-4 px-6 text-center">Status</th>
+                    <th className="py-4 px-6 text-center">Action</th>
                   </tr>
                 </thead>
-                <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
+                <tbody className={`divide-y text-xs transition-colors ${
+                  isDarkMode ? 'divide-white/[0.04]' : 'divide-slate-200/70'
+                }`}>
                   {filteredReconciliation.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="py-12 text-center text-slate-400 font-mono text-xs">
@@ -1603,31 +2022,58 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     filteredReconciliation.map((rec) => {
                       const isDiscrepancy = rec.status === 'DISCREPANCY';
                       return (
-                        <tr key={rec.itemCode} className={`transition-colors ${isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'}`}>
-                          <td className="py-4 px-5 font-bold text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{rec.itemCode}</td>
-                          <td className="py-4 px-5 text-slate-200 font-sans font-medium">{rec.description}</td>
-                          <td className="py-4 px-5 text-right font-bold text-emerald-400">{formatDecimal(rec.ledgerBalance)}</td>
-                          <td className={`py-4 px-5 text-right font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{formatDecimal(rec.cachedOnHand)}</td>
-                          <td className={`py-4 px-5 text-right font-bold ${isDiscrepancy ? 'text-rose-400' : 'text-emerald-400'}`}>
+                        <tr
+                          key={rec.itemCode}
+                          className={`group transition-all duration-150 ${
+                            isDarkMode
+                              ? 'even:bg-white/[0.015] hover:bg-gradient-to-r hover:from-white/[0.06] hover:via-white/[0.02] hover:to-transparent'
+                              : 'even:bg-slate-50/50 hover:bg-gradient-to-r hover:from-blue-500/[0.05] hover:via-indigo-500/[0.03] hover:to-transparent'
+                          }`}
+                        >
+                          <td className="py-4.5 px-6">
+                            <div className="flex items-center gap-3.5">
+                              <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 shadow-2xs ${
+                                isDiscrepancy
+                                  ? isDarkMode ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30' : 'bg-rose-50 text-rose-600 border border-rose-200'
+                                  : isDarkMode ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              }`}>
+                                <Boxes className="w-5 h-5 stroke-[2]" />
+                              </div>
+                              <div className="min-w-0">
+                                <span className="font-mono text-sm tracking-tight text-slate-900 dark:text-white font-black">
+                                  {rec.itemCode}
+                                </span>
+                                <div className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate max-w-[280px] mt-1">
+                                  {rec.description}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className={`py-4 px-6 font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>{rec.description}</td>
+                          <td className="py-4 px-6 text-right font-bold font-mono text-emerald-500">{formatDecimal(rec.ledgerBalance)}</td>
+                          <td className={`py-4 px-6 text-right font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{formatDecimal(rec.cachedOnHand)}</td>
+                          <td className={`py-4 px-6 text-right font-bold font-mono ${isDiscrepancy ? 'text-rose-500' : 'text-emerald-500'}`}>
                             {rec.discrepancy > 0 ? `+${formatDecimal(rec.discrepancy)}` : formatDecimal(rec.discrepancy)}
                           </td>
-                          <td className="py-4 px-5 text-center">
-                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-bold uppercase border ${
+                          <td className="py-4.5 px-6 text-center">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border ${
                               isDiscrepancy
-                                ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-                                : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                                ? isDarkMode ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
+                                : isDarkMode ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                             }`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${isDiscrepancy ? 'bg-rose-500' : 'bg-emerald-500'}`} />
-                              <span>{rec.status}</span>
+                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isDiscrepancy ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+                              <span>{isDiscrepancy ? 'Discrepancy' : 'Balanced'}</span>
                             </span>
                           </td>
-                          <td className="py-4 px-5 text-center">
+                          <td className="py-4 px-6 text-center">
                             <button
                               onClick={() => {
                                 onAdjustStock(rec.itemCode, rec.discrepancy, 'Reconciliation Correction');
                               }}
-                              className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-ui cursor-pointer ${
-                                isDarkMode ? 'bg-[var(--accent-soft-dark)] text-[var(--accent-text-dark)] hover:brightness-125 border border-[var(--accent-border-dark)]' : 'bg-[var(--accent-soft-light)] text-[var(--accent-text-light)] hover:brightness-95 border border-[var(--accent-border-light)]'
+                              className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer ${
+                                isDarkMode 
+                                  ? 'bg-white/10 hover:bg-white/15 text-white border border-white/15' 
+                                  : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200'
                               }`}
                             >
                               Reconcile

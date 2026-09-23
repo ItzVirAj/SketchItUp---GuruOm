@@ -13,7 +13,8 @@ import { ConsoleView, UserRole, ConsoleUser } from '../../types/console';
 import { 
   COMMAND_CENTRE_NAV_ITEM, 
   getFilteredNavigation, 
-  findParentSectionId 
+  findParentSectionId,
+  NAVIGATION_SECTIONS
 } from '../../utils/navigationConfig';
 
 interface MobileDrawerProps {
@@ -51,12 +52,12 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
   // Accordion state for grouped modules
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
     const activeParent = findParentSectionId(currentView);
-    return {
-      'operations-reports': activeParent === 'operations-reports' || true,
-      'quality-dispatch': activeParent === 'quality-dispatch' || false,
-      'finance': activeParent === 'finance' || false,
-      'admin': activeParent === 'admin' || false,
-    };
+    return Object.fromEntries(
+      NAVIGATION_SECTIONS.map(section => [
+        section.id,
+        section.id === activeParent || section.id === 'operations-reports'
+      ])
+    );
   });
 
   // Keep active section open when currentView changes

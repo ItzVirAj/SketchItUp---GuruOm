@@ -1587,7 +1587,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
             {activeSection === 'job-cards' && (
               <button
                 onClick={openNewJobModal}
-                className="min-h-[44px] px-3.5 py-2 rounded-xl bg-gradient-to-r from-[var(--accent-gradient-from)] to-[var(--accent-gradient-to)] text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer active:scale-[0.96] transition-transform font-mono"
+                className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#181920] hover:bg-[#252730] text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer active:scale-[0.96] transition-transform font-mono"
               >
                 <Plus className="w-4 h-4" />
                 <span>New Job</span>
@@ -1596,7 +1596,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
             {activeSection === 'job-cards' && onBulkReleaseJobCards && (
               <button
                 onClick={() => bulkReleaseModal.open()}
-                className="min-h-[44px] px-3 py-2 rounded-xl border border-[var(--accent-primary)]/40 text-[var(--accent-primary)] font-bold text-xs flex items-center gap-1.5 cursor-pointer active:scale-[0.96] transition-transform font-mono"
+                className="min-h-[44px] px-3 py-2 rounded-xl border border-slate-300 dark:border-white/20 text-slate-950 dark:text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer active:scale-[0.96] transition-transform font-mono"
               >
                 <Factory className="w-4 h-4" />
                 <span>Release PO</span>
@@ -1666,24 +1666,33 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
       {/* ── DESKTOP HEADER & INTEGRATED KPI ROW (≥ md) ──                          */}
       {/* ========================================================================= */}
       <div className="hidden md:block space-y-4">
-        <section className={`overflow-hidden rounded-[24px] border ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'}`}>
-          <div className="flex items-center justify-between gap-6 px-6 py-5">
-            <div className="min-w-0">
-              <div className="mb-1.5 flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                Shopfloor & Engineering Telemetry
-                <span className="text-slate-300 dark:text-slate-700">/</span>
-                <span>{activeJobsCount} Active Jobs</span>
-              </div>
-              <div className="flex items-baseline gap-3">
-                <h1 className="truncate text-[25px] font-extrabold tracking-[-0.04em] text-slate-950 dark:text-white">
-                  Production & Manufacturing Engineering
-                </h1>
-                <span className="hidden font-mono text-[10px] font-semibold text-slate-400 xl:inline">
-                  JOB CARDS • ROUTE CARDS • BOM RECIPES • CAPACITY MATRIX
+        <section className={`overflow-hidden rounded-2xl border transition-all ${
+          isDarkMode
+            ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]'
+            : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
+        }`}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 px-6 py-6 sm:py-7">
+            <div className="min-w-0 space-y-1.5">
+              <div className="flex items-center gap-2.5">
+                <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wide ${
+                  isDarkMode
+                    ? 'bg-white/10 border border-white/15 text-white'
+                    : 'bg-white/20 border border-white/30 backdrop-blur-md text-white shadow-xs'
+                }`}>
+                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>Shopfloor &amp; Engineering Telemetry</span>
+                </span>
+                <span className="text-sm font-semibold text-white/80">•</span>
+                <span className="text-xs sm:text-sm font-semibold text-white/95">
+                  {activeJobsCount} Active Jobs
                 </span>
               </div>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+
+              <h1 className="text-3xl sm:text-[32px] font-black tracking-tight text-white leading-tight">
+                Production &amp; Manufacturing Engineering
+              </h1>
+
+              <p className="text-xs sm:text-sm text-white/95 font-medium leading-relaxed max-w-2xl">
                 Manage Bill of Materials (BOM recipes), configure multi-operation Route Cards, simulate batch requirements, and release shopfloor Job Cards.
               </p>
             </div>
@@ -1691,7 +1700,11 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
             <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={() => breakdownModal.open()}
-                className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 px-3.5 text-xs font-bold text-rose-600 dark:text-rose-400 transition-ui cursor-pointer active:scale-[0.96]"
+                className={`inline-flex items-center gap-2 px-4 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
+                  isDarkMode
+                    ? 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 shadow-black/40'
+                    : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 shadow-xs'
+                }`}
                 title="Report machine downtime or breakdown to shopfloor cell"
               >
                 <AlertTriangle className="h-4 w-4" />
@@ -1701,61 +1714,120 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
               {activeSection === 'job-cards' && (
                 <button
                   onClick={openNewJobModal}
-                  className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96]"
+                  className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
+                    isDarkMode
+                      ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
+                      : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
+                  }`}
                 >
-                  <Plus className="h-4 w-4" />
-                  Create Job Card
+                  <Plus className="h-4 w-4 stroke-[3]" />
+                  <span>Create Job Card</span>
                 </button>
               )}
               {activeSection === 'job-cards' && onBulkReleaseJobCards && (
                 <button
                   onClick={() => bulkReleaseModal.open()}
-                  className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-[var(--accent-primary)]/40 px-4 text-xs font-extrabold text-[var(--accent-primary)] transition-ui hover:bg-[var(--accent-primary)]/10 active:scale-[0.96]"
+                  className={`inline-flex items-center gap-2 px-4 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
+                    isDarkMode
+                      ? 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
+                      : 'bg-white/20 hover:bg-white/30 text-white border border-white/30 backdrop-blur-md'
+                  }`}
                   title="Release job cards for many lines of one PO at once"
                 >
                   <Factory className="h-4 w-4" />
-                  Release PO
+                  <span>Release PO</span>
                 </button>
               )}
               {activeSection === 'route-cards' && (
                 <button
                   onClick={handleOpenCreateRoute}
-                  className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96]"
+                  className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
+                    isDarkMode
+                      ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
+                      : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
+                  }`}
                 >
-                  <Route className="h-4 w-4" />
-                  Create Route Card
+                  <Route className="h-4 w-4 stroke-[3]" />
+                  <span>Create Route Card</span>
                 </button>
               )}
               {activeSection === 'bom' && (
                 <button
                   onClick={handleOpenCreateBom}
-                  className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96]"
+                  className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
+                    isDarkMode
+                      ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
+                      : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
+                  }`}
                 >
-                  <Layers className="h-4 w-4" />
-                  Create BOM Formula
+                  <Layers className="h-4 w-4 stroke-[3]" />
+                  <span>Create BOM Formula</span>
                 </button>
               )}
             </div>
           </div>
 
           {/* Integrated 4-Column Metric Strip (border-t) */}
-          <div className={`grid grid-cols-4 border-t ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+          <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t ${
+            isDarkMode
+              ? 'border-white/10 bg-gradient-to-b from-black/40 to-black/70 backdrop-blur-md'
+              : 'border-white/20 bg-white/[0.06] backdrop-blur-sm'
+          }`}>
             {[
-              { label: 'Active Job Cards', value: String(activeJobsCount), detail: 'Shopfloor execution', icon: Factory, tone: 'text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)]', iconBg: 'bg-[var(--accent-soft-light)] dark:bg-[var(--accent-soft-dark)]' },
-              { label: 'Configured BOMs', value: String(boms.length), detail: 'WHAT formulas', icon: Layers, tone: 'text-indigo-600 dark:text-indigo-400', iconBg: 'bg-indigo-500/10' },
-              { label: 'Route Cards', value: String(routeCards.length), detail: 'HOW sequences', icon: Route, tone: 'text-emerald-600 dark:text-emerald-400', iconBg: 'bg-emerald-500/10' },
-              { label: 'OEE Efficiency', value: '94.2%', detail: 'Nominal shopfloor rate', icon: Activity, tone: 'text-amber-600 dark:text-amber-400', iconBg: 'bg-amber-500/10' },
+              {
+                label: 'Active Job Cards',
+                value: String(activeJobsCount),
+                detail: 'Shopfloor execution',
+                icon: Factory,
+                iconColor: isDarkMode ? 'text-white' : 'text-[#155dfc]',
+                iconBg: isDarkMode ? 'bg-blue-600 shadow-xs' : 'bg-white shadow-xs',
+              },
+              {
+                label: 'Configured BOMs',
+                value: String(boms.length),
+                detail: 'WHAT formulas',
+                icon: Layers,
+                iconColor: 'text-white',
+                iconBg: 'bg-indigo-500 shadow-xs',
+              },
+              {
+                label: 'Route Cards',
+                value: String(routeCards.length),
+                detail: 'HOW sequences',
+                icon: Route,
+                iconColor: 'text-white',
+                iconBg: 'bg-emerald-500 shadow-xs',
+              },
+              {
+                label: 'OEE Efficiency',
+                value: '94.2%',
+                detail: 'Nominal shopfloor rate',
+                icon: Activity,
+                iconColor: 'text-white',
+                iconBg: 'bg-amber-500 shadow-xs',
+              },
             ].map((metric, index) => {
               const MetricIcon = metric.icon;
               return (
-                <div key={metric.label} className={`flex items-center gap-3 px-5 py-4 ${index > 0 ? isDarkMode ? 'border-l border-white/[0.07]' : 'border-l border-slate-200' : ''}`}>
-                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${metric.iconBg} ${metric.tone}`}>
-                    <MetricIcon className="h-4 w-4" />
+                <div
+                  key={metric.label}
+                  className={`flex items-center gap-4 px-6 py-5 transition-all ${
+                    index > 0 ? (isDarkMode ? 'lg:border-l border-white/10' : 'lg:border-l border-white/20') : ''
+                  }`}
+                >
+                  <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${metric.iconBg} ${metric.iconColor}`}>
+                    <MetricIcon className="h-5 w-5 stroke-[2.5]" />
                   </div>
-                  <div className="min-w-0">
-                    <div className="font-mono text-[9px] font-bold uppercase tracking-[0.13em] text-slate-400">{metric.label}</div>
-                    <div className={`mt-0.5 truncate text-lg font-extrabold tracking-[-0.03em] ${metric.tone}`}>{metric.value}</div>
-                    <div className="truncate text-[10px] text-slate-400">{metric.detail}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-bold uppercase tracking-wider text-white/85">
+                      {metric.label}
+                    </div>
+                    <div className="text-2xl sm:text-[26px] font-black tracking-tight text-white tabular-nums my-0.5 leading-tight">
+                      {metric.value}
+                    </div>
+                    <div className="text-xs font-medium text-white/90 truncate">
+                      {metric.detail}
+                    </div>
                   </div>
                 </div>
               );
@@ -1783,54 +1855,74 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
           </div>
         )}
 
-        {/* Desktop Primary Section Navigation & Search Toolbar */}
-        <div className={`rounded-2xl border p-3 ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
-          <div className="flex items-center gap-2">
-            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${isDarkMode ? 'bg-white/[0.05] text-slate-400' : 'bg-slate-100 text-slate-500'}`} title="Modules">
-              <Factory className="h-4 w-4" />
-            </div>
-
-            <div className="flex items-center gap-1.5 overflow-x-auto">
-              {[
-                { id: 'job-cards', label: 'Job Cards (Shopfloor)', count: jobCards.length, icon: Factory },
-                { id: 'route-cards', label: 'Route Cards (HOW)', count: routeCards.length, icon: Route },
-                { id: 'bom', label: 'Bill of Materials (WHAT)', count: boms.length, icon: Layers },
-                { id: 'matrix', label: 'Engineering Hub & Matrix', icon: GitFork },
-              ].map(section => {
-                const Icon = section.icon;
-                const isActive = activeSection === section.id;
-                return (
-                  <button
-                    key={section.id}
-                    onClick={() => setActiveSection(section.id as ProductionSection)}
-                    className={`flex items-center gap-1.5 h-10 px-3.5 rounded-xl text-xs font-bold transition-ui cursor-pointer whitespace-nowrap border ${
-                      isActive
-                        ? isDarkMode
-                          ? 'bg-[var(--accent-primary)]/20 text-[var(--accent-text-dark)] border-[var(--accent-primary)]/40 shadow-xs'
-                          : 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)] shadow-sm shadow-[var(--accent-shadow)]'
-                        : isDarkMode
-                          ? 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/[0.06]'
-                          : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                    }`}
-                  >
-                    <Icon className="w-3.5 h-3.5" />
-                    <span>{section.label}</span>
-                    {section.count !== undefined && (
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${
+        {/* ── APPLE 2-TIER COMMAND DECK & FILTERS ── */}
+        <div className={`rounded-2xl border p-3.5 transition-all ${
+          isDarkMode
+            ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] shadow-[0_8px_28px_rgba(0,0,0,0.5)]'
+            : 'border-slate-200/80 bg-gradient-to-b from-white/95 via-slate-50/90 to-slate-100/70 shadow-[0_4px_20px_rgba(0,0,0,0.03)]'
+        }`}>
+          <div className="space-y-3">
+            {/* Tier 1: Section tabs with counts + Live telemetry chip */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className={`inline-flex items-center gap-1 rounded-xl p-1 border transition-all ${
+                isDarkMode ? 'border-white/10 bg-black/40' : 'border-slate-200/80 bg-slate-100/80'
+              }`}>
+                {[
+                  { id: 'job-cards', label: 'Job Cards (Shopfloor)', count: jobCards.length, icon: Factory },
+                  { id: 'route-cards', label: 'Route Cards (HOW)', count: routeCards.length, icon: Route },
+                  { id: 'bom', label: 'Bill of Materials (WHAT)', count: boms.length, icon: Layers },
+                  { id: 'matrix', label: 'Engineering Hub & Matrix', icon: GitFork },
+                ].map(section => {
+                  const Icon = section.icon;
+                  const isActive = activeSection === section.id;
+                  return (
+                    <button
+                      key={section.id}
+                      onClick={() => setActiveSection(section.id as ProductionSection)}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-150 cursor-pointer ${
                         isActive
-                          ? isDarkMode ? 'bg-[var(--accent-primary)]/30 text-white' : 'bg-white/25 text-white'
-                          : isDarkMode ? 'bg-white/[0.06] text-slate-400' : 'bg-slate-200 text-slate-600'
-                      }`}>
-                        {section.count}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+                          ? isDarkMode
+                            ? 'bg-white text-slate-950 shadow-xs'
+                            : 'bg-slate-900 text-white shadow-xs'
+                          : isDarkMode
+                          ? 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                      <span>{section.label}</span>
+                      {section.count !== undefined && (
+                        <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                          isActive
+                            ? isDarkMode ? 'bg-slate-200 text-slate-900' : 'bg-white/30 text-white'
+                            : isDarkMode ? 'bg-white/10 text-slate-400' : 'bg-slate-200/80 text-slate-600'
+                        }`}>
+                          {section.count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Telemetry pill */}
+              <div className="flex items-center gap-2">
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-semibold border ${
+                  isDarkMode ? 'border-white/10 bg-white/[0.03] text-slate-400' : 'border-slate-200 bg-white text-slate-600 shadow-2xs'
+                }`}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  Showing {activeSection === 'job-cards' ? filteredCards.length : activeSection === 'route-cards' ? routeCards.length : activeSection === 'bom' ? boms.length : 1} records
+                </span>
+              </div>
             </div>
 
-            <div className={`flex h-10 min-w-[240px] flex-1 items-center gap-2 rounded-xl border px-3 ml-auto ${isDarkMode ? 'border-white/[0.08] bg-black/20 text-white focus-within:border-[var(--accent-border-dark)]' : 'border-slate-200 bg-slate-50 text-slate-900 focus-within:border-[var(--accent-primary)]'}`}>
-              <Search className="h-4 w-4 shrink-0 text-slate-400" />
+            {/* Tier 2: Spotlight search */}
+            <div className={`relative flex items-center rounded-xl border transition-all ${
+              isDarkMode
+                ? 'border-white/10 bg-black/40 text-white focus-within:border-white/25 focus-within:bg-black/60'
+                : 'border-slate-200/90 bg-white text-slate-900 focus-within:border-slate-400 focus-within:shadow-xs'
+            }`}>
+              <Search className="absolute left-3.5 h-4 w-4 text-slate-400 pointer-events-none" />
               <input
                 type="text"
                 placeholder={
@@ -1840,19 +1932,26 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                 }
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-full w-full bg-transparent text-xs font-semibold outline-none placeholder:font-normal placeholder:text-slate-400 font-mono"
+                className="w-full bg-transparent pl-10 pr-24 py-2.5 text-xs font-medium outline-none placeholder:text-slate-400 font-sans"
               />
-              {searchQuery && (
-                <button type="button" onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-700 dark:hover:text-white">
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
+              <div className="absolute right-3 flex items-center gap-2">
+                {searchQuery ? (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                ) : (
+                  <kbd className={`hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono font-bold rounded border ${
+                    isDarkMode ? 'border-white/10 bg-white/5 text-slate-400' : 'border-slate-200 bg-slate-100 text-slate-500'
+                  }`}>
+                    ⌘F
+                  </kbd>
+                )}
+              </div>
             </div>
-          </div>
-
-          <div className="mt-2.5 flex items-center justify-between px-1 font-mono text-[9px] font-semibold uppercase tracking-wider text-slate-400">
-            <span>Showing {activeSection === 'job-cards' ? filteredCards.length : activeSection === 'route-cards' ? routeCards.length : activeSection === 'bom' ? boms.length : 1} records</span>
-            <span>Discrete Manufacturing & Shopfloor Execution Control</span>
           </div>
         </div>
       </div>
@@ -1885,8 +1984,8 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-ui cursor-pointer whitespace-nowrap border ${
                       isActive
                         ? isDarkMode 
-                          ? 'bg-[var(--accent-soft-dark)] text-[var(--accent-text-dark)] border-[var(--accent-border-dark)] shadow-xs'
-                          : 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)] shadow-xs'
+                          ? 'bg-white text-slate-900 border-white shadow-xs'
+                          : 'bg-[#181920] text-white border-[#181920] shadow-xs'
                         : isDarkMode
                           ? 'bg-white/[0.04] text-slate-400 border-white/[0.06] hover:text-slate-200 hover:bg-white/[0.08]'
                           : 'bg-slate-50 text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-100'
@@ -1895,7 +1994,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                     <span>{tab.label}</span>
                     <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
                       isActive
-                        ? isDarkMode ? 'bg-white/20 text-white' : 'bg-white/25 text-white'
+                        ? isDarkMode ? 'bg-black/15 text-slate-900 font-bold' : 'bg-white/25 text-white'
                         : isDarkMode ? 'bg-white/[0.06] text-slate-400' : 'bg-slate-200 text-slate-700'
                     }`}>
                       {tab.count}
@@ -2122,36 +2221,39 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
           {viewMode !== 'grouped' && (
           <div className="hidden md:block">
             {viewMode === 'list' ? (
-              <div className={`overflow-hidden rounded-[22px] border transition-ui ${
-                isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
+              <div className={`overflow-hidden rounded-3xl border transition-all duration-300 ${
+                isDarkMode 
+                  ? 'border-white/[0.08] bg-gradient-to-b from-[#111318] via-[#08090c] to-[#010203] shadow-[0_24px_50px_rgba(0,0,0,0.6)]' 
+                  : 'border-slate-200/80 bg-gradient-to-b from-white via-slate-50/40 to-[#f6f8fc] shadow-[0_16px_40px_rgba(15,23,42,0.06)]'
               }`}>
-                <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+                {/* Specular top edge highlight line */}
+                <div className="h-px w-full bg-gradient-to-r from-transparent via-white/20 dark:via-white/10 to-transparent" />
+
+                <div className={`flex items-center justify-between border-b px-6 py-4 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
                   <div>
-                    <div className="text-xs font-extrabold text-slate-900 dark:text-white">Active Shopfloor Job Cards</div>
-                    <div className="mt-0.5 text-[10px] text-slate-400">Live operational execution, machine assignment, and routing traveler status</div>
+                    <div className="text-sm font-extrabold text-slate-900 dark:text-white">Active Shopfloor Job Cards</div>
+                    <div className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Live operational execution, machine assignment, and routing traveler status</div>
                   </div>
-                  <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>{filteredCards.length} job cards</span>
+                  <span className={`rounded-full border px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-300' : 'border-slate-200 bg-slate-50 text-slate-600'}`}>{filteredCards.length} job cards</span>
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse font-mono">
-                    <thead>
-                      <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${
-                        isDarkMode ? 'border-white/[0.07] bg-black/20 text-slate-500' : 'border-slate-200 bg-slate-50/80 text-slate-400'
-                      }`}>
-                        <th className="py-4 px-5">Job Card #</th>
-                        <th className="py-4 px-5">Customer Order PO</th>
-                        <th className="py-4 px-5">Part Description</th>
-                        <th className="py-4 px-5 text-right">Job Qty</th>
-                        <th className="py-4 px-5">Machine Center</th>
-                        <th className="py-4 px-5">Target Date</th>
-                        <th className="py-4 px-5 text-center">Status</th>
-                        <th className="py-4 px-5 text-center">Action</th>
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead className={`border-b ${isDarkMode ? 'border-white/[0.06] bg-white/[0.02]' : 'border-slate-200/80 bg-slate-50/60'}`}>
+                      <tr className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-slate-600 dark:text-slate-400">
+                        <th className="py-4 px-6">Job Card #</th>
+                        <th className="py-4 px-6">Customer Order PO</th>
+                        <th className="py-4 px-6">Part Description</th>
+                        <th className="py-4 px-6 text-right">Job Qty</th>
+                        <th className="py-4 px-6">Machine Center</th>
+                        <th className="py-4 px-6">Target Date</th>
+                        <th className="py-4 px-6 text-center">Status</th>
+                        <th className="py-4 px-6 text-center">Action</th>
                       </tr>
                     </thead>
-                    <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
+                    <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200/80'}`}>
                       {filteredCards.length === 0 ? (
                         <tr>
-                          <td colSpan={8} className="py-12 text-center text-slate-400 font-mono text-xs">
+                          <td colSpan={8} className="py-16 text-center text-slate-400 font-mono text-xs">
                             No job cards found matching criteria.
                           </td>
                         </tr>
@@ -2163,87 +2265,97 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                             setSelectedJobForDetail(jc);
                             jobDetailModal.open({ jobNo: jc.jobNo });
                           }}
-                          className={`group transition-colors ${isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'}`}
+                          className={`group transition-all duration-200 cursor-pointer ${
+                            isDarkMode 
+                              ? 'hover:bg-white/[0.03] border-b border-white/[0.04]' 
+                              : 'hover:bg-slate-50/90 border-b border-slate-100'
+                          }`}
                         >
-                          <td className="py-4 px-5">
-                            <div className="flex items-center gap-2.5">
-                              <div className={`p-2 rounded-xl transition-transform group-hover:scale-105 shrink-0 ${
+                          <td className="py-4 px-6">
+                            <div className="flex items-center gap-3.5">
+                              <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 border transition-all duration-300 group-hover:scale-105 group-hover:shadow-md ${
                                 isDarkMode 
-                                  ? 'bg-[var(--accent-primary)]/20 text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/30' 
-                                  : 'bg-[var(--accent-primary)]/10 text-[var(--accent-text-light)] border border-[var(--accent-primary)]/20'
+                                  ? 'bg-gradient-to-br from-white/[0.08] to-white/[0.02] border-white/10 text-white' 
+                                  : 'bg-gradient-to-br from-slate-50 to-slate-100/80 border-slate-200/80 text-slate-800 shadow-xs'
                               }`}>
-                                <Factory className="w-3.5 h-3.5" />
+                                <Factory className="w-5 h-5 text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]" />
                               </div>
                               <div className="min-w-0">
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className="font-bold text-xs font-mono text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono text-sm tracking-tight text-slate-900 dark:text-white font-black">
                                     {jc.jobNo}
                                   </span>
                                   {jc.drawingRevision && (
-                                    <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-mono font-bold uppercase tracking-wider border ${
+                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase tracking-wider border ${
                                       isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                     }`}>
                                       Rev: {jc.drawingRevision}
                                     </span>
                                   )}
                                 </div>
-                                {jc.materialIssuedLot && (
-                                  <div className={`text-[10px] font-mono truncate mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                                {jc.materialIssuedLot ? (
+                                  <div className={`text-xs font-bold text-slate-800 dark:text-slate-200 mt-1 font-mono truncate`}>
                                     Heat: {jc.materialIssuedLot}
+                                  </div>
+                                ) : (
+                                  <div className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-1 font-mono truncate">
+                                    PO: {jc.orderPo}
                                   </div>
                                 )}
                               </div>
                             </div>
                           </td>
-                          <td className="py-4 px-5 font-mono text-slate-400">
-                            <div className="font-bold text-slate-800 dark:text-slate-200">{jc.orderPo}</div>
+                          <td className="py-4 px-6 font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
+                            {jc.orderPo}
                           </td>
-                          <td className={`py-4 px-5 font-semibold font-sans ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
+                          <td className={`py-4 px-6 font-bold text-xs ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>
                             <div>{jc.partCode} — {jc.partDescription}</div>
                             {jc.hasOpenNcr && (
-                              <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40">
+                              <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40">
                                 <AlertTriangle className="w-3 h-3" />
                                 <span>Hold: {jc.ncrReference || 'Open NCR'}</span>
                               </span>
                             )}
                           </td>
-                          <td className={`py-4 px-5 text-right font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                          <td className={`py-4 px-6 text-right font-black font-mono text-xs ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                             {jc.targetQty || jc.qty} NOS
                           </td>
-                          <td className="py-4 px-5 font-mono text-purple-400 font-medium">
+                          <td className="py-4 px-6 font-mono text-xs text-purple-600 dark:text-purple-400 font-semibold">
                             {jc.machine || jc.currentOperation || 'VMC / Lathe Center'}
                           </td>
-                          <td className="py-4 px-5 font-mono text-amber-500">
+                          <td className="py-4 px-6 font-mono text-xs text-amber-600 dark:text-amber-400 font-medium">
                             {jc.targetDate}
                           </td>
-                          <td className="py-4 px-5 text-center">
-                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
+                          <td className="py-4 px-6 text-center">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border ${
                               jc.jobStatus === 'QC_HOLD' || jc.status === 'QC_HOLD'
-                                ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                                ? 'border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400'
                                 : jc.jobStatus === 'IN_PROGRESS' || jc.status === 'RUNNING' || jc.status === 'IN_PROGRESS'
-                                ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
+                                ? 'border-purple-500/30 bg-purple-500/10 text-purple-600 dark:text-purple-400'
                                 : jc.jobStatus === 'COMPLETED' || jc.status === 'COMPLETED'
-                                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                                  : 'bg-[#5B75F8]/10 text-[#7B92FF] border-[#5B75F8]/30'
+                                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                : 'border-blue-500/30 bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF]'
                             }`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${
+                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                                 jc.jobStatus === 'QC_HOLD' || jc.status === 'QC_HOLD' 
-                                  ? 'bg-rose-500' 
+                                  ? 'bg-rose-500 animate-ping' 
                                   : jc.jobStatus === 'IN_PROGRESS' || jc.status === 'RUNNING' 
-                                  ? 'bg-purple-500 animate-pulse' 
+                                  ? 'bg-purple-500' 
+                                  : jc.jobStatus === 'COMPLETED' || jc.status === 'COMPLETED'
+                                  ? 'bg-emerald-500'
                                   : 'bg-[#5B75F8]'
                               }`} />
                               <span>{jc.jobStatus || jc.status}</span>
                             </span>
                           </td>
-                          <td className="py-3 px-5 text-center" onClick={(e) => e.stopPropagation()}>
+                          <td className="py-4 px-6 text-center" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-center gap-1.5">
                               <button
                                 onClick={() => {
                                   setSelectedJobForDetail(jc);
                                   jobDetailModal.open({ jobNo: jc.jobNo });
                                 }}
-                                className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-ui cursor-pointer ${
+                                className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer ${
                                   isDarkMode ? 'bg-[var(--accent-soft-dark)] text-[var(--accent-text-dark)] hover:brightness-125 border border-[var(--accent-border-dark)]' : 'bg-[var(--accent-soft-light)] text-[var(--accent-text-light)] hover:brightness-95 border border-[var(--accent-border-light)]'
                                 }`}
                                 title="Open Full Job Card Detail View"
@@ -2255,7 +2367,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                                   setSelectedJobForDetail(jc);
                                   jobDetailModal.open({ jobNo: jc.jobNo });
                                 }}
-                                className={`p-1.5 rounded-xl border flex items-center justify-center font-mono text-xs transition-ui cursor-pointer ${
+                                className={`p-1.5 rounded-xl border flex items-center justify-center font-mono text-xs transition-all cursor-pointer ${
                                   isDarkMode
                                     ? 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white'
                                     : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
@@ -2416,8 +2528,11 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                         <span className={`px-2 py-0.5 rounded-md text-[10px] font-mono ${
                           isDarkMode ? 'bg-white/[0.06] text-slate-300' : 'bg-slate-100 text-slate-600'
                         }`}>{route.revision || 'REV-A'}</span>
-                        <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                          {route.status || 'ACTIVE'}
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border ${
+                          isDarkMode ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                        }`}>
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                          <span>{route.status || 'ACTIVE'}</span>
                         </span>
                       </div>
                       <h4 className={`text-sm font-semibold mt-0.5 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
@@ -2603,14 +2718,17 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                         <span className={`px-2 py-0.5 rounded-md text-[10px] font-mono ${
                           isDarkMode ? 'bg-white/[0.06] text-slate-300' : 'bg-slate-100 text-slate-600'
                         }`}>{bom.revision}</span>
-                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-bold border ${
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border ${
                           bom.status === 'ACTIVE' 
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
+                            ? isDarkMode ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' : 'border-emerald-200 bg-emerald-50 text-emerald-700'
                             : bom.status === 'DRAFT'
-                            ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                            : 'bg-white/[0.06] text-slate-400 border-white/[0.08]'
+                            ? isDarkMode ? 'border-amber-500/30 bg-amber-500/10 text-amber-300' : 'border-amber-200 bg-amber-50 text-amber-700'
+                            : isDarkMode ? 'border-white/[0.08] bg-white/[0.06] text-slate-400' : 'border-slate-200 bg-slate-100 text-slate-600'
                         }`}>
-                          {bom.status}
+                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                            bom.status === 'ACTIVE' ? 'bg-emerald-500' : bom.status === 'DRAFT' ? 'bg-amber-500' : 'bg-slate-400'
+                          }`} />
+                          <span>{bom.status}</span>
                         </span>
                       </div>
                       <h4 className={`text-sm font-semibold mt-0.5 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
@@ -3004,7 +3122,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                   type="button"
                   onClick={() => {
                     createRouteModal.close();
-                    navigate('/masters/items');
+                    navigate('/admin/master-catalogs/items');
                     if (onNavigate) onNavigate('masters');
                   }}
                   className="text-[10px] font-mono font-medium text-emerald-500 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer transition-ui"
@@ -3122,7 +3240,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                   type="button"
                   onClick={() => {
                     createRouteModal.close();
-                    navigate('/masters/machines');
+                    navigate('/admin/master-catalogs/machines');
                     if (onNavigate) onNavigate('masters');
                   }}
                   className="text-[10px] font-mono font-medium text-emerald-500 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer transition-ui"
@@ -3153,7 +3271,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                   type="button"
                   onClick={() => {
                     createRouteModal.close();
-                    navigate('/masters/machines');
+                    navigate('/admin/master-catalogs/machines');
                     if (onNavigate) onNavigate('masters');
                   }}
                   className="font-bold underline hover:text-amber-300 font-mono text-[11px] flex items-center gap-1 cursor-pointer"
@@ -3243,7 +3361,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                         type="button"
                         onClick={() => {
                           createRouteModal.close();
-                          navigate('/masters/machines');
+                          navigate('/admin/master-catalogs/machines');
                           if (onNavigate) onNavigate('masters');
                         }}
                         className="text-[9px] font-mono text-emerald-500 dark:text-emerald-400 hover:underline flex items-center gap-0.5 mt-1 cursor-pointer"
@@ -3375,7 +3493,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
                   type="button"
                   onClick={() => {
                     handleCloseCreateBom();
-                    navigate('/masters/items');
+                    navigate('/admin/master-catalogs/items');
                     if (onNavigate) onNavigate('masters');
                   }}
                   className="text-[10px] font-mono font-medium text-emerald-500 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer transition-ui"

@@ -1,4 +1,4 @@
-export type ConsoleView = 
+export type ConsoleView =
   | 'command-centre'
   | 'orders'
   | 'order-detail'
@@ -35,7 +35,7 @@ export type UserRole = 'ServerAdmin' | 'SUPER ADMIN' | 'OPERATOR' | 'QC_MANAGER'
 
 export type ConsoleUser = SystemUser;
 
-export type OrderStatus = 
+export type OrderStatus =
   | 'DRAFT'
   | 'CONFIRMED'
   | 'PENDING_VERIFICATION'
@@ -203,7 +203,7 @@ export interface ShortageItem {
   unit: string;
 }
 
-export type MovementType = 
+export type MovementType =
   | 'OPENING_BALANCE'
   | 'GRN'
   | 'PRODUCTION_CONSUMPTION'

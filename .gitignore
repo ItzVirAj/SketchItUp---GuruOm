@@ -46,7 +46,7 @@ lerna-debug.log*
 coverage/
 *.lcov
 .nyc_output/
-
+brag-output/
 # ---- TypeScript ----
 *.tsbuildinfo
 

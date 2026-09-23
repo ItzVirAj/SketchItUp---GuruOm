@@ -236,46 +236,46 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
     switch (type) {
       case 'DISCOUNT_OVERRIDE':
         return (
-          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
+          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-tight border ${
             isDarkMode ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-200'
           }`}>
-            <Percent className="w-3 h-3 text-amber-500 shrink-0" />
+            <Percent className="w-3.5 h-3.5 text-amber-500 shrink-0" />
             <span>Discount Override</span>
           </span>
         );
       case 'HIGH_VALUE_PO':
         return (
-          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
+          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-tight border ${
             isDarkMode ? 'bg-teal-500/10 text-teal-400 border-teal-500/30' : 'bg-teal-50 text-teal-800 border-teal-200'
           }`}>
-            <DollarSign className="w-3 h-3 text-teal-500 shrink-0" />
+            <DollarSign className="w-3.5 h-3.5 text-teal-500 shrink-0" />
             <span>High Value PO</span>
           </span>
         );
       case 'ORDER_CANCEL':
         return (
-          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
+          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-tight border ${
             isDarkMode ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-800 border-rose-200'
           }`}>
-            <XCircle className="w-3 h-3 text-rose-500 shrink-0" />
+            <XCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
             <span>Cancellation</span>
           </span>
         );
       case 'SCRAP_WRITE_OFF':
         return (
-          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
+          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-tight border ${
             isDarkMode ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' : 'bg-purple-50 text-purple-800 border-purple-200'
           }`}>
-            <Trash2 className="w-3 h-3 text-purple-500 shrink-0" />
+            <Trash2 className="w-3.5 h-3.5 text-purple-500 shrink-0" />
             <span>Scrap Write-off</span>
           </span>
         );
       default:
         return (
-          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
+          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-tight border ${
             isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-200'
           }`}>
-            <ShieldCheck className="w-3 h-3 text-slate-400 shrink-0" />
+            <ShieldCheck className="w-3.5 h-3.5 text-slate-400 shrink-0" />
             <span>{type}</span>
           </span>
         );
@@ -288,42 +288,54 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
       {/* ========================================================================= */}
       {/* ── TOP HEADER & INTEGRATED EXECUTIVE DESK BANNER ──                       */}
       {/* ========================================================================= */}
-      <section className={`overflow-hidden rounded-[24px] border ${
-        isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
+      <section className={`overflow-hidden rounded-2xl border transition-all ${
+        isDarkMode
+          ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]'
+          : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
       }`}>
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 px-6 py-5">
-          <div className="min-w-0">
-            <div className="mb-1.5 flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Executive Governance Desk
-              <span className="text-slate-300 dark:text-slate-700">/</span>
-              <span>Stage 1 Gated Gatekeeper</span>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 p-6 sm:p-7">
+          <div className="min-w-0 space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wide ${
+                isDarkMode ? 'bg-white/10 border border-white/15 text-white' : 'bg-white/20 border border-white/30 backdrop-blur-md text-white shadow-xs'
+              }`}>
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Executive Governance Desk</span>
+              </span>
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
+                isDarkMode ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-white/20 text-white border border-white/30 backdrop-blur-md'
+              }`}>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <span>Stage 1 Gated Gatekeeper</span>
+              </span>
             </div>
             
-            <div className="flex flex-wrap items-baseline gap-3">
-              <h1 className="truncate text-xl sm:text-2xl md:text-[25px] font-extrabold tracking-[-0.04em] text-slate-950 dark:text-white">
-                Management Approvals & Authorization Queue
-              </h1>
-            </div>
+            <h1 className="text-xl sm:text-2xl md:text-[26px] font-black tracking-tight text-white">
+              Management Approvals & Authorization Queue
+            </h1>
             
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 max-w-2xl">
+            <p className={`text-xs leading-relaxed max-w-2xl font-normal mt-1 ${
+              isDarkMode ? 'text-white/60' : 'text-blue-100/90'
+            }`}>
               Multi-level commercial governance, credit authorization, high-value procurement sign-offs, discount overrides, and Stage 1 customer order releases.
             </p>
           </div>
 
           {/* Signatory Authorization Lozenge */}
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            <div className={`p-2.5 px-3.5 rounded-2xl border flex items-center gap-2.5 font-mono text-xs ${
-              isAuthorizedSignatory
-                ? isDarkMode ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400' : 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                : isDarkMode ? 'border-amber-500/30 bg-amber-500/10 text-amber-400' : 'border-amber-200 bg-amber-50 text-amber-800'
+            <div className={`p-3 px-4 rounded-full border flex items-center gap-2.5 font-mono text-xs shadow-inner ${
+              isDarkMode
+                ? 'border-white/15 bg-white/10 text-white'
+                : 'border-white/30 bg-white/20 text-white backdrop-blur-md shadow-xs'
             }`}>
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
               <div>
-                <span className="font-bold block text-[11px] leading-tight">
+                <span className="font-bold block text-xs leading-tight text-white">
                   {isAuthorizedSignatory ? 'Authorized Signatory' : 'View Only Mode'}
                 </span>
-                <span className="text-[9px] text-slate-400 uppercase tracking-wider block">
+                <span className={`text-[10px] uppercase tracking-wider block font-semibold ${
+                  isDarkMode ? 'text-white/50' : 'text-blue-100/80'
+                }`}>
                   Server Admin • Owner • Admin • HR
                 </span>
               </div>
@@ -332,56 +344,64 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
         </div>
 
         {/* Integrated 4-Column Apple Inset Metric Strip */}
-        <div className={`grid grid-cols-2 md:grid-cols-4 border-t ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+        <div className={`grid grid-cols-2 md:grid-cols-4 border-t divide-y sm:divide-y-0 sm:divide-x ${
+          isDarkMode
+            ? 'border-white/10 bg-gradient-to-b from-black/40 to-black/70 divide-white/10 backdrop-blur-md'
+            : 'border-white/20 bg-white/[0.06] divide-white/15 backdrop-blur-sm'
+        }`}>
           {[
             { 
               label: 'Total Pending Actions', 
               value: String(totalPendingCount), 
               detail: `${pendingOrders.length} orders · ${activeApprovals.length} overrides`, 
               icon: CheckCircle2, 
-              tone: 'text-emerald-500', 
-              iconBg: 'bg-emerald-500/10' 
+              iconBg: 'bg-white text-blue-600 shadow-md shadow-black/10',
             },
             { 
               label: 'Gated Order Value', 
               value: `₹${totalGatedOrderValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`, 
               detail: 'Stage 1 order pipeline', 
               icon: DollarSign, 
-              tone: 'text-teal-500', 
-              iconBg: 'bg-teal-500/10' 
+              iconBg: 'bg-emerald-600 text-white shadow-md shadow-emerald-500/30',
             },
             { 
               label: 'High-Value POs', 
               value: String(highValuePOCount), 
               detail: 'Procurement sign-offs', 
               icon: ShieldCheck, 
-              tone: 'text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)]', 
-              iconBg: 'bg-[var(--accent-primary)]/15' 
+              iconBg: 'bg-purple-600 text-white shadow-md shadow-purple-500/30',
             },
             { 
               label: 'Commercial Overrides', 
               value: String(overridesCount), 
               detail: 'Discounts & write-offs', 
               icon: Percent, 
-              tone: 'text-amber-500', 
-              iconBg: 'bg-amber-500/10' 
+              iconBg: 'bg-amber-500 text-white shadow-md shadow-amber-500/30',
             },
-          ].map((metric, index) => {
+          ].map((metric) => {
             const MetricIcon = metric.icon;
             return (
               <div 
                 key={metric.label} 
-                className={`flex items-center gap-3 px-5 py-3.5 ${
-                  index > 0 ? isDarkMode ? 'border-l border-white/[0.07]' : 'border-l border-slate-200' : ''
-                }`}
+                className="p-4 sm:p-5 flex flex-col justify-between"
               >
-                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${metric.iconBg} ${metric.tone}`}>
-                  <MetricIcon className="h-4 w-4" />
+                <div className="flex items-center justify-between mb-3">
+                  <span className={`text-[11px] font-mono uppercase tracking-wider font-bold ${
+                    isDarkMode ? 'text-white/50' : 'text-blue-100/70'
+                  }`}>
+                    {metric.label}
+                  </span>
+                  <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${metric.iconBg}`}>
+                    <MetricIcon className="w-5 h-5" />
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <div className="font-mono text-[9px] font-bold uppercase tracking-[0.13em] text-slate-400">{metric.label}</div>
-                  <div className={`mt-0.5 truncate text-base sm:text-lg font-extrabold tracking-[-0.03em] ${metric.tone}`}>{metric.value}</div>
-                  <div className="truncate text-[10px] text-slate-400 font-mono">{metric.detail}</div>
+                <div className="text-2xl sm:text-[26px] font-black tracking-tight text-white tabular-nums my-0.5 leading-tight">
+                  {metric.value}
+                </div>
+                <div className={`text-[11px] font-medium truncate ${
+                  isDarkMode ? 'text-white/50' : 'text-blue-100/80'
+                }`}>
+                  {metric.detail}
                 </div>
               </div>
             );
@@ -390,65 +410,87 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
       </section>
 
       {/* ========================================================================= */}
-      {/* ── TOOLBAR: APPLE SEGMENTED FILTER STRIP & SEARCH ──                      */}
+      {/* ── TOOLBAR: APPLE 2-TIER COMMAND DECK & SEARCH ──                         */}
       {/* ========================================================================= */}
-      <div className={`rounded-2xl border p-2.5 flex flex-col md:flex-row items-center justify-between gap-3 ${
-        isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'
+      <div className={`rounded-2xl border p-3.5 space-y-3 transition-all ${
+        isDarkMode
+          ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] shadow-[0_8px_28px_rgba(0,0,0,0.5)]'
+          : 'border-slate-200/80 bg-gradient-to-b from-white/95 via-slate-50/90 to-slate-100/70 shadow-[0_4px_20px_rgba(0,0,0,0.03)]'
       }`}>
-        {/* macOS Segmented Filter Control */}
-        <div className={`p-1 rounded-xl border flex items-center gap-1 overflow-x-auto w-full md:w-auto scrollbar-none ${
-          isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-100 border-slate-200'
-        }`}>
-          {[
-            { id: 'ALL', label: 'All Items', count: totalPendingCount },
-            { id: 'ORDER_CONFIRMATIONS', label: 'Customer Orders', count: pendingOrders.length },
-            { id: 'HIGH_VALUE_PO', label: 'High Value PO', count: highValuePOCount },
-            { id: 'DISCOUNT_OVERRIDE', label: 'Discounts', count: activeApprovals.filter(a => a.type === 'DISCOUNT_OVERRIDE').length },
-            { id: 'ORDER_CANCEL', label: 'Cancellations', count: activeApprovals.filter(a => a.type === 'ORDER_CANCEL').length },
-            { id: 'SCRAP_WRITE_OFF', label: 'Scrap Write-offs', count: activeApprovals.filter(a => a.type === 'SCRAP_WRITE_OFF').length },
-          ].map(tab => {
-            const isActive = filterType === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setFilterType(tab.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold font-mono transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                  isActive
-                    ? 'bg-[var(--accent-primary)] text-white shadow-xs'
-                    : isDarkMode
-                      ? 'text-slate-400 hover:text-white'
-                      : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <span>{tab.label}</span>
-                <span className={`px-1.5 py-0.2 rounded-full text-[9px] ${
-                  isActive ? 'bg-white/25 text-white' : isDarkMode ? 'bg-white/10 text-slate-400' : 'bg-slate-200 text-slate-700'
-                }`}>
-                  {tab.count}
-                </span>
-              </button>
-            );
-          })}
+        {/* Tier 1: Segmented Filter Control */}
+        <div className="flex items-center justify-between gap-3 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+          <div className="flex items-center gap-1.5 min-w-max">
+            {[
+              { id: 'ALL', label: 'All Items', count: totalPendingCount },
+              { id: 'ORDER_CONFIRMATIONS', label: 'Customer Orders', count: pendingOrders.length },
+              { id: 'HIGH_VALUE_PO', label: 'High Value PO', count: highValuePOCount },
+              { id: 'DISCOUNT_OVERRIDE', label: 'Discounts', count: activeApprovals.filter(a => a.type === 'DISCOUNT_OVERRIDE').length },
+              { id: 'ORDER_CANCEL', label: 'Cancellations', count: activeApprovals.filter(a => a.type === 'ORDER_CANCEL').length },
+              { id: 'SCRAP_WRITE_OFF', label: 'Scrap Write-offs', count: activeApprovals.filter(a => a.type === 'SCRAP_WRITE_OFF').length },
+            ].map(tab => {
+              const isActive = filterType === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setFilterType(tab.id)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                    isActive
+                      ? isDarkMode
+                        ? 'bg-white text-slate-950 shadow-sm'
+                        : 'bg-[#155dfc] text-white shadow-sm'
+                      : isDarkMode
+                      ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] tabular-nums font-bold ${
+                    isActive
+                      ? isDarkMode ? 'bg-slate-900 text-white' : 'bg-white/20 text-white'
+                      : isDarkMode ? 'bg-white/10 text-slate-400' : 'bg-slate-200 text-slate-700'
+                  }`}>
+                    {tab.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Global Search Bar */}
-        <div className={`flex h-10 w-full md:w-80 items-center gap-2 rounded-xl border px-3 shrink-0 ${
-          isDarkMode ? 'border-white/[0.08] bg-black/20 text-white focus-within:border-[var(--accent-border-dark)]' : 'border-slate-200 bg-slate-50 text-slate-900 focus-within:border-[var(--accent-primary)]'
-        }`}>
-          <Search className="h-4 w-4 shrink-0 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search PO #, customer, requester..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-full w-full bg-transparent text-xs font-semibold outline-none placeholder:font-normal placeholder:text-slate-400 font-mono"
-          />
-          {searchQuery && (
-            <button type="button" onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-700 dark:hover:text-white">
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
+        {/* Tier 2: Search Bar & Info */}
+        <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-200/50 dark:border-white/5">
+          <div className="relative flex-1 max-w-md">
+            <Search className={`w-4 h-4 absolute left-3.5 top-3 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`} />
+            <input
+              type="text"
+              placeholder="Search PO #, customer, requester..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className={`h-10 w-full pl-10 pr-16 rounded-full border text-xs font-medium outline-none transition-all ${
+                isDarkMode 
+                  ? 'border-white/10 bg-black/60 text-white placeholder:text-slate-500 focus:border-[#5B75F8] focus:ring-4 focus:ring-[#5B75F8]/15' 
+                  : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-[#155dfc] focus:ring-4 focus:ring-[#155dfc]/15 shadow-xs'
+              }`}
+            />
+            <div className="absolute right-3 top-2.5 flex items-center gap-1.5">
+              {searchQuery ? (
+                <button type="button" onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              ) : (
+                <span className="hidden sm:inline-block px-1.5 py-0.5 rounded text-[10px] font-mono text-slate-400 border border-slate-200 dark:border-white/10">
+                  ⌘F
+                </span>
+              )}
+            </div>
+          </div>
+
+          <span className={`text-xs font-mono font-bold px-3 py-1.5 rounded-full border ${
+            isDarkMode ? 'border-white/10 bg-white/5 text-slate-400' : 'border-slate-200 bg-slate-100 text-slate-600'
+          }`}>
+            {totalPendingCount} Pending
+          </span>
         </div>
       </div>
 
@@ -456,27 +498,32 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
       {/* ── SECTION 1: PENDING CUSTOMER ORDERS (STAGE 1 GATED GATEKEEPER) ──      */}
       {/* ========================================================================= */}
       {showOrdersSection && (
-        <div className={`overflow-hidden rounded-[22px] border transition-ui ${
-          isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
+        <div className={`overflow-hidden rounded-3xl border transition-all ${
+          isDarkMode
+            ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#08090c] to-[#010203] shadow-[0_16px_40px_rgba(0,0,0,0.5)]'
+            : 'border-slate-200/90 bg-gradient-to-b from-white via-slate-50/40 to-[#f6f8fc] shadow-[0_4px_24px_rgba(0,0,0,0.04)]'
         }`}>
+          {/* Top Specular Highlight */}
+          <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-white/70 dark:via-white/10 to-transparent" />
+
           {/* Section Header Bar */}
-          <div className={`flex items-center justify-between border-b px-5 py-4 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-blue-500/15 text-blue-500 border border-blue-500/25 flex items-center justify-center">
-                <FileText className="w-4 h-4" />
+          <div className={`flex items-center justify-between border-b px-6 py-4 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-2xl bg-blue-500/15 text-blue-500 border border-blue-500/25 flex items-center justify-center">
+                <FileText className="w-5 h-5" />
               </div>
               <div>
-                <div className="text-xs font-extrabold text-slate-900 dark:text-white">
+                <div className="text-xs font-black tracking-tight text-slate-900 dark:text-white uppercase font-mono">
                   Pending Customer Order Confirmations (Stage 1 Gatekeeper)
                 </div>
-                <div className="mt-0.5 text-[10px] text-slate-400 font-mono">
+                <div className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400 font-sans">
                   Review customer purchase orders, pricing terms, and gross value before advancing to technical review
                 </div>
               </div>
             </div>
 
-            <span className={`rounded-lg border px-2.5 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${
-              isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'
+            <span className={`rounded-full border px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider ${
+              isDarkMode ? 'border-white/10 bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-600 shadow-2xs'
             }`}>
               {searchedOrders.length} {searchedOrders.length === 1 ? 'Order' : 'Orders'}
             </span>
@@ -517,17 +564,26 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
                         className={`group transition-colors ${isDarkMode ? 'hover:bg-white/[0.03]' : 'hover:bg-slate-50/80'}`}
                       >
                         {/* 1st Column: Bold PO Number with Squircle FileText Icon */}
-                        <td className="py-3.5 px-5 whitespace-nowrap">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-7 h-7 rounded-lg bg-blue-500/15 text-blue-500 border border-blue-500/20 flex items-center justify-center shrink-0">
-                              <FileText className="w-3.5 h-3.5" />
+                        <td className="py-4 px-5 whitespace-nowrap">
+                          <div className="flex items-center gap-3">
+                            <div className={`h-11 w-11 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 shadow-sm ${
+                              isDarkMode 
+                                ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30' 
+                                : 'bg-blue-500/10 text-blue-600 border border-blue-500/20 shadow-xs'
+                            }`}>
+                              <FileText className="w-5 h-5" />
                             </div>
-                            <span 
-                              onClick={() => onViewOrder?.(ord.id)}
-                              className="font-mono font-bold text-xs text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)] hover:underline cursor-pointer"
-                            >
-                              {ord.poNo}
-                            </span>
+                            <div className="flex flex-col">
+                              <span 
+                                onClick={() => onViewOrder?.(ord.id)}
+                                className="font-mono text-sm tracking-tight text-slate-900 dark:text-white font-black hover:underline cursor-pointer"
+                              >
+                                {ord.poNo}
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-mono mt-0.5">
+                                {ord.poDate || 'Stage 1'}
+                              </span>
+                            </div>
                           </div>
                         </td>
 
@@ -563,8 +619,8 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
                         </td>
 
                         {/* Stage Status */}
-                        <td className="py-3.5 px-4 whitespace-nowrap">
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30">
+                        <td className="py-4 px-4 whitespace-nowrap">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-tight border bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30">
                             <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
                             <span>Stage 1: Pending</span>
                           </span>
@@ -577,14 +633,14 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
                               <button
                                 type="button"
                                 onClick={() => onViewOrder(ord.id)}
-                                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border text-xs font-mono font-bold transition-all cursor-pointer ${
+                                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border text-xs font-bold transition-all cursor-pointer ${
                                   isDarkMode
                                     ? 'border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/[0.08] hover:text-white'
-                                    : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                                 }`}
                                 title="Inspect Complete PO Details"
                               >
-                                <ExternalLink className="w-3 h-3" />
+                                <ExternalLink className="w-3.5 h-3.5" />
                                 <span>Inspect</span>
                               </button>
                             )}
@@ -593,15 +649,15 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
                               <button
                                 type="button"
                                 onClick={() => onConfirmOrder?.(ord.id)}
-                                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs font-mono shadow-xs active:scale-95 transition-all cursor-pointer"
+                                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs font-mono shadow-xs active:scale-95 transition-all cursor-pointer"
                                 title="Authorize and advance PO to technical review"
                               >
                                 <Check className="w-3.5 h-3.5" />
                                 <span>Confirm Order</span>
                               </button>
                             ) : (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-mono text-slate-400 border border-slate-700/50">
-                                <Lock className="w-3 h-3" />
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-slate-400 border border-slate-700/50">
+                                <Lock className="w-3.5 h-3.5" />
                                 <span>Signatory Only</span>
                               </span>
                             )}
@@ -621,27 +677,32 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
       {/* ── SECTION 2: EXECUTIVE OVERRIDES & FINANCIAL AUTHORIZATIONS ──           */}
       {/* ========================================================================= */}
       {showApprovalsSection && (
-        <div className={`overflow-hidden rounded-[22px] border transition-ui ${
-          isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
+        <div className={`overflow-hidden rounded-3xl border transition-all ${
+          isDarkMode
+            ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#08090c] to-[#010203] shadow-[0_16px_40px_rgba(0,0,0,0.5)]'
+            : 'border-slate-200/90 bg-gradient-to-b from-white via-slate-50/40 to-[#f6f8fc] shadow-[0_4px_24px_rgba(0,0,0,0.04)]'
         }`}>
+          {/* Top Specular Highlight */}
+          <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-white/70 dark:via-white/10 to-transparent" />
+
           {/* Section Header Bar */}
-          <div className={`flex items-center justify-between border-b px-5 py-4 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-teal-500/15 text-teal-500 border border-teal-500/25 flex items-center justify-center">
-                <ShieldCheck className="w-4 h-4" />
+          <div className={`flex items-center justify-between border-b px-6 py-4 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-2xl bg-teal-500/15 text-teal-500 border border-teal-500/25 flex items-center justify-center">
+                <ShieldCheck className="w-5 h-5" />
               </div>
               <div>
-                <div className="text-xs font-extrabold text-slate-900 dark:text-white">
+                <div className="text-xs font-black tracking-tight text-slate-900 dark:text-white uppercase font-mono">
                   Executive Overrides & Financial Authorizations
                 </div>
-                <div className="mt-0.5 text-[10px] text-slate-400 font-mono">
+                <div className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400 font-sans">
                   Multi-level authorization for high-value supplier POs, discount overrides, and scrap write-offs
                 </div>
               </div>
             </div>
 
-            <span className={`rounded-lg border px-2.5 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${
-              isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'
+            <span className={`rounded-full border px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider ${
+              isDarkMode ? 'border-white/10 bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-600 shadow-2xs'
             }`}>
               {filteredApprovals.length} {filteredApprovals.length === 1 ? 'Action' : 'Actions'}
             </span>
@@ -678,13 +739,17 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
                       className={`group transition-colors ${isDarkMode ? 'hover:bg-white/[0.03]' : 'hover:bg-slate-50/80'}`}
                     >
                       {/* 1st Column: Bold Item Title with Squircle Icon */}
-                      <td className="py-3.5 px-5 whitespace-nowrap">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-lg bg-teal-500/15 text-teal-500 border border-teal-500/20 flex items-center justify-center shrink-0">
-                            <ShieldCheck className="w-3.5 h-3.5" />
+                      <td className="py-4 px-5 whitespace-nowrap">
+                        <div className="flex items-center gap-3">
+                          <div className={`h-11 w-11 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 shadow-sm ${
+                            isDarkMode 
+                              ? 'bg-teal-500/15 text-teal-400 border border-teal-500/30' 
+                              : 'bg-teal-500/10 text-teal-600 border border-teal-500/20 shadow-xs'
+                          }`}>
+                            <ShieldCheck className="w-5 h-5" />
                           </div>
                           <div>
-                            <span className="font-mono font-bold text-xs text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)] block">
+                            <span className="font-mono text-sm tracking-tight text-slate-900 dark:text-white font-black block">
                               {item.title}
                             </span>
                             <span className="text-[10px] text-slate-400 font-mono block mt-0.5">
@@ -734,13 +799,13 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
                       </td>
 
                       {/* Actions: Signatory restricted */}
-                      <td className="py-3.5 px-5 text-right whitespace-nowrap">
+                      <td className="py-4 px-5 text-right whitespace-nowrap">
                         {isAuthorizedSignatory ? (
                           <div className="flex items-center justify-end gap-2">
                             <button
                               type="button"
                               onClick={() => onReject(item.id)}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 text-xs font-mono font-bold active:scale-95 transition-all cursor-pointer shadow-2xs"
+                              className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 text-xs font-mono font-bold active:scale-95 transition-all cursor-pointer shadow-2xs"
                               title="Reject this approval request"
                             >
                               <X className="w-3.5 h-3.5" />
@@ -750,7 +815,7 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
                             <button
                               type="button"
                               onClick={() => onApprove(item.id)}
-                              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs font-mono shadow-xs active:scale-95 transition-all cursor-pointer"
+                              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs font-mono shadow-xs active:scale-95 transition-all cursor-pointer"
                               title="Sign and authorize this transaction"
                             >
                               <Check className="w-3.5 h-3.5" />
@@ -758,8 +823,8 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
                             </button>
                           </div>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-mono text-slate-400 border border-slate-700/50">
-                            <Lock className="w-3 h-3" />
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-slate-400 border border-slate-700/50">
+                            <Lock className="w-3.5 h-3.5" />
                             <span>Signatory Only</span>
                           </span>
                         )}

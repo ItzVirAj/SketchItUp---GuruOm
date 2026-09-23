@@ -92,7 +92,8 @@ export const PDIView: React.FC<PDIViewProps> = ({
   const [inspectingItem, setInspectingItem] = useState<PDIInspection | null>(null);
   const [reinspectingItem, setReinspectingItem] = useState<PDIInspection | null>(null);
 
-  // Global PDI Audit Box State
+  // Global PDI Audit Box State (URL-driven modal endpoint: ?modal=global-pdi-audit)
+  const globalAuditModal = useUrlModal('global-pdi-audit');
   const [isGlobalAuditOpen, setIsGlobalAuditOpen] = useState<boolean>(false);
   const [globalAuditSearch, setGlobalAuditSearch] = useState<string>('');
 
@@ -508,10 +509,12 @@ export const PDIView: React.FC<PDIViewProps> = ({
                 handleOpenInspect(pdi);
                 inspectModal.open({ pdiNo: pdi.id, jobNo: pdi.jobNo, orderPo: pdi.orderPo });
               }}
-              className={`w-full h-8 px-4 py-1.5 rounded-xl text-white text-xs font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 shadow-xs active:scale-[0.96] ${
+              className={`w-full h-8 px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 shadow-xs active:scale-[0.96] ${
                 isFailed
-                  ? 'bg-rose-600 hover:bg-rose-500 shadow-rose-600/25'
-                  : 'bg-[#5B75F8] hover:bg-[#4E67F0] shadow-[#5B75F8]/25'
+                  ? 'bg-rose-600 hover:bg-rose-500 shadow-rose-600/25 text-white'
+                  : isDarkMode
+                  ? 'bg-white text-slate-900 hover:bg-slate-100 shadow-sm'
+                  : 'bg-[#181920] text-white hover:bg-[#252730] shadow-sm'
               }`}
               title={isFailed ? `Re-Audit Failed PDI for ${pdi.jobNo}` : `Inspect PDI for ${pdi.jobNo}`}
             >
@@ -570,245 +573,269 @@ export const PDIView: React.FC<PDIViewProps> = ({
       {/* ========================================================================= */}
       {/* ── TOP HEADER & TELEMETRY WIDGETS (Apple Executive Window) ──             */}
       {/* ========================================================================= */}
-      <div className={`p-5 sm:p-6 rounded-2xl border transition-all ${
-        isDarkMode 
-          ? 'bg-[#09090B] border-white/10 text-white shadow-[0_4px_24px_rgba(0,0,0,0.4)]' 
-          : 'bg-white/90 border-slate-200/80 shadow-xs text-slate-900 backdrop-blur-xl'
+      <section className={`overflow-hidden rounded-2xl border transition-all ${
+        isDarkMode
+          ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]'
+          : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
       }`}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-start sm:items-center gap-3.5">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF] border border-blue-500/20 shrink-0">
-              <ClipboardCheck className="w-6 h-6 stroke-[2]" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 px-6 py-6 sm:py-7">
+          <div className="min-w-0 space-y-1.5">
+            <div className="flex items-center gap-2.5">
+              <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wide ${
+                isDarkMode
+                  ? 'bg-white/10 border border-white/15 text-white'
+                  : 'bg-white/20 border border-white/30 backdrop-blur-md text-white shadow-xs'
+              }`}>
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Pre-Dispatch Clearance &amp; Verification</span>
+              </span>
+              <span className="text-sm font-semibold text-white/80">•</span>
+              <span className="text-xs sm:text-sm font-semibold text-white/95">
+                {totalCount} Inspection Lots
+              </span>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                  Pre-Dispatch Clearance
-                </span>
-                <span className="text-xs text-slate-400 dark:text-slate-500">
-                  • 4-Point Audit & CoC Release
-                </span>
-              </div>
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white mt-1">
-                PDI Queue (Pre-Dispatch Inspection)
-              </h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 max-w-xl">
-                Final pre-dispatch compliance verification for Job Cards and Customer POs, dimensional checklists, and outward CoC generation.
-              </p>
-            </div>
+
+            <h1 className="text-3xl sm:text-[32px] font-black tracking-tight text-white leading-tight">
+              PDI Queue (Pre-Dispatch Inspection)
+            </h1>
+
+            <p className="text-xs sm:text-sm text-white/95 font-medium leading-relaxed max-w-2xl">
+              Final pre-dispatch compliance verification for Job Cards and Customer POs, dimensional checklists, and outward CoC generation.
+            </p>
           </div>
 
-          <div className="flex items-center gap-2.5 shrink-0">
-            {/* Export CSV Button */}
+          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={handleExportCSV}
-              className={`flex h-10 items-center gap-2 px-4 rounded-xl border text-xs font-bold transition-all cursor-pointer active:scale-[0.96] shadow-xs ${
-                isDarkMode 
-                  ? 'border-white/10 bg-white/[0.04] text-slate-200 hover:bg-white/[0.08] hover:border-white/20' 
-                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+              className={`inline-flex items-center gap-2 px-4 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
+                isDarkMode
+                  ? 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
+                  : 'bg-white/20 hover:bg-white/30 text-white border border-white/30 backdrop-blur-md'
               }`}
             >
-              <Download className="w-3.5 h-3.5" />
+              <Download className="w-4 h-4 stroke-[2.5]" />
               <span>Export CSV</span>
             </button>
 
-            {/* Apple Redesigned Global PDI Audit Box Trigger */}
             <button
               type="button"
               onClick={() => {
                 setIsGlobalAuditOpen(true);
+                globalAuditModal.open();
                 setGlobalAuditSearch('');
               }}
-              className="flex h-10 items-center gap-2.5 px-4 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-white text-xs font-bold shadow-md shadow-[var(--accent-primary)]/25 cursor-pointer transition-all active:scale-[0.96]"
+              className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md cursor-pointer transition-all active:scale-95 shrink-0 ${
+                isDarkMode
+                  ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
+                  : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
+              }`}
               title="Open Global PDI Audit Box"
             >
-              <ClipboardCheck className="w-4 h-4 stroke-[2.2]" />
+              <ClipboardCheck className="w-4 h-4 stroke-[2.5]" />
               <span>Global PDI Audit Box</span>
-              <span className="px-2 py-0.5 rounded-full bg-white/20 text-white font-mono text-[11px] font-bold">
+              <span className={`rounded-full px-2 py-0.5 font-mono text-[11px] font-bold ${
+                isDarkMode ? 'bg-black/15 text-slate-950' : 'bg-blue-100 text-[#155dfc]'
+              }`}>
                 {pendingCount} Left
               </span>
               {pendingCount > 0 && (
-                <span className="w-2 h-2 rounded-full bg-amber-300 animate-pulse" />
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
               )}
             </button>
           </div>
         </div>
 
-        {/* Telemetry Stat Cards Grid - Apple Desktop Widgets */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-5">
-          {/* Total PDI Lots */}
-          <div className={`p-4 rounded-2xl border transition-all ${
-            isDarkMode 
-              ? 'bg-[#09090B] border-white/10 hover:border-white/20' 
-              : 'bg-white/80 border-slate-200/80 hover:border-slate-300 shadow-xs'
-          }`}>
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Total PDI Lots</span>
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF]">
-                <ClipboardCheck className="w-4 h-4 stroke-[2]" />
+        {/* Integrated 4-Column Metric Strip (border-t) */}
+        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t ${
+          isDarkMode
+            ? 'border-white/10 bg-gradient-to-b from-black/40 to-black/70 backdrop-blur-md'
+            : 'border-white/20 bg-white/[0.06] backdrop-blur-sm'
+        }`}>
+          {[
+            {
+              label: 'Total PDI Lots',
+              value: String(totalCount),
+              detail: 'Registered in PDI queue',
+              icon: Package,
+              iconColor: 'text-blue-600',
+              iconBg: 'bg-white shadow-md shadow-black/10',
+            },
+            {
+              label: 'Passed Quantity',
+              value: `${totalPassedQty.toLocaleString('en-IN')} NOS`,
+              detail: `${passedCount} lots cleared for dispatch`,
+              icon: CheckCircle2,
+              iconColor: 'text-white',
+              iconBg: 'bg-emerald-500 shadow-xs',
+            },
+            {
+              label: 'Pending Audit',
+              value: String(pendingCount),
+              detail: 'Awaiting pre-shipment signoff',
+              icon: Clock,
+              iconColor: 'text-white',
+              iconBg: pendingCount > 0 ? 'bg-amber-500 shadow-xs' : 'bg-emerald-500 shadow-xs',
+            },
+            {
+              label: 'Compliance Rate',
+              value: `${complianceRate}%`,
+              detail: 'First-pass outward CoC rate',
+              icon: ShieldCheck,
+              iconColor: 'text-white',
+              iconBg: 'bg-indigo-500 shadow-xs',
+            },
+          ].map((metric, index) => {
+            const MetricIcon = metric.icon;
+            return (
+              <div
+                key={metric.label}
+                className={`flex items-center gap-4 px-6 py-5 transition-all ${
+                  index > 0 ? (isDarkMode ? 'lg:border-l border-white/10' : 'lg:border-l border-white/20') : ''
+                }`}
+              >
+                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${metric.iconBg} ${metric.iconColor}`}>
+                  <MetricIcon className="h-5 w-5 stroke-[2.5]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-bold uppercase tracking-wider text-white/85">
+                    {metric.label}
+                  </div>
+                  <div className="text-2xl sm:text-[26px] font-black tracking-tight text-white tabular-nums my-0.5 leading-tight">
+                    {metric.value}
+                  </div>
+                  <div className="text-xs font-medium text-white/90 truncate">
+                    {metric.detail}
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="mt-2 flex items-baseline justify-between">
-              <span className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{totalCount}</span>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF]">Lots</span>
-            </div>
-          </div>
-
-          {/* Passed Quantity */}
-          <div className={`p-4 rounded-2xl border transition-all ${
-            isDarkMode 
-              ? 'bg-[#09090B] border-white/10 hover:border-white/20' 
-              : 'bg-white/80 border-slate-200/80 hover:border-slate-300 shadow-xs'
-          }`}>
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Passed Quantity</span>
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                <CheckCircle2 className="w-4 h-4 stroke-[2]" />
-              </div>
-            </div>
-            <div className="mt-2 flex items-baseline justify-between">
-              <span className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 tabular-nums">
-                {totalPassedQty.toLocaleString('en-IN')}
-              </span>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                {passedCount} Lots
-              </span>
-            </div>
-          </div>
-
-          {/* Pending Audit Lots */}
-          <div className={`p-4 rounded-2xl border transition-all ${
-            isDarkMode 
-              ? 'bg-[#09090B] border-white/10 hover:border-white/20' 
-              : 'bg-white/80 border-slate-200/80 hover:border-slate-300 shadow-xs'
-          }`}>
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Pending Audit</span>
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500">
-                <Clock className="w-4 h-4 stroke-[2]" />
-              </div>
-            </div>
-            <div className="mt-2 flex items-baseline justify-between">
-              <span className="text-2xl font-bold tracking-tight text-amber-500">{pendingCount}</span>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500">
-                Awaiting
-              </span>
-            </div>
-          </div>
-
-          {/* Quality Compliance Rate */}
-          <div className={`p-4 rounded-2xl border transition-all ${
-            isDarkMode 
-              ? 'bg-[#09090B] border-white/10 hover:border-white/20' 
-              : 'bg-white/80 border-slate-200/80 hover:border-slate-300 shadow-xs'
-          }`}>
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Compliance Rate</span>
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-500/10 text-purple-500">
-                <ShieldCheck className="w-4 h-4 stroke-[2]" />
-              </div>
-            </div>
-            <div className="mt-2 flex items-baseline justify-between">
-              <span className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{complianceRate}%</span>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-500">PDI Rate</span>
-            </div>
-          </div>
+            );
+          })}
         </div>
-      </div>
+      </section>
 
       {/* ========================================================================= */}
       {/* ── SEARCH & FILTER CONTROLS BAR (Apple Unified Search & Segmented Pill) ── */}
       {/* ========================================================================= */}
-      <div className={`p-3.5 sm:p-4 rounded-2xl border flex flex-col md:flex-row items-center justify-between gap-3 ${
-        isDarkMode ? 'bg-[#09090B] border-white/10' : 'bg-white border-slate-200/80 shadow-xs'
+      <div className={`rounded-2xl border p-3.5 space-y-3 transition-all ${
+        isDarkMode
+          ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] shadow-[0_8px_28px_rgba(0,0,0,0.5)]'
+          : 'border-slate-200/80 bg-gradient-to-b from-white/95 via-slate-50/90 to-slate-100/70 shadow-[0_4px_20px_rgba(0,0,0,0.03)]'
       }`}>
-        {/* Search Bar */}
-        <div className="relative w-full md:w-80">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search Job Card, PO, component..."
-            className={`w-full pl-9 pr-8 py-2 rounded-xl text-xs font-medium outline-none transition-all ${
-              isDarkMode 
-                ? 'bg-white/[0.04] border border-white/10 text-white placeholder-slate-500 focus:border-[#5B75F8] focus:ring-1 focus:ring-[#5B75F8]' 
-                : 'bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 focus:border-[#5B75F8] focus:ring-1 focus:ring-[#5B75F8]'
-            }`}
-          />
-          {searchQuery && (
-            <button 
-              onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 p-0.5 cursor-pointer"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
-
-        {/* Filter Pills & View Switcher */}
-        <div className="flex items-center gap-2 w-full md:w-auto justify-between md:justify-end overflow-x-auto">
-          <div className={`flex items-center p-1 rounded-xl border ${
-            isDarkMode ? 'bg-black/50 border-white/10' : 'bg-slate-100 border-slate-200'
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          {/* Tier 1: Apple Segmented Pill Rail */}
+          <div className={`inline-flex items-center gap-1 rounded-xl p-1 border overflow-x-auto no-scrollbar shrink-0 ${
+            isDarkMode ? 'border-white/10 bg-black/40' : 'border-slate-200/80 bg-slate-100/80'
           }`}>
-            {(['ALL', 'PENDING', 'PASS', 'FAIL'] as const).map((status) => (
-              <button
-                key={status}
-                type="button"
-                onClick={() => setFilterStatus(status)}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                  filterStatus === status
-                    ? isDarkMode ? 'bg-white/15 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
-                    : isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                {status === 'ALL' ? 'All Lots' : status === 'PASS' ? 'Passed' : status === 'FAIL' ? 'Failed' : 'Pending'}
-              </button>
-            ))}
+            {(['ALL', 'PENDING', 'PASS', 'FAIL'] as const).map((status) => {
+              const isActive = filterStatus === status;
+              const count = status === 'ALL' ? totalCount : status === 'PASS' ? passedCount : status === 'FAIL' ? failedCount : pendingCount;
+              const isAlert = status === 'FAIL' && failedCount > 0;
+              return (
+                <button
+                  key={status}
+                  type="button"
+                  onClick={() => setFilterStatus(status)}
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                    isActive
+                      ? isDarkMode
+                        ? 'bg-white/15 text-white shadow-xs border border-white/20'
+                        : 'bg-white text-slate-900 shadow-xs border border-slate-200/90'
+                      : isAlert
+                      ? 'text-rose-500 hover:text-rose-600'
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <span>{status === 'ALL' ? 'All Lots' : status === 'PASS' ? 'Passed' : status === 'FAIL' ? 'Failed' : 'Pending'}</span>
+                  <span className={`rounded-full px-1.5 py-0.5 font-mono text-[10px] font-bold ${
+                    isActive
+                      ? isDarkMode ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-900'
+                      : isAlert
+                      ? 'bg-rose-500/10 text-rose-500'
+                      : isDarkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-200/70 text-slate-600'
+                  }`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
 
-          <div className={`flex items-center p-1 rounded-xl border ${
-            isDarkMode ? 'bg-black/50 border-white/10' : 'bg-slate-100 border-slate-200'
-          }`}>
-            <button
-              type="button"
-              onClick={() => setViewMode('grouped')}
-              className={`p-1.5 rounded-lg text-xs transition-all cursor-pointer ${
-                viewMode === 'grouped'
-                  ? isDarkMode ? 'bg-white/15 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
-                  : isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
-              }`}
-              title="Group by PO"
-              aria-label="Group by PO"
-              aria-pressed={viewMode === 'grouped'}
-            >
-              <Layers className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('table')}
-              className={`p-1.5 rounded-lg text-xs transition-all cursor-pointer ${
-                viewMode === 'table'
-                  ? isDarkMode ? 'bg-white/15 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
-                  : isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
-              }`}
-              title="Table View"
-            >
-              <List className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-lg text-xs transition-all cursor-pointer ${
-                viewMode === 'grid'
-                  ? isDarkMode ? 'bg-white/15 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
-                  : isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
-              }`}
-              title="Cards Grid View"
-            >
-              <LayoutGrid className="w-4 h-4" />
-            </button>
+          {/* Tier 2: Spotlight search & View switchers */}
+          <div className="flex items-center gap-2.5">
+            <div className={`relative flex items-center rounded-xl border px-3.5 py-1.5 transition-all w-full sm:w-80 ${
+              isDarkMode
+                ? 'border-white/10 bg-black/40 text-white focus-within:border-blue-500'
+                : 'border-slate-200/90 bg-white text-slate-900 focus-within:border-blue-500 shadow-2xs'
+            }`}>
+              <Search className="w-4 h-4 text-slate-400 shrink-0 mr-2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search Job Card, PO, component..."
+                className="bg-transparent outline-none text-xs w-full placeholder:text-slate-400 font-medium"
+              />
+              {searchQuery ? (
+                <button type="button" onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-600 dark:hover:text-white ml-2">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              ) : (
+                <kbd className={`hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono font-bold rounded border ${
+                  isDarkMode ? 'border-white/10 bg-white/5 text-slate-400' : 'border-slate-200 bg-slate-100 text-slate-500'
+                }`}>
+                  ⌘F
+                </kbd>
+              )}
+            </div>
+
+            {/* View Mode Switcher */}
+            <div className={`hidden sm:flex items-center p-0.5 rounded-xl border shrink-0 ${
+              isDarkMode ? 'border-white/10 bg-black/40' : 'border-slate-200/80 bg-slate-100/80'
+            }`}>
+              <button
+                type="button"
+                onClick={() => setViewMode('grouped')}
+                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                  viewMode === 'grouped'
+                    ? isDarkMode ? 'bg-white/15 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                }`}
+                title="Group by PO"
+                aria-label="Group by PO"
+                aria-pressed={viewMode === 'grouped'}
+              >
+                <Layers className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('table')}
+                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                  viewMode === 'table'
+                    ? isDarkMode ? 'bg-white/15 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                }`}
+                title="Table View"
+              >
+                <List className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('grid')}
+                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                  viewMode === 'grid'
+                    ? isDarkMode ? 'bg-white/15 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                }`}
+                title="Cards Grid View"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0 hidden lg:inline font-mono">
+              {filteredPdi.length} of {totalCount}
+            </span>
           </div>
         </div>
       </div>
@@ -957,9 +984,12 @@ export const PDIView: React.FC<PDIViewProps> = ({
       {/* ── DESKTOP PDI VIEW: TABLE OR INSPECTOR CARD GRID (Viewport >= md) ──      */}
       {/* ========================================================================= */}
       {viewMode === 'table' ? (
-        <div className={`hidden md:block overflow-hidden rounded-[22px] border transition-ui ${
-          isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
+        <div className={`hidden md:block overflow-hidden rounded-3xl border transition-all ${
+          isDarkMode
+            ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#08090c] to-[#010203] shadow-[0_16px_40px_rgba(0,0,0,0.5)]'
+            : 'border-slate-200/90 bg-gradient-to-b from-white via-slate-50/40 to-[#f6f8fc] shadow-[0_4px_24px_rgba(0,0,0,0.04)]'
         }`}>
+          <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-white/70 dark:via-white/10 to-transparent" />
           <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
             <div>
               <div className="text-xs font-extrabold text-slate-900 dark:text-white">Pre-Dispatch Inspection (PDI) Register</div>
@@ -973,7 +1003,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${
+                <tr className={`border-b font-mono text-[10px] font-bold uppercase tracking-[0.14em] ${
                   isDarkMode ? 'border-white/[0.07] bg-black/20 text-slate-500' : 'border-slate-200 bg-slate-50/80 text-slate-400'
                 }`}>
                   <th className="py-4 px-5">Job Card #</th>
@@ -1009,23 +1039,23 @@ export const PDIView: React.FC<PDIViewProps> = ({
                         }}
                         className={`group transition-colors cursor-pointer ${isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'}`}
                       >
-                        <td className="py-4 px-5">
-                          <div className="flex items-center gap-2.5">
-                            <div className={`p-2 rounded-xl transition-transform group-hover:scale-105 shrink-0 ${
+                        <td className="py-4 px-6">
+                          <div className="flex items-center gap-3.5">
+                            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-2xs border ${
                               isDarkMode 
-                                ? 'bg-[var(--accent-primary)]/20 text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/30' 
-                                : 'bg-[var(--accent-primary)]/10 text-[var(--accent-text-light)] border border-[var(--accent-primary)]/20'
+                                ? 'bg-white/10 text-white border-white/15' 
+                                : 'bg-slate-100 text-slate-800 border-slate-200'
                             }`}>
-                              <Package className="w-3.5 h-3.5" />
+                              <ClipboardCheck className="w-5 h-5 stroke-[2]" />
                             </div>
                             <div className="min-w-0">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="font-bold text-xs font-mono text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">
-                                  {pdi.jobNo}
-                                </span>
+                              <div className="font-mono text-sm tracking-tight text-slate-900 dark:text-white font-black">
+                                {pdi.jobNo}
+                              </div>
+                              <div className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate mt-0.5">
+                                {pdi.partCode}
                               </div>
                             </div>
-                            <ChevronRight className="w-3 h-3 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
                           </div>
                         </td>
                         <td className="py-4 px-5 font-mono text-xs">
@@ -1054,16 +1084,21 @@ export const PDIView: React.FC<PDIViewProps> = ({
                           ) : null}
                         </td>
                         <td className="py-4 px-5 text-center">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border ${
                             isPassed
-                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                              ? isDarkMode ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                               : isFailed
-                              ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
-                              : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                              ? isDarkMode ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
+                              : isDarkMode ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-700 border-amber-200'
                           }`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${
-                              isPassed ? 'bg-emerald-500' : isFailed ? 'bg-rose-500' : 'bg-amber-500'
-                            }`} />
+                            <span className="relative flex h-1.5 w-1.5 shrink-0">
+                              {isFailed && (
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+                              )}
+                              <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${
+                                isPassed ? 'bg-emerald-500' : isFailed ? 'bg-rose-500' : 'bg-amber-500'
+                              }`} />
+                            </span>
                             <span>{pdi.pdiStatus || 'PENDING'}</span>
                           </span>
                         </td>
@@ -1266,16 +1301,19 @@ export const PDIView: React.FC<PDIViewProps> = ({
       ) : null}
 
       {/* ========================================================================= */}
-      {/* ── GLOBAL PDI AUDIT BOX MODAL (Apple Sheet Presentation) ──               */}
+      {/* 1. GLOBAL PDI AUDIT BOX MODAL (Apple Sheet Presentation)                   */}
       {/* ========================================================================= */}
-      {isGlobalAuditOpen && (
+      {(globalAuditModal.isOpen || isGlobalAuditOpen) && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 dark:bg-black/80 backdrop-blur-xl animate-in fade-in duration-200 font-sans overflow-y-auto"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 dark:bg-black/80 backdrop-blur-xl font-sans overflow-y-auto"
           onClick={(e) => {
-            if (e.target === e.currentTarget) setIsGlobalAuditOpen(false);
+            if (e.target === e.currentTarget) {
+              setIsGlobalAuditOpen(false);
+              globalAuditModal.close();
+            }
           }}
         >
-          <div className={`relative w-full max-w-4xl h-[82vh] max-h-[750px] min-h-[520px] flex flex-col rounded-3xl border shadow-2xl transition-all overflow-hidden ${
+          <div className={`relative w-full max-w-4xl max-h-[92vh] sm:max-h-[85vh] flex flex-col rounded-t-3xl sm:rounded-3xl border shadow-2xl backdrop-blur-2xl transition-all overflow-hidden ${
             isDarkMode 
               ? 'bg-[#121316]/95 border-white/[0.08] text-slate-100 shadow-[0_24px_70px_rgba(0,0,0,0.85)]' 
               : 'bg-white/95 border-slate-200/90 text-slate-900 shadow-[0_24px_70px_rgba(15,23,42,0.18)]'
@@ -1283,7 +1321,10 @@ export const PDIView: React.FC<PDIViewProps> = ({
             {/* Top Right Close Button */}
             <button
               type="button"
-              onClick={() => setIsGlobalAuditOpen(false)}
+              onClick={() => {
+                setIsGlobalAuditOpen(false);
+                globalAuditModal.close();
+              }}
               className={`absolute top-4 right-4 z-20 w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer ${
                 isDarkMode
                   ? 'bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white'
@@ -1412,6 +1453,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
                         type="button"
                         onClick={() => {
                           setIsGlobalAuditOpen(false);
+                          globalAuditModal.close();
                           handleOpenInspect(item);
                           inspectModal.open({ pdiNo: item.id, jobNo: item.jobNo, orderPo: item.orderPo });
                         }}
@@ -1435,7 +1477,10 @@ export const PDIView: React.FC<PDIViewProps> = ({
               </span>
               <button
                 type="button"
-                onClick={() => setIsGlobalAuditOpen(false)}
+                onClick={() => {
+                  setIsGlobalAuditOpen(false);
+                  globalAuditModal.close();
+                }}
                 className={`px-4 py-1.5 rounded-xl border text-xs font-medium cursor-pointer transition-all ${
                   isDarkMode ? 'border-white/10 text-slate-300 hover:text-white hover:bg-white/10' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
                 }`}

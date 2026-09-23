@@ -13,6 +13,7 @@ import {
   Truck,
   SlidersHorizontal,
   ChevronRight,
+  ChevronLeft,
   RefreshCw,
   X,
   Eye,
@@ -21,6 +22,7 @@ import {
   ArrowRight,
   Search,
   TrendingUp,
+  TrendingDown,
   Package,
   Download,
   CheckSquare,
@@ -40,11 +42,41 @@ import {
   CreditCard,
   Building2,
   Receipt,
-  FileText,
   Megaphone,
-  Pin
+  Pin,
+  Calendar,
+  Sun,
+  Moon,
+  Sunset,
+  UserCheck,
+  ListTodo,
+  Video,
+  ExternalLink,
+  Activity,
+  CheckCircle2,
+  CircleDot,
+  Info,
+  Paperclip,
+  MessageSquare,
+  MoreHorizontal,
+  Mic,
+  ChevronDown,
+  Scissors,
+  MapPin,
+  BarChart2,
+  Users,
+  Cog,
+  Rocket
 } from 'lucide-react';
-import { Announcement } from '../../../services/consoleApiServices';
+import { motion, useReducedMotion } from 'motion/react';
+import { useAuth } from '../../../context/AuthContext';
+import { toast } from '../../../context/ToastContext';
+import {
+  Announcement,
+  Task,
+  AttendanceLog,
+  Meeting
+} from '../../../services/consoleApiServices';
 import {
   CustomerOrder,
   StockItem,
@@ -55,7 +87,8 @@ import {
   VendorBill,
   ProductionLogReport,
   AuditLogEntry,
-  PendingApproval
+  PendingApproval,
+  SystemUser
 } from '../../../types/console';
 import { AgentBentoGrid } from '../AgentBentoGrid';
 import { AccentColorSelector } from '../AccentColorSelector';
@@ -104,30 +137,1003 @@ interface CommandCentreViewProps {
   setShowCustomizeModal?: (show: boolean) => void;
   scope?: string;
   setScope?: (scope: string) => void;
+
+  // New HR Module Integration
+  tasks?: Task[];
+  isLoadingTasks?: boolean;
+  onUpdateTaskStatus?: (taskId: string, status: any) => Promise<any> | void;
+  onCreateTask?: (task: any) => Promise<any> | void;
+  todayLog?: AttendanceLog | null;
+  onCheckIn?: (shift?: string) => Promise<any> | void;
+  onCheckOut?: () => Promise<any> | void;
+  meetings?: Meeting[];
+  currentUser?: SystemUser | null;
 }
 
-const SectionTitle: React.FC<{
-  icon: React.ElementType;
-  title: string;
-  sub?: string;
-  accent?: string;
-  action?: React.ReactNode;
+/* ─────────────────────────────────────────────────────────────────────────────
+   SUBCOMPONENT: Quick Attendance Station (Live Punch In / Out)
+───────────────────────────────────────────────────────────────────────────── */
+const QuickAttendanceStation: React.FC<{
+  todayLog?: AttendanceLog | null;
+  onCheckIn?: (shift?: string) => Promise<any> | void;
+  onCheckOut?: () => Promise<any> | void;
   isDarkMode?: boolean;
-}> = ({ icon: Icon, title, sub, accent, action, isDarkMode = true }) => (
-  <div className="mb-4 flex items-start justify-between gap-3">
-    <div className="flex items-start gap-3">
-      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${accent || 'bg-[var(--accent-soft-light)] text-[var(--accent-text-light)] border border-[var(--accent-border-light)] dark:bg-[var(--accent-soft-dark)] dark:text-[var(--accent-text-dark)] dark:border-[var(--accent-border-dark)] shadow-2xs'}`}>
-        <Icon className="h-4.5 w-4.5 stroke-[2]" />
+}> = ({ todayLog, onCheckIn, onCheckOut, isDarkMode }) => {
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [localCheckedIn, setLocalCheckedIn] = useState<boolean | null>(null);
+
+  const isCheckedIn = localCheckedIn !== null
+    ? localCheckedIn
+    : Boolean(todayLog?.checkIn && !todayLog?.checkOut);
+
+  const isCheckedOut = Boolean(todayLog?.checkOut && !localCheckedIn);
+
+  const handlePunch = async () => {
+    if (isProcessing) return;
+    setIsProcessing(true);
+    try {
+      if (isCheckedIn) {
+        if (onCheckOut) {
+          await onCheckOut();
+        }
+        setLocalCheckedIn(false);
+      } else {
+        if (onCheckIn) {
+          await onCheckIn('General');
+        }
+        setLocalCheckedIn(true);
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Attendance action failed');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const punchTimeFormatted = useMemo(() => {
+    if (todayLog?.checkIn) {
+      try {
+        const d = new Date(todayLog.checkIn);
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      } catch {
+        return todayLog.checkIn;
+      }
+    }
+    return null;
+  }, [todayLog?.checkIn]);
+
+  return (
+    <div
+      className={`inline-flex items-center gap-3 p-1 pl-3.5 pr-1 rounded-full border backdrop-blur-xl transition-all ${
+        isDarkMode
+          ? 'bg-white/[0.05] border-white/10 text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08)]'
+          : 'bg-slate-100/90 border-slate-200/80 text-slate-800 shadow-2xs'
+      }`}
+    >
+      {/* Status indicator */}
+      <div className="flex items-center gap-2">
+        <span className="relative flex h-2 w-2">
+          {isCheckedIn && (
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+          )}
+          <span
+            className={`relative inline-flex h-2 w-2 rounded-full ${
+              isCheckedIn ? 'bg-emerald-500' : isCheckedOut ? 'bg-slate-400' : 'bg-slate-300 dark:bg-slate-600'
+            }`}
+          />
+        </span>
+        <div className="flex items-center gap-1.5 text-xs">
+          <span className="font-medium text-slate-500 dark:text-slate-400">
+            {isCheckedIn ? 'Shift Active' : isCheckedOut ? 'Shift Done' : 'Shift Ready'}
+          </span>
+          {isCheckedIn && punchTimeFormatted && (
+            <>
+              <span className="text-slate-300 dark:text-slate-600">·</span>
+              <span className="font-semibold text-slate-800 dark:text-slate-200 font-mono text-[11px]">
+                {punchTimeFormatted}
+              </span>
+            </>
+          )}
+        </div>
       </div>
-      <div>
-        <h2 className={`text-[15px] font-bold tracking-tight leading-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{title}</h2>
-        {sub && <p className={`mt-0.5 text-xs ${isDarkMode ? 'text-slate-300' : 'text-slate-500'}`}>{sub}</p>}
+
+      {/* Action Button */}
+      <button
+        type="button"
+        disabled={isProcessing}
+        onClick={handlePunch}
+        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer active:scale-95 disabled:opacity-50 ${
+          isCheckedIn
+            ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+            : isDarkMode
+              ? 'bg-white text-slate-950 hover:bg-slate-100 shadow-xs'
+              : 'bg-slate-900 hover:bg-slate-800 text-white shadow-xs'
+        }`}
+      >
+        {isProcessing ? (
+          <RefreshCw className="w-3 h-3 animate-spin" />
+        ) : isCheckedIn ? (
+          <Clock className="w-3 h-3" />
+        ) : (
+          <UserCheck className="w-3 h-3" />
+        )}
+        <span>{isProcessing ? 'Syncing...' : isCheckedIn ? 'Check Out' : 'Check In'}</span>
+      </button>
+    </div>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   SUBCOMPONENT: Interactive Mini Calendar Widget (Wide 8-Column Responsive Split)
+───────────────────────────────────────────────────────────────────────────── */
+const MiniCalendarWidget: React.FC<{
+  isDarkMode?: boolean;
+  tasks?: Task[];
+  meetings?: Meeting[];
+  onNavigateToMeetings?: () => void;
+}> = ({ isDarkMode, tasks = [], meetings = [], onNavigateToMeetings }) => {
+  const [currentMonthDate, setCurrentMonthDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(new Date());
+
+  const year = currentMonthDate.getFullYear();
+  const month = currentMonthDate.getMonth();
+
+  const monthName = currentMonthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+  const prevMonth = () => setCurrentMonthDate(new Date(year, month - 1, 1));
+  const nextMonth = () => setCurrentMonthDate(new Date(year, month + 1, 1));
+
+  // Monday-first weekday header
+  const weekdays = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+
+  const calendarDays = useMemo(() => {
+    const firstDay = (new Date(year, month, 1).getDay() + 6) % 7;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+    const days: { date: Date; dayNum: number; isCurrentMonth: boolean }[] = [];
+
+    for (let i = firstDay - 1; i >= 0; i--) {
+      const d = daysInPrevMonth - i;
+      days.push({
+        date: new Date(year, month - 1, d),
+        dayNum: d,
+        isCurrentMonth: false
+      });
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      days.push({
+        date: new Date(year, month, d),
+        dayNum: d,
+        isCurrentMonth: true
+      });
+    }
+
+    const remaining = (7 - (days.length % 7)) % 7;
+    for (let d = 1; d <= remaining; d++) {
+      days.push({
+        date: new Date(year, month + 1, d),
+        dayNum: d,
+        isCurrentMonth: false
+      });
+    }
+
+    return days;
+  }, [year, month]);
+
+  const today = new Date();
+
+  const dayHasEvent = (d: Date) => {
+    const y = d.getFullYear();
+    const m = d.getMonth();
+    const dt = d.getDate();
+
+    const hasM = meetings.some(meet => {
+      if (!meet.startTime) return false;
+      const md = new Date(meet.startTime);
+      return md.getFullYear() === y && md.getMonth() === m && md.getDate() === dt;
+    });
+
+    const hasT = tasks.some(t => {
+      const taskDate = t.dueAt || t.dueDate;
+      if (!taskDate) return false;
+      const td = new Date(taskDate);
+      return td.getFullYear() === y && td.getMonth() === m && td.getDate() === dt;
+    });
+
+    return hasM || hasT;
+  };
+
+  const selectedYear = selectedDate.getFullYear();
+  const selectedMonth = selectedDate.getMonth();
+  const selectedDay = selectedDate.getDate();
+
+  const selectedMeetings = meetings.filter(m => {
+    if (!m.startTime) return false;
+    const md = new Date(m.startTime);
+    return md.getFullYear() === selectedYear && md.getMonth() === selectedMonth && md.getDate() === selectedDay;
+  });
+
+  const selectedTasks = tasks.filter(t => {
+    const taskDate = t.dueAt || t.dueDate;
+    if (!taskDate) return false;
+    const td = new Date(taskDate);
+    return td.getFullYear() === selectedYear && td.getMonth() === selectedMonth && td.getDate() === selectedDay;
+  });
+
+  return (
+    <div
+      className={`p-3.5 sm:p-4 rounded-2xl border transition-all backdrop-blur-2xl overflow-hidden ${
+        isDarkMode
+          ? 'bg-[#151722]/90 border-white/[0.08] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06),0_12px_32px_rgba(0,0,0,0.4)]'
+          : 'bg-white border-slate-200/90 shadow-[0_4px_20px_rgba(0,0,0,0.04)]'
+      }`}
+    >
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 lg:gap-6 items-start">
+        {/* Left Column: Interactive Month Calendar Grid */}
+        <div>
+          {/* Header: < Month Year > */}
+          <div className="flex items-center justify-between mb-3 px-1">
+            <button
+              type="button"
+              onClick={prevMonth}
+              className="p-1 rounded-full text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+              title="Previous Month"
+            >
+              <ChevronLeft className="w-4 h-4 stroke-[2]" />
+            </button>
+
+            <div className="flex items-center gap-2">
+              <Calendar className="w-3.5 h-3.5 text-blue-500" />
+              <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white tracking-tight">
+                {monthName}
+              </h3>
+            </div>
+
+            <button
+              type="button"
+              onClick={nextMonth}
+              className="p-1 rounded-full text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+              title="Next Month"
+            >
+              <ChevronRight className="w-4 h-4 stroke-[2]" />
+            </button>
+          </div>
+
+          {/* Weekdays Row */}
+          <div className="grid grid-cols-7 gap-1 text-center mb-1">
+            {weekdays.map(w => (
+              <div key={w} className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 py-0.5">
+                {w}
+              </div>
+            ))}
+          </div>
+
+          {/* Days Grid */}
+          <div className="grid grid-cols-7 gap-y-1 place-items-center">
+            {calendarDays.map(({ date, dayNum, isCurrentMonth }, idx) => {
+              const isToday = date.toDateString() === today.toDateString();
+              const isSelected = date.toDateString() === selectedDate.toDateString();
+              const hasEvent = dayHasEvent(date);
+
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => {
+                    setSelectedDate(date);
+                    if (!isCurrentMonth) {
+                      setCurrentMonthDate(new Date(date.getFullYear(), date.getMonth(), 1));
+                    }
+                  }}
+                  className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex flex-col items-center justify-center text-[11px] font-semibold transition-colors cursor-pointer relative ${
+                    isToday
+                      ? 'bg-slate-950 dark:bg-white text-white dark:text-slate-950 font-bold shadow-xs'
+                      : isSelected
+                      ? 'bg-blue-600 text-white font-bold shadow-xs'
+                      : isCurrentMonth
+                      ? 'text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/10'
+                      : 'text-slate-300 dark:text-slate-600 hover:text-slate-400'
+                  }`}
+                >
+                  <span className="leading-none">{dayNum}</span>
+                  <span
+                    className={`w-1 h-1 rounded-full mt-0.5 ${
+                      hasEvent
+                        ? isToday || isSelected
+                          ? 'bg-white dark:bg-slate-950'
+                          : 'bg-blue-500 dark:bg-blue-400'
+                        : 'opacity-0'
+                    }`}
+                  />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Right Column: Selected Date Schedule & Direct Meeting Action */}
+        <div className="md:border-l md:border-slate-100 md:dark:border-white/[0.08] md:pl-5 lg:pl-6 pt-3 md:pt-0 flex flex-col justify-between h-full min-h-[220px]">
+          <div>
+            <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100 dark:border-white/[0.08]">
+              <div className="flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-blue-500" />
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  {selectedDate.toDateString() === today.toDateString()
+                    ? 'Today\'s Schedule'
+                    : selectedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                </span>
+              </div>
+              <span className="text-[10px] font-mono text-slate-400">
+                {selectedMeetings.length + selectedTasks.length} Item{selectedMeetings.length + selectedTasks.length === 1 ? '' : 's'}
+              </span>
+            </div>
+
+            {selectedMeetings.length === 0 && selectedTasks.length === 0 ? (
+              <div className="text-xs text-slate-400 dark:text-slate-500 py-6 text-center flex flex-col items-center justify-center">
+                <Calendar className="w-6 h-6 stroke-[1.5] text-slate-300 dark:text-slate-600 mb-1.5" />
+                <span>No scheduled sessions or task deadlines on this date.</span>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
+                {selectedMeetings.map(m => (
+                  <div
+                    key={m.id}
+                    className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-violet-500/10 border border-violet-500/20 text-xs"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-6 h-6 rounded-lg bg-violet-500/20 text-violet-600 dark:text-violet-400 flex items-center justify-center shrink-0">
+                        <Video className="w-3 h-3" />
+                      </div>
+                      <span className="font-semibold text-slate-800 dark:text-slate-200 truncate">{m.title}</span>
+                    </div>
+                    <span className="text-[10px] text-violet-600 dark:text-violet-400 font-mono font-semibold shrink-0">
+                      {m.startTime ? new Date(m.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'All day'}
+                    </span>
+                  </div>
+                ))}
+                {selectedTasks.map(t => (
+                  <div
+                    key={t.id}
+                    className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                        <CheckSquare className="w-3 h-3" />
+                      </div>
+                      <span className="font-semibold text-slate-800 dark:text-slate-200 truncate">{t.title}</span>
+                    </div>
+                    <span className="text-[9px] uppercase font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
+                      {t.priority || 'Task'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="pt-3 border-t border-slate-100 dark:border-white/[0.08] flex items-center justify-between">
+            <span className="text-[11px] text-slate-400">Team Calendar Synchronized</span>
+            {onNavigateToMeetings && (
+              <button
+                type="button"
+                onClick={onNavigateToMeetings}
+                className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <span>Full Calendar View</span>
+                <ChevronRight className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
-    {action}
-  </div>
-);
+  );
+};
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   SUBCOMPONENT: Meeting Notes Card (Matching Reference UI)
+───────────────────────────────────────────────────────────────────────────── */
+interface MeetingNotesWidgetProps {
+  meetings?: Meeting[];
+  isDarkMode?: boolean;
+  onNavigateToMeetings?: () => void;
+}
+
+const MeetingNotesWidget: React.FC<MeetingNotesWidgetProps> = ({
+  meetings = [],
+  isDarkMode,
+  onNavigateToMeetings
+}) => {
+  const upcomingMeeting = useMemo(() => {
+    const now = new Date();
+    const scheduled = meetings
+      .filter(m => m.status === 'SCHEDULED' && m.startTime && new Date(m.startTime).getTime() >= now.getTime() - 1000 * 60 * 60)
+      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+    return scheduled[0] || null;
+  }, [meetings]);
+
+  const formatMeetingTime = (startStr?: string, endStr?: string) => {
+    if (!startStr) return '02.00 pm - 04.00 pm';
+    try {
+      const s = new Date(startStr);
+      const startFormatted = s.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase();
+      if (!endStr) return startFormatted;
+      const e = new Date(endStr);
+      const endFormatted = e.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase();
+      return `${startFormatted} - ${endFormatted}`;
+    } catch {
+      return '02.00 pm - 04.00 pm';
+    }
+  };
+
+  const handleStartMeeting = () => {
+    if (upcomingMeeting?.meetingLink) {
+      toast.success(`Launching virtual meeting: ${upcomingMeeting.title}`);
+      window.open(upcomingMeeting.meetingLink, '_blank', 'noopener,noreferrer');
+    } else {
+      toast.info('Opening Meetings & Scheduling Suite...');
+      onNavigateToMeetings?.();
+    }
+  };
+
+  const displayTitle = upcomingMeeting?.title || 'Meeting with Arc Company';
+  const displayTime = formatMeetingTime(upcomingMeeting?.startTime, upcomingMeeting?.endTime);
+
+  return (
+    <div className={`p-4 sm:p-5 rounded-3xl border transition-all backdrop-blur-2xl ${
+      isDarkMode
+        ? 'bg-[#11131a] border-white/10 shadow-[0_12px_32px_rgba(0,0,0,0.4)]'
+        : 'bg-white border-slate-200/90 shadow-[0_4px_20px_rgba(0,0,0,0.04)]'
+    }`}>
+      {/* Top Header: "Meeting Notes" + Circular Plus Button */}
+      <div className="flex items-center justify-between mb-4 px-1">
+        <h3 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 dark:text-white">
+          Meeting Notes
+        </h3>
+        <button
+          type="button"
+          onClick={onNavigateToMeetings}
+          className={`w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 ${
+            isDarkMode
+              ? 'bg-white/10 hover:bg-white/15 text-white'
+              : 'bg-slate-100 hover:bg-slate-200 text-slate-800 shadow-2xs'
+          }`}
+          title="Schedule New Meeting"
+        >
+          <Plus className="w-4 h-4 stroke-[2.5]" />
+        </button>
+      </div>
+
+      {/* Stacked Cards Deck Visual Effect (Matching Blue Gradient Spec) */}
+      <div className="relative pt-2">
+        {/* Layer 2 (Backmost) */}
+        <div className={`absolute inset-x-8 -top-1 h-full rounded-[24px] pointer-events-none transition-all ${
+          isDarkMode ? 'bg-blue-500/10 border border-blue-400/20' : 'bg-blue-400/15 border border-blue-300/30'
+        }`} />
+        {/* Layer 1 (Middle) */}
+        <div className={`absolute inset-x-4 top-0.5 h-full rounded-[24px] pointer-events-none transition-all ${
+          isDarkMode ? 'bg-blue-500/20 border border-blue-400/30' : 'bg-blue-400/25 border border-blue-300/40'
+        }`} />
+
+        {/* Front Blue Gradient Card */}
+        <div className="relative z-10 p-4 sm:p-5 rounded-[22px] bg-gradient-to-br from-[#1b64ff] via-[#155dfc] to-[#0d47a1] border border-blue-400/30 text-white shadow-xl shadow-blue-500/20 flex flex-col justify-between min-h-[165px]">
+          <div>
+            <div className="flex items-start justify-between gap-3">
+              <h4 className="text-base sm:text-lg font-extrabold tracking-tight text-white leading-snug line-clamp-2 max-w-[210px]">
+                {displayTitle}
+              </h4>
+              <button
+                type="button"
+                onClick={onNavigateToMeetings}
+                className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 border border-white/25 shadow-xs shrink-0"
+                title="Meeting Options"
+              >
+                <MoreHorizontal className="w-4 h-4 stroke-[2.5]" />
+              </button>
+            </div>
+
+            <div className="text-xs text-white/80 font-medium tracking-wide mt-1.5">
+              Time: {displayTime}
+            </div>
+          </div>
+
+          {/* Full-width white gradient "Start Meeting" button */}
+          <button
+            type="button"
+            onClick={handleStartMeeting}
+            className="w-full mt-4 py-2.5 rounded-full bg-gradient-to-b from-white via-slate-50 to-slate-100 hover:from-white hover:to-blue-50 text-blue-700 font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-blue-950/20 border border-white/80 transition-all active:scale-[0.98] cursor-pointer"
+          >
+            <Video className="w-4 h-4 fill-blue-700 text-blue-700 stroke-[1.5]" />
+            <span>Start Meeting</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   SUBCOMPONENT: AI PlanIQ Card (Matching Reference UI)
+───────────────────────────────────────────────────────────────────────────── */
+interface AiPlanIqWidgetProps {
+  userName?: string;
+  isDarkMode?: boolean;
+  onNavigate?: (view: any) => void;
+}
+
+const AiPlanIqWidget: React.FC<AiPlanIqWidgetProps> = ({
+  userName = 'Masud A.',
+  isDarkMode,
+  onNavigate
+}) => {
+  const [prompt, setPrompt] = useState('');
+  const [modelMode, setModelMode] = useState<'plan' | 'deep' | 'ops'>('plan');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  // Time-aware greeting
+  const greeting = useMemo(() => {
+    const hr = new Date().getHours();
+    if (hr < 12) return 'Good Morning';
+    if (hr < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  }, []);
+
+  const handleSendPrompt = (text?: string) => {
+    const query = (text || prompt).trim();
+    if (!query) {
+      toast.info('Ask AI anything about tasks, factory efficiency, or schedules.');
+      return;
+    }
+    toast.success(`AI Query received: "${query}". Analyzing factory telemetry...`);
+    setPrompt('');
+  };
+
+  return (
+    <div className={`p-5 sm:p-5.5 rounded-3xl border transition-all backdrop-blur-2xl relative overflow-hidden flex flex-col justify-between min-h-[290px] sm:min-h-[315px] ${
+      isDarkMode
+        ? 'bg-gradient-to-br from-[#101c3d] via-[#0d1428] to-[#070b17] border-blue-500/30 shadow-[0_16px_40px_rgba(0,0,0,0.5),inset_0_1px_0_0_rgba(255,255,255,0.12)] text-white'
+        : 'bg-gradient-to-br from-[#eff6ff] via-[#f7faff] to-[#e4edff] border-blue-200 shadow-[0_10px_32px_rgba(59,130,246,0.12),inset_0_1px_0_0_rgba(255,255,255,0.9)] text-slate-900'
+    }`}>
+      {/* Rich ambient radial backlights for gradient depth */}
+      <div className="pointer-events-none absolute -top-14 -right-14 w-40 h-40 rounded-full bg-blue-500/20 blur-2xl" />
+      <div className="pointer-events-none absolute -bottom-14 -left-14 w-40 h-40 rounded-full bg-indigo-500/15 blur-2xl" />
+
+      {/* Top Left Dropdown Pill: [ 🚀 AI PlanIQ ˅ ] */}
+      <div className="relative mb-2">
+        <button
+          type="button"
+          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border transition-all cursor-pointer shadow-xs ${
+            isDarkMode
+              ? 'bg-white/[0.08] hover:bg-white/15 border-white/15 text-white'
+              : 'bg-white hover:bg-slate-50 border-blue-200 text-slate-800'
+          }`}
+        >
+          <div className="w-4 h-4 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center text-[10px]">
+            <Rocket className="w-2.5 h-2.5" />
+          </div>
+          <span>{modelMode === 'plan' ? 'AI PlanIQ' : modelMode === 'deep' ? 'Deep Reason' : 'Factory Copilot'}</span>
+          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+        </button>
+
+        {isDropdownOpen && (
+          <div className={`absolute top-full left-0 mt-1.5 w-44 rounded-2xl border p-1 z-30 shadow-xl backdrop-blur-xl ${
+            isDarkMode ? 'bg-[#181a24] border-white/10 text-white' : 'bg-white border-slate-200 text-slate-800'
+          }`}>
+            {[
+              { id: 'plan', label: 'AI PlanIQ', desc: 'Predictive & Roster' },
+              { id: 'deep', label: 'Deep Reason', desc: 'Financial & Root Cause' },
+              { id: 'ops', label: 'Factory Copilot', desc: 'Shopfloor Realtime' }
+            ].map(item => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => {
+                  setModelMode(item.id as any);
+                  setIsDropdownOpen(false);
+                }}
+                className={`w-full text-left px-3 py-2 rounded-xl text-xs transition-colors cursor-pointer flex flex-col ${
+                  modelMode === item.id
+                    ? isDarkMode ? 'bg-white/10 text-white font-bold' : 'bg-slate-100 text-slate-900 font-bold'
+                    : isDarkMode ? 'hover:bg-white/5 text-slate-300' : 'hover:bg-slate-50 text-slate-600'
+                }`}
+              >
+                <span>{item.label}</span>
+                <span className="text-[10px] text-slate-400 font-normal">{item.desc}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Central 3D Metallic Fluid Ribbon Orb Graphic (Blue Accents) */}
+      <div className="flex flex-col items-center justify-center my-1 sm:my-2">
+        <div className="relative w-16 h-16 sm:w-18 sm:h-18 flex items-center justify-center">
+          {/* Ambient Blue Backlight Glow */}
+          <div className="absolute inset-0 rounded-full bg-blue-500/25 blur-xl animate-pulse" />
+          
+          {/* 3D Fluid Metallic Ribbon Orb SVG in Electric Blue */}
+          <svg
+            viewBox="0 0 100 100"
+            className="w-14 h-14 sm:w-16 sm:h-16 relative z-10 drop-shadow-[0_6px_16px_rgba(37,99,235,0.45)] transition-transform hover:scale-105 duration-300"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <defs>
+              <linearGradient id="orbGrad1" x1="10" y1="10" x2="90" y2="90" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="#93c5fd" />
+                <stop offset="40%" stopColor="#3b82f6" />
+                <stop offset="80%" stopColor="#1d4ed8" />
+                <stop offset="100%" stopColor="#172554" />
+              </linearGradient>
+              <linearGradient id="orbGrad2" x1="90" y1="20" x2="20" y2="80" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="#60a5fa" />
+                <stop offset="50%" stopColor="#2563eb" />
+                <stop offset="100%" stopColor="#1e40af" />
+              </linearGradient>
+              <linearGradient id="orbGrad3" x1="30" y1="90" x2="70" y2="10" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="#bfdbfe" />
+                <stop offset="50%" stopColor="#3b82f6" />
+                <stop offset="100%" stopColor="#1e3a8a" />
+              </linearGradient>
+              <radialGradient id="highlight" cx="35%" cy="30%" r="50%">
+                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.85" />
+                <stop offset="50%" stopColor="#93c5fd" stopOpacity="0.25" />
+                <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+              </radialGradient>
+            </defs>
+            <path
+              d="M50 10 C 25 10, 10 32, 16 55 C 22 76, 42 90, 65 88 C 88 86, 92 62, 84 42 C 76 22, 65 10, 50 10 Z"
+              fill="url(#orbGrad1)"
+            />
+            <path
+              d="M32 30 C 45 18, 72 24, 78 45 C 84 66, 62 82, 45 80 C 28 78, 22 55, 32 30 Z"
+              fill="url(#orbGrad2)"
+            />
+            <path
+              d="M40 35 C 55 28, 68 38, 65 52 C 62 66, 48 70, 38 62 C 28 54, 30 40, 40 35 Z"
+              fill="url(#orbGrad3)"
+            />
+            <ellipse cx="42" cy="32" rx="14" ry="8" transform="rotate(-25 42 32)" fill="url(#highlight)" />
+          </svg>
+        </div>
+
+        {/* Greeting Text */}
+        <h4 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 tracking-tight text-center mt-2">
+          {greeting}, {userName}.
+        </h4>
+        <h3 className="text-sm sm:text-base font-extrabold tracking-tight text-center mt-0.5">
+          <span className="text-slate-900 dark:text-white">HOW Can I </span>
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-500 to-cyan-500 dark:from-blue-400 dark:via-indigo-300 dark:to-cyan-300">
+            Assist You Today?
+          </span>
+        </h3>
+      </div>
+
+      {/* Floating Prompt Input Capsule with Dedicated Enter/Send Button */}
+      <div className={`mt-2.5 p-1.5 pl-4 rounded-full border transition-all flex items-center gap-2 ${
+        isDarkMode
+          ? 'bg-white/[0.06] border-white/15 shadow-inner'
+          : 'bg-white/95 border-blue-200/90 shadow-2xs'
+      }`}>
+        <Sparkles className="w-4 h-4 text-blue-500 shrink-0" />
+        <input
+          type="text"
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSendPrompt()}
+          placeholder="Ask AI anything about factory ops..."
+          className="w-full bg-transparent text-xs text-slate-900 dark:text-white placeholder:text-slate-400 outline-none pr-1"
+        />
+        <button
+          type="button"
+          onClick={() => handleSendPrompt()}
+          className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white flex items-center justify-center shrink-0 transition-all active:scale-95 cursor-pointer shadow-md shadow-blue-500/25"
+          title="Send Query (Enter)"
+        >
+          <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   SUBCOMPONENT: Priority Tasks Widget (HR Module)
+───────────────────────────────────────────────────────────────────────────── */
+const PriorityTasksWidget: React.FC<{
+  tasks?: Task[];
+  isLoading?: boolean;
+  onUpdateStatus?: (taskId: string, status: any) => Promise<any> | void;
+  onNavigateToTasks?: () => void;
+  isDarkMode?: boolean;
+}> = ({ tasks = [], isLoading, onUpdateStatus, onNavigateToTasks, isDarkMode }) => {
+  const [filter, setFilter] = useState<'pending' | 'all'>('pending');
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const pendingTasks = useMemo(() => {
+    return tasks.filter(t => t.status !== 'DONE' && t.status !== 'CANCELLED');
+  }, [tasks]);
+
+  const displayedTasks = filter === 'pending' ? pendingTasks : tasks;
+
+  // Safe index within range
+  const safeIndex = displayedTasks.length > 0 && currentIndex < displayedTasks.length ? currentIndex : 0;
+  const activeTask = displayedTasks[safeIndex];
+
+  const handleNext = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (displayedTasks.length <= 1) return;
+    setCurrentIndex(prev => (prev + 1) % displayedTasks.length);
+  };
+
+  const handlePrev = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (displayedTasks.length <= 1) return;
+    setCurrentIndex(prev => (prev - 1 + displayedTasks.length) % displayedTasks.length);
+  };
+
+  const isDone = activeTask?.status === 'DONE';
+  const progressPercent = isDone ? 100 : activeTask?.status === 'IN_PROGRESS' ? 50 : 0;
+
+  // Real task code (e.g. TSK-101 or section prefix)
+  const taskCode = useMemo(() => {
+    if (!activeTask) return '';
+    if (activeTask.id && activeTask.id.includes('-') && activeTask.id.length <= 12) return activeTask.id;
+    const prefix = (activeTask.section || 'TSK').slice(0, 3).toUpperCase();
+    const suffix = activeTask.id ? activeTask.id.slice(-3).toUpperCase() : '101';
+    return `${prefix}-${suffix}`;
+  }, [activeTask]);
+
+  // Real priority styling
+  const priorityConfig = useMemo(() => {
+    const p = (activeTask?.priority || 'MEDIUM').toUpperCase();
+    if (p === 'URGENT') {
+      return {
+        label: 'Urgent',
+        pill: 'bg-rose-50 text-rose-500 dark:bg-rose-500/15 dark:text-rose-400 border border-rose-200/50 dark:border-rose-500/20',
+        bar: 'bg-rose-500',
+        track: 'bg-rose-100/70 dark:bg-rose-950/40'
+      };
+    }
+    if (p === 'HIGH') {
+      return {
+        label: 'High',
+        pill: 'bg-rose-50 text-rose-500 dark:bg-rose-500/15 dark:text-rose-400 border border-rose-200/50 dark:border-rose-500/20',
+        bar: 'bg-rose-500',
+        track: 'bg-rose-100/70 dark:bg-rose-950/40'
+      };
+    }
+    if (p === 'MEDIUM') {
+      return {
+        label: 'Medium',
+        pill: 'bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400 border border-amber-200/50 dark:border-amber-500/20',
+        bar: 'bg-amber-500',
+        track: 'bg-amber-100/70 dark:bg-amber-950/40'
+      };
+    }
+    return {
+      label: 'Low',
+      pill: 'bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400 border border-blue-200/50 dark:border-blue-500/20',
+      bar: 'bg-blue-500',
+      track: 'bg-blue-100/70 dark:bg-blue-950/40'
+    };
+  }, [activeTask?.priority]);
+
+  const categoryLabel = activeTask?.section || 'Operations';
+  const commentsCount = activeTask?.comments?.length || 0;
+  const attachmentsCount = activeTask?.linkedEntityId ? 1 : 0;
+  const assignees = activeTask?.assignees || [];
+
+  return (
+    <div className="space-y-2">
+      {/* Header with Title, Count, and Filter Toggle */}
+      <div className="flex items-center justify-between px-1 text-xs">
+        <div className="flex items-center gap-2">
+          <span className="font-bold text-slate-800 dark:text-slate-200">Priority Tasks</span>
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold">
+            {pendingTasks.length}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {displayedTasks.length > 1 && (
+            <div className="flex items-center gap-1 text-slate-400">
+              <span className="text-[11px] font-bold tabular-nums">
+                {safeIndex + 1}/{displayedTasks.length}
+              </span>
+              <button
+                type="button"
+                onClick={handlePrev}
+                className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                title="Previous Task"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={handleNext}
+                className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                title="Next Task"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          <div className="flex items-center rounded-xl border border-slate-200 dark:border-white/10 p-0.5 text-[10px] font-bold">
+            <button
+              type="button"
+              onClick={() => setFilter('pending')}
+              className={`px-2 py-0.5 rounded-lg transition-all cursor-pointer ${
+                filter === 'pending'
+                  ? 'bg-[var(--accent-primary)] text-white'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              Pending
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilter('all')}
+              className={`px-2 py-0.5 rounded-lg transition-all cursor-pointer ${
+                filter === 'all'
+                  ? 'bg-[var(--accent-primary)] text-white'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              All
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── CARD DISPLAY: REAL TASKS OR EMPTY STATE ── */}
+      {isLoading ? (
+        <div className={`p-8 rounded-3xl border flex items-center justify-center text-xs text-slate-400 ${
+          isDarkMode ? 'bg-[#151722]/90 border-white/[0.08]' : 'bg-white border-slate-200/90'
+        }`}>
+          <RefreshCw className="w-4 h-4 animate-spin mr-2" /> Loading tasks...
+        </div>
+      ) : displayedTasks.length === 0 ? (
+        /* Empty State: "No Tasks at the moment" */
+        <div
+          onClick={onNavigateToTasks}
+          className={`group relative p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer backdrop-blur-2xl overflow-hidden flex flex-col items-center justify-center text-center ${
+            isDarkMode
+              ? 'bg-[#151722]/90 border-white/[0.08] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06),0_12px_32px_rgba(0,0,0,0.4)] hover:border-white/20'
+              : 'bg-white border-slate-200/90 shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:border-slate-300'
+          }`}
+        >
+          <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center justify-center mb-2">
+            <CheckCircle2 className="w-4.5 h-4.5 stroke-[2]" />
+          </div>
+
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+            No Tasks at the moment
+          </h3>
+
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-2.5 max-w-[240px] leading-relaxed">
+            All priority tasks have been completed.
+          </p>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onNavigateToTasks?.();
+            }}
+            className="px-3 py-1 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/5 transition-all shadow-xs cursor-pointer active:scale-95 flex items-center gap-1.5"
+          >
+            <span>Open Tasks</span>
+            <ArrowRight className="w-3 h-3" />
+          </button>
+        </div>
+      ) : (
+        /* Real Task Card matching the Reference UI */
+        <div
+          onClick={onNavigateToTasks}
+          className={`group relative p-4 rounded-2xl border transition-all cursor-pointer backdrop-blur-2xl overflow-hidden hover:scale-[1.005] active:scale-[0.99] ${
+            isDarkMode
+              ? 'bg-[#151722]/90 border-white/[0.08] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06),0_12px_32px_rgba(0,0,0,0.4)] hover:border-white/20'
+              : 'bg-white border-slate-200/90 shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:border-slate-300'
+          }`}
+        >
+          {/* Top Row: [Priority] [Category]             Code */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${priorityConfig.pill}`}>
+                {priorityConfig.label}
+              </span>
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400 border border-blue-200/50 dark:border-blue-500/20">
+                {categoryLabel}
+              </span>
+            </div>
+
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 tracking-tight">
+              {taskCode}
+            </span>
+          </div>
+
+          {/* Title */}
+          <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white mt-2.5 tracking-tight leading-snug truncate">
+            {activeTask.title}
+          </h3>
+
+          {/* Description */}
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed line-clamp-1">
+            {activeTask.description || (activeTask.dueDate ? `Due date: ${new Date(activeTask.dueDate).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}` : 'Priority operational task assignment')}
+          </p>
+
+          {/* Progress Section */}
+          <div className="mt-3 mb-1">
+            <div className="flex items-center justify-between text-xs mb-1.5">
+              <span className="font-medium text-slate-700 dark:text-slate-300 text-[11px]">Progress</span>
+              <span className="font-bold text-slate-900 dark:text-white tabular-nums text-xs">
+                {progressPercent}%
+              </span>
+            </div>
+            {/* Progress Bar */}
+            <div className={`h-2 w-full rounded-full ${priorityConfig.track} overflow-hidden`}>
+              <div
+                className={`h-full rounded-full ${priorityConfig.bar} transition-all duration-500`}
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Bottom Row / Footer: Avatars Stack on Left, Paperclip and Message on Right */}
+          <div className="flex items-center justify-between pt-1">
+            {/* Real Assignees Avatar Stack */}
+            <div className="flex items-center -space-x-1.5">
+              {assignees.length > 0 ? (
+                assignees.slice(0, 4).map((assignee, idx) => (
+                  assignee.avatarUrl ? (
+                    <img
+                      key={assignee.userId || idx}
+                      src={assignee.avatarUrl}
+                      alt={assignee.userName || 'Assignee'}
+                      className="w-7 h-7 rounded-full border-2 border-white dark:border-[#151722] object-cover shrink-0"
+                    />
+                  ) : (
+                    <div
+                      key={assignee.userId || idx}
+                      className="w-7 h-7 rounded-full border-2 border-white dark:border-[#151722] bg-gradient-to-tr from-blue-600 to-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0"
+                    >
+                      {(assignee.userName || assignee.userEmail || 'U').slice(0, 2).toUpperCase()}
+                    </div>
+                  )
+                ))
+              ) : (
+                <div className="w-7 h-7 rounded-full border-2 border-white dark:border-[#151722] bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-bold flex items-center justify-center shrink-0">
+                  GO
+                </div>
+              )}
+            </div>
+
+            {/* Links & Comments */}
+            <div className="flex items-center gap-4 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300">
+              <div className="flex items-center gap-1.5">
+                <Paperclip className="w-4 h-4 text-slate-700 dark:text-slate-300 stroke-[2.2]" />
+                <span className="tabular-nums">{attachmentsCount}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <MessageSquare className="w-4 h-4 text-slate-700 dark:text-slate-300 stroke-[2.2]" />
+                <span className="tabular-nums">{commentsCount}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   MAIN COMPONENT: CommandCentreView (Revamped Cockpit)
+───────────────────────────────────────────────────────────────────────────── */
 export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
   orders = [],
   stock = [],
@@ -142,6 +1148,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
   auditLogs = [],
   approvals = [],
   announcements = [],
+  users = [],
   containerScrollRef,
   isDarkMode = false,
   isRealtimeStreaming = true,
@@ -153,7 +1160,15 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
   showCustomizeModal: externalShowCustomizeModal,
   setShowCustomizeModal: externalSetShowCustomizeModal,
   scope: externalScope,
-  setScope: externalSetScope
+  setScope: externalSetScope,
+  tasks = [],
+  isLoadingTasks = false,
+  onUpdateTaskStatus,
+  todayLog,
+  onCheckIn,
+  onCheckOut,
+  meetings = [],
+  currentUser
 }) => {
   type CommandCentreLayoutMode = 'executive' | 'operations' | 'quality' | 'financial' | 'numbers' | 'charts';
   const [mode, setMode] = useState<CommandCentreLayoutMode>(() => {
@@ -172,82 +1187,124 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
     setMode(newMode);
     try {
       localStorage.setItem('stratum_cmd_layout', newMode);
-    } catch {
-      // ignore
-    }
+    } catch { /* ignore */ }
   };
+
+  const { user, profile } = useAuth();
+  const shouldReduceMotion = useReducedMotion();
+
+  // Safely extract first name
+  const firstName = useMemo(() => {
+    const metaFirstName = (user as any)?.user_metadata?.first_name || (user as any)?.user_metadata?.firstName;
+    if (metaFirstName && typeof metaFirstName === 'string' && metaFirstName.trim()) {
+      const name = metaFirstName.trim().split(/\s+/)[0];
+      return name.charAt(0).toUpperCase() + name.slice(1);
+    }
+
+    const profileName = profile?.fullName || profile?.name;
+    if (profileName && typeof profileName === 'string' && profileName.trim()) {
+      const name = profileName.trim().split(/\s+/)[0];
+      return name.charAt(0).toUpperCase() + name.slice(1);
+    }
+
+    const metaFullName = (user as any)?.user_metadata?.full_name || (user as any)?.user_metadata?.name || (user as any)?.name;
+    if (metaFullName && typeof metaFullName === 'string' && metaFullName.trim()) {
+      const name = metaFullName.trim().split(/\s+/)[0];
+      return name.charAt(0).toUpperCase() + name.slice(1);
+    }
+
+    if (users && users.length > 0) {
+      const matched = users.find(u =>
+        (user?.id && u.id === user.id) ||
+        (user?.email && u.email && u.email.toLowerCase() === user.email.toLowerCase()) ||
+        (profile?.email && u.email && u.email.toLowerCase() === profile.email.toLowerCase())
+      );
+      const matchedName = matched?.fullName || matched?.name;
+      if (matchedName && typeof matchedName === 'string' && matchedName.trim()) {
+        const name = matchedName.trim().split(/\s+/)[0];
+        return name.charAt(0).toUpperCase() + name.slice(1);
+      }
+    }
+
+    return '';
+  }, [user, profile, users]);
+
+  // Determine local time context
+  const { greeting, supportingContext, timePeriod } = useMemo(() => {
+    const hour = new Date().getHours();
+
+    if (hour >= 5 && hour < 12) {
+      return {
+        greeting: 'Good Morning',
+        supportingContext: "Here's your command center for today. Let's get things moving.",
+        timePeriod: 'morning'
+      };
+    } else if (hour >= 12 && hour < 17) {
+      return {
+        greeting: 'Good Afternoon',
+        supportingContext: "Here's what's happening across your operations this afternoon.",
+        timePeriod: 'afternoon'
+      };
+    } else if (hour >= 17 && hour < 22) {
+      return {
+        greeting: 'Good Evening',
+        supportingContext: "Here's your latest operational snapshot before the day wraps up.",
+        timePeriod: 'evening'
+      };
+    } else {
+      return {
+        greeting: 'Good Night',
+        supportingContext: "Operations are running in overnight mode. Here's your system status.",
+        timePeriod: 'night'
+      };
+    }
+  }, []);
+
+  const formattedDate = useMemo(() => {
+    const now = new Date();
+    const weekday = now.toLocaleDateString('en-US', { weekday: 'long' });
+    const day = now.toLocaleDateString('en-US', { day: 'numeric' });
+    const month = now.toLocaleDateString('en-US', { month: 'long' });
+    return `${weekday} · ${day} ${month}`;
+  }, []);
+
+  // Filter scopes
+  const [internalScope, setInternalScope] = useState('FY 26-27');
+  const scope = externalScope !== undefined ? externalScope : internalScope;
+  const setScope = externalSetScope || setInternalScope;
+
+  const [internalShowCustomize, setInternalShowCustomize] = useState(false);
+  const showCustomizeModal = externalShowCustomizeModal !== undefined ? externalShowCustomizeModal : internalShowCustomize;
+  const setShowCustomizeModal = externalSetShowCustomizeModal || setInternalShowCustomize;
+
   const [tabularSearchQuery, setTabularSearchQuery] = useState('');
   const [tabularCategoryFilter, setTabularCategoryFilter] = useState('ALL');
-  const [localScope, setLocalScope] = useState('FY 26-27');
-  const scope = externalScope ?? localScope;
-  const setScope = externalSetScope ?? setLocalScope;
 
   const localContainerRef = useRef<HTMLDivElement>(null);
-  const activeScrollRef = containerScrollRef || localContainerRef;
+  const effectiveScrollRef = containerScrollRef || localContainerRef;
 
-  const { isRefreshing, pullDistance, isTriggered } = usePullToRefresh(activeScrollRef, {
-    onRefresh: async () => {
-      if (onResetAllData) await onResetAllData();
+  const { pullDistance, isRefreshing, isTriggered } = usePullToRefresh(
+    effectiveScrollRef,
+    {
+      onRefresh: async () => {
+        onResetAllData?.();
+      }
     }
-  });
+  );
 
-  const customizeModal = useUrlModal('customize-dashboard');
-  const showCustomizeModal = externalShowCustomizeModal !== undefined ? externalShowCustomizeModal : customizeModal.isOpen;
-  const setShowCustomizeModal = (open: boolean) => {
-    if (externalSetShowCustomizeModal) externalSetShowCustomizeModal(open);
-    if (open) {
-      customizeModal.open();
-    } else {
-      customizeModal.close();
+  const currencySymbol = '₹';
+
+  const handleNavigate = (view: string) => {
+    if (onNavigate) {
+      onNavigate(view);
+    } else if (onNavigateView) {
+      onNavigateView(view);
     }
   };
 
-  const defaultVisibility = {
-    showAlertsBar: true,
-    showShortagesBanner: true,
-    showAgentBentoGrid: true,
-    showTopMetricsRow: true,
-    showAnalyticsGrid: true,
-    showThroughputChart: true,
-    showOrderPipelineCard: true,
-    showQcCard: true,
-    showMachineRuntimeCard: true
-  };
-
-  const [widgetVisibility, setWidgetVisibility] = useState(() => {
-    try {
-      const saved = localStorage.getItem('stratum_cmd_widgets');
-      if (!saved) return defaultVisibility;
-      return { ...defaultVisibility, ...JSON.parse(saved) };
-    } catch {
-      return defaultVisibility;
-    }
-  });
-
-  const [currencySymbol] = useState(() => {
-    try {
-      return localStorage.getItem('stratum_currency') || '₹';
-    } catch {
-      return '₹';
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('stratum_cmd_widgets', JSON.stringify(widgetVisibility));
-    } catch {
-      // ignore
-    }
-  }, [widgetVisibility]);
-
-  const handleNavigate = (view: any) => {
-    onNavigate?.(view);
-    onNavigateView?.(view);
-  };
-
-  const toggleWidget = (key: keyof typeof widgetVisibility) => {
-    setWidgetVisibility(prev => ({ ...prev, [key]: !prev[key] }));
-  };
+  const pinnedAnnouncement = useMemo(() => {
+    return (announcements || []).find(a => a.isPinned);
+  }, [announcements]);
 
   const getScopeFilter = (dateString?: string) => {
     if (!dateString || scope === 'All-Time') return true;
@@ -260,7 +1317,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
   };
 
   const metrics = useMemo(() => {
-    const scopedOrders = orders.filter(o => getScopeFilter(o.orderDate || o.createdAt));
+    const scopedOrders = orders.filter(o => getScopeFilter(o.poDate || o.orderDate || o.createdAt));
     const scopedInvoices = invoices.filter(i => getScopeFilter(i.invoiceDate || i.createdAt));
     const scopedDispatches = dispatches.filter(d => getScopeFilter(d.dispatchDate || d.createdAt));
 
@@ -278,7 +1335,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
     const openOrders = scopedOrders.filter(o => o.status !== 'CLOSED' && o.status !== 'CANCELLED');
     const openOrderBookValue = openOrders.reduce((acc, o) => acc + (o.grossAmount || 0), 0);
     const totalRevenue = scopedOrders.reduce((acc, o) => acc + (o.grossAmount || 0), 0);
-    const activeJobCards = jobCards.filter(j => j.status === 'IN_PROGRESS');
+    const activeJobCards = jobCards.filter(j => j.status === 'IN_PROGRESS' || j.status === 'IN_PRODUCTION');
     const passQcCount = qcItems.filter(q => q.qcStatus === 'PASS').length;
     const qcPassRate = qcItems.length > 0 ? ((passQcCount / qcItems.length) * 100).toFixed(1) : '98.5';
     const outstandingPayablesSum = payables.filter(p => p.status === 'UNPAID' || p.status === 'OVERDUE').reduce((acc, p) => acc + (p.amount || 0), 0);
@@ -309,6 +1366,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
       totalRevenue,
       activeJobCards,
       qcPassRate,
+      passQcCount,
       outstandingPayablesSum,
       totalOutput,
       pipeline,
@@ -318,6 +1376,84 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
 
   const fmt = (num: number) =>
     `${currencySymbol}${num.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+
+  // Realtime customer distribution from actual orders
+  const customerBreakdown = useMemo(() => {
+    const activeOrders = (metrics.scopedOrders && metrics.scopedOrders.length > 0) ? metrics.scopedOrders : orders;
+
+    const palette = [
+      { dot: 'bg-blue-600', bar: 'bg-blue-600' },
+      { dot: 'bg-slate-900 dark:bg-white', bar: 'bg-[#181920] dark:bg-slate-700' },
+      { dot: 'bg-slate-500', bar: 'bg-slate-500' },
+      { dot: 'bg-slate-300 dark:bg-slate-500', bar: 'bg-slate-300 dark:bg-slate-600' }
+    ];
+
+    if (!activeOrders || activeOrders.length === 0) {
+      return [
+        { name: 'Tata Motors Ltd', count: 0, pct: '0%', pctNum: 25, dot: palette[0].dot, bar: palette[0].bar },
+        { name: 'Bharat Forge Ltd', count: 0, pct: '0%', pctNum: 25, dot: palette[1].dot, bar: palette[1].bar },
+        { name: 'Mahindra & Mahindra', count: 0, pct: '0%', pctNum: 25, dot: palette[2].dot, bar: palette[2].bar },
+        { name: 'Bosch Automotive', count: 0, pct: '0%', pctNum: 25, dot: palette[3].dot, bar: palette[3].bar }
+      ];
+    }
+
+    const groupMap: Record<string, { count: number; totalAmount: number }> = {};
+    activeOrders.forEach(o => {
+      const rawName = o.customerName || (o as any).customer || 'Direct Client';
+      const name = rawName.trim() || 'Direct Client';
+      if (!groupMap[name]) {
+        groupMap[name] = { count: 0, totalAmount: 0 };
+      }
+      groupMap[name].count += 1;
+      groupMap[name].totalAmount += (o.grossAmount || 0);
+    });
+
+    const totalCount = activeOrders.length;
+    const sorted = Object.entries(groupMap)
+      .map(([name, stat]) => ({
+        name,
+        count: stat.count,
+        totalAmount: stat.totalAmount,
+        pctNum: totalCount > 0 ? Math.round((stat.count / totalCount) * 100) : 0
+      }))
+      .sort((a, b) => b.count - a.count || b.totalAmount - a.totalAmount);
+
+    let items: Array<{ name: string; count: number; totalAmount: number; pctNum: number }>;
+    if (sorted.length <= 4) {
+      items = sorted;
+    } else {
+      const top3 = sorted.slice(0, 3);
+      const rest = sorted.slice(3);
+      const othersCount = rest.reduce((acc, r) => acc + r.count, 0);
+      const othersAmount = rest.reduce((acc, r) => acc + r.totalAmount, 0);
+      const othersPct = totalCount > 0 ? Math.round((othersCount / totalCount) * 100) : 0;
+      items = [
+        ...top3,
+        { name: 'Other Customers', count: othersCount, totalAmount: othersAmount, pctNum: othersPct }
+      ];
+    }
+
+    return items.map((item, idx) => ({
+      ...item,
+      pct: `${item.pctNum}%`,
+      dot: palette[idx % palette.length].dot,
+      bar: palette[idx % palette.length].bar
+    }));
+  }, [metrics.scopedOrders, orders]);
+
+  // Contextual date range label for Total Sales card
+  const salesDateRange = useMemo(() => {
+    if (scope === 'FY 26-27') return '01 Apr 2026 - 31 Mar 2027';
+    if (scope === 'FY 25-26') return '01 Apr 2025 - 31 Mar 2026';
+    if (scope === 'Q3 2026') return '01 Oct 2026 - 31 Dec 2026';
+    if (scope === 'All-Time') return 'All-Time Financial Inception';
+
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const fmtD = (d: Date) => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    return `${fmtD(start)} - ${fmtD(end)}`;
+  }, [scope]);
 
   const allTabularMetrics = [
     { code: 'MTR-FIN-01', name: 'Open Order Book Value', category: 'FINANCIAL', valueStr: fmt(metrics.openOrderBookValue), status: 'HEALTHY', viewKey: 'orders' },
@@ -348,199 +1484,18 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
-  const recentOrders = metrics.scopedOrders.slice(0, 6);
-  const pipelineTotal = (Object.values(metrics.pipeline) as number[]).reduce((a, b) => a + b, 0) || 1;
-  const pinnedAnnouncement = useMemo(() => {
-    return announcements.find((a) => a.pinned);
-  }, [announcements]);
-
-  /* ─────────────────────────────  DESIGN TOKENS  ───────────────────────────── */
-
-  const surface = isDarkMode
-    ? 'bg-[#18181B]/90 border border-white/15 backdrop-blur-2xl shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12),0_16px_36px_rgba(0,0,0,0.5)]'
-    : 'bg-gradient-to-b from-white via-white to-slate-50/70 border border-slate-200/90 backdrop-blur-2xl shadow-[inset_0_1px_0_0_#ffffff,0_1px_3px_0_rgba(15,23,42,0.05),0_8px_20px_-3px_rgba(15,23,42,0.07)]';
-
-  const softInner = isDarkMode
-    ? 'bg-white/[0.04] border border-white/10 hover:border-white/20'
-    : 'bg-slate-50/80 border border-slate-200/80 hover:bg-slate-100/90 shadow-[inset_0_1px_1px_0_rgba(15,23,42,0.02)]';
-  const textPrimary = isDarkMode ? 'text-white' : 'text-slate-900';
-  const textMuted = isDarkMode ? 'text-slate-300' : 'text-slate-500';
-  const textFaint = isDarkMode ? 'text-slate-400' : 'text-slate-400';
-
-  /* ─────────────────────────────  SUB-COMPONENTS  ───────────────────────────── */
-
-  const AlertPill = ({ count, label, sub, icon: Icon, tone, onClick }: {
-    count: number | string; label: string; sub: string; icon: React.ElementType;
-    tone: 'rose' | 'amber' | 'emerald' | 'sky' | 'violet'; onClick: () => void;
-  }) => {
-    const tones: Record<string, { border: string; icon: string; text: string }> = {
-      rose: {
-        border: 'border-rose-500/30',
-        icon: isDarkMode ? 'bg-rose-500/15 text-rose-400' : 'bg-rose-50 text-rose-700 border border-rose-200/90 shadow-[0_1px_2px_rgba(244,63,94,0.12)]',
-        text: isDarkMode ? 'text-rose-400' : 'text-rose-700'
-      },
-      amber: {
-        border: 'border-amber-500/30',
-        icon: isDarkMode ? 'bg-amber-500/15 text-amber-400' : 'bg-amber-50 text-amber-700 border border-amber-200/90 shadow-[0_1px_2px_rgba(245,158,11,0.12)]',
-        text: isDarkMode ? 'text-amber-400' : 'text-amber-700'
-      },
-      emerald: {
-        border: 'border-emerald-500/30',
-        icon: isDarkMode ? 'bg-emerald-500/15 text-emerald-400' : 'bg-emerald-50 text-emerald-700 border border-emerald-200/90 shadow-[0_1px_2px_rgba(16,185,129,0.12)]',
-        text: isDarkMode ? 'text-emerald-400' : 'text-emerald-700'
-      },
-      sky: {
-        border: 'border-blue-500/30',
-        icon: isDarkMode ? 'bg-blue-500/15 text-[#5B75F8] dark:text-[#7B92FF]' : 'bg-blue-50 text-blue-700 border border-blue-200/90 shadow-[0_1px_2px_rgba(59,130,246,0.12)]',
-        text: isDarkMode ? 'text-[#7B92FF]' : 'text-blue-700'
-      },
-      violet: {
-        border: 'border-purple-500/30',
-        icon: isDarkMode ? 'bg-purple-500/15 text-purple-400' : 'bg-purple-50 text-purple-700 border border-purple-200/90 shadow-[0_1px_2px_rgba(147,51,234,0.12)]',
-        text: isDarkMode ? 'text-purple-400' : 'text-purple-700'
-      }
-    };
-    const t = tones[tone] || tones.sky;
-
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        className={`group relative flex min-w-[190px] shrink-0 items-center gap-3.5 rounded-2xl border px-4 py-3 text-left transition-all backdrop-blur-2xl hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${isDarkMode
-            ? 'bg-[#18181B]/90 border-white/15 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08),0_8px_20px_rgba(0,0,0,0.35)] hover:bg-[#202026] hover:border-white/25'
-            : 'bg-gradient-to-b from-white via-white to-slate-50/70 border-slate-200/90 shadow-[inset_0_1px_0_0_#ffffff,0_1px_3px_rgba(15,23,42,0.04),0_6px_16px_-2px_rgba(15,23,42,0.06)] hover:border-slate-300 hover:shadow-[inset_0_1px_0_0_#ffffff,0_4px_12px_rgba(15,23,42,0.08)]'
-          } ${t.border}`}
-      >
-        <div className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${t.icon} transition-transform`}>
-          <Icon className="h-4.5 w-4.5 stroke-[2]" />
-          {count !== 0 && count !== '0' && count !== '₹0' && (
-            <span className="absolute -right-1 -top-1 flex h-2 w-2 animate-pulse rounded-full bg-current" />
-          )}
-        </div>
-
-        <div className="relative min-w-0 flex-1">
-          <div className="flex items-center justify-between">
-            <div className={`text-xl font-bold tracking-tight text-slate-900 dark:text-white`}>
-              {count}
-            </div>
-            <ChevronRight className="h-3.5 w-3.5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
-          <div className={`text-xs font-semibold ${t.text} truncate`}>
-            {label}
-          </div>
-          <div className={`text-[10px] text-slate-400 dark:text-slate-400 truncate`}>
-            {sub}
-          </div>
-        </div>
-      </button>
-    );
-  };
-
-  const KpiCard = ({ label, value, hint, delta, icon: Icon, badge, tone = 'blue', onClick }: {
-    label: string; value: string; hint: string; delta?: string; icon: React.ElementType;
-    badge?: string; tone?: 'blue' | 'rose' | 'amber' | 'emerald' | 'purple'; onClick: () => void;
-  }) => {
-    const toneStyles: Record<string, { icon: string; text: string }> = {
-      blue: {
-        icon: isDarkMode ? 'bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF]' : 'bg-blue-50 text-blue-700 border border-blue-200/90 shadow-[0_1px_2px_rgba(59,130,246,0.12)]',
-        text: isDarkMode ? 'text-[#7B92FF]' : 'text-blue-700'
-      },
-      rose: {
-        icon: isDarkMode ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' : 'bg-rose-50 text-rose-700 border border-rose-200/90 shadow-[0_1px_2px_rgba(244,63,94,0.12)]',
-        text: isDarkMode ? 'text-rose-400' : 'text-rose-700'
-      },
-      amber: {
-        icon: isDarkMode ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-amber-50 text-amber-700 border border-amber-200/90 shadow-[0_1px_2px_rgba(245,158,11,0.12)]',
-        text: isDarkMode ? 'text-amber-400' : 'text-amber-700'
-      },
-      emerald: {
-        icon: isDarkMode ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-emerald-50 text-emerald-700 border border-emerald-200/90 shadow-[0_1px_2px_rgba(16,185,129,0.12)]',
-        text: isDarkMode ? 'text-emerald-400' : 'text-emerald-700'
-      },
-      purple: {
-        icon: isDarkMode ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400' : 'bg-purple-50 text-purple-700 border border-purple-200/90 shadow-[0_1px_2px_rgba(147,51,234,0.12)]',
-        text: isDarkMode ? 'text-purple-400' : 'text-purple-700'
-      }
-    };
-    const t = toneStyles[tone] || toneStyles.blue;
-
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        className={`group relative flex min-h-[140px] flex-col justify-between rounded-3xl border p-5 text-left transition-all backdrop-blur-2xl hover:scale-[1.01] active:scale-[0.99] cursor-pointer ${isDarkMode
-            ? 'bg-[#18181B]/90 border-white/15 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12),0_12px_32px_rgba(0,0,0,0.45)] hover:bg-[#202026] hover:border-white/25'
-            : 'bg-gradient-to-b from-white via-white to-slate-50/70 border-slate-200/90 shadow-[inset_0_1px_0_0_#ffffff,0_1px_3px_0_rgba(15,23,42,0.05),0_8px_20px_-3px_rgba(15,23,42,0.07)] hover:border-slate-300 hover:shadow-[inset_0_1px_0_0_#ffffff,0_4px_12px_rgba(15,23,42,0.08),0_16px_32px_-4px_rgba(15,23,42,0.1)]'
-          }`}
-      >
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-300 tracking-wide">
-                {label}
-              </span>
-              {badge && (
-                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${t.icon}`}>
-                  {badge}
-                </span>
-              )}
-            </div>
-            <p className="mt-2 text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-              {value}
-            </p>
-          </div>
-          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${t.icon}`}>
-            <Icon className="h-5 w-5 stroke-[2]" />
-          </div>
-        </div>
-
-        <div className="mt-3 flex items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-white/5">
-          <p className="text-xs text-slate-400 dark:text-slate-500 truncate">
-            {hint}
-          </p>
-          {delta && (
-            <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">
-              <TrendingUp className="h-3 w-3" />
-              {delta}
-            </span>
-          )}
-        </div>
-      </button>
-    );
-  };
-
-  const statusChip = (status: string) => {
-    const s = status.toLowerCase();
-    if (s.includes('critical') || s.includes('due') || s === 'alert')
-      return 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20';
-    if (s.includes('run') || s.includes('active') || s.includes('process'))
-      return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20';
-    if (s.includes('optimal') || s.includes('healthy') || s.includes('ok') || s.includes('complete'))
-      return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20';
-    return 'bg-slate-500/10 text-slate-500 dark:text-slate-400 border border-slate-500/20';
   };
 
   /* ─────────────────────────────  RENDER  ───────────────────────────── */
 
   return (
-    <div ref={localContainerRef} className="relative space-y-6 pb-12 font-sans overflow-hidden">
+    <div ref={localContainerRef} className="relative space-y-2.5 font-sans overflow-hidden">
 
-      {/* ── Apple HIG Atmospheric Ambient Gradient Mesh Background ── */}
+      {/* Atmospheric Ambient Gradient Glow Background */}
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        {/* Top Center Radiant Glow (dynamic brand accent) */}
-        <div className="absolute -top-32 left-1/2 h-[550px] w-full max-w-5xl -translate-x-1/2 bg-[radial-gradient(ellipse_75%_55%_at_50%_0%,rgba(0,122,255,0.20),transparent_70%)] blur-3xl" />
-
-        {/* Top-Right Secondary Atmospheric Orb (Electric Violet/Purple) */}
-        <div className="absolute -top-12 -right-24 h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle_at_center,rgba(147,51,234,0.14),transparent_65%)] blur-3xl" />
-
-        {/* Mid-Left Emerald Factory Operations Aura */}
-        <div className="absolute top-[38%] -left-28 h-[480px] w-[480px] rounded-full bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.10),transparent_65%)] blur-3xl" />
-
-        {/* Bottom-Right Sapphire Cashflow Glow */}
-        <div className="absolute -bottom-24 right-1/4 h-[400px] w-[400px] rounded-full bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.12),transparent_65%)] blur-3xl" />
+        <div className="absolute -top-32 left-1/3 h-[500px] w-full max-w-5xl -translate-x-1/2 bg-[radial-gradient(ellipse_70%_50%_at_50%_0%,rgba(37,99,235,0.18),transparent_70%)] blur-3xl" />
+        <div className="absolute top-10 right-0 h-[450px] w-[450px] rounded-full bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.14),transparent_65%)] blur-3xl" />
+        <div className="absolute top-[40%] -left-20 h-[450px] w-[450px] rounded-full bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.12),transparent_65%)] blur-3xl" />
       </div>
 
       {/* Pull-to-refresh */}
@@ -556,303 +1511,393 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
         </div>
       )}
 
-      {/* ── Pinned Company Announcement Banner ── */}
-      {pinnedAnnouncement && (
-        <div
-          onClick={() => handleNavigate('announcements')}
-          className={`relative cursor-pointer overflow-hidden rounded-2xl border p-4 transition-all duration-200 hover:scale-[1.005] active:scale-[0.995] ${isDarkMode
-              ? 'bg-amber-500/10 border-amber-500/30 text-white shadow-[0_4px_24px_rgba(245,158,11,0.15)]'
-              : 'bg-amber-50/90 border-amber-300 text-amber-950 shadow-sm'
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {/* ── 1. APPLE COCKPIT HEADER: EDITORIAL TYPOGRAPHY & CAPSULE DECK ──  */}
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      <motion.div
+        initial={shouldReduceMotion ? false : { opacity: 0, y: -6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+        className={`flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-3.5 sm:px-5 sm:py-3.5 rounded-2xl border transition-all backdrop-blur-2xl ${
+          isDarkMode
+            ? 'bg-gradient-to-b from-[#1c1f2a] via-[#161822] to-[#11131a] border-white/10 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1),inset_0_-1px_0_0_rgba(0,0,0,0.5),0_8px_24px_rgba(0,0,0,0.4)]'
+            : 'bg-gradient-to-b from-white via-[#fbfcfd] to-[#f4f6fa] border-slate-200/90 shadow-[inset_0_1px_0_0_rgba(255,255,255,1),inset_0_-1px_0_0_rgba(0,0,0,0.03),0_4px_16px_rgba(0,0,0,0.03)]'
+        }`}
+      >
+        <div className="space-y-1">
+          {/* Apple Sub-eyebrow Badge */}
+          <div className="flex items-center gap-2 mb-1">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-semibold tracking-wide uppercase bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+              <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
+              Command Centre
+            </span>
+            <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
+              Factory Operating System
+            </span>
+          </div>
+
+          {/* Apple Large Title */}
+          <h1 className="text-2xl sm:text-[28px] font-bold tracking-tight text-slate-900 dark:text-white leading-tight">
+            {greeting}{firstName ? `, ${firstName}` : ''}
+          </h1>
+
+          {/* Subtitle */}
+          <p className="text-xs sm:text-[13px] text-slate-500 dark:text-slate-400 font-normal leading-relaxed max-w-2xl">
+            {supportingContext}
+          </p>
+        </div>
+
+        {/* Apple Capsule Toolbar Deck */}
+        <div className="flex flex-wrap items-center gap-2 sm:self-auto shrink-0">
+          {/* Quick Attendance Capsule */}
+          <QuickAttendanceStation
+            todayLog={todayLog}
+            onCheckIn={onCheckIn}
+            onCheckOut={onCheckOut}
+            isDarkMode={isDarkMode}
+          />
+
+          {/* Apple Date & Daylight Capsule */}
+          <div
+            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-medium backdrop-blur-xl transition-all ${
+              isDarkMode
+                ? 'bg-white/[0.05] border-white/10 text-slate-300 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08)]'
+                : 'bg-slate-100/90 border-slate-200/80 text-slate-700 shadow-2xs'
             }`}
-        >
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 text-amber-500 border border-amber-500/30">
-                <Megaphone className="h-4.5 w-4.5" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-500 dark:text-amber-400 border border-amber-500/30">
-                    <Pin className="w-2.5 h-2.5 fill-amber-500" />
-                    <span>Company Notice</span>
-                  </span>
-                  <span className="text-xs font-bold truncate">{pinnedAnnouncement.title}</span>
+          >
+            {timePeriod === 'night' ? (
+              <Moon className="w-3.5 h-3.5 text-indigo-400" />
+            ) : timePeriod === 'evening' ? (
+              <Sunset className="w-3.5 h-3.5 text-amber-500" />
+            ) : (
+              <Sun className="w-3.5 h-3.5 text-amber-500" />
+            )}
+            <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600" />
+            <Calendar className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+            <span className="tracking-tight font-medium">{formattedDate}</span>
+          </div>
+
+          {/* New Order Capsule Button (Beside Date) */}
+          <button
+            type="button"
+            onClick={() => handleNavigate('orders')}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer active:scale-95"
+          >
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>New Order</span>
+          </button>
+        </div>
+      </motion.div>
+
+      {mode === 'executive' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+          {/* ───────────────── LEFT 8 COLUMNS: OPERATIONS, CALENDAR & PRIORITY TASKS ────────── */}
+          <div className="lg:col-span-8 space-y-2.5">
+            {/* Luminous Telemetry KPI Cards - 4 Vibrant Gradients (Bigger & More Spacious) */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {/* 1. CARD: Total Orders (Our Blue Gradient) */}
+              <div
+                className={`group relative p-4 sm:p-4.5 rounded-2xl border transition-all backdrop-blur-2xl overflow-hidden flex flex-col justify-between text-white shadow-xl min-h-[160px] ${
+                  isDarkMode
+                    ? 'bg-gradient-to-br from-[#12389a] via-[#155dfc] to-[#0a2674] border-blue-400/30 shadow-blue-900/30'
+                    : 'bg-gradient-to-br from-[#1b64ff] via-[#155dfc] to-[#0d47a1] border-blue-400/40 shadow-blue-500/20'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-1.5 mb-1.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-white/20 text-white flex items-center justify-center shrink-0 border border-white/25 shadow-2xs">
+                        <Receipt className="w-4 h-4 stroke-[2.2] text-white" />
+                      </div>
+                      <span className="text-xs sm:text-sm font-bold text-white truncate">
+                        Total Orders
+                      </span>
+                    </div>
+                    <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white border border-white/25 shrink-0 shadow-2xs">
+                      <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <span>
+                        {orders.length > 0
+                          ? `${Math.round(((metrics.pipeline.confirmed + metrics.pipeline.production + metrics.pipeline.qc + metrics.pipeline.dispatch) / Math.max(orders.length, 1)) * 100)}%`
+                          : '+12%'}
+                      </span>
+                    </span>
+                  </div>
+
+                  <div className="text-2xl sm:text-[28px] font-black tracking-tight text-white my-1.5 leading-tight">
+                    {((metrics.scopedOrders && metrics.scopedOrders.length > 0) ? metrics.scopedOrders.length : orders.length).toLocaleString('en-IN')}
+                  </div>
+
+                  <div className="flex items-center gap-1 h-2 rounded-full overflow-hidden w-full my-2 bg-white/20">
+                    {customerBreakdown.map((item, idx) => (
+                      <div
+                        key={item.name + idx}
+                        className={`h-full ${idx === 0 ? 'bg-white' : idx === 1 ? 'bg-white/75' : idx === 2 ? 'bg-white/50' : 'bg-white/30'} transition-all`}
+                        style={{ width: `${Math.max(item.pctNum, item.count > 0 ? 8 : 4)}%` }}
+                        title={`${item.name}: ${item.count} orders (${item.pct})`}
+                      />
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 my-1 text-[11px]">
+                    {customerBreakdown.slice(0, 2).map((item, idx) => (
+                      <div key={item.name} className="flex items-center justify-between min-w-0 pr-1">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${idx === 0 ? 'bg-white' : 'bg-white/75'}`} />
+                          <span className="font-medium text-white/85 truncate" title={item.name}>
+                            {item.name}
+                          </span>
+                        </div>
+                        <span className="font-bold text-white shrink-0 ml-1">
+                          {item.pct}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <p className={`text-xs mt-0.5 truncate ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                  {pinnedAnnouncement.body}
-                </p>
+
+                <div className="flex items-center justify-between pt-2 mt-1.5 border-t border-white/20">
+                  <span className="text-[11px] font-medium text-white/80 truncate">
+                    Distribution
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleNavigate('orders')}
+                    className="px-2.5 py-1 rounded-lg bg-white/15 hover:bg-white/25 border border-white/30 text-[11px] font-semibold text-white transition-all shadow-2xs cursor-pointer active:scale-95 shrink-0"
+                  >
+                    Details
+                  </button>
+                </div>
+              </div>
+
+              {/* 2. CARD: Total Sales (Clean Flat Surface) */}
+              <div
+                className={`group relative p-4 sm:p-4.5 rounded-2xl border transition-all backdrop-blur-2xl overflow-hidden flex flex-col justify-between min-h-[160px] ${
+                  isDarkMode
+                    ? 'bg-[#151722]/90 border-white/[0.08] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06),0_8px_24px_rgba(0,0,0,0.35)] text-white'
+                    : 'bg-white border-slate-200/90 shadow-[0_4px_16px_rgba(0,0,0,0.04)] text-slate-900'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-1.5 mb-1.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center shrink-0 border ${
+                        isDarkMode
+                          ? 'bg-white/10 text-white border-white/10'
+                          : 'bg-slate-100 text-slate-700 border-slate-200/80 shadow-2xs'
+                      }`}>
+                        <RefreshCw className="w-4 h-4 stroke-[2.2]" />
+                      </div>
+                      <span className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
+                        Total Sales
+                      </span>
+                    </div>
+                    <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400 border border-blue-200/60 dark:border-blue-500/20 shrink-0">
+                      <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <span>+14.8%</span>
+                    </span>
+                  </div>
+
+                  <div className="text-2xl sm:text-[28px] font-black tracking-tight text-slate-900 dark:text-white my-1.5 leading-tight truncate">
+                    {fmt(
+                      metrics.totalRevenue > 0
+                        ? metrics.totalRevenue
+                        : orders.reduce((acc, o) => acc + (o.grossAmount || 0), 0)
+                    )}
+                  </div>
+
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug my-1 line-clamp-2">
+                    Invoiced billing against active customer POs.
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 mt-1.5 border-t border-slate-100 dark:border-white/[0.08]">
+                  <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate max-w-[95px]">
+                    {salesDateRange}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleNavigate('invoices')}
+                    className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-white/10 text-[11px] font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/5 transition-all shadow-2xs cursor-pointer active:scale-95 shrink-0"
+                  >
+                    Details
+                  </button>
+                </div>
+              </div>
+
+              {/* 3. CARD: Shopfloor In-Flight (Darker Green Gradient BG & White Icon) */}
+              <div
+                className={`group relative p-4 sm:p-4.5 rounded-2xl border transition-all backdrop-blur-2xl overflow-hidden flex flex-col justify-between text-white shadow-xl min-h-[160px] ${
+                  isDarkMode
+                    ? 'bg-gradient-to-br from-[#064e3b] via-[#022c22] to-[#011a14] border-emerald-500/30 shadow-emerald-950/50'
+                    : 'bg-gradient-to-br from-[#047857] via-[#065f46] to-[#022c22] border-emerald-500/40 shadow-emerald-950/25'
+                }`}
+              >
+                <div className="pointer-events-none absolute -top-12 -right-12 h-24 w-24 rounded-full bg-white/15 blur-xl" />
+                <div>
+                  <div className="flex items-center justify-between gap-1.5 mb-1.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-white/20 text-white flex items-center justify-center shrink-0 border border-white/25 shadow-2xs">
+                        <Factory className="w-4 h-4 stroke-[2.2] text-white" />
+                      </div>
+                      <span className="text-xs sm:text-sm font-bold text-white truncate">
+                        Shopfloor
+                      </span>
+                    </div>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white border border-white/25 shrink-0 shadow-2xs">
+                      <span className="relative flex h-1.5 w-1.5">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
+                        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
+                      </span>
+                      <span>Live</span>
+                    </span>
+                  </div>
+
+                  <div className="text-2xl sm:text-[28px] font-black tracking-tight text-white my-1.5 leading-tight truncate">
+                    {metrics.activeJobCards.length} JCs
+                  </div>
+
+                  <p className="text-[11px] text-white/85 line-clamp-2 my-1 leading-snug">
+                    {metrics.totalOutput.toLocaleString('en-IN')} units produced across CNC centers.
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 mt-1.5 border-t border-white/20">
+                  <span className="text-[11px] font-medium text-white/80 truncate">
+                    Machining
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleNavigate('production')}
+                    className="px-2.5 py-1 rounded-lg bg-white/15 hover:bg-white/25 border border-white/30 text-[11px] font-semibold text-white transition-all shadow-2xs cursor-pointer active:scale-95 shrink-0"
+                  >
+                    Details
+                  </button>
+                </div>
+              </div>
+
+              {/* 4. CARD: Immediate Action Required (Darker Red Gradient) */}
+              <div
+                className={`group relative p-4 sm:p-4.5 rounded-2xl border transition-all backdrop-blur-2xl overflow-hidden flex flex-col justify-between text-white shadow-xl min-h-[160px] ${
+                  isDarkMode
+                    ? 'bg-gradient-to-br from-[#881337] via-[#4c0519] to-[#2e020d] border-rose-500/30 shadow-rose-950/50'
+                    : 'bg-gradient-to-br from-[#be123c] via-[#9f1239] to-[#4c0519] border-rose-500/40 shadow-rose-950/25'
+                }`}
+              >
+                <div className="pointer-events-none absolute -top-12 -right-12 h-24 w-24 rounded-full bg-white/15 blur-xl" />
+                <div>
+                  <div className="flex items-center justify-between gap-1.5 mb-1.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-white/20 text-white flex items-center justify-center shrink-0 border border-white/25 shadow-2xs">
+                        <AlertTriangle className="w-4 h-4 stroke-[2.2] text-white" />
+                      </div>
+                      <span className="text-xs sm:text-sm font-bold text-white truncate">
+                        Critical
+                      </span>
+                    </div>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white border border-white/25 shrink-0 shadow-2xs animate-pulse">
+                      {metrics.criticalCount > 0 ? `${metrics.criticalCount}` : 'Clear'}
+                    </span>
+                  </div>
+
+                  <div className="text-2xl sm:text-[28px] font-black tracking-tight text-white my-1.5 leading-tight truncate">
+                    {metrics.criticalCount} Alerts
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5 my-1">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/20 text-white border border-white/25 shadow-2xs">
+                      Short: {metrics.itemsShortCount}
+                    </span>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/20 text-white border border-white/25 shadow-2xs">
+                      Sign: {metrics.pendingApprovalsCount}
+                    </span>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/20 text-white border border-white/25 shadow-2xs">
+                      QC: {metrics.qcHoldCount}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 mt-1.5 border-t border-white/20">
+                  <span className="text-[11px] font-medium text-white/80 truncate">
+                    Bottlenecks
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (metrics.pendingApprovalsCount > 0) handleNavigate('approvals');
+                      else if (metrics.itemsShortCount > 0) handleNavigate('inventory');
+                      else handleNavigate('orders');
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-white/15 hover:bg-white/25 border border-white/30 text-[11px] font-semibold text-white transition-all shadow-2xs cursor-pointer active:scale-95 shrink-0"
+                  >
+                    Details
+                  </button>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-1 shrink-0 text-xs font-semibold text-amber-500 dark:text-amber-400">
-              <span className="hidden sm:inline">Read Notice</span>
-              <ChevronRight className="h-4 w-4" />
-            </div>
+
+            {/* ── Interactive Mini Calendar (Left Middle) ── */}
+            <MiniCalendarWidget
+              isDarkMode={isDarkMode}
+              tasks={tasks}
+              meetings={meetings}
+              onNavigateToMeetings={() => handleNavigate('meetings')}
+            />
+
+            {/* ── Priority Tasks (Shifted to Bottom of Calendar) ── */}
+            <PriorityTasksWidget
+              tasks={tasks}
+              isLoading={isLoadingTasks}
+              onUpdateStatus={onUpdateTaskStatus}
+              onNavigateToTasks={() => handleNavigate('tasks')}
+              isDarkMode={isDarkMode}
+            />
+          </div>
+
+          {/* ───────────────── RIGHT 4 COLUMNS: MEETING NOTES & AI PLANIQ ────────── */}
+          <div className="lg:col-span-4 space-y-2.5">
+            {/* 1. Meeting Notes Card (Reference UI) */}
+            <MeetingNotesWidget
+              meetings={meetings}
+              isDarkMode={isDarkMode}
+              onNavigateToMeetings={() => handleNavigate('meetings')}
+            />
+
+            {/* 2. AI PlanIQ Card (Reference UI) */}
+            <AiPlanIqWidget
+              userName={firstName || 'Masud A.'}
+              isDarkMode={isDarkMode}
+              onNavigate={handleNavigate}
+            />
+
+            {/* 3. Urgent Approvals Quick Access if any */}
+            {metrics.pendingApprovalsCount > 0 && (
+              <div
+                onClick={() => handleNavigate('approvals')}
+                className={`p-3 sm:p-3.5 rounded-2xl border transition-all cursor-pointer backdrop-blur-2xl hover:scale-[1.01] ${
+                  isDarkMode
+                    ? 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+                    : 'bg-rose-50/90 border-rose-200 text-rose-900'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <CheckSquare className="w-4 h-4 text-rose-500 shrink-0" />
+                    <div>
+                      <div className="text-xs font-bold">{metrics.pendingApprovalsCount} Awaiting Signatures</div>
+                      <div className="text-[10px] text-slate-400">High-value POs & credit lines</div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-rose-500" />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* ══════════════  APPLE HIG EXECUTIVE WINDOW HEADER  ══════════════ */}
-      <section className={`relative overflow-hidden rounded-3xl border transition-all backdrop-blur-2xl ${isDarkMode
-          ? 'bg-gradient-to-b from-[#1c1c22]/95 via-[#16161b]/95 to-[#121216]/95 border-white/15 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.15),0_24px_60px_rgba(0,0,0,0.6)] text-white'
-          : 'bg-gradient-to-b from-white via-white to-slate-50/80 border-slate-200/90 shadow-[inset_0_1px_0_0_#ffffff,0_2px_4px_rgba(15,23,42,0.04),0_12px_28px_-4px_rgba(15,23,42,0.08)] text-slate-900'
-        }`}>
-        {/* Apple Inset Specular Ambient Highlight */}
-        <div className="pointer-events-none absolute -top-20 -right-20 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(0,122,255,0.22),transparent_70%)] blur-2xl" />
-        <div className="pointer-events-none absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(147,51,234,0.15),transparent_70%)] blur-2xl" />
-        <div className="relative p-5 sm:p-6 lg:p-7">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="space-y-1.5">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                  <span className="relative flex h-2 w-2">
-                    {isRealtimeStreaming && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />}
-                    <span className={`relative inline-flex h-2 w-2 rounded-full ${isRealtimeStreaming ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-                  </span>
-                  <span>{isRealtimeStreaming ? 'Live Operations' : 'Paused'}</span>
-                </span>
-                {metrics.criticalCount > 0 && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/20 bg-rose-500/10 px-3 py-1 text-xs font-semibold text-rose-600 dark:text-rose-400">
-                    <AlertTriangle className="h-3.5 w-3.5" />
-                    <span>{metrics.criticalCount} attention items</span>
-                  </span>
-                )}
-              </div>
-
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-                  Executive Command Centre
-                </h1>
-                <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Real-time visibility across orders, shopfloor, quality gates, and finance — scoped to{' '}
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">{scope}</span>.
-                </p>
-              </div>
-            </div>
-
-            {/* Apple Window Toolbar Controls */}
-            <div className="flex flex-wrap items-center gap-2.5">
-              <select
-                value={scope}
-                onChange={e => setScope(e.target.value)}
-                className={`h-9 cursor-pointer rounded-full border px-3.5 text-xs font-semibold outline-none transition-all ${isDarkMode
-                    ? 'border-white/10 bg-black/60 text-slate-200 hover:border-white/20'
-                    : 'border-slate-200/90 bg-white text-slate-800 hover:border-slate-300 shadow-2xs'
-                  }`}
-              >
-                <option value="All-Time">All-Time</option>
-                <option value="FY 26-27">FY 26-27</option>
-                <option value="FY 25-26">FY 25-26</option>
-                <option value="Q3 2026">Q3 2026</option>
-              </select>
-
-              {/* Layout Switcher Pill Group */}
-              <div className={`flex items-center rounded-full border p-1 ${isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200/90 bg-slate-100/90 shadow-2xs'
-                }`}>
-                {[
-                  { id: 'executive', label: 'Executive', icon: LayoutDashboard },
-                  { id: 'operations', label: 'Shopfloor', icon: Factory },
-                  { id: 'quality', label: 'Quality', icon: ShieldCheck },
-                  { id: 'financial', label: 'Finance', icon: Wallet },
-                  { id: 'numbers', label: 'Tabular', icon: Hash }
-                ].map(item => {
-                  const Icon = item.icon;
-                  const isActive = mode === item.id || (mode === 'charts' && item.id === 'executive');
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => handleSetMode(item.id as any)}
-                      className={`flex h-7.5 px-3 items-center gap-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${isActive
-                          ? 'bg-[var(--accent-primary)] text-white shadow-sm shadow-[var(--accent-shadow)]'
-                          : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
-                        }`}
-                    >
-                      <Icon className="h-3.5 w-3.5" />
-                      <span className="hidden md:inline">{item.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowCustomizeModal(true)}
-                className={`flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border transition-all active:scale-95 ${isDarkMode
-                    ? 'border-white/10 bg-black/60 text-slate-300 hover:text-white hover:bg-white/10'
-                    : 'border-slate-200/90 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-2xs'
-                  }`}
-                title="Customize Dashboard"
-              >
-                <SlidersHorizontal className="h-4 w-4" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleNavigate('orders')}
-                className="flex h-9 cursor-pointer items-center gap-1.5 rounded-full bg-[var(--accent-primary)] hover:opacity-90 active:scale-[0.98] px-4 text-xs font-semibold text-white shadow-sm shadow-[var(--accent-shadow)] transition-all"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                <span>New Order</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Quick stats strip */}
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 pt-5 border-t border-slate-200/70 dark:border-white/10">
-            {[
-              { label: 'Open POs', value: metrics.openOrders.length, icon: ShoppingCart, tone: 'text-[#5B75F8] dark:text-[#7B92FF]', bg: 'bg-blue-50 text-blue-700 border border-blue-200/90 dark:bg-blue-500/10 dark:text-[#7B92FF] dark:border-blue-500/20' },
-              { label: 'Active JCs', value: metrics.activeJobCards.length, icon: Factory, tone: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-50 text-indigo-700 border border-indigo-200/90 dark:bg-indigo-500/10 dark:text-indigo-400 dark:border-indigo-500/20' },
-              { label: 'QC Pass Rate', value: `${metrics.qcPassRate}%`, icon: ShieldCheck, tone: 'text-emerald-700 dark:text-emerald-400', bg: 'bg-emerald-50 text-emerald-700 border border-emerald-200/90 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20' },
-              { label: 'Parts Output', value: metrics.totalOutput.toLocaleString('en-IN'), icon: Gauge, tone: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-50 text-amber-700 border border-amber-200/90 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20' }
-            ].map(item => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={item.label}
-                  className={`flex items-center gap-3.5 p-3.5 rounded-2xl border transition-all ${isDarkMode ? 'border-white/10 bg-black/50 hover:border-white/20' : 'border-slate-200/70 bg-slate-50/70 shadow-[inset_0_1px_1px_0_rgba(15,23,42,0.02)]'
-                    }`}
-                >
-                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-xs ${item.bg}`}>
-                    <Icon className="h-5 w-5 stroke-[2]" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">{item.label}</div>
-                    <div className="mt-0.5 text-lg font-bold tracking-tight text-slate-900 dark:text-white tabular-nums">{item.value}</div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════════  APPROVALS BANNER  ══════════════ */}
-      {metrics.pendingApprovalsCount > 0 && (
-        <button
-          type="button"
-          onClick={() => handleNavigate('approvals')}
-          className={`group w-full rounded-3xl border border-rose-500/30 p-4 text-left transition-all backdrop-blur-2xl flex items-center justify-between gap-3 cursor-pointer ${isDarkMode
-              ? 'bg-[#1c1417]/90 hover:bg-[#26191e] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1),0_12px_32px_rgba(0,0,0,0.4)]'
-              : 'bg-gradient-to-r from-rose-50/90 via-rose-50/70 to-white border-rose-200/90 hover:border-rose-300 shadow-[inset_0_1px_0_0_#ffffff,0_2px_8px_rgba(244,63,94,0.08)]'
-            }`}
-        >
-          <div className="flex items-center gap-3.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400 shrink-0">
-              <CheckSquare className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-xs sm:text-sm font-semibold text-rose-700 dark:text-rose-300">
-                {metrics.pendingApprovalsCount} approval{metrics.pendingApprovalsCount > 1 ? 's' : ''} awaiting sign-off
-              </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">High-value POs and credit dispatches need your action</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5 rounded-full bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 group-hover:bg-rose-500 group-hover:text-white transition-all">
-            <span>Review</span>
-            <ArrowRight className="h-3.5 w-3.5" />
-          </div>
-        </button>
-      )}
-
-
-      {/* ══════════════  TABULAR MODE  ══════════════ */}
-      {mode === 'numbers' && (
-        <section className={`space-y-4 rounded-3xl border p-5 ${surface}`}>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <SectionTitle icon={Target} title="Telemetry Registry" sub="All operational KPIs in tabular form" isDarkMode={isDarkMode} />
-            <div className="flex flex-wrap items-center gap-2">
-              <div className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs ${softInner}`}>
-                <Search className="h-3.5 w-3.5 text-slate-400" />
-                <input
-                  value={tabularSearchQuery}
-                  onChange={e => setTabularSearchQuery(e.target.value)}
-                  placeholder="Search metrics"
-                  className={`w-40 bg-transparent outline-none text-xs ${textPrimary}`}
-                />
-              </div>
-              <select
-                value={tabularCategoryFilter}
-                onChange={e => setTabularCategoryFilter(e.target.value)}
-                className={`cursor-pointer rounded-xl border px-3 py-1.5 text-xs font-medium outline-none ${softInner} ${textPrimary}`}
-              >
-                <option value="ALL">All Categories</option>
-                <option value="FINANCIAL">Financial</option>
-                <option value="PRODUCTION">Production</option>
-                <option value="INVENTORY">Inventory</option>
-                <option value="QUALITY">Quality</option>
-              </select>
-              <button
-                type="button"
-                onClick={handleExportTabularCSV}
-                className="flex items-center gap-1.5 rounded-full bg-[var(--accent-primary)] hover:opacity-90 active:scale-[0.98] px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs shadow-[var(--accent-shadow)] transition-all cursor-pointer"
-              >
-                <Download className="h-3.5 w-3.5" />
-                <span>Export CSV</span>
-              </button>
-            </div>
-          </div>
-          <div className={`overflow-x-auto rounded-2xl border ${isDarkMode ? 'border-white/10 bg-white/[0.02]' : 'border-slate-200/80 bg-white'}`}>
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${isDarkMode ? 'border-white/10 bg-white/[0.05] text-slate-400' : 'border-slate-200/80 bg-slate-50/80 text-slate-500'}`}>
-                  <th className="px-4 py-3">Code</th>
-                  <th className="px-4 py-3">Metric</th>
-                  <th className="px-4 py-3">Category</th>
-                  <th className="px-4 py-3">Value</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3 text-right" />
-                </tr>
-              </thead>
-              <tbody className={`divide-y ${isDarkMode ? 'divide-white/5' : 'divide-slate-100'}`}>
-                {filteredTabularMetrics.map(m => (
-                  <tr key={m.code} className={`transition-all ${isDarkMode ? 'hover:bg-white/[0.05]' : 'hover:bg-slate-50/70'}`}>
-                    <td className="px-4 py-3 font-mono font-bold text-xs text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{m.code}</td>
-                    <td className={`px-4 py-3 font-medium ${textPrimary}`}>{m.name}</td>
-                    <td className="px-4 py-3 text-slate-400 dark:text-slate-400">{m.category}</td>
-                    <td className={`px-4 py-3 font-bold ${textPrimary}`}>{m.valueStr}</td>
-                    <td className="px-4 py-3">
-                      <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium ${statusChip(m.status)}`}>{m.status}</span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        type="button"
-                        onClick={() => handleNavigate(m.viewKey)}
-                        className="inline-flex items-center gap-1 font-semibold text-[#5B75F8] dark:text-[#7B92FF] transition hover:underline cursor-pointer"
-                      >
-                        <span>Open</span>
-                        <ChevronRight className="h-3.5 w-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
-
-      {(mode === 'executive' || mode === 'charts') && (
-        <ExecutiveDashboardLayout
-          orders={orders}
-          stock={stock}
-          qcItems={qcItems}
-          pdiQueue={pdiQueue}
-          jobCards={jobCards}
-          shortages={shortages}
-          dispatches={dispatches}
-          invoices={invoices}
-          payables={payables}
-          productionLogs={productionLogs}
-          auditLogs={auditLogs}
-          approvals={approvals}
-          scope={scope}
-          currencySymbol={currencySymbol}
-          isDarkMode={isDarkMode}
-          onNavigate={handleNavigate}
-          onSelectOrder={onSelectOrder}
-        />
-      )}
-
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {/* ── 4. SHOPFLOOR / OPERATIONS MODE ──                               */}
+      {/* ═════════════════════════════════════════════════════════════════════ */}
       {mode === 'operations' && (
         <OperationsDashboardLayout
           orders={orders}
@@ -875,6 +1920,9 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
         />
       )}
 
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {/* ── 5. QUALITY GATEWAYS MODE ──                                      */}
+      {/* ═════════════════════════════════════════════════════════════════════ */}
       {mode === 'quality' && (
         <QualityGateDashboardLayout
           orders={orders}
@@ -897,6 +1945,9 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
         />
       )}
 
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {/* ── 6. FINANCIAL RADAR MODE ──                                       */}
+      {/* ═════════════════════════════════════════════════════════════════════ */}
       {mode === 'financial' && (
         <FinancialDashboardLayout
           orders={orders}
@@ -919,174 +1970,125 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
         />
       )}
 
-      {/* ══════════════  AI AGENT GRID  ══════════════ */}
-      {widgetVisibility.showAgentBentoGrid && (
-        <section className="space-y-3">
-          <div className={`flex flex-wrap items-center justify-between gap-2 rounded-3xl border px-4 py-3.5 ${surface}`}>
-            <div className="flex min-w-0 items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/12 text-violet-500">
-                <Sparkles className="h-4 w-4" />
-              </div>
-              <h2 className={`truncate text-[15px] font-bold ${textPrimary}`}>Autonomous AI Agents</h2>
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {/* ── 7. TABULAR METRICS LEDGER ──                                     */}
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {mode === 'numbers' && (
+        <section className={`space-y-4 rounded-3xl border p-5 backdrop-blur-2xl ${
+          isDarkMode ? 'bg-[#15161f]/90 border-white/[0.08]' : 'bg-white border-slate-200'
+        }`}>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">Telemetry & Operational KPI Registry</h2>
+              <p className="text-xs text-slate-400 mt-0.5">Comprehensive tabular registry across all operational metrics</p>
             </div>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-500/10 px-2.5 py-1 text-[10px] font-bold text-violet-500">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-500 opacity-75" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-violet-500" />
-              </span>
-              LIVE
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs ${
+                isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <Search className="h-3.5 w-3.5 text-slate-400" />
+                <input
+                  value={tabularSearchQuery}
+                  onChange={e => setTabularSearchQuery(e.target.value)}
+                  placeholder="Search metrics"
+                  className="w-40 bg-transparent outline-none text-xs"
+                />
+              </div>
+              <select
+                value={tabularCategoryFilter}
+                onChange={e => setTabularCategoryFilter(e.target.value)}
+                className={`cursor-pointer rounded-xl border px-3 py-1.5 text-xs font-semibold outline-none ${
+                  isDarkMode ? 'bg-black/40 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                }`}
+              >
+                <option value="ALL">All Categories</option>
+                <option value="FINANCIAL">Financial</option>
+                <option value="PRODUCTION">Production</option>
+                <option value="INVENTORY">Inventory</option>
+                <option value="QUALITY">Quality</option>
+              </select>
+              <button
+                type="button"
+                onClick={handleExportTabularCSV}
+                className="flex items-center gap-1.5 rounded-xl bg-[var(--accent-primary)] hover:opacity-90 active:scale-[0.98] px-3.5 py-1.5 text-xs font-bold text-white shadow-md shadow-[var(--accent-primary)]/20 transition-all cursor-pointer"
+              >
+                <Download className="h-3.5 w-3.5" />
+                <span>Export CSV</span>
+              </button>
+            </div>
           </div>
-          <AgentBentoGrid
-            orders={orders}
-            stock={stock}
-            shortages={shortages}
-            qcItems={qcItems}
-            pdiQueue={pdiQueue}
-            jobCards={jobCards}
-            dispatches={dispatches}
-            invoices={invoices}
-            payables={payables}
-            productionLogs={productionLogs}
-            auditLogs={auditLogs}
-            isRealtimeStreaming={isRealtimeStreaming}
-            currencySymbol={currencySymbol}
-            isDarkMode={isDarkMode}
-            onNavigateView={handleNavigate}
-          />
+          <div className={`overflow-x-auto rounded-2xl border ${isDarkMode ? 'border-white/10 bg-white/[0.02]' : 'border-slate-200 bg-white'}`}>
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${
+                  isDarkMode ? 'border-white/10 bg-white/[0.05] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'
+                }`}>
+                  <th className="px-4 py-3">Code</th>
+                  <th className="px-4 py-3">Metric</th>
+                  <th className="px-4 py-3">Category</th>
+                  <th className="px-4 py-3">Value</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3 text-right" />
+                </tr>
+              </thead>
+              <tbody className={`divide-y ${isDarkMode ? 'divide-white/5' : 'divide-slate-100'}`}>
+                {filteredTabularMetrics.map(m => (
+                  <tr key={m.code} className={`transition-all ${isDarkMode ? 'hover:bg-white/[0.05]' : 'hover:bg-slate-50/70'}`}>
+                    <td className="px-4 py-3 font-mono font-bold text-xs text-[var(--accent-primary)]">{m.code}</td>
+                    <td className="px-4 py-3 font-semibold text-slate-900 dark:text-white">{m.name}</td>
+                    <td className="px-4 py-3 text-slate-400">{m.category}</td>
+                    <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">{m.valueStr}</td>
+                    <td className="px-4 py-3">
+                      <span className="rounded-full px-2.5 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                        {m.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => handleNavigate(m.viewKey)}
+                        className="inline-flex items-center gap-1 font-bold text-[var(--accent-primary)] transition hover:underline cursor-pointer"
+                      >
+                        <span>Open</span>
+                        <ChevronRight className="h-3.5 w-3.5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
       )}
 
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {/* ── 8. DEEP CHARTS MODE ──                                           */}
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {mode === 'charts' && (
+        <div className="space-y-5">
+          <div className={`p-5 rounded-3xl border backdrop-blur-2xl ${
+            isDarkMode ? 'bg-[#15161f]/90 border-white/[0.08]' : 'bg-white border-slate-200'
+          }`}>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">Order Book Fulfillment Trajectory</h3>
+            <OrderBookRevenueChart orders={metrics.scopedOrders} isDarkMode={isDarkMode} />
+          </div>
 
-      {/* ══════════════  CUSTOMIZE MODAL  ══════════════ */}
-      {showCustomizeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div onClick={() => setShowCustomizeModal(false)} className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity" />
-          <div className={`relative z-10 w-full max-w-md space-y-4 rounded-2xl border p-6 shadow-2xl backdrop-blur-2xl ${isDarkMode ? 'border-white/10 bg-slate-900/95 text-white' : 'border-slate-200/80 bg-white/95 text-slate-900'}`}>
-            <div className="flex items-center justify-between border-b pb-3.5 border-slate-100 dark:border-white/10">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--accent-soft-light)] text-[var(--accent-text-light)] dark:bg-[var(--accent-soft-dark)] dark:text-[var(--accent-text-dark)]">
-                  <SlidersHorizontal className="h-4 w-4" />
-                </div>
-                <h3 className="text-base font-bold tracking-tight">Customize Dashboard</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowCustomizeModal(false)}
-                className="rounded-full p-1.5 text-slate-400 transition hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-              >
-                <X className="h-4.5 w-4.5" />
-              </button>
-            </div>
-
-            <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
-              <div className={`rounded-xl border p-3.5 ${softInner}`}>
-                <AccentColorSelector isDarkMode={isDarkMode} />
-              </div>
-
-              <div className={`space-y-2 rounded-xl border p-3.5 ${softInner}`}>
-                <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">Dashboard Layout Preset</label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {[
-                    { id: 'executive', label: 'Executive', icon: Sparkles },
-                    { id: 'operations', label: 'Operations', icon: Factory },
-                    { id: 'quality', label: 'Quality', icon: ShieldCheck },
-                    { id: 'financial', label: 'Financial', icon: DollarSign },
-                    { id: 'numbers', label: 'Tabular', icon: Hash }
-                  ].map(tab => {
-                    const Icon = tab.icon;
-                    const isActive = mode === tab.id || (mode === 'charts' && tab.id === 'executive');
-                    return (
-                      <button
-                        key={tab.id}
-                        type="button"
-                        onClick={() => handleSetMode(tab.id as any)}
-                        className={`flex min-h-[38px] items-center justify-center gap-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${isActive
-                            ? 'border-transparent bg-[#0F766E] text-white shadow-xs dark:bg-[#2DD4BF] dark:text-slate-950'
-                            : isDarkMode
-                              ? 'border-white/10 bg-slate-800/80 text-slate-300 hover:bg-slate-800'
-                              : 'border-slate-200/80 bg-white text-slate-700 hover:bg-slate-50'
-                          }`}
-                      >
-                        <Icon className="h-3.5 w-3.5" />
-                        <span>{tab.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className={`flex items-center justify-between rounded-xl border p-3.5 ${softInner}`}>
-                <div>
-                  <div className="text-xs font-semibold">Realtime Feed</div>
-                  <div className="text-[11px] text-slate-400 dark:text-slate-500">Auto-update every 5s</div>
-                </div>
-                <button type="button" onClick={onToggleRealtimeStreaming} className="cursor-pointer">
-                  <div className={`w-11 rounded-full p-0.5 transition-colors ${isRealtimeStreaming ? 'bg-[#34C759]' : 'bg-slate-300 dark:bg-slate-700'}`}>
-                    <div className={`h-5 w-5 rounded-full bg-white shadow-xs transition-transform ${isRealtimeStreaming ? 'translate-x-5' : ''}`} />
-                  </div>
-                </button>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">Visible Widgets</label>
-                {[
-                  { key: 'showAlertsBar', label: 'Alert Rail' },
-                  { key: 'showTopMetricsRow', label: 'KPI Cards' },
-                  { key: 'showAnalyticsGrid', label: 'Analytics Grid' },
-                  { key: 'showOrderPipelineCard', label: 'Order Book Revenue & Pipeline' },
-                  { key: 'showAgentBentoGrid', label: 'AI Agent Grid' }
-                ].map(item => {
-                  const key = item.key as keyof typeof widgetVisibility;
-                  const active = widgetVisibility[key];
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => toggleWidget(key)}
-                      className={`flex w-full items-center justify-between rounded-xl border p-2.5 text-xs font-medium transition-all cursor-pointer ${active
-                        ? isDarkMode
-                          ? 'border-blue-500/30 bg-blue-500/10 text-white'
-                          : 'border-blue-500/30 bg-blue-50/60 text-slate-900'
-                        : isDarkMode
-                          ? 'border-white/5 text-slate-400 hover:bg-white/[0.03]'
-                          : 'border-slate-100 text-slate-500 hover:bg-slate-50'
-                        }`}
-                    >
-                      <span>{item.label}</span>
-                      {active ? <Eye className="h-4 w-4 text-[#5B75F8] dark:text-[#7B92FF]" /> : <EyeOff className="h-4 w-4 text-slate-400" />}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {onResetAllData && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (window.confirm('Reset all data to factory defaults?')) {
-                      onResetAllData();
-                      setShowCustomizeModal(false);
-                    }
-                  }}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-rose-500/20 p-2.5 text-xs font-semibold text-rose-600 dark:text-rose-400 transition-all hover:bg-rose-500/10 cursor-pointer"
-                >
-                  <RotateCcw className="h-4 w-4" />
-                  <span>Reset Factory Data</span>
-                </button>
-              )}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setShowCustomizeModal(false)}
-              className="w-full rounded-full bg-[#5B75F8] hover:bg-[#435BE8] active:scale-[0.98] py-2.5 text-xs font-semibold text-white shadow-xs transition-all cursor-pointer"
-            >
-              Done
-            </button>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <CashflowTrendCard
+              invoices={invoices}
+              payables={payables}
+              currencySymbol={currencySymbol}
+              isDarkMode={isDarkMode}
+            />
+            <MonthlyProgressCard
+              orders={orders}
+              productionLogs={productionLogs}
+              isDarkMode={isDarkMode}
+            />
           </div>
         </div>
       )}
+
     </div>
   );
 };

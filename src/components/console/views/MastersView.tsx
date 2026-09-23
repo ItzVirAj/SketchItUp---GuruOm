@@ -190,20 +190,20 @@ export const MastersView: React.FC<MastersViewProps> = ({
 
   useEffect(() => {
     const path = location.pathname;
-    if (path.includes('/masters/customers')) setActiveTab('CUSTOMERS');
-    else if (path.includes('/masters/vendors')) setActiveTab('VENDORS');
-    else if (path.includes('/masters/machines')) setActiveTab('MACHINES');
-    else if (path.includes('/masters/import-omgst')) setActiveTab('IMPORT_OMGST');
-    else if (path.includes('/masters/items')) setActiveTab('ITEMS');
+    if (path.includes('/customers')) setActiveTab('CUSTOMERS');
+    else if (path.includes('/vendors')) setActiveTab('VENDORS');
+    else if (path.includes('/machines')) setActiveTab('MACHINES');
+    else if (path.includes('/import-omgst')) setActiveTab('IMPORT_OMGST');
+    else if (path.includes('/items')) setActiveTab('ITEMS');
   }, [location.pathname]);
 
   const handleSelectTab = (tab: 'ITEMS' | 'CUSTOMERS' | 'VENDORS' | 'MACHINES' | 'IMPORT_OMGST') => {
     setActiveTab(tab);
-    const subPath = tab === 'CUSTOMERS' ? '/masters/customers' :
-                    tab === 'VENDORS' ? '/masters/vendors' :
-                    tab === 'MACHINES' ? '/masters/machines' :
-                    tab === 'IMPORT_OMGST' ? '/masters/import-omgst' :
-                    '/masters/items';
+    const subPath = tab === 'CUSTOMERS' ? '/admin/master-catalogs/customers' :
+                    tab === 'VENDORS' ? '/admin/master-catalogs/vendors' :
+                    tab === 'MACHINES' ? '/admin/master-catalogs/machines' :
+                    tab === 'IMPORT_OMGST' ? '/admin/master-catalogs/import-omgst' :
+                    '/admin/master-catalogs/items';
     if (location.pathname !== subPath) {
       navigate(subPath);
     }
@@ -1052,36 +1052,48 @@ export const MastersView: React.FC<MastersViewProps> = ({
     <div className="space-y-6 font-sans">
       
       {/* Top Banner Header with Summary Telemetry */}
-      <div className={`p-4 sm:p-6 rounded-3xl border transition-ui ${
-        isDarkMode 
-          ? 'bg-slate-900/80 border-slate-800/80 text-white backdrop-blur-xl shadow-2xl' 
-          : 'bg-white border-slate-200 shadow-sm text-slate-900'
+      <section className={`overflow-hidden rounded-2xl border transition-all ${
+        isDarkMode
+          ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]'
+          : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
       }`}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider ${
-                isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/30' : 'bg-[#5B75F8]/10 text-[#5B75F8] border border-[#5B75F8]/20'
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 md:gap-6 p-6 sm:p-7">
+          <div className="min-w-0 space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wide ${
+                isDarkMode ? 'bg-white/10 border border-white/15 text-white' : 'bg-white/20 border border-white/30 backdrop-blur-md text-white shadow-xs'
               }`}>
-                Precision Master Data Registry
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Precision Master Data Registry</span>
               </span>
-              <span className={`text-[11px] sm:text-xs font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                • ERP Core Modules Specification
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
+                isDarkMode ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-white/20 text-white border border-white/30 backdrop-blur-md'
+              }`}>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <span>ERP Core Modules Specification</span>
               </span>
             </div>
-            <h1 className={`text-xl sm:text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+            
+            <h1 className="text-xl sm:text-2xl md:text-[26px] font-black tracking-tight text-white">
               Master Data Hub
             </h1>
-            <p className={`text-xs mt-0.5 sm:mt-1 max-w-xl ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-              Manage Customers, Vendors, Item Catalog, Machine Routing Fleet & Users with strict GSTIN/PAN and conditional rules.
+            
+            <p className={`text-xs leading-relaxed max-w-2xl font-normal mt-1 ${
+              isDarkMode ? 'text-white/60' : 'text-blue-100/90'
+            }`}>
+              Manage Customers, Vendors, Item Catalog, Machine Routing Fleet &amp; Users with strict GSTIN/PAN and conditional rules.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto shrink-0">
             {activeTab === 'CUSTOMERS' && (
               <button
                 onClick={openCustomerModal}
-                className="w-full sm:w-auto flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer"
+                className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
+                  isDarkMode
+                    ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
+                    : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
+                }`}
               >
                 <Plus className="w-4 h-4" />
                 <span>New Customer</span>
@@ -1091,7 +1103,11 @@ export const MastersView: React.FC<MastersViewProps> = ({
             {activeTab === 'VENDORS' && (
               <button
                 onClick={openVendorModal}
-                className="w-full sm:w-auto flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer"
+                className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
+                  isDarkMode
+                    ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
+                    : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
+                }`}
               >
                 <Plus className="w-4 h-4" />
                 <span>New Vendor</span>
@@ -1101,7 +1117,11 @@ export const MastersView: React.FC<MastersViewProps> = ({
             {activeTab === 'ITEMS' && (
               <button
                 onClick={openItemModal}
-                className="w-full sm:w-auto flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer"
+                className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
+                  isDarkMode
+                    ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
+                    : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
+                }`}
               >
                 <Plus className="w-4 h-4" />
                 <span>New Item</span>
@@ -1111,7 +1131,11 @@ export const MastersView: React.FC<MastersViewProps> = ({
             {activeTab === 'MACHINES' && (
               <button
                 onClick={openMachineModal}
-                className="w-full sm:w-auto flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer"
+                className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
+                  isDarkMode
+                    ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
+                    : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
+                }`}
               >
                 <Plus className="w-4 h-4" />
                 <span>New Machine</span>
@@ -1120,90 +1144,164 @@ export const MastersView: React.FC<MastersViewProps> = ({
           </div>
         </div>
 
-        {/* Master Metrics Strip */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 mt-4 sm:mt-5 pt-3 sm:pt-4 border-t border-slate-200 dark:border-slate-800/60">
-          <div className={`p-3 sm:p-4 rounded-2xl border transition-ui ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
-            <div className={`text-[10px] sm:text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Total Customers</div>
-            <div className="text-base sm:text-xl font-bold text-blue-600 dark:text-blue-400 mt-0.5 sm:mt-1">{customers.length} Accounts</div>
-            <div className="text-[10px] sm:text-[11px] text-emerald-600 dark:text-emerald-400 font-mono font-semibold mt-0.5">● {customers.filter(c => c.status === 'Active').length} Active</div>
-          </div>
-          <div className={`p-3 sm:p-4 rounded-2xl border transition-ui ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
-            <div className={`text-[10px] sm:text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Total Vendors</div>
-            <div className="text-base sm:text-xl font-bold text-indigo-600 dark:text-indigo-400 mt-0.5 sm:mt-1">{vendors.length} Suppliers</div>
-            <div className="text-[10px] sm:text-[11px] text-indigo-600 dark:text-indigo-400 font-mono font-semibold mt-0.5">● {vendors.filter(v => v.vendorType === 'Subcontractor / Job Worker').length} Subcontractors</div>
-          </div>
-          <div className={`p-3 sm:p-4 rounded-2xl border transition-ui ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
-            <div className={`text-[10px] sm:text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Item Master Parts</div>
-            <div className="text-base sm:text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 sm:mt-1">{masters.length} SKUs</div>
-            <div className={`text-[10px] sm:text-[11px] font-mono font-semibold mt-0.5 truncate ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{masters.filter(m => m.isFinishedGoods || m.itemType === 'Finished Good').length} FG / {masters.filter(m => m.itemType === 'Raw Material').length} RM</div>
-          </div>
-          <div className={`p-3 sm:p-4 rounded-2xl border transition-ui ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
-            <div className={`text-[10px] sm:text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Machine Fleet</div>
-            <div className="text-base sm:text-xl font-bold text-amber-600 dark:text-amber-400 mt-0.5 sm:mt-1">{machines.length} Units</div>
-            <div className="text-[10px] sm:text-[11px] text-amber-600 dark:text-amber-400 font-mono font-semibold mt-0.5">● {machines.filter(m => m.status === 'Active').length} Operational</div>
-          </div>
+        {/* Master Metrics Strip with Solid Vibrant Icon Colors */}
+        <div className={`grid grid-cols-2 lg:grid-cols-4 border-t divide-y sm:divide-y-0 sm:divide-x ${
+          isDarkMode
+            ? 'border-white/10 bg-gradient-to-b from-black/40 to-black/70 divide-white/10 backdrop-blur-md'
+            : 'border-white/20 bg-white/[0.06] divide-white/15 backdrop-blur-sm'
+        }`}>
+          {[
+            {
+              label: 'Total Customers',
+              value: `${customers.length} Accounts`,
+              detail: `${customers.filter(c => c.status === 'Active').length} Active Accounts`,
+              icon: Users,
+              iconBg: 'bg-white text-blue-600 shadow-md shadow-black/10',
+            },
+            {
+              label: 'Total Vendors',
+              value: `${vendors.length} Suppliers`,
+              detail: `${vendors.filter(v => v.vendorType === 'Subcontractor / Job Worker').length} Subcontractors`,
+              icon: Building,
+              iconBg: 'bg-purple-600 text-white shadow-md shadow-purple-500/30',
+            },
+            {
+              label: 'Item Master Parts',
+              value: `${masters.length} SKUs`,
+              detail: `${masters.filter(m => m.isFinishedGoods || m.itemType === 'Finished Good').length} FG / ${masters.filter(m => m.itemType === 'Raw Material').length} RM`,
+              icon: Package,
+              iconBg: 'bg-emerald-600 text-white shadow-md shadow-emerald-500/30',
+            },
+            {
+              label: 'Machine Fleet',
+              value: `${machines.length} Units`,
+              detail: `${machines.filter(m => m.status === 'Active').length} Operational Units`,
+              icon: Wrench,
+              iconBg: 'bg-amber-500 text-white shadow-md shadow-amber-500/30',
+            },
+          ].map((metric) => {
+            const MetricIcon = metric.icon;
+            return (
+              <div key={metric.label} className="p-4 sm:p-5 flex flex-col justify-between">
+                <div className="flex items-center justify-between mb-3">
+                  <span className={`text-[11px] font-mono uppercase tracking-wider font-bold ${
+                    isDarkMode ? 'text-white/50' : 'text-blue-100/70'
+                  }`}>
+                    {metric.label}
+                  </span>
+                  <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${metric.iconBg}`}>
+                    <MetricIcon className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="text-2xl sm:text-[26px] font-black tracking-tight text-white tabular-nums my-0.5 leading-tight">
+                  {metric.value}
+                </div>
+                <div className={`text-[11px] font-medium truncate ${
+                  isDarkMode ? 'text-white/50' : 'text-blue-100/80'
+                }`}>
+                  {metric.detail}
+                </div>
+              </div>
+            );
+          })}
         </div>
-      </div>
+      </section>
 
-      {/* Main Tab Controls Bar */}
-      <div className={`p-3.5 sm:p-4 rounded-3xl border transition-ui space-y-3 ${
-        isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-sm'
+      {/* Main Tab Controls Bar (Apple 2-Tier Command Deck) */}
+      <div className={`rounded-2xl border p-3.5 space-y-3 transition-all ${
+        isDarkMode
+          ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] shadow-[0_8px_28px_rgba(0,0,0,0.5)]'
+          : 'border-slate-200/80 bg-gradient-to-b from-white/95 via-slate-50/90 to-slate-100/70 shadow-[0_4px_20px_rgba(0,0,0,0.03)]'
       }`}>
+        {/* Tier 1: Segmented Module Navigation Rail */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
           <button
+            type="button"
             onClick={() => handleSelectTab('CUSTOMERS')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-ui cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
+            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'CUSTOMERS'
-                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-md'
-                : isDarkMode ? 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-white' : 'bg-slate-100 text-slate-600 border-slate-200 hover:text-slate-900'
+                ? isDarkMode ? 'bg-white text-slate-950 shadow-sm' : 'bg-[#155dfc] text-white shadow-sm'
+                : isDarkMode ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
             <Building className="w-3.5 h-3.5" />
-            <span>Customers ({customers.length})</span>
+            <span>Customers</span>
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] tabular-nums font-bold ${
+              activeTab === 'CUSTOMERS'
+                ? isDarkMode ? 'bg-slate-900 text-white' : 'bg-white/20 text-white'
+                : isDarkMode ? 'bg-white/10 text-slate-400' : 'bg-slate-200 text-slate-700'
+            }`}>
+              {customers.length}
+            </span>
           </button>
           
           <button
+            type="button"
             onClick={() => handleSelectTab('VENDORS')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-ui cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
+            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'VENDORS'
-                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-md'
-                : isDarkMode ? 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-white' : 'bg-slate-100 text-slate-600 border-slate-200 hover:text-slate-900'
+                ? isDarkMode ? 'bg-white text-slate-950 shadow-sm' : 'bg-[#155dfc] text-white shadow-sm'
+                : isDarkMode ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
             <Users className="w-3.5 h-3.5" />
-            <span>Vendors ({vendors.length})</span>
+            <span>Vendors</span>
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] tabular-nums font-bold ${
+              activeTab === 'VENDORS'
+                ? isDarkMode ? 'bg-slate-900 text-white' : 'bg-white/20 text-white'
+                : isDarkMode ? 'bg-white/10 text-slate-400' : 'bg-slate-200 text-slate-700'
+            }`}>
+              {vendors.length}
+            </span>
           </button>
 
           <button
+            type="button"
             onClick={() => handleSelectTab('ITEMS')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-ui cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
+            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'ITEMS'
-                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-md'
-                : isDarkMode ? 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-white' : 'bg-slate-100 text-slate-600 border-slate-200 hover:text-slate-900'
+                ? isDarkMode ? 'bg-white text-slate-950 shadow-sm' : 'bg-[#155dfc] text-white shadow-sm'
+                : isDarkMode ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
             <Package className="w-3.5 h-3.5" />
-            <span>Items ({masters.length})</span>
+            <span>Items</span>
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] tabular-nums font-bold ${
+              activeTab === 'ITEMS'
+                ? isDarkMode ? 'bg-slate-900 text-white' : 'bg-white/20 text-white'
+                : isDarkMode ? 'bg-white/10 text-slate-400' : 'bg-slate-200 text-slate-700'
+            }`}>
+              {masters.length}
+            </span>
           </button>
 
           <button
+            type="button"
             onClick={() => handleSelectTab('MACHINES')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-ui cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
+            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'MACHINES'
-                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-md'
-                : isDarkMode ? 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-white' : 'bg-slate-100 text-slate-600 border-slate-200 hover:text-slate-900'
+                ? isDarkMode ? 'bg-white text-slate-950 shadow-sm' : 'bg-[#155dfc] text-white shadow-sm'
+                : isDarkMode ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
             <Wrench className="w-3.5 h-3.5" />
-            <span>Machines ({machines.length})</span>
+            <span>Machines</span>
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] tabular-nums font-bold ${
+              activeTab === 'MACHINES'
+                ? isDarkMode ? 'bg-slate-900 text-white' : 'bg-white/20 text-white'
+                : isDarkMode ? 'bg-white/10 text-slate-400' : 'bg-slate-200 text-slate-700'
+            }`}>
+              {machines.length}
+            </span>
           </button>
 
           <button
+            type="button"
             onClick={() => handleSelectTab('IMPORT_OMGST')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-ui cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
+            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'IMPORT_OMGST'
-                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-md'
-                : isDarkMode ? 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-white' : 'bg-slate-100 text-slate-600 border-slate-200 hover:text-slate-900'
+                ? isDarkMode ? 'bg-white text-slate-950 shadow-sm' : 'bg-[#155dfc] text-white shadow-sm'
+                : isDarkMode ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
             <FileSpreadsheet className="w-3.5 h-3.5" />
@@ -1211,39 +1309,57 @@ export const MastersView: React.FC<MastersViewProps> = ({
           </button>
         </div>
 
-        {/* Filter & Search Toolbar */}
+        {/* Tier 2: Spotlight Search & Parametric Controls */}
         {activeTab !== 'IMPORT_OMGST' && (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className={`relative flex items-center rounded-2xl border px-3.5 py-2 transition-ui flex-1 ${
-              isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white focus-within:border-[#5B75F8]' : 'bg-slate-50 border-slate-200 text-slate-900 focus-within:border-[#5B75F8]'
-            }`}>
-              <Search className="w-3.5 h-3.5 text-slate-400 shrink-0 mr-2" />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-200/50 dark:border-white/5">
+            <div className="relative flex-1 max-w-md">
+              <Search className={`w-4 h-4 absolute left-3.5 top-3 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`} />
               <input
                 type="text"
                 placeholder={`Search ${activeTab.toLowerCase()} by code, name, tax ID...`}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="bg-transparent outline-none text-xs w-full font-mono"
+                className={`h-10 w-full pl-10 pr-16 rounded-full border text-xs font-medium outline-none transition-all ${
+                  isDarkMode 
+                    ? 'border-white/10 bg-black/60 text-white placeholder:text-slate-500 focus:border-[#5B75F8] focus:ring-4 focus:ring-[#5B75F8]/15' 
+                    : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-[#155dfc] focus:ring-4 focus:ring-[#155dfc]/15 shadow-xs'
+                }`}
               />
-              {searchTerm && (
-                <button onClick={() => setSearchTerm('')} className="text-slate-400 hover:text-white ml-2 cursor-pointer">
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
+              <div className="absolute right-3 top-2.5 flex items-center gap-1.5">
+                {searchTerm ? (
+                  <button onClick={() => setSearchTerm('')} className="text-slate-400 hover:text-white cursor-pointer">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                ) : (
+                  <span className="hidden sm:inline-block px-1.5 py-0.5 rounded text-[10px] font-mono text-slate-400 border border-slate-200 dark:border-white/10">
+                    ⌘F
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Status Filter */}
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
-              className={`px-3 py-2 rounded-2xl border text-xs font-bold font-mono outline-none cursor-pointer w-full sm:w-auto ${
-                isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-              }`}
-            >
-              <option value="ALL">Status: All</option>
-              <option value="Active">Active Only</option>
-              <option value="Inactive">Inactive</option>
-            </select>
+            <div className="flex items-center gap-2">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as any)}
+                className={`h-10 px-4 rounded-full border text-xs font-bold font-mono outline-none cursor-pointer ${
+                  isDarkMode 
+                    ? 'bg-black/60 border-white/10 text-white hover:bg-black/80' 
+                    : 'bg-white border-slate-200 text-slate-900 hover:bg-slate-50 shadow-xs'
+                }`}
+              >
+                <option value="ALL">Status: All</option>
+                <option value="Active">Active Only</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+
+              <span className={`text-xs font-mono font-bold px-3 py-1.5 rounded-full border ${
+                isDarkMode ? 'border-white/10 bg-white/5 text-slate-400' : 'border-slate-200 bg-slate-100 text-slate-600'
+              }`}>
+                {activeTab === 'CUSTOMERS' ? filteredCustomers.length : activeTab === 'VENDORS' ? filteredVendors.length : activeTab === 'ITEMS' ? filteredItems.length : filteredMachines.length} Records
+              </span>
+            </div>
           </div>
         )}
       </div>
@@ -1357,9 +1473,13 @@ export const MastersView: React.FC<MastersViewProps> = ({
           </div>
 
           {/* Desktop Table (Viewport >= md) */}
-          <div className={`hidden md:block rounded-3xl border overflow-hidden transition-ui shadow-xl ${
-            isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-sm'
+          <div className={`hidden md:block overflow-hidden rounded-3xl border transition-all ${
+            isDarkMode
+              ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#08090c] to-[#010203] shadow-[0_16px_40px_rgba(0,0,0,0.5)]'
+              : 'border-slate-200/90 bg-gradient-to-b from-white via-slate-50/40 to-[#f6f8fc] shadow-[0_4px_24px_rgba(0,0,0,0.04)]'
           }`}>
+            {/* Top Specular Highlight */}
+            <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-white/70 dark:via-white/10 to-transparent" />
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>

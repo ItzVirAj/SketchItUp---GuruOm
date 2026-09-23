@@ -29,6 +29,49 @@ import {
 
 import { InAppNotification } from '../services/notificationService';
 
+// ── Styles (Transitions.dev — Panel reveal) ──────────────
+const __TRANSITION_STYLES = `
+:root {
+  --panel-open-dur: 400ms;
+  --panel-close-dur: 350ms;
+  --panel-translate-y: calc(187px * 0.5);
+  --panel-blur: 2px;
+  --panel-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.t-panel-slide {
+  transform: translateY(var(--panel-translate-y));
+  opacity: 0;
+  filter: blur(var(--panel-blur));
+  pointer-events: none;
+  transition:
+    transform var(--panel-close-dur) var(--panel-ease),
+    opacity   var(--panel-close-dur) var(--panel-ease),
+    filter    var(--panel-close-dur) var(--panel-ease);
+  will-change: transform, opacity, filter;
+}
+.t-panel-slide[data-open="true"] {
+  transform: translateY(0);
+  opacity: 1;
+  filter: blur(0);
+  pointer-events: auto;
+  transition:
+    transform var(--panel-open-dur) var(--panel-ease),
+    opacity   var(--panel-open-dur) var(--panel-ease),
+    filter    var(--panel-open-dur) var(--panel-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-panel-slide { transition: none !important; }
+}
+`;
+if (typeof document !== 'undefined' && !document.getElementById('transitions-p3')) {
+  const __style = document.createElement('style');
+  __style.id = 'transitions-p3';
+  __style.textContent = __TRANSITION_STYLES;
+  document.head.appendChild(__style);
+}
+
 export type NotificationSectionKey =
   | 'all'
   | 'critical'
@@ -389,6 +432,8 @@ export const NotificationDrawer: React.FC<
   isDarkMode,
 }) => {
     const [mounted, setMounted] = useState(false);
+    const [isRendered, setIsRendered] = useState(isOpen);
+    const [openState, setOpenState] = useState(false);
     const [activeTab, setActiveTab] =
       useState<NotificationSectionKey>('all');
     const [searchQuery, setSearchQuery] = useState('');
@@ -402,8 +447,19 @@ export const NotificationDrawer: React.FC<
     }, []);
 
     useEffect(() => {
-      if (!isOpen) {
+      if (isOpen) {
+        setIsRendered(true);
+        const frame = requestAnimationFrame(() => {
+          setOpenState(true);
+        });
+        return () => cancelAnimationFrame(frame);
+      } else {
+        setOpenState(false);
         setSearchQuery('');
+        const timer = setTimeout(() => {
+          setIsRendered(false);
+        }, 360);
+        return () => clearTimeout(timer);
       }
     }, [isOpen]);
 
@@ -596,13 +652,13 @@ export const NotificationDrawer: React.FC<
 
     const selectedSection = SECTION_CONFIG_MAP[activeTab];
 
-    if (!mounted || !isOpen) {
+    if (!mounted || !isRendered) {
       return null;
     }
 
     const drawerContent = (
       <div
-        className="fixed inset-0 z-[9999] font-sans"
+        className="fixed inset-0 z-[9999] font-sans flex flex-col justify-end items-center pointer-events-none overflow-hidden"
         data-lenis-prevent="true"
       >
         {/* Backdrop */}
@@ -611,222 +667,192 @@ export const NotificationDrawer: React.FC<
           tabIndex={-1}
           aria-label="Close notifications"
           onClick={onClose}
-          className="absolute inset-0 h-full w-full cursor-default bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200"
+          className={`fixed inset-0 h-full w-full cursor-default bg-slate-950/65 backdrop-blur-md transition-opacity duration-300 pointer-events-auto ${
+            openState ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          }`}
         />
 
-        {/* Drawer */}
-        <div
-          ref={drawerRef}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="notification-drawer-title"
-          aria-describedby="notification-drawer-description"
-          data-lenis-prevent="true"
-          onClick={(event) => event.stopPropagation()}
-          className={[
-            'absolute inset-y-0 right-0 flex h-full w-full max-w-[520px] flex-col overflow-hidden',
-            'animate-in slide-in-from-right duration-300',
-            'sm:inset-y-3 sm:right-3 sm:h-[calc(100%-1.5rem)] sm:rounded-[28px] sm:border',
-            isDarkMode
-              ? 'border-white/10 bg-[#0B0D12]/95 text-white shadow-[-24px_0_80px_rgba(0,0,0,0.55)] backdrop-blur-3xl'
-              : 'border-slate-200/80 bg-white/95 text-slate-950 shadow-[-24px_0_80px_rgba(15,23,42,0.20)] backdrop-blur-3xl',
-          ].join(' ')}
-        >
-          {/* Ambient decoration */}
+        {/* Bottom Sheet Travel Wrapper (clips travel area) */}
+        <div className="w-full flex justify-center overflow-hidden pointer-events-none px-2 sm:px-4 pb-2 sm:pb-4 z-10">
           <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 overflow-hidden"
-          >
-            <div className="absolute -right-28 -top-36 h-80 w-80 rounded-full bg-indigo-500/15 blur-3xl" />
-            <div className="absolute -left-28 top-[38%] h-72 w-72 rounded-full bg-cyan-500/10 blur-3xl" />
-          </div>
-
-          {/* Header */}
-          <header
+            ref={drawerRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="notification-drawer-title"
+            aria-describedby="notification-drawer-description"
+            data-lenis-prevent="true"
+            data-open={openState}
+            onClick={(event) => event.stopPropagation()}
             className={[
-              'relative z-10 shrink-0 border-b px-5 pb-4 pt-5 sm:px-6',
+              't-panel-slide pointer-events-auto relative flex flex-col w-full max-w-2xl max-h-[82vh] overflow-hidden',
+              'rounded-[28px] sm:rounded-[32px] border shadow-[0_-24px_70px_-15px_rgba(0,0,0,0.75)] backdrop-blur-3xl transition-all',
               isDarkMode
-                ? 'border-white/[0.08]'
-                : 'border-slate-200/80',
+                ? 'border-white/15 bg-gradient-to-b from-[#14161F]/98 via-[#0C0D12]/98 to-[#050608]/98 text-white'
+                : 'border-slate-200/90 bg-white/95 text-slate-950 shadow-[0_-20px_50px_-15px_rgba(15,23,42,0.22)]',
             ].join(' ')}
           >
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex min-w-0 items-start gap-3">
-                <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/25">
-                  <Bell className="h-5 w-5" strokeWidth={2.2} />
+            {/* Ambient subtle decoration */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 overflow-hidden"
+            >
+              <div className="absolute -right-28 -top-36 h-72 w-72 rounded-full bg-indigo-500/10 blur-3xl" />
+              <div className="absolute -left-28 bottom-0 h-72 w-72 rounded-full bg-cyan-500/10 blur-3xl" />
+            </div>
 
-                  {unreadCount > 0 && (
-                    <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full border-2 border-white bg-rose-500 px-1 text-[9px] font-bold leading-none text-white dark:border-[#0B0D12]">
-                      {unreadCount > 99 ? '99+' : unreadCount}
-                    </span>
-                  )}
-                </div>
+            {/* Apple Sheet Pull Handle Grabber */}
+            <div className="pt-2.5 pb-1 flex justify-center shrink-0 cursor-pointer" onClick={onClose} title="Dismiss">
+              <div
+                className={[
+                  'w-11 h-1.25 rounded-full transition-colors',
+                  isDarkMode ? 'bg-white/25 hover:bg-white/45' : 'bg-slate-300 hover:bg-slate-400',
+                ].join(' ')}
+              />
+            </div>
 
-                <div className="min-w-0 pt-0.5">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h2
-                      id="notification-drawer-title"
-                      className={[
-                        'text-base font-bold tracking-tight',
-                        isDarkMode
-                          ? 'text-white'
-                          : 'text-slate-950',
-                      ].join(' ')}
-                    >
-                      Operations center
-                    </h2>
-
-                    <span
-                      className={[
-                        'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider',
-                        isDarkMode
-                          ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300'
-                          : 'border-emerald-200 bg-emerald-50 text-emerald-700',
-                      ].join(' ')}
-                    >
-                      <Radio className="h-2.5 w-2.5" />
-                      Live
-                    </span>
+            {/* Header */}
+            <header
+              className={[
+                'relative z-10 shrink-0 border-b px-5 pb-3.5 pt-1 sm:px-6',
+                isDarkMode ? 'border-white/[0.08]' : 'border-slate-200/80',
+              ].join(' ')}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-500/25">
+                    <Bell className="h-5 w-5" strokeWidth={2.2} />
+                    {unreadCount > 0 && (
+                      <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full border-2 border-white bg-rose-500 px-1 text-[9px] font-bold leading-none text-white dark:border-[#0C0D12]">
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    )}
                   </div>
 
-                  <p
-                    id="notification-drawer-description"
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h2
+                        id="notification-drawer-title"
+                        className={[
+                          'text-base font-bold tracking-tight',
+                          isDarkMode ? 'text-white' : 'text-slate-950',
+                        ].join(' ')}
+                      >
+                        Operations Center
+                      </h2>
+
+                      <span
+                        className={[
+                          'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider',
+                          isDarkMode
+                            ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300'
+                            : 'border-emerald-200 bg-emerald-50 text-emerald-700',
+                        ].join(' ')}
+                      >
+                        <Radio className="h-2.5 w-2.5" />
+                        Live
+                      </span>
+                    </div>
+
+                    <p
+                      id="notification-drawer-description"
+                      className={[
+                        'mt-0.5 text-xs truncate',
+                        isDarkMode ? 'text-slate-400' : 'text-slate-500',
+                      ].join(' ')}
+                    >
+                      Real-time factory telemetry, orders, QC & production alerts
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={onToggleSound}
+                    aria-label={
+                      isSoundEnabled
+                        ? 'Mute notification sounds'
+                        : 'Enable notification sounds'
+                    }
+                    aria-pressed={isSoundEnabled}
+                    title={
+                      isSoundEnabled
+                        ? 'Notification sounds enabled'
+                        : 'Notification sounds muted'
+                    }
                     className={[
-                      'mt-0.5 text-xs leading-relaxed',
+                      'flex h-8 w-8 items-center justify-center rounded-full border transition-all',
+                      'focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500',
+                      'active:scale-95',
                       isDarkMode
-                        ? 'text-slate-400'
-                        : 'text-slate-500',
+                        ? 'border-white/10 bg-white/[0.05] text-slate-300 hover:border-white/20 hover:bg-white/[0.10] hover:text-white'
+                        : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-slate-100 hover:text-slate-900',
                     ].join(' ')}
                   >
-                    Factory events, quality alerts and order updates
-                  </p>
+                    {isSoundEnabled ? (
+                      <Volume2 className="h-4 w-4 text-indigo-400" />
+                    ) : (
+                      <VolumeX className="h-4 w-4" />
+                    )}
+                  </button>
+
+                  <button
+                    ref={closeButtonRef}
+                    type="button"
+                    onClick={onClose}
+                    aria-label="Close notifications"
+                    title="Close"
+                    className={[
+                      'flex h-8 w-8 items-center justify-center rounded-full border transition-all',
+                      'focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500',
+                      'active:scale-95',
+                      isDarkMode
+                        ? 'border-white/10 bg-white/[0.05] text-slate-300 hover:border-white/20 hover:bg-white/[0.10] hover:text-white'
+                        : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-slate-100 hover:text-slate-900',
+                    ].join(' ')}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
 
-              <div className="flex shrink-0 items-center gap-2">
-                <button
-                  type="button"
-                  onClick={onToggleSound}
-                  aria-label={
-                    isSoundEnabled
-                      ? 'Mute notification sounds'
-                      : 'Enable notification sounds'
-                  }
-                  aria-pressed={isSoundEnabled}
-                  title={
-                    isSoundEnabled
-                      ? 'Notification sounds enabled'
-                      : 'Notification sounds muted'
-                  }
+              {/* Quick Stat Pill Bar */}
+              <div className="mt-3 flex items-center gap-2">
+                <div
                   className={[
-                    'flex h-9 w-9 items-center justify-center rounded-full border transition-all',
-                    'focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500',
-                    'active:scale-95',
+                    'flex items-center gap-2 px-3 py-1 rounded-xl border text-xs',
                     isDarkMode
-                      ? 'border-white/10 bg-white/[0.05] text-slate-300 hover:border-white/20 hover:bg-white/[0.10] hover:text-white'
-                      : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-slate-100 hover:text-slate-900',
+                      ? 'border-white/[0.08] bg-white/[0.04]'
+                      : 'border-slate-200 bg-slate-50/80',
                   ].join(' ')}
                 >
-                  {isSoundEnabled ? (
-                    <Volume2 className="h-4 w-4 text-indigo-500" />
-                  ) : (
-                    <VolumeX className="h-4 w-4" />
-                  )}
-                </button>
-
-                <button
-                  ref={closeButtonRef}
-                  type="button"
-                  onClick={onClose}
-                  aria-label="Close notifications"
-                  title="Close"
+                  <span className="text-slate-400 text-[11px] font-medium">Unread:</span>
+                  <span className="font-bold text-indigo-400 tabular-nums">{unreadCount}</span>
+                </div>
+                <div
                   className={[
-                    'flex h-9 w-9 items-center justify-center rounded-full border transition-all',
-                    'focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500',
-                    'active:scale-95',
+                    'flex items-center gap-2 px-3 py-1 rounded-xl border text-xs',
                     isDarkMode
-                      ? 'border-white/10 bg-white/[0.05] text-slate-300 hover:border-white/20 hover:bg-white/[0.10] hover:text-white'
-                      : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-slate-100 hover:text-slate-900',
+                      ? 'border-white/[0.08] bg-white/[0.04]'
+                      : 'border-slate-200 bg-slate-50/80',
                   ].join(' ')}
                 >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Summary cards */}
-            <div className="mt-5 grid grid-cols-2 gap-2.5">
-              <div
-                className={[
-                  'rounded-2xl border p-3',
-                  isDarkMode
-                    ? 'border-white/[0.08] bg-white/[0.04]'
-                    : 'border-slate-200 bg-slate-50/80',
-                ].join(' ')}
-              >
-                <div className="flex items-center justify-between">
-                  <span
-                    className={[
-                      'text-[10px] font-semibold uppercase tracking-wider',
-                      isDarkMode
-                        ? 'text-slate-500'
-                        : 'text-slate-500',
-                    ].join(' ')}
-                  >
-                    Unread
-                  </span>
-
-                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-500">
-                    <Bell className="h-3.5 w-3.5" />
-                  </span>
+                  <span className="text-slate-400 text-[11px] font-medium">Critical:</span>
+                  <span className="font-bold text-rose-400 tabular-nums">{sectionCounts.critical}</span>
                 </div>
-
-                <p
+                <div
                   className={[
-                    'mt-1 text-xl font-bold tabular-nums',
-                    isDarkMode ? 'text-white' : 'text-slate-950',
+                    'flex items-center gap-2 px-3 py-1 rounded-xl border text-xs',
+                    isDarkMode
+                      ? 'border-white/[0.08] bg-white/[0.04]'
+                      : 'border-slate-200 bg-slate-50/80',
                   ].join(' ')}
                 >
-                  {unreadCount}
-                </p>
-              </div>
-
-              <div
-                className={[
-                  'rounded-2xl border p-3',
-                  isDarkMode
-                    ? 'border-white/[0.08] bg-white/[0.04]'
-                    : 'border-slate-200 bg-slate-50/80',
-                ].join(' ')}
-              >
-                <div className="flex items-center justify-between">
-                  <span
-                    className={[
-                      'text-[10px] font-semibold uppercase tracking-wider',
-                      isDarkMode
-                        ? 'text-slate-500'
-                        : 'text-slate-500',
-                    ].join(' ')}
-                  >
-                    Critical
-                  </span>
-
-                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-rose-500/10 text-rose-500">
-                    <AlertOctagon className="h-3.5 w-3.5" />
-                  </span>
+                  <span className="text-slate-400 text-[11px] font-medium">Total:</span>
+                  <span className="font-bold text-slate-300 tabular-nums">{notifications.length}</span>
                 </div>
-
-                <p
-                  className={[
-                    'mt-1 text-xl font-bold tabular-nums',
-                    isDarkMode ? 'text-white' : 'text-slate-950',
-                  ].join(' ')}
-                >
-                  {sectionCounts.critical}
-                </p>
               </div>
-            </div>
-          </header>
+            </header>
 
           {/* Search */}
           <div
@@ -914,7 +940,9 @@ export const NotificationDrawer: React.FC<
                     'focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500',
                     'active:scale-[0.98]',
                     isActive
-                      ? 'border-indigo-500 bg-indigo-500 text-white shadow-lg shadow-indigo-500/20'
+                      ? isDarkMode
+                        ? 'border-white bg-white text-black shadow-md shadow-white/10 font-bold'
+                        : 'border-slate-900 bg-slate-900 text-white shadow-md font-bold'
                       : isDarkMode
                         ? 'border-white/[0.08] bg-white/[0.04] text-slate-300 hover:border-white/15 hover:bg-white/[0.08] hover:text-white'
                         : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-slate-100 hover:text-slate-900',
@@ -924,7 +952,7 @@ export const NotificationDrawer: React.FC<
                     className={[
                       'h-3.5 w-3.5',
                       isActive
-                        ? 'text-white'
+                        ? isDarkMode ? 'text-black' : 'text-white'
                         : isDarkMode
                           ? section.darkIconClass
                           : section.lightIconClass,
@@ -937,7 +965,7 @@ export const NotificationDrawer: React.FC<
                     className={[
                       'ml-0.5 rounded-md px-1.5 py-0.5 font-mono text-[9px] font-bold tabular-nums',
                       isActive
-                        ? 'bg-white/20 text-white'
+                        ? isDarkMode ? 'bg-black/15 text-black' : 'bg-white/20 text-white'
                         : isDarkMode
                           ? 'bg-white/[0.07] text-slate-400'
                           : 'bg-slate-200/80 text-slate-600',
@@ -1099,26 +1127,14 @@ export const NotificationDrawer: React.FC<
                         'group relative overflow-hidden rounded-2xl border transition-all duration-200',
                         notification.is_read
                           ? isDarkMode
-                            ? 'border-white/[0.08] bg-white/[0.035] hover:border-white/15 hover:bg-white/[0.055]'
+                            ? 'border-white/[0.08] bg-gradient-to-b from-[#181A22] to-[#101217] hover:border-white/15 hover:from-[#1D1F29] hover:to-[#14161C]'
                             : 'border-slate-200 bg-slate-50/80 hover:border-slate-300 hover:bg-white hover:shadow-md'
                           : isDarkMode
-                            ? 'border-indigo-400/20 bg-white/[0.075] shadow-[0_12px_35px_rgba(0,0,0,0.22)] hover:border-indigo-400/30 hover:bg-white/[0.095]'
+                            ? 'border-indigo-400/25 bg-gradient-to-b from-[#1E2230] to-[#131620] shadow-[0_8px_25px_rgba(0,0,0,0.35)] hover:border-indigo-400/40 hover:from-[#242838] hover:to-[#181B26]'
                             : 'border-indigo-200 bg-white shadow-[0_12px_35px_rgba(79,70,229,0.10)] ring-1 ring-indigo-500/5 hover:border-indigo-300',
                       ].join(' ')}
                     >
-                      {/* Severity accent */}
-                      <span
-                        aria-hidden="true"
-                        className={[
-                          'absolute inset-y-0 left-0 w-1',
-                          severityConfig.accentClass,
-                          notification.is_read
-                            ? 'opacity-35'
-                            : 'opacity-100',
-                        ].join(' ')}
-                      />
-
-                      <div className="p-4 pl-5">
+                      <div className="p-4">
                         <div className="flex items-start gap-3">
                           <div
                             title={severityConfig.label}
@@ -1300,6 +1316,7 @@ export const NotificationDrawer: React.FC<
           </footer>
         </div>
       </div>
+    </div>
     );
 
     return createPortal(drawerContent, document.body);

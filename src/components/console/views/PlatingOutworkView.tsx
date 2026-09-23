@@ -228,42 +228,40 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
     }
   };
 
+  const renderStatusBadge = (meta: { isOverdue: boolean; isCompleted: boolean; status: string; overdueDays: number }) => {
+    if (meta.isOverdue || meta.status === 'OVERDUE_JOBWORK') {
+      return (
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border ${
+          isDarkMode ? 'border-rose-500/30 bg-rose-500/10 text-rose-300' : 'border-rose-200 bg-rose-50 text-rose-700'
+        }`}>
+          <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0 animate-ping" />
+          <span>OVERDUE{meta.overdueDays > 0 ? ` (+${meta.overdueDays}d)` : ''}</span>
+        </span>
+      );
+    }
+    if (meta.isCompleted || meta.status === 'RETURNED_INSPECTED' || meta.status === 'COMPLETED') {
+      return (
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border ${
+          isDarkMode ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+        }`}>
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+          <span>RETURNED</span>
+        </span>
+      );
+    }
+    return (
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border ${
+        isDarkMode ? 'border-purple-500/30 bg-purple-500/10 text-purple-300' : 'border-purple-200 bg-purple-50 text-purple-700'
+      }`}>
+        <span className="w-1.5 h-1.5 rounded-full bg-purple-500 shrink-0" />
+        <span>IN SUBCON WIP</span>
+      </span>
+    );
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6 font-sans w-full max-w-full min-w-0 pb-6">
       
-      {/* Overdue Subcontracting Alert Banner */}
-      {overdueCount > 0 && (
-        <div className={`p-3.5 sm:p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-ui ${
-          isDarkMode 
-            ? 'bg-rose-500/10 border-rose-500/30 text-rose-400' 
-            : 'bg-rose-50 border-rose-200 text-rose-900 shadow-xs'
-        }`}>
-          <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-xl shrink-0 ${isDarkMode ? 'bg-rose-500/20 text-rose-400' : 'bg-rose-100 text-rose-700'}`}>
-              <AlertTriangle className="w-4 h-4" />
-            </div>
-            <div>
-              <h4 className={`font-bold text-xs sm:text-sm ${isDarkMode ? 'text-rose-300' : 'text-rose-900'}`}>
-                Subcontracting Overdue Alert
-              </h4>
-              <p className={`text-[11px] font-mono mt-0.5 ${isDarkMode ? 'text-rose-400/90' : 'text-rose-700'}`}>
-                {overdueCount} job-work gate-out batch{overdueCount > 1 ? 'es are' : ' is'} past expected return date.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setStatusTab('OVERDUE')}
-            className={`self-start sm:self-auto px-3 py-1.5 rounded-xl text-xs font-mono font-bold border transition-ui cursor-pointer ${
-              isDarkMode 
-                ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-500/30' 
-                : 'bg-rose-200/80 text-rose-900 border-rose-300 hover:bg-rose-200'
-            }`}
-          >
-            Filter {overdueCount} Overdue →
-          </button>
-        </div>
-      )}
 
       {/* ========================================================================= */}
       {/* ── MOBILE-FIRST TOP HEADER (< md) ──                                      */}
@@ -285,7 +283,7 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
           <button
             type="button"
             onClick={() => gatePassModal.open()}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold shadow-md active:scale-[0.96] transition-ui"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#181920] hover:bg-[#252730] text-white text-xs font-bold shadow-md active:scale-[0.96] transition-ui cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Issue Pass</span>
@@ -328,56 +326,114 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
       {/* ── DESKTOP HEADER & INTEGRATED KPI ROW (≥ md) ──                          */}
       {/* ========================================================================= */}
       <div className="hidden md:block space-y-4">
-        <section className={`overflow-hidden rounded-[24px] border ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'}`}>
-          <div className="flex items-center justify-between gap-6 px-6 py-5">
-            <div className="min-w-0">
-              <div className="mb-1.5 flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                Subcontracting & Outwork Operations
-                <span className="text-slate-300 dark:text-slate-700">/</span>
-                <span>{filtered.length} Gate Passes</span>
-              </div>
-              <div className="flex items-baseline gap-3">
-                <h1 className="truncate text-[25px] font-extrabold tracking-[-0.04em] text-slate-950 dark:text-white">
-                  Plating & Job-Work Hub
-                </h1>
-                <span className="hidden font-mono text-[10px] font-semibold text-slate-400 xl:inline">
-                  OUTWORK & JOB-WORK • GATE-OUT / IN LEDGER • SUBCONTRACTING WIP
+        <section className={`overflow-hidden rounded-2xl border transition-all ${
+          isDarkMode
+            ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]'
+            : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
+        }`}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 px-6 py-6 sm:py-7">
+            <div className="min-w-0 space-y-1.5">
+              <div className="flex items-center gap-2.5">
+                <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wide ${
+                  isDarkMode
+                    ? 'bg-white/10 border border-white/15 text-white'
+                    : 'bg-white/20 border border-white/30 backdrop-blur-md text-white shadow-xs'
+                }`}>
+                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>Subcontracting &amp; Outwork Operations</span>
+                </span>
+                <span className="text-sm font-semibold text-white/80">•</span>
+                <span className="text-xs sm:text-sm font-semibold text-white/95">
+                  {filtered.length} Gate Passes
                 </span>
               </div>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+
+              <h1 className="text-3xl sm:text-[32px] font-black tracking-tight text-white leading-tight">
+                Plating &amp; Job-Work Hub
+              </h1>
+
+              <p className="text-xs sm:text-sm text-white/95 font-medium leading-relaxed max-w-2xl">
                 Track outsourced processes with gate passes, SUBCON WIP movements, and return inspections.
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={() => gatePassModal.open()}
-              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-5 text-xs font-bold text-white shadow-lg shadow-[var(--accent-shadow)] transition hover:brightness-110 active:scale-[0.96]"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Issue Gate-Out Pass</span>
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => gatePassModal.open()}
+                className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
+                  isDarkMode
+                    ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
+                    : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
+                }`}
+              >
+                <Plus className="h-4 w-4 stroke-[3]" />
+                <span>Issue Gate-Out Pass</span>
+              </button>
+            </div>
           </div>
 
           {/* Integrated 4-Column Metric Strip (border-t) */}
-          <div className={`grid grid-cols-4 border-t ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+          <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t ${
+            isDarkMode
+              ? 'border-white/10 bg-gradient-to-b from-black/40 to-black/70 backdrop-blur-md'
+              : 'border-white/20 bg-white/[0.06] backdrop-blur-sm'
+          }`}>
             {[
-              { label: 'Total Outwork Passes', value: `${activeSendOuts.length}`, detail: 'Active & archived passes', icon: Wrench, tone: 'text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)]', iconBg: 'bg-[var(--accent-soft-light)] dark:bg-[var(--accent-soft-dark)]' },
-              { label: 'In Subcon WIP', value: `${totalSent.toLocaleString()} NOS`, detail: 'Material at jobworkers', icon: Layers, tone: 'text-purple-600 dark:text-purple-400', iconBg: 'bg-purple-500/10' },
-              { label: 'Active Subcontractors', value: `${Array.from(new Set(activeSendOuts.map(s => s.vendorName || s.subcontractorName))).filter(Boolean).length || 3}`, detail: 'Approved processing partners', icon: Building2, tone: 'text-emerald-600 dark:text-emerald-400', iconBg: 'bg-emerald-500/10' },
-              { label: 'Return Schedule', value: overdueCount > 0 ? `${overdueCount} Overdue` : '100% On Time', detail: overdueCount > 0 ? 'Action required on batches' : 'All jobs within SLA', icon: Clock, tone: overdueCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-amber-600 dark:text-amber-400', iconBg: overdueCount > 0 ? 'bg-rose-500/10' : 'bg-amber-500/10' },
+              {
+                label: 'Total Outwork Passes',
+                value: `${activeSendOuts.length}`,
+                detail: 'Active & archived passes',
+                icon: Wrench,
+                iconColor: isDarkMode ? 'text-white' : 'text-[#155dfc]',
+                iconBg: isDarkMode ? 'bg-blue-600 shadow-xs' : 'bg-white shadow-xs',
+              },
+              {
+                label: 'In Subcon WIP',
+                value: `${totalSent.toLocaleString()} NOS`,
+                detail: 'Material at jobworkers',
+                icon: Layers,
+                iconColor: 'text-white',
+                iconBg: 'bg-purple-500 shadow-xs',
+              },
+              {
+                label: 'Active Subcontractors',
+                value: `${Array.from(new Set(activeSendOuts.map(s => s.vendorName || s.subcontractorName))).filter(Boolean).length || 3}`,
+                detail: 'Approved processing partners',
+                icon: Building2,
+                iconColor: 'text-white',
+                iconBg: 'bg-emerald-500 shadow-xs',
+              },
+              {
+                label: 'Return Schedule',
+                value: overdueCount > 0 ? `${overdueCount} Overdue` : '100% On Time',
+                detail: overdueCount > 0 ? 'Action required on batches' : 'All jobs within SLA',
+                icon: Clock,
+                iconColor: 'text-white',
+                iconBg: overdueCount > 0 ? 'bg-rose-500 shadow-xs' : 'bg-amber-500 shadow-xs',
+              },
             ].map((metric, index) => {
               const MetricIcon = metric.icon;
               return (
-                <div key={metric.label} className={`flex items-center gap-3 px-5 py-4 ${index > 0 ? isDarkMode ? 'border-l border-white/[0.07]' : 'border-l border-slate-200' : ''}`}>
-                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${metric.iconBg} ${metric.tone}`}>
-                    <MetricIcon className="h-4 w-4" />
+                <div
+                  key={metric.label}
+                  className={`flex items-center gap-4 px-6 py-5 transition-all ${
+                    index > 0 ? (isDarkMode ? 'lg:border-l border-white/10' : 'lg:border-l border-white/20') : ''
+                  }`}
+                >
+                  <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${metric.iconBg} ${metric.iconColor}`}>
+                    <MetricIcon className="h-5 w-5 stroke-[2.5]" />
                   </div>
-                  <div className="min-w-0">
-                    <div className="font-mono text-[9px] font-bold uppercase tracking-[0.13em] text-slate-400">{metric.label}</div>
-                    <div className={`mt-0.5 truncate text-lg font-extrabold tracking-[-0.03em] ${metric.tone}`}>{metric.value}</div>
-                    <div className="truncate text-[10px] text-slate-400">{metric.detail}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-bold uppercase tracking-wider text-white/85">
+                      {metric.label}
+                    </div>
+                    <div className="text-2xl sm:text-[26px] font-black tracking-tight text-white tabular-nums my-0.5 leading-tight">
+                      {metric.value}
+                    </div>
+                    <div className="text-xs font-medium text-white/90 truncate">
+                      {metric.detail}
+                    </div>
                   </div>
                 </div>
               );
@@ -385,79 +441,108 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
           </div>
         </section>
 
-        {/* Desktop Filter & Search Toolbar */}
-        <div className={`rounded-2xl border p-3 ${isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]'}`}>
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${isDarkMode ? 'bg-white/[0.05] text-slate-400' : 'bg-slate-100 text-slate-500'}`} title="Modules">
-              <Wrench className="h-4 w-4" />
-            </div>
-
-            {/* Filter Pills */}
-            <div className="flex items-center gap-1.5">
-              {[
-                { id: 'ALL', label: 'All Passes', count: activeSendOuts.length },
-                { id: 'WIP', label: 'In Job-Work', count: wipCount },
-                { id: 'OVERDUE', label: 'Overdue', count: overdueCount, isAlert: overdueCount > 0 },
-                { id: 'COMPLETED', label: 'Returned', count: completedCount },
-              ].map(tab => {
-                const isActive = statusTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setStatusTab(tab.id as any)}
-                    className={`flex h-9 items-center gap-1.5 rounded-xl border px-3 text-xs font-bold transition-colors ${
-                      isActive
-                        ? isDarkMode
+        {/* ── APPLE 2-TIER COMMAND DECK & FILTERS ── */}
+        <div className={`rounded-2xl border p-3.5 transition-all ${
+          isDarkMode
+            ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] shadow-[0_8px_28px_rgba(0,0,0,0.5)]'
+            : 'border-slate-200/80 bg-gradient-to-b from-white/95 via-slate-50/90 to-slate-100/70 shadow-[0_4px_20px_rgba(0,0,0,0.03)]'
+        }`}>
+          <div className="space-y-3">
+            {/* Tier 1: Segmented tab buttons with counts + Live telemetry chip */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className={`inline-flex items-center gap-1 rounded-xl p-1 border transition-all ${
+                isDarkMode ? 'border-white/10 bg-black/40' : 'border-slate-200/80 bg-slate-100/80'
+              }`}>
+                {[
+                  { id: 'ALL', label: 'All Passes', count: activeSendOuts.length, isAlert: false },
+                  { id: 'WIP', label: 'In Job-Work', count: wipCount, isAlert: false },
+                  { id: 'OVERDUE', label: 'Overdue', count: overdueCount, isAlert: overdueCount > 0 },
+                  { id: 'COMPLETED', label: 'Returned', count: completedCount, isAlert: false },
+                ].map(tab => {
+                  const isActive = statusTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setStatusTab(tab.id as any)}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-150 cursor-pointer ${
+                        isActive
+                          ? isDarkMode
+                            ? tab.isAlert
+                              ? 'bg-rose-500 text-white shadow-xs'
+                              : 'bg-white text-slate-950 shadow-xs'
+                            : tab.isAlert
+                            ? 'bg-rose-600 text-white shadow-xs'
+                            : 'bg-slate-900 text-white shadow-xs'
+                          : isDarkMode
                           ? tab.isAlert
-                            ? 'border-rose-500/50 bg-rose-500/20 text-rose-300'
-                            : 'border-[var(--accent-primary)]/40 bg-[var(--accent-primary)]/20 text-[var(--accent-text-dark)] shadow-xs'
+                            ? 'text-rose-400 hover:text-rose-300 hover:bg-rose-500/10'
+                            : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
                           : tab.isAlert
-                          ? 'border-rose-300 bg-rose-500 text-white'
-                          : 'border-[var(--accent-primary)] bg-[var(--accent-primary)] text-white shadow-sm shadow-[var(--accent-shadow)]'
-                        : isDarkMode
-                        ? tab.isAlert
-                          ? 'border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20'
-                          : 'border-white/[0.08] bg-black/20 text-slate-400 hover:bg-white/[0.04] hover:text-white'
-                        : tab.isAlert
-                        ? 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100'
-                        : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                    }`}
-                  >
-                    <span>{tab.label}</span>
-                    <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-mono font-bold ${
-                      isActive
-                        ? isDarkMode ? 'bg-white/20 text-white' : 'bg-white/30 text-white'
-                        : isDarkMode ? 'bg-white/10 text-slate-400' : 'bg-slate-200 text-slate-700'
-                    }`}>
-                      {tab.count}
-                    </span>
-                  </button>
-                );
-              })}
+                          ? 'text-rose-700 hover:text-rose-800 hover:bg-rose-100/50'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                      }`}
+                    >
+                      <span>{tab.label}</span>
+                      <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                        isActive
+                          ? isDarkMode
+                            ? tab.isAlert ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-900'
+                            : 'bg-white/30 text-white'
+                          : isDarkMode
+                          ? tab.isAlert ? 'bg-rose-500/20 text-rose-300' : 'bg-white/10 text-slate-400'
+                          : tab.isAlert ? 'bg-rose-200 text-rose-800' : 'bg-slate-200/80 text-slate-600'
+                      }`}>
+                        {tab.count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Telemetry pill */}
+              <div className="flex items-center gap-2">
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-semibold border ${
+                  isDarkMode ? 'border-white/10 bg-white/[0.03] text-slate-400' : 'border-slate-200 bg-white text-slate-600 shadow-2xs'
+                }`}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  Showing {filtered.length} of {activeSendOuts.length} outwork records
+                </span>
+              </div>
             </div>
 
-            {/* Search Input */}
-            <div className={`flex h-10 min-w-[240px] flex-1 items-center gap-2 rounded-xl border px-3 ml-auto ${isDarkMode ? 'border-white/[0.08] bg-black/20 text-white focus-within:border-[var(--accent-border-dark)]' : 'border-slate-200 bg-slate-50 text-slate-900 focus-within:border-[var(--accent-primary)]'}`}>
-              <Search className="h-4 w-4 shrink-0 text-slate-400" />
+            {/* Tier 2: Spotlight search */}
+            <div className={`relative flex items-center rounded-xl border transition-all ${
+              isDarkMode
+                ? 'border-white/10 bg-black/40 text-white focus-within:border-white/25 focus-within:bg-black/60'
+                : 'border-slate-200/90 bg-white text-slate-900 focus-within:border-slate-400 focus-within:shadow-xs'
+            }`}>
+              <Search className="absolute left-3.5 h-4 w-4 text-slate-400 pointer-events-none" />
               <input
                 type="text"
-                placeholder="Search Gate Pass #, Job #, Vendor, Process..."
+                placeholder="Search gate pass #, job card #, vendor partner, process..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-full w-full bg-transparent text-xs font-semibold outline-none placeholder:font-normal placeholder:text-slate-400 font-mono"
+                className="w-full bg-transparent pl-10 pr-24 py-2.5 text-xs font-medium outline-none placeholder:text-slate-400 font-sans"
               />
-              {searchQuery && (
-                <button type="button" onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-700 dark:hover:text-white">
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
+              <div className="absolute right-3 flex items-center gap-2">
+                {searchQuery ? (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                ) : (
+                  <kbd className={`hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono font-bold rounded border ${
+                    isDarkMode ? 'border-white/10 bg-white/5 text-slate-400' : 'border-slate-200 bg-slate-100 text-slate-500'
+                  }`}>
+                    ⌘F
+                  </kbd>
+                )}
+              </div>
             </div>
-          </div>
-
-          <div className="mt-2.5 flex items-center justify-between px-1 font-mono text-[9px] font-semibold uppercase tracking-wider text-slate-400">
-            <span>Showing {filtered.length} of {activeSendOuts.length} outwork records</span>
-            <span>Gate-Out / Return Material Inspection Ledger</span>
           </div>
         </div>
       </div>
@@ -505,18 +590,7 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
                     </h3>
                   </div>
 
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border shrink-0 ${
-                    meta.isOverdue || meta.status === 'OVERDUE_JOBWORK'
-                      ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
-                      : meta.isCompleted
-                      ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                      : 'bg-purple-500/15 text-purple-400 border-purple-500/30'
-                  }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${
-                      meta.isOverdue ? 'bg-rose-400' : meta.isCompleted ? 'bg-emerald-400' : 'bg-purple-400'
-                    }`} />
-                    <span>{meta.isOverdue ? `OVERDUE (${meta.overdueDays}d)` : (meta.status === 'OUT_FOR_JOBWORK' ? 'IN WIP' : meta.status)}</span>
-                  </span>
+                  {renderStatusBadge(meta)}
                 </div>
 
                 {/* Process Badge & Item Description */}
@@ -595,38 +669,43 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
       {/* ========================================================================= */}
       {/* DESKTOP OUTWORK TABLE (Viewport >= md) */}
       {/* ========================================================================= */}
-      <div className={`hidden md:block overflow-hidden rounded-[22px] border transition-ui ${
-        isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
+      <div className={`hidden md:block overflow-hidden rounded-3xl border transition-all duration-300 ${
+        isDarkMode 
+          ? 'border-white/[0.08] bg-gradient-to-b from-[#111318] via-[#08090c] to-[#010203] shadow-[0_24px_50px_rgba(0,0,0,0.6)]' 
+          : 'border-slate-200/80 bg-gradient-to-b from-white via-slate-50/40 to-[#f6f8fc] shadow-[0_16px_40px_rgba(15,23,42,0.06)]'
       }`}>
-        <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+        {/* Specular top edge highlight line */}
+        <div className="h-px w-full bg-gradient-to-r from-transparent via-white/20 dark:via-white/10 to-transparent" />
+
+        <div className={`flex items-center justify-between border-b px-6 py-4 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
           <div>
-            <div className="text-xs font-extrabold text-slate-900 dark:text-white">Subcontracting Outwork Register</div>
-            <div className="mt-0.5 text-[10px] text-slate-400">Gate pass movements, outside processing batches, and return tracking</div>
+            <div className="text-sm font-extrabold text-slate-900 dark:text-white">Subcontracting Outwork Register</div>
+            <div className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Gate pass movements, outside processing batches, and return tracking</div>
           </div>
-          <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>{filtered.length} records</span>
+          <span className={`rounded-full border px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-300' : 'border-slate-200 bg-slate-50 text-slate-600'}`}>
+            {filtered.length} records
+          </span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${
-                isDarkMode ? 'border-white/[0.07] bg-black/20 text-slate-500' : 'border-slate-200 bg-slate-50/80 text-slate-400'
-              }`}>
-                <th className="py-4 px-5">Gate-Out Pass #</th>
-                <th className="py-4 px-5">Job Card Reference</th>
-                <th className="py-4 px-5">Subcontractor / Vendor</th>
-                <th className="py-4 px-5">Outsourced Process</th>
-                <th className="py-4 px-5 text-right">Dispatched Qty</th>
-                <th className="py-4 px-5 text-right">Received Qty</th>
-                <th className="py-4 px-5">Expected Return</th>
-                <th className="py-4 px-5 text-center">Status</th>
-                <th className="py-4 px-5 text-center">Action</th>
+            <thead className={`border-b ${isDarkMode ? 'border-white/[0.06] bg-white/[0.02]' : 'border-slate-200/80 bg-slate-50/60'}`}>
+              <tr className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-slate-600 dark:text-slate-400">
+                <th className="py-4 px-6">Gate-Out Pass #</th>
+                <th className="py-4 px-6">Job Card Reference</th>
+                <th className="py-4 px-6">Subcontractor / Vendor</th>
+                <th className="py-4 px-6">Outsourced Process</th>
+                <th className="py-4 px-6 text-right">Dispatched Qty</th>
+                <th className="py-4 px-6 text-right">Received Qty</th>
+                <th className="py-4 px-6">Expected Return</th>
+                <th className="py-4 px-6 text-center">Status</th>
+                <th className="py-4 px-6 text-center">Action</th>
               </tr>
             </thead>
-            <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
+            <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200/80'}`}>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-400 font-mono text-xs">
+                  <td colSpan={9} className="py-16 text-center text-slate-400 font-mono text-xs">
                     No outwork gate passes found matching current filters.
                   </td>
                 </tr>
@@ -635,72 +714,69 @@ export const PlatingOutworkView: React.FC<PlatingOutworkViewProps> = ({
                 const meta = getItemMeta(s, idx);
 
                 return (
-                  <tr key={meta.passNo} className={`group transition-colors ${isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'}`}>
-                    <td className="py-4 px-5">
-                      <div className="flex items-center gap-2.5">
-                        <div className={`p-2 rounded-xl transition-transform group-hover:scale-105 shrink-0 ${
-                          isDarkMode 
-                            ? 'bg-[var(--accent-primary)]/20 text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/30' 
-                            : 'bg-[var(--accent-primary)]/10 text-[var(--accent-text-light)] border border-[var(--accent-primary)]/20'
+                  <tr key={meta.passNo} className={`group transition-all duration-200 ${
+                    isDarkMode 
+                      ? 'hover:bg-white/[0.03] border-b border-white/[0.04]' 
+                      : 'hover:bg-slate-50/90 border-b border-slate-100'
+                  }`}>
+                    <td className="py-4 px-6">
+                      <div className="flex items-center gap-3.5">
+                        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 border transition-all duration-300 group-hover:scale-105 group-hover:shadow-md ${
+                          isDarkMode
+                            ? 'bg-gradient-to-br from-white/[0.08] to-white/[0.02] border-white/10 text-white'
+                            : 'bg-gradient-to-br from-slate-50 to-slate-100/80 border-slate-200/80 text-slate-800 shadow-xs'
                         }`}>
-                          <Wrench className="w-3.5 h-3.5" />
+                          <Wrench className="w-5 h-5 text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]" />
                         </div>
                         <div>
-                          <div className="font-mono font-bold text-xs text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">
+                          <div className="font-mono text-sm tracking-tight text-slate-900 dark:text-white font-black">
                             {meta.passNo}
+                          </div>
+                          <div className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-1 flex items-center gap-1.5">
+                            <span>{meta.vendor}</span>
+                            {s.jobNo && (
+                              <span className="font-mono text-[10px] font-semibold text-slate-400 dark:text-slate-500">
+                                • {s.jobNo}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td className="py-4 px-5">
-                      <span className="font-bold text-xs font-mono text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">
+                    <td className="py-4 px-6">
+                      <span className="font-mono text-xs font-bold text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">
                         {s.jobNo || 'JC/0001/26-27'}
                       </span>
                     </td>
-                    <td className={`py-4 px-5 font-semibold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
+                    <td className={`py-4 px-6 font-bold text-xs ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>
                       {meta.vendor}
                     </td>
-                    <td className="py-4 px-5 font-mono font-medium text-purple-500 dark:text-purple-400">
+                    <td className="py-4 px-6 font-mono text-xs font-semibold text-purple-600 dark:text-purple-400">
                       {getProcessLabel(meta.proc)}
                     </td>
-                    <td className={`py-4 px-5 text-right font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    <td className={`py-4 px-6 text-right font-black font-mono text-xs ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                       {meta.sent} NOS
                     </td>
-                    <td className="py-4 px-5 text-right font-bold font-mono text-emerald-500">
+                    <td className="py-4 px-6 text-right font-black font-mono text-xs text-emerald-600 dark:text-emerald-400">
                       {meta.rec} NOS
                     </td>
-                    <td className={`py-4 px-5 font-mono ${meta.isOverdue ? 'text-rose-500 font-bold' : (isDarkMode ? 'text-amber-400' : 'text-amber-600')}`}>
+                    <td className={`py-4 px-6 font-mono text-xs ${meta.isOverdue ? 'text-rose-500 font-bold' : (isDarkMode ? 'text-amber-400 font-medium' : 'text-amber-600 font-medium')}`}>
                       {meta.expDate}
                       {meta.isOverdue && (
                         <span className="ml-1.5 text-[9px] px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-400 font-bold">
-                          OVERDUE{meta.overdueDays > 0 ? ` (+${meta.overdueDays}d)` : ''}
+                          +{meta.overdueDays}d
                         </span>
                       )}
                     </td>
-                    <td className="py-4 px-5 text-center">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
-                        meta.isOverdue || meta.status === 'OVERDUE_JOBWORK'
-                          ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-                          : meta.status === 'RETURNED_INSPECTED' || meta.status === 'COMPLETED'
-                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                          : 'bg-purple-500/10 text-purple-400 border-purple-500/30'
-                      }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${
-                          meta.isOverdue || meta.status === 'OVERDUE_JOBWORK'
-                            ? 'bg-rose-500'
-                            : meta.status === 'RETURNED_INSPECTED' || meta.status === 'COMPLETED'
-                            ? 'bg-emerald-500'
-                            : 'bg-purple-500'
-                        }`} />
-                        <span>{meta.isOverdue ? 'OVERDUE' : (meta.status === 'OUT_FOR_JOBWORK' ? 'IN WIP' : meta.status)}</span>
-                      </span>
+                    <td className="py-4 px-6 text-center">
+                      {renderStatusBadge(meta)}
                     </td>
-                    <td className="py-4 px-5 text-center">
+                    <td className="py-4 px-6 text-center">
                       {!meta.isCompleted ? (
                         <button
                           type="button"
                           onClick={() => handleOpenReceive(s, idx)}
-                          className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-ui cursor-pointer inline-flex items-center gap-1.5 ${
+                          className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
                             isDarkMode 
                               ? 'bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 border border-emerald-500/30' 
                               : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 shadow-xs'

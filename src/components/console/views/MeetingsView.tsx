@@ -207,56 +207,49 @@ export const MeetingsView: React.FC<MeetingsViewProps> = ({
 
   return (
     <div className="space-y-4 sm:space-y-6 font-sans">
-      {/* ========================================================================= */}
-      {/* ── TOP HERO HEADER (Apple HIG Banner Matching OwnerOS) ──                 */}
-      {/* ========================================================================= */}
-      <div className={`p-6 sm:p-7 rounded-3xl border transition-all ${cardBase}`}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 pb-6 border-b border-white/10 dark:border-white/10">
-          <div className="flex items-start gap-4">
-            <div className="p-3.5 rounded-2xl bg-[var(--accent-soft-light)] dark:bg-[var(--accent-soft-dark)] text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-border-light)] dark:border-[var(--accent-border-dark)] shrink-0">
-              <CalendarClock className="w-6 h-6" />
+      {/* 1. Luminous Dual-Mode Hero & Integrated Mini Dashboard */}
+      <div className={`relative overflow-hidden rounded-[28px] border transition-all duration-300 p-6 sm:p-8 ${
+        isDarkMode
+          ? 'bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] border-white/10 shadow-[0_24px_50px_rgba(0,0,0,0.7)] text-white'
+          : 'bg-gradient-to-r from-[#1b64ff] via-[#155dfc] to-[#0f52dc] border-blue-400/30 shadow-[0_16px_36px_rgba(21,93,252,0.28)] text-white'
+      }`}>
+        {/* Ambient Top Glow */}
+        <div
+          aria-hidden="true"
+          className={`pointer-events-none absolute -top-24 -right-10 w-96 h-96 rounded-full blur-3xl transition-opacity duration-500 ${
+            isDarkMode ? 'bg-blue-500/10' : 'bg-white/20'
+          }`}
+        />
+
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold tracking-wide backdrop-blur-md border bg-white/15 text-white border-white/20 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>HR Module • Team Calendar &amp; Automated Reminders Sync</span>
             </div>
-            <div className="space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide bg-[var(--accent-soft-light)] dark:bg-[var(--accent-soft-dark)] text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-border-light)] dark:border-[var(--accent-border-dark)]">
-                  HR Module
-                </span>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>Automated Reminders Sync</span>
-                </span>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 text-white shadow-inner">
+                <CalendarClock className="h-5 w-5" />
               </div>
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
-                Meetings & Scheduling
-              </h1>
-              <p className={`text-xs max-w-2xl leading-relaxed ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                Team calendar schedule with automated 24h and 15m reminders. Attach links from Google Meet, Zoom, or Microsoft Teams for rapid one-click launching.
-              </p>
-            </div>
+              Meetings &amp; Scheduling
+            </h1>
+            <p className={`text-xs sm:text-sm max-w-2xl font-normal leading-relaxed ${
+              isDarkMode ? 'text-white/60' : 'text-blue-100'
+            }`}>
+              Team calendar schedule with automated 24h and 15m reminders. Launch Google Meet, Zoom, or Microsoft Teams with a single click.
+            </p>
           </div>
 
-          <div className="flex items-center gap-3 self-start sm:self-center">
-            {/* Live Upcoming Metric Pill */}
-            <div
-              className={`p-3 sm:px-4 sm:py-2.5 rounded-2xl border font-mono text-right w-full sm:w-auto ${
-                isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-50 border-slate-200/80 shadow-2xs'
-              }`}
-            >
-              <div className="flex sm:flex-col justify-between items-center sm:items-end">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                  Upcoming
-                </span>
-                <span className="text-xl sm:text-2xl font-bold text-[var(--accent-text-dark)] tabular-nums">
-                  {upcomingCount}
-                </span>
-              </div>
-            </div>
-
+          <div className="flex flex-wrap items-center gap-3 shrink-0 self-start lg:self-center">
             {canManageMeetings && (
               <button
                 type="button"
                 onClick={() => meetingModal.open()}
-                className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer"
+                className={`flex h-11 shrink-0 items-center gap-2 rounded-full px-5 text-xs font-bold transition-all active:scale-[0.96] cursor-pointer shadow-lg ${
+                  isDarkMode
+                    ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
+                    : 'bg-white hover:bg-blue-50 text-blue-700 shadow-blue-900/30'
+                }`}
               >
                 <Plus className="w-4 h-4" />
                 <span>Schedule Meeting</span>
@@ -265,66 +258,97 @@ export const MeetingsView: React.FC<MeetingsViewProps> = ({
           </div>
         </div>
 
-        {/* Apple 3-Column Metric Strip */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 pt-6">
-          {[
-            {
-              label: 'Upcoming Sessions',
-              value: upcomingCount,
-              sub: 'Scheduled & upcoming',
-              icon: CalendarClock,
-              iconBg: 'bg-[var(--accent-soft-light)] dark:bg-[var(--accent-soft-dark)] text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-border-light)] dark:border-[var(--accent-border-dark)]'
-            },
-            {
-              label: 'Total Sessions',
-              value: meetings.length,
-              sub: 'Calendar lifetime count',
-              icon: Calendar,
-              iconBg: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-            },
-            {
-              label: 'Cancelled Sessions',
-              value: cancelledCount,
-              sub: 'Retracted bookings',
-              icon: XCircle,
-              iconBg: 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-            }
-          ].map((m) => {
-            const Icon = m.icon;
-            return (
-              <div
-                key={m.label}
-                className={`p-4 sm:p-5 rounded-2xl border transition-all ${
-                  isDarkMode ? 'bg-black/40 border-white/10 hover:border-white/20' : 'bg-slate-50 border-slate-200'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className={`p-2.5 rounded-xl ${m.iconBg}`}>
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <span className="text-[10px] font-mono uppercase font-semibold text-slate-400 tracking-wider">
-                    {m.label}
-                  </span>
-                </div>
-                <div className={`text-xl sm:text-2xl font-bold tracking-tight font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                  {m.value}
-                </div>
-                <div className="text-[11px] text-slate-400 mt-1 font-medium truncate">
-                  {m.sub}
-                </div>
-              </div>
-            );
-          })}
+        {/* Mini Metric Dashboard Strip with SOLID VIBRANT ICON SQUIRCLES */}
+        <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-3">
+          {/* Card 1: Upcoming Sessions */}
+          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
+            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+          }`}>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-md shadow-black/10">
+              <CalendarClock className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
+                Upcoming
+              </span>
+              <span className="text-xl sm:text-2xl font-bold font-mono text-white block tabular-nums">
+                {upcomingCount}
+              </span>
+              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
+                Scheduled &amp; upcoming
+              </span>
+            </div>
+          </div>
+
+          {/* Card 2: Total Sessions */}
+          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
+            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+          }`}>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-purple-600 text-white shadow-md shadow-purple-500/30">
+              <Calendar className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
+                Total Sessions
+              </span>
+              <span className="text-xl sm:text-2xl font-bold font-mono text-white block tabular-nums">
+                {meetings.length}
+              </span>
+              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
+                Lifetime bookings
+              </span>
+            </div>
+          </div>
+
+          {/* Card 3: Active Scheduled */}
+          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
+            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+          }`}>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-md shadow-emerald-500/30">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
+                Active Scheduled
+              </span>
+              <span className="text-xl sm:text-2xl font-bold font-mono text-white block tabular-nums">
+                {meetings.filter(m => m.status === 'SCHEDULED').length}
+              </span>
+              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
+                Confirmed slots
+              </span>
+            </div>
+          </div>
+
+          {/* Card 4: Cancelled Sessions */}
+          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
+            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+          }`}>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-600 text-white shadow-md shadow-rose-500/30">
+              <XCircle className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
+                Cancelled
+              </span>
+              <span className="text-xl sm:text-2xl font-bold font-mono text-white block tabular-nums">
+                {cancelledCount}
+              </span>
+              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
+                Retracted meetings
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* ========================================================================= */}
       {/* ── APPLE SEGMENTED FILTER BAR ──                                        */}
       {/* ========================================================================= */}
-      <div className={`p-2.5 sm:p-3 rounded-3xl border transition-ui flex items-center justify-between gap-3 overflow-x-auto scrollbar-none ${cardBase}`}>
+      <div className={`p-2.5 sm:p-3 rounded-2xl sm:rounded-3xl border transition-ui flex items-center justify-between gap-3 overflow-x-auto scrollbar-none ${cardBase}`}>
         <div
-          className={`p-1 rounded-xl border flex items-center overflow-x-auto scrollbar-none w-full sm:w-auto ${
-            isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-100 border-slate-200'
+          className={`p-1 rounded-full border flex items-center gap-1 overflow-x-auto scrollbar-none w-full sm:w-auto ${
+            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-slate-100/80 border-slate-200/80'
           }`}
         >
           {[
@@ -338,22 +362,22 @@ export const MeetingsView: React.FC<MeetingsViewProps> = ({
                 key={tab.id}
                 type="button"
                 onClick={() => setStatusFilter(tab.id as typeof statusFilter)}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold transition-ui cursor-pointer whitespace-nowrap ${
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                   isActive
-                    ? 'bg-[var(--accent-primary)] text-white shadow-sm'
+                    ? isDarkMode ? 'bg-white text-slate-950 shadow-sm' : 'bg-[#155dfc] text-white shadow-sm'
                     : isDarkMode
-                      ? 'text-slate-400 hover:text-white'
-                      : 'text-slate-600 hover:text-slate-900'
+                      ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                 }`}
               >
                 <span>{tab.label}</span>
                 <span
-                  className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                  className={`px-1.5 py-0.5 rounded-full text-[10px] tabular-nums font-bold ${
                     isActive
-                      ? 'bg-white/20 text-white'
+                      ? isDarkMode ? 'bg-slate-900 text-white' : 'bg-white/20 text-white'
                       : isDarkMode
                         ? 'bg-white/10 text-slate-400'
-                        : 'bg-slate-200 text-slate-600'
+                        : 'bg-slate-200 text-slate-700'
                   }`}
                 >
                   {tab.count}
@@ -520,7 +544,7 @@ export const MeetingsView: React.FC<MeetingsViewProps> = ({
                         target="_blank"
                         rel="noreferrer"
                         title="Open video call"
-                        className="inline-flex h-9 items-center gap-1.5 px-3 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-white text-xs font-bold shadow-md shadow-[var(--accent-shadow)] transition-ui cursor-pointer"
+                        className="inline-flex h-9 items-center gap-1.5 px-4 rounded-full bg-[#155dfc] hover:bg-blue-600 text-white text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer"
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
                         <span>Join</span>

@@ -148,70 +148,69 @@ export const EmployeeMasterView: React.FC<Props> = ({
 
   return (
     <div className="space-y-4 sm:space-y-6 font-sans">
-      {/* ========================================================================= */}
-      {/* ── TOP HERO HEADER (Apple HIG Banner Matching OwnerOS) ──                 */}
-      {/* ========================================================================= */}
-      <div className={`p-6 sm:p-7 rounded-3xl border transition-all ${cardBase}`}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 pb-6 border-b border-white/10 dark:border-white/10">
-          <div className="flex items-start gap-4">
-            <div className="p-3.5 rounded-2xl bg-[var(--accent-soft-light)] dark:bg-[var(--accent-soft-dark)] text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-border-light)] dark:border-[var(--accent-border-dark)] shrink-0">
-              <Users className="w-6 h-6" />
+      {/* 1. Luminous Dual-Mode Hero & Integrated Mini Dashboard */}
+      <div className={`relative overflow-hidden rounded-[28px] border transition-all duration-300 p-6 sm:p-8 ${
+        isDarkMode
+          ? 'bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] border-white/10 shadow-[0_24px_50px_rgba(0,0,0,0.7)] text-white'
+          : 'bg-gradient-to-r from-[#1b64ff] via-[#155dfc] to-[#0f52dc] border-blue-400/30 shadow-[0_16px_36px_rgba(21,93,252,0.28)] text-white'
+      }`}>
+        {/* Ambient Top Glow */}
+        <div
+          aria-hidden="true"
+          className={`pointer-events-none absolute -top-24 -right-10 w-96 h-96 rounded-full blur-3xl transition-opacity duration-500 ${
+            isDarkMode ? 'bg-blue-500/10' : 'bg-white/20'
+          }`}
+        />
+
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold tracking-wide backdrop-blur-md border bg-white/15 text-white border-white/20 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>HR / People Operations • Internal Staff Roster</span>
             </div>
-            <div className="space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide bg-[var(--accent-soft-light)] dark:bg-[var(--accent-soft-dark)] text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-border-light)] dark:border-[var(--accent-border-dark)]">
-                  HR / People Operations
-                </span>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>Internal Staff Roster</span>
-                </span>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 text-white shadow-inner">
+                <Users className="h-5 w-5" />
               </div>
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
-                Employee Management
-              </h1>
-              <p className={`text-xs max-w-2xl leading-relaxed ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                Canonical staff records projected from internal accounts. Platform Admins and Client accounts are excluded from staff rosters.
-              </p>
-            </div>
+              Employee Management
+            </h1>
+            <p className={`text-xs sm:text-sm max-w-2xl font-normal leading-relaxed ${
+              isDarkMode ? 'text-white/60' : 'text-blue-100'
+            }`}>
+              Canonical staff records projected from internal accounts. Manage roles, department assignments, and contact records.
+            </p>
           </div>
 
-          <div className="flex items-center gap-2.5 self-start sm:self-center">
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0 self-start lg:self-center">
             {/* View Switcher (macOS Segmented Toggle) */}
-            <div
-              className={`p-1 rounded-xl border flex items-center gap-1 ${
-                isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-100 border-slate-200'
-              }`}
-            >
+            <div className={`p-1 rounded-full border backdrop-blur-md flex items-center gap-1 ${
+              isDarkMode ? 'border-white/15 bg-white/[0.06]' : 'border-white/25 bg-white/20'
+            }`}>
               <button
                 type="button"
                 onClick={() => setViewMode('table')}
                 title="Table View"
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-ui cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                   viewMode === 'table'
-                    ? 'bg-[var(--accent-primary)] text-white shadow-sm'
-                    : isDarkMode
-                      ? 'text-slate-400 hover:text-white'
-                      : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : isDarkMode ? 'text-white/70 hover:text-white' : 'text-white/90 hover:text-white'
                 }`}
               >
                 <TableIcon className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Table</span>
+                <span>Table</span>
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode('grid')}
                 title="Cards Grid View"
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-ui cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                   viewMode === 'grid'
-                    ? 'bg-[var(--accent-primary)] text-white shadow-sm'
-                    : isDarkMode
-                      ? 'text-slate-400 hover:text-white'
-                      : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : isDarkMode ? 'text-white/70 hover:text-white' : 'text-white/90 hover:text-white'
                 }`}
               >
                 <LayoutGrid className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Cards</span>
+                <span>Cards</span>
               </button>
             </div>
 
@@ -220,75 +219,95 @@ export const EmployeeMasterView: React.FC<Props> = ({
               type="button"
               onClick={() => onRefresh?.()}
               disabled={isLoadingEmployees}
-              className={`inline-flex h-10 items-center gap-2 rounded-xl border px-3.5 text-xs font-semibold transition-ui cursor-pointer active:scale-95 ${
-                isDarkMode
-                  ? 'border-white/10 bg-white/[0.04] text-slate-200 hover:bg-white/[0.08] hover:text-white'
-                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-950 shadow-2xs'
-              }`}
+              className="inline-flex h-11 items-center gap-2 rounded-full border border-white/20 bg-white/10 hover:bg-white/15 text-white text-xs font-semibold transition-all cursor-pointer active:scale-95 shadow-sm disabled:opacity-50 px-4 backdrop-blur-md"
             >
-              <RefreshCw className={`h-3.5 w-3.5 ${isLoadingEmployees ? 'animate-spin text-[var(--accent-text-dark)]' : ''}`} />
-              <span className="hidden xs:inline">Refresh</span>
+              <RefreshCw className={`h-3.5 w-3.5 ${isLoadingEmployees ? 'animate-spin text-white' : ''}`} />
+              <span>Refresh</span>
             </button>
           </div>
         </div>
 
-        {/* Apple 4-Column Metric Strip */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-6">
-          {[
-            {
-              label: 'Total Staff',
-              value: employees.length,
-              sub: 'Enrolled employee accounts',
-              icon: Users,
-              iconBg: 'bg-[var(--accent-soft-light)] dark:bg-[var(--accent-soft-dark)] text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-border-light)] dark:border-[var(--accent-border-dark)]'
-            },
-            {
-              label: 'Active Staff',
-              value: employees.filter(e => e.status === 'ACTIVE').length,
-              sub: 'Operational credentials',
-              icon: ShieldCheck,
-              iconBg: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-            },
-            {
-              label: 'Departments',
-              value: departments.length,
-              sub: 'Functional teams',
-              icon: Building2,
-              iconBg: 'bg-sky-500/10 text-sky-400 border border-sky-500/20'
-            },
-            {
-              label: 'Filtered Staff',
-              value: filtered.length,
-              sub: 'Matching current view',
-              icon: UserCheck,
-              iconBg: 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-            }
-          ].map((m) => {
-            const Icon = m.icon;
-            return (
-              <div
-                key={m.label}
-                className={`p-4 sm:p-5 rounded-2xl border transition-all ${
-                  isDarkMode ? 'bg-black/40 border-white/10 hover:border-white/20' : 'bg-slate-50 border-slate-200'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className={`p-2.5 rounded-xl ${m.iconBg}`}>
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <span className="text-[10px] font-mono uppercase font-semibold text-slate-400 tracking-wider">
-                    {m.label}
-                  </span>
-                </div>
-                <div className={`text-xl sm:text-2xl font-bold tracking-tight font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                  {m.value}
-                </div>
-                <div className="text-[11px] text-slate-400 mt-1 font-medium truncate">
-                  {m.sub}
-                </div>
-              </div>
-            );
-          })}
+        {/* Mini Metric Dashboard Strip with SOLID VIBRANT ICON SQUIRCLES */}
+        <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-3">
+          {/* Card 1: Total Staff */}
+          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
+            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+          }`}>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-md shadow-black/10">
+              <Users className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
+                Total Staff
+              </span>
+              <span className="text-xl sm:text-2xl font-bold font-mono text-white block tabular-nums">
+                {employees.length}
+              </span>
+              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
+                Enrolled employees
+              </span>
+            </div>
+          </div>
+
+          {/* Card 2: Active Staff */}
+          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
+            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+          }`}>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-md shadow-emerald-500/30">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
+                Active Staff
+              </span>
+              <span className="text-xl sm:text-2xl font-bold font-mono text-white block tabular-nums">
+                {employees.filter(e => e.status === 'ACTIVE').length}
+              </span>
+              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
+                Active credentials
+              </span>
+            </div>
+          </div>
+
+          {/* Card 3: Departments */}
+          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
+            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+          }`}>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-purple-600 text-white shadow-md shadow-purple-500/30">
+              <Building2 className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
+                Departments
+              </span>
+              <span className="text-xl sm:text-2xl font-bold font-mono text-white block tabular-nums">
+                {departments.length}
+              </span>
+              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
+                Functional units
+              </span>
+            </div>
+          </div>
+
+          {/* Card 4: Filtered Staff */}
+          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
+            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+          }`}>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-md shadow-amber-500/30">
+              <UserCheck className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
+                Filtered Roster
+              </span>
+              <span className="text-xl sm:text-2xl font-bold font-mono text-white block tabular-nums">
+                {filtered.length}
+              </span>
+              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
+                Matching view
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -344,8 +363,8 @@ export const EmployeeMasterView: React.FC<Props> = ({
 
             {/* Apple Segmented Control for Status */}
             <div
-              className={`p-1 rounded-xl border flex items-center overflow-x-auto scrollbar-none w-full sm:w-auto ${
-                isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-100 border-slate-200'
+              className={`p-1 rounded-full border flex items-center gap-1 overflow-x-auto scrollbar-none w-full sm:w-auto ${
+                isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-slate-100/80 border-slate-200/80'
               }`}
             >
               {statuses.map(s => {
@@ -356,22 +375,20 @@ export const EmployeeMasterView: React.FC<Props> = ({
                     key={s}
                     type="button"
                     onClick={() => setStatus(s)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold uppercase transition-ui whitespace-nowrap cursor-pointer ${
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                       isActive
-                        ? 'bg-[var(--accent-primary)] text-white shadow-sm'
+                        ? isDarkMode ? 'bg-white text-slate-950 shadow-sm' : 'bg-[#155dfc] text-white shadow-sm'
                         : isDarkMode
-                          ? 'text-slate-400 hover:text-white'
-                          : 'text-slate-600 hover:text-slate-900'
+                          ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                     }`}
                   >
                     <span>{s === 'ALL' ? 'All' : s}</span>
                     <span
-                      className={`px-1.5 py-0.2 rounded-full text-[9px] ${
+                      className={`px-1.5 py-0.5 rounded-full text-[10px] tabular-nums font-bold ${
                         isActive
-                          ? 'bg-white/20 text-white'
-                          : isDarkMode
-                            ? 'bg-white/10 text-slate-400'
-                            : 'bg-slate-200 text-slate-600'
+                          ? isDarkMode ? 'bg-slate-900 text-white' : 'bg-white/20 text-white'
+                          : isDarkMode ? 'bg-white/10 text-slate-400' : 'bg-slate-200 text-slate-700'
                       }`}
                     >
                       {count}

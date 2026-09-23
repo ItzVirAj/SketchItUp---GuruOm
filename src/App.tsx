@@ -110,9 +110,10 @@ function MainApp() {
         >
           <Router>
             <ScrollToTop />
-            <div className={`min-h-screen font-sans ${isDarkMode ? 'bg-[#09090B] text-[#F4F4F5]' : 'bg-white text-slate-900'}`}>
+            <div className={`min-h-screen font-sans ${isDarkMode ? 'bg-[#101317] text-white' : 'bg-[#155dfc] text-slate-900'}`}>
               <Routes>
-                <Route path="/admin/*" element={<ServerAdminVault onSignOut={signOut} />} />
+                <Route path="/server-admin/*" element={<ServerAdminVault onSignOut={signOut} />} />
+                <Route path="/admin-vault/*" element={<ServerAdminVault onSignOut={signOut} />} />
                 <Route path="*" element={<ConsoleContainer onSignOut={signOut} />} />
               </Routes>
             </div>

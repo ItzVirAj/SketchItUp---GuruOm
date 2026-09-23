@@ -248,65 +248,63 @@ export const TasksView: React.FC<TasksViewProps> = ({
 
   return (
     <div className="space-y-4 sm:space-y-6 font-sans">
-      {/* ========================================================================= */}
-      {/* ── TOP HERO HEADER (Apple HIG Banner) ──                                */}
-      {/* ========================================================================= */}
-      <div className={`p-4 sm:p-6 md:p-7 rounded-3xl border transition-ui ${cardBase}`}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1.5">
-              <span
-                className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-[var(--accent-soft-light)] dark:bg-[var(--accent-soft-dark)] text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-border-light)] dark:border-[var(--accent-border-dark)]"
-              >
-                HR Module
-              </span>
-              <span className={`text-[11px] sm:text-xs font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                • Team Action Items & Kanban Board
-              </span>
+      {/* 1. Luminous Dual-Mode Hero & Integrated Mini Dashboard */}
+      <div className={`relative overflow-hidden rounded-[28px] border transition-all duration-300 p-6 sm:p-8 ${
+        isDarkMode
+          ? 'bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] border-white/10 shadow-[0_24px_50px_rgba(0,0,0,0.7)] text-white'
+          : 'bg-gradient-to-r from-[#1b64ff] via-[#155dfc] to-[#0f52dc] border-blue-400/30 shadow-[0_16px_36px_rgba(21,93,252,0.28)] text-white'
+      }`}>
+        {/* Ambient Top Glow */}
+        <div
+          aria-hidden="true"
+          className={`pointer-events-none absolute -top-24 -right-10 w-96 h-96 rounded-full blur-3xl transition-opacity duration-500 ${
+            isDarkMode ? 'bg-blue-500/10' : 'bg-white/20'
+          }`}
+        />
+
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold tracking-wide backdrop-blur-md border bg-white/15 text-white border-white/20 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>HR Module • Team Action Items &amp; Kanban Dispatch</span>
             </div>
-            <h1 className={`text-xl sm:text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2.5 ${
-              isDarkMode ? 'text-white' : 'text-slate-900'
-            }`}>
-              <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-2xl bg-[var(--accent-primary)] text-white shadow-md shadow-[var(--accent-shadow)]">
-                <ListTodo className="h-4 w-4 sm:h-5 sm:w-5" />
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 text-white shadow-inner">
+                <ListTodo className="h-5 w-5" />
               </div>
-              Tasks
+              Tasks &amp; Assignments
             </h1>
-            <p className={`text-xs sm:text-sm mt-1 max-w-2xl ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-              Internal assignments and deliverables. Assign work to colleagues with automated due-date reminders and tracking.
+            <p className={`text-xs sm:text-sm max-w-2xl font-normal leading-relaxed ${
+              isDarkMode ? 'text-white/60' : 'text-blue-100'
+            }`}>
+              Internal deliverables, milestone tracking, and task delegation. Assign work with automated due-date reminders and real-time status sync.
             </p>
           </div>
 
-          <div className="flex items-center flex-wrap gap-3">
+          <div className="flex flex-wrap items-center gap-3 shrink-0 self-start lg:self-center">
             {/* Primary View Switcher: Schedule & Calendar vs Board */}
-            <div
-              className={`flex items-center p-1 rounded-2xl border ${
-                isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-100 border-slate-200'
-              }`}
-            >
+            <div className={`flex items-center p-1 rounded-full border backdrop-blur-md ${
+              isDarkMode ? 'border-white/15 bg-white/[0.06]' : 'border-white/25 bg-white/20'
+            }`}>
               <button
                 type="button"
                 onClick={() => setMainView('calendar')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-ui cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                   mainView === 'calendar'
-                    ? 'bg-[var(--accent-primary)] text-white shadow-sm'
-                    : isDarkMode
-                      ? 'text-slate-400 hover:text-white'
-                      : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : isDarkMode ? 'text-white/70 hover:text-white' : 'text-white/90 hover:text-white'
                 }`}
               >
                 <Calendar className="w-3.5 h-3.5" />
-                <span>Schedule & Calendar</span>
+                <span>Schedule &amp; Calendar</span>
               </button>
               <button
                 type="button"
                 onClick={() => setMainView('board')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-ui cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                   mainView === 'board'
-                    ? 'bg-[var(--accent-primary)] text-white shadow-sm'
-                    : isDarkMode
-                      ? 'text-slate-400 hover:text-white'
-                      : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : isDarkMode ? 'text-white/70 hover:text-white' : 'text-white/90 hover:text-white'
                 }`}
               >
                 <ListTodo className="w-3.5 h-3.5" />
@@ -314,39 +312,11 @@ export const TasksView: React.FC<TasksViewProps> = ({
               </button>
             </div>
 
-            {/* Dual Summary Metrics Pill */}
-            <div
-              className={`flex items-center gap-3.5 p-3 sm:px-4 sm:py-2.5 rounded-2xl border font-mono w-full sm:w-auto ${
-                isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-50 border-slate-200/80 shadow-2xs'
-              }`}
-            >
-              <div className="text-center">
-                <div className={`text-[10px] uppercase font-bold tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                  Overdue
-                </div>
-                <div className={`text-lg sm:text-xl font-bold tabular-nums flex items-center justify-center gap-1 ${
-                  overdueCount > 0 ? 'text-rose-500' : isDarkMode ? 'text-slate-500' : 'text-slate-400'
-                }`}>
-                  {overdueCount > 0 && <span className="h-2 w-2 rounded-full bg-rose-500 animate-ping" />}
-                  {overdueCount}
-                </div>
-              </div>
-              <div className={`w-px h-8 ${isDarkMode ? 'bg-white/10' : 'bg-slate-200'}`} />
-              <div className="text-center">
-                <div className={`text-[10px] uppercase font-bold tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                  Due Today
-                </div>
-                <div className="text-lg sm:text-xl font-bold text-amber-400 tabular-nums">
-                  {dueTodayCount}
-                </div>
-              </div>
-            </div>
-
             {canManageTasks && (
               <button
                 type="button"
                 onClick={() => templateModal.open()}
-                className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-[var(--accent-primary)]/40 bg-[var(--accent-primary)]/10 hover:bg-[var(--accent-primary)]/20 px-4 text-xs font-extrabold text-[var(--accent-primary)] shadow-sm transition-ui active:scale-[0.96] cursor-pointer"
+                className="flex h-11 shrink-0 items-center gap-2 rounded-full border border-white/20 bg-white/10 hover:bg-white/15 px-4 text-xs font-semibold text-white shadow-sm transition-all active:scale-[0.98] cursor-pointer backdrop-blur-md"
               >
                 <Sparkles className="w-4 h-4" />
                 <span>Apply Template</span>
@@ -357,12 +327,100 @@ export const TasksView: React.FC<TasksViewProps> = ({
               <button
                 type="button"
                 onClick={() => taskModal.open()}
-                className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer"
+                className={`flex h-11 shrink-0 items-center gap-2 rounded-full px-5 text-xs font-bold transition-all active:scale-[0.96] cursor-pointer shadow-lg ${
+                  isDarkMode
+                    ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
+                    : 'bg-white hover:bg-blue-50 text-blue-700 shadow-blue-900/30'
+                }`}
               >
                 <Plus className="w-4 h-4" />
                 <span>Assign Task</span>
               </button>
             )}
+          </div>
+        </div>
+
+        {/* Mini Metric Dashboard Strip with SOLID VIBRANT ICON SQUIRCLES */}
+        <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-3">
+          {/* Card 1: Total Tasks */}
+          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
+            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+          }`}>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-md shadow-black/10">
+              <ListTodo className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
+                Total Tasks
+              </span>
+              <span className="text-xl sm:text-2xl font-bold font-mono text-white block tabular-nums">
+                {tasks.length}
+              </span>
+              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
+                Active assignments
+              </span>
+            </div>
+          </div>
+
+          {/* Card 2: Overdue Tasks */}
+          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
+            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+          }`}>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-600 text-white shadow-md shadow-rose-500/30">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
+                Overdue
+              </span>
+              <span className="text-xl sm:text-2xl font-bold font-mono text-white block tabular-nums flex items-center gap-1.5">
+                {overdueCount}
+                {overdueCount > 0 && <span className="h-2 w-2 rounded-full bg-rose-400 animate-pulse" />}
+              </span>
+              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
+                Needs immediate action
+              </span>
+            </div>
+          </div>
+
+          {/* Card 3: Due Today */}
+          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
+            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+          }`}>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-md shadow-amber-500/30">
+              <Clock className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
+                Due Today
+              </span>
+              <span className="text-xl sm:text-2xl font-bold font-mono text-white block tabular-nums">
+                {dueTodayCount}
+              </span>
+              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
+                Current day deliverables
+              </span>
+            </div>
+          </div>
+
+          {/* Card 4: Completed */}
+          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
+            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+          }`}>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-md shadow-emerald-500/30">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
+                Completed
+              </span>
+              <span className="text-xl sm:text-2xl font-bold font-mono text-white block tabular-nums">
+                {tasks.filter(t => t.status === 'DONE').length}
+              </span>
+              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
+                Resolved items
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -387,10 +445,10 @@ export const TasksView: React.FC<TasksViewProps> = ({
           {/* ========================================================================= */}
           {/* ── APPLE SEGMENTED FILTER BAR ──                                        */}
           {/* ========================================================================= */}
-      <div className={`p-2.5 sm:p-3 rounded-3xl border transition-ui flex items-center justify-between gap-3 overflow-x-auto scrollbar-none ${cardBase}`}>
+      <div className={`p-2.5 sm:p-3 rounded-2xl sm:rounded-3xl border transition-ui flex items-center justify-between gap-3 overflow-x-auto scrollbar-none ${cardBase}`}>
         <div
-          className={`p-1 rounded-2xl border flex items-center overflow-x-auto scrollbar-none w-full sm:w-auto ${
-            isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-100 border-slate-200'
+          className={`p-1 rounded-full border flex items-center gap-1 overflow-x-auto scrollbar-none w-full sm:w-auto ${
+            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-slate-100/80 border-slate-200/80'
           }`}
         >
           {[
@@ -404,12 +462,12 @@ export const TasksView: React.FC<TasksViewProps> = ({
                 key={tab.id}
                 type="button"
                 onClick={() => setViewFilter(tab.id as typeof viewFilter)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-ui cursor-pointer whitespace-nowrap ${
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                   isActive
-                    ? 'bg-[var(--accent-primary)] text-white shadow-sm'
+                    ? isDarkMode ? 'bg-white text-slate-950 shadow-sm' : 'bg-[#155dfc] text-white shadow-sm'
                     : isDarkMode
-                      ? 'text-slate-400 hover:text-white'
-                      : 'text-slate-600 hover:text-slate-900'
+                      ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                 }`}
               >
                 {tab.label}

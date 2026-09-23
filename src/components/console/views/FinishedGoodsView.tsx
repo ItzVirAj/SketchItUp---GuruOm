@@ -33,8 +33,8 @@ interface FGRow {
 const SortIcon: React.FC<{ col: SortKey; sortKey: SortKey; sortDir: SortDir }> = ({ col, sortKey, sortDir }) => {
   if (sortKey !== col) return <ChevronDown className="w-3 h-3 opacity-30" />;
   return sortDir === "asc"
-    ? <ChevronUp className="w-3 h-3 text-[var(--accent-primary)]" />
-    : <ChevronDown className="w-3 h-3 text-[var(--accent-primary)]" />;
+    ? <ChevronUp className="w-3 h-3 text-slate-900 dark:text-white" />
+    : <ChevronDown className="w-3 h-3 text-slate-900 dark:text-white" />;
 };
 
 export const FinishedGoodsView: React.FC<FinishedGoodsViewProps> = ({
@@ -116,136 +116,314 @@ export const FinishedGoodsView: React.FC<FinishedGoodsViewProps> = ({
   const criticalCount  = rows.filter(r => r.stockStatus === "CRITICAL" || r.stockStatus === "NO_STOCK").length;
 
   const statusBadge = (status: StockStatus) => {
-    const map: Record<StockStatus, { label: string; cls: string; dot: string }> = {
-      OK:       { label: "IN STOCK",  cls: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30", dot: "bg-emerald-500" },
-      SHORTAGE: { label: "LOW STOCK", cls: "bg-amber-500/10 text-amber-400 border-amber-500/30",     dot: "bg-amber-500" },
-      CRITICAL: { label: "CRITICAL",  cls: "bg-rose-500/10 text-rose-400 border-rose-500/30",         dot: "bg-rose-500" },
-      NO_STOCK: { label: "NO STOCK",  cls: "bg-slate-500/10 text-slate-400 border-slate-500/30",      dot: "bg-slate-500" },
-    };
-    const cfg = map[status];
+    if (status === 'OK') {
+      return (
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border ${
+          isDarkMode ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+        }`}>
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+          <span>In Stock</span>
+        </span>
+      );
+    }
+    if (status === 'SHORTAGE') {
+      return (
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border ${
+          isDarkMode ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-200'
+        }`}>
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+          <span>Low Stock</span>
+        </span>
+      );
+    }
+    if (status === 'CRITICAL' || status === 'NO_STOCK') {
+      return (
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border ${
+          isDarkMode ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
+        }`}>
+          <span className="relative flex h-1.5 w-1.5 shrink-0">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500" />
+          </span>
+          <span>{status === 'NO_STOCK' ? 'No Stock' : 'Critical Shortage'}</span>
+        </span>
+      );
+    }
     return (
-      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold uppercase border ${cfg.cls}`}>
-        <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-        {cfg.label}
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border ${
+        isDarkMode ? 'bg-white/10 text-slate-300 border-white/10' : 'bg-slate-100 text-slate-700 border-slate-200'
+      }`}>
+        <span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />
+        <span>{status}</span>
       </span>
     );
   };
 
-  const thBase = `py-4 px-5 font-mono font-bold uppercase tracking-[0.12em] text-[9px] cursor-pointer select-none ${isDarkMode ? "text-slate-500" : "text-slate-400"}`;
-
   const renderTh = (col: SortKey, label: string, right?: boolean) => (
-    <th key={col} className={`${thBase} ${right ? "text-right" : ""}`} onClick={() => toggleSort(col)}>
-      <span className={`inline-flex items-center gap-1 ${right ? "justify-end" : ""}`}>
+    <th 
+      key={col} 
+      className={`py-4 px-6 text-[11px] font-bold uppercase tracking-wider cursor-pointer select-none transition-colors ${
+        right ? "text-right" : ""
+      } ${isDarkMode ? "text-slate-400 hover:text-white" : "text-slate-600 hover:text-slate-900"}`} 
+      onClick={() => toggleSort(col)}
+    >
+      <span className={`inline-flex items-center gap-1.5 ${right ? "justify-end" : ""}`}>
         {label}<SortIcon col={col} sortKey={sortKey} sortDir={sortDir} />
       </span>
     </th>
   );
 
   return (
-    <div className="space-y-5 font-sans w-full max-w-full min-w-0 pb-6">
+    <div className="space-y-4 sm:space-y-6 font-sans w-full max-w-full min-w-0 pb-6">
 
-      {/* HEADER */}
-      <section className={`overflow-hidden rounded-[24px] border ${isDarkMode ? "border-white/[0.08] bg-[#121215]" : "border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]"}`}>
-        <div className="flex items-center gap-6 px-6 py-5">
-          <div className="min-w-0">
-            <div className="mb-1.5 flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              Inventory · Item Master Index
-              <span className="text-slate-700">/</span>
-              <span>{fgMasters.length} FG items registered</span>
+      <section className={`overflow-hidden rounded-2xl border transition-all ${
+        isDarkMode
+          ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]'
+          : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
+      }`}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 px-6 py-6 sm:py-7">
+          <div className="min-w-0 space-y-1.5">
+            <div className="flex items-center gap-2.5">
+              <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wide ${
+                isDarkMode
+                  ? 'bg-white/10 border border-white/15 text-white'
+                  : 'bg-white/20 border border-white/30 backdrop-blur-md text-white shadow-xs'
+              }`}>
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Finished Goods Telemetry</span>
+              </span>
+              <span className="text-sm font-semibold text-white/80">•</span>
+              <span className="text-xs sm:text-sm font-semibold text-white/95">
+                {fgMasters.length} Registered FG Items
+              </span>
             </div>
-            <h1 className="truncate text-[25px] font-extrabold tracking-[-0.04em] text-slate-950 dark:text-white">
+
+            <h1 className="text-3xl sm:text-[32px] font-black tracking-tight text-white leading-tight">
               Finished Goods Inventory
             </h1>
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              All finished goods from the item master — live stock levels, reorder points, PDI &amp; dispatch data indexed per FG code.
+
+            <p className="text-xs sm:text-sm text-white/95 font-medium leading-relaxed max-w-2xl">
+              Finished goods index from catalog master — live store levels, reorder buffers, and PDI dispatch allocations.
             </p>
           </div>
         </div>
 
-        <div className={`grid grid-cols-2 md:grid-cols-4 border-t ${isDarkMode ? "border-white/[0.07]" : "border-slate-200"}`}>
+        {/* Integrated 4-Column Metric Strip (border-t) */}
+        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t ${
+          isDarkMode
+            ? 'border-white/10 bg-gradient-to-b from-black/40 to-black/70 backdrop-blur-md'
+            : 'border-white/20 bg-white/[0.06] backdrop-blur-sm'
+        }`}>
           {([
-            { label: "FG Items in Master",      value: `${fgMasters.length}`,                  detail: "Registered finished goods",   Icon: Package,      tone: "text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)]", bg: "bg-[var(--accent-soft-light)] dark:bg-[var(--accent-soft-dark)]" },
-            { label: "Total On-Hand Stock",     value: `${totalOnHand.toLocaleString()} NOS`,  detail: "Physical units in store",     Icon: Warehouse,    tone: "text-emerald-600 dark:text-emerald-400",                               bg: "bg-emerald-500/10" },
-            { label: "Available for Dispatch",  value: `${totalAvailable.toLocaleString()} NOS`, detail: "Unallocated ready stock",  Icon: TrendingUp,   tone: "text-sky-600 dark:text-sky-400",                                        bg: "bg-sky-500/10" },
-            { label: "Critical / No Stock",     value: `${criticalCount}`,                     detail: "Items at or below reorder",   Icon: AlertTriangle, tone: criticalCount > 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400", bg: criticalCount > 0 ? "bg-rose-500/10" : "bg-emerald-500/10" },
-          ] as const).map(({ label, value, detail, Icon, tone, bg }, i) => (
-            <div key={label} className={`flex items-center gap-3 px-5 py-4 ${i > 0 ? isDarkMode ? "border-l border-white/[0.07]" : "border-l border-slate-200" : ""}`}>
-              <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${bg} ${tone}`}><Icon className="h-4 w-4" /></div>
-              <div className="min-w-0">
-                <div className="font-mono text-[9px] font-bold uppercase tracking-[0.13em] text-slate-400">{label}</div>
-                <div className={`mt-0.5 truncate text-lg font-extrabold tracking-[-0.03em] ${tone}`}>{value}</div>
-                <div className="truncate text-[10px] text-slate-400">{detail}</div>
+            {
+              label: "FG Items in Master",
+              value: `${fgMasters.length}`,
+              detail: "Registered finished goods",
+              Icon: Package,
+              iconColor: isDarkMode ? 'text-white' : 'text-[#155dfc]',
+              iconBg: isDarkMode ? 'bg-blue-600 shadow-xs' : 'bg-white shadow-xs',
+            },
+            {
+              label: "Total On-Hand Stock",
+              value: `${totalOnHand.toLocaleString()} NOS`,
+              detail: "Physical units in store",
+              Icon: Warehouse,
+              iconColor: "text-white",
+              iconBg: "bg-emerald-500 shadow-xs",
+            },
+            {
+              label: "Available for Dispatch",
+              value: `${totalAvailable.toLocaleString()} NOS`,
+              detail: "Unallocated ready stock",
+              Icon: TrendingUp,
+              iconColor: "text-white",
+              iconBg: "bg-sky-500 shadow-xs",
+            },
+            {
+              label: "Critical / No Stock",
+              value: `${criticalCount}`,
+              detail: "Items at or below reorder",
+              Icon: AlertTriangle,
+              iconColor: "text-white",
+              iconBg: criticalCount > 0 ? "bg-rose-500 shadow-xs" : "bg-emerald-500 shadow-xs",
+            },
+          ] as const).map(({ label, value, detail, Icon, iconColor, iconBg }, index) => (
+            <div
+              key={label}
+              className={`flex items-center gap-4 px-6 py-5 transition-all ${
+                index > 0 ? (isDarkMode ? 'lg:border-l border-white/10' : 'lg:border-l border-white/20') : ''
+              }`}
+            >
+              <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${iconBg} ${iconColor}`}>
+                <Icon className="h-5 w-5 stroke-[2.5]" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-bold uppercase tracking-wider text-white/85">
+                  {label}
+                </div>
+                <div className="text-2xl sm:text-[26px] font-black tracking-tight text-white tabular-nums my-0.5 leading-tight">
+                  {value}
+                </div>
+                <div className="text-xs font-medium text-white/90 truncate">
+                  {detail}
+                </div>
               </div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* TOOLBAR */}
-      <div className={`rounded-2xl border p-3 ${isDarkMode ? "border-white/[0.08] bg-[#121215]" : "border-slate-200 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.04)]"}`}>
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-1.5">
-            <Filter className={`w-3.5 h-3.5 ${isDarkMode ? "text-slate-500" : "text-slate-400"}`} />
-            {(["ALL","OK","SHORTAGE","CRITICAL"] as const).map(s => (
-              <button key={s} onClick={() => setStatusFilter(s)}
-                className={`px-3 py-1.5 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wider transition-ui cursor-pointer ${
-                  statusFilter === s
-                    ? "bg-[var(--accent-primary)] text-white shadow-sm"
-                    : isDarkMode ? "bg-white/[0.05] text-slate-400 hover:bg-white/[0.09]" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
-                }`}>
-                {s === "ALL"      && `All (${rows.length})`}
-                {s === "OK"       && `In Stock (${rows.filter(r => r.stockStatus === "OK").length})`}
-                {s === "SHORTAGE" && `Low Stock (${rows.filter(r => r.stockStatus === "SHORTAGE").length})`}
-                {s === "CRITICAL" && `Critical (${rows.filter(r => r.stockStatus === "CRITICAL" || r.stockStatus === "NO_STOCK").length})`}
-              </button>
-            ))}
+      {/* ========================================================================= */}
+      {/* ── APPLE 2-TIER COMMAND DECK & FILTERS ──                                 */}
+      {/* ========================================================================= */}
+      <div className={`rounded-2xl border p-3.5 transition-all ${
+        isDarkMode
+          ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] shadow-[0_8px_28px_rgba(0,0,0,0.5)]'
+          : 'border-slate-200/80 bg-gradient-to-b from-white/95 via-slate-50/90 to-slate-100/70 shadow-[0_4px_20px_rgba(0,0,0,0.03)]'
+      }`}>
+        <div className="space-y-3">
+          {/* Tier 1: Segmented status filter buttons + Telemetry chip */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className={`inline-flex items-center gap-1 rounded-xl p-1 border transition-all ${
+              isDarkMode ? 'border-white/10 bg-black/40' : 'border-slate-200/80 bg-slate-100/80'
+            }`}>
+              {(["ALL","OK","SHORTAGE","CRITICAL"] as const).map(s => {
+                const isSelected = statusFilter === s;
+                const count = s === "ALL" ? rows.length :
+                  s === "OK" ? rows.filter(r => r.stockStatus === "OK").length :
+                  s === "SHORTAGE" ? rows.filter(r => r.stockStatus === "SHORTAGE").length :
+                  rows.filter(r => r.stockStatus === "CRITICAL" || r.stockStatus === "NO_STOCK").length;
+
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setStatusFilter(s)}
+                    className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      isSelected
+                        ? isDarkMode
+                          ? 'bg-white text-slate-900 shadow-sm'
+                          : 'bg-white text-slate-900 shadow-sm border border-slate-200/80'
+                        : isDarkMode
+                          ? 'text-slate-400 hover:text-white hover:bg-white/5'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                    }`}
+                  >
+                    <span>
+                      {s === "ALL" && "All"}
+                      {s === "OK" && "In Stock"}
+                      {s === "SHORTAGE" && "Low Stock"}
+                      {s === "CRITICAL" && "Critical"}
+                    </span>
+                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                      isSelected
+                        ? isDarkMode ? 'bg-slate-200 text-slate-900' : 'bg-slate-100 text-slate-800'
+                        : isDarkMode ? 'bg-white/10 text-slate-400' : 'bg-slate-200 text-slate-600'
+                    }`}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className={`rounded-full border px-3 py-1 font-mono text-xs font-bold tracking-tight ${
+                isDarkMode ? 'border-white/10 bg-black/60 text-slate-300' : 'border-slate-200 bg-white text-slate-700 shadow-2xs'
+              }`}>
+                Showing {filtered.length} of {fgMasters.length} items
+              </span>
+            </div>
           </div>
-          <div className={`flex h-10 min-w-[240px] flex-1 items-center gap-2 rounded-xl border px-3 ml-auto ${isDarkMode ? "border-white/[0.08] bg-black/20 text-white focus-within:border-[var(--accent-border-dark)]" : "border-slate-200 bg-slate-50 text-slate-900 focus-within:border-[var(--accent-primary)]"}`}>
-            <Search className="h-4 w-4 shrink-0 text-slate-400" />
-            <input type="text" placeholder="Search FG code, name, description, part no..."
-              value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-              className="h-full w-full bg-transparent text-xs font-semibold outline-none placeholder:font-normal placeholder:text-slate-400 font-mono" />
-            {searchQuery && (
-              <button type="button" onClick={() => setSearchQuery("")} className="text-slate-400 hover:text-slate-700 dark:hover:text-white">
-                <X className="h-3.5 w-3.5" />
+
+          {/* Tier 2: Apple Spotlight Search Bar */}
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search by finished goods code, catalog name, drawing #, or description..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className={`h-11 w-full rounded-xl border pl-10 pr-24 font-mono text-xs font-semibold outline-none transition-all ${
+                isDarkMode
+                  ? 'border-white/10 bg-black/30 text-white placeholder:text-slate-500 focus:border-white/30 focus:bg-black/50'
+                  : 'border-slate-200/90 bg-white text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:shadow-xs'
+              }`}
+            />
+            {searchQuery ? (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
+              >
+                <X className="h-4 w-4" />
               </button>
+            ) : (
+              <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 rounded-md border border-black/10 dark:border-white/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-slate-400">
+                ⌘F
+              </span>
             )}
           </div>
         </div>
-        <div className={`mt-2.5 flex items-center justify-between px-1 font-mono text-[9px] font-semibold uppercase tracking-wider ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>
-          <span>Showing {filtered.length} of {fgMasters.length} finished goods</span>
-          <span>Inventory Master · Live Stock Index</span>
-        </div>
       </div>
 
-      {/* TABLE */}
-      <div className={`overflow-hidden rounded-[22px] border ${isDarkMode ? "border-white/[0.08] bg-[#121215]" : "border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]"}`}>
-        <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? "border-white/[0.07]" : "border-slate-200"}`}>
-          <div>
-            <div className={`text-xs font-extrabold ${isDarkMode ? "text-white" : "text-slate-900"}`}>Finished Goods Item Master</div>
-            <div className="mt-0.5 text-[10px] text-slate-400">Click any row to expand PDI &amp; dispatch history</div>
+      {/* ========================================================================= */}
+      {/* ── FINISHED GOODS MASTER TABLE ──                                         */}
+      {/* ========================================================================= */}
+      <div className={`overflow-hidden rounded-3xl border transition-all ${
+        isDarkMode
+          ? 'border-white/[0.08] bg-gradient-to-b from-[#111318] via-[#08090c] to-[#010203] shadow-[0_20px_50px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]'
+          : 'border-slate-200/90 bg-gradient-to-b from-white via-slate-50/40 to-[#f6f8fc] shadow-[0_16px_40px_rgba(15,23,42,0.05),inset_0_1px_0_0_rgba(255,255,255,1)]'
+      }`}>
+        <div className={`flex items-center justify-between border-b px-6 py-4.5 transition-all ${
+          isDarkMode
+            ? 'border-white/[0.08] bg-gradient-to-r from-black/60 via-black/30 to-black/60'
+            : 'border-slate-200/80 bg-gradient-to-r from-slate-50/90 via-white/60 to-slate-50/90'
+        }`}>
+          <div className="flex items-center gap-3.5">
+            <div className={`flex h-10 w-10 items-center justify-center rounded-2xl shadow-xs ${
+              isDarkMode ? 'bg-white/10 text-white border border-white/10' : 'bg-slate-900 text-white shadow-2xs'
+            }`}>
+              <Boxes className="h-5 w-5 stroke-[2]" />
+            </div>
+            <div>
+              <div className="text-base font-black tracking-tight text-slate-900 dark:text-white">
+                Finished Goods Item Master
+              </div>
+              <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                Click any row to reveal line-level PDI &amp; dispatch tracking history
+              </div>
+            </div>
           </div>
-          <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? "border-white/[0.08] bg-white/[0.04] text-slate-400" : "border-slate-200 bg-slate-50 text-slate-500"}`}>
-            {filtered.length} items
+          <span className={`rounded-full border px-3 py-1 font-mono text-xs font-bold tracking-tight ${
+            isDarkMode ? 'border-white/10 bg-black/60 text-slate-300' : 'border-slate-200 bg-white text-slate-700 shadow-2xs'
+          }`}>
+            {filtered.length} records
           </span>
         </div>
+
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full text-left text-xs border-collapse font-sans">
             <thead>
-              <tr className={`border-b font-mono font-bold uppercase tracking-[0.12em] text-[9px] ${isDarkMode ? "border-white/[0.07] bg-black/20 text-slate-500" : "border-slate-200 bg-slate-50/80 text-slate-400"}`}>
+              <tr className={`border-b text-[11px] font-bold uppercase tracking-wider transition-all ${
+                isDarkMode
+                  ? 'border-white/[0.07] bg-gradient-to-b from-black/80 to-black/60 text-slate-400'
+                  : 'border-slate-200/90 bg-gradient-to-b from-slate-100/90 to-slate-50/90 text-slate-600'
+              }`}>
                 {renderTh("code", "FG Code")}
                 {renderTh("name", "Description")}
-                <th className={thBase}>HSN / UoM</th>
+                <th className="py-4 px-6 text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">HSN / UoM</th>
                 {renderTh("onHand", "On Hand", true)}
                 {renderTh("reserved", "Reserved", true)}
                 {renderTh("available", "Available", true)}
-                <th className={`${thBase} text-right`}>Reorder</th>
-                {renderTh("status", "Status")}
-                <th className={thBase}>Sale Price</th>
+                <th className="py-4 px-6 text-right text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">Reorder</th>
+                {renderTh("status", "Status", true)}
+                <th className="py-4 px-6 text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">Sale Price</th>
               </tr>
             </thead>
-            <tbody className={`divide-y ${isDarkMode ? "divide-slate-800/60" : "divide-slate-200"}`}>
+            <tbody className={`divide-y text-xs transition-colors ${
+              isDarkMode ? 'divide-white/[0.04]' : 'divide-slate-200/70'
+            }`}>
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={9} className="py-16 text-center text-slate-400 font-mono text-xs">
@@ -263,81 +441,106 @@ export const FinishedGoodsView: React.FC<FinishedGoodsViewProps> = ({
 
                 return (
                   <React.Fragment key={master.id || master.code}>
-                    <tr onClick={() => setExpandedCode(isExpanded ? null : master.code)}
-                      className={`group transition-colors cursor-pointer ${isDarkMode ? "hover:bg-white/[0.035]" : "hover:bg-slate-50/80"} ${isExpanded ? isDarkMode ? "bg-white/[0.025]" : "bg-slate-50" : ""}`}>
-
-                      {/* FG Code */}
-                      <td className="py-4 px-5">
-                        <div className="flex items-center gap-2.5">
-                          <div className={`p-2 rounded-xl shrink-0 transition-transform group-hover:scale-105 ${
-                            isDarkMode
-                              ? "bg-[var(--accent-primary)]/20 text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/30"
-                              : "bg-[var(--accent-primary)]/10 text-[var(--accent-text-light)] border border-[var(--accent-primary)]/20"
+                    <tr 
+                      onClick={() => setExpandedCode(isExpanded ? null : master.code)}
+                      className={`group transition-all duration-150 cursor-pointer ${
+                        isDarkMode
+                          ? 'even:bg-white/[0.015] hover:bg-gradient-to-r hover:from-white/[0.06] hover:via-white/[0.02] hover:to-transparent'
+                          : 'even:bg-slate-50/50 hover:bg-gradient-to-r hover:from-blue-500/[0.05] hover:via-indigo-500/[0.03] hover:to-transparent'
+                      } ${isExpanded ? isDarkMode ? "bg-white/[0.03]" : "bg-slate-50" : ""}`}
+                    >
+                      {/* Column 1: FG Code with squircle and font-black code */}
+                      <td className="py-4.5 px-6">
+                        <div className="flex items-center gap-3.5">
+                          <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 shadow-2xs ${
+                            stockStatus === 'CRITICAL' || stockStatus === 'NO_STOCK'
+                              ? isDarkMode ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30' : 'bg-rose-50 text-rose-600 border border-rose-200'
+                              : stockStatus === 'SHORTAGE'
+                              ? isDarkMode ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' : 'bg-amber-50 text-amber-800 border border-amber-200'
+                              : isDarkMode ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-blue-50 text-blue-600 border border-blue-200/70'
                           }`}>
-                            <Package className="w-3.5 h-3.5" />
+                            <Package className="w-5 h-5 stroke-[2]" />
                           </div>
-                          <div>
-                            <div className="font-mono font-bold text-xs text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{master.code}</div>
-                            {master.partNo && <div className="text-[10px] font-mono text-slate-500 mt-0.5">Drwg: {master.partNo}</div>}
+                          <div className="min-w-0">
+                            <span className="font-mono text-sm tracking-tight text-slate-900 dark:text-white font-black">
+                              {master.code}
+                            </span>
+                            {master.partNo ? (
+                              <div className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate max-w-[280px] mt-1">
+                                Drwg: {master.partNo}
+                              </div>
+                            ) : (
+                              <div className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate max-w-[280px] mt-1">
+                                {master.name || master.description}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </td>
 
                       {/* Description */}
-                      <td className={`py-4 px-5 max-w-[220px] ${isDarkMode ? "text-slate-100" : "text-slate-800"}`}>
+                      <td className={`py-4.5 px-6 max-w-[240px] ${isDarkMode ? "text-slate-100" : "text-slate-800"}`}>
                         <div className="font-semibold text-xs truncate">{master.name || master.description}</div>
                         {master.name && master.description && master.name !== master.description && (
-                          <div className="text-[10px] text-slate-500 truncate mt-0.5">{master.description}</div>
+                          <div className="text-[10px] text-slate-500 font-mono truncate mt-0.5">{master.description}</div>
                         )}
                         {master.category && (
-                          <span className={`inline-block mt-1 text-[9px] font-mono font-bold uppercase px-1.5 py-0.5 rounded ${isDarkMode ? "bg-slate-800 text-slate-500" : "bg-slate-100 text-slate-400"}`}>
+                          <span className={`inline-block mt-1 text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded-full border ${
+                            isDarkMode ? "bg-white/[0.06] text-slate-400 border-white/[0.08]" : "bg-slate-100 text-slate-600 border-slate-200"
+                          }`}>
                             {master.category}
                           </span>
                         )}
                       </td>
 
                       {/* HSN / UoM */}
-                      <td className="py-4 px-5">
-                        <div className={`font-mono text-xs font-bold ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>{master.hsnCode || "—"}</div>
-                        <div className="text-[10px] text-slate-400 mt-0.5">{master.unit}</div>
+                      <td className="py-4.5 px-6">
+                        <div className={`font-mono text-xs font-bold ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>
+                          {master.hsnCode || "—"}
+                        </div>
+                        <div className="text-[10px] font-mono text-slate-400 mt-0.5">{master.unit}</div>
                       </td>
 
                       {/* On Hand */}
-                      <td className="py-4 px-5 text-right">
+                      <td className="py-4.5 px-6 text-right">
                         <div className={`font-mono font-bold text-sm ${
                           stockStatus === "OK" ? "text-emerald-500" :
                           stockStatus === "SHORTAGE" ? "text-amber-500" :
                           stockStatus === "CRITICAL" ? "text-rose-500" : "text-slate-400"
-                        }`}>{onHand.toLocaleString()}</div>
-                        <div className="text-[10px] text-slate-400">{master.unit}</div>
+                        }`}>
+                          {onHand.toLocaleString()}
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-mono">{master.unit}</div>
                       </td>
 
                       {/* Reserved */}
-                      <td className="py-4 px-5 text-right">
-                        <div className={`font-mono font-bold text-xs ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>{reserved.toLocaleString()}</div>
-                        <div className="text-[10px] text-slate-400">{master.unit}</div>
+                      <td className="py-4.5 px-6 text-right font-mono text-slate-400">
+                        <div className="font-bold text-xs">{reserved.toLocaleString()}</div>
+                        <div className="text-[10px]">{master.unit}</div>
                       </td>
 
                       {/* Available */}
-                      <td className="py-4 px-5 text-right">
-                        <div className={`font-mono font-bold text-sm ${available > 0 ? "text-sky-400" : "text-slate-400"}`}>{available.toLocaleString()}</div>
-                        <div className="text-[10px] text-slate-400">{master.unit}</div>
+                      <td className="py-4.5 px-6 text-right">
+                        <div className={`font-mono font-bold text-sm ${available > 0 ? "text-emerald-500" : "text-slate-400"}`}>
+                          {available.toLocaleString()}
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-mono">{master.unit}</div>
                       </td>
 
                       {/* Reorder Level */}
-                      <td className="py-4 px-5 text-right">
-                        <div className={`font-mono font-bold text-xs ${isBelowReorder ? "text-rose-400" : isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
+                      <td className="py-4.5 px-6 text-right font-mono">
+                        <div className={`font-bold text-xs ${isBelowReorder ? "text-rose-400" : isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
                           {reorder > 0 ? reorder.toLocaleString() : "—"}
                           {isBelowReorder && <AlertTriangle className="w-3 h-3 inline ml-1 text-rose-400" />}
                         </div>
                       </td>
 
                       {/* Status */}
-                      <td className="py-4 px-5">{statusBadge(stockStatus)}</td>
+                      <td className="py-4.5 px-6 text-center">{statusBadge(stockStatus)}</td>
 
                       {/* Sale Price */}
-                      <td className="py-4 px-5">
-                        <div className={`font-mono text-xs font-bold ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>
+                      <td className="py-4.5 px-6 font-mono">
+                        <div className={`text-xs font-bold ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>
                           {master.sellingPrice ? `\u20B9${master.sellingPrice.toLocaleString("en-IN")}` : "—"}
                         </div>
                         {master.gstRate !== undefined && (
@@ -382,7 +585,7 @@ export const FinishedGoodsView: React.FC<FinishedGoodsViewProps> = ({
                                   <tbody className={`divide-y ${isDarkMode ? "divide-slate-800/60" : "divide-slate-200"}`}>
                                     {transactions.map((t, i) => (
                                       <tr key={i} className={isDarkMode ? "hover:bg-white/[0.03]" : "hover:bg-slate-50"}>
-                                        <td className="py-2 px-3 font-mono font-bold text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{t.orderPo}</td>
+                                        <td className="py-2 px-3 font-mono font-bold text-slate-900 dark:text-slate-100">{t.orderPo}</td>
                                         <td className="py-2 px-3 text-right text-emerald-400 font-mono font-bold">{t.pdiPassedQty}</td>
                                         <td className={`py-2 px-3 text-right font-mono font-bold ${isDarkMode ? "text-slate-200" : "text-slate-700"}`}>{t.physicallyHeldQty}</td>
                                         <td className="py-2 px-3 text-right font-mono text-slate-400">{t.dispatchedQty}</td>

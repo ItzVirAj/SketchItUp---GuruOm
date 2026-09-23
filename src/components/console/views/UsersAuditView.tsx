@@ -813,36 +813,49 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
     <div className="space-y-6 font-sans">
       
       {/* Top Banner Header with Summary Telemetry */}
-      <div className={`p-4 sm:p-6 rounded-3xl border transition-ui ${
-        isDarkMode 
-          ? 'bg-slate-900/80 border-slate-800/80 text-white backdrop-blur-xl shadow-2xl' 
-          : 'bg-white border-slate-200 shadow-sm text-slate-900'
+      <section className={`overflow-hidden rounded-2xl border transition-all ${
+        isDarkMode
+          ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]'
+          : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
       }`}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider ${
-                isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/30' : 'bg-[#5B75F8]/10 text-[#5B75F8] border border-[#5B75F8]/20'
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 md:gap-6 p-6 sm:p-7">
+          <div className="min-w-0 space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wide ${
+                isDarkMode ? 'bg-white/10 border border-white/15 text-white' : 'bg-white/20 border border-white/30 backdrop-blur-md text-white shadow-xs'
               }`}>
-                Governance & Authorization Hub
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Governance &amp; Authorization Hub</span>
               </span>
-              <span className={`text-[11px] sm:text-xs font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                • Exact 12-Role RBAC & Monetary Escalation Engine
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
+                isDarkMode ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-white/20 text-white border border-white/30 backdrop-blur-md'
+              }`}>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <span>Exact 12-Role RBAC &amp; Monetary Escalation</span>
               </span>
             </div>
-            <h1 className={`text-xl sm:text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-              Identity & Access Control Suite
+            
+            <h1 className="text-xl sm:text-2xl md:text-[26px] font-black tracking-tight text-white">
+              Identity &amp; Access Control Suite
             </h1>
-            <p className={`text-xs mt-0.5 sm:mt-1 max-w-xl ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+            
+            <p className={`text-xs leading-relaxed max-w-2xl font-normal mt-1 ${
+              isDarkMode ? 'text-white/60' : 'text-blue-100/90'
+            }`}>
               Manage users, explore the 12-role RBAC permission matrix with server-side monetary limits (Purchase: ₹1.0L, Accounts: ₹50k), and audit immutable logs.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto shrink-0">
             {activeTab === 'AUDIT' && (
               <button
+                type="button"
                 onClick={handleExportCSV}
-                className="w-full sm:w-auto flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer"
+                className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
+                  isDarkMode
+                    ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
+                    : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
+                }`}
               >
                 {copiedExport ? <Check className="w-4 h-4" /> : <Download className="w-4 h-4" />}
                 <span>{copiedExport ? 'Exported Log!' : 'Export Log CSV'}</span>
@@ -851,8 +864,13 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
 
             {activeTab === 'USERS' && onAddUser && (
               <button
+                type="button"
                 onClick={openAddUserModal}
-                className="w-full sm:w-auto flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer"
+                className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
+                  isDarkMode
+                    ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
+                    : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
+                }`}
               >
                 <Plus className="w-4 h-4" />
                 <span>Provision New User</span>
@@ -861,106 +879,190 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
           </div>
         </div>
 
-        {/* Master Metrics Strip */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 mt-4 sm:mt-5 pt-3 sm:pt-4 border-t border-slate-200 dark:border-slate-800/60">
-          <div className={`p-3 sm:p-4 rounded-2xl border transition-ui ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
-            <div className={`text-[10px] sm:text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>System Directory</div>
-            <div className="text-base sm:text-xl font-bold text-indigo-600 dark:text-indigo-400 mt-0.5 sm:mt-1">{users.length} Users</div>
-            <div className="text-[10px] sm:text-[11px] text-emerald-600 dark:text-emerald-400 font-mono font-semibold mt-0.5">● {users.filter(u => u.status === 'ACTIVE' || u.status === 'Active').length} Active Accounts</div>
-          </div>
-          <div className={`p-3 sm:p-4 rounded-2xl border transition-ui ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
-            <div className={`text-[10px] sm:text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Immutable Audit Ledger</div>
-            <div className="text-base sm:text-xl font-bold text-blue-600 dark:text-blue-400 mt-0.5 sm:mt-1">{mergedAuditLogs.length} Events</div>
-            <div className="text-[10px] sm:text-[11px] text-blue-600 dark:text-blue-400 font-mono font-semibold mt-0.5">● Real-time Stream</div>
-          </div>
-          <div className={`p-3 sm:p-4 rounded-2xl border transition-ui ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
-            <div className={`text-[10px] sm:text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>RBAC Architecture</div>
-            <div className="text-base sm:text-xl font-bold text-purple-600 dark:text-purple-400 mt-0.5 sm:mt-1">12 Matrix Roles</div>
-            <div className="text-[10px] sm:text-[11px] text-purple-600 dark:text-purple-400 font-mono font-semibold mt-0.5">● Strict Boundaries</div>
-          </div>
-          <div className={`p-3 sm:p-4 rounded-2xl border transition-ui ${isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50/90 border-slate-200/90 shadow-xs'}`}>
-            <div className={`text-[10px] sm:text-[11px] font-mono font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Monetary Ceilings</div>
-            <div className="text-base sm:text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 sm:mt-1">PO ₹1L • Pay ₹50k</div>
-            <div className="text-[10px] sm:text-[11px] text-emerald-600 dark:text-emerald-400 font-mono font-semibold mt-0.5">● Auto-Escalation</div>
-          </div>
+        {/* Master Metrics Strip with Solid Vibrant Icon Colors */}
+        <div className={`grid grid-cols-2 lg:grid-cols-4 border-t divide-y sm:divide-y-0 sm:divide-x ${
+          isDarkMode
+            ? 'border-white/10 bg-gradient-to-b from-black/40 to-black/70 divide-white/10 backdrop-blur-md'
+            : 'border-white/20 bg-white/[0.06] divide-white/15 backdrop-blur-sm'
+        }`}>
+          {[
+            {
+              label: 'System Directory',
+              value: `${users.length} Users`,
+              detail: `${users.filter(u => u.status === 'ACTIVE' || u.status === 'Active').length} Active Accounts`,
+              icon: Users,
+              iconBg: 'bg-white text-blue-600 shadow-md shadow-black/10',
+            },
+            {
+              label: 'Immutable Audit Ledger',
+              value: `${mergedAuditLogs.length} Events`,
+              detail: 'Real-time Streaming',
+              icon: History,
+              iconBg: 'bg-indigo-600 text-white shadow-md shadow-indigo-500/30',
+            },
+            {
+              label: 'RBAC Architecture',
+              value: '12 Matrix Roles',
+              detail: 'Strict Boundaries',
+              icon: ShieldCheck,
+              iconBg: 'bg-purple-600 text-white shadow-md shadow-purple-500/30',
+            },
+            {
+              label: 'Monetary Ceilings',
+              value: 'PO ₹1L • Pay ₹50k',
+              detail: 'Auto-Escalation Engine',
+              icon: DollarSign,
+              iconBg: 'bg-emerald-600 text-white shadow-md shadow-emerald-500/30',
+            },
+          ].map((metric) => {
+            const MetricIcon = metric.icon;
+            return (
+              <div key={metric.label} className="p-4 sm:p-5 flex flex-col justify-between">
+                <div className="flex items-center justify-between mb-3">
+                  <span className={`text-[11px] font-mono uppercase tracking-wider font-bold ${
+                    isDarkMode ? 'text-white/50' : 'text-blue-100/70'
+                  }`}>
+                    {metric.label}
+                  </span>
+                  <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${metric.iconBg}`}>
+                    <MetricIcon className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="text-2xl sm:text-[26px] font-black tracking-tight text-white tabular-nums my-0.5 leading-tight">
+                  {metric.value}
+                </div>
+                <div className={`text-[11px] font-medium truncate ${
+                  isDarkMode ? 'text-white/50' : 'text-blue-100/80'
+                }`}>
+                  {metric.detail}
+                </div>
+              </div>
+            );
+          })}
         </div>
-      </div>
+      </section>
 
-      {/* Main Tab Controls Bar */}
-      <div className={`p-3.5 sm:p-4 rounded-3xl border transition-ui space-y-3 ${
-        isDarkMode ? 'bg-slate-900/70 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-xs'
+      {/* Main Tab Controls Bar (Apple 2-Tier Command Deck) */}
+      <div className={`rounded-2xl border p-3.5 space-y-3 transition-all ${
+        isDarkMode
+          ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] shadow-[0_8px_28px_rgba(0,0,0,0.5)]'
+          : 'border-slate-200/80 bg-gradient-to-b from-white/95 via-slate-50/90 to-slate-100/70 shadow-[0_4px_20px_rgba(0,0,0,0.03)]'
       }`}>
+        {/* Tier 1: Segmented Module Navigation Rail */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
           <button
+            type="button"
             onClick={() => setActiveTab('AUDIT')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-ui cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
+            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'AUDIT'
-                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-xs'
-                : isDarkMode ? 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-white' : 'bg-slate-100 text-slate-600 border-slate-200 hover:text-slate-900'
+                ? isDarkMode ? 'bg-white text-slate-950 shadow-sm' : 'bg-[#155dfc] text-white shadow-sm'
+                : isDarkMode ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
             <History className="w-3.5 h-3.5" />
-            <span>Audit Trail ({mergedAuditLogs.length})</span>
+            <span>Audit Trail</span>
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] tabular-nums font-bold ${
+              activeTab === 'AUDIT'
+                ? isDarkMode ? 'bg-slate-900 text-white' : 'bg-white/20 text-white'
+                : isDarkMode ? 'bg-white/10 text-slate-400' : 'bg-slate-200 text-slate-700'
+            }`}>
+              {mergedAuditLogs.length}
+            </span>
           </button>
           
           <button
+            type="button"
             onClick={() => setActiveTab('USERS')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-ui cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
+            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'USERS'
-                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-xs'
-                : isDarkMode ? 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-white' : 'bg-slate-100 text-slate-600 border-slate-200 hover:text-slate-900'
+                ? isDarkMode ? 'bg-white text-slate-950 shadow-sm' : 'bg-[#155dfc] text-white shadow-sm'
+                : isDarkMode ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
             <Users className="w-3.5 h-3.5" />
-            <span>Users ({users.length})</span>
+            <span>Users</span>
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] tabular-nums font-bold ${
+              activeTab === 'USERS'
+                ? isDarkMode ? 'bg-slate-900 text-white' : 'bg-white/20 text-white'
+                : isDarkMode ? 'bg-white/10 text-slate-400' : 'bg-slate-200 text-slate-700'
+            }`}>
+              {users.length}
+            </span>
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveTab('RBAC_MATRIX')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-ui cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
+            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'RBAC_MATRIX'
-                ? isDarkMode ? 'bg-[#5B75F8]/20 text-[#7B92FF] border border-[#5B75F8]/40 shadow-xs' : 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-xs'
-                : isDarkMode ? 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-white' : 'bg-slate-100 text-slate-600 border-slate-200 hover:text-slate-900'
+                ? isDarkMode ? 'bg-white text-slate-950 shadow-sm' : 'bg-[#155dfc] text-white shadow-sm'
+                : isDarkMode ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
             <ShieldCheck className="w-3.5 h-3.5" />
-            <span>RBAC Matrix (12 Roles)</span>
+            <span>RBAC Matrix</span>
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] tabular-nums font-bold ${
+              activeTab === 'RBAC_MATRIX'
+                ? isDarkMode ? 'bg-slate-900 text-white' : 'bg-white/20 text-white'
+                : isDarkMode ? 'bg-white/10 text-slate-400' : 'bg-slate-200 text-slate-700'
+            }`}>
+              12 Roles
+            </span>
           </button>
         </div>
 
-        {/* Search Bar & Actions */}
+        {/* Tier 2: Spotlight Search & Parametric Controls */}
         {activeTab !== 'RBAC_MATRIX' && (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            {activeTab === 'USERS' && (
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as any)}
-                className={`px-3 py-2 rounded-2xl border text-xs font-bold font-mono outline-none cursor-pointer w-full sm:w-auto ${
-                  isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                }`}
-              >
-                <option value="ALL">All Status ({users.length})</option>
-                <option value="ACTIVE">Active Only ({users.filter(u => u.status === 'ACTIVE').length})</option>
-                <option value="REVOKED">Revoked Only ({users.filter(u => u.status === 'REVOKED').length})</option>
-              </select>
-            )}
-
-            <div className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl border text-xs flex-1 transition-ui ${
-              isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white focus-within:border-[#5B75F8]' : 'bg-slate-50 border-slate-200 text-slate-900 focus-within:border-[#5B75F8]'
-            }`}>
-              <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-200/50 dark:border-white/5">
+            <div className="relative flex-1 max-w-md">
+              <Search className={`w-4 h-4 absolute left-3.5 top-3 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`} />
               <input
                 type="text"
                 placeholder={activeTab === 'AUDIT' ? "Filter audit logs by keyword..." : "Search users by name, email, role..."}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="bg-transparent outline-none w-full font-mono"
+                className={`h-10 w-full pl-10 pr-16 rounded-full border text-xs font-medium outline-none transition-all ${
+                  isDarkMode 
+                    ? 'border-white/10 bg-black/60 text-white placeholder:text-slate-500 focus:border-[#5B75F8] focus:ring-4 focus:ring-[#5B75F8]/15' 
+                    : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-[#155dfc] focus:ring-4 focus:ring-[#155dfc]/15 shadow-xs'
+                }`}
               />
-              {searchTerm && (
-                <button onClick={() => setSearchTerm('')} className="text-slate-400 hover:text-white cursor-pointer ml-1">
-                  <X className="w-3.5 h-3.5" />
-                </button>
+              <div className="absolute right-3 top-2.5 flex items-center gap-1.5">
+                {searchTerm ? (
+                  <button type="button" onClick={() => setSearchTerm('')} className="text-slate-400 hover:text-white cursor-pointer">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                ) : (
+                  <span className="hidden sm:inline-block px-1.5 py-0.5 rounded text-[10px] font-mono text-slate-400 border border-slate-200 dark:border-white/10">
+                    ⌘F
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Status Filter for Users */}
+            <div className="flex items-center gap-2">
+              {activeTab === 'USERS' && (
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as any)}
+                  className={`h-10 px-4 rounded-full border text-xs font-bold font-mono outline-none cursor-pointer ${
+                    isDarkMode 
+                      ? 'bg-black/60 border-white/10 text-white hover:bg-black/80' 
+                      : 'bg-white border-slate-200 text-slate-900 hover:bg-slate-50 shadow-xs'
+                  }`}
+                >
+                  <option value="ALL">All Status ({users.length})</option>
+                  <option value="ACTIVE">Active Only ({users.filter(u => u.status === 'ACTIVE' || u.status === 'Active').length})</option>
+                  <option value="REVOKED">Revoked Only ({users.filter(u => u.status === 'REVOKED' || u.status === 'Inactive').length})</option>
+                </select>
               )}
+
+              <span className={`text-xs font-mono font-bold px-3 py-1.5 rounded-full border ${
+                isDarkMode ? 'border-white/10 bg-white/5 text-slate-400' : 'border-slate-200 bg-slate-100 text-slate-600'
+              }`}>
+                {activeTab === 'AUDIT' ? `${filteredLogs.length} Events` : `${filteredUsers.length} Users`}
+              </span>
             </div>
           </div>
         )}

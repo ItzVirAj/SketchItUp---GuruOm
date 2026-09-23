@@ -117,25 +117,25 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             <button
               type="button"
               onClick={onNavigateToday}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-ui cursor-pointer active:scale-95 ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all cursor-pointer active:scale-95 ${
                 isDarkMode
                   ? 'border-white/10 bg-white/[0.04] text-slate-200 hover:bg-white/[0.08] hover:text-white'
-                  : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  : 'border-slate-200 bg-white text-slate-800 hover:bg-slate-50 shadow-2xs'
               }`}
             >
               Today
             </button>
 
             <div
-              className={`flex items-center rounded-xl border p-0.5 ${
-                isDarkMode ? 'border-white/10 bg-white/[0.02]' : 'border-slate-200 bg-slate-100'
+              className={`flex items-center rounded-full border p-0.5 ${
+                isDarkMode ? 'border-white/10 bg-white/[0.02]' : 'border-slate-200 bg-slate-100/80'
               }`}
             >
               <button
                 type="button"
                 onClick={onNavigatePrev}
                 aria-label="Previous period"
-                className={`p-1.5 rounded-lg transition-ui cursor-pointer ${
+                className={`p-1.5 rounded-full transition-all cursor-pointer ${
                   isDarkMode
                     ? 'text-slate-400 hover:text-white hover:bg-white/10'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-white shadow-2xs'
@@ -147,7 +147,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                 type="button"
                 onClick={onNavigateNext}
                 aria-label="Next period"
-                className={`p-1.5 rounded-lg transition-ui cursor-pointer ${
+                className={`p-1.5 rounded-full transition-all cursor-pointer ${
                   isDarkMode
                     ? 'text-slate-400 hover:text-white hover:bg-white/10'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-white shadow-2xs'
@@ -183,8 +183,8 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
         <div className="flex items-center flex-wrap gap-2.5 sm:gap-3">
           {/* View Mode Segmented Picker */}
           <div
-            className={`p-1 rounded-2xl border flex items-center ${
-              isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-100 border-slate-200'
+            className={`p-1 rounded-full border flex items-center gap-1 ${
+              isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-slate-100/80 border-slate-200/80'
             }`}
           >
             {(['month', 'week', 'day', 'agenda'] as CalendarViewMode[]).map((mode) => {
@@ -200,12 +200,12 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                   key={mode}
                   type="button"
                   onClick={() => onViewModeChange(mode)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold capitalize transition-ui cursor-pointer ${
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold capitalize transition-all cursor-pointer whitespace-nowrap ${
                     isActive
-                      ? 'bg-[var(--accent-primary)] text-white shadow-sm font-bold'
+                      ? isDarkMode ? 'bg-white text-slate-950 shadow-sm' : 'bg-[#155dfc] text-white shadow-sm font-bold'
                       : isDarkMode
-                        ? 'text-slate-400 hover:text-white'
-                        : 'text-slate-600 hover:text-slate-900'
+                        ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                   }`}
                 >
                   {labels[mode]}
@@ -218,12 +218,12 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
           <button
             type="button"
             onClick={onToggleUnscheduled}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-ui cursor-pointer active:scale-95 ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border text-xs font-bold transition-all cursor-pointer active:scale-95 ${
               isUnscheduledOpen
-                ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)] text-white shadow-sm'
+                ? isDarkMode ? 'border-white/20 bg-white text-slate-950 shadow-sm' : 'border-blue-600 bg-[#155dfc] text-white shadow-sm'
                 : isDarkMode
                   ? 'border-white/10 bg-white/[0.04] text-slate-300 hover:text-white hover:bg-white/[0.08]'
-                  : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 shadow-2xs'
             }`}
           >
             <Inbox className="w-3.5 h-3.5" />
@@ -247,12 +247,12 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
           <button
             type="button"
             onClick={onToggleWorkload}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-ui cursor-pointer active:scale-95 ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border text-xs font-bold transition-all cursor-pointer active:scale-95 ${
               isWorkloadOpen
-                ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)] text-white shadow-sm'
+                ? isDarkMode ? 'border-white/20 bg-white text-slate-950 shadow-sm' : 'border-blue-600 bg-[#155dfc] text-white shadow-sm'
                 : isDarkMode
                   ? 'border-white/10 bg-white/[0.04] text-slate-300 hover:text-white hover:bg-white/[0.08]'
-                  : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 shadow-2xs'
             }`}
           >
             <BarChart2 className="w-3.5 h-3.5" />
@@ -264,7 +264,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             <button
               type="button"
               onClick={onOpenCreateTask}
-              className="flex h-9 items-center gap-1.5 rounded-xl bg-[var(--accent-primary)] px-3.5 text-xs font-extrabold text-white shadow-[0_6px_16px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-95 cursor-pointer"
+              className="flex h-9 items-center gap-1.5 rounded-full bg-[#155dfc] px-4 text-xs font-bold text-white shadow-md transition-all hover:bg-blue-600 active:scale-95 cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Schedule Task</span>
@@ -358,12 +358,12 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
           <button
             type="button"
             onClick={onMyTasksOnlyToggle}
-            className={`px-3 py-1 rounded-xl border font-semibold transition-ui cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-full border text-xs font-bold transition-all cursor-pointer ${
               myTasksOnly
-                ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/15 text-[var(--accent-primary)] font-bold'
+                ? isDarkMode ? 'border-white/20 bg-white text-slate-950 shadow-sm' : 'border-blue-600 bg-[#155dfc] text-white shadow-sm'
                 : isDarkMode
-                  ? 'border-white/10 text-slate-400 hover:text-white'
-                  : 'border-slate-200 text-slate-600 hover:text-slate-900'
+                  ? 'border-white/10 bg-white/[0.04] text-slate-400 hover:text-white hover:bg-white/[0.06]'
+                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 shadow-2xs'
             }`}
           >
             My Tasks
@@ -373,12 +373,12 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
           <button
             type="button"
             onClick={onOverdueOnlyToggle}
-            className={`px-3 py-1 rounded-xl border font-semibold transition-ui cursor-pointer flex items-center gap-1.5 ${
+            className={`px-3.5 py-1.5 rounded-full border text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
               overdueOnly
-                ? 'border-rose-500 bg-rose-500/15 text-rose-400 font-bold'
+                ? 'border-rose-600 bg-rose-600 text-white shadow-sm'
                 : isDarkMode
-                  ? 'border-white/10 text-slate-400 hover:text-rose-400'
-                  : 'border-slate-200 text-slate-600 hover:text-rose-600'
+                  ? 'border-white/10 bg-white/[0.04] text-slate-400 hover:text-rose-400 hover:bg-white/[0.06]'
+                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-rose-600 shadow-2xs'
             }`}
           >
             <AlertTriangle className="w-3 h-3 text-rose-400" />

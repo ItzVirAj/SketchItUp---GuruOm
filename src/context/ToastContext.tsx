@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { CheckCircle2, AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
+import { Ban, AlertTriangle, Check, Info, X } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
@@ -156,34 +156,34 @@ const ToastCard: React.FC<{ item: ToastItem; onDismiss: () => void }> = ({ item,
 
   const getThemeStyles = () => {
     switch (item.type) {
-      case 'success':
-        return {
-          icon: <CheckCircle2 className="w-5 h-5 text-emerald-500 dark:text-emerald-400 shrink-0" />,
-          containerBg: 'bg-white/95 dark:bg-slate-900/95 border-emerald-300/80 dark:border-emerald-500/30 text-slate-900 dark:text-slate-100 shadow-[0_8px_30px_rgba(16,185,129,0.15)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.6)]',
-          barColor: 'bg-emerald-500',
-          dotGlow: 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]'
-        };
       case 'error':
         return {
-          icon: <AlertCircle className="w-5 h-5 text-rose-500 dark:text-rose-400 shrink-0" />,
-          containerBg: 'bg-white/95 dark:bg-slate-900/95 border-rose-300/80 dark:border-rose-500/30 text-slate-900 dark:text-slate-100 shadow-[0_8px_30px_rgba(244,63,94,0.15)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.6)]',
-          barColor: 'bg-rose-500',
-          dotGlow: 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)]'
+          icon: <Ban className="w-5 h-5 text-white stroke-[2.5]" />,
+          badgeBg: 'bg-[#E53935]',
+          containerBg: 'bg-[#2A1214] border-[#571B20]',
+          progressColor: 'bg-[#E53935]'
         };
       case 'warning':
         return {
-          icon: <AlertTriangle className="w-5 h-5 text-amber-500 dark:text-amber-400 shrink-0" />,
-          containerBg: 'bg-white/95 dark:bg-slate-900/95 border-amber-300/80 dark:border-amber-500/30 text-slate-900 dark:text-slate-100 shadow-[0_8px_30px_rgba(245,158,11,0.15)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.6)]',
-          barColor: 'bg-amber-500',
-          dotGlow: 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]'
+          icon: <AlertTriangle className="w-5 h-5 text-white stroke-[2.5]" />,
+          badgeBg: 'bg-[#F59E0B]',
+          containerBg: 'bg-[#2D1E0B] border-[#5E3D12]',
+          progressColor: 'bg-[#F59E0B]'
+        };
+      case 'success':
+        return {
+          icon: <Check className="w-5 h-5 text-white stroke-[3]" />,
+          badgeBg: 'bg-[#22C55E]',
+          containerBg: 'bg-[#112718] border-[#1C532E]',
+          progressColor: 'bg-[#22C55E]'
         };
       case 'info':
       default:
         return {
-          icon: <Info className="w-5 h-5 text-[#5B75F8] dark:text-[#7B92FF] shrink-0" />,
-          containerBg: 'bg-white/95 dark:bg-slate-900/95 border-indigo-200 dark:border-indigo-500/30 text-slate-900 dark:text-slate-100 shadow-[0_8px_30px_rgba(91,117,248,0.15)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.6)]',
-          barColor: 'bg-[#5B75F8]',
-          dotGlow: 'bg-[#5B75F8] shadow-[0_0_8px_rgba(91,117,248,0.8)]'
+          icon: <Info className="w-5 h-5 text-white stroke-[2.5]" />,
+          badgeBg: 'bg-[#0284C7]',
+          containerBg: 'bg-[#0B2035] border-[#154773]',
+          progressColor: 'bg-[#0284C7]'
         };
     }
   };
@@ -193,46 +193,40 @@ const ToastCard: React.FC<{ item: ToastItem; onDismiss: () => void }> = ({ item,
   return (
     <div
       role="alert"
-      className={`pointer-events-auto relative overflow-hidden rounded-2xl border backdrop-blur-md transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-300 transform translate-y-0 opacity-100 p-3.5 flex items-start gap-3 animate-in slide-in-from-bottom-4 fade-in duration-200 ${theme.containerBg}`}
+      className={`pointer-events-auto relative overflow-hidden rounded-2xl border backdrop-blur-2xl transition-[color,background-color,border-color,outline-color,box-shadow,opacity,transform,translate,scale,rotate,filter,backdrop-filter] duration-300 transform translate-y-0 opacity-100 p-2.5 sm:p-3 flex items-center gap-3.5 shadow-2xl shadow-black/60 animate-in slide-in-from-bottom-4 fade-in duration-200 text-white ${theme.containerBg}`}
     >
-      {/* Icon & Pulse Beacon */}
-      <div className="relative mt-0.5 shrink-0 flex items-center justify-center">
+      {/* Solid Vibrant Squircle Icon Badge */}
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${theme.badgeBg}`}>
         {theme.icon}
-        <span className={`absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full ${theme.dotGlow}`} />
       </div>
 
-      {/* Content */}
+      {/* Message & Optional Title */}
       <div className="flex-1 min-w-0 pr-1">
-        <div className="flex items-center gap-2 mb-0.5">
-          {item.title && (
-            <h4 className="text-xs font-bold tracking-tight text-slate-900 dark:text-white truncate font-mono uppercase">
-              {item.title}
-            </h4>
-          )}
-          <span className="text-[9px] font-mono text-slate-400 dark:text-slate-500 ml-auto">
-            now
-          </span>
-        </div>
-        <p className="text-xs font-medium text-slate-600 dark:text-slate-300 leading-relaxed break-words font-sans">
+        {item.title && item.title !== 'Operation Failed' && item.title !== 'Created Successfully' && item.title !== 'Warning' && item.title !== 'Info' && (
+          <div className="text-xs font-bold text-white/80 font-mono uppercase tracking-wider mb-0.5 truncate">
+            {item.title}
+          </div>
+        )}
+        <div className="text-sm font-medium text-white leading-normal break-words">
           {item.message}
-        </p>
+        </div>
       </div>
 
-      {/* Manual Dismiss */}
+      {/* Dismiss Button with Subdued Hover Container */}
       <button
         type="button"
         onClick={onDismiss}
-        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1 -mr-1 -mt-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer shrink-0"
+        className="w-8 h-8 rounded-lg flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 active:scale-95 transition-all cursor-pointer shrink-0"
         title="Dismiss alert"
       >
-        <X className="w-3.5 h-3.5" />
+        <X className="w-4 h-4 stroke-[2.2]" />
       </button>
 
-      {/* Subtle 3-Second Countdown Progress Bar */}
+      {/* Subtle Countdown Progress Bar */}
       {duration > 0 && (
-        <div className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-slate-200/80 dark:bg-slate-800/80 overflow-hidden">
+        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-white/10 overflow-hidden">
           <div
-            className={`h-full ${theme.barColor} origin-left`}
+            className={`h-full ${theme.progressColor} origin-left opacity-90`}
             style={{
               animation: `shrinkWidth ${duration}ms linear forwards`
             }}

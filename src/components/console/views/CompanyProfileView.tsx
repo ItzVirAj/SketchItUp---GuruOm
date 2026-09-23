@@ -197,40 +197,41 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-sans pb-12">
 
-      {/* 1. Top Executive Control Deck */}
-      <div className={`p-6 sm:p-7 rounded-3xl border transition-all ${isDarkMode
-        ? 'bg-[#09090B] border-white/10 text-white shadow-[0_16px_40px_rgba(0,0,0,0.6)]'
-        : 'bg-white border-slate-200/80 shadow-sm text-slate-900'
-        }`}>
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-          <div className="flex items-start gap-4">
-            <div className="p-3.5 rounded-2xl bg-[#5B75F8]/10 text-[#5B75F8] border border-[#5B75F8]/20 shrink-0">
-              <Building2 className="w-6 h-6" />
+      {/* 1. Luminous Dual-Mode Hero & Integrated Mini Dashboard */}
+      <div className={`relative overflow-hidden rounded-[28px] border transition-all duration-300 p-6 sm:p-8 ${
+        isDarkMode
+          ? 'bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] border-white/10 shadow-[0_24px_50px_rgba(0,0,0,0.7)] text-white'
+          : 'bg-gradient-to-r from-[#1b64ff] via-[#155dfc] to-[#0f52dc] border-blue-400/30 shadow-[0_16px_36px_rgba(21,93,252,0.28)] text-white'
+      }`}>
+        {/* Ambient Top Glow */}
+        <div
+          aria-hidden="true"
+          className={`pointer-events-none absolute -top-24 -right-10 w-96 h-96 rounded-full blur-3xl transition-opacity duration-500 ${
+            isDarkMode ? 'bg-blue-500/10' : 'bg-white/20'
+          }`}
+        />
+
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold tracking-wide backdrop-blur-md border bg-white/15 text-white border-white/20 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Enterprise Master Settings • Rule 55 &amp; GST Compliant</span>
             </div>
-            <div className="space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide bg-[#5B75F8]/15 text-[#5B75F8] border border-[#5B75F8]/30">
-                  Enterprise Registration
-                </span>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  <span>Rule 55 & GST Compliant</span>
-                </span>
-              </div>
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
-                Company Profile & Tax Settings
-              </h1>
-              <p className={`text-xs max-w-2xl leading-relaxed ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                Master organizational entity details rendered on all GST Tax Invoices, Delivery Challans (Rule 55), E-Way Bills, and inspection certificates.
-              </p>
-            </div>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white">
+              Company Profile &amp; Tax Settings
+            </h1>
+            <p className={`text-xs sm:text-sm max-w-2xl font-normal leading-relaxed ${
+              isDarkMode ? 'text-white/60' : 'text-blue-100'
+            }`}>
+              Master organizational entity details rendered on all GST Tax Invoices, Delivery Challans (Rule 55), E-Way Bills, and inspection certificates.
+            </p>
           </div>
 
-          <div className="flex items-center gap-2.5 shrink-0 self-start lg:self-center">
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0 self-start lg:self-center">
             {savedSuccess && (
-              <div className="px-3.5 py-2 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-semibold flex items-center gap-1.5 animate-in fade-in duration-200">
+              <div className="px-3.5 py-2 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center gap-1.5 animate-in fade-in duration-200">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                <span>Saved & Synchronized</span>
+                <span>Saved &amp; Synchronized</span>
               </div>
             )}
 
@@ -238,10 +239,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
               type="button"
               onClick={handleResetToCurrent}
               title="Reset fields to current saved profile"
-              className={`flex h-11 shrink-0 items-center gap-1.5 rounded-xl border px-4 text-xs font-semibold transition-all cursor-pointer active:scale-[0.98] ${isDarkMode
-                ? 'border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/10 hover:text-white'
-                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100 shadow-xs'
-                }`}
+              className="flex h-11 shrink-0 items-center gap-2 rounded-full border border-white/20 bg-white/10 hover:bg-white/15 text-white px-5 text-xs font-semibold transition-all cursor-pointer active:scale-[0.98] shadow-sm backdrop-blur-md"
             >
               <RefreshCw className="w-3.5 h-3.5" />
               <span>Reset</span>
@@ -251,7 +249,11 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
               type="button"
               onClick={handleSave}
               disabled={isSaving}
-              className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer disabled:opacity-50"
+              className={`flex h-11 shrink-0 items-center gap-2 rounded-full px-6 text-xs font-bold transition-all active:scale-[0.96] cursor-pointer shadow-lg disabled:opacity-50 ${
+                isDarkMode
+                  ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
+                  : 'bg-white hover:bg-blue-50 text-blue-700 shadow-blue-900/30'
+              }`}
             >
               {isSaving ? (
                 <>
@@ -265,6 +267,89 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                 </>
               )}
             </button>
+          </div>
+        </div>
+
+        {/* Mini Metric Dashboard Strip with SOLID VIBRANT ICON SQUIRCLES */}
+        <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-3">
+          {/* Metric 1: Legal Entity */}
+          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
+            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+          }`}>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-md shadow-black/10">
+              <Building2 className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
+                Legal Entity
+              </span>
+              <span className="text-sm font-bold text-white block truncate">
+                {legalName || 'GuruOm Industries'}
+              </span>
+              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
+                Manufacturing LLP
+              </span>
+            </div>
+          </div>
+
+          {/* Metric 2: GSTIN Registration */}
+          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
+            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+          }`}>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-md shadow-emerald-500/30">
+              <Receipt className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
+                GSTIN Registration
+              </span>
+              <span className="text-sm font-bold font-mono text-white block truncate">
+                {gstin || '27AABCG1234F1Z5'}
+              </span>
+              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
+                {isGstinValid ? 'Rule 55 Active' : 'Format Pending'}
+              </span>
+            </div>
+          </div>
+
+          {/* Metric 3: Corporate PAN */}
+          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
+            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+          }`}>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-purple-600 text-white shadow-md shadow-purple-500/30">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
+                Corporate PAN
+              </span>
+              <span className="text-sm font-bold font-mono text-white block truncate">
+                {pan || 'AABCG1234F'}
+              </span>
+              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
+                {isPanValid ? 'Income Tax Verified' : 'Check Format'}
+              </span>
+            </div>
+          </div>
+
+          {/* Metric 4: State Jurisdiction */}
+          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
+            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+          }`}>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-md shadow-amber-500/30">
+              <MapPin className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
+                State Jurisdiction
+              </span>
+              <span className="text-sm font-bold text-white block truncate">
+                {state || 'Maharashtra'}
+              </span>
+              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
+                State Code: {stateCode || '27'}
+              </span>
+            </div>
           </div>
         </div>
       </div>

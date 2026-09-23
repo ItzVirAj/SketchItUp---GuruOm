@@ -345,33 +345,46 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
       {/* ========================================================================= */}
       {/* ── 1. EXECUTIVE CONTROL DECK & KPI OVERVIEW ──                            */}
       {/* ========================================================================= */}
-      <div className={`p-6 sm:p-7 rounded-3xl border transition-all ${
-        isDarkMode 
-          ? 'bg-[#09090B] border-white/10 text-white shadow-[0_16px_40px_rgba(0,0,0,0.6)]' 
-          : 'bg-white border-slate-200/80 shadow-sm text-slate-900'
+      <section className={`overflow-hidden rounded-2xl border transition-all ${
+        isDarkMode
+          ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]'
+          : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
       }`}>
         {/* Top Header Row */}
-        <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-5 pb-6 border-b ${
-          isDarkMode ? 'border-white/10' : 'border-slate-200'
-        }`}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 p-6 sm:p-7">
           <div className="flex items-start gap-4">
-            <div className="p-3.5 rounded-2xl bg-[#5B75F8]/10 text-[#5B75F8] border border-[#5B75F8]/20 shrink-0">
+            <div className={`p-3.5 rounded-2xl shrink-0 shadow-inner ${
+              isDarkMode
+                ? 'bg-white/10 text-white border border-white/15'
+                : 'bg-white/20 text-white border border-white/30 backdrop-blur-md'
+            }`}>
               <Building className="w-6 h-6" />
             </div>
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide bg-[#5B75F8]/15 text-[#5B75F8] border border-[#5B75F8]/30">
-                  Vendor Accounts & Accounts Payable
+                <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wide ${
+                  isDarkMode
+                    ? 'bg-white/10 border border-white/15 text-white'
+                    : 'bg-white/20 border border-white/30 backdrop-blur-md text-white shadow-xs'
+                }`}>
+                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>Vendor Accounts & Accounts Payable</span>
                 </span>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
+                  isDarkMode
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                    : 'bg-white/20 text-white border border-white/30 backdrop-blur-md'
+                }`}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                   <span>3-Way Match Verified</span>
                 </span>
               </div>
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+              <h1 className="text-xl sm:text-2xl md:text-[26px] font-black tracking-tight text-white">
                 Vendor Bills & Payables
               </h1>
-              <p className={`text-xs max-w-2xl leading-relaxed ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              <p className={`text-xs max-w-2xl leading-relaxed font-normal mt-1 ${
+                isDarkMode ? 'text-white/60' : 'text-blue-100/90'
+              }`}>
                 Manage raw material supplier bills, outwork plating invoices, disbursement schedules, and statutory TDS compliance.
               </p>
             </div>
@@ -380,9 +393,13 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
           <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-center">
             <label
               htmlFor="header-receipt-scan-input"
-              className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-[#5B75F8]/40 bg-[#5B75F8]/10 hover:bg-[#5B75F8]/20 px-4 text-xs font-bold text-[#5B75F8] shadow-sm transition-all cursor-pointer active:scale-[0.96]"
+              className={`inline-flex items-center gap-2 px-4 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
+                isDarkMode
+                  ? 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
+                  : 'bg-white/20 hover:bg-white/30 text-white border border-white/30 backdrop-blur-md'
+              }`}
             >
-              <Sparkles className="w-4 h-4 text-[#5B75F8]" />
+              <Sparkles className="w-4 h-4 text-white" />
               <span>AI Scan & Upload Bill</span>
             </label>
             <input
@@ -406,7 +423,11 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                 setFormError(null);
                 createBillModal.open();
               }}
-              className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer"
+              className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
+                isDarkMode
+                  ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
+                  : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
+              }`}
             >
               <Plus className="w-4 h-4" />
               <span>New Vendor Bill</span>
@@ -414,65 +435,63 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
           </div>
         </div>
 
-        {/* Apple 4-Column Metric Strip */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-6">
+        {/* Integrated 4-Column Metric Strip */}
+        <div className={`grid grid-cols-2 lg:grid-cols-4 border-t divide-y sm:divide-y-0 sm:divide-x ${
+          isDarkMode
+            ? 'border-white/10 bg-gradient-to-b from-black/40 to-black/70 divide-white/10 backdrop-blur-md'
+            : 'border-white/20 bg-white/[0.06] divide-white/15 backdrop-blur-sm'
+        }`}>
           {[
             {
               label: 'Total Payables',
               value: `₹${totalAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`,
               detail: `${payables.length} vendor bills`,
               icon: Building,
-              tone: isDarkMode ? 'text-white' : 'text-slate-900',
-              iconBg: 'bg-[#5B75F8]/10 text-[#5B75F8] border border-[#5B75F8]/20',
+              iconBg: 'bg-white text-blue-600 shadow-md shadow-black/10',
             },
             {
               label: 'Disbursed Payments',
               value: `₹${paidAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`,
               detail: 'Settled to vendors',
               icon: CreditCard,
-              tone: 'text-emerald-400',
-              iconBg: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+              iconBg: 'bg-emerald-600 text-white shadow-md shadow-emerald-500/30',
             },
             {
               label: 'Outstanding Liabilities',
               value: `₹${balanceAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`,
               detail: 'Unsettled balances',
               icon: Clock,
-              tone: 'text-rose-400',
-              iconBg: 'bg-rose-500/10 text-rose-400 border border-rose-500/20',
+              iconBg: 'bg-purple-600 text-white shadow-md shadow-purple-500/30',
             },
             {
               label: 'Pending / Due Bills',
               value: `${overdueCount} Bills`,
               detail: overdueCount > 0 ? 'Disbursement due' : 'All accounts settled',
               icon: AlertCircle,
-              tone: 'text-amber-400',
-              iconBg: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
+              iconBg: 'bg-amber-500 text-white shadow-md shadow-amber-500/30',
             },
           ].map((m) => {
             const Icon = m.icon;
             return (
               <div
                 key={m.label}
-                className={`p-4 sm:p-5 rounded-2xl border transition-all ${
-                  isDarkMode ? 'bg-black/40 border-white/10 hover:border-white/20' : 'bg-slate-50 border-slate-200'
-                }`}
+                className="p-4 sm:p-5 flex flex-col justify-between"
               >
                 <div className="flex items-center justify-between mb-3">
-                  <div className={`p-2.5 rounded-xl ${m.iconBg}`}>
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <span className={`text-[10px] font-mono uppercase font-semibold tracking-wider ${
-                    isDarkMode ? 'text-slate-400' : 'text-slate-500'
+                  <span className={`text-[11px] font-mono uppercase tracking-wider font-bold ${
+                    isDarkMode ? 'text-white/50' : 'text-blue-100/70'
                   }`}>
                     {m.label}
                   </span>
+                  <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${m.iconBg}`}>
+                    <Icon className="w-5 h-5" />
+                  </div>
                 </div>
-                <div className={`text-xl sm:text-2xl font-bold tracking-tight font-mono ${m.tone}`}>
+                <div className="text-2xl sm:text-[26px] font-black tracking-tight text-white tabular-nums my-0.5 leading-tight">
                   {m.value}
                 </div>
-                <div className={`text-[11px] mt-1 font-medium truncate ${
-                  isDarkMode ? 'text-slate-400' : 'text-slate-500'
+                <div className={`text-[11px] font-medium truncate ${
+                  isDarkMode ? 'text-white/50' : 'text-blue-100/80'
                 }`}>
                   {m.detail}
                 </div>
@@ -480,24 +499,24 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
             );
           })}
         </div>
-      </div>
+      </section>
 
       {/* ========================================================================= */}
-      {/* ── 2. SEGMENTED FILTER & SEARCH TOOLBAR ──                                 */}
+      {/* ── 2. SEGMENTED FILTER & SEARCH TOOLBAR (2-TIER COMMAND DECK) ──          */}
       {/* ========================================================================= */}
-      <div className={`p-4 rounded-3xl border transition-all ${
-        isDarkMode 
-          ? 'bg-[#09090B] border-white/10 text-white shadow-sm' 
-          : 'bg-white border-slate-200/80 text-slate-900 shadow-sm'
+      <div className={`rounded-2xl border p-3.5 space-y-3 transition-all ${
+        isDarkMode
+          ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] shadow-[0_8px_28px_rgba(0,0,0,0.5)]'
+          : 'border-slate-200/80 bg-gradient-to-b from-white/95 via-slate-50/90 to-slate-100/70 shadow-[0_4px_20px_rgba(0,0,0,0.03)]'
       }`}>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          {/* Apple Segmented Pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+        {/* Tier 1: Segmented status tabs with count badges */}
+        <div className="flex items-center justify-between gap-3 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+          <div className="flex items-center gap-1.5 min-w-max">
             {[
-              { id: 'ALL', label: 'All Bills' },
-              { id: 'OPEN', label: 'Open' },
-              { id: 'PAID', label: 'Paid' },
-              { id: 'OVERDUE', label: 'Overdue' }
+              { id: 'ALL', label: 'All Bills', count: payables.length },
+              { id: 'OPEN', label: 'Open', count: payables.filter(b => b.status === 'OPEN').length },
+              { id: 'PAID', label: 'Paid', count: payables.filter(b => b.status === 'PAID').length },
+              { id: 'OVERDUE', label: 'Overdue', count: overdueCount }
             ].map((tab) => {
               const isActive = statusFilter === tab.id;
               return (
@@ -505,44 +524,67 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                   key={tab.id}
                   type="button"
                   onClick={() => setStatusFilter(tab.id)}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
                     isActive
-                      ? 'bg-[#5B75F8] text-white shadow-sm'
+                      ? isDarkMode
+                        ? 'bg-white text-slate-950 shadow-sm'
+                        : 'bg-[#155dfc] text-white shadow-sm'
                       : isDarkMode
                       ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`}
                 >
-                  {tab.label}
+                  <span>{tab.label}</span>
+                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] tabular-nums font-bold ${
+                    isActive
+                      ? isDarkMode ? 'bg-slate-900 text-white' : 'bg-white/20 text-white'
+                      : isDarkMode ? 'bg-white/10 text-slate-400' : 'bg-slate-200 text-slate-700'
+                  }`}>
+                    {tab.count}
+                  </span>
                 </button>
               );
             })}
           </div>
+        </div>
 
-          {/* Search Input */}
-          <div className="relative min-w-[260px]">
+        {/* Tier 2: Search Bar & Info */}
+        <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-200/50 dark:border-white/5">
+          <div className="relative flex-1 max-w-md">
             <Search className={`w-4 h-4 absolute left-3.5 top-3 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`} />
             <input
               type="text"
               placeholder="Search Bill #, Vendor Name, PO #..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className={`h-10 w-full pl-10 pr-8 rounded-full border text-xs font-medium outline-none transition-all ${
+              className={`h-10 w-full pl-10 pr-16 rounded-full border text-xs font-medium outline-none transition-all ${
                 isDarkMode 
                   ? 'border-white/10 bg-black/60 text-white placeholder:text-slate-500 focus:border-[#5B75F8] focus:ring-4 focus:ring-[#5B75F8]/15' 
-                  : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:border-[#5B75F8] focus:ring-4 focus:ring-[#5B75F8]/15'
+                  : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-[#155dfc] focus:ring-4 focus:ring-[#155dfc]/15 shadow-xs'
               }`}
             />
-            {searchTerm && (
-              <button 
-                type="button" 
-                onClick={() => setSearchTerm('')} 
-                className={`absolute right-3 top-3 ${isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-400 hover:text-slate-700'} cursor-pointer`}
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
+            <div className="absolute right-3 top-2.5 flex items-center gap-1.5">
+              {searchTerm ? (
+                <button 
+                  type="button" 
+                  onClick={() => setSearchTerm('')} 
+                  className={`${isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-400 hover:text-slate-700'} cursor-pointer`}
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              ) : (
+                <span className="hidden sm:inline-block px-1.5 py-0.5 rounded text-[10px] font-mono text-slate-400 border border-slate-200 dark:border-white/10">
+                  ⌘F
+                </span>
+              )}
+            </div>
           </div>
+
+          <span className={`text-xs font-mono font-bold px-3 py-1.5 rounded-full border ${
+            isDarkMode ? 'border-white/10 bg-white/5 text-slate-400' : 'border-slate-200 bg-slate-100 text-slate-600'
+          }`}>
+            {filtered.length} {filtered.length === 1 ? 'Bill' : 'Bills'}
+          </span>
         </div>
       </div>
 
@@ -661,15 +703,22 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
       {/* ========================================================================= */}
       {/* ── 4. DESKTOP PAYABLES TABLE (≥ md) ──                                   */}
       {/* ========================================================================= */}
-      <div className={`hidden md:block overflow-hidden rounded-[22px] border transition-ui ${
-        isDarkMode ? 'border-white/[0.08] bg-[#121215]' : 'border-slate-200 bg-white shadow-[0_12px_36px_rgba(15,23,42,0.06)]'
+      <div className={`hidden md:block overflow-hidden rounded-3xl border transition-all ${
+        isDarkMode
+          ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#08090c] to-[#010203] shadow-[0_16px_40px_rgba(0,0,0,0.5)]'
+          : 'border-slate-200/90 bg-gradient-to-b from-white via-slate-50/40 to-[#f6f8fc] shadow-[0_4px_24px_rgba(0,0,0,0.04)]'
       }`}>
-        <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+        {/* Top Specular Highlight */}
+        <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-white/70 dark:via-white/10 to-transparent" />
+
+        <div className={`flex items-center justify-between border-b px-6 py-4 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
           <div>
-            <div className="text-xs font-extrabold text-slate-900 dark:text-white">Vendor Bills Register</div>
-            <div className="mt-0.5 text-[10px] text-slate-400">Supplier invoices, 3-way matching validation, and disbursement records</div>
+            <div className="text-xs font-black tracking-tight text-slate-900 dark:text-white uppercase font-mono">Vendor Bills Register</div>
+            <div className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400 font-sans">Supplier invoices, 3-way matching validation, and disbursement records</div>
           </div>
-          <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>
+          <span className={`rounded-full border px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider ${
+            isDarkMode ? 'border-white/10 bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-600 shadow-2xs'
+          }`}>
             {filtered.length} bills
           </span>
         </div>
@@ -745,21 +794,25 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                 filtered.map((bill) => (
                 <tr key={bill.billNo} className={`group transition-colors ${isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'}`}>
                   <td className="py-4 px-5">
-                    <div className="flex items-center gap-2.5">
-                      <div className={`p-2 rounded-xl transition-transform group-hover:scale-105 shrink-0 ${
+                    <div className="flex items-center gap-3">
+                      <div className={`h-11 w-11 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 shadow-sm ${
                         isDarkMode 
-                          ? 'bg-[var(--accent-primary)]/20 text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/30' 
-                          : 'bg-[var(--accent-primary)]/10 text-[var(--accent-text-light)] border border-[var(--accent-primary)]/20'
+                          ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30' 
+                          : 'bg-blue-500/10 text-blue-600 border border-blue-500/20 shadow-xs'
                       }`}>
-                        <Building2 className="w-3.5 h-3.5" />
+                        <Building2 className="w-5 h-5" />
                       </div>
                       <div className="flex flex-col">
-                        <span className="font-mono font-bold text-xs text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">
+                        <span className="font-mono text-sm tracking-tight text-slate-900 dark:text-white font-black">
                           {bill.billNo}
                         </span>
-                        {bill.attachmentId && (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-medium font-mono text-emerald-400 mt-0.5">
+                        {bill.attachmentId ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold font-mono text-emerald-500 mt-0.5">
                             <Paperclip className="w-2.5 h-2.5" /> Scanned Doc
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-slate-400 font-mono mt-0.5">
+                            {bill.date || 'Vendor Bill'}
                           </span>
                         )}
                       </div>
@@ -789,12 +842,16 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                     </span>
                   </td>
                   <td className="py-4 px-5 text-center">
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-semibold border ${
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-tight border ${
                       bill.status === 'PAID'
-                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                        : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                        : bill.status === 'OVERDUE'
+                        ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30'
+                        : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
                     }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${bill.status === 'PAID' ? 'bg-emerald-400' : 'bg-rose-400'}`} />
+                      <span className={`h-1.5 w-1.5 rounded-full ${
+                        bill.status === 'PAID' ? 'bg-emerald-500' : bill.status === 'OVERDUE' ? 'bg-rose-500' : 'bg-amber-500'
+                      }`} />
                       <span>{bill.status}</span>
                     </span>
                   </td>
@@ -802,7 +859,11 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                     {bill.status !== 'PAID' && Number(bill.balanceAmount) > 0 && (
                       <button
                         onClick={() => handleOpenDisburseModal(bill)}
-                        className="px-3.5 py-1.5 rounded-full bg-[#5B75F8] hover:bg-[#435BE8] text-white text-xs font-semibold shadow-sm transition-all cursor-pointer active:scale-95"
+                        className={`px-4 py-1.5 rounded-full text-xs font-bold shadow-sm transition-all cursor-pointer active:scale-95 ${
+                          isDarkMode
+                            ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-white/10'
+                            : 'bg-[#155dfc] hover:bg-blue-700 text-white shadow-blue-500/20'
+                        }`}
                       >
                         Disburse Funds
                       </button>
@@ -1126,7 +1187,11 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-6 py-2.5 rounded-full bg-[#5B75F8] hover:bg-[#435BE8] active:scale-[0.98] text-white font-semibold text-xs cursor-pointer shadow-md shadow-blue-500/20 transition-all disabled:opacity-50"
+              className={`px-6 py-2.5 rounded-full font-bold text-xs cursor-pointer shadow-md transition-all active:scale-[0.98] disabled:opacity-50 ${
+                isDarkMode
+                  ? 'bg-white hover:bg-slate-100 text-slate-900 shadow-white/10'
+                  : 'bg-[#181920] hover:bg-[#252730] text-white shadow-black/20'
+              }`}
             >
               {isSubmitting ? 'Recording...' : 'Record vendor bill'}
             </button>
@@ -1548,7 +1613,11 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                 type="button"
                 onClick={handleConfirmDisbursement}
                 disabled={isSubmittingDisbursement || netPayableDisburse <= 0 || !disburseRefNo}
-                className="px-6 py-2.5 rounded-full bg-[#5B75F8] hover:bg-[#435BE8] active:scale-[0.98] text-white font-semibold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-blue-500/20 disabled:opacity-50 transition-all"
+                className={`px-6 py-2.5 rounded-full font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-50 transition-all active:scale-[0.98] ${
+                  isDarkMode
+                    ? 'bg-white hover:bg-slate-100 text-slate-900 shadow-white/10'
+                    : 'bg-[#181920] hover:bg-[#252730] text-white shadow-black/20'
+                }`}
               >
                 {isSubmittingDisbursement ? (
                   <>

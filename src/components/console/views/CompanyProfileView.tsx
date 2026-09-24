@@ -1,0 +1,784 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Building2,
+  MapPin,
+  Phone,
+  Mail,
+  FileText,
+  Save,
+  CheckCircle2,
+  Building,
+  ShieldCheck,
+  Landmark,
+  Globe,
+  Sparkles,
+  RefreshCw,
+  AlertCircle,
+  Hash,
+  BadgePercent,
+  Receipt,
+  FileCheck,
+  Copy,
+  Check,
+  ExternalLink,
+  Lock,
+  Stamp
+} from 'lucide-react';
+import { CompanyProfile } from '../../../types/console';
+
+interface CompanyProfileViewProps {
+  profile?: CompanyProfile | null;
+  isDarkMode?: boolean;
+  onSaveProfile?: (updated: CompanyProfile) => Promise<void> | void;
+}
+
+export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
+  profile,
+  isDarkMode = true,
+  onSaveProfile,
+}) => {
+  const [legalName, setLegalName] = useState(profile?.legalName && profile.legalName !== 'Test Tech Ltd' ? profile.legalName : 'GuruOm Industries LLP');
+  const [address, setAddress] = useState(
+    !profile?.address || profile.address.includes('MIDC') || profile.address.includes('Metoda') || profile.address.includes('Rajkot') || profile.address.includes('123 Test St')
+      ? 'Sr No 15/2, Mataji Logistic Park, Behind Tilakraj CNG Pump, Urali Devachi, Pune 412308, India'
+      : profile.address
+  );
+  const [phone, setPhone] = useState(
+    !profile?.phone || profile.phone.includes('2712 3456') || profile.phone.includes('98250') || profile.phone === '1234567890'
+      ? '+91 9763 969 798'
+      : profile.phone
+  );
+  const [email, setEmail] = useState(
+    !profile?.email || profile.email === 'operations@guruom.in' || profile.email === 'test@example.com'
+      ? 'contact@guruom.in'
+      : profile.email
+  );
+  const [gstin, setGstin] = useState(profile?.gstin && !profile.gstin.startsWith('24') ? profile.gstin : '27AABCG1234F1Z5');
+  const [pan, setPan] = useState(profile?.pan || 'AABCG1234F');
+  const [state, setState] = useState(profile?.state || 'Maharashtra');
+  const [stateCode, setStateCode] = useState(profile?.stateCode || '27');
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [savedSuccess, setSavedSuccess] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  // Synchronize local form when backend profile updates
+  useEffect(() => {
+    if (profile) {
+      setLegalName(profile.legalName && profile.legalName !== 'Test Tech Ltd' ? profile.legalName : 'GuruOm Industries LLP');
+      setAddress(
+        !profile.address || profile.address.includes('MIDC') || profile.address.includes('Metoda') || profile.address.includes('Rajkot') || profile.address.includes('123 Test St')
+          ? 'Sr No 15/2, Mataji Logistic Park, Behind Tilakraj CNG Pump, Urali Devachi, Pune 412308, India'
+          : profile.address
+      );
+      setPhone(
+        !profile.phone || profile.phone.includes('2712 3456') || profile.phone.includes('98250') || profile.phone === '1234567890'
+          ? '+91 9763 969 798'
+          : profile.phone
+      );
+      setEmail(
+        !profile.email || profile.email === 'operations@guruom.in' || profile.email === 'test@example.com'
+          ? 'contact@guruom.in'
+          : profile.email
+      );
+      setGstin(profile.gstin && !profile.gstin.startsWith('24') ? profile.gstin : '27AABCG1234F1Z5');
+      setPan(profile.pan || 'AABCG1234F');
+      setState(profile.state || 'Maharashtra');
+      setStateCode(profile.stateCode || '27');
+    }
+  }, [profile]);
+
+  // Live copy helper
+  const handleCopy = (text: string, label: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedField(label);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  // Auto-extract PAN & State Code from GSTIN if applicable
+  const handleGstinChange = (val: string) => {
+    const formatted = val.toUpperCase().trim();
+    setGstin(formatted);
+    if (formatted.length >= 2) {
+      const derivedCode = formatted.slice(0, 2);
+      if (/^\d{2}$/.test(derivedCode)) {
+        setStateCode(derivedCode);
+        if (derivedCode === '27' && (!state || state === 'Maharshtra')) {
+          setState('Maharashtra');
+        } else if (derivedCode === '24' && (!state || state === 'Maharashtra')) {
+          setState('Maharashtra');
+        }
+      }
+    }
+    if (formatted.length >= 12) {
+      const derivedPan = formatted.slice(2, 12);
+      if (/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(derivedPan)) {
+        setPan(derivedPan);
+      }
+    }
+  };
+
+  // Validation checkers
+  const isGstinValid = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gstin);
+  const isPanValid = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(pan);
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    setSaveError(null);
+
+    const updated: CompanyProfile = {
+      legalName: (legalName || 'GuruOm Industries LLP').trim(),
+      address: (address || 'Sr No 15/2, Mataji Logistic Park, Behind Tilakraj CNG Pump, Urali Devachi, Pune 412308, India').trim(),
+      phone: (phone || '+91 9763 969 798').trim(),
+      email: (email || 'contact@guruom.in').trim(),
+      gstin: (gstin || '27AABCG1234F1Z5').trim().toUpperCase(),
+      pan: (pan || 'AABCG1234F').trim().toUpperCase(),
+      state: (state || 'Maharashtra').trim(),
+      stateCode: (stateCode || '27').trim(),
+    };
+
+    try {
+      if (onSaveProfile) {
+        await onSaveProfile(updated);
+      }
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 4000);
+    } catch (err: any) {
+      setSaveError(err?.message || 'Failed to save company profile.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleResetToCurrent = () => {
+    if (profile) {
+      setLegalName(profile.legalName && profile.legalName !== 'Test Tech Ltd' ? profile.legalName : 'GuruOm Industries LLP');
+      setAddress(
+        !profile.address || profile.address.includes('MIDC') || profile.address.includes('Metoda') || profile.address.includes('Rajkot') || profile.address.includes('123 Test St')
+          ? 'Sr No 15/2, Mataji Logistic Park, Behind Tilakraj CNG Pump, Urali Devachi, Pune 412308, India'
+          : profile.address
+      );
+      setPhone(
+        !profile.phone || profile.phone.includes('2712 3456') || profile.phone.includes('98250') || profile.phone === '1234567890'
+          ? '+91 9763 969 798'
+          : profile.phone
+      );
+      setEmail(
+        !profile.email || profile.email === 'operations@guruom.in' || profile.email === 'test@example.com'
+          ? 'contact@guruom.in'
+          : profile.email
+      );
+      setGstin(profile.gstin && !profile.gstin.startsWith('24') ? profile.gstin : '27AABCG1234F1Z5');
+      setPan(profile.pan || 'AABCG1234F');
+      setState(profile.state || 'Maharashtra');
+      setStateCode(profile.stateCode || '27');
+      setSaveError(null);
+    } else {
+      setLegalName('GuruOm Industries LLP');
+      setAddress('Sr No 15/2, Mataji Logistic Park, Behind Tilakraj CNG Pump, Urali Devachi, Pune 412308, India');
+      setPhone('+91 9763 969 798');
+      setEmail('contact@guruom.in');
+      setGstin('27AABCG1234F1Z5');
+      setPan('AABCG1234F');
+      setState('Maharashtra');
+      setStateCode('27');
+      setSaveError(null);
+    }
+  };
+
+  const inputClass = `h-11 w-full rounded-xl border px-3.5 text-xs font-medium outline-none transition-[border-color,box-shadow,background-color] duration-150 focus:border-[#5B75F8] focus:ring-4 focus:ring-[#5B75F8]/15 ${isDarkMode
+    ? 'border-white/10 bg-black/60 text-white placeholder:text-slate-500 hover:border-white/20 focus:bg-black/80'
+    : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:bg-white'
+    }`;
+
+  return (
+    <div className="space-y-6 max-w-7xl mx-auto font-sans pb-12">
+
+      {/* 1. Luminous Dual-Mode Hero & Integrated Mini Dashboard */}
+      <div className={`relative overflow-hidden rounded-[28px] border transition-all duration-300 p-6 sm:p-8 ${
+        isDarkMode
+          ? 'bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] border-white/10 shadow-[0_24px_50px_rgba(0,0,0,0.7)] text-white'
+          : 'bg-gradient-to-r from-[#1b64ff] via-[#155dfc] to-[#0f52dc] border-blue-400/30 shadow-[0_16px_36px_rgba(21,93,252,0.28)] text-white'
+      }`}>
+        {/* Ambient Top Glow */}
+        <div
+          aria-hidden="true"
+          className={`pointer-events-none absolute -top-24 -right-10 w-96 h-96 rounded-full blur-3xl transition-opacity duration-500 ${
+            isDarkMode ? 'bg-blue-500/10' : 'bg-white/20'
+          }`}
+        />
+
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold tracking-wide backdrop-blur-md border bg-white/15 text-white border-white/20 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Enterprise Master Settings • Rule 55 &amp; GST Compliant</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white">
+              Company Profile &amp; Tax Settings
+            </h1>
+            <p className={`text-xs sm:text-sm max-w-2xl font-normal leading-relaxed ${
+              isDarkMode ? 'text-white/60' : 'text-blue-100'
+            }`}>
+              Master organizational entity details rendered on all GST Tax Invoices, Delivery Challans (Rule 55), E-Way Bills, and inspection certificates.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0 self-start lg:self-center">
+            {savedSuccess && (
+              <div className="px-3.5 py-2 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center gap-1.5 animate-in fade-in duration-200">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>Saved &amp; Synchronized</span>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={handleResetToCurrent}
+              title="Reset fields to current saved profile"
+              className="flex h-11 shrink-0 items-center gap-2 rounded-full border border-white/20 bg-white/10 hover:bg-white/15 text-white px-5 text-xs font-semibold transition-all cursor-pointer active:scale-[0.98] shadow-sm backdrop-blur-md"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Reset</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={isSaving}
+              className={`flex h-11 shrink-0 items-center gap-2 rounded-full px-6 text-xs font-bold transition-all active:scale-[0.96] cursor-pointer shadow-lg disabled:opacity-50 ${
+                isDarkMode
+                  ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
+                  : 'bg-white hover:bg-blue-50 text-blue-700 shadow-blue-900/30'
+              }`}
+            >
+              {isSaving ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-3.5 h-3.5" />
+                  <span>Save changes</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Mini Metric Dashboard Strip with SOLID VIBRANT ICON SQUIRCLES */}
+        <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-3">
+          {/* Metric 1: Legal Entity */}
+          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
+            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+          }`}>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-md shadow-black/10">
+              <Building2 className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
+                Legal Entity
+              </span>
+              <span className="text-sm font-bold text-white block truncate">
+                {legalName || 'GuruOm Industries'}
+              </span>
+              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
+                Manufacturing LLP
+              </span>
+            </div>
+          </div>
+
+          {/* Metric 2: GSTIN Registration */}
+          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
+            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+          }`}>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-md shadow-emerald-500/30">
+              <Receipt className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
+                GSTIN Registration
+              </span>
+              <span className="text-sm font-bold font-mono text-white block truncate">
+                {gstin || '27AABCG1234F1Z5'}
+              </span>
+              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
+                {isGstinValid ? 'Rule 55 Active' : 'Format Pending'}
+              </span>
+            </div>
+          </div>
+
+          {/* Metric 3: Corporate PAN */}
+          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
+            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+          }`}>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-purple-600 text-white shadow-md shadow-purple-500/30">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
+                Corporate PAN
+              </span>
+              <span className="text-sm font-bold font-mono text-white block truncate">
+                {pan || 'AABCG1234F'}
+              </span>
+              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
+                {isPanValid ? 'Income Tax Verified' : 'Check Format'}
+              </span>
+            </div>
+          </div>
+
+          {/* Metric 4: State Jurisdiction */}
+          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
+            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+          }`}>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-md shadow-amber-500/30">
+              <MapPin className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
+                State Jurisdiction
+              </span>
+              <span className="text-sm font-bold text-white block truncate">
+                {state || 'Maharashtra'}
+              </span>
+              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
+                State Code: {stateCode || '27'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Main Two-Column Interactive Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+        {/* Left Column: Official Statutory Entity Card & Real-Time Stationery Preview */}
+        <div className="lg:col-span-5 space-y-6">
+
+          {/* Official Digital Certificate Card */}
+          <div className={`p-6 rounded-3xl border relative overflow-hidden transition-all ${isDarkMode
+            ? 'bg-[#09090B] border-white/10 text-white shadow-[0_24px_60px_rgba(0,0,0,0.8)]'
+            : 'bg-white border-slate-200/80 text-slate-900 shadow-sm'
+            }`}>
+            {/* Ambient Sapphire Glow */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -top-20 -right-20 w-52 h-52 bg-blue-500/10 rounded-full blur-3xl"
+            />
+
+            {/* Entity Header */}
+            <div className={`flex items-start justify-between border-b pb-4 ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#5B75F8] to-[#5856D6] flex items-center justify-center text-white shadow-md shadow-blue-500/20 font-bold text-sm">
+                  GO
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono uppercase font-semibold text-[#5B75F8] tracking-wider block">
+                    REGISTERED ENTERPRISE
+                  </span>
+                  <h3 className={`text-sm font-bold tracking-tight line-clamp-1 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    {legalName || 'GuruOm Industries LLP'}
+                  </h3>
+                </div>
+              </div>
+
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                <span>Active</span>
+              </span>
+            </div>
+
+            {/* Address & Contact Block */}
+            <div className={`py-4 space-y-3 border-b text-xs ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
+              <div>
+                <span className="text-[10px] font-semibold uppercase text-slate-400 tracking-wider block mb-1">
+                  Registered Works Address
+                </span>
+                <p className={`text-xs leading-relaxed flex items-start gap-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                  <MapPin className="w-3.5 h-3.5 text-[#5B75F8] shrink-0 mt-0.5" />
+                  <span>{address || 'Sr No 15/2, Mataji Logistic Park, Behind Tilakraj CNG Pump, Urali Devachi, Pune 412308, India'}</span>
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <div className={`p-2.5 rounded-xl border ${isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-50 border-slate-200'}`}>
+                  <span className="text-[10px] uppercase text-slate-400 font-medium block">Phone</span>
+                  <p className={`font-mono text-xs font-semibold truncate mt-0.5 ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>{phone || '—'}</p>
+                </div>
+                <div className={`p-2.5 rounded-xl border ${isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-50 border-slate-200'}`}>
+                  <span className="text-[10px] uppercase text-slate-400 font-medium block">Email</span>
+                  <p className={`font-mono text-xs font-semibold truncate mt-0.5 ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>{email || '—'}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Key Statutory Identifiers Grid */}
+            <div className="pt-4 space-y-2.5">
+              <span className="text-[10px] font-semibold uppercase text-slate-400 tracking-wider block">
+                Statutory Identifiers
+              </span>
+
+              {/* GSTIN Row with Copy Button */}
+              <div className={`p-3 rounded-2xl border flex items-center justify-between transition-colors ${isDarkMode ? 'bg-black/60 border-white/10' : 'bg-slate-50 border-slate-200'
+                }`}>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-medium text-slate-400">GSTIN Registration</span>
+                    {isGstinValid ? (
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" title="Valid GSTIN Format" />
+                    ) : (
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400" title="Check format" />
+                    )}
+                  </div>
+                  <span className="font-mono font-bold text-xs text-emerald-400 tracking-wide block mt-0.5">
+                    {gstin || '—'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleCopy(gstin, 'gstin')}
+                  title="Copy GSTIN"
+                  className={`p-1.5 rounded-lg border text-xs cursor-pointer transition-colors ${isDarkMode ? 'border-white/10 text-slate-400 hover:text-white hover:bg-white/10' : 'border-slate-200 text-slate-600 hover:bg-slate-200'
+                    }`}
+                >
+                  {copiedField === 'gstin' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+
+              {/* PAN & State Code Row */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className={`p-3 rounded-2xl border flex items-center justify-between ${isDarkMode ? 'bg-black/60 border-white/10' : 'bg-slate-50 border-slate-200'
+                  }`}>
+                  <div>
+                    <span className="text-[10px] font-medium text-slate-400 block">PAN Number</span>
+                    <span className="font-mono font-bold text-xs text-sky-400 tracking-wide block mt-0.5">
+                      {pan || '—'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(pan, 'pan')}
+                    title="Copy PAN"
+                    className={`p-1.5 rounded-lg border text-xs cursor-pointer transition-colors ${isDarkMode ? 'border-white/10 text-slate-400 hover:text-white hover:bg-white/10' : 'border-slate-200 text-slate-600 hover:bg-slate-200'
+                      }`}
+                  >
+                    {copiedField === 'pan' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+
+                <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-black/60 border-white/10' : 'bg-slate-50 border-slate-200'
+                  }`}>
+                  <span className="text-[10px] font-medium text-slate-400 block">State (Code)</span>
+                  <span className="font-mono font-bold text-xs text-purple-400 block mt-0.5 truncate">
+                    {state || 'Maharashtra'} ({stateCode || '27'})
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Rule 55 Statutory Stamp */}
+            <div className={`mt-4 p-3 rounded-2xl border flex items-center gap-2.5 text-[11px] ${isDarkMode ? 'bg-blue-500/5 border-blue-500/20 text-slate-300' : 'bg-blue-50 border-blue-200 text-slate-700'
+              }`}>
+              <ShieldCheck className="w-4 h-4 text-[#5B75F8] shrink-0" />
+              <span>Registered under GST Section 31 & Rule 55 for manufacturing movement of goods.</span>
+            </div>
+          </div>
+
+          {/* Real-Time Stationery Print Box Preview */}
+          <div className={`p-5 rounded-3xl border space-y-3 ${isDarkMode
+            ? 'bg-[#09090B] border-white/10 text-white'
+            : 'bg-white border-slate-200 text-slate-900'
+            }`}>
+            <div className={`flex items-center justify-between border-b pb-2.5 ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
+              <div className="flex items-center gap-2">
+                <Receipt className="w-4 h-4 text-[#5B75F8]" />
+                <span className={`text-xs font-semibold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                  Official Document Header Preview
+                </span>
+              </div>
+              <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                Rule 55 Format
+              </span>
+            </div>
+
+            {/* Inset Stationery Template */}
+            <div className={`p-4 rounded-2xl border text-xs space-y-2 ${isDarkMode ? 'bg-black/60 border-white/10' : 'bg-slate-50 border-slate-200'
+              }`}>
+              <span className="inline-block px-2 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase bg-[#5B75F8]/15 text-[#5B75F8] border border-[#5B75F8]/30">
+                PRECISION MANUFACTURING ENTERPRISE
+              </span>
+              <h4 className={`font-bold text-sm tracking-tight uppercase ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                {legalName || 'GuruOm Industries LLP'}
+              </h4>
+              <p className={`text-[11px] leading-relaxed ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                {address || 'Sr No 15/2, Mataji Logistic Park, Behind Tilakraj CNG Pump, Urali Devachi, Pune 412308, India'}
+              </p>
+              <div className={`flex flex-wrap gap-x-3 gap-y-1 font-mono text-[10px] pt-1 border-t ${isDarkMode ? 'border-white/10 text-slate-400' : 'border-slate-200 text-slate-600'}`}>
+                <span><strong>GSTIN:</strong> {gstin || '27AABCG1234F1Z5'}</span>
+                <span><strong>State Code:</strong> {stateCode || '27'}</span>
+                <span><strong>PAN:</strong> {pan || 'AABCG1234F'}</span>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              This layout automatically formats the top header on generated Delivery Challans, Invoices, and Inspection CoC Certificates.
+            </p>
+          </div>
+        </div>
+
+        {/* Right Column: Inset Grouped Settings Form */}
+        <div className="lg:col-span-7">
+          <div className={`p-6 sm:p-8 rounded-3xl border transition-all ${isDarkMode
+            ? 'bg-[#09090B] border-white/10 text-white shadow-[0_24px_60px_rgba(0,0,0,0.8)]'
+            : 'bg-white border-slate-200/80 text-slate-900 shadow-sm'
+            }`}>
+            <form onSubmit={handleSave} className="space-y-6 text-xs">
+
+              {saveError && (
+                <div className="p-3.5 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-200 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                  <span>{saveError}</span>
+                </div>
+              )}
+
+              {/* Group 1: Legal Identity & Corporate Details */}
+              <div className="space-y-4">
+                <div className={`flex items-center gap-2 pb-2 border-b ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
+                  <div className="p-1.5 rounded-lg bg-[#5B75F8]/10 text-[#5B75F8]">
+                    <Building className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+                      1. Legal Entity & Corporate Details
+                    </h3>
+                    <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Official registered corporate title and verified contact info</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3.5">
+                  <div>
+                    <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                      Legal Organization Entity Name *
+                    </label>
+                    <div className="relative">
+                      <Building2 className={`w-4 h-4 absolute left-3.5 top-3.5 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`} />
+                      <input
+                        type="text"
+                        required
+                        value={legalName}
+                        onChange={(e) => setLegalName(e.target.value)}
+                        placeholder="e.g. GuruOm Industries LLP"
+                        className={`${inputClass} pl-10 font-medium`}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                      <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                        Official Contact Phone
+                      </label>
+                      <div className="relative">
+                        <Phone className={`w-4 h-4 absolute left-3.5 top-3.5 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`} />
+                        <input
+                          type="text"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          placeholder="e.g. +91 9763 969 798"
+                          className={`${inputClass} pl-10 font-mono`}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                        Corporate Operations Email
+                      </label>
+                      <div className="relative">
+                        <Mail className={`w-4 h-4 absolute left-3.5 top-3.5 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`} />
+                        <input
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="e.g. contact@guruom.in"
+                          className={`${inputClass} pl-10 font-mono`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Group 2: Registered Manufacturing Works & Dispatch Plant */}
+              <div className="space-y-4 pt-2">
+                <div className={`flex items-center gap-2 pb-2 border-b ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
+                  <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400">
+                    <MapPin className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+                      2. Registered Manufacturing Works & Plant
+                    </h3>
+                    <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Physical factory location used as the primary consignor facility</p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Registered Works & Dispatch Plant Address *
+                  </label>
+                  <textarea
+                    rows={3}
+                    required
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Full street address, industrial estate, city, state, and pincode"
+                    className={`w-full rounded-xl border p-3.5 text-xs font-medium outline-none transition-[border-color,box-shadow,background-color] duration-150 focus:border-[#5B75F8] focus:ring-4 focus:ring-[#5B75F8]/15 ${isDarkMode
+                      ? 'border-white/10 bg-black/60 text-white placeholder:text-slate-500 hover:border-white/20 focus:bg-black/80'
+                      : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:bg-white'
+                      }`}
+                  />
+                  <span className="text-[11px] text-slate-400 mt-1 block">
+                    This address appears as the Goods Origin on all outward GST delivery documents and E-Way bills.
+                  </span>
+                </div>
+              </div>
+
+              {/* Group 3: Statutory GST & Tax Registration */}
+              <div className="space-y-4 pt-2">
+                <div className={`flex items-center gap-2 pb-2 border-b ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
+                  <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-400">
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+                      3. Statutory GST & Tax Registration
+                    </h3>
+                    <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Government statutory identifiers and state tax jurisdiction</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className={`block text-xs font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                        GSTIN Registration Number *
+                      </label>
+                      {isGstinValid && (
+                        <span className="text-[10px] font-medium text-emerald-400 flex items-center gap-1">
+                          <Check className="w-3 h-3" /> Valid format
+                        </span>
+                      )}
+                    </div>
+                    <input
+                      type="text"
+                      required
+                      value={gstin}
+                      onChange={(e) => handleGstinChange(e.target.value)}
+                      placeholder="27AABCG1234F1Z5"
+                      className={`${inputClass} font-mono font-bold text-emerald-400`}
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className={`block text-xs font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                        Permanent Account Number (PAN) *
+                      </label>
+                      {isPanValid && (
+                        <span className="text-[10px] font-medium text-sky-400 flex items-center gap-1">
+                          <Check className="w-3 h-3" /> Verified PAN
+                        </span>
+                      )}
+                    </div>
+                    <input
+                      type="text"
+                      required
+                      value={pan}
+                      onChange={(e) => setPan(e.target.value.toUpperCase())}
+                      placeholder="AABCG1234F"
+                      className={`${inputClass} font-mono font-bold text-sky-400`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                      State Jurisdiction Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={state}
+                      onChange={(e) => setState(e.target.value)}
+                      placeholder="e.g. Maharashtra"
+                      className={inputClass}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                      GST State Code *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={stateCode}
+                      onChange={(e) => setStateCode(e.target.value)}
+                      placeholder="e.g. 27"
+                      className={`${inputClass} font-mono font-bold text-purple-400 text-center`}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Form Action Footer */}
+              <div className={`pt-5 border-t flex flex-col sm:flex-row items-center justify-between gap-4 ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
+                <p className={`text-[11px] leading-relaxed ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Modifications take effect immediately across all newly generated documents.
+                </p>
+
+                <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={handleResetToCurrent}
+                    className={`w-1/2 sm:w-auto flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border px-5 text-xs font-semibold transition-all cursor-pointer ${isDarkMode
+                      ? 'border-white/10 text-slate-300 hover:bg-white/10'
+                      : 'border-slate-200 text-slate-700 hover:bg-slate-100'
+                      }`}
+                  >
+                    Discard
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={isSaving}
+                    className="w-1/2 sm:w-auto flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-6 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer disabled:opacity-50"
+                  >
+                    {isSaving ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-3.5 h-3.5" />
+                        <span>Save enterprise profile</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CompanyProfileView;

@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+
+<html class="dark h-full" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>GuruOmOS • Enterprise Secure Authentication | SketchItUp Solutions</title>
+<!-- Tailwind CSS CDN with forms and container-queries -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Inter & SF-style typography -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind Configuration matching GuruOmOS design system -->
+<script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            surface: "#121318",
+            "surface-dim": "#121318",
+            "surface-container-lowest": "#0a0b0f",
+            "surface-container-low": "#15161c",
+            "surface-container": "#1b1c23",
+            "surface-container-high": "#24252d",
+            "surface-container-highest": "#30323c",
+            primary: "#adc6ff",
+            "primary-container": "#4d8eff",
+            "on-primary": "#002e6a",
+            "on-primary-fixed": "#001a42",
+            tertiary: "#4cd7f6",
+            "tertiary-fixed": "#acedff",
+            secondary: "#d0bcff",
+            outline: "#8c909f",
+            "outline-variant": "rgba(255, 255, 255, 0.08)",
+            "on-surface": "#e3e1e9",
+            "on-surface-variant": "#9ba1b4"
+          },
+          fontFamily: {
+            sans: ['Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'system-ui', 'sans-serif'],
+          },
+          transitionTimingFunction: {
+            'apple-spring': 'cubic-bezier(0.16, 1, 0.3, 1)',
+            'apple-bounce': 'cubic-bezier(0.34, 1.56, 0.64, 1)'
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    /* Emil Kowalski fluid spring curves & optical micro-details */
+    :root {
+      --spring-physics: cubic-bezier(0.16, 1, 0.3, 1);
+      --ease-out-back: cubic-bezier(0.34, 1.3, 0.64, 1);
+    }
+
+    body {
+      background-color: #090a0f;
+      font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Radial pointer glow */
+    .mouse-follow-glow {
+      position: fixed;
+      pointer-events: none;
+      width: 700px;
+      height: 700px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(77, 142, 255, 0.075) 0%, rgba(76, 215, 246, 0.02) 40%, transparent 70%);
+      transform: translate(-50%, -50%);
+      transition: opacity 0.6s ease;
+      z-index: 1;
+    }
+
+    /* Obsidian glassmorphism */
+    .obsidian-card {
+      background: radial-gradient(120% 120% at 50% 0%, rgba(30, 32, 42, 0.72) 0%, rgba(13, 14, 19, 0.88) 100%);
+      backdrop-filter: blur(48px) saturate(210%);
+      -webkit-backdrop-filter: blur(48px) saturate(210%);
+      box-shadow: 
+        0 0 0 1px rgba(255, 255, 255, 0.09) inset,
+        0 1px 1px 0 rgba(255, 255, 255, 0.15) inset,
+        0 30px 80px -15px rgba(0, 0, 0, 0.85),
+        0 0 120px -30px rgba(60, 120, 255, 0.18);
+    }
+
+    /* Subtle rim beam on inputs */
+    .apple-input-container:focus-within {
+      box-shadow: 0 0 0 1px #4d8eff, 0 0 24px -2px rgba(77, 142, 255, 0.32);
+      border-color: rgba(173, 198, 255, 0.8);
+    }
+
+    /* Face ID Radar ring animations */
+    @keyframes pulse-ring {
+      0% { transform: scale(0.85); opacity: 0.8; }
+      50% { transform: scale(1.18); opacity: 0.15; }
+      100% { transform: scale(0.85); opacity: 0.8; }
+    }
+    .animate-pulse-ring-slow {
+      animation: pulse-ring 3.4s ease-in-out infinite;
+    }
+    .animate-pulse-ring-fast {
+      animation: pulse-ring 2.2s ease-in-out infinite;
+      animation-delay: 0.6s;
+    }
+
+    /* Biometric Scan Line */
+    @keyframes scanline {
+      0% { top: 12%; opacity: 0; }
+      15% { opacity: 1; }
+      85% { opacity: 1; }
+      100% { top: 88%; opacity: 0; }
+    }
+    .biometric-scan-line {
+      animation: scanline 2.2s ease-in-out infinite alternate;
+    }
+
+    /* Staggered entrance animation classes */
+    .stagger-1 { animation: enterUp 0.8s var(--spring-physics) 0.05s backwards; }
+    .stagger-2 { animation: enterUp 0.8s var(--spring-physics) 0.12s backwards; }
+    .stagger-3 { animation: enterUp 0.8s var(--spring-physics) 0.20s backwards; }
+    .stagger-4 { animation: enterUp 0.8s var(--spring-physics) 0.28s backwards; }
+
+    @keyframes enterUp {
+      from {
+        opacity: 0;
+        transform: translateY(18px) scale(0.985);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+  </style>
+</head>
+<body class="relative min-h-screen w-full flex flex-col justify-between items-center px-4 py-8 sm:py-12 overflow-x-hidden text-on-surface select-none">
+<!-- Interactive pointer ambient light -->
+<div class="mouse-follow-glow top-1/2 left-1/2 opacity-60 sm:opacity-100" id="mouseFollower"></div>
+<!-- Ambient Deep Field Atmosphere Gradients (No Images) -->
+<div aria-hidden="true" class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+<div class="absolute -top-[25%] left-1/2 -translate-x-1/2 w-[840px] h-[520px] bg-gradient-to-b from-[#1c3569]/35 via-[#004e5c]/15 to-transparent rounded-full blur-[110px]"></div>
+<div class="absolute -bottom-[20%] right-[-10%] w-[580px] h-[480px] bg-gradient-to-t from-[#2c1354]/25 via-transparent to-transparent rounded-full blur-[120px]"></div>
+<div class="absolute top-[40%] -left-[15%] w-[500px] h-[500px] bg-gradient-to-r from-[#003640]/20 to-transparent rounded-full blur-[130px]"></div>
+</div>
+<!-- TOP BAR: Floating System Pill & Enclave Indicator -->
+<header class="relative z-10 w-full max-w-xl flex justify-center mb-6 sm:mb-8 stagger-1">
+<div class="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] backdrop-blur-xl shadow-lg transition-all duration-300 hover:bg-white/[0.07] hover:border-white/[0.15]">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-tertiary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-tertiary"></span>
+</span>
+<span class="text-[11.5px] font-medium tracking-tight text-white/80">GuruOmOS Kernel 4.2</span>
+<span class="text-white/20 text-[10px]">•</span>
+<span class="text-[11.5px] font-normal tracking-tight text-white/60">Secure Enclave Active</span>
+<span class="text-white/20 text-[10px]">•</span>
+<span class="text-[11px] font-semibold text-primary/90">SketchItUp Solutions</span>
+</div>
+</header>
+<!-- MAIN CENTERPIECE: Precision Emil Kowalski / Apple Auth Box -->
+<main class="relative z-10 w-full max-w-[440px] obsidian-card rounded-[32px] p-7 sm:p-9 stagger-2" data-purpose="auth-enclave">
+<!-- Header typographic brand glyph (NO IMAGE) -->
+<div class="flex flex-col items-center text-center">
+<!-- Apple-style Pure Vector Enclave Emblem -->
+<div class="relative w-14 h-14 rounded-2xl bg-gradient-to-b from-white/[0.12] to-white/[0.02] border border-white/20 shadow-[0_8px_20px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.4)] flex items-center justify-center group mb-4 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:scale-105 active:scale-95">
+<div class="absolute inset-0 rounded-2xl bg-gradient-to-tr from-primary/10 to-tertiary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+<svg class="w-6 h-6 text-primary transition-transform duration-500 group-hover:rotate-12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.9" viewbox="0 0 24 24">
+<path d="M12 2L3 7v6c0 5.25 3.75 10.15 9 11.35c5.25-1.2 9-6.1 9-11.35V7l-9-5z"></path>
+<path d="M12 11a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path>
+<path d="M7.5 17.5c.8-2 2.4-3 4.5-3s3.7 1 4.5 3"></path>
+</svg>
+</div>
+<h1 class="text-[23px] sm:text-[25px] font-semibold tracking-[-0.03em] text-white leading-tight">
+        Authenticate with <span class="bg-gradient-to-r from-white via-primary to-tertiary bg-clip-text text-transparent">GuruOmOS</span>
+</h1>
+<p class="text-[13.5px] text-on-surface-variant font-normal tracking-[-0.01em] mt-1.5">
+        Owner Operating System Architecture
+      </p>
+</div>
+<!-- Emil Kowalski Fluid Segmented Control Pill -->
+<div class="relative mt-7 p-1 rounded-2xl bg-black/40 border border-white/[0.08] grid grid-cols-2 gap-1 text-[13px] font-medium tracking-tight">
+<!-- Sliding Active Spring Pill Indicator -->
+<div class="absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] rounded-xl bg-gradient-to-b from-white/[0.14] to-white/[0.05] border border-white/[0.18] shadow-md transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] pointer-events-none" id="segmentIndicator"></div>
+<!-- Option 1: Passkey / Biometrics -->
+<button class="relative z-10 py-2 rounded-xl flex items-center justify-center gap-1.5 text-white transition-colors duration-200" id="tabPasskey" type="button">
+<svg class="w-4 h-4 text-tertiary" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<rect height="18" rx="5" width="18" x="3" y="3"></rect>
+<path d="M9 9h.01M15 9h.01M9 15c.8 1.2 2.2 2 3 2s2.2-.8 3-2"></path>
+</svg>
+<span>Passkey &amp; Face ID</span>
+</button>
+<!-- Option 2: Password & Token -->
+<button class="relative z-10 py-2 rounded-xl flex items-center justify-center gap-1.5 text-on-surface-variant hover:text-white transition-colors duration-200" id="tabPassword" type="button">
+<svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<rect height="11" rx="2" ry="2" width="18" x="3" y="11"></rect>
+<path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+</svg>
+<span>Password</span>
+</button>
+</div>
+<!-- Dynamic Container Morphing for Modes -->
+<div class="relative mt-6 overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]" id="morphContainer">
+<!-- ============================================== -->
+<!-- VIEW 1: APPLE PASSKEY / FACE ID AUTHENTICATION -->
+<!-- ============================================== -->
+<div class="w-full flex flex-col items-center text-center transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)]" id="passkeyView">
+<!-- Interactive Biometric Optical Scanner -->
+<div class="relative my-4 w-36 h-36 rounded-3xl bg-white/[0.02] border border-white/[0.09] flex items-center justify-center cursor-pointer group transition-all duration-300 hover:border-tertiary/40 hover:bg-white/[0.04] active:scale-95 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]" id="scanTriggerArea">
+<!-- Acoustic pulse rings -->
+<div class="absolute inset-0 rounded-3xl border border-tertiary/20 animate-pulse-ring-slow pointer-events-none"></div>
+<div class="absolute inset-2 rounded-2xl border border-primary/25 animate-pulse-ring-fast pointer-events-none"></div>
+<!-- Vertical scanning laser beam -->
+<div class="absolute inset-x-3 h-[2px] bg-gradient-to-r from-transparent via-tertiary to-transparent shadow-[0_0_12px_#4cd7f6] opacity-0 biometric-scan-line pointer-events-none" id="scanLaser"></div>
+<!-- Apple Face ID / Passkey Glyph Wireframe -->
+<div class="relative z-10 flex flex-col items-center">
+<svg class="w-14 h-14 text-white/80 transition-all duration-300 group-hover:text-tertiary group-hover:scale-105" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.4" viewbox="0 0 24 24">
+<!-- Top Left Corner -->
+<path d="M3 8V5a2 2 0 0 1 2-2h3"></path>
+<!-- Top Right Corner -->
+<path d="M16 3h3a2 2 0 0 1 2 2v3"></path>
+<!-- Bottom Left Corner -->
+<path d="M3 16v3a2 2 0 0 0 2 2h3"></path>
+<!-- Bottom Right Corner -->
+<path d="M16 21h3a2 2 0 0 0 2-2v-3"></path>
+<!-- Stylized Apple Face/Sensor Points -->
+<circle cx="9" cy="9.5" fill="currentColor" r="1"></circle>
+<circle cx="15" cy="9.5" fill="currentColor" r="1"></circle>
+<path d="M12 12v2" stroke-width="1.8"></path>
+<path d="M9.5 16.5c1.2 1 3.8 1 5 0" stroke-width="1.8"></path>
+</svg>
+<span class="mt-2 text-[10.5px] uppercase tracking-[0.08em] font-semibold text-tertiary" id="scanStatusBadge">Touch to Scan</span>
+</div>
+</div>
+<p class="text-[13px] text-on-surface-variant/90 max-w-[320px] leading-relaxed">
+          Sign in instantly using Touch ID, Face ID, or an external FIDO2 YubiKey bound to your enclave.
+        </p>
+<!-- Primary Passkey Instant Button -->
+<button class="w-full mt-6 py-3 px-4 rounded-2xl bg-gradient-to-b from-[#4d8eff] to-[#005ac2] hover:brightness-110 active:scale-[0.98] transition-all duration-200 text-white font-medium text-[14px] shadow-[0_8px_20px_-4px_rgba(77,142,255,0.45),inset_0_1px_1px_rgba(255,255,255,0.35)] flex items-center justify-center gap-2 group" id="btnTriggerPasskey" type="button">
+<svg class="w-4 h-4 text-white group-hover:rotate-6 transition-transform" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M21 2l-2 2m-1.5 1.5L16 7l-1.5-1.5M7 11a5 5 0 1 0 7.07 7.07l6.93-6.93a1.5 1.5 0 0 0 0-2.12l-1.42-1.42a1.5 1.5 0 0 0-2.12 0L14.4 9.17A5 5 0 0 0 7 11z"></path>
+</svg>
+<span>Authenticate with Passkey</span>
+<span class="ml-1 text-[11px] px-1.5 py-0.5 rounded-md bg-white/20 font-mono tracking-tighter">↵</span>
+</button>
+</div>
+<!-- ============================================== -->
+<!-- VIEW 2: STANDARD ENTERPRISE PASSWORD FLOW     -->
+<!-- ============================================== -->
+<div class="hidden w-full flex-col transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)]" id="passwordView">
+<form class="space-y-4" id="traditionalAuthForm" onsubmit="event.preventDefault(); window.handlePasswordSubmit();">
+<!-- Work Email Input Container -->
+<div>
+<div class="flex justify-between items-center mb-1.5 px-1">
+<label class="text-[11px] font-semibold text-white/60 tracking-[0.05em] uppercase" for="workEmail">Enterprise Identity</label>
+<span class="text-[11px] text-primary/80">SSO Enabled</span>
+</div>
+<div class="relative apple-input-container rounded-2xl bg-black/35 border border-white/[0.12] transition-all duration-200">
+<div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-white/40">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewbox="0 0 24 24">
+<path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+</svg>
+</div>
+<input autocomplete="username" class="w-full pl-10 pr-10 py-3 bg-transparent text-[13.5px] text-white placeholder-white/25 rounded-2xl border-0 focus:ring-0 focus:outline-none" id="workEmail" placeholder="name@company.com" required="" type="email"/>
+<button class="hidden absolute inset-y-0 right-0 pr-3.5 flex items-center text-white/30 hover:text-white/80 transition-colors" id="clearEmailBtn" type="button">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+</button>
+</div>
+</div>
+<!-- Password Field with Interactive Strength Meter -->
+<div>
+<div class="flex justify-between items-center mb-1.5 px-1">
+<label class="text-[11px] font-semibold text-white/60 tracking-[0.05em] uppercase" for="masterPassword">Master Password</label>
+<a class="text-[11.5px] text-primary/80 hover:text-primary transition-colors hover:underline underline-offset-2" href="#">Recover key</a>
+</div>
+<div class="relative apple-input-container rounded-2xl bg-black/35 border border-white/[0.12] transition-all duration-200">
+<div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-white/40">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewbox="0 0 24 24">
+<rect height="11" rx="2" ry="2" width="18" x="3" y="11"></rect>
+<path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+</svg>
+</div>
+<input autocomplete="current-password" class="w-full pl-10 pr-11 py-3 bg-transparent text-[13.5px] text-white placeholder-white/25 rounded-2xl border-0 focus:ring-0 focus:outline-none" id="masterPassword" placeholder="Enter enclave password" required="" type="password"/>
+<button aria-label="Toggle password visibility" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-white/40 hover:text-white transition-colors" id="togglePasswordBtn" type="button">
+<svg class="w-4 h-4" fill="none" id="eyeIconOpen" stroke="currentColor" stroke-width="1.8" viewbox="0 0 24 24">
+<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+<circle cx="12" cy="12" r="3"></circle>
+</svg>
+<svg class="w-4 h-4 hidden" fill="none" id="eyeIconClosed" stroke="currentColor" stroke-width="1.8" viewbox="0 0 24 24">
+<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+<line x1="1" x2="23" y1="1" y2="23"></line>
+</svg>
+</button>
+</div>
+<!-- Dynamic Emil Kowalski Password Strength Bar -->
+<div class="hidden mt-2 px-1 transition-all duration-300" id="strengthContainer">
+<div class="flex items-center gap-1.5 h-1 w-full bg-white/10 rounded-full overflow-hidden">
+<div class="h-full w-1/4 rounded-full bg-white/20 transition-all duration-300" id="bar1"></div>
+<div class="h-full w-1/4 rounded-full bg-white/20 transition-all duration-300" id="bar2"></div>
+<div class="h-full w-1/4 rounded-full bg-white/20 transition-all duration-300" id="bar3"></div>
+<div class="h-full w-1/4 rounded-full bg-white/20 transition-all duration-300" id="bar4"></div>
+</div>
+<div class="flex justify-between items-center mt-1 text-[11px] text-white/50">
+<span id="strengthLabel">Enclave requirement: 8+ chars</span>
+<span class="text-tertiary text-[10px] font-mono">AES-256</span>
+</div>
+</div>
+</div>
+<!-- Persistence checkbox & device trust -->
+<div class="flex items-center justify-between pt-1">
+<label class="flex items-center gap-2.5 cursor-pointer text-[12.5px] text-on-surface-variant hover:text-white transition-colors select-none">
+<input class="w-4 h-4 rounded-md border-white/20 bg-black/40 text-primary focus:ring-primary/40 focus:ring-offset-0 focus:ring-1" id="trustDevice" type="checkbox"/>
+<span>Trust this hardware node (30d)</span>
+</label>
+</div>
+<!-- Submit Action Button with magnetic sensation -->
+<button class="w-full mt-2 py-3 px-4 rounded-2xl bg-gradient-to-b from-[#4d8eff] to-[#005ac2] hover:brightness-110 active:scale-[0.98] transition-all duration-200 text-white font-medium text-[14px] shadow-[0_8px_20px_-4px_rgba(77,142,255,0.45),inset_0_1px_1px_rgba(255,255,255,0.35)] flex items-center justify-center gap-2 group" id="passwordSubmitBtn" type="submit">
+<span>Decrypt &amp; Sign In</span>
+<svg class="w-4 h-4 text-white group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M5 12h14M12 5l7 7-7 7"></path>
+</svg>
+</button>
+</form>
+</div>
+</div>
+<!-- Enterprise SSO Divider -->
+<div class="relative my-6">
+<div class="absolute inset-0 flex items-center">
+<div class="w-full border-t border-white/[0.08]"></div>
+</div>
+<div class="relative flex justify-center text-[11px] uppercase tracking-[0.08em]">
+<span class="px-3 bg-[#13151c] text-white/40 rounded-full">Federated Providers</span>
+</div>
+</div>
+<!-- Apple-grade Minimalist SSO Buttons -->
+<div class="grid grid-cols-2 gap-2.5">
+<!-- Apple ID / Identity -->
+<button class="flex items-center justify-center gap-2 py-2.5 px-3 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-white/[0.16] active:scale-[0.98] transition-all duration-200 text-white text-[12.5px] font-medium" onclick="window.simulateSSO('Apple ID')" type="button">
+<svg class="w-4 h-4 fill-current" viewbox="0 0 170 170">
+<path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.69-3.04-7.69-7.85-12-14.43-5.65-8.62-10.14-18.66-13.48-30.13-3.34-11.47-5.01-22.31-5.01-32.53 0-14.67 3.73-26.65 11.19-35.94 7.46-9.29 16.74-14.07 27.84-14.35 4.8 0 10.3 1.25 16.5 3.76 6.2 2.51 10.12 3.82 11.75 3.93 1.3 0 5.4-1.4 12.3-4.22 6.89-2.82 12.76-4.04 17.6-3.66 13.52 1.09 24.32 6.43 32.4 16.03-11.95 7.2-17.78 17.07-17.51 29.6.27 9.8 4.09 18 11.46 24.6 7.37 6.6 16.02 10.36 25.96 11.28-2.22 6.54-4.82 13.1-7.81 19.68zM119.22 31.84c0-7.39 2.68-14.48 8.04-21.27 5.36-6.79 12.08-10.57 20.16-11.34.11 1.09.16 2.18.16 3.27 0 7.39-2.83 14.53-8.49 21.43-5.66 6.9-12.44 10.68-20.34 11.34-.33-1.09-.5-2.24-.5-3.43z"></path>
+</svg>
+<span>Apple ID</span>
+</button>
+<!-- Enterprise Google Workspace / Okta SSO -->
+<button class="flex items-center justify-center gap-2 py-2.5 px-3 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-white/[0.16] active:scale-[0.98] transition-all duration-200 text-white text-[12.5px] font-medium" onclick="window.simulateSSO('Enterprise Workspace')" type="button">
+<svg class="w-4 h-4" viewbox="0 0 24 24">
+<path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
+<path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"></path>
+<path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"></path>
+<path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"></path>
+</svg>
+<span>Workspace</span>
+</button>
+</div>
+<!-- Enclave Status Toast / Feedback Banner (Dynamic) -->
+<div class="hidden mt-4 py-2 px-3 rounded-xl bg-primary/10 border border-primary/25 text-center text-[12px] text-primary transition-all duration-300" id="authNotification">
+<span id="authNotificationText">Initializing hardware handshake...</span>
+</div>
+</main>
+<!-- FOOTER: Security details, shortcut clues & SketchItUp Solutions attribution -->
+<footer class="relative z-10 mt-8 text-center flex flex-col items-center gap-3 stagger-3">
+<!-- Fast keyboard tips -->
+<div class="flex items-center gap-3 text-[11.5px] text-white/40">
+<span class="flex items-center gap-1">
+<kbd class="px-1.5 py-0.5 rounded bg-white/[0.08] text-white/70 font-mono text-[10px] border border-white/10">⌘</kbd>
+<kbd class="px-1.5 py-0.5 rounded bg-white/[0.08] text-white/70 font-mono text-[10px] border border-white/10">K</kbd>
+<span>Command Enclave</span>
+</span>
+<span>•</span>
+<span class="flex items-center gap-1">
+<kbd class="px-1.5 py-0.5 rounded bg-white/[0.08] text-white/70 font-mono text-[10px] border border-white/10">Tab</kbd>
+<span>Switch Mode</span>
+</span>
+</div>
+<!-- Official Enterprise Attribution -->
+<div class="text-[12px] text-white/50 tracking-[-0.01em]">
+      Architected with precision by 
+      <span class="text-white/80 font-medium">SketchItUp Solutions</span> 
+      for <span class="text-primary font-medium">GuruOmOS</span> Enterprise.
+    </div>
+<div class="flex gap-4 text-[11px] text-white/40">
+<a class="hover:text-white/80 transition-colors" href="#">Privacy Specification</a>
+<span>•</span>
+<a class="hover:text-white/80 transition-colors" href="#">Zero-Trust Protocol</a>
+<span>•</span>
+<a class="hover:text-white/80 transition-colors" href="#">Compliance Shield</a>
+</div>
+</footer>
+<!-- Emil Kowalski Micro-Interactions & State Controller -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Fluid Mouse Follower Glow
+      const follower = document.getElementById('mouseFollower');
+      window.addEventListener('pointermove', (e) => {
+        if (!follower) return;
+        requestAnimationFrame(() => {
+          follower.style.left = `${e.clientX}px`;
+          follower.style.top = `${e.clientY}px`;
+        });
+      }, { passive: true });
+
+      // 2. Segmented Control Switcher (Passkey vs Password)
+      const tabPasskey = document.getElementById('tabPasskey');
+      const tabPassword = document.getElementById('tabPassword');
+      const segmentIndicator = document.getElementById('segmentIndicator');
+      const passkeyView = document.getElementById('passkeyView');
+      const passwordView = document.getElementById('passwordView');
+      let currentMode = 'passkey';
+
+      function setMode(mode) {
+        currentMode = mode;
+        if (mode === 'passkey') {
+          // Pill animation to left
+          segmentIndicator.style.transform = 'translateX(0%)';
+          tabPasskey.classList.add('text-white');
+          tabPasskey.classList.remove('text-on-surface-variant');
+          tabPassword.classList.remove('text-white');
+          tabPassword.classList.add('text-on-surface-variant');
+
+          // Smooth transition out & in
+          passwordView.classList.add('opacity-0');
+          setTimeout(() => {
+            passwordView.classList.add('hidden');
+            passkeyView.classList.remove('hidden');
+            requestAnimationFrame(() => {
+              passkeyView.classList.remove('opacity-0');
+            });
+          }, 150);
+        } else {
+          // Pill animation to right with spring feel
+          segmentIndicator.style.transform = 'translateX(100%)';
+          tabPassword.classList.add('text-white');
+          tabPassword.classList.remove('text-on-surface-variant');
+          tabPasskey.classList.remove('text-white');
+          tabPasskey.classList.add('text-on-surface-variant');
+
+          passkeyView.classList.add('opacity-0');
+          setTimeout(() => {
+            passkeyView.classList.add('hidden');
+            passwordView.classList.remove('hidden');
+            requestAnimationFrame(() => {
+              passwordView.classList.remove('opacity-0');
+            });
+          }, 150);
+        }
+      }
+
+      tabPasskey.addEventListener('click', () => setMode('passkey'));
+      tabPassword.addEventListener('click', () => setMode('password'));
+
+      // Keyboard Shortcut 'Tab' or 'P' to toggle mode smoothly
+      window.addEventListener('keydown', (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+          e.preventDefault();
+          showNotification('GuruOmOS Terminal Ready • Press Enter to Authenticate');
+        }
+      });
+
+      // 3. Password Visibility Toggle
+      const togglePasswordBtn = document.getElementById('togglePasswordBtn');
+      const masterPassword = document.getElementById('masterPassword');
+      const eyeIconOpen = document.getElementById('eyeIconOpen');
+      const eyeIconClosed = document.getElementById('eyeIconClosed');
+
+      if (togglePasswordBtn && masterPassword) {
+        togglePasswordBtn.addEventListener('click', () => {
+          const isPass = masterPassword.type === 'password';
+          masterPassword.type = isPass ? 'text' : 'password';
+          eyeIconOpen.classList.toggle('hidden', isPass);
+          eyeIconClosed.classList.toggle('hidden', !isPass);
+        });
+      }
+
+      // 4. Email Input Clear Button
+      const workEmail = document.getElementById('workEmail');
+      const clearEmailBtn = document.getElementById('clearEmailBtn');
+
+      if (workEmail && clearEmailBtn) {
+        workEmail.addEventListener('input', () => {
+          clearEmailBtn.classList.toggle('hidden', workEmail.value.length === 0);
+        });
+        clearEmailBtn.addEventListener('click', () => {
+          workEmail.value = '';
+          clearEmailBtn.classList.add('hidden');
+          workEmail.focus();
+        });
+      }
+
+      // 5. Interactive Password Strength Meter
+      const strengthContainer = document.getElementById('strengthContainer');
+      const bar1 = document.getElementById('bar1');
+      const bar2 = document.getElementById('bar2');
+      const bar3 = document.getElementById('bar3');
+      const bar4 = document.getElementById('bar4');
+      const strengthLabel = document.getElementById('strengthLabel');
+
+      if (masterPassword && strengthContainer) {
+        masterPassword.addEventListener('input', (e) => {
+          const val = e.target.value;
+          if (val.length === 0) {
+            strengthContainer.classList.add('hidden');
+            return;
+          }
+          strengthContainer.classList.remove('hidden');
+
+          const len = val.length;
+          const hasMixed = /[a-z]/.test(val) && /[A-Z]/.test(val) && /\d/.test(val);
+          const hasSpecial = /[^a-zA-Z0-9]/.test(val);
+
+          // Reset styles
+          [bar1, bar2, bar3, bar4].forEach(b => {
+            b.className = 'h-full w-1/4 rounded-full bg-white/20 transition-all duration-300';
+          });
+
+          if (len < 6) {
+            bar1.className = 'h-full w-1/4 rounded-full bg-red-400 transition-all duration-300';
+            strengthLabel.textContent = 'Enclave Key: Fragile';
+            strengthLabel.className = 'text-red-400';
+          } else if (len < 10) {
+            bar1.className = 'h-full w-1/4 rounded-full bg-amber-400 transition-all duration-300';
+            bar2.className = 'h-full w-1/4 rounded-full bg-amber-400 transition-all duration-300';
+            strengthLabel.textContent = 'Enclave Key: Moderate';
+            strengthLabel.className = 'text-amber-400';
+          } else if (len >= 10 && (hasMixed || hasSpecial)) {
+            bar1.className = 'h-full w-1/4 rounded-full bg-emerald-400 transition-all duration-300';
+            bar2.className = 'h-full w-1/4 rounded-full bg-emerald-400 transition-all duration-300';
+            bar3.className = 'h-full w-1/4 rounded-full bg-emerald-400 transition-all duration-300';
+            if (len >= 14 && hasSpecial) {
+              bar4.className = 'h-full w-1/4 rounded-full bg-tertiary shadow-[0_0_8px_#4cd7f6] transition-all duration-300';
+              strengthLabel.textContent = 'Enclave Key: Cryptographic Grade';
+              strengthLabel.className = 'text-tertiary font-semibold';
+            } else {
+              strengthLabel.textContent = 'Enclave Key: Strong';
+              strengthLabel.className = 'text-emerald-400';
+            }
+          }
+        });
+      }
+
+      // 6. Biometric Scan Simulation Craft
+      const scanTriggerArea = document.getElementById('scanTriggerArea');
+      const btnTriggerPasskey = document.getElementById('btnTriggerPasskey');
+      const scanLaser = document.getElementById('scanLaser');
+      const scanStatusBadge = document.getElementById('scanStatusBadge');
+
+      function startBiometricSimulation() {
+        if (scanLaser) scanLaser.classList.remove('opacity-0');
+        scanStatusBadge.textContent = 'Scanning Sensor...';
+        scanStatusBadge.className = 'mt-2 text-[10.5px] uppercase tracking-[0.08em] font-semibold text-primary animate-pulse';
+
+        showNotification('Contacting Secure Enclave & verifying FIDO2 credentials...');
+
+        setTimeout(() => {
+          scanStatusBadge.textContent = 'Biometrics Verified';
+          scanStatusBadge.className = 'mt-2 text-[10.5px] uppercase tracking-[0.08em] font-semibold text-emerald-400';
+          if (scanLaser) scanLaser.classList.add('opacity-0');
+          showNotification('✓ Identity verified by GuruOmOS Kernel. Session authorized.');
+        }, 1800);
+      }
+
+      if (scanTriggerArea) scanTriggerArea.addEventListener('click', startBiometricSimulation);
+      if (btnTriggerPasskey) btnTriggerPasskey.addEventListener('click', startBiometricSimulation);
+
+      // 7. Notification helper
+      const authNotification = document.getElementById('authNotification');
+      const authNotificationText = document.getElementById('authNotificationText');
+
+      function showNotification(msg) {
+        if (!authNotification || !authNotificationText) return;
+        authNotificationText.textContent = msg;
+        authNotification.classList.remove('hidden');
+        authNotification.classList.add('animate-apple-bounce');
+        setTimeout(() => {
+          authNotification.classList.add('hidden');
+        }, 3600);
+      }
+      window.showNotification = showNotification;
+
+      // 8. Form submit handler
+      window.handlePasswordSubmit = function() {
+        showNotification('Decrypting workspace tokens with SketchItUp Secure Enclave...');
+        const btn = document.getElementById('passwordSubmitBtn');
+        if (btn) {
+          btn.innerHTML = `
+            <svg class="animate-spin w-4 h-4 text-white" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+            <span>Decrypting...</span>
+          `;
+          setTimeout(() => {
+            btn.innerHTML = `<span>Decrypted & Authorized</span>`;
+            showNotification('Access granted to GuruOmOS Enterprise node.');
+          }, 1400);
+        }
+      };
+
+      // 9. SSO Simulator
+      window.simulateSSO = function(provider) {
+        showNotification(`Redirecting to ${provider} Enterprise Enclave...`);
+      };
+    });
+  </script>
+</body></html>

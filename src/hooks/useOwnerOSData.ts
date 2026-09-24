@@ -1,0 +1,1811 @@
+import { useState, useEffect, useCallback } from 'react';
+import {
+  CustomerOrder,
+  StockItem,
+  ShortageItem,
+  JobCard,
+  FinishedGoodsItem,
+  OutworkSendOut,
+  ProductionLogReport,
+  QCInspection,
+  PDIInspection,
+  DispatchChallan,
+  CustomerInvoice,
+  VendorBill,
+  MasterItem,
+  CustomerMaster,
+  VendorMaster,
+  MachineMaster,
+  SystemUser,
+  AuditLogEntry,
+  CompanyProfile,
+  PendingApproval,
+  UserRole,
+  ConsoleView
+} from '../types/console';
+import { ROLE_PERMISSIONS, isViewAllowedForRole } from '../utils/permissions';
+
+import {
+  fetchCompanyProfile,
+  updateCompanyProfile,
+  fetchProfiles,
+  createProfile,
+  updateProfile,
+  updateProfileRole,
+  updateProfileStatus,
+  fetchMasters,
+  insertMaster,
+  updateMasterItem,
+  deleteMasterItem,
+  fetchOrders,
+  insertOrder,
+  updateOrder,
+  confirmOrder,
+  updateOrderStatus,
+  fetchStock,
+  adjustStockItem,
+  fetchShortages,
+  fetchJobCards,
+  bulkReleaseJobCards,
+  type BulkReleaseResult,
+  type BulkReleaseLineInput,
+  createJobCardForOrder,
+  startJobCardOperation,
+  completeJobCardOperation,
+  fetchProductionLogs,
+  insertProductionLogAndQC,
+  fetchQCQueue,
+  updateQCInspection,
+  fetchPDIQueue,
+  passPDIInspection,
+  fetchFinishedGoods,
+  fetchOutworkSendOuts,
+  fetchDispatches,
+  insertDispatchChallan,
+  updateDispatchChallan,
+  cancelDispatchChallan,
+  fetchInvoices,
+  insertCustomerInvoice,
+  issueCustomerInvoice,
+  payInvoice,
+  deleteCustomerInvoice,
+  clearAllCustomerInvoices,
+  completePdiInspectionForOrder,
+  generateInvoiceForOrder,
+  generateChallanForOrder,
+  markOrderDispatched,
+  markOrderDelivered,
+  markOrderDelayed,
+  recordOrderPaymentAndClose,
+  fetchPayables,
+  insertVendorBill,
+  payVendorBill,
+  insertOutworkSendOut,
+  fetchApprovals,
+  removeApproval,
+  approveApproval,
+  rejectApproval,
+  fetchAuditLogs,
+  fetchSecurityEvents,
+  insertAuditLog,
+  fetchCustomers,
+  insertCustomer,
+  updateCustomer,
+  deleteCustomer,
+  fetchVendors,
+  insertVendor,
+  updateVendor,
+  deleteVendor,
+  fetchMachines,
+  insertMachine,
+  updateMachine,
+  deleteMachine,
+  deleteProfile,
+  seedAllDataToSupabase,
+  clearOperationalDataInSupabase
+} from '../services/supabaseServices';
+import { toast } from '../context/ToastContext';
+import { initialCompanyProfile } from '../data/consoleData';
+
+export function useOwnerOSData(currentUser?: SystemUser) {
+  const [loading, setLoading] = useState<boolean>(true);
+  const [orders, setOrders] = useState<CustomerOrder[]>([]);
+  const [stock, setStock] = useState<StockItem[]>([]);
+  const [shortages, setShortages] = useState<ShortageItem[]>([]);
+  const [jobCards, setJobCards] = useState<JobCard[]>([]);
+  const [finishedGoods, setFinishedGoods] = useState<FinishedGoodsItem[]>([]);
+  const [outworkSendOuts, setOutworkSendOuts] = useState<OutworkSendOut[]>([]);
+  const [productionLogs, setProductionLogs] = useState<ProductionLogReport[]>([]);
+  const [qcQueue, setQcQueue] = useState<QCInspection[]>([]);
+  const [pdiQueue, setPdiQueue] = useState<PDIInspection[]>([]);
+  const [dispatches, setDispatches] = useState<DispatchChallan[]>([]);
+  const [invoices, setInvoices] = useState<CustomerInvoice[]>([]);
+  const [payables, setPayables] = useState<VendorBill[]>([]);
+  const [masters, setMasters] = useState<MasterItem[]>([]);
+  const [customers, setCustomers] = useState<CustomerMaster[]>([]);
+  const [vendors, setVendors] = useState<VendorMaster[]>([]);
+  const [machines, setMachines] = useState<MachineMaster[]>([]);
+  const [users, setUsers] = useState<SystemUser[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
+  const [securityEvents, setSecurityEvents] = useState<any[]>([]);
+  const [companyProfile, setCompanyProfile] = useState<CompanyProfile>(() => {
+    try {
+      const saved = localStorage.getItem('stratum_company_profile');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.legalName) {
+          if (
+            parsed.address?.includes('Metoda') ||
+            parsed.address?.includes('Rajkot') ||
+            parsed.address?.includes('Bhosari') ||
+            parsed.address?.includes('123 Test St') ||
+            parsed.legalName === 'Test Tech Ltd'
+          ) {
+            const updated: CompanyProfile = {
+              ...parsed,
+              legalName: 'GuruOm Industries LLP',
+              address: 'Sr No 15/2, Mataji Logistic Park, Behind Tilakraj CNG Pump, Urali Devachi, Pune 412308, India',
+              phone: '+91 9763 969 798',
+              email: 'contact@guruom.in',
+              state: 'Maharashtra',
+              stateCode: '27'
+            };
+            try {
+              localStorage.setItem('stratum_company_profile', JSON.stringify(updated));
+            } catch (_) { }
+            return updated;
+          }
+          return parsed;
+        }
+      }
+    } catch (_) { }
+    return initialCompanyProfile;
+  });
+  const [approvals, setApprovals] = useState<PendingApproval[]>([]);
+  const [lastSynced, setLastSynced] = useState<string>(() => new Date().toLocaleString('en-IN', { hour12: true }));
+
+  const isAllowed = useCallback((view: ConsoleView): boolean => {
+    if (!currentUser?.role) return true;
+    return isViewAllowedForRole(currentUser.role, view);
+  }, [currentUser?.role]);
+
+  const loadAllData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [
+        cProfile,
+        usrList,
+        mList,
+        oList,
+        sList,
+        shList,
+        jcList,
+        fgList,
+        owList,
+        plList,
+        qcList,
+        pdiList,
+        dList,
+        invList,
+        billList,
+        apprList,
+        auditList,
+        secEventList,
+        custs,
+        vends,
+        mchs
+      ] = await Promise.all([
+        fetchCompanyProfile(),
+        fetchProfiles(),
+        fetchMasters(),
+        isAllowed('orders') ? fetchOrders() : Promise.resolve([]),
+        isAllowed('inventory') ? fetchStock() : Promise.resolve([]),
+        isAllowed('inventory') ? fetchShortages() : Promise.resolve([]),
+        isAllowed('production') ? fetchJobCards() : Promise.resolve([]),
+        isAllowed('finished-goods') ? fetchFinishedGoods() : Promise.resolve([]),
+        isAllowed('plating-outwork') ? fetchOutworkSendOuts() : Promise.resolve([]),
+        isAllowed('production') ? fetchProductionLogs() : Promise.resolve([]),
+        isAllowed('qc') ? fetchQCQueue() : Promise.resolve([]),
+        isAllowed('pdi') ? fetchPDIQueue() : Promise.resolve([]),
+        isAllowed('dispatch') ? fetchDispatches() : Promise.resolve([]),
+        isAllowed('invoices') ? fetchInvoices() : Promise.resolve([]),
+        isAllowed('payables') ? fetchPayables() : Promise.resolve([]),
+        isAllowed('approvals') ? fetchApprovals() : Promise.resolve([]),
+        isAllowed('users-audit') ? fetchAuditLogs() : Promise.resolve([]),
+        isAllowed('users-audit') ? fetchSecurityEvents() : Promise.resolve([]),
+        fetchCustomers(),
+        fetchVendors(),
+        fetchMachines()
+      ]);
+
+      setCompanyProfile(cProfile);
+      setUsers(usrList);
+      setMasters(mList);
+      setOrders(oList);
+      setStock(sList);
+      setShortages(shList);
+      setJobCards(jcList);
+      setFinishedGoods(fgList);
+      setOutworkSendOuts(owList);
+      setProductionLogs(plList);
+      setQcQueue(qcList);
+      setPdiQueue(pdiList);
+      setDispatches(dList);
+      setInvoices(invList);
+      setPayables(prev => {
+        let localBills: VendorBill[] = [];
+        try {
+          const stored = localStorage.getItem('stratum_vendor_bills');
+          if (stored) localBills = JSON.parse(stored);
+        } catch (_) {}
+
+        const allKnown = [...(billList || []), ...prev, ...localBills];
+        const unique = new Map<string, VendorBill>();
+        for (const b of allKnown) {
+          if (b && b.billNo && !unique.has(b.billNo)) {
+            unique.set(b.billNo, b);
+          }
+        }
+        return Array.from(unique.values());
+      });
+      setApprovals(apprList);
+      setAuditLogs(auditList);
+      setSecurityEvents(secEventList || []);
+      setCustomers(custs);
+      setVendors(vends);
+      setMachines(mchs);
+      setLastSynced(new Date().toLocaleString('en-IN', { hour12: true }));
+    } catch (err) {
+      console.error('Error loading Supabase data:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [isAllowed]);
+
+  // Initial Load & Realtime SSE Stream
+  // react-doctor-disable-next-line react-doctor/effect-needs-cleanup
+  useEffect(() => {
+    loadAllData();
+
+    // 3-Minute Background Reconciliation
+    const reconciliationInterval = setInterval(() => {
+      loadAllData();
+    }, 3 * 60 * 1000);
+
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+    // H-02: never put the access token in the SSE URL (log/Referer leakage).
+    // The server authenticates the stream from the httpOnly refresh cookie,
+    // which EventSource sends automatically via withCredentials.
+    const streamUrl = `${apiBaseUrl}/notifications/stream`;
+
+    let eventSource: EventSource | null = null;
+    const registeredListeners: Array<{ type: string; listener: (e: any) => void }> = [];
+    const addListener = (type: string, listener: (e: any) => void) => {
+      if (eventSource) {
+        eventSource.addEventListener(type, listener);
+        registeredListeners.push({ type, listener });
+      }
+    };
+
+    try {
+      eventSource = new EventSource(streamUrl, { withCredentials: true });
+
+      // User events
+      addListener('user_created', (event: MessageEvent) => {
+        try {
+          const newUser = JSON.parse(event.data);
+          setUsers(prev => [newUser, ...prev.filter(u => u.id !== newUser.id && u.email !== newUser.email)]);
+        } catch (_) { }
+      });
+
+      addListener('user_updated', (event: MessageEvent) => {
+        try {
+          const updated = JSON.parse(event.data);
+          setUsers(prev => prev.map(u => u.id === updated.id ? { ...u, ...updated } : u));
+        } catch (_) { }
+      });
+
+      addListener('user_deleted', (event: MessageEvent) => {
+        try {
+          const deleted = JSON.parse(event.data);
+          setUsers(prev => prev.filter(u => u.id !== deleted.id));
+        } catch (_) { }
+      });
+
+      // Company profile event
+      addListener('company_profile_updated', (event: MessageEvent) => {
+        try {
+          const updated = JSON.parse(event.data);
+          if (updated && updated.legalName) {
+            setCompanyProfile(updated);
+            try {
+              localStorage.setItem('stratum_company_profile', JSON.stringify(updated));
+            } catch (_) { }
+          }
+        } catch (_) { }
+      });
+
+      // Order events
+      addListener('order_created', (event: MessageEvent) => {
+        try {
+          const newOrder = JSON.parse(event.data);
+          setOrders(prev => {
+            // Replace any optimistic entry matching by poNo, otherwise prepend
+            const hasExisting = prev.some(o => o.poNo === newOrder.poNo);
+            if (hasExisting) {
+              return prev.map(o => o.poNo === newOrder.poNo ? { ...o, ...newOrder } : o);
+            }
+            return [newOrder, ...prev.filter(o => o.id !== newOrder.id)];
+          });
+        } catch (_) { }
+      });
+
+      addListener('order_updated', (event: MessageEvent) => {
+        try {
+          const updated = JSON.parse(event.data);
+          const targetKey = updated.id || updated.poNo || updated.orderId;
+          setOrders(prev => prev.map(o => {
+            const isMatch = o.id === updated.id ||
+              o.poNo === updated.poNo ||
+              o.id === updated.poNo ||
+              o.poNo === updated.id ||
+              (updated.orderId && (o.id === updated.orderId || o.poNo === updated.orderId));
+            if (isMatch) {
+              return {
+                ...o,
+                ...updated,
+                id: o.id || updated.id,
+                poNo: o.poNo || updated.poNo,
+                status: updated.status || updated.stage || o.status,
+                stage: updated.stage || updated.status || o.stage,
+                progressStep: updated.progressStep ?? updated.progress_step ?? o.progressStep
+              };
+            }
+            return o;
+          }));
+        } catch (_) { }
+      });
+
+      addListener('order_transitioned', (event: MessageEvent) => {
+        try {
+          const payload = JSON.parse(event.data);
+          setOrders(prev => prev.map(o => {
+            const isMatch = o.id === payload.orderId ||
+              o.poNo === payload.poNo ||
+              o.id === payload.poNo ||
+              o.poNo === payload.orderId ||
+              o.id === payload.id ||
+              o.poNo === payload.id;
+            if (isMatch) {
+              return {
+                ...o,
+                status: payload.status || payload.newStage || payload.stage || o.status,
+                stage: payload.stage || payload.newStage || payload.status || o.stage,
+                progressStep: payload.progressStep ?? payload.progress_step ?? o.progressStep,
+                heatLotNumber: payload.heatLotNumber || o.heatLotNumber
+              };
+            }
+            return o;
+          }));
+        } catch (_) { }
+      });
+
+      // Inventory & Shortage events
+      addListener('stock_updated', () => {
+        if (isAllowed('inventory')) {
+          fetchStock().then(setStock).catch(() => { });
+          fetchShortages().then(setShortages).catch(() => { });
+        }
+      });
+
+      addListener('shortage_updated', () => {
+        if (isAllowed('inventory')) fetchShortages().then(setShortages).catch(() => { });
+      });
+
+      addListener('finished_goods_updated', () => {
+        if (isAllowed('finished-goods')) fetchFinishedGoods().then(setFinishedGoods).catch(() => { });
+      });
+
+      // GRN events
+      addListener('grn_created', () => {
+        if (isAllowed('inventory')) fetchStock().then(setStock).catch(() => { });
+        if (isAllowed('orders')) fetchOrders().then(setOrders).catch(() => { });
+      });
+
+      // Item Catalog events — Stock Master mirrors the Masters catalog in realtime
+      addListener('master_item_created', (event: MessageEvent) => {
+        try {
+          const newItem = JSON.parse(event.data);
+          setMasters(prev => prev.some(m => m.code === newItem.code) ? prev : [newItem, ...prev]);
+        } catch (_) { }
+        fetchMasters().then(setMasters).catch(() => { });
+      });
+
+      // Audit trail events — every backend-recorded system change streams in realtime
+      addListener('audit_log_created', (event: MessageEvent) => {
+        if (!isAllowed('users-audit')) return;
+        try {
+          const record = JSON.parse(event.data);
+          const entry = {
+            id: record.id,
+            when: record.created_at ? new Date(record.created_at).toLocaleString('en-IN', { hour12: true }) : 'Just now',
+            user: record.actorEmail || record.actor_email || 'System',
+            actorId: record.actorId || record.actor_id,
+            actorEmail: record.actorEmail || record.actor_email,
+            entity: record.entityType || record.entity_type || record.entity || 'General',
+            entityType: record.entityType || record.entity_type,
+            entityId: record.entityId || record.entity_id,
+            action: record.action,
+            details: record.metadata?.details || record.details || `${record.action} on ${record.entityType || 'item'}`,
+            beforeState: record.beforeState || record.before_state,
+            afterState: record.afterState || record.after_state,
+            ipAddress: record.ipAddress || record.ip_address,
+            userAgent: record.userAgent || record.user_agent,
+            metadata: record.metadata,
+            createdAt: record.created_at
+          };
+          setAuditLogs(prev => prev.some(l => l.id === entry.id) ? prev : [entry, ...prev]);
+        } catch (_) { }
+      });
+
+      addListener('grn_updated', () => {
+        if (isAllowed('inventory')) fetchStock().then(setStock).catch(() => { });
+      });
+
+      // Production & Job Card events
+      addListener('job_card_created', (event: MessageEvent) => {
+        if (!isAllowed('production')) return;
+        try {
+          const newJob = JSON.parse(event.data);
+          setJobCards(prev => [newJob, ...prev.filter(j => j.id !== newJob.id && j.jobNo !== newJob.jobNo)]);
+        } catch (_) { }
+      });
+
+      addListener('job_card_updated', (event: MessageEvent) => {
+        if (!isAllowed('production')) return;
+        try {
+          const updatedJob = JSON.parse(event.data);
+          setJobCards(prev => prev.map(j => (j.id === updatedJob.id || j.jobNo === updatedJob.jobNo) ? { ...j, ...updatedJob } : j));
+        } catch (_) { }
+      });
+
+      addListener('operation_completed', (event: MessageEvent) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload?.allCompleted && (payload?.orderPo || payload?.jobCard?.orderPo)) {
+            const orderPo = payload.orderPo || payload.jobCard.orderPo;
+            setOrders(prev => prev.map(o => {
+              if (o.poNo === orderPo || o.id === orderPo) {
+                return {
+                  ...o,
+                  status: 'READY_FOR_QC',
+                  stage: 'READY_FOR_QC',
+                  progressStep: 6,
+                  updatedAt: new Date().toISOString()
+                };
+              }
+              return o;
+            }));
+          }
+        } catch (_) { }
+        if (isAllowed('production')) fetchJobCards().then(setJobCards).catch(() => { });
+        if (isAllowed('orders')) fetchOrders().then(setOrders).catch(() => { });
+        if (isAllowed('qc')) fetchQCQueue().then(setQcQueue).catch(() => { });
+      });
+
+      // QC & PDI events
+      addListener('qc_created', (event: MessageEvent) => {
+        if (!isAllowed('qc')) return;
+        try {
+          const newQc = JSON.parse(event.data);
+          setQcQueue(prev => [newQc, ...prev.filter(q => q.id !== newQc.id && q.jobNo !== newQc.jobNo)]);
+        } catch (_) { }
+      });
+
+      addListener('qc_updated', (event: MessageEvent) => {
+        if (!isAllowed('qc')) return;
+        try {
+          const updatedQc = JSON.parse(event.data);
+          setQcQueue(prev => prev.map(q => q.id === updatedQc.id ? { ...q, ...updatedQc } : q));
+        } catch (_) { }
+      });
+
+      addListener('pdi_created', (event: MessageEvent) => {
+        if (!isAllowed('pdi')) return;
+        try {
+          const newPdi = JSON.parse(event.data);
+          setPdiQueue(prev => [newPdi, ...prev.filter(p => p.id !== newPdi.id && !(p.orderPo === newPdi.orderPo && p.jobNo === newPdi.jobNo))]);
+        } catch (_) { }
+      });
+
+      addListener('pdi_updated', (event: MessageEvent) => {
+        if (!isAllowed('pdi')) return;
+        try {
+          const updatedPdi = JSON.parse(event.data);
+          setPdiQueue(prev => prev.map(p => p.id === updatedPdi.id ? { ...p, ...updatedPdi } : p));
+        } catch (_) { }
+      });
+
+      // Dispatch events
+      addListener('dispatch_created', (event: MessageEvent) => {
+        if (!isAllowed('dispatch')) return;
+        try {
+          const newDispatch = JSON.parse(event.data);
+          setDispatches(prev => [newDispatch, ...prev.filter(d => d.id !== newDispatch.id && d.challanNo !== newDispatch.challanNo)]);
+        } catch (_) { }
+      });
+
+      // Invoice & Payment events
+      addListener('invoice_created', (event: MessageEvent) => {
+        if (!isAllowed('invoices')) return;
+        try {
+          const newInvoice = JSON.parse(event.data);
+          setInvoices(prev => [newInvoice, ...prev.filter(i => i.id !== newInvoice.id && i.invoiceNo !== newInvoice.invoiceNo)]);
+        } catch (_) { }
+      });
+
+      addListener('invoice_updated', (event: MessageEvent) => {
+        if (!isAllowed('invoices')) return;
+        try {
+          const updatedInv = JSON.parse(event.data);
+          setInvoices(prev => prev.map(i => (i.id === updatedInv.id || i.invoiceNo === updatedInv.invoiceNo) ? { ...i, ...updatedInv } : i));
+        } catch (_) { }
+      });
+
+      addListener('payment_recorded', () => {
+        if (isAllowed('invoices')) fetchInvoices().then(setInvoices).catch(() => { });
+        if (isAllowed('orders')) fetchOrders().then(setOrders).catch(() => { });
+      });
+
+      // Vendor Bills
+      addListener('vendor_bill_created', (event: MessageEvent) => {
+        if (!isAllowed('payables')) return;
+        try {
+          const newBill = JSON.parse(event.data);
+          setPayables(prev => [newBill, ...prev.filter(b => b.id !== newBill.id && b.billNo !== newBill.billNo)]);
+        } catch (_) { }
+      });
+
+      addListener('vendor_bill_disbursed', (event: MessageEvent) => {
+        if (!isAllowed('payables')) return;
+        try {
+          const disbursed = JSON.parse(event.data);
+          setPayables(prev => prev.map(b => (b.id === disbursed.billNo || b.billNo === disbursed.billNo) ? { ...b, ...disbursed } : b));
+        } catch (_) { }
+      });
+
+      // Approvals
+      addListener('approval_created', () => {
+        if (isAllowed('approvals')) fetchApprovals().then(setApprovals).catch(() => { });
+      });
+
+      addListener('approval_updated', () => {
+        if (isAllowed('approvals')) fetchApprovals().then(setApprovals).catch(() => { });
+      });
+
+      eventSource.onerror = () => {
+        // SSE automatic reconnection will retry silently
+      };
+    } catch (_) { }
+
+    return () => {
+      clearInterval(reconciliationInterval);
+      if (eventSource) {
+        registeredListeners.forEach(({ type, listener }) => {
+          eventSource?.removeEventListener(type, listener);
+        });
+        eventSource.close();
+      }
+    };
+  }, [loadAllData, isAllowed]);
+
+  // Helper Audit Logger
+  const addAuditLog = async (entity: string, action: string, details: string) => {
+    const currentUserName = 'System Admin';
+    await insertAuditLog(entity, action, details, currentUserName);
+    const updated = await fetchAuditLogs();
+    setAuditLogs(updated);
+  };
+
+  // Actions
+  const handleSaveCompanyProfile = async (profile: CompanyProfile) => {
+    try {
+      setCompanyProfile(profile);
+      try {
+        localStorage.setItem('stratum_company_profile', JSON.stringify(profile));
+      } catch (_) { }
+      await updateCompanyProfile(profile);
+      await addAuditLog('company', 'update', `Updated company profile details: ${profile.legalName} (${profile.gstin})`);
+      toast.success(`Company Profile updated successfully`, 'Profile Saved');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update company profile', 'Save Error');
+      throw err;
+    }
+  };
+
+  const handleCreateOrder = async (order: CustomerOrder) => {
+    try {
+      // Immediately prepend to local state so newest order appears at the top
+      setOrders(prev => [order, ...prev.filter(o => o.id !== order.id && o.poNo !== order.poNo)]);
+      await insertOrder(order);
+      await addAuditLog('order', 'create', `Created order #${order.poNo} for ${order.customerName}`);
+      toast.success(`Created order #${order.poNo} for ${order.customerName}`, 'Order Created');
+      // Do NOT call loadAllData() here — the backend SSE 'order_created' event will
+      // update the list in real-time without overwriting the optimistic state.
+    } catch (err: any) {
+      // Remove the optimistic entry on failure
+      setOrders(prev => prev.filter(o => o.poNo !== order.poNo));
+      toast.error(err?.message || 'Failed to create order', 'Creation Failed');
+      throw err;
+    }
+  };
+
+  const handleUpdateOrder = async (orderId: string, updates: Partial<CustomerOrder>) => {
+    const targetOrder = orders.find(o => o.id === orderId || o.poNo === orderId);
+    const targetId = targetOrder?.id || orderId;
+    const targetPo = targetOrder?.poNo || orderId;
+
+    if (updates.status === 'CONFIRMED' || updates.stage === 'CONFIRMED') {
+      return handleConfirmOrder(targetId);
+    }
+
+    setOrders(prev => prev.map(o => (o.id === targetId || o.poNo === targetPo) ? { ...o, ...updates } : o));
+    try {
+      await updateOrder(targetId, updates);
+      toast.success(`Updated order #${updates.poNo || targetPo}`, 'Order Updated');
+    } catch (err: any) {
+      console.warn('Backend updateOrder warning:', err);
+      toast.error(err?.message || 'Failed to update order', 'Update Failed');
+    }
+    await addAuditLog('order', 'update', `Updated order #${updates.poNo || targetPo}`);
+    await loadAllData();
+  };
+
+  const handleConfirmOrder = async (orderId: string) => {
+    const targetOrder = orders.find(o => o.id === orderId || o.poNo === orderId);
+    const targetId = targetOrder?.id || orderId;
+    const targetPo = targetOrder?.poNo || orderId;
+
+    const updates: Partial<CustomerOrder> = {
+      status: 'CONFIRMED',
+      stage: 'CONFIRMED',
+      progressStep: 2
+    };
+    setOrders(prev => prev.map(o => (o.id === targetId || o.poNo === targetPo) ? { ...o, ...updates } : o));
+    try {
+      const confirmed = await confirmOrder(targetId);
+      if (confirmed) {
+        setOrders(prev => prev.map(o => (o.id === targetId || o.poNo === targetPo) ? { ...o, ...confirmed, status: 'CONFIRMED', stage: 'CONFIRMED', progressStep: 2 } : o));
+      }
+      toast.success(`Executive authorized order #${targetPo}`, 'Order Confirmed');
+    } catch (err: any) {
+      console.warn('Backend handleConfirmOrder fallback:', err);
+      toast.error(err?.message || 'Failed to confirm order', 'Confirmation Failed');
+      // Re-sync on failure
+      await loadAllData();
+      throw err;
+    }
+    await addAuditLog('order', 'confirm', `Executive authorized and confirmed order #${targetPo} for ${targetOrder?.customerName || 'Customer'}`);
+    await loadAllData();
+  };
+
+  const handleCloseOrder = async (orderId: string) => {
+    try {
+      await updateOrderStatus(orderId, 'CLOSED', 6);
+      await addAuditLog('order', 'close', `Closed order ${orderId}`);
+      toast.info(`Closed order #${orderId}`, 'Order Closed');
+      await loadAllData();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to close order', 'Error Closing Order');
+    }
+  };
+
+  const handleCancelOrder = async (orderId: string) => {
+    try {
+      await updateOrderStatus(orderId, 'CANCELLED');
+      await addAuditLog('order', 'cancel', `Cancelled order ${orderId}`);
+      toast.warning(`Cancelled order #${orderId}`, 'Order Cancelled');
+      await loadAllData();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to cancel order', 'Error Cancelling Order');
+    }
+  };
+
+  const handleAdjustStock = async (code: string, newOnHand: number, reason?: string) => {
+    try {
+      await adjustStockItem(code, newOnHand, reason);
+      await addAuditLog('stock', 'adjust', `Adjusted stock for item ${code} to ${newOnHand}${reason ? ` (${reason})` : ''}`);
+      toast.success(`Stock level for ${code} set to ${newOnHand}`, 'Stock Adjusted');
+      await loadAllData();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to adjust stock', 'Adjustment Failed');
+    }
+  };
+
+  const handleCreateJobCard = async (job: JobCard) => {
+    try {
+      // Manual creation from the Production floor form — posts to the job card release API
+      // jobNo is intentionally NOT sent: the backend allocates it from the atomic counter.
+      const res = await createJobCardForOrder({
+        orderPo: job.orderPo,
+        partCode: job.partCode,
+        partDescription: job.partDescription,
+        drawingRevision: job.drawingRevision || 'REV-A',
+        targetQty: Number(job.targetQty ?? job.qty ?? 0),
+        qty: Number(job.qty ?? job.targetQty ?? 0),
+        machine: job.machine || 'CNC-01',
+        materialIssuedLot: job.materialIssuedLot || 'HEAT-LOT-NA',
+        targetDate: job.targetDate,
+        remarks: `Manually created on Production floor for PO ${job.orderPo}${job.machine ? ` (${job.machine})` : ''}`
+      });
+      await addAuditLog('job_card', 'create', `Created job card ${res?.jobNo || job.jobNo} for PO ${job.orderPo} (${job.partCode} x ${Number(job.targetQty ?? job.qty ?? 0)})`);
+      toast.success(`Created job card #${res?.jobNo || job.jobNo} for PO ${job.orderPo}`, 'Job Card Released');
+      await loadAllData();
+      return res;
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to create job card', 'Job Card Error');
+      throw err;
+    }
+  };
+
+  // Bulk release: one API call for many lines of one order. Refreshes ONLY orders + job cards
+  // (2 requests) instead of loadAllData() (~21 requests), which matters at 40-50 lines per PO.
+  const handleBulkReleaseJobCards = async (
+    orderRef: string,
+    payload: { targetDate?: string; machine?: string; lines: BulkReleaseLineInput[] }
+  ): Promise<BulkReleaseResult> => {
+    try {
+      const result = await bulkReleaseJobCards(orderRef, payload);
+      const released = result.created.length;
+      if (released > 0) {
+        toast.success(
+          `Released ${released} job card${released === 1 ? '' : 's'} for PO ${result.orderPo}` +
+            (result.skipped.length ? ` (${result.skipped.length} skipped)` : ''),
+          'Job Cards Released'
+        );
+        // The release already succeeded; a failed refresh must not turn it into an error.
+        await Promise.all([
+          isAllowed('orders') ? fetchOrders().then(setOrders) : Promise.resolve(),
+          isAllowed('production') ? fetchJobCards().then(setJobCards) : Promise.resolve()
+        ]).catch(() => { });
+      }
+      return result;
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to release job cards', 'Bulk Release Error');
+      throw err;
+    }
+  };
+
+  const handleStartOperation = async (jobNo: string, payload: { sequenceNo: number; machineId: string; operatorName: string; actualStartTime?: string }) => {
+    const nowIso = payload.actualStartTime || new Date().toISOString();
+    let updatedJobCard: JobCard | null = null;
+    try {
+      updatedJobCard = await startJobCardOperation(jobNo, { ...payload, actualStartTime: nowIso });
+    } catch (e) {
+      console.warn('REST startJobCardOperation error, applying local state update:', e);
+    }
+
+    setJobCards(prev => prev.map(j => {
+      if (j.jobNo === jobNo || j.id === jobNo) {
+        if (updatedJobCard) return { ...j, ...updatedJobCard };
+        const ops = (j.operations || []).map(op => {
+          if (op.sequenceNo === payload.sequenceNo) {
+            return {
+              ...op,
+              machineId: payload.machineId,
+              operatorName: payload.operatorName,
+              actualStartTime: nowIso,
+              opStatus: 'IN_PROGRESS'
+            };
+          }
+          return op;
+        });
+        return {
+          ...j,
+          status: 'RUNNING',
+          jobStatus: 'IN_PROGRESS',
+          operations: ops
+        };
+      }
+      return j;
+    }));
+
+    await addAuditLog('production', 'start_operation', `Op ${payload.sequenceNo} started on ${payload.machineId} by ${payload.operatorName} for ${jobNo}`);
+    toast.info(`Op ${payload.sequenceNo} started on ${payload.machineId} (${jobNo})`, 'Operation Started');
+    await loadAllData();
+    return updatedJobCard;
+  };
+
+  const handleCompleteOperation = async (jobNo: string, payload: { sequenceNo: number; qtyProcessed: number; qtyRejected: number; actualMinutes: number; notes?: string; actualStartTime?: string; actualEndTime?: string }) => {
+    const endIso = payload.actualEndTime || new Date().toISOString();
+    let updatedJobCard: JobCard | null = null;
+    try {
+      updatedJobCard = await completeJobCardOperation(jobNo, { ...payload, actualEndTime: endIso });
+    } catch (e) {
+      console.warn('REST completeJobCardOperation error, applying local state update:', e);
+    }
+
+    let targetJobCard: JobCard | undefined;
+
+    setJobCards(prev => prev.map(j => {
+      if (j.jobNo === jobNo || j.id === jobNo) {
+        if (updatedJobCard) {
+          targetJobCard = updatedJobCard;
+          return { ...j, ...updatedJobCard };
+        }
+        const ops = (j.operations || []).map(op => {
+          if (op.sequenceNo === payload.sequenceNo) {
+            return {
+              ...op,
+              qtyProcessed: payload.qtyProcessed,
+              qtyRejected: payload.qtyRejected,
+              actualTimeMinutes: payload.actualMinutes,
+              actualStartTime: payload.actualStartTime || op.actualStartTime || new Date(Date.now() - (payload.actualMinutes || 15) * 60000).toISOString(),
+              actualEndTime: endIso,
+              notes: payload.notes,
+              opStatus: 'COMPLETED'
+            };
+          }
+          return op;
+        });
+        const allDone = ops.length > 0 && ops.every(o => o.opStatus === 'COMPLETED');
+        const updated = {
+          ...j,
+          status: allDone ? 'COMPLETED' : 'IN_PROGRESS',
+          jobStatus: allDone ? 'COMPLETED' : 'IN_PROGRESS',
+          operations: ops
+        };
+        targetJobCard = updated;
+        return updated;
+      }
+      return j;
+    }));
+
+    // If target job card is now completed, check if order should advance live
+    const effectiveJob = targetJobCard || updatedJobCard || jobCards.find(j => j.jobNo === jobNo || j.id === jobNo);
+    const orderPo = effectiveJob?.orderPo;
+    const isJobCompleted = (effectiveJob?.operations || []).length > 0 && effectiveJob?.operations?.every(o => o.opStatus === 'COMPLETED');
+
+    if (orderPo && (isJobCompleted || effectiveJob?.status === 'COMPLETED' || effectiveJob?.jobStatus === 'COMPLETED')) {
+      const siblingJobs = jobCards.filter(j => (j.orderPo === orderPo || j.orderId === orderPo) && j.jobNo !== jobNo && j.id !== jobNo);
+      const allSiblingsDone = siblingJobs.length === 0 || siblingJobs.every(j => j.status === 'COMPLETED' || j.jobStatus === 'COMPLETED');
+      if (allSiblingsDone) {
+        setOrders(prev => prev.map(o => {
+          if (o.poNo === orderPo || o.id === orderPo) {
+            return {
+              ...o,
+              status: 'READY_FOR_QC',
+              stage: 'READY_FOR_QC',
+              progressStep: 6,
+              updatedAt: new Date().toISOString()
+            };
+          }
+          return o;
+        }));
+      }
+    }
+
+    await addAuditLog('production', 'complete_operation', `Op ${payload.sequenceNo} completed (${payload.qtyProcessed} good, ${payload.qtyRejected} rejected, ${payload.actualMinutes}m) for ${jobNo}`);
+    toast.success(`Op ${payload.sequenceNo} completed (${payload.qtyProcessed} processed) for ${jobNo}`, 'Operation Finished');
+    await loadAllData();
+    return updatedJobCard || targetJobCard;
+  };
+
+  const handleLogProduction = async (logOrJob: Partial<ProductionLogReport> | JobCard, qtyDoneParam?: number) => {
+    try {
+      const res = await insertProductionLogAndQC(logOrJob, qtyDoneParam);
+      const logDetails = ('jobNo' in logOrJob && 'qtyDone' in logOrJob && qtyDoneParam === undefined)
+        ? (logOrJob as Partial<ProductionLogReport>)
+        : { jobNo: (logOrJob as JobCard).jobNo, qtyDone: qtyDoneParam || 1, operationName: undefined };
+      await addAuditLog(
+        'production',
+        'log',
+        `Logged ${logDetails.qtyDone} units for ${logDetails.jobNo}${logDetails.operationName ? ` (${logDetails.operationName})` : ''}`
+      );
+      toast.success(`Logged ${logDetails.qtyDone} units for ${logDetails.jobNo}`, 'Production Logged');
+      await loadAllData();
+      return res;
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to log production', 'Production Error');
+      throw err;
+    }
+  };
+
+  const handleUpdateQC = async (id: string, qcStatus: 'PASS' | 'QC_HOLD' | 'REJECTED', notes?: string) => {
+    try {
+      const target = qcQueue.find(q => q.id === id);
+      const targetOrderPo = target?.orderPo;
+      const targetJobNo = target?.jobNo;
+
+      // Synchronize all QC entries for this order/job to prevent conflicting statuses
+      setQcQueue(prev => prev.map(q => {
+        if (q.id === id || (targetOrderPo && q.orderPo === targetOrderPo)) {
+          return {
+            ...q,
+            qcStatus,
+            inspectorNotes: notes || q.inspectorNotes,
+            inspectedAt: new Date().toISOString()
+          };
+        }
+        return q;
+      }));
+
+      if (targetOrderPo) {
+        setOrders(prev => prev.map(ord => {
+          if (ord.poNo === targetOrderPo || ord.id === targetOrderPo) {
+            return {
+              ...ord,
+              hasOpenNcr: qcStatus !== 'PASS',
+              stage: qcStatus === 'PASS' ? 'QC_INSPECTION' : ord.stage,
+              status: qcStatus === 'PASS' ? 'QC_INSPECTION' : ord.status,
+              progressStep: qcStatus === 'PASS' ? Math.max(ord.progressStep || 1, 6) : ord.progressStep
+            };
+          }
+          return ord;
+        }));
+      }
+
+      if (targetJobNo) {
+        setJobCards(prev => prev.map(j => {
+          if (j.jobNo === targetJobNo || j.id === targetJobNo) {
+            return {
+              ...j,
+              status: qcStatus === 'PASS' ? 'COMPLETED' : 'QC_HOLD'
+            };
+          }
+          return j;
+        }));
+      }
+
+      await updateQCInspection(id, qcStatus, notes);
+      await addAuditLog('qc', 'inspect', `QC status updated to ${qcStatus} for inspection #${id} (PO: ${targetOrderPo || 'N/A'})`);
+
+      if (qcStatus === 'PASS') {
+        toast.success(`QC Inspection Passed for #${targetOrderPo || id}`, 'QC Passed');
+      } else if (qcStatus === 'REJECTED') {
+        toast.error(`QC Inspection Rejected (NCR Raised) for #${targetOrderPo || id}`, 'QC Rejected');
+      } else {
+        toast.warning(`QC Inspection placed on Hold for #${targetOrderPo || id}`, 'QC Hold');
+      }
+
+      await loadAllData();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update QC inspection', 'QC Error');
+    }
+  };
+
+  const handlePassPDI = async (id: string, payload?: Partial<PDIInspection>) => {
+    try {
+      const target = pdiQueue.find(p => p.id === id || p.orderPo === id);
+      const targetOrderPo = (payload?.orderPo || target?.orderPo || id || '').trim();
+      // C-02: never mint a PDI certificate number client-side — the backend's atomic
+      // document sequence is the only authority. The value shown here is optimistic
+      // and gets replaced by the server-minted number on the next loadAllData().
+      const certNo = payload?.certificateNo || target?.certificateNo || '';
+
+      const normPo = targetOrderPo.toUpperCase();
+
+      setPdiQueue(prev => prev.map(p => {
+        const match = p.id === id || (normPo && (p.orderPo || '').trim().toUpperCase() === normPo);
+        if (match) {
+          return {
+            ...p,
+            ...payload,
+            pdiStatus: 'PASS',
+            certificateNo: certNo,
+            reportDate: new Date().toISOString().split('T')[0]
+          };
+        }
+        return p;
+      }));
+
+      if (normPo) {
+        setOrders(prev => prev.map(ord => {
+          if ((ord.poNo || '').trim().toUpperCase() === normPo || (ord.id || '').trim().toUpperCase() === normPo) {
+            return {
+              ...ord,
+              stage: 'READY_TO_DISPATCH' as any,
+              status: 'READY_TO_DISPATCH' as any,
+              progressStep: Math.max(ord.progressStep || 1, 7)
+            };
+          }
+          return ord;
+        }));
+
+        // Explicitly update the order status
+        const matchedOrder = orders.find(o => (o.poNo || '').trim().toUpperCase() === normPo || (o.id || '').trim().toUpperCase() === normPo);
+        if (matchedOrder) {
+          await updateOrder(matchedOrder.id, {
+            stage: 'READY_TO_DISPATCH' as any,
+            status: 'READY_TO_DISPATCH' as any,
+            progressStep: 7
+          }).catch(() => { });
+        }
+      }
+
+      await passPDIInspection(id);
+      await addAuditLog('pdi', 'pass', `Passed PDI inspection #${id} (Cert: ${certNo}, PO: ${targetOrderPo || 'N/A'})`);
+      toast.success(`Passed PDI inspection for #${targetOrderPo || id} (Cert #${certNo})`, 'PDI Passed');
+      await loadAllData();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to pass PDI inspection', 'PDI Error');
+    }
+  };
+
+  const handleIssueDispatch = async (challan: DispatchChallan) => {
+    try {
+      await insertDispatchChallan(challan);
+      await addAuditLog('dispatch', 'create', `Issued dispatch challan #${challan.challanNo}`);
+      toast.success(`Issued delivery challan #${challan.challanNo}`, 'Challan Created');
+      await loadAllData();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to issue dispatch challan', 'Challan Error');
+    }
+  };
+
+  const handleRecordInvoicePayment = async (invoiceNo: string, paymentData?: any) => {
+    try {
+      const payAmt = paymentData?.paymentAmount;
+      setInvoices(prev => prev.map(inv => {
+        if (inv.id === invoiceNo || inv.invoiceNo === invoiceNo) {
+          const amt = payAmt !== undefined ? Number(payAmt) : (inv.balanceAmount || inv.totalAmount);
+          const newPaid = Math.min(inv.totalAmount, Number(inv.paidAmount || 0) + amt);
+          const newBal = Math.max(0, inv.totalAmount - newPaid);
+          return {
+            ...inv,
+            paidAmount: newPaid,
+            balanceAmount: newBal,
+            status: newBal <= 0 ? 'PAID' : 'PARTIAL'
+          };
+        }
+        return inv;
+      }));
+      await payInvoice(invoiceNo, paymentData);
+      await addAuditLog('invoice', 'payment', `Recorded payment for invoice #${invoiceNo} (Amount: ₹${payAmt !== undefined ? payAmt : 'Full'})`);
+      toast.success(`Recorded payment for invoice #${invoiceNo}`, 'Payment Recorded');
+      await loadAllData();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to record invoice payment', 'Payment Error');
+    }
+  };
+
+  const handleCreateInvoice = async (inv: CustomerInvoice) => {
+    try {
+      setInvoices(prev => [inv, ...prev.filter(i => i.invoiceNo !== inv.invoiceNo && i.id !== inv.id)]);
+      if (inv.orderPo) {
+        setOrders(prev => prev.map(o => {
+          if ((o.poNo && o.poNo.trim().toUpperCase() === inv.orderPo?.trim().toUpperCase()) || (o.id && o.id.trim().toUpperCase() === inv.orderPo?.trim().toUpperCase())) {
+            return {
+              ...o,
+              invoiceNo: inv.invoiceNo,
+              status: 'INVOICED',
+              stage: 'INVOICED',
+              progressStep: 8
+            };
+          }
+          return o;
+        }));
+      }
+      await insertCustomerInvoice(inv);
+      await addAuditLog('invoice', 'create', `Created invoice #${inv.invoiceNo} for ${inv.customerName}`);
+      toast.success(`Created invoice #${inv.invoiceNo} for ${inv.customerName}`, 'Invoice Generated');
+      await loadAllData();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to create invoice', 'Invoice Error');
+    }
+  };
+
+  const handleIssueInvoice = async (invoiceNo: string) => {
+    try {
+      setInvoices(prev => prev.map(inv => {
+        if (inv.id === invoiceNo || inv.invoiceNo === invoiceNo) {
+          return {
+            ...inv,
+            status: 'ISSUED'
+          };
+        }
+        return inv;
+      }));
+      await issueCustomerInvoice(invoiceNo);
+      await addAuditLog('invoice', 'issue', `Issued tax invoice #${invoiceNo}`);
+      toast.success(`Issued tax invoice #${invoiceNo}`, 'Invoice Issued');
+      await loadAllData();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to issue invoice', 'Invoice Error');
+    }
+  };
+
+  const handleDeleteInvoice = async (invoiceNo: string) => {
+    try {
+      setInvoices(prev => prev.filter(inv => inv.id !== invoiceNo && inv.invoiceNo !== invoiceNo));
+      await deleteCustomerInvoice(invoiceNo);
+      await addAuditLog('invoice', 'delete', `Deleted invoice #${invoiceNo}`);
+      toast.success(`Deleted invoice #${invoiceNo}`, 'Invoice Deleted');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to delete invoice', 'Delete Error');
+    }
+  };
+
+  const handleClearAllInvoices = async () => {
+    try {
+      setInvoices([]);
+      await clearAllCustomerInvoices();
+      await addAuditLog('invoice', 'clear_all', 'Cleared all customer invoices from table');
+      toast.success('All customer invoices deleted from table', 'Invoices Cleared');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to clear invoices', 'Clear Error');
+    }
+  };
+
+  const handleRecordPayablePayment = async (billNo: string) => {
+    try {
+      setPayables(prev => prev.map(bill => {
+        if (bill.id === billNo || bill.billNo === billNo) {
+          return {
+            ...bill,
+            paidAmount: bill.amount,
+            balanceAmount: 0,
+            status: 'PAID'
+          };
+        }
+        return bill;
+      }));
+
+      try {
+        const storedStr = localStorage.getItem('stratum_vendor_bills');
+        if (storedStr) {
+          const stored: VendorBill[] = JSON.parse(storedStr);
+          const updated = stored.map(b => (b.billNo === billNo || b.id === billNo) ? { ...b, paidAmount: b.amount, balanceAmount: 0, status: 'PAID' as const } : b);
+          localStorage.setItem('stratum_vendor_bills', JSON.stringify(updated));
+        }
+      } catch (_) {}
+
+      await payVendorBill(billNo);
+      await addAuditLog('payable', 'payment', `Recorded payment for vendor bill #${billNo}`);
+      toast.success(`Recorded payment for vendor bill #${billNo}`, 'Payable Settled');
+      await loadAllData();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to record bill payment', 'Payment Error');
+    }
+  };
+
+  const handleCreateVendorBill = async (bill: VendorBill) => {
+    // 1. Optimistic instant UI update
+    setPayables(prev => [bill, ...prev.filter(b => b.billNo !== bill.billNo)]);
+
+    // 2. Client-side local storage backup
+    try {
+      const storedStr = localStorage.getItem('stratum_vendor_bills');
+      const stored: VendorBill[] = storedStr ? JSON.parse(storedStr) : [];
+      localStorage.setItem('stratum_vendor_bills', JSON.stringify([bill, ...stored.filter(b => b.billNo !== bill.billNo)]));
+    } catch (_) {}
+
+    try {
+      await insertVendorBill(bill);
+      await addAuditLog('payable', 'create', `Created vendor bill #${bill.billNo} for ${bill.vendorName}`);
+      toast.success(`Created vendor bill #${bill.billNo} for ${bill.vendorName}`, 'Bill Created');
+      await loadAllData();
+    } catch (err: any) {
+      console.warn('Backend bill save warning:', err);
+      toast.success(`Recorded vendor bill #${bill.billNo} for ${bill.vendorName}`, 'Bill Recorded');
+    }
+  };
+
+  const handleCreateOutwork = async (outwork: OutworkSendOut) => {
+    try {
+      await insertOutworkSendOut(outwork);
+      await addAuditLog('outwork', 'create', `Issued outwork process #${outwork.sendOutId} to ${outwork.vendorName}`);
+      toast.success(`Issued outwork process #${outwork.sendOutId}`, 'Outwork Issued');
+      await loadAllData();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to issue outwork', 'Outwork Error');
+    }
+  };
+
+  const handleCompletePDI = async (orderId: string, payload: any) => {
+    await completePdiInspectionForOrder(orderId, payload);
+    await addAuditLog('qc', 'complete_pdi', `Completed PDI for order ${payload.orderPo}: Status ${payload.pdiStatus} (${payload.acceptedQty} Accepted)`);
+    await loadAllData();
+  };
+
+  const handleGenerateInvoice = async (orderId: string, invoiceData: any) => {
+    // C-01/C-02: the GST invoice number is minted exclusively by the backend's
+    // atomic document sequence — never generate one client-side. The optimistic
+    // value below is replaced by the server-returned number on reload.
+    const invNo = invoiceData.invoiceNo || 'PENDING-SERVER-ASSIGNMENT';
+    setInvoices(prev => [{
+      id: `inv-${Date.now()}`,
+      invoiceNo: invNo,
+      orderPo: invoiceData.orderPo,
+      challanNo: invoiceData.challanNo,
+      customerName: invoiceData.customerName,
+      amount: invoiceData.totalAmount,
+      totalAmount: invoiceData.totalAmount,
+      taxAmount: invoiceData.taxAmount || 0,
+      status: 'UNPAID',
+      invoiceDate: invoiceData.invoiceDate || new Date().toISOString().split('T')[0],
+      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    }, ...prev]);
+
+    setOrders(prev => prev.map(o => (o.id === orderId || o.poNo === invoiceData.orderPo) ? {
+      ...o,
+      invoiceNo: invNo,
+      status: 'INVOICE_GENERATED' as any,
+      stage: 'INVOICE_GENERATED' as any,
+      progressStep: 8
+    } : o));
+
+    const inv = await generateInvoiceForOrder(orderId, invoiceData);
+    await addAuditLog('invoices', 'generate', `Generated Tax Invoice ${inv.invoiceNo} for Order ${invoiceData.orderPo}`);
+    await loadAllData();
+    return inv;
+  };
+
+  const handleGenerateChallan = async (orderId: string, challanData: any) => {
+    const ch = await generateChallanForOrder(orderId, challanData);
+    await addAuditLog('dispatch', 'generate_challan', `Generated Delivery Challan ${ch.challanNo} via ${challanData.transporter}`);
+    await loadAllData();
+    return ch;
+  };
+
+  const handleUpdateChallan = async (challanNo: string, updates: any) => {
+    setDispatches(prev => prev.map(d => (d.challanNo === challanNo || d.id === challanNo) ? { ...d, ...updates } : d));
+    const updated = await updateDispatchChallan(challanNo, updates);
+    await addAuditLog('dispatch', 'update_challan', `Updated Delivery Challan ${challanNo} (${updates.status || updates.transporter || updates.vehicleNo || 'draft params'})`);
+    await loadAllData();
+    return updated;
+  };
+
+  const handleCancelChallan = async (challanNo: string, reason = 'Cancelled by user') => {
+    setDispatches(prev => prev.map(d => (d.challanNo === challanNo || d.id === challanNo) ? { ...d, status: 'CANCELLED' as any } : d));
+    await cancelDispatchChallan(challanNo, reason);
+    await addAuditLog('dispatch', 'cancel_challan', `Cancelled Delivery Challan ${challanNo}: ${reason}`);
+    await loadAllData();
+  };
+
+  const handleMarkDispatched = async (orderId: string, dispatchData: any) => {
+    // Instant optimistic update for dispatches
+    if (dispatchData.challanNo) {
+      setDispatches(prev => prev.map(d => (d.challanNo === dispatchData.challanNo || d.id === dispatchData.challanNo) ? { ...d, status: 'DISPATCHED' as any } : d));
+      await updateDispatchChallan(dispatchData.challanNo, { status: 'DISPATCHED' }).catch(() => { });
+    }
+    // Instant optimistic update for orders
+    setOrders(prev => prev.map(ord => {
+      if (ord.id === orderId || ord.poNo === orderId || (dispatchData.challanNo && ord.deliveryChallanNo === dispatchData.challanNo)) {
+        return {
+          ...ord,
+          status: 'DISPATCHED' as any,
+          stage: 'DISPATCHED' as any,
+          transporterName: dispatchData.transporter || ord.transporterName,
+          dispatchedAt: dispatchData.dispatchDate || new Date().toISOString().split('T')[0],
+          progressStep: 8,
+          lines: (ord.lines || []).map(l => ({
+            ...l,
+            dispatchedQty: l.orderQty,
+            pendingQty: 0
+          }))
+        };
+      }
+      return ord;
+    }));
+
+    await markOrderDispatched(orderId, dispatchData);
+    await addAuditLog('dispatch', 'mark_dispatched', `Dispatched consignment for Order #${orderId} via ${dispatchData.transporter} (${dispatchData.vehicleNo})`);
+    await loadAllData();
+  };
+
+  const handleMarkDelivered = async (orderId: string, deliveryData: any) => {
+    setOrders(prev => prev.map(ord => {
+      if (ord.id === orderId || ord.poNo === orderId) {
+        return {
+          ...ord,
+          status: 'DELIVERED',
+          stage: 'DELIVERED',
+          podDocumentUrl: deliveryData.podUrl || 'POD-VERIFIED-PHYSICAL',
+          podReceivedBy: deliveryData.receivedBy,
+          podReceivedDate: deliveryData.deliveryDate,
+          progressStep: 9
+        };
+      }
+      return ord;
+    }));
+
+    await markOrderDelivered(orderId, deliveryData);
+    await addAuditLog('dispatch', 'mark_delivered', `Marked Order #${orderId} as Delivered to ${deliveryData.receivedBy}`);
+    await loadAllData();
+  };
+
+  const handleMarkDelayed = async (orderId: string, delayData: { reason?: string; followUpDate?: string }) => {
+    setOrders(prev => prev.map(ord => {
+      if (ord.id === orderId || ord.poNo === orderId) {
+        return {
+          ...ord,
+          status: 'DELIVERY_DELAYED' as any,
+          stage: 'DELIVERY_DELAYED' as any,
+          progressStep: 9
+        };
+      }
+      return ord;
+    }));
+
+    await markOrderDelayed(orderId, delayData);
+    await addAuditLog('dispatch', 'mark_delayed', `Marked Order #${orderId} as Delivery Delayed: ${delayData.reason || 'No reason specified'}`);
+    await loadAllData();
+  };
+
+  const handleRecordPayment = async (orderId: string, paymentData: any) => {
+    const payAmt = Number(paymentData.amount || paymentData.paymentAmount || 0);
+    const targetInvNo = paymentData.invoiceNo;
+
+    setOrders(prev => prev.map(ord => {
+      if (ord.id === orderId || ord.poNo === orderId) {
+        const gross = Number(ord.grossAmount || ord.totalAmount || 0);
+        const newPaid = Number(ord.paidAmount || 0) + payAmt;
+        const isPaid = newPaid >= gross;
+        return {
+          ...ord,
+          paidAmount: newPaid,
+          paymentStatus: isPaid ? 'PAID' : 'PARTIAL'
+        };
+      }
+      return ord;
+    }));
+
+    // Synchronize the linked invoice in Invoices & Payments state
+    setInvoices(prev => prev.map(inv => {
+      const order = orders.find(o => o.id === orderId || o.poNo === orderId);
+      const isMatch = (targetInvNo && (inv.invoiceNo === targetInvNo || inv.id === targetInvNo)) ||
+        (order && order.invoiceNo && (inv.invoiceNo === order.invoiceNo || inv.id === order.invoiceNo)) ||
+        (order && inv.orderPo && (inv.orderPo.trim().toUpperCase() === order.poNo?.trim().toUpperCase() || inv.orderPo.trim().toUpperCase() === order.id.trim().toUpperCase())) ||
+        (inv.id === orderId || inv.invoiceNo === orderId);
+      if (isMatch) {
+        const total = Number(inv.totalAmount || 0);
+        const newPaid = Math.min(total, Number(inv.paidAmount || 0) + payAmt);
+        const newBal = Math.max(0, total - newPaid);
+        return {
+          ...inv,
+          paidAmount: newPaid,
+          balanceAmount: newBal,
+          status: newBal <= 0 ? 'PAID' : 'PARTIAL'
+        };
+      }
+      return inv;
+    }));
+
+    // If an invoice is linked, also call payInvoice to update backend invoice records
+    const targetOrder = orders.find(o => o.id === orderId || o.poNo === orderId);
+    const resolvedInvoiceNo = targetInvNo || targetOrder?.invoiceNo;
+    if (resolvedInvoiceNo) {
+      await payInvoice(resolvedInvoiceNo, {
+        paymentAmount: payAmt,
+        paymentMode: paymentData.mode || 'NEFT_RTGS',
+        referenceNo: paymentData.referenceNo,
+        paymentDate: paymentData.paymentDate,
+        notes: paymentData.remarks
+      });
+    }
+
+    const res = await recordOrderPaymentAndClose(orderId, paymentData);
+    await addAuditLog('finance', 'record_payment', `Recorded payment of ₹${payAmt.toLocaleString()} for Order #${orderId} (${res.isFullyPaid ? 'PAID IN FULL' : 'PARTIALLY PAID'})`);
+    await loadAllData();
+    return res;
+  };
+
+  const handleAddUser = async (user: Partial<SystemUser>) => {
+    const newUser: SystemUser = {
+      id: user.id || `usr-${Date.now()}`,
+      name: user.name || 'New User',
+      email: user.email || '',
+      role: (user.role || 'OPERATOR') as UserRole,
+      status: user.status || 'ACTIVE',
+      department: user.department || 'Operations',
+      phone: user.phone || '',
+      lastLogin: 'Never'
+    };
+    await createProfile(user);
+    setUsers(prev => [newUser, ...prev.filter(u => u.email !== newUser.email)]);
+    await addAuditLog('users', 'add_user', `Created user profile ${user.name} (${user.email})`);
+    await loadAllData();
+  };
+
+  const handleRevokeUser = async (userId: string) => {
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: 'REVOKED' } : u));
+    await updateProfileStatus(userId, 'REVOKED');
+    await addAuditLog('users', 'revoke_user', `Revoked access for user #${userId}`);
+    await loadAllData();
+  };
+
+  const handleRestoreUser = async (userId: string) => {
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: 'ACTIVE' } : u));
+    await updateProfileStatus(userId, 'ACTIVE');
+    await addAuditLog('users', 'restore_user', `Restored access for user #${userId}`);
+    await loadAllData();
+  };
+
+  const handleUpdateUserRole = async (userId: string, newRole: UserRole) => {
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
+    const saved = localStorage.getItem('stratum_user');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.id === userId || parsed.email === users.find(u => u.id === userId)?.email) {
+          localStorage.setItem('stratum_user', JSON.stringify({ ...parsed, role: newRole }));
+        }
+      } catch (_) { }
+    }
+    await updateProfileRole(userId, newRole);
+    await addAuditLog('users', 'update_role', `Updated role to ${newRole} for user #${userId}`);
+    await loadAllData();
+  };
+
+  const handleUpdateUser = async (userId: string, updates: Partial<SystemUser>) => {
+    const saved = localStorage.getItem('stratum_user');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.id === userId || parsed.email === users.find(u => u.id === userId)?.email) {
+          localStorage.setItem('stratum_user', JSON.stringify({ ...parsed, ...updates }));
+        }
+      } catch (_) { }
+    }
+    await updateProfile(userId, updates);
+    setUsers(prev => prev.map(u => (u.id === userId || u.userId === userId || u.code === userId) ? { ...u, ...updates } : u));
+    await addAuditLog('users', 'update_user', `Updated user record #${userId} [Name: ${updates.name || '—'}, Email: ${updates.email || '—'}, Role: ${updates.role || '—'}]`);
+    await loadAllData();
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    setUsers(prev => prev.filter(u => u.id !== userId));
+    await deleteProfile(userId);
+    await addAuditLog('users', 'delete_user', `Permanently deleted user profile #${userId}`);
+    await loadAllData();
+  };
+
+  const handleApprove = async (id: string) => {
+    await approveApproval(id);
+    await loadAllData();
+  };
+
+  const handleReject = async (id: string) => {
+    await rejectApproval(id);
+    await loadAllData();
+  };
+
+  const handleSync = async () => {
+    await loadAllData();
+    await addAuditLog('system', 'sync', 'Synchronized live system state with database in real-time.');
+  };
+
+  const handleResetAllData = async () => {
+    // Clear all local state, then reload everything from the backend
+    setOrders([]);
+    setStock([]);
+    setShortages([]);
+    setJobCards([]);
+    setFinishedGoods([]);
+    setOutworkSendOuts([]);
+    setProductionLogs([]);
+    setQcQueue([]);
+    setPdiQueue([]);
+    setDispatches([]);
+    setInvoices([]);
+    setPayables([]);
+    setAuditLogs([]);
+    setUsers([]);
+    setMasters([]);
+    setCustomers([]);
+    setVendors([]);
+    setMachines([]);
+
+    await seedAllDataToSupabase();
+    await addAuditLog('system', 'seed_all', 'Reset and seeded complete demonstration dataset across all sections.');
+    await loadAllData();
+  };
+
+  const handleClearOperationalData = async () => {
+    await clearOperationalDataInSupabase();
+    await addAuditLog('system', 'clear_operational', 'Purged operational test records (orders, shift logs, dispatches, invoices).');
+    await loadAllData();
+  };
+
+  const handleAddMasterItem = async (item: Partial<MasterItem>) => {
+    try {
+      const created = await insertMaster(item);
+      setMasters(prev => [created, ...prev.filter(m => m.code !== created.code)]);
+      await addAuditLog('masters', 'add_master', `Added item master ${created.code} (${created.name})`);
+      toast.success(`Added item master ${created.code} (${created.name})`, 'Item Master Created');
+    } catch (err: any) {
+      console.warn('handleAddMasterItem error:', err);
+      toast.error(err?.message || 'Failed to add item master', 'Error Adding Item');
+    }
+    await loadAllData();
+  };
+
+  const handleUpdateMasterItem = async (code: string, item: Partial<MasterItem>) => {
+    try {
+      const updated = await updateMasterItem(code, item);
+      setMasters(prev => prev.map(m => m.code === code ? { ...m, ...updated } : m));
+      await addAuditLog('masters', 'update_master', `Updated item master ${code} (${item.name || item.description || ''})`);
+      toast.success(`Updated item master ${code}`, 'Item Master Updated');
+    } catch (err: any) {
+      console.warn('handleUpdateMasterItem error:', err);
+      toast.error(err?.message || 'Failed to update item master', 'Error Updating Item');
+    }
+    await loadAllData();
+  };
+
+  const handleDeleteMasterItem = async (code: string) => {
+    try {
+      await deleteMasterItem(code);
+      setMasters(prev => prev.filter(m => m.code !== code));
+      await addAuditLog('masters', 'delete_master', `Deleted item master ${code}`);
+      toast.info(`Deleted item master ${code}`, 'Item Master Deleted');
+    } catch (err: any) {
+      console.warn('handleDeleteMasterItem error:', err);
+      toast.error(err?.message || 'Failed to delete item master', 'Delete Error');
+    }
+    await loadAllData();
+  };
+
+  const handleAddCustomer = async (c: CustomerMaster) => {
+    try {
+      const created = await insertCustomer(c);
+      setCustomers(prev => [created, ...prev.filter(item => item.code !== created.code)]);
+      await addAuditLog('masters', 'add_customer', `Added/updated customer master ${created.code} (${created.name})`);
+      toast.success(`Saved customer ${created.name} (${created.code})`, 'Customer Saved');
+    } catch (err: any) {
+      console.warn('Realtime Supabase customer insert error:', err);
+      toast.error(err?.message || 'Failed to save customer', 'Customer Error');
+    }
+    await loadAllData();
+  };
+
+  const handleUpdateCustomer = async (code: string, c: CustomerMaster) => {
+    try {
+      const updated = await updateCustomer(code, c);
+      setCustomers(prev => prev.map(item => item.code === code ? { ...item, ...updated } : item));
+      await addAuditLog('masters', 'update_customer', `Updated customer master ${code} (${c.name})`);
+      toast.success(`Updated customer ${c.name}`, 'Customer Updated');
+    } catch (err: any) {
+      console.warn('Realtime Supabase customer update error:', err);
+      toast.error(err?.message || 'Failed to update customer', 'Update Error');
+    }
+    await loadAllData();
+  };
+
+  const handleDeleteCustomer = async (code: string) => {
+    try {
+      await deleteCustomer(code);
+      setCustomers(prev => prev.filter(item => item.code !== code));
+      await addAuditLog('masters', 'delete_customer', `Deleted customer master ${code}`);
+      toast.info(`Deleted customer ${code}`, 'Customer Deleted');
+    } catch (err: any) {
+      console.warn('Realtime Supabase customer delete error:', err);
+      toast.error(err?.message || 'Failed to delete customer', 'Delete Error');
+    }
+    await loadAllData();
+  };
+
+  const handleAddVendor = async (v: VendorMaster) => {
+    try {
+      const created = await insertVendor(v);
+      setVendors(prev => [created, ...prev.filter(item => item.code !== created.code)]);
+      await addAuditLog('masters', 'add_vendor', `Added/updated vendor master ${created.code} (${created.name})`);
+      toast.success(`Saved vendor ${created.name} (${created.code})`, 'Vendor Saved');
+    } catch (err: any) {
+      console.warn('Realtime Supabase vendor insert error:', err);
+      toast.error(err?.message || 'Failed to save vendor', 'Vendor Error');
+    }
+    await loadAllData();
+  };
+
+  const handleUpdateVendor = async (code: string, v: VendorMaster) => {
+    try {
+      const updated = await updateVendor(code, v);
+      setVendors(prev => prev.map(item => item.code === code ? { ...item, ...updated } : item));
+      await addAuditLog('masters', 'update_vendor', `Updated vendor master ${code} (${v.name})`);
+      toast.success(`Updated vendor ${v.name}`, 'Vendor Updated');
+    } catch (err: any) {
+      console.warn('Realtime Supabase vendor update error:', err);
+      toast.error(err?.message || 'Failed to update vendor', 'Update Error');
+    }
+    await loadAllData();
+  };
+
+  const handleDeleteVendor = async (code: string) => {
+    try {
+      await deleteVendor(code);
+      setVendors(prev => prev.filter(item => item.code !== code));
+      await addAuditLog('masters', 'delete_vendor', `Deleted vendor master ${code}`);
+      toast.info(`Deleted vendor ${code}`, 'Vendor Deleted');
+    } catch (err: any) {
+      console.warn('Realtime Supabase vendor delete error:', err);
+      toast.error(err?.message || 'Failed to delete vendor', 'Delete Error');
+    }
+    await loadAllData();
+  };
+
+  const handleAddMachine = async (m: MachineMaster) => {
+    try {
+      const created = await insertMachine(m);
+      setMachines(prev => [created, ...prev.filter(item => item.code !== created.code)]);
+      await addAuditLog('masters', 'add_machine', `Added/updated machine master ${created.code} (${created.name})`);
+      toast.success(`Saved machine ${created.name} (${created.code})`, 'Machine Saved');
+    } catch (err: any) {
+      console.warn('Realtime Supabase machine insert error:', err);
+      toast.error(err?.message || 'Failed to save machine', 'Machine Error');
+    }
+    await loadAllData();
+  };
+
+  const handleUpdateMachine = async (code: string, m: MachineMaster) => {
+    try {
+      const updated = await updateMachine(code, m);
+      setMachines(prev => prev.map(item => item.code === code ? { ...item, ...updated } : item));
+      await addAuditLog('masters', 'update_machine', `Updated machine master ${code} (${m.name})`);
+      toast.success(`Updated machine ${m.name}`, 'Machine Updated');
+    } catch (err: any) {
+      console.warn('Realtime Supabase machine update error:', err);
+      toast.error(err?.message || 'Failed to update machine', 'Update Error');
+    }
+    await loadAllData();
+  };
+
+  const handleDeleteMachine = async (code: string) => {
+    try {
+      await deleteMachine(code);
+      setMachines(prev => prev.filter(item => item.code !== code));
+      await addAuditLog('masters', 'delete_machine', `Deleted machine master ${code}`);
+      toast.info(`Deleted machine ${code}`, 'Machine Deleted');
+    } catch (err: any) {
+      console.warn('Realtime Supabase machine delete error:', err);
+      toast.error(err?.message || 'Failed to delete machine', 'Delete Error');
+    }
+    await loadAllData();
+  };
+
+  const handleImportOMGST = async (importedData: { customers?: CustomerMaster[]; vendors?: VendorMaster[]; machines?: MachineMaster[]; items?: MasterItem[] }) => {
+    // Previously this awaited one insert at a time in a sequential for-loop,
+    // so a 500-row spreadsheet became 500 serial HTTP round-trips, and every
+    // failure was swallowed into console.warn with no user-visible report.
+    //
+    // Bounded concurrency (not Promise.all over the whole array) is deliberate:
+    // firing hundreds of simultaneous inserts would just move the bottleneck
+    // onto the server / Supabase connection pool. Chunks of 5 keep it fast
+    // without stampeding the backend.
+    const CONCURRENCY = 5;
+
+    const importGroup = async <T,>(
+      rows: T[] | undefined,
+      insert: (row: T) => Promise<unknown>,
+      label: string
+    ): Promise<{ ok: number; failed: number }> => {
+      if (!rows?.length) return { ok: 0, failed: 0 };
+      let ok = 0;
+      let failed = 0;
+      for (let i = 0; i < rows.length; i += CONCURRENCY) {
+        const chunk = rows.slice(i, i + CONCURRENCY);
+        const results = await Promise.allSettled(chunk.map(insert));
+        for (const r of results) {
+          if (r.status === 'fulfilled') {
+            ok++;
+          } else {
+            failed++;
+            console.warn(`Import ${label} error:`, r.reason);
+          }
+        }
+      }
+      return { ok, failed };
+    };
+
+    const [customerRes, vendorRes, machineRes, itemRes] = [
+      await importGroup(importedData.customers, insertCustomer, 'customer'),
+      await importGroup(importedData.vendors, insertVendor, 'vendor'),
+      await importGroup(importedData.machines, insertMachine, 'machine'),
+      await importGroup(importedData.items, insertMaster, 'item master')
+    ];
+
+    const importedCount = customerRes.ok + vendorRes.ok + machineRes.ok + itemRes.ok;
+    const failedCount = customerRes.failed + vendorRes.failed + machineRes.failed + itemRes.failed;
+
+    await addAuditLog(
+      'masters',
+      'import_omgst',
+      `Imported ${importedCount} OMGST master records` + (failedCount ? ` (${failedCount} failed)` : '') + '.'
+    );
+
+    // Surface partial failures instead of silently reporting success.
+    if (failedCount > 0) {
+      toast.warning(
+        `${importedCount} record${importedCount === 1 ? '' : 's'} imported, ${failedCount} failed. Check the browser console for per-row details.`,
+        'Partial Import'
+      );
+    }
+
+    await loadAllData();
+    return { importedCount, failedCount };
+  };
+
+  return {
+    loading,
+    orders,
+    stock,
+    shortages,
+    jobCards,
+    finishedGoods,
+    outworkSendOuts,
+    productionLogs,
+    qcQueue,
+    pdiQueue,
+    dispatches,
+    invoices,
+    payables,
+    masters,
+    customers,
+    vendors,
+    machines,
+    users,
+    auditLogs,
+    securityEvents,
+    companyProfile,
+    approvals,
+    lastSynced,
+    handleSaveCompanyProfile,
+    handleCreateOrder,
+    handleUpdateOrder,
+    handleConfirmOrder,
+    handleCloseOrder,
+    handleCancelOrder,
+    handleAdjustStock,
+    handleCreateJobCard,
+    handleBulkReleaseJobCards,
+    handleStartOperation,
+    handleCompleteOperation,
+    handleLogProduction,
+    handleUpdateQC,
+    handlePassPDI,
+    handleCompletePDI,
+    handleGenerateInvoice,
+    handleGenerateChallan,
+    handleUpdateChallan,
+    handleCancelChallan,
+    handleMarkDispatched,
+    handleMarkDelivered,
+    handleMarkDelayed,
+    handleRecordPayment,
+    handleIssueDispatch,
+    handleRecordInvoicePayment,
+    handleCreateInvoice,
+    handleIssueInvoice,
+    handleDeleteInvoice,
+    handleClearAllInvoices,
+    handleRecordPayablePayment,
+    handleCreateVendorBill,
+    handleCreateOutwork,
+    handleAddMasterItem,
+    handleUpdateMasterItem,
+    handleDeleteMasterItem,
+    handleAddCustomer,
+    handleUpdateCustomer,
+    handleDeleteCustomer,
+    handleAddVendor,
+    handleUpdateVendor,
+    handleDeleteVendor,
+    handleAddMachine,
+    handleUpdateMachine,
+    handleDeleteMachine,
+    handleImportOMGST,
+    handleAddUser,
+    handleUpdateUser,
+    handleRevokeUser,
+    handleRestoreUser,
+    handleUpdateUserRole,
+    handleDeleteUser,
+    handleApprove,
+    handleReject,
+    handleSync,
+    handleResetAllData,
+    handleClearOperationalData,
+    reload: loadAllData
+  };
+}

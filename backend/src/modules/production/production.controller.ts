@@ -1,0 +1,187 @@
+import { Request, Response } from 'express';
+import { productionService } from './production.service';
+
+export class ProductionController {
+  async getRouteCards(req: Request, res: Response) {
+    try {
+      const data = await productionService.getRouteCardTemplates();
+      return res.json({ data });
+    } catch (err: any) {
+      return res.status(500).json({ error: 'InternalServerError', message: err.message });
+    }
+  }
+
+  async getGroupedRouteCards(req: Request, res: Response) {
+    try {
+      const data = await productionService.getGroupedRouteCards();
+      return res.json({ data });
+    } catch (err: any) {
+      return res.status(500).json({ error: 'InternalServerError', message: err.message });
+    }
+  }
+
+  async saveRouteCard(req: Request, res: Response) {
+    try {
+      const data = await productionService.saveRouteCard(req.body);
+      return res.status(201).json({ message: 'Route Card saved successfully', data });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
+
+  async duplicateRouteCard(req: Request, res: Response) {
+    try {
+      const { sourcePartCode, targetPartCode, targetPartDescription } = req.body;
+      const data = await productionService.duplicateRouteCard(sourcePartCode, targetPartCode, targetPartDescription);
+      return res.status(201).json({ message: 'Route Card duplicated successfully', data });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
+
+  async deleteRouteCard(req: Request, res: Response) {
+    try {
+      const data = await productionService.deleteRouteCard(req.params.partCode);
+      return res.json({ message: 'Route Card deleted successfully', data });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
+
+  async getJobCards(req: Request, res: Response) {
+    try {
+      const data = await productionService.getJobCards();
+      return res.json({ data });
+    } catch (err: any) {
+      return res.status(500).json({ error: 'InternalServerError', message: err.message });
+    }
+  }
+
+  async getJobCardByJobNo(req: Request, res: Response) {
+    try {
+      const data = await productionService.getJobCardByJobNo(req.params.jobNo);
+      if (!data) {
+        return res.status(404).json({ error: 'NotFound', message: `Job Card ${req.params.jobNo} not found` });
+      }
+      return res.json({ data });
+    } catch (err: any) {
+      return res.status(500).json({ error: 'InternalServerError', message: err.message });
+    }
+  }
+
+  async createJobCard(req: Request, res: Response) {
+    try {
+      const plannerName = req.rbacScope?.userName || req.user?.name || 'Production Planner';
+      const data = await productionService.createJobCard(req.body, plannerName);
+      return res.status(201).json({ message: 'Job Card released successfully with locked drawing revision', data });
+    } catch (err: any) {
+      // CRITICAL ISSUE #8: business conflicts (e.g. ROUTE_CARD_REQUIRED) surface with
+      // their explicit statusCode/errorCode; everything else keeps the 400 convention.
+      const statusCode = err.statusCode || 400;
+      return res.status(statusCode).json({ error: err.code || 'ValidationError', message: err.message });
+    }
+  }
+
+  async bulkReleaseJobCards(req: Request, res: Response) {
+    try {
+      const plannerName = req.rbacScope?.userName || req.user?.name || 'Production Planner';
+      const data = await productionService.bulkReleaseJobCards(req.params.orderRef, req.body, plannerName);
+      const released = data.created.length;
+      // 201 when at least one card was created; 200 (with per-line reasons) when nothing could be released.
+      return res.status(released > 0 ? 201 : 200).json({
+        message: released > 0
+          ? `${released} job card(s) released${data.skipped.length ? `, ${data.skipped.length} line(s) skipped` : ''}`
+          : 'No job cards were released',
+        data
+      });
+    } catch (err: any) {
+      if (err?.name === 'ZodError' && Array.isArray(err.issues)) {
+        return res.status(400).json({ error: 'ValidationError', message: err.issues.map((i: any) => i.message).join('; ') });
+      }
+      const statusCode = err.statusCode || 400;
+      return res.status(statusCode).json({ error: err.code || 'ValidationError', message: err.message });
+    }
+  }
+
+  async consumeJobCardMaterials(req: Request, res: Response) {
+    try {
+      const actorName = req.rbacScope?.userName || req.user?.name || 'Stores';
+      const data = await productionService.consumeJobCardMaterials(req.params.jobNo, actorName);
+      return res.json({ message: 'Job Card BOM materials issued & consumed atomically (order reservation pool partially reconciled)', data });
+    } catch (err: any) {
+      const statusCode = err.statusCode || 400;
+      return res.status(statusCode).json({ error: err.errorCode || err.code || 'ValidationError', message: err.message });
+    }
+  }
+
+  async startOperation(req: Request, res: Response) {
+    try {
+      const supervisorName = req.rbacScope?.userName || req.user?.name || 'Shop Floor Supervisor';
+      const data = await productionService.startOperation(req.params.jobNo, req.body, supervisorName);
+      return res.json({ message: 'Operation started with skill certification verified', data });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
+
+  async completeOperation(req: Request, res: Response) {
+    try {
+      const operatorName = req.rbacScope?.userName || req.user?.name || 'Machine Operator';
+      const data = await productionService.completeOperation(req.params.jobNo, req.body, operatorName);
+      return res.json({ message: 'Operation completed, times recorded & scrap ledger updated', data });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
+
+  async raiseNcr(req: Request, res: Response) {
+    try {
+      const inspectorName = req.rbacScope?.userName || req.user?.name || 'Quality Inspector';
+      const data = await productionService.raiseNcr(req.body, inspectorName);
+      return res.status(201).json({ message: 'NCR raised successfully. Job Card locked in QC Hold.', data });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
+
+  async disposeNcr(req: Request, res: Response) {
+    try {
+      const approverName = req.rbacScope?.userName || req.user?.name || 'Quality Inspector';
+      const data = await productionService.disposeNcr(req.params.jobNo, req.body, approverName);
+      return res.json({ message: 'NCR disposition approved. QC Hold cleared on Job Card.', data });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
+
+  async getTelemetry(req: Request, res: Response) {
+    try {
+      const data = await productionService.getProductionTelemetry();
+      return res.json({ data });
+    } catch (err: any) {
+      return res.status(500).json({ error: 'InternalServerError', message: err.message });
+    }
+  }
+
+  async postProductionLog(req: Request, res: Response) {
+    try {
+      const operatorName = req.rbacScope?.userName || req.user?.name || 'Machine Operator';
+      const data = await productionService.recordProductionLog(req.body, operatorName);
+      return res.status(201).json({ message: 'Production logged & QC triggered where applicable', data });
+    } catch (err: any) {
+      return res.status(400).json({ error: 'ValidationError', message: err.message });
+    }
+  }
+
+  async getProductionLogs(req: Request, res: Response) {
+    try {
+      const limit = Number(req.query.limit) || 200;
+      const data = await productionService.getProductionLogs(limit);
+      return res.json({ data });
+    } catch (err: any) {
+      return res.status(500).json({ error: 'InternalServerError', message: err.message });
+    }
+  }
+}
+
+export const productionController = new ProductionController();

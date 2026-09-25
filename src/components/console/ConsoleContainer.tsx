@@ -1,27 +1,28 @@
 import React, { useState, useEffect, useRef, startTransition } from 'react';
-import { 
-  ConsoleView, 
-  UserRole, 
-  CustomerOrder, 
-  StockItem, 
-  ShortageItem, 
-  JobCard, 
-  FinishedGoodsItem, 
-  OutworkSendOut, 
-  ProductionLogReport, 
-  QCInspection, 
-  PDIInspection, 
-  DispatchChallan, 
-  CustomerInvoice, 
-  VendorBill, 
-  MasterItem, 
-  SystemUser, 
-  AuditLogEntry, 
-  CompanyProfile, 
-  PendingApproval 
+import {
+  ConsoleView,
+  UserRole,
+  CustomerOrder,
+  StockItem,
+  ShortageItem,
+  JobCard,
+  FinishedGoodsItem,
+  OutworkSendOut,
+  ProductionLogReport,
+  QCInspection,
+  PDIInspection,
+  DispatchChallan,
+  CustomerInvoice,
+  VendorBill,
+  MasterItem,
+  SystemUser,
+  AuditLogEntry,
+  CompanyProfile,
+  PendingApproval
 } from '../../types/console';
 
 import { ConsoleSidebar } from './ConsoleSidebar';
+import { ConsoleTopBar } from './ConsoleTopBar';
 import { MobileDrawer } from './MobileDrawer';
 import { MobileBottomTabBar } from './MobileBottomTabBar';
 
@@ -239,7 +240,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
     handleRecordPayment
   } = useOwnerOSData(activeUserFallback);
 
-  const currentUser = 
+  const currentUser =
     (currentUserId ? users.find(u => u.id === currentUserId) : null) ||
     (authProfile?.email ? users.find(u => u.email.toLowerCase() === authProfile.email.toLowerCase()) : null) ||
     authProfile ||
@@ -410,7 +411,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
             order.id || order.poNo,
             order.poNo,
             order.customerName
-          ).catch(() => {});
+          ).catch(() => { });
         }
       });
     };
@@ -426,153 +427,153 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
     // applied elsewhere this session; this effect's many setCurrentView(...)
     // branches are all synchronous state writes.
     startTransition(() => {
-    const path = location.pathname;
+      const path = location.pathname;
 
-    // Command Centre
-    if (path === '/' || path === '/command-center' || path === '/command-centre') {
-      setCurrentView('command-centre');
-      if (path === '/command-centre') {
-        navigate('/command-center', { replace: true });
-      }
-    }
-    // Operations & Reports (Canonical: /operations/*)
-    else if (path === '/operations' || path === '/operations/') {
-      navigate('/operations/orders', { replace: true });
-      setCurrentView('orders');
-    } else if (path.startsWith('/operations/orders/')) {
-      const rawId = path.replace('/operations/orders/', '');
-      if (rawId) {
-        const matched = orders.find(o => o.id === rawId || o.poNo === rawId);
-        if (matched) {
-          setSelectedOrderId(matched.id);
-          setDynamicFetchedOrder(null);
-        } else {
-          setSelectedOrderId(rawId);
-          fetchOrderById(rawId).then(remote => {
-            if (remote) setDynamicFetchedOrder(remote);
-          }).catch(() => {});
+      // Command Centre
+      if (path === '/' || path === '/command-center' || path === '/command-centre') {
+        setCurrentView('command-centre');
+        if (path === '/command-centre') {
+          navigate('/command-center', { replace: true });
         }
-        setCurrentView('order-detail');
-      } else {
+      }
+      // Operations & Reports (Canonical: /operations/*)
+      else if (path === '/operations' || path === '/operations/') {
+        navigate('/operations/orders', { replace: true });
         setCurrentView('orders');
+      } else if (path.startsWith('/operations/orders/')) {
+        const rawId = path.replace('/operations/orders/', '');
+        if (rawId) {
+          const matched = orders.find(o => o.id === rawId || o.poNo === rawId);
+          if (matched) {
+            setSelectedOrderId(matched.id);
+            setDynamicFetchedOrder(null);
+          } else {
+            setSelectedOrderId(rawId);
+            fetchOrderById(rawId).then(remote => {
+              if (remote) setDynamicFetchedOrder(remote);
+            }).catch(() => { });
+          }
+          setCurrentView('order-detail');
+        } else {
+          setCurrentView('orders');
+        }
+      } else if (path === '/operations/orders') {
+        setCurrentView('orders');
+      } else if (path === '/operations/inventory') {
+        setCurrentView('inventory');
+      } else if (path === '/operations/production') {
+        const params = new URLSearchParams(location.search);
+        const tab = params.get('tab');
+        if (tab === 'bom') {
+          setCurrentView('bom');
+        } else if (tab === 'route-cards') {
+          setCurrentView('route-cards');
+        } else {
+          setCurrentView('production');
+        }
+      } else if (path === '/operations/finished-goods') {
+        setCurrentView('finished-goods');
+      } else if (path === '/operations/plating-outwork') {
+        setCurrentView('plating-outwork');
+      } else if (path === '/operations/reports') {
+        setCurrentView('reports');
       }
-    } else if (path === '/operations/orders') {
-      setCurrentView('orders');
-    } else if (path === '/operations/inventory') {
-      setCurrentView('inventory');
-    } else if (path === '/operations/production') {
-      const params = new URLSearchParams(location.search);
-      const tab = params.get('tab');
-      if (tab === 'bom') {
-        setCurrentView('bom');
-      } else if (tab === 'route-cards') {
-        setCurrentView('route-cards');
-      } else {
-        setCurrentView('production');
+      // Quality & Dispatch (Canonical: /quality-dispatch/*)
+      else if (path === '/quality-dispatch' || path === '/quality-dispatch/') {
+        navigate('/quality-dispatch/qc-inspection', { replace: true });
+        setCurrentView('qc');
+      } else if (path === '/quality-dispatch/qc-inspection') {
+        setCurrentView('qc');
+      } else if (path === '/quality-dispatch/pdi-inspection') {
+        setCurrentView('pdi');
+      } else if (path === '/quality-dispatch/dispatch-logistics') {
+        setCurrentView('dispatch');
       }
-    } else if (path === '/operations/finished-goods') {
-      setCurrentView('finished-goods');
-    } else if (path === '/operations/plating-outwork') {
-      setCurrentView('plating-outwork');
-    } else if (path === '/operations/reports') {
-      setCurrentView('reports');
-    }
-    // Quality & Dispatch (Canonical: /quality-dispatch/*)
-    else if (path === '/quality-dispatch' || path === '/quality-dispatch/') {
-      navigate('/quality-dispatch/qc-inspection', { replace: true });
-      setCurrentView('qc');
-    } else if (path === '/quality-dispatch/qc-inspection') {
-      setCurrentView('qc');
-    } else if (path === '/quality-dispatch/pdi-inspection') {
-      setCurrentView('pdi');
-    } else if (path === '/quality-dispatch/dispatch-logistics') {
-      setCurrentView('dispatch');
-    }
-    // Finance & Accounts (Canonical: /finance/*)
-    else if (path === '/finance' || path === '/finance/') {
-      navigate('/finance/invoices-payments', { replace: true });
-      setCurrentView('invoices');
-    } else if (path === '/finance/invoices-payments') {
-      setCurrentView('invoices');
-    } else if (path === '/finance/vendor-payables') {
-      setCurrentView('payables');
-    } else if (path === '/finance/management-approvals') {
-      setCurrentView('approvals');
-    }
-    // Admin & Systems (Canonical: /admin/*)
-    else if (path === '/admin' || path === '/admin/') {
-      navigate('/admin/master-catalogs', { replace: true });
-      setCurrentView('masters');
-    } else if (path.startsWith('/admin/master-catalogs')) {
-      setCurrentView('masters');
-    } else if (path === '/admin/users-audit-logs') {
-      setCurrentView('users-audit');
-    } else if (path === '/admin/company-profile') {
-      setCurrentView('company-profile');
-    }
-    // HR Module (Canonical: /hr/*)
-    else if (path === '/hr' || path === '/hr/') {
-      navigate('/hr/tasks', { replace: true });
-      setCurrentView('tasks');
-    } else if (path === '/hr/meetings') {
-      setCurrentView('meetings');
-    } else if (path === '/hr/tasks') {
-      setCurrentView('tasks');
-    } else if (path === '/hr/leave' || path === '/hr/leave-requests') {
-      setCurrentView('leave-requests');
-    } else if (path === '/hr/attendance') {
-      setCurrentView('attendance');
-    } else if (path === '/hr/certifications' || path === '/hr/employee-certifications') {
-      setCurrentView('employee-certifications');
-    } else if (path === '/hr/announcements') {
-      setCurrentView('announcements');
-    } else if (path === '/hr/employees' || path === '/hr/employee-master') {
-      setCurrentView('employee-master');
-    }
-    // General / Utility
-    else if (path === '/workflow-testing') {
-      setCurrentView('workflow-testing');
-    }
-    // Legacy Routes -> Canonical Redirects
-    else if (path.startsWith('/orders/')) {
-      const rawId = path.replace('/orders/', '');
-      navigate(`/operations/orders/${rawId}`, { replace: true });
-    } else if (path === '/orders') {
-      navigate('/operations/orders', { replace: true });
-    } else if (path.startsWith('/masters')) {
-      const sub = path.replace('/masters', '');
-      navigate(`/admin/master-catalogs${sub}`, { replace: true });
-    } else if (path === '/inventory') {
-      navigate('/operations/inventory', { replace: true });
-    } else if (path === '/production') {
-      navigate('/operations/production', { replace: true });
-    } else if (path === '/bom') {
-      navigate('/operations/production?tab=bom', { replace: true });
-    } else if (path === '/route-cards') {
-      navigate('/operations/production?tab=route-cards', { replace: true });
-    } else if (path === '/finished-goods') {
-      navigate('/operations/finished-goods', { replace: true });
-    } else if (path === '/plating-outwork') {
-      navigate('/operations/plating-outwork', { replace: true });
-    } else if (path === '/reports') {
-      navigate('/operations/reports', { replace: true });
-    } else if (path === '/qc') {
-      navigate('/quality-dispatch/qc-inspection', { replace: true });
-    } else if (path === '/pdi') {
-      navigate('/quality-dispatch/pdi-inspection', { replace: true });
-    } else if (path === '/dispatch') {
-      navigate('/quality-dispatch/dispatch-logistics', { replace: true });
-    } else if (path === '/invoices') {
-      navigate('/finance/invoices-payments', { replace: true });
-    } else if (path === '/payables') {
-      navigate('/finance/vendor-payables', { replace: true });
-    } else if (path === '/approvals') {
-      navigate('/finance/management-approvals', { replace: true });
-    } else if (path === '/users-audit') {
-      navigate('/admin/users-audit-logs', { replace: true });
-    } else if (path === '/company-profile') {
-      navigate('/admin/company-profile', { replace: true });
-    }
+      // Finance & Accounts (Canonical: /finance/*)
+      else if (path === '/finance' || path === '/finance/') {
+        navigate('/finance/invoices-payments', { replace: true });
+        setCurrentView('invoices');
+      } else if (path === '/finance/invoices-payments') {
+        setCurrentView('invoices');
+      } else if (path === '/finance/vendor-payables') {
+        setCurrentView('payables');
+      } else if (path === '/finance/management-approvals') {
+        setCurrentView('approvals');
+      }
+      // Admin & Systems (Canonical: /admin/*)
+      else if (path === '/admin' || path === '/admin/') {
+        navigate('/admin/master-catalogs', { replace: true });
+        setCurrentView('masters');
+      } else if (path.startsWith('/admin/master-catalogs')) {
+        setCurrentView('masters');
+      } else if (path === '/admin/users-audit-logs') {
+        setCurrentView('users-audit');
+      } else if (path === '/admin/company-profile') {
+        setCurrentView('company-profile');
+      }
+      // HR Module (Canonical: /hr/*)
+      else if (path === '/hr' || path === '/hr/') {
+        navigate('/hr/tasks', { replace: true });
+        setCurrentView('tasks');
+      } else if (path === '/hr/meetings') {
+        setCurrentView('meetings');
+      } else if (path === '/hr/tasks') {
+        setCurrentView('tasks');
+      } else if (path === '/hr/leave' || path === '/hr/leave-requests') {
+        setCurrentView('leave-requests');
+      } else if (path === '/hr/attendance') {
+        setCurrentView('attendance');
+      } else if (path === '/hr/certifications' || path === '/hr/employee-certifications') {
+        setCurrentView('employee-certifications');
+      } else if (path === '/hr/announcements') {
+        setCurrentView('announcements');
+      } else if (path === '/hr/employees' || path === '/hr/employee-master') {
+        setCurrentView('employee-master');
+      }
+      // General / Utility
+      else if (path === '/workflow-testing') {
+        setCurrentView('workflow-testing');
+      }
+      // Legacy Routes -> Canonical Redirects
+      else if (path.startsWith('/orders/')) {
+        const rawId = path.replace('/orders/', '');
+        navigate(`/operations/orders/${rawId}`, { replace: true });
+      } else if (path === '/orders') {
+        navigate('/operations/orders', { replace: true });
+      } else if (path.startsWith('/masters')) {
+        const sub = path.replace('/masters', '');
+        navigate(`/admin/master-catalogs${sub}`, { replace: true });
+      } else if (path === '/inventory') {
+        navigate('/operations/inventory', { replace: true });
+      } else if (path === '/production') {
+        navigate('/operations/production', { replace: true });
+      } else if (path === '/bom') {
+        navigate('/operations/production?tab=bom', { replace: true });
+      } else if (path === '/route-cards') {
+        navigate('/operations/production?tab=route-cards', { replace: true });
+      } else if (path === '/finished-goods') {
+        navigate('/operations/finished-goods', { replace: true });
+      } else if (path === '/plating-outwork') {
+        navigate('/operations/plating-outwork', { replace: true });
+      } else if (path === '/reports') {
+        navigate('/operations/reports', { replace: true });
+      } else if (path === '/qc') {
+        navigate('/quality-dispatch/qc-inspection', { replace: true });
+      } else if (path === '/pdi') {
+        navigate('/quality-dispatch/pdi-inspection', { replace: true });
+      } else if (path === '/dispatch') {
+        navigate('/quality-dispatch/dispatch-logistics', { replace: true });
+      } else if (path === '/invoices') {
+        navigate('/finance/invoices-payments', { replace: true });
+      } else if (path === '/payables') {
+        navigate('/finance/vendor-payables', { replace: true });
+      } else if (path === '/approvals') {
+        navigate('/finance/management-approvals', { replace: true });
+      } else if (path === '/users-audit') {
+        navigate('/admin/users-audit-logs', { replace: true });
+      } else if (path === '/company-profile') {
+        navigate('/admin/company-profile', { replace: true });
+      }
     });
   }, [location.pathname, location.search, orders, navigate]);
 
@@ -617,9 +618,9 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
     if (!targetUser) return { success: false, error: 'User record not found.' };
 
     if (targetUser.status === 'REVOKED') {
-      return { 
-        success: false, 
-        error: `Access Revoked: Account "${targetUser.name}" has been revoked by Super Admin.` 
+      return {
+        success: false,
+        error: `Access Revoked: Account "${targetUser.name}" has been revoked by Super Admin.`
       };
     }
 
@@ -643,7 +644,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
   // stepper (Production & Order Fulfillment Pipeline) updates live without a refresh.
   const dynamicLive = dynamicFetchedOrder
     ? orders.find(o => o.id === dynamicFetchedOrder.id || o.poNo === dynamicFetchedOrder.poNo ||
-                       o.id === dynamicFetchedOrder.poNo || o.poNo === dynamicFetchedOrder.id)
+      o.id === dynamicFetchedOrder.poNo || o.poNo === dynamicFetchedOrder.id)
     : null;
   const selectedOrder = liveSelected ||
     (dynamicFetchedOrder ? { ...dynamicFetchedOrder, ...(dynamicLive || {}) } : null) ||
@@ -676,32 +677,53 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
         unreadNotificationsCount={unreadCount}
       />
 
-        {/* Mobile Off-canvas Drawer Navigation (<1024px) */}
-        <MobileDrawer
-          isOpen={isOpenMobile}
-          onClose={() => setIsOpenMobile(false)}
+      {/* Mobile Off-canvas Drawer Navigation (<1024px) */}
+      <MobileDrawer
+        isOpen={isOpenMobile}
+        onClose={() => setIsOpenMobile(false)}
+        currentView={currentView}
+        onSelectView={(view) => handleNavigateView(view)}
+        currentRole={currentRole}
+        currentUser={currentUser}
+        userName={currentUser ? currentUser.name : "Sachin Gharbude"}
+        isDarkMode={isDarkMode}
+        onSignOut={onSignOut}
+        onOpenSecurityModal={() => setIsSecurityModalOpen(true)}
+        onOpenSwitchUser={isSwitchUserAllowed ? () => setIsSwitchUserOpen(true) : undefined}
+        pendingApprovalsCount={pendingApprovalsCount}
+      />
+
+      {/* Main Content: Large white rounded container, inset from the outer shell with generous margins and rounded corners */}
+      <div className="flex-1 min-h-0 min-w-0 h-full rounded-2xl lg:rounded-3xl bg-white dark:bg-[#09090B] text-slate-900 dark:text-[#F4F4F5] shadow-2xl overflow-hidden flex flex-col border border-white/10 dark:border-white/10">
+        {/* ── Static Top Bar: Apple HIG Breadcrumb + Controls (always visible) ── */}
+        <ConsoleTopBar
           currentView={currentView}
-          onSelectView={(view) => handleNavigateView(view)}
-          currentRole={currentRole}
-          currentUser={currentUser}
-          userName={currentUser ? currentUser.name : "Sachin Gharbude"}
+          onNavigate={(view) => handleNavigateView(view)}
+          onToggleMobileMenu={() => setIsOpenMobile(true)}
+          onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+          onSync={handleManualSync}
+          isSyncing={isSyncing}
+          lastSynced={lastSynced}
+          onOpenNotifications={() => setIsNotificationOpen(true)}
+          unreadNotificationsCount={unreadCount}
           isDarkMode={isDarkMode}
-          onSignOut={onSignOut}
+          setIsDarkMode={setIsDarkMode}
+          currentUser={currentUser}
+          userName={currentUser ? currentUser.name : 'Sachin Gharbude'}
+          currentRole={currentRole}
           onOpenSecurityModal={() => setIsSecurityModalOpen(true)}
           onOpenSwitchUser={isSwitchUserAllowed ? () => setIsSwitchUserOpen(true) : undefined}
-          pendingApprovalsCount={pendingApprovalsCount}
+          onSignOut={onSignOut}
+          orderPo={currentView === 'order-detail' ? (selectedOrder?.poNo || selectedOrderId) : null}
         />
 
-        {/* Main Content: Large white rounded container, inset from the outer shell with generous margins and rounded corners */}
-        <div className="flex-1 min-h-0 min-w-0 h-full rounded-2xl lg:rounded-3xl bg-white dark:bg-[#09090B] text-slate-900 dark:text-[#F4F4F5] shadow-2xl overflow-hidden flex flex-col border border-white/10 dark:border-white/10">
-          <main
-            ref={mainScrollRef}
-            className={`flex-1 min-h-0 min-w-0 ${
-              currentView === 'command-centre'
-                ? 'overflow-hidden p-2.5 sm:p-3.5 lg:p-4 pb-2.5 lg:pb-3.5 flex flex-col'
-                : 'overflow-y-auto scroll-smooth overscroll-y-contain overscroll-x-hidden p-3 sm:p-4 md:p-6 lg:p-8 pb-24 lg:pb-8'
+        <main
+          ref={mainScrollRef}
+          className={`flex-1 min-h-0 min-w-0 ${currentView === 'command-centre'
+              ? 'overflow-hidden p-2.5 sm:p-3.5 lg:p-4 pb-2.5 lg:pb-3.5 flex flex-col'
+              : 'overflow-y-auto scroll-smooth overscroll-y-contain overscroll-x-hidden p-3 sm:p-4 md:p-6 lg:p-8 pb-24 lg:pb-8'
             } bg-transparent`}
-          >
+        >
           <div key={currentView} className={currentView === 'command-centre' ? 'h-full flex-1 flex flex-col overflow-hidden' : 'space-y-6'}>
             {!isViewAllowedForUser(currentUser, currentView) ? (
               <AccessRestrictedGate
@@ -714,584 +736,584 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
             ) : (
               <>
                 {currentView === 'command-centre' && (
-            <CommandCentreView
-              orders={orders}
-              stock={stock}
-              shortages={shortages}
-              qcItems={qcQueue}
-              jobCards={jobCards}
-              dispatches={dispatches}
-              invoices={invoices}
-              payables={payables}
-              productionLogs={productionLogs}
-              pdiQueue={pdiQueue}
-              machines={machines}
-              users={users}
-              auditLogs={auditLogs}
-              approvals={approvals}
-              announcements={announcements}
-              containerScrollRef={mainScrollRef}
-              isDarkMode={isDarkMode}
-              isRealtimeStreaming={isRealtimeStreaming}
-              onToggleRealtimeStreaming={() => setIsRealtimeStreaming(!isRealtimeStreaming)}
-              onResetAllData={handleSync}
-              onNavigate={(view) => handleNavigateView(view)}
-              onNavigateView={(view) => handleNavigateView(view)}
-              onSelectOrder={handleSelectOrder}
-              scope={scope}
-              setScope={setScope}
-              showCustomizeModal={showCustomizeModal}
-              setShowCustomizeModal={setShowCustomizeModal}
-              tasks={tasks}
-              isLoadingTasks={isLoadingTasks}
-              onUpdateTaskStatus={handleUpdateStatus}
-              onCreateTask={handleCreateTask}
-              todayLog={todayLog}
-              onCheckIn={handleCheckIn}
-              onCheckOut={handleCheckOut}
-              meetings={meetings}
-              currentUser={currentUser}
-            />
-          )}
+                  <CommandCentreView
+                    orders={orders}
+                    stock={stock}
+                    shortages={shortages}
+                    qcItems={qcQueue}
+                    jobCards={jobCards}
+                    dispatches={dispatches}
+                    invoices={invoices}
+                    payables={payables}
+                    productionLogs={productionLogs}
+                    pdiQueue={pdiQueue}
+                    machines={machines}
+                    users={users}
+                    auditLogs={auditLogs}
+                    approvals={approvals}
+                    announcements={announcements}
+                    containerScrollRef={mainScrollRef}
+                    isDarkMode={isDarkMode}
+                    isRealtimeStreaming={isRealtimeStreaming}
+                    onToggleRealtimeStreaming={() => setIsRealtimeStreaming(!isRealtimeStreaming)}
+                    onResetAllData={handleSync}
+                    onNavigate={(view) => handleNavigateView(view)}
+                    onNavigateView={(view) => handleNavigateView(view)}
+                    onSelectOrder={handleSelectOrder}
+                    scope={scope}
+                    setScope={setScope}
+                    showCustomizeModal={showCustomizeModal}
+                    setShowCustomizeModal={setShowCustomizeModal}
+                    tasks={tasks}
+                    isLoadingTasks={isLoadingTasks}
+                    onUpdateTaskStatus={handleUpdateStatus}
+                    onCreateTask={handleCreateTask}
+                    todayLog={todayLog}
+                    onCheckIn={handleCheckIn}
+                    onCheckOut={handleCheckOut}
+                    meetings={meetings}
+                    currentUser={currentUser}
+                  />
+                )}
 
-          {currentView === 'orders' && (
-            <OrdersView
-              orders={orders}
-              qcQueue={qcQueue}
-              customers={customers}
-              masters={masters}
-              isDarkMode={isDarkMode}
-              onSelectOrder={handleSelectOrder}
-              onCreateOrder={handleCreateOrder}
-              onNavigateToCustomers={() => {
-                navigate('/admin/master-catalogs?tab=customers');
-                handleNavigateView('masters');
-              }}
-              onNavigateToMasters={() => {
-                navigate('/admin/master-catalogs?tab=items');
-                handleNavigateView('masters');
-              }}
-            />
-          )}
+                {currentView === 'orders' && (
+                  <OrdersView
+                    orders={orders}
+                    qcQueue={qcQueue}
+                    customers={customers}
+                    masters={masters}
+                    isDarkMode={isDarkMode}
+                    onSelectOrder={handleSelectOrder}
+                    onCreateOrder={handleCreateOrder}
+                    onNavigateToCustomers={() => {
+                      navigate('/admin/master-catalogs?tab=customers');
+                      handleNavigateView('masters');
+                    }}
+                    onNavigateToMasters={() => {
+                      navigate('/admin/master-catalogs?tab=items');
+                      handleNavigateView('masters');
+                    }}
+                  />
+                )}
 
-          {currentView === 'order-detail' && selectedOrder && (
-            <OrderDetailView
-              order={selectedOrder}
-              qcQueue={qcQueue}
-              pdiQueue={pdiQueue}
-              dispatches={dispatches}
-              invoices={invoices}
-              vendors={vendors}
-              isDarkMode={isDarkMode}
-              currentRole={currentRole}
-              currentUser={currentUser}
-              onBack={() => handleNavigateView('orders')}
-              onNavigate={(view) => handleNavigateView(view as any)}
-              onConfirmOrder={async (orderId) => {
-                if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
-                  setDynamicFetchedOrder(prev => prev ? { ...prev, status: 'CONFIRMED', stage: 'CONFIRMED', progressStep: 2 } : null);
-                }
-                return handleConfirmOrder(orderId);
-              }}
-              onUpdateOrder={(orderId, updates) => {
-                if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
-                  setDynamicFetchedOrder(prev => prev ? { ...prev, ...updates } : null);
-                }
-                handleUpdateOrder(orderId, updates);
-              }}
-              onNavigateToCreateJobCard={(orderPo) => {
-                setPendingJobCardOrderPo(orderPo);
-                handleNavigateView('production');
-              }}
-              onNavigateToCreateInvoice={(orderPo, challanNo) => {
-                setPendingInvoiceOrderPo(orderPo);
-                setPendingInvoiceDispatchNo(challanNo || null);
-                handleNavigateView('invoices');
-              }}
-              onCancelOrder={handleCancelOrder}
-              onNavigateToPDI={(orderPo, jobNo) => {
-                setPendingPdiOrderPo(orderPo || null);
-                setPendingPdiJobNo(jobNo || null);
-                handleNavigateView('pdi');
-              }}
-              onNavigateToDispatch={(orderPo) => {
-                setPendingDispatchOrderPo(orderPo || null);
-                handleNavigateView('dispatch');
-              }}
-              onCompletePDI={async (orderId, payload) => {
-                if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
-                  setDynamicFetchedOrder(prev => prev ? { ...prev, status: 'READY_TO_DISPATCH', stage: 'READY_TO_DISPATCH', progressStep: 4 } : null);
-                }
-                return handleCompletePDI(orderId, payload);
-              }}
-              onGenerateInvoice={async (orderId, invoiceData) => {
-                if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
-                  const invNo = typeof invoiceData === 'string' ? invoiceData : (invoiceData.invoiceNo || invoiceData.invoice_no);
-                  setDynamicFetchedOrder(prev => prev ? { ...prev, invoiceNo: invNo } : null);
-                }
-                return handleGenerateInvoice(orderId, invoiceData);
-              }}
-              onGenerateChallan={async (orderId, challanData) => {
-                if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
-                  const chNo = typeof challanData === 'string' ? challanData : (challanData.challanNo || challanData.challan_no);
-                  setDynamicFetchedOrder(prev => prev ? { ...prev, deliveryChallanNo: chNo } : null);
-                }
-                return handleGenerateChallan(orderId, challanData);
-              }}
-              onUpdateChallan={handleUpdateChallan}
-              onCancelChallan={handleCancelChallan}
-              onMarkDispatched={async (orderId, dispatchData) => {
-                if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
-                  setDynamicFetchedOrder(prev => prev ? {
-                    ...prev,
-                    status: 'DISPATCHED',
-                    stage: 'DISPATCHED',
-                    progressStep: 5,
-                    deliveryChallanNo: dispatchData?.challanNo || prev.deliveryChallanNo
-                  } : null);
-                }
-                return handleMarkDispatched(orderId, dispatchData);
-              }}
-              onMarkDelivered={async (orderId, deliveryData) => {
-                if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
-                  setDynamicFetchedOrder(prev => prev ? {
-                    ...prev,
-                    status: 'DELIVERED',
-                    stage: 'DELIVERED',
-                    progressStep: 6,
-                    podDocumentUrl: deliveryData?.podDocumentUrl || prev.podDocumentUrl,
-                    podReceivedDate: deliveryData?.podReceivedDate || new Date().toISOString().split('T')[0],
-                    podReceivedBy: deliveryData?.podReceivedBy || prev.podReceivedBy
-                  } : null);
-                }
-                return handleMarkDelivered(orderId, deliveryData);
-              }}
-              onMarkDelayed={async (orderId, delayData) => {
-                if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
-                  setDynamicFetchedOrder(prev => prev ? {
-                    ...prev,
-                    status: 'DELIVERY_DELAYED',
-                    stage: 'DELIVERY_DELAYED',
-                    delayedReason: delayData?.reason,
-                    delayedFollowUpDate: delayData?.followUpDate
-                  } : null);
-                }
-                return handleMarkDelayed(orderId, delayData);
-              }}
-              onRecordPayment={async (orderId, paymentData) => {
-                if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
-                  const payAmt = Number(paymentData.amount || paymentData.paymentAmount || 0);
-                  const gross = Number(dynamicFetchedOrder.grossAmount || 0);
-                  const newPaid = Number(dynamicFetchedOrder.paidAmount || 0) + payAmt;
-                  const isPaid = newPaid >= gross;
-                  setDynamicFetchedOrder(prev => prev ? {
-                    ...prev,
-                    paidAmount: newPaid,
-                    paymentStatus: isPaid ? 'PAID' : 'PARTIAL',
-                    stage: (isPaid ? 'INVOICED' : 'PAYMENT_PENDING') as any,
-                    status: (isPaid ? 'INVOICED' : 'PAYMENT_PENDING') as any,
-                    progressStep: 10
-                  } : null);
-                }
-                return handleRecordPayment(orderId, paymentData);
-              }}
-            />
-          )}
+                {currentView === 'order-detail' && selectedOrder && (
+                  <OrderDetailView
+                    order={selectedOrder}
+                    qcQueue={qcQueue}
+                    pdiQueue={pdiQueue}
+                    dispatches={dispatches}
+                    invoices={invoices}
+                    vendors={vendors}
+                    isDarkMode={isDarkMode}
+                    currentRole={currentRole}
+                    currentUser={currentUser}
+                    onBack={() => handleNavigateView('orders')}
+                    onNavigate={(view) => handleNavigateView(view as any)}
+                    onConfirmOrder={async (orderId) => {
+                      if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
+                        setDynamicFetchedOrder(prev => prev ? { ...prev, status: 'CONFIRMED', stage: 'CONFIRMED', progressStep: 2 } : null);
+                      }
+                      return handleConfirmOrder(orderId);
+                    }}
+                    onUpdateOrder={(orderId, updates) => {
+                      if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
+                        setDynamicFetchedOrder(prev => prev ? { ...prev, ...updates } : null);
+                      }
+                      handleUpdateOrder(orderId, updates);
+                    }}
+                    onNavigateToCreateJobCard={(orderPo) => {
+                      setPendingJobCardOrderPo(orderPo);
+                      handleNavigateView('production');
+                    }}
+                    onNavigateToCreateInvoice={(orderPo, challanNo) => {
+                      setPendingInvoiceOrderPo(orderPo);
+                      setPendingInvoiceDispatchNo(challanNo || null);
+                      handleNavigateView('invoices');
+                    }}
+                    onCancelOrder={handleCancelOrder}
+                    onNavigateToPDI={(orderPo, jobNo) => {
+                      setPendingPdiOrderPo(orderPo || null);
+                      setPendingPdiJobNo(jobNo || null);
+                      handleNavigateView('pdi');
+                    }}
+                    onNavigateToDispatch={(orderPo) => {
+                      setPendingDispatchOrderPo(orderPo || null);
+                      handleNavigateView('dispatch');
+                    }}
+                    onCompletePDI={async (orderId, payload) => {
+                      if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
+                        setDynamicFetchedOrder(prev => prev ? { ...prev, status: 'READY_TO_DISPATCH', stage: 'READY_TO_DISPATCH', progressStep: 4 } : null);
+                      }
+                      return handleCompletePDI(orderId, payload);
+                    }}
+                    onGenerateInvoice={async (orderId, invoiceData) => {
+                      if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
+                        const invNo = typeof invoiceData === 'string' ? invoiceData : (invoiceData.invoiceNo || invoiceData.invoice_no);
+                        setDynamicFetchedOrder(prev => prev ? { ...prev, invoiceNo: invNo } : null);
+                      }
+                      return handleGenerateInvoice(orderId, invoiceData);
+                    }}
+                    onGenerateChallan={async (orderId, challanData) => {
+                      if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
+                        const chNo = typeof challanData === 'string' ? challanData : (challanData.challanNo || challanData.challan_no);
+                        setDynamicFetchedOrder(prev => prev ? { ...prev, deliveryChallanNo: chNo } : null);
+                      }
+                      return handleGenerateChallan(orderId, challanData);
+                    }}
+                    onUpdateChallan={handleUpdateChallan}
+                    onCancelChallan={handleCancelChallan}
+                    onMarkDispatched={async (orderId, dispatchData) => {
+                      if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
+                        setDynamicFetchedOrder(prev => prev ? {
+                          ...prev,
+                          status: 'DISPATCHED',
+                          stage: 'DISPATCHED',
+                          progressStep: 5,
+                          deliveryChallanNo: dispatchData?.challanNo || prev.deliveryChallanNo
+                        } : null);
+                      }
+                      return handleMarkDispatched(orderId, dispatchData);
+                    }}
+                    onMarkDelivered={async (orderId, deliveryData) => {
+                      if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
+                        setDynamicFetchedOrder(prev => prev ? {
+                          ...prev,
+                          status: 'DELIVERED',
+                          stage: 'DELIVERED',
+                          progressStep: 6,
+                          podDocumentUrl: deliveryData?.podDocumentUrl || prev.podDocumentUrl,
+                          podReceivedDate: deliveryData?.podReceivedDate || new Date().toISOString().split('T')[0],
+                          podReceivedBy: deliveryData?.podReceivedBy || prev.podReceivedBy
+                        } : null);
+                      }
+                      return handleMarkDelivered(orderId, deliveryData);
+                    }}
+                    onMarkDelayed={async (orderId, delayData) => {
+                      if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
+                        setDynamicFetchedOrder(prev => prev ? {
+                          ...prev,
+                          status: 'DELIVERY_DELAYED',
+                          stage: 'DELIVERY_DELAYED',
+                          delayedReason: delayData?.reason,
+                          delayedFollowUpDate: delayData?.followUpDate
+                        } : null);
+                      }
+                      return handleMarkDelayed(orderId, delayData);
+                    }}
+                    onRecordPayment={async (orderId, paymentData) => {
+                      if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
+                        const payAmt = Number(paymentData.amount || paymentData.paymentAmount || 0);
+                        const gross = Number(dynamicFetchedOrder.grossAmount || 0);
+                        const newPaid = Number(dynamicFetchedOrder.paidAmount || 0) + payAmt;
+                        const isPaid = newPaid >= gross;
+                        setDynamicFetchedOrder(prev => prev ? {
+                          ...prev,
+                          paidAmount: newPaid,
+                          paymentStatus: isPaid ? 'PAID' : 'PARTIAL',
+                          stage: (isPaid ? 'INVOICED' : 'PAYMENT_PENDING') as any,
+                          status: (isPaid ? 'INVOICED' : 'PAYMENT_PENDING') as any,
+                          progressStep: 10
+                        } : null);
+                      }
+                      return handleRecordPayment(orderId, paymentData);
+                    }}
+                  />
+                )}
 
-          {currentView === 'inventory' && (
-            <InventoryView
-              stock={stock}
-              shortages={shortages}
-              masters={masters}
-              isDarkMode={isDarkMode}
-              onAdjustStock={handleAdjustStock}
-            />
-          )}
+                {currentView === 'inventory' && (
+                  <InventoryView
+                    stock={stock}
+                    shortages={shortages}
+                    masters={masters}
+                    isDarkMode={isDarkMode}
+                    onAdjustStock={handleAdjustStock}
+                  />
+                )}
 
-          {(currentView === 'production' || currentView === 'bom' || currentView === 'route-cards') && (
-            <ProductionView
-              jobCards={jobCards}
-              orders={orders}
-              productionLogs={productionLogs}
-              qcItems={qcQueue}
-              stock={stock}
-              masters={masters}
-              machines={machines}
-              companyProfile={companyProfile}
-              isDarkMode={isDarkMode}
-              initialSection={currentView === 'bom' ? 'bom' : currentView === 'route-cards' ? 'route-cards' : 'job-cards'}
-              onCreateJobCard={handleCreateJobCard}
-              onBulkReleaseJobCards={handleBulkReleaseJobCards}
-              onStartOperation={handleStartOperation}
-              onCompleteOperation={handleCompleteOperation}
-              onLogProduction={handleLogProduction}
-              onNavigate={handleNavigateView}
-              onSelectOrder={handleSelectOrder}
-              preselectedOrderPo={pendingJobCardOrderPo}
-              onJobCardModalOpened={() => setPendingJobCardOrderPo(null)}
-            />
-          )}
+                {(currentView === 'production' || currentView === 'bom' || currentView === 'route-cards') && (
+                  <ProductionView
+                    jobCards={jobCards}
+                    orders={orders}
+                    productionLogs={productionLogs}
+                    qcItems={qcQueue}
+                    stock={stock}
+                    masters={masters}
+                    machines={machines}
+                    companyProfile={companyProfile}
+                    isDarkMode={isDarkMode}
+                    initialSection={currentView === 'bom' ? 'bom' : currentView === 'route-cards' ? 'route-cards' : 'job-cards'}
+                    onCreateJobCard={handleCreateJobCard}
+                    onBulkReleaseJobCards={handleBulkReleaseJobCards}
+                    onStartOperation={handleStartOperation}
+                    onCompleteOperation={handleCompleteOperation}
+                    onLogProduction={handleLogProduction}
+                    onNavigate={handleNavigateView}
+                    onSelectOrder={handleSelectOrder}
+                    preselectedOrderPo={pendingJobCardOrderPo}
+                    onJobCardModalOpened={() => setPendingJobCardOrderPo(null)}
+                  />
+                )}
 
-          {currentView === 'finished-goods' && (
-            <FinishedGoodsView
-              items={finishedGoods}
-              masters={masters}
-              stock={stock}
-              orders={orders}
-              isDarkMode={isDarkMode}
-            />
-          )}
+                {currentView === 'finished-goods' && (
+                  <FinishedGoodsView
+                    items={finishedGoods}
+                    masters={masters}
+                    stock={stock}
+                    orders={orders}
+                    isDarkMode={isDarkMode}
+                  />
+                )}
 
-          {currentView === 'plating-outwork' && (
-            <PlatingOutworkView
-              outworks={outworkSendOuts}
-              isDarkMode={isDarkMode}
-              onCreateSendOut={async (outwork) => {
-                await handleCreateOutwork(outwork as any);
-                await handleSync();
-              }}
-              onReceiveReturn={async (payload) => {
-                try {
-                  await receiveOutworkReturn(payload as any);
-                  const passNo = typeof payload === 'string' ? payload : payload.gatePassNo;
-                  toast.success(`Gate-In pass received for ${passNo}`, 'Job-Work Returned');
-                  await handleSync();
-                } catch (err: any) {
-                  toast.error(err?.message || 'Failed to receive outwork return', 'Outwork Error');
-                }
-              }}
-            />
-          )}
+                {currentView === 'plating-outwork' && (
+                  <PlatingOutworkView
+                    outworks={outworkSendOuts}
+                    isDarkMode={isDarkMode}
+                    onCreateSendOut={async (outwork) => {
+                      await handleCreateOutwork(outwork as any);
+                      await handleSync();
+                    }}
+                    onReceiveReturn={async (payload) => {
+                      try {
+                        await receiveOutworkReturn(payload as any);
+                        const passNo = typeof payload === 'string' ? payload : payload.gatePassNo;
+                        toast.success(`Gate-In pass received for ${passNo}`, 'Job-Work Returned');
+                        await handleSync();
+                      } catch (err: any) {
+                        toast.error(err?.message || 'Failed to receive outwork return', 'Outwork Error');
+                      }
+                    }}
+                  />
+                )}
 
-          {currentView === 'reports' && (
-            <ReportsView
-              orders={orders}
-              stock={stock}
-              productionLogs={productionLogs}
-              qcItems={qcQueue}
-              isDarkMode={isDarkMode}
-            />
-          )}
+                {currentView === 'reports' && (
+                  <ReportsView
+                    orders={orders}
+                    stock={stock}
+                    productionLogs={productionLogs}
+                    qcItems={qcQueue}
+                    isDarkMode={isDarkMode}
+                  />
+                )}
 
-          {currentView === 'qc' && (
-            <QCView
-              qcItems={qcQueue}
-              isDarkMode={isDarkMode}
-              onUpdateQC={handleUpdateQC}
-            />
-          )}
+                {currentView === 'qc' && (
+                  <QCView
+                    qcItems={qcQueue}
+                    isDarkMode={isDarkMode}
+                    onUpdateQC={handleUpdateQC}
+                  />
+                )}
 
-          {currentView === 'pdi' && (
-            <PDIView
-              pdiItems={pdiQueue}
-              isDarkMode={isDarkMode}
-              preselectedOrderPo={pendingPdiOrderPo}
-              preselectedJobNo={pendingPdiJobNo}
-              onPdiModalOpened={() => {
-                setPendingPdiOrderPo(null);
-                setPendingPdiJobNo(null);
-              }}
-              onPassPDI={handlePassPDI}
-            />
-          )}
+                {currentView === 'pdi' && (
+                  <PDIView
+                    pdiItems={pdiQueue}
+                    isDarkMode={isDarkMode}
+                    preselectedOrderPo={pendingPdiOrderPo}
+                    preselectedJobNo={pendingPdiJobNo}
+                    onPdiModalOpened={() => {
+                      setPendingPdiOrderPo(null);
+                      setPendingPdiJobNo(null);
+                    }}
+                    onPassPDI={handlePassPDI}
+                  />
+                )}
 
-          {currentView === 'dispatch' && (
-            <DispatchView
-              dispatches={dispatches}
-              orders={orders}
-              vendors={vendors}
-              isDarkMode={isDarkMode}
-              preselectedOrderPo={pendingDispatchOrderPo}
-              onDispatchModalOpened={() => setPendingDispatchOrderPo(null)}
-              onIssueDispatch={handleIssueDispatch}
-              onUpdateChallan={handleUpdateChallan}
-              onCancelChallan={handleCancelChallan}
-              onDispatchChallan={async (challanNo) => {
-                const targetCh = dispatches.find(d => d.challanNo === challanNo || d.id === challanNo);
-                const targetPo = targetCh?.orderPo || selectedOrderId;
-                const targetOrd = orders.find(o => o.poNo === targetPo || o.id === targetPo || o.deliveryChallanNo === challanNo);
-                
-                await handleUpdateChallan(challanNo, { status: 'DISPATCHED' });
-                
-                if (targetOrd) {
-                  await handleMarkDispatched(targetOrd.id, {
-                    dispatchDate: targetCh?.date || new Date().toISOString().split('T')[0],
-                    transporter: targetCh?.transporter || targetOrd.transporterName || 'VRL Logistics Ltd',
-                    vehicleNo: targetCh?.vehicleNo || (targetOrd as any).vehicleNo || 'MH 12 AB 4589',
-                    lrNo: targetCh?.lrNo,
-                    challanNo: challanNo,
-                    lines: targetOrd.lines
-                  });
-                }
-              }}
-              onMarkDelivered={async (orderIdOrPo, deliveryData) => {
-                const targetOrd = orders.find(o => o.id === orderIdOrPo || o.poNo === orderIdOrPo || o.deliveryChallanNo === orderIdOrPo) ||
-                  (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderIdOrPo || dynamicFetchedOrder.poNo === orderIdOrPo) ? dynamicFetchedOrder : null);
-                const orderId = targetOrd ? targetOrd.id : orderIdOrPo;
-                if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
-                  setDynamicFetchedOrder(prev => prev ? {
-                    ...prev,
-                    status: 'DELIVERED',
-                    stage: 'DELIVERED',
-                    progressStep: 6,
-                    podDocumentUrl: deliveryData?.podDocumentUrl || prev.podDocumentUrl,
-                    podReceivedDate: deliveryData?.podReceivedDate || new Date().toISOString().split('T')[0],
-                    podReceivedBy: deliveryData?.podReceivedBy || prev.podReceivedBy
-                  } : null);
-                }
-                return handleMarkDelivered(orderId, deliveryData);
-              }}
-              onNavigateToOrder={(po) => {
-                const ord = orders.find(o => o.poNo === po || o.id === po);
-                handleSelectOrder(ord ? ord.id : po);
-              }}
-            />
-          )}
+                {currentView === 'dispatch' && (
+                  <DispatchView
+                    dispatches={dispatches}
+                    orders={orders}
+                    vendors={vendors}
+                    isDarkMode={isDarkMode}
+                    preselectedOrderPo={pendingDispatchOrderPo}
+                    onDispatchModalOpened={() => setPendingDispatchOrderPo(null)}
+                    onIssueDispatch={handleIssueDispatch}
+                    onUpdateChallan={handleUpdateChallan}
+                    onCancelChallan={handleCancelChallan}
+                    onDispatchChallan={async (challanNo) => {
+                      const targetCh = dispatches.find(d => d.challanNo === challanNo || d.id === challanNo);
+                      const targetPo = targetCh?.orderPo || selectedOrderId;
+                      const targetOrd = orders.find(o => o.poNo === targetPo || o.id === targetPo || o.deliveryChallanNo === challanNo);
 
-          {currentView === 'approvals' && (
-            <ApprovalsView
-              approvals={approvals}
-              orders={orders}
-              isDarkMode={isDarkMode}
-              onApprove={handleApprove}
-              onReject={handleReject}
-              onConfirmOrder={(orderId) => {
-                if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
-                  setDynamicFetchedOrder(prev => prev ? { ...prev, status: 'CONFIRMED', stage: 'CONFIRMED', progressStep: 2 } : null);
-                }
-                handleConfirmOrder(orderId);
-              }}
-              onViewOrder={(orderId) => {
-                const target = orders.find(o => o.id === orderId || o.poNo === orderId);
-                if (target) {
-                  setSelectedOrderId(target.id);
-                  handleNavigateView('order-detail');
-                }
-              }}
-              currentUser={currentUser}
-              currentRole={currentRole}
-            />
-          )}
+                      await handleUpdateChallan(challanNo, { status: 'DISPATCHED' });
 
-          {currentView === 'meetings' && (
-            <MeetingsView
-              meetings={meetings}
-              isLoadingMeetings={isLoadingMeetings}
-              users={users}
-              currentUser={currentUser}
-              canManageMeetings={canManageMeetings}
-              isDarkMode={isDarkMode}
-              onCreateMeeting={handleCreateMeeting}
-              onUpdateMeeting={handleUpdateMeeting}
-              onCancelMeeting={handleCancelMeeting}
-            />
-          )}
+                      if (targetOrd) {
+                        await handleMarkDispatched(targetOrd.id, {
+                          dispatchDate: targetCh?.date || new Date().toISOString().split('T')[0],
+                          transporter: targetCh?.transporter || targetOrd.transporterName || 'VRL Logistics Ltd',
+                          vehicleNo: targetCh?.vehicleNo || (targetOrd as any).vehicleNo || 'MH 12 AB 4589',
+                          lrNo: targetCh?.lrNo,
+                          challanNo: challanNo,
+                          lines: targetOrd.lines
+                        });
+                      }
+                    }}
+                    onMarkDelivered={async (orderIdOrPo, deliveryData) => {
+                      const targetOrd = orders.find(o => o.id === orderIdOrPo || o.poNo === orderIdOrPo || o.deliveryChallanNo === orderIdOrPo) ||
+                        (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderIdOrPo || dynamicFetchedOrder.poNo === orderIdOrPo) ? dynamicFetchedOrder : null);
+                      const orderId = targetOrd ? targetOrd.id : orderIdOrPo;
+                      if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
+                        setDynamicFetchedOrder(prev => prev ? {
+                          ...prev,
+                          status: 'DELIVERED',
+                          stage: 'DELIVERED',
+                          progressStep: 6,
+                          podDocumentUrl: deliveryData?.podDocumentUrl || prev.podDocumentUrl,
+                          podReceivedDate: deliveryData?.podReceivedDate || new Date().toISOString().split('T')[0],
+                          podReceivedBy: deliveryData?.podReceivedBy || prev.podReceivedBy
+                        } : null);
+                      }
+                      return handleMarkDelivered(orderId, deliveryData);
+                    }}
+                    onNavigateToOrder={(po) => {
+                      const ord = orders.find(o => o.poNo === po || o.id === po);
+                      handleSelectOrder(ord ? ord.id : po);
+                    }}
+                  />
+                )}
 
-          {currentView === 'tasks' && (
-            <TasksView
-              tasks={tasks}
-              isLoadingTasks={isLoadingTasks}
-              users={users}
-              currentUser={currentUser}
-              canManageTasks={canManageTasks}
-              isDarkMode={isDarkMode}
-              onCreateTask={handleCreateTask}
-              onUpdateTask={handleUpdateTask}
-              onUpdateStatus={handleUpdateStatus}
-              onAddComment={handleAddComment}
-              onCancelTask={handleCancelTask}
-            />
-          )}
+                {currentView === 'approvals' && (
+                  <ApprovalsView
+                    approvals={approvals}
+                    orders={orders}
+                    isDarkMode={isDarkMode}
+                    onApprove={handleApprove}
+                    onReject={handleReject}
+                    onConfirmOrder={(orderId) => {
+                      if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
+                        setDynamicFetchedOrder(prev => prev ? { ...prev, status: 'CONFIRMED', stage: 'CONFIRMED', progressStep: 2 } : null);
+                      }
+                      handleConfirmOrder(orderId);
+                    }}
+                    onViewOrder={(orderId) => {
+                      const target = orders.find(o => o.id === orderId || o.poNo === orderId);
+                      if (target) {
+                        setSelectedOrderId(target.id);
+                        handleNavigateView('order-detail');
+                      }
+                    }}
+                    currentUser={currentUser}
+                    currentRole={currentRole}
+                  />
+                )}
 
-          {(currentView === 'leave' || currentView === 'leave-requests') && (
-            <LeaveRequestsView
-              leaveRequests={leaveRequests}
-              isLoadingLeave={isLoadingLeave}
-              canViewAllLeave={canViewAllLeave}
-              canApproveLeave={canApproveLeave}
-              currentUserId={currentUser?.id}
-              isDarkMode={isDarkMode}
-              onCreateLeaveRequest={handleCreateLeaveRequest}
-              onDecideLeaveRequest={handleDecideLeaveRequest}
-              onCancelLeaveRequest={handleCancelLeaveRequest}
-            />
-          )}
+                {currentView === 'meetings' && (
+                  <MeetingsView
+                    meetings={meetings}
+                    isLoadingMeetings={isLoadingMeetings}
+                    users={users}
+                    currentUser={currentUser}
+                    canManageMeetings={canManageMeetings}
+                    isDarkMode={isDarkMode}
+                    onCreateMeeting={handleCreateMeeting}
+                    onUpdateMeeting={handleUpdateMeeting}
+                    onCancelMeeting={handleCancelMeeting}
+                  />
+                )}
 
-          {currentView === 'attendance' && (
-            <AttendanceView
-              attendanceLogs={attendanceLogs}
-              myAttendanceLogs={myAttendanceLogs}
-              isLoadingAttendance={isLoadingAttendance}
-              canManageAttendance={canManageAttendance}
-              canViewAllAttendance={canViewAllAttendance}
-              todayLog={todayLog}
-              currentUserId={currentUser?.id}
-              isDarkMode={isDarkMode}
-              searchQuery={attendanceSearchQuery}
-              onSearchChange={setAttendanceSearchQuery}
-              statusFilter={attendanceStatusFilter}
-              onStatusFilterChange={setAttendanceStatusFilter}
-              onCheckIn={handleCheckIn}
-              onCheckOut={handleCheckOut}
-              onCreateAttendance={handleCreateAttendance}
-              onUpdateAttendance={handleUpdateAttendance}
-            />
-          )}
+                {currentView === 'tasks' && (
+                  <TasksView
+                    tasks={tasks}
+                    isLoadingTasks={isLoadingTasks}
+                    users={users}
+                    currentUser={currentUser}
+                    canManageTasks={canManageTasks}
+                    isDarkMode={isDarkMode}
+                    onCreateTask={handleCreateTask}
+                    onUpdateTask={handleUpdateTask}
+                    onUpdateStatus={handleUpdateStatus}
+                    onAddComment={handleAddComment}
+                    onCancelTask={handleCancelTask}
+                  />
+                )}
 
-          {(currentView === 'employee-certifications' || currentView === 'certifications') && (
-            <EmployeeCertificationsView
-              certifications={empCertifications}
-              myCertifications={myEmpCertifications}
-              isLoading={isLoadingEmpCertifications}
-              canViewAll={canViewAllEmpCertifications}
-              canAssign={canAssignCertification}
-              isDarkMode={isDarkMode}
-              searchQuery={empCertSearchQuery}
-              onSearchChange={setEmpCertSearchQuery}
-              statusFilter={empCertStatusFilter}
-              onStatusFilterChange={setEmpCertStatusFilter}
-              activeTab={empCertActiveTab}
-              onTabChange={setEmpCertActiveTab}
-              onAssignCertification={handleAssignEmpCert}
-              onDeleteCertification={handleDeleteEmpCert}
-              onUploadDocument={handleUploadEmpCertDoc}
-              employeesList={employees.map(e => ({
-                id: e.id,
-                name: e.name,
-                email: e.email,
-                department: e.department,
-                role: e.role
-              }))}
-            />
-          )}
+                {(currentView === 'leave' || currentView === 'leave-requests') && (
+                  <LeaveRequestsView
+                    leaveRequests={leaveRequests}
+                    isLoadingLeave={isLoadingLeave}
+                    canViewAllLeave={canViewAllLeave}
+                    canApproveLeave={canApproveLeave}
+                    currentUserId={currentUser?.id}
+                    isDarkMode={isDarkMode}
+                    onCreateLeaveRequest={handleCreateLeaveRequest}
+                    onDecideLeaveRequest={handleDecideLeaveRequest}
+                    onCancelLeaveRequest={handleCancelLeaveRequest}
+                  />
+                )}
 
-          {currentView === 'announcements' && (
-            <AnnouncementsView
-              announcements={announcements}
-              isLoadingAnnouncements={isLoadingAnnouncements}
-              canPostAnnouncements={canPostAnnouncements}
-              isDarkMode={isDarkMode}
-              onCreateAnnouncement={handleCreateAnnouncement}
-              onDeleteAnnouncement={handleDeleteAnnouncement}
-            />
-          )}
+                {currentView === 'attendance' && (
+                  <AttendanceView
+                    attendanceLogs={attendanceLogs}
+                    myAttendanceLogs={myAttendanceLogs}
+                    isLoadingAttendance={isLoadingAttendance}
+                    canManageAttendance={canManageAttendance}
+                    canViewAllAttendance={canViewAllAttendance}
+                    todayLog={todayLog}
+                    currentUserId={currentUser?.id}
+                    isDarkMode={isDarkMode}
+                    searchQuery={attendanceSearchQuery}
+                    onSearchChange={setAttendanceSearchQuery}
+                    statusFilter={attendanceStatusFilter}
+                    onStatusFilterChange={setAttendanceStatusFilter}
+                    onCheckIn={handleCheckIn}
+                    onCheckOut={handleCheckOut}
+                    onCreateAttendance={handleCreateAttendance}
+                    onUpdateAttendance={handleUpdateAttendance}
+                  />
+                )}
 
-          {currentView === 'employee-master' && (
-            <EmployeeMasterView
-              employees={employees}
-              isLoadingEmployees={isLoadingEmployees}
-              canManageEmployees={canManageEmployees}
-              isDarkMode={isDarkMode}
-              onUpdateEmployee={handleUpdateEmployee}
-              onRefresh={() => loadEmployees()}
-            />
-          )}
+                {(currentView === 'employee-certifications' || currentView === 'certifications') && (
+                  <EmployeeCertificationsView
+                    certifications={empCertifications}
+                    myCertifications={myEmpCertifications}
+                    isLoading={isLoadingEmpCertifications}
+                    canViewAll={canViewAllEmpCertifications}
+                    canAssign={canAssignCertification}
+                    isDarkMode={isDarkMode}
+                    searchQuery={empCertSearchQuery}
+                    onSearchChange={setEmpCertSearchQuery}
+                    statusFilter={empCertStatusFilter}
+                    onStatusFilterChange={setEmpCertStatusFilter}
+                    activeTab={empCertActiveTab}
+                    onTabChange={setEmpCertActiveTab}
+                    onAssignCertification={handleAssignEmpCert}
+                    onDeleteCertification={handleDeleteEmpCert}
+                    onUploadDocument={handleUploadEmpCertDoc}
+                    employeesList={employees.map(e => ({
+                      id: e.id,
+                      name: e.name,
+                      email: e.email,
+                      department: e.department,
+                      role: e.role
+                    }))}
+                  />
+                )}
 
-          {currentView === 'invoices' && (
-            <InvoicesView
-              invoices={invoices}
-              dispatches={dispatches}
-              orders={orders}
-              customers={customers}
-              masters={masters}
-              companyProfile={companyProfile}
-              isDarkMode={isDarkMode}
-              currentRole={currentRole}
-              preselectedOrderPo={pendingInvoiceOrderPo}
-              preselectedDispatchNo={pendingInvoiceDispatchNo}
-              onInvoiceModalOpened={() => {
-                setPendingInvoiceOrderPo(null);
-                setPendingInvoiceDispatchNo(null);
-              }}
-              onCreateInvoice={handleCreateInvoice}
-              onIssueInvoice={handleIssueInvoice}
-              onRecordPayment={handleRecordInvoicePayment}
-              onViewOrder={(orderId) => {
-                const target = orders.find(o => o.id === orderId || o.poNo === orderId);
-                if (target) {
-                  setSelectedOrderId(target.id);
-                  handleNavigateView('order-detail');
-                }
-              }}
-            />
-          )}
+                {currentView === 'announcements' && (
+                  <AnnouncementsView
+                    announcements={announcements}
+                    isLoadingAnnouncements={isLoadingAnnouncements}
+                    canPostAnnouncements={canPostAnnouncements}
+                    isDarkMode={isDarkMode}
+                    onCreateAnnouncement={handleCreateAnnouncement}
+                    onDeleteAnnouncement={handleDeleteAnnouncement}
+                  />
+                )}
 
-          {currentView === 'payables' && (
-            <PayablesView
-              payables={payables}
-              vendors={vendors}
-              isDarkMode={isDarkMode}
-              onAddBill={handleCreateVendorBill}
-              onRecordDisbursement={handleRecordPayablePayment}
-            />
-          )}
+                {currentView === 'employee-master' && (
+                  <EmployeeMasterView
+                    employees={employees}
+                    isLoadingEmployees={isLoadingEmployees}
+                    canManageEmployees={canManageEmployees}
+                    isDarkMode={isDarkMode}
+                    onUpdateEmployee={handleUpdateEmployee}
+                    onRefresh={() => loadEmployees()}
+                  />
+                )}
 
-          {currentView === 'masters' && (
-            <MastersView
-              masters={masters}
-              customers={customers}
-              vendors={vendors}
-              machines={machines}
-              isDarkMode={isDarkMode}
-              onAddMaster={handleAddMasterItem}
-              onUpdateMaster={handleUpdateMasterItem}
-              onDeleteMaster={handleDeleteMasterItem}
-              onAddCustomer={handleAddCustomer}
-              onUpdateCustomer={handleUpdateCustomer}
-              onDeleteCustomer={handleDeleteCustomer}
-              onAddVendor={handleAddVendor}
-              onUpdateVendor={handleUpdateVendor}
-              onDeleteVendor={handleDeleteVendor}
-              onAddMachine={handleAddMachine}
-              onUpdateMachine={handleUpdateMachine}
-              onDeleteMachine={handleDeleteMachine}
-              onImportOMGST={handleImportOMGST}
-            />
-          )}
+                {currentView === 'invoices' && (
+                  <InvoicesView
+                    invoices={invoices}
+                    dispatches={dispatches}
+                    orders={orders}
+                    customers={customers}
+                    masters={masters}
+                    companyProfile={companyProfile}
+                    isDarkMode={isDarkMode}
+                    currentRole={currentRole}
+                    preselectedOrderPo={pendingInvoiceOrderPo}
+                    preselectedDispatchNo={pendingInvoiceDispatchNo}
+                    onInvoiceModalOpened={() => {
+                      setPendingInvoiceOrderPo(null);
+                      setPendingInvoiceDispatchNo(null);
+                    }}
+                    onCreateInvoice={handleCreateInvoice}
+                    onIssueInvoice={handleIssueInvoice}
+                    onRecordPayment={handleRecordInvoicePayment}
+                    onViewOrder={(orderId) => {
+                      const target = orders.find(o => o.id === orderId || o.poNo === orderId);
+                      if (target) {
+                        setSelectedOrderId(target.id);
+                        handleNavigateView('order-detail');
+                      }
+                    }}
+                  />
+                )}
 
-          {currentView === 'users-audit' && (
-            <UsersAuditView
-              users={users}
-              auditLogs={auditLogs}
-              securityEvents={securityEvents}
-              orders={orders}
-              stock={stock}
-              jobCards={jobCards}
-              qcQueue={qcQueue}
-              dispatches={dispatches}
-              invoices={invoices}
-              payables={payables}
-              masters={masters}
-              productionLogs={productionLogs}
-              pdiQueue={pdiQueue}
-              isDarkMode={isDarkMode}
-              currentUserId={currentUserId}
-              currentRole={currentRole}
-              onAddUser={handleAddUser}
-              onUpdateUser={handleUpdateUser}
-              onSwitchUser={handleSwitchUser}
-              onRevokeUser={handleRevokeUser}
-              onRestoreUser={handleRestoreUser}
-              onUpdateUserRole={handleUpdateUserRole}
-              onDeleteUser={handleDeleteUser}
-              onResetAllData={handleResetAllData}
-              onClearOperationalData={handleClearOperationalData}
-            />
-          )}
+                {currentView === 'payables' && (
+                  <PayablesView
+                    payables={payables}
+                    vendors={vendors}
+                    isDarkMode={isDarkMode}
+                    onAddBill={handleCreateVendorBill}
+                    onRecordDisbursement={handleRecordPayablePayment}
+                  />
+                )}
 
-          {currentView === 'company-profile' && (
-            <CompanyProfileView
-              profile={companyProfile}
-              isDarkMode={isDarkMode}
-              onSaveProfile={handleSaveCompanyProfile}
-            />
-          )}
+                {currentView === 'masters' && (
+                  <MastersView
+                    masters={masters}
+                    customers={customers}
+                    vendors={vendors}
+                    machines={machines}
+                    isDarkMode={isDarkMode}
+                    onAddMaster={handleAddMasterItem}
+                    onUpdateMaster={handleUpdateMasterItem}
+                    onDeleteMaster={handleDeleteMasterItem}
+                    onAddCustomer={handleAddCustomer}
+                    onUpdateCustomer={handleUpdateCustomer}
+                    onDeleteCustomer={handleDeleteCustomer}
+                    onAddVendor={handleAddVendor}
+                    onUpdateVendor={handleUpdateVendor}
+                    onDeleteVendor={handleDeleteVendor}
+                    onAddMachine={handleAddMachine}
+                    onUpdateMachine={handleUpdateMachine}
+                    onDeleteMachine={handleDeleteMachine}
+                    onImportOMGST={handleImportOMGST}
+                  />
+                )}
 
-          {currentView === 'workflow-testing' && (
-            <WorkflowTestingView
-              isDarkMode={isDarkMode}
-            />
-          )}
+                {currentView === 'users-audit' && (
+                  <UsersAuditView
+                    users={users}
+                    auditLogs={auditLogs}
+                    securityEvents={securityEvents}
+                    orders={orders}
+                    stock={stock}
+                    jobCards={jobCards}
+                    qcQueue={qcQueue}
+                    dispatches={dispatches}
+                    invoices={invoices}
+                    payables={payables}
+                    masters={masters}
+                    productionLogs={productionLogs}
+                    pdiQueue={pdiQueue}
+                    isDarkMode={isDarkMode}
+                    currentUserId={currentUserId}
+                    currentRole={currentRole}
+                    onAddUser={handleAddUser}
+                    onUpdateUser={handleUpdateUser}
+                    onSwitchUser={handleSwitchUser}
+                    onRevokeUser={handleRevokeUser}
+                    onRestoreUser={handleRestoreUser}
+                    onUpdateUserRole={handleUpdateUserRole}
+                    onDeleteUser={handleDeleteUser}
+                    onResetAllData={handleResetAllData}
+                    onClearOperationalData={handleClearOperationalData}
+                  />
+                )}
+
+                {currentView === 'company-profile' && (
+                  <CompanyProfileView
+                    profile={companyProfile}
+                    isDarkMode={isDarkMode}
+                    onSaveProfile={handleSaveCompanyProfile}
+                  />
+                )}
+
+                {currentView === 'workflow-testing' && (
+                  <WorkflowTestingView
+                    isDarkMode={isDarkMode}
+                  />
+                )}
               </>
             )}
           </div>

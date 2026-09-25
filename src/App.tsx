@@ -80,7 +80,7 @@ function MainApp() {
           transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
           className="w-full"
         >
-          <LoginPage 
+          <LoginPage
             isDarkMode={isDarkMode}
             onToggleTheme={() => setIsDarkMode(!isDarkMode)}
           />
@@ -92,16 +92,16 @@ function MainApp() {
             reduceMotion
               ? { opacity: 0 }
               : isFreshLogin
-              ? { opacity: 0, scale: 0.988 }
-              : false
+                ? { opacity: 0, scale: 0.988 }
+                : false
           }
           animate={{ opacity: 1, scale: 1 }}
           transition={
             reduceMotion
               ? { duration: 0.2 }
               : isFreshLogin
-              ? { duration: 0.7, ease: [0.16, 1, 0.3, 1] }
-              : { duration: 0 }
+                ? { duration: 0.7, ease: [0.16, 1, 0.3, 1] }
+                : { duration: 0 }
           }
           className="w-full"
           onAnimationComplete={() => {
@@ -110,7 +110,9 @@ function MainApp() {
         >
           <Router>
             <ScrollToTop />
-            <div className={`min-h-screen font-sans ${isDarkMode ? 'bg-[#101317] text-white' : 'bg-[#155dfc] text-slate-900'}`}>
+            {/* Outer shell: always pure black so the console/admin frame is
+                consistent across both themes (inner surfaces stay theme-driven). */}
+            <div className="min-h-screen bg-black font-sans text-white">
               <Routes>
                 <Route path="/server-admin/*" element={<ServerAdminVault onSignOut={signOut} />} />
                 <Route path="/admin-vault/*" element={<ServerAdminVault onSignOut={signOut} />} />

@@ -29,45 +29,39 @@ import {
 
 import { InAppNotification } from '../services/notificationService';
 
-// ── Styles (Transitions.dev — Panel reveal) ──────────────
+// ── Styles (Transitions.dev — Panel reveal from right) ──────────────
 const __TRANSITION_STYLES = `
 :root {
-  --panel-open-dur: 400ms;
-  --panel-close-dur: 350ms;
-  --panel-translate-y: calc(187px * 0.5);
-  --panel-blur: 2px;
-  --panel-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --panel-open-dur: 380ms;
+  --panel-close-dur: 320ms;
+  --panel-ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.t-panel-slide {
-  transform: translateY(var(--panel-translate-y));
-  opacity: 0;
-  filter: blur(var(--panel-blur));
+.t-panel-right {
+  transform: translateX(100%);
+  opacity: 0.5;
   pointer-events: none;
   transition:
     transform var(--panel-close-dur) var(--panel-ease),
-    opacity   var(--panel-close-dur) var(--panel-ease),
-    filter    var(--panel-close-dur) var(--panel-ease);
-  will-change: transform, opacity, filter;
+    opacity   var(--panel-close-dur) var(--panel-ease);
+  will-change: transform, opacity;
 }
-.t-panel-slide[data-open="true"] {
-  transform: translateY(0);
+.t-panel-right[data-open="true"] {
+  transform: translateX(0);
   opacity: 1;
-  filter: blur(0);
   pointer-events: auto;
   transition:
     transform var(--panel-open-dur) var(--panel-ease),
-    opacity   var(--panel-open-dur) var(--panel-ease),
-    filter    var(--panel-open-dur) var(--panel-ease);
+    opacity   var(--panel-open-dur) var(--panel-ease);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .t-panel-slide { transition: none !important; }
+  .t-panel-right { transition: none !important; }
 }
 `;
-if (typeof document !== 'undefined' && !document.getElementById('transitions-p3')) {
+if (typeof document !== 'undefined' && !document.getElementById('transitions-panel-right')) {
   const __style = document.createElement('style');
-  __style.id = 'transitions-p3';
+  __style.id = 'transitions-panel-right';
   __style.textContent = __TRANSITION_STYLES;
   document.head.appendChild(__style);
 }
@@ -658,7 +652,7 @@ export const NotificationDrawer: React.FC<
 
     const drawerContent = (
       <div
-        className="fixed inset-0 z-[9999] font-sans flex flex-col justify-end items-center pointer-events-none overflow-hidden"
+        className="fixed inset-0 z-[9999] font-sans flex justify-end pointer-events-none overflow-hidden"
         data-lenis-prevent="true"
       >
         {/* Backdrop */}
@@ -667,13 +661,13 @@ export const NotificationDrawer: React.FC<
           tabIndex={-1}
           aria-label="Close notifications"
           onClick={onClose}
-          className={`fixed inset-0 h-full w-full cursor-default bg-slate-950/65 backdrop-blur-md transition-opacity duration-300 pointer-events-auto ${
+          className={`fixed inset-0 h-full w-full cursor-default bg-slate-950/60 backdrop-blur-sm transition-opacity duration-300 pointer-events-auto ${
             openState ? 'opacity-100' : 'opacity-0 pointer-events-none'
           }`}
         />
 
-        {/* Bottom Sheet Travel Wrapper (clips travel area) */}
-        <div className="w-full flex justify-center overflow-hidden pointer-events-none px-2 sm:px-4 pb-2 sm:pb-4 z-10">
+        {/* Right Drawer Travel Wrapper */}
+        <div className="h-full flex overflow-hidden pointer-events-none z-10 p-2 sm:p-3 w-full max-w-lg lg:max-w-xl">
           <div
             ref={drawerRef}
             role="dialog"
@@ -684,11 +678,11 @@ export const NotificationDrawer: React.FC<
             data-open={openState}
             onClick={(event) => event.stopPropagation()}
             className={[
-              't-panel-slide pointer-events-auto relative flex flex-col w-full max-w-2xl max-h-[82vh] overflow-hidden',
-              'rounded-[28px] sm:rounded-[32px] border shadow-[0_-24px_70px_-15px_rgba(0,0,0,0.75)] backdrop-blur-3xl transition-all',
+              't-panel-right pointer-events-auto relative flex flex-col w-full h-full overflow-hidden',
+              'rounded-2xl sm:rounded-3xl border shadow-[-24px_0_60px_-15px_rgba(0,0,0,0.6)] backdrop-blur-3xl transition-all',
               isDarkMode
                 ? 'border-white/15 bg-gradient-to-b from-[#14161F]/98 via-[#0C0D12]/98 to-[#050608]/98 text-white'
-                : 'border-slate-200/90 bg-white/95 text-slate-950 shadow-[0_-20px_50px_-15px_rgba(15,23,42,0.22)]',
+                : 'border-slate-200/90 bg-white/95 text-slate-950 shadow-[-16px_0_40px_-12px_rgba(15,23,42,0.18)]',
             ].join(' ')}
           >
             {/* Ambient subtle decoration */}
@@ -700,20 +694,10 @@ export const NotificationDrawer: React.FC<
               <div className="absolute -left-28 bottom-0 h-72 w-72 rounded-full bg-cyan-500/10 blur-3xl" />
             </div>
 
-            {/* Apple Sheet Pull Handle Grabber */}
-            <div className="pt-2.5 pb-1 flex justify-center shrink-0 cursor-pointer" onClick={onClose} title="Dismiss">
-              <div
-                className={[
-                  'w-11 h-1.25 rounded-full transition-colors',
-                  isDarkMode ? 'bg-white/25 hover:bg-white/45' : 'bg-slate-300 hover:bg-slate-400',
-                ].join(' ')}
-              />
-            </div>
-
             {/* Header */}
             <header
               className={[
-                'relative z-10 shrink-0 border-b px-5 pb-3.5 pt-1 sm:px-6',
+                'relative z-10 shrink-0 border-b px-5 pb-3.5 pt-4 sm:px-6 sm:pt-5',
                 isDarkMode ? 'border-white/[0.08]' : 'border-slate-200/80',
               ].join(' ')}
             >

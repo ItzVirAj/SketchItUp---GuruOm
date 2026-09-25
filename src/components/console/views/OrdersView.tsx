@@ -870,33 +870,41 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
       {/* ========================================================================= */}
       <div className="hidden md:block space-y-4">
         {/* Apple macOS Frosted Header & Integrated Metrics */}
-        <section className={`overflow-hidden rounded-2xl border transition-all ${
+        <section className={`relative isolate overflow-hidden rounded-2xl border transition-all ${
           isDarkMode
             ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]'
-            : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
+            : 'border-slate-200/90 bg-[radial-gradient(120%_120%_at_100%_0%,#c2e7fd_0%,rgba(194,231,253,0.45)_24%,rgba(194,231,253,0)_60%),linear-gradient(180deg,#ffffff_0%,#fbfdff_52%,#eff6fe_100%)] text-black shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_32px_-12px_rgba(15,23,42,0.12),inset_0_1px_0_0_rgba(255,255,255,0.9)]'
         }`}>
+          {/* Light-scheme only: whisper-faint drafting grid, dissolved before the KPI shelf */}
+          {!isDarkMode && (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 -z-10 bg-grid-pattern opacity-70 [mask-image:linear-gradient(to_bottom,black,transparent_72%)] [-webkit-mask-image:linear-gradient(to_bottom,black,transparent_72%)]"
+            />
+          )}
+
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 px-6 py-6 sm:py-7">
             <div className="min-w-0 space-y-1.5">
               <div className="flex items-center gap-2.5">
                 <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wide ${
                   isDarkMode
                     ? 'bg-white/10 border border-white/15 text-white'
-                    : 'bg-white/20 border border-white/30 backdrop-blur-md text-white shadow-xs'
+                    : 'bg-white/80 border border-slate-200/90 backdrop-blur-md text-black shadow-2xs'
                 }`}>
                   <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
                   <span>Active Order Book</span>
                 </span>
-                <span className="text-sm font-semibold text-white/80">•</span>
-                <span className="text-xs sm:text-sm font-semibold text-white/95">
+                <span className={`text-sm font-semibold ${isDarkMode ? 'text-white/80' : 'text-black/45'}`}>•</span>
+                <span className={`text-xs sm:text-sm font-semibold ${isDarkMode ? 'text-white/95' : 'text-black/70'}`}>
                   {orders.length} Purchase Orders
                 </span>
               </div>
 
-              <h1 className="text-3xl sm:text-[32px] font-black tracking-tight text-white leading-tight">
+              <h1 className={`text-3xl sm:text-[32px] font-black tracking-tight leading-tight ${isDarkMode ? 'text-white' : 'text-black'}`}>
                 Customer Purchase Orders
               </h1>
 
-              <p className="text-xs sm:text-sm text-white/95 font-medium leading-relaxed max-w-2xl">
+              <p className={`text-xs sm:text-sm font-medium leading-relaxed max-w-2xl ${isDarkMode ? 'text-white/95' : 'text-black/70'}`}>
                 Real-time commercial value, engineering handoffs, and gated production commitments.
               </p>
             </div>
@@ -906,7 +914,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
               className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 self-start sm:self-auto ${
                 isDarkMode
                   ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
-                  : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
+                  : 'bg-white hover:bg-slate-50 text-black border border-slate-200/90 shadow-md shadow-slate-900/10 hover:shadow-lg hover:shadow-slate-900/15'
               }`}
             >
               <Plus className="h-4 w-4 stroke-[3]" />
@@ -917,7 +925,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
           <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t ${
             isDarkMode
               ? 'border-white/10 bg-gradient-to-b from-black/40 to-black/70 backdrop-blur-md'
-              : 'border-white/20 bg-white/[0.06] backdrop-blur-sm'
+              : 'border-slate-200/70 bg-white/55 backdrop-blur-md'
           }`}>
             {[
               {
@@ -925,53 +933,53 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                 value: `₹${totalActiveValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`,
                 detail: `${orders.length} total active contracts`,
                 icon: TrendingUp,
-                iconColor: isDarkMode ? 'text-white' : 'text-[#155dfc]',
-                iconBg: isDarkMode ? 'bg-blue-600 shadow-xs' : 'bg-white shadow-xs',
+                iconColor: isDarkMode ? 'text-white' : 'text-[#1d4ed8]',
+                iconBg: isDarkMode ? 'bg-blue-600 shadow-xs' : 'bg-[#e8f2fe] ring-1 ring-inset ring-black/[0.04] shadow-2xs',
               },
               {
                 label: 'In Production',
                 value: String(inProdCount),
                 detail: 'Shopfloor active jobs',
                 icon: Package,
-                iconColor: 'text-white',
-                iconBg: 'bg-amber-500 shadow-xs',
+                iconColor: isDarkMode ? 'text-white' : 'text-[#b45309]',
+                iconBg: isDarkMode ? 'bg-amber-500 shadow-xs' : 'bg-[#fdf5e6] ring-1 ring-inset ring-black/[0.04] shadow-2xs',
               },
               {
                 label: 'Quality Gate',
                 value: String(qcGateCount),
                 detail: 'Under inspection & NCR',
                 icon: ShieldCheck,
-                iconColor: 'text-white',
-                iconBg: 'bg-purple-600 shadow-xs',
+                iconColor: isDarkMode ? 'text-white' : 'text-[#6d28d9]',
+                iconBg: isDarkMode ? 'bg-purple-600 shadow-xs' : 'bg-[#f4efff] ring-1 ring-inset ring-black/[0.04] shadow-2xs',
               },
               {
                 label: 'Ready for Dispatch',
                 value: String(dispatchReadyCount),
                 detail: 'PDI cleared shipments',
                 icon: Truck,
-                iconColor: 'text-white',
-                iconBg: 'bg-emerald-500 shadow-xs',
+                iconColor: isDarkMode ? 'text-white' : 'text-[#047857]',
+                iconBg: isDarkMode ? 'bg-emerald-500 shadow-xs' : 'bg-[#e9f7f1] ring-1 ring-inset ring-black/[0.04] shadow-2xs',
               },
             ].map((metric, index) => {
               const MetricIcon = metric.icon;
               return (
                 <div
                   key={metric.label}
-                  className={`flex items-center gap-4 px-6 py-5 transition-all ${
-                    index > 0 ? (isDarkMode ? 'lg:border-l border-white/10' : 'lg:border-l border-white/20') : ''
+                  className={`flex items-center gap-4 px-6 py-5 transition-all ${isDarkMode ? '' : 'hover:bg-white/60'} ${
+                    index > 0 ? (isDarkMode ? 'lg:border-l border-white/10' : 'lg:border-l border-slate-200/70') : ''
                   }`}
                 >
                   <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${metric.iconBg} ${metric.iconColor}`}>
                     <MetricIcon className="h-5 w-5 stroke-[2.5]" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="text-xs font-bold uppercase tracking-wider text-white/85">
+                    <div className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-white/85' : 'text-black/60'}`}>
                       {metric.label}
                     </div>
-                    <div className="text-2xl sm:text-[26px] font-black tracking-tight text-white tabular-nums my-0.5 leading-tight">
+                    <div className={`text-2xl sm:text-[26px] font-black tracking-tight tabular-nums my-0.5 leading-tight ${isDarkMode ? 'text-white' : 'text-black'}`}>
                       {metric.value}
                     </div>
-                    <div className="text-xs font-medium text-white/90 truncate">
+                    <div className={`text-xs font-medium truncate ${isDarkMode ? 'text-white/90' : 'text-black/60'}`}>
                       {metric.detail}
                     </div>
                   </div>

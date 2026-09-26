@@ -1,6 +1,7 @@
 import { Worker, Job } from 'bullmq';
 import { createBullMQRedisConnection } from './lib/queue-connection';
-import { QUEUE_NAME, enqueueJob } from './lib/queues';
+// import { QUEUE_NAME, enqueueJob } from './lib/queues';
+import { QUEUE_NAME, enqueueJob, registerDailySnapshotSchedule } from './lib/queues';
 import { getRedisClient, isRedisConnected } from './lib/redis';
 import { publishTenantEvent } from './lib/pubsub';
 import { authService } from './modules/auth/auth.service';
@@ -8,6 +9,8 @@ import { attachmentsService } from './modules/attachments/attachments.service';
 import { notificationsService } from './modules/notifications/notifications.service';
 import { getDbClient } from './config/database';
 import { logger } from './utils/logger';
+import { metricsService } from './modules/metrics/metrics.service';
+
 
 const db = getDbClient();
 
@@ -346,6 +349,17 @@ async function processCertificationReminder(job: Job) {
 }
 
 /**
+ * Computes and upserts today's (or an explicit date's) business snapshot —
+ * feeds the Owner Copilot's get_business_trends tool.
+ */
+async function processCaptureDailySnapshot(job: Job) {
+  const { date } = job.data || {};
+  const snapshot = await metricsService.captureSnapshot(date);
+  logger.info(`📊 [Worker:Metrics] Daily snapshot captured for ${snapshot.snapshot_date}.`);
+  return { status: 'captured', date: snapshot.snapshot_date };
+}
+
+/**
  * Initializes BullMQ worker process.
  */
 export function startWorker(): Worker {
@@ -365,8 +379,10 @@ export function startWorker(): Worker {
           return await processMeetingReminder(job);
         case 'task-reminder':
           return await processTaskReminder(job);
-        case 'certification-reminder':
+                case 'certification-reminder':
           return await processCertificationReminder(job);
+        case 'capture-daily-snapshot':
+          return await processCaptureDailySnapshot(job);
         default:
           throw new Error(`Unknown job type "${job.name}"`);
       }
@@ -411,6 +427,8 @@ export function startWorker(): Worker {
       } catch (_) {}
     }
   });
+
+  registerDailySnapshotSchedule();
 
   return worker;
 }

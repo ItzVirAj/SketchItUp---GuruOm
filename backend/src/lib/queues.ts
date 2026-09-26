@@ -2,6 +2,7 @@ import { Queue, QueueEvents, JobsOptions } from 'bullmq';
 import { createBullMQRedisConnection } from './queue-connection';
 import { isRedisConnected } from './redis';
 
+
 export interface GenerateInvoicePdfJobData {
   invoiceId: string;
   invoiceNo: string;
@@ -11,6 +12,25 @@ export interface GenerateInvoicePdfJobData {
   dueDate: string;
   tenantId: string;
   recipientEmail?: string;
+}
+
+export interface CaptureDailySnapshotJobData { date?: string }
+// add to the OwnerOSJobData union:
+// | { type: 'capture-daily-snapshot'; payload: CaptureDailySnapshotJobData }
+
+export async function registerDailySnapshotSchedule(): Promise<void> {
+  try {
+    if (!isRedisConnected()) return;
+    await getJobsQueue().upsertJobScheduler(
+      'daily-snapshot-scheduler',
+      { pattern: '5 0 * * *', tz: 'Asia/Kolkata' },
+      { name: 'capture-daily-snapshot', data: {} }
+    );
+    console.log('⏰ [BullMQ] Daily snapshot scheduler registered (00:05 IST).');
+  } catch (err: any) {
+    console.warn('⚠️ [BullMQ] Could not register daily snapshot scheduler:', err.message);
+  }
+  
 }
 
 export interface SendEmailJobData {
@@ -55,13 +75,18 @@ export interface CertificationReminderJobData {
   offsetLabel: string; // e.g. '30d_before_expiry'
 }
 
+export interface CaptureDailySnapshotJobData {
+  date?: string; // 'YYYY-MM-DD'; omit to snapshot "today"
+}
+
 export type OwnerOSJobData =
   | { type: 'generate-invoice-pdf'; payload: GenerateInvoicePdfJobData }
   | { type: 'send-email'; payload: SendEmailJobData }
   | { type: 'create-notification'; payload: CreateNotificationJobData }
   | { type: 'meeting-reminder'; payload: MeetingReminderJobData }
   | { type: 'task-reminder'; payload: TaskReminderJobData }
-  | { type: 'certification-reminder'; payload: CertificationReminderJobData };
+  | { type: 'certification-reminder'; payload: CertificationReminderJobData }
+  | { type: 'capture-daily-snapshot'; payload: CaptureDailySnapshotJobData };
 
 export const QUEUE_NAME = 'owner-os-jobs';
 
@@ -102,7 +127,7 @@ export function getQueueEvents(): QueueEvents {
  * Fail-safe: Does not throw if Redis is offline; logs warning so the DB record remains preserved.
  */
 export async function enqueueJob(
-  jobType: 'generate-invoice-pdf' | 'send-email' | 'create-notification' | 'meeting-reminder' | 'task-reminder' | 'certification-reminder',
+  jobType: 'generate-invoice-pdf' | 'send-email' | 'create-notification' | 'meeting-reminder' | 'task-reminder' | 'certification-reminder' | 'capture-daily-snapshot',
   payload: any,
   options?: JobsOptions
 ): Promise<{ enqueued: boolean; jobId?: string }> {
@@ -117,6 +142,25 @@ export async function enqueueJob(
   }
 
   return { enqueued: false };
+}
+
+/**
+ * Registers (or updates) the once-a-day snapshot job. Idempotent — safe to
+ * call on every worker boot, BullMQ upserts by scheduler id instead of
+ * duplicating it.
+ */
+export async function registerDailySnapshotSchedule(): Promise<void> {
+  try {
+    if (!isRedisConnected()) return;
+    await getJobsQueue().upsertJobScheduler(
+      'daily-snapshot-scheduler',
+      { pattern: '5 0 * * *', tz: 'Asia/Kolkata' }, // 00:05 IST daily
+      { name: 'capture-daily-snapshot', data: {} }
+    );
+    console.log('⏰ [BullMQ] Daily snapshot scheduler registered (00:05 IST).');
+  } catch (err: any) {
+    console.warn('⚠️ [BullMQ] Could not register daily snapshot scheduler:', err.message);
+  }
 }
 
 /**

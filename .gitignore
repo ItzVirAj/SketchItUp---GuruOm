@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-node_modules
-=======
 # ---- Dependencies ----
-AGENTS.md
 node_modules/
 .pnp
 .pnp.js
@@ -33,7 +29,7 @@ tests/
 scripts/
 .mcp.json
 patches/
-tests/
+
 # ---- Logs & Data ----
 logs/
 data/
@@ -50,6 +46,7 @@ coverage/
 *.lcov
 .nyc_output/
 brag-output/
+
 # ---- TypeScript ----
 *.tsbuildinfo
 
@@ -78,15 +75,14 @@ supabase/.temp/
 .eslintcache
 .parcel-cache/
 
-# ---- Package manager locks (uncomment ONE if you want to ignore it) ----
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
+# ---- Package manager locks (currently NOT ignored — package-lock.json
+# is committed on purpose so `npm ci` keeps working on Render) ----
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
 .aider*
-tests/
 
 # ---- Agentation & AI Skills ----
-.agents/
 .agents/skills/
 .agents/skills/agentation/
 .agentation/
@@ -117,5 +113,3 @@ backup/
 .impeccable*
 impeccable.json
 .codex/
-
->>>>>>> backup-old-main

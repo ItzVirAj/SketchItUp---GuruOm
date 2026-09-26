@@ -18,20 +18,20 @@ export interface CaptureDailySnapshotJobData { date?: string }
 // add to the OwnerOSJobData union:
 // | { type: 'capture-daily-snapshot'; payload: CaptureDailySnapshotJobData }
 
-export async function registerDailySnapshotSchedule(): Promise<void> {
-  try {
-    if (!isRedisConnected()) return;
-    await getJobsQueue().upsertJobScheduler(
-      'daily-snapshot-scheduler',
-      { pattern: '5 0 * * *', tz: 'Asia/Kolkata' },
-      { name: 'capture-daily-snapshot', data: {} }
-    );
-    console.log('⏰ [BullMQ] Daily snapshot scheduler registered (00:05 IST).');
-  } catch (err: any) {
-    console.warn('⚠️ [BullMQ] Could not register daily snapshot scheduler:', err.message);
-  }
+// export async function registerDailySnapshotSchedule(): Promise<void> {
+//   try {
+//     if (!isRedisConnected()) return;
+//     await getJobsQueue().upsertJobScheduler(
+//       'daily-snapshot-scheduler',
+//       { pattern: '5 0 * * *', tz: 'Asia/Kolkata' },
+//       { name: 'capture-daily-snapshot', data: {} }
+//     );
+//     console.log('⏰ [BullMQ] Daily snapshot scheduler registered (00:05 IST).');
+//   } catch (err: any) {
+//     console.warn('⚠️ [BullMQ] Could not register daily snapshot scheduler:', err.message);
+//   }
   
-}
+// }
 
 export interface SendEmailJobData {
   to: string;
@@ -149,19 +149,19 @@ export async function enqueueJob(
  * call on every worker boot, BullMQ upserts by scheduler id instead of
  * duplicating it.
  */
-// export async function registerDailySnapshotSchedule(): Promise<void> {
-//   try {
-//     if (!isRedisConnected()) return;
-//     await getJobsQueue().upsertJobScheduler(
-//       'daily-snapshot-scheduler',
-//       { pattern: '5 0 * * *', tz: 'Asia/Kolkata' }, // 00:05 IST daily
-//       { name: 'capture-daily-snapshot', data: {} }
-//     );
-//     console.log('⏰ [BullMQ] Daily snapshot scheduler registered (00:05 IST).');
-//   } catch (err: any) {
-//     console.warn('⚠️ [BullMQ] Could not register daily snapshot scheduler:', err.message);
-//   }
-// }
+export async function registerDailySnapshotSchedule(): Promise<void> {
+  try {
+    if (!isRedisConnected()) return;
+    await getJobsQueue().upsertJobScheduler(
+      'daily-snapshot-scheduler',
+      { pattern: '5 0 * * *', tz: 'Asia/Kolkata' }, // 00:05 IST daily
+      { name: 'capture-daily-snapshot', data: {} }
+    );
+    console.log('⏰ [BullMQ] Daily snapshot scheduler registered (00:05 IST).');
+  } catch (err: any) {
+    console.warn('⚠️ [BullMQ] Could not register daily snapshot scheduler:', err.message);
+  }
+}
 
 /**
  * Closes queue connections cleanly during shutdown.

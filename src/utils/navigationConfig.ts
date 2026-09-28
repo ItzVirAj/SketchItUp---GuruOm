@@ -164,6 +164,7 @@ export function getFilteredNavigation(context: NavigationContext): NavSectionCon
 export function getViewTitle(view: ConsoleView): string {
   if (view === 'command-centre') return 'Command Centre';
   if (view === 'order-detail') return 'Order Details';
+  if (view === 'account') return 'My Account';
 
   for (const section of NAVIGATION_SECTIONS) {
     const found = section.items.find(item => item.id === view);
@@ -225,6 +226,15 @@ export function getBreadcrumbsForView(view: ConsoleView, orderPo?: string | null
       submoduleLabel: 'Orders',
       submodulePath: '/operations/orders',
       detailLabel: orderPo || 'Order Details'
+    };
+  }
+
+  if (view === 'account') {
+    return {
+      moduleLabel: 'Workspace',
+      modulePath: '/command-center',
+      submoduleLabel: 'My Account',
+      submodulePath: '/account'
     };
   }
 
@@ -303,6 +313,8 @@ export function getCanonicalPathForView(view: ConsoleView, orderId?: string | nu
       return '/hr/announcements';
     case 'employee-master':
       return '/hr/employees';
+    case 'account':
+      return '/account';
     case 'workflow-testing':
       return '/workflow-testing';
     case 'bom':

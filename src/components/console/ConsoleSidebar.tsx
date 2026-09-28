@@ -4,14 +4,7 @@ import {
   ChevronDown,
   LayoutGrid,
   PanelLeftClose,
-  PanelLeft,
-  Search,
-  Bell,
-  RefreshCw,
-  Sun,
-  Moon,
   LogOut,
-  Shield,
   Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -32,7 +25,6 @@ interface ConsoleSidebarProps {
   currentUser?: ConsoleUser | null;
   userName?: string;
   onSignOut?: () => void;
-  onOpenSecurityModal?: () => void;
   isOpenMobile?: boolean;
   setIsOpenMobile?: (open: boolean) => void;
   onOpenCommandPalette?: () => void;
@@ -52,7 +44,6 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
   currentUser,
   userName = 'Sachin Gharbude',
   onSignOut,
-  onOpenSecurityModal,
   setIsOpenMobile,
   onOpenCommandPalette,
   onSync,
@@ -188,15 +179,6 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
                   <span className="truncate text-[15px] font-bold tracking-tight">
                     OwnerOS
                   </span>
-                  <span
-                    className={`rounded-[4px] px-1 py-[1px] text-[9px] font-semibold tracking-wide uppercase ${
-                      isDarkMode
-                        ? 'bg-blue-950/60 text-blue-400 border border-blue-800/40'
-                        : 'bg-blue-50 text-blue-600 border border-blue-200'
-                    }`}
-                  >
-                    PRO
-                  </span>
                 </div>
                 <span className={`truncate text-[11px] font-medium ${textMuted}`}>
                   GuruOm Precision
@@ -238,51 +220,7 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
           )}
         </div>
 
-        {/* ===================================================================== */}
-        {/* 2. COMMAND SEARCH BAR (Expanded) / QUICK ICON (Collapsed)              */}
-        {/* ===================================================================== */}
-        <div className="shrink-0 px-3 pt-3 pb-1">
-          {!isCollapsed ? (
-            <button
-              type="button"
-              onClick={onOpenCommandPalette}
-              aria-label="Open command palette (Ctrl+K)"
-              className={`group flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left shadow-xs transition-all duration-150 cursor-pointer active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${cardBg} ${cardBorder} ${
-                isDarkMode
-                  ? 'hover:border-white/20 text-[#8E939E] hover:text-[#EDEEF0]'
-                  : 'hover:border-black/20 text-[#646872] hover:text-[#17181B]'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <Search className="h-3.5 w-3.5 shrink-0 opacity-70 group-hover:opacity-100 transition-opacity" />
-                <span className="text-[12.5px] font-normal">Search or command...</span>
-              </div>
-              <kbd
-                className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium tracking-wide ${
-                  isDarkMode
-                    ? 'bg-white/[0.08] text-white/70 border border-white/10'
-                    : 'bg-black/[0.05] text-black/60 border border-black/10'
-                }`}
-              >
-                ⌘K
-              </kbd>
-            </button>
-          ) : (
-            <div className="flex justify-center">
-              <button
-                type="button"
-                onClick={onOpenCommandPalette}
-                aria-label="Open command palette"
-                title="Command Palette (⌘K)"
-                className={`flex h-10 w-10 items-center justify-center rounded-xl border transition-all duration-150 cursor-pointer active:scale-[0.95] focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${cardBg} ${cardBorder} ${textMuted} ${hoverBg} ${
-                  isDarkMode ? 'hover:text-white' : 'hover:text-black'
-                }`}
-              >
-                <Search className="h-4 w-4" />
-              </button>
-            </div>
-          )}
-        </div>
+
 
         {/* ===================================================================== */}
         {/* 3. SCROLLABLE NAVIGATION TREE                                         */}
@@ -614,95 +552,26 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
             isDarkMode ? 'bg-[#14151A]/80' : 'bg-[#EFECE5]/60'
           }`}
         >
-          {/* Quick Action Tools Bar */}
-          <div
-            className={`flex items-center rounded-xl border p-1 ${cardBg} ${cardBorder} ${
-              isCollapsed ? 'flex-col gap-1 justify-center' : 'justify-between'
-            }`}
-          >
-            {/* Sync Trigger */}
-            <button
-              type="button"
-              onClick={onSync}
-              disabled={isSyncing}
-              aria-label={isSyncing ? 'Syncing data with cloud' : `Sync data (Last synced: ${lastSynced || 'just now'})`}
-              title={isSyncing ? 'Syncing...' : `Sync cloud database (${lastSynced || 'Live'})`}
-              className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-150 cursor-pointer active:scale-[0.95] focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${textMuted} ${hoverBg} ${
-                isDarkMode ? 'hover:text-white' : 'hover:text-black'
-              }`}
-            >
-              <RefreshCw
-                className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin text-blue-500' : ''}`}
-              />
-            </button>
 
-            {/* Notification Center Trigger */}
-            <button
-              type="button"
-              onClick={onOpenNotifications}
-              aria-label={`Open notifications (${unreadNotificationsCount} unread)`}
-              title={`Notifications (${unreadNotificationsCount} unread)`}
-              className={`relative flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-150 cursor-pointer active:scale-[0.95] focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${textMuted} ${hoverBg} ${
-                isDarkMode ? 'hover:text-white' : 'hover:text-black'
-              }`}
-            >
-              <Bell className="h-3.5 w-3.5" />
-              {unreadNotificationsCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500" />
-                </span>
-              )}
-            </button>
-
-            {/* Dark / Light Mode Switch */}
-            <button
-              type="button"
-              onClick={() => setIsDarkMode?.(!isDarkMode)}
-              aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-              title={isDarkMode ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
-              className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-150 cursor-pointer active:scale-[0.95] focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${textMuted} ${hoverBg} ${
-                isDarkMode ? 'hover:text-amber-300' : 'hover:text-amber-600'
-              }`}
-            >
-              {isDarkMode ? (
-                <Sun className="h-3.5 w-3.5" />
-              ) : (
-                <Moon className="h-3.5 w-3.5" />
-              )}
-            </button>
-
-            {/* Security Sessions Trigger */}
-            {onOpenSecurityModal && (
-              <button
-                type="button"
-                onClick={onOpenSecurityModal}
-                aria-label="Security & Session Audit"
-                title="Security & Active Sessions"
-                className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-150 cursor-pointer active:scale-[0.95] focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${textMuted} ${hoverBg} ${
-                  isDarkMode ? 'hover:text-emerald-400' : 'hover:text-emerald-600'
-                }`}
-              >
-                <Shield className="h-3.5 w-3.5" />
-              </button>
-            )}
-
-            {/* Sign Out Trigger (Collapsed Only) */}
-            {isCollapsed && onSignOut && (
-              <button
-                type="button"
-                onClick={onSignOut}
-                aria-label="Sign out from OwnerOS"
-                title="Sign Out"
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-rose-500/80 hover:text-rose-500 hover:bg-rose-500/10 transition-all duration-150 cursor-pointer active:scale-[0.95] focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:outline-none"
-              >
-                <LogOut className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
 
           {/* User Profile Identity Pill (Expanded Only) */}
-          {!isCollapsed && (
+          {isCollapsed ? (
+            <div className="flex justify-center">
+              <div
+                className={`relative flex h-8 w-8 items-center justify-center rounded-lg font-mono text-[11px] font-bold ${
+                  isDarkMode
+                    ? 'bg-blue-600/20 text-blue-300 border border-blue-500/30'
+                    : 'bg-blue-100 text-blue-700 border border-blue-200'
+                }`}
+                title={`${displayName} (${displayRole})`}
+              >
+                {initials}
+                <span
+                  className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-[#111215]"
+                />
+              </div>
+            </div>
+          ) : (
             <div
               className={`flex items-center justify-between rounded-xl border p-2 ${cardBg} ${cardBorder}`}
             >

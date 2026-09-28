@@ -52,10 +52,10 @@ import { PayablesView } from './views/PayablesView';
 import { MastersView } from './views/MastersView';
 import { UsersAuditView } from './views/UsersAuditView';
 import { CompanyProfileView } from './views/CompanyProfileView';
+import { AccountView } from './views/AccountView';
 import { WorkflowTestingView } from './views/WorkflowTestingView';
 import { AccessRestrictedGate } from '../common/AccessRestrictedGate';
 import { SwitchUserModal } from '../common/SwitchUserModal';
-import { SecuritySessionsModal } from './modals/SecuritySessionsModal';
 import { CommandPaletteModal } from './modals/CommandPaletteModal';
 import { NotificationDrawer } from '../NotificationDrawer';
 import { useInAppNotifications } from '../../hooks/useInAppNotifications';
@@ -110,7 +110,6 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
   const [showCustomizeModal, setShowCustomizeModal] = useState<boolean>(false);
   const [isOpenMobile, setIsOpenMobile] = useState<boolean>(false);
   const [isSwitchUserOpen, setIsSwitchUserOpen] = useState<boolean>(false);
-  const [isSecurityModalOpen, setIsSecurityModalOpen] = useState<boolean>(false);
   const [currentUserId, setCurrentUserId] = useState<string>(authProfile?.id || '');
   const [isRealtimeStreaming, setIsRealtimeStreaming] = useState<boolean>(true);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
@@ -534,6 +533,8 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
       // General / Utility
       else if (path === '/workflow-testing') {
         setCurrentView('workflow-testing');
+      } else if (path === '/account') {
+        setCurrentView('account');
       }
       // Legacy Routes -> Canonical Redirects
       else if (path.startsWith('/orders/')) {
@@ -667,7 +668,6 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
         currentUser={currentUser}
         userName={currentUser ? currentUser.name : "Sachin Gharbude"}
         onSignOut={onSignOut}
-        onOpenSecurityModal={() => setIsSecurityModalOpen(true)}
         isOpenMobile={isOpenMobile}
         setIsOpenMobile={setIsOpenMobile}
         onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
@@ -689,7 +689,6 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
         userName={currentUser ? currentUser.name : "Sachin Gharbude"}
         isDarkMode={isDarkMode}
         onSignOut={onSignOut}
-        onOpenSecurityModal={() => setIsSecurityModalOpen(true)}
         onOpenSwitchUser={isSwitchUserAllowed ? () => setIsSwitchUserOpen(true) : undefined}
         pendingApprovalsCount={pendingApprovalsCount}
       />
@@ -712,8 +711,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
           currentUser={currentUser}
           userName={currentUser ? currentUser.name : 'Sachin Gharbude'}
           currentRole={currentRole}
-          onOpenSecurityModal={() => setIsSecurityModalOpen(true)}
-          onOpenSwitchUser={isSwitchUserAllowed ? () => setIsSwitchUserOpen(true) : undefined}
+            onOpenSwitchUser={isSwitchUserAllowed ? () => setIsSwitchUserOpen(true) : undefined}
           onSignOut={onSignOut}
           orderPo={currentView === 'order-detail' ? (selectedOrder?.poNo || selectedOrderId) : null}
         />
@@ -1325,6 +1323,14 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
                   />
                 )}
 
+                {currentView === 'account' && (
+                  <AccountView
+                    currentUser={currentUser}
+                    isDarkMode={isDarkMode}
+                    onSignOut={onSignOut}
+                  />
+                )}
+
                 {currentView === 'workflow-testing' && (
                   <WorkflowTestingView
                     isDarkMode={isDarkMode}
@@ -1361,14 +1367,6 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
           isDarkMode={isDarkMode}
         />
       )}
-
-      {/* Active Sessions & Suspicious Login Security Center Modal */}
-      <SecuritySessionsModal
-        isOpen={isSecurityModalOpen}
-        onClose={() => setIsSecurityModalOpen(false)}
-        isDarkMode={isDarkMode}
-        currentUser={currentUser}
-      />
 
       {/* Global Spotlight Command Palette (Ctrl + K / Cmd + K) */}
       <CommandPaletteModal

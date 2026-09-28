@@ -6,15 +6,13 @@ import {
   Sun,
   Moon,
   Search,
-  ShieldCheck,
+  UserCircle,
   LogOut,
   Menu,
   ChevronRight,
   ChevronDown,
-  Settings,
   Palette,
-  Check,
-  X
+  Check
 } from 'lucide-react';
 import { ConsoleView, UserRole, ConsoleUser, SystemUser } from '../../types/console';
 import { getBreadcrumbsForView, getViewTitle } from '../../utils/navigationConfig';
@@ -35,7 +33,6 @@ export interface ConsoleTopBarProps {
   currentUser?: ConsoleUser | SystemUser | null;
   userName?: string;
   currentRole?: UserRole;
-  onOpenSecurityModal?: () => void;
   onOpenSwitchUser?: () => void;
   onSignOut?: () => void;
   scope?: string;
@@ -68,15 +65,13 @@ export const ConsoleTopBar: React.FC<ConsoleTopBarProps> = ({
   currentUser,
   userName = 'Sachin Gharbude',
   currentRole = 'SUPER ADMIN',
-  onOpenSecurityModal,
   onOpenSwitchUser: _onOpenSwitchUser,
   onSignOut,
   orderPo
 }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const settingsMenuRef = useRef<HTMLDivElement | null>(null);
+  const [isThemeOpen, setIsThemeOpen] = useState(false);
 
   const { setAccent, isGreen, isBlue, isCrystal } = useAccentTheme();
 
@@ -85,15 +80,13 @@ export const ConsoleTopBar: React.FC<ConsoleTopBarProps> = ({
     const handleClickOutside = (e: MouseEvent) => {
       if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
         setIsUserMenuOpen(false);
-      }
-      if (settingsMenuRef.current && !settingsMenuRef.current.contains(e.target as Node)) {
-        setIsSettingsOpen(false);
+        setIsThemeOpen(false);
       }
     };
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setIsUserMenuOpen(false);
-        setIsSettingsOpen(false);
+        setIsThemeOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -129,55 +122,56 @@ export const ConsoleTopBar: React.FC<ConsoleTopBarProps> = ({
     return 'command-centre';
   };
 
-  return (
-    <header className="relative z-30 shrink-0 h-[52px] w-full select-none font-sans px-3.5 sm:px-5 flex items-center justify-between transition-colors backdrop-blur-2xl bg-[#FCFCFC]/90 dark:bg-[#0E0F12]/85 border-b border-black/[0.08] dark:border-white/[0.08] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.4)] dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] text-slate-900 dark:text-[#F4F4F5]">
+  // Icon button shared style — quiet, consistent
+  const iconBtnClass = `flex h-8 w-8 items-center justify-center rounded-lg transition-colors duration-100 cursor-pointer active:scale-95 text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-100 hover:bg-black/[0.05] dark:hover:bg-white/[0.07]`;
 
-      {/* ========================================================================= */}
-      {/* ── 1. LEADING: APPLE HIG HIERARCHICAL BREADCRUMB NAVIGATION ──            */}
-      {/* ========================================================================= */}
-      <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+  return (
+    <header className="relative z-30 shrink-0 h-[48px] w-full select-none font-sans px-4 sm:px-5 flex items-center justify-between bg-white dark:bg-[#111215] border-b border-[#E5E2D9] dark:border-[#22242B] text-neutral-900 dark:text-neutral-100">
+
+      {/* ── 1. LEADING: BREADCRUMB NAVIGATION ── */}
+      <div className="flex items-center gap-1 sm:gap-1.5 min-w-0">
         {onToggleMobileMenu && (
           <button
             type="button"
             onClick={onToggleMobileMenu}
-            className="flex h-8 w-8 items-center justify-center rounded-lg lg:hidden transition-all active:scale-95 text-slate-600 dark:text-neutral-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.08] cursor-pointer"
+            className={`${iconBtnClass} lg:hidden mr-1`}
             aria-label="Open sidebar drawer"
           >
             <Menu className="h-4 w-4" />
           </button>
         )}
 
-        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-[13px] tracking-tight min-w-0">
+        <nav aria-label="Breadcrumb" className="flex items-center gap-0.5 text-[13px] min-w-0">
           {cleanModule !== 'Workspace' && (
             <>
               <button
                 type="button"
                 onClick={() => onNavigate?.(getModuleDefaultView(cleanModule))}
-                className="flex items-center gap-1 px-2 py-1 rounded-md font-medium text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer truncate max-w-[130px]"
+                className="px-1.5 py-0.5 rounded-md font-medium text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.05] transition-colors cursor-pointer truncate max-w-[120px]"
                 title={`Navigate to ${cleanModule}`}
               >
-                <span className="truncate">{cleanModule}</span>
+                {cleanModule}
               </button>
 
-              <ChevronRight className="h-3 w-3 text-neutral-400 dark:text-neutral-500 shrink-0 stroke-[2.2]" />
+              <ChevronRight className="h-3 w-3 text-neutral-300 dark:text-neutral-600 shrink-0" />
             </>
           )}
 
           <button
             type="button"
             onClick={() => onNavigate?.(currentView)}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[13px] font-semibold transition-all cursor-pointer truncate max-w-[200px] ${breadcrumbs.detailLabel
-              ? 'text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
-              : 'text-neutral-900 dark:text-white bg-white/70 dark:bg-white/[0.08] border border-black/[0.05] dark:border-white/[0.08] shadow-2xs'
+            className={`px-1.5 py-0.5 rounded-md text-[13px] transition-colors cursor-pointer truncate max-w-[200px] ${breadcrumbs.detailLabel
+              ? 'font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.05]'
+              : 'font-semibold text-neutral-900 dark:text-white'
               }`}
           >
-            <span className="truncate">{cleanSubmodule}</span>
+            {cleanSubmodule}
           </button>
 
           {breadcrumbs.detailLabel && (
             <>
-              <ChevronRight className="h-3 w-3 text-neutral-400 dark:text-neutral-500 shrink-0 stroke-[2.2]" />
-              <span className="inline-flex items-center px-2 py-0.5 rounded-md font-mono text-[11px] font-semibold tracking-tight bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 truncate max-w-[160px]">
+              <ChevronRight className="h-3 w-3 text-neutral-300 dark:text-neutral-600 shrink-0" />
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded font-mono text-[11px] font-medium tracking-tight text-blue-600 dark:text-blue-400 bg-blue-500/8 dark:bg-blue-400/10 truncate max-w-[160px]">
                 {breadcrumbs.detailLabel}
               </span>
             </>
@@ -185,401 +179,281 @@ export const ConsoleTopBar: React.FC<ConsoleTopBarProps> = ({
         </nav>
       </div>
 
-      {/* ========================================================================= */}
-      {/* ── 2. CENTER: macOS SPOTLIGHT SEARCH CAPSULE ──                            */}
-      {/* ========================================================================= */}
-      <div className="hidden md:flex items-center justify-center flex-1 max-w-[380px] mx-auto px-4">
+      {/* ── 2. CENTER: SEARCH ── */}
+      <div className="hidden md:flex items-center justify-center flex-1 max-w-[340px] mx-auto px-6">
         <button
           type="button"
           onClick={onOpenCommandPalette}
-          className="group relative flex h-8 w-full items-center justify-between rounded-lg px-3 transition-all duration-150 cursor-pointer text-xs bg-black/[0.035] hover:bg-black/[0.06] dark:bg-white/[0.05] dark:hover:bg-white/[0.08] border border-black/[0.06] hover:border-black/[0.1] dark:border-white/[0.07] dark:hover:border-white/[0.12] text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 shadow-[inset_0_1px_1px_rgba(0,0,0,0.02)] active:scale-[0.99]"
-          title="Spotlight command palette (⌘K)"
+          className="group flex h-[32px] w-full items-center justify-between rounded-lg px-3 cursor-pointer text-[12px] bg-neutral-100 dark:bg-white/[0.06] hover:bg-neutral-200/80 dark:hover:bg-white/[0.09] border border-neutral-200/80 dark:border-white/[0.08] text-neutral-400 dark:text-neutral-500 transition-colors duration-100 active:scale-[0.995]"
+          title="Search (⌘K)"
         >
           <div className="flex items-center gap-2 min-w-0">
-            <Search className="h-3.5 w-3.5 shrink-0 text-neutral-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
-            <span className="truncate text-neutral-500 dark:text-neutral-400 font-normal">
-              Spotlight search orders, stock, jobs...
-            </span>
+            <Search className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">Search orders, stock, jobs…</span>
           </div>
 
-          <kbd className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-mono font-medium tracking-tight bg-white/90 dark:bg-white/[0.1] text-neutral-600 dark:text-neutral-300 border border-black/[0.08] dark:border-white/[0.08] shadow-2xs">
-            <span>⌘</span>
-            <span>K</span>
+          <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-white dark:bg-white/[0.08] text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-white/[0.1]">
+            ⌘K
           </kbd>
         </button>
       </div>
 
-      {/* ========================================================================= */}
-      {/* ── 3. TRAILING: APPLE CONTROL CENTER ACTION DECK ──                       */}
-      {/* ========================================================================= */}
-      <div className="flex items-center gap-2 shrink-0">
-        {/* Mobile Search Icon Trigger */}
+      {/* ── 3. TRAILING: ACTIONS + AVATAR ── */}
+      <div className="flex items-center gap-1 shrink-0">
+        {/* Mobile Search */}
         <button
           type="button"
           onClick={onOpenCommandPalette}
-          className="flex h-8 w-8 items-center justify-center rounded-lg md:hidden text-neutral-600 dark:text-neutral-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-all cursor-pointer"
+          className={`${iconBtnClass} md:hidden`}
           title="Search (⌘K)"
           aria-label="Search"
         >
           <Search className="h-4 w-4" />
         </button>
 
-        {/* Apple Segmented Quick Action Strip */}
-        <div className="flex items-center p-0.5 rounded-xl bg-black/[0.035] dark:bg-white/[0.04] border border-black/[0.05] dark:border-white/[0.06]">
-          {onSync && (
-            <button
-              type="button"
-              onClick={onSync}
-              disabled={isSyncing}
-              className="flex items-center gap-1.5 h-7.5 px-2.5 rounded-lg text-xs font-medium transition-all cursor-pointer active:scale-95 disabled:opacity-40 text-neutral-700 dark:text-neutral-200 hover:bg-white dark:hover:bg-white/[0.1] hover:shadow-2xs"
-              title={lastSynced ? `System Synced: ${lastSynced}` : 'Sync live data'}
-              aria-label="Sync live data"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin text-blue-500' : 'text-neutral-500 dark:text-neutral-400'}`} />
-              <span className="hidden xl:inline text-[11px] font-medium">{isSyncing ? 'Syncing' : 'Sync'}</span>
-            </button>
-          )}
+        {/* Sync */}
+        {onSync && (
+          <button
+            type="button"
+            onClick={onSync}
+            disabled={isSyncing}
+            className={`${iconBtnClass} disabled:opacity-30`}
+            title={lastSynced ? `Synced: ${lastSynced}` : 'Sync data'}
+            aria-label="Sync live data"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin text-blue-500' : ''}`} />
+          </button>
+        )}
 
-          {/* Settings Menu Button & Popover */}
-          <div className="relative" ref={settingsMenuRef}>
-            <button
-              type="button"
-              onClick={() => setIsSettingsOpen(prev => !prev)}
-              className={`flex h-7.5 w-7.5 items-center justify-center rounded-lg text-xs font-medium transition-all cursor-pointer active:scale-95 ${
-                isSettingsOpen
-                  ? 'bg-white dark:bg-white/[0.14] text-neutral-900 dark:text-white shadow-2xs'
-                  : 'text-neutral-700 dark:text-neutral-200 hover:bg-white dark:hover:bg-white/[0.1] hover:shadow-2xs'
-              }`}
-              title="Interface Settings & Theme"
-              aria-label="Settings and Theme menu"
-              aria-expanded={isSettingsOpen}
-              aria-haspopup="true"
-            >
-              <Settings className={`h-3.5 w-3.5 transition-transform duration-200 ${isSettingsOpen ? 'rotate-45 text-neutral-950 dark:text-white' : 'text-neutral-600 dark:text-neutral-300'}`} />
-            </button>
+        {/* Notifications */}
+        {onOpenNotifications && (
+          <button
+            type="button"
+            onClick={onOpenNotifications}
+            className={`${iconBtnClass} relative`}
+            title={`Notifications (${unreadNotificationsCount} unread)`}
+            aria-label="Open notifications"
+          >
+            <Bell className="h-3.5 w-3.5" />
+            {unreadNotificationsCount > 0 && (
+              <span className="absolute top-1 right-1 flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-60 animate-ping" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+              </span>
+            )}
+          </button>
+        )}
 
-            {/* Settings Dropdown Popover */}
-            <AnimatePresence>
-              {isSettingsOpen && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95, y: 6 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: 4 }}
-                  transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
-                  className="absolute right-0 top-full mt-2 w-[360px] rounded-2xl bg-white/95 dark:bg-[#14151B]/95 backdrop-blur-xl border border-neutral-200/80 dark:border-neutral-800/90 shadow-2xl shadow-black/15 dark:shadow-black/60 p-4 z-50 text-left"
-                >
-                  {/* Header */}
-                  <div className="flex items-center justify-between pb-3 border-b border-neutral-100 dark:border-neutral-800/80">
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-neutral-100 dark:bg-white/10 text-neutral-700 dark:text-neutral-200">
-                        <Palette className="h-3.5 w-3.5" />
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-neutral-900 dark:text-white">Console Settings</div>
-                        <div className="text-[10px] text-neutral-500 dark:text-neutral-400">Theme gradients & preferences</div>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setIsSettingsOpen(false)}
-                      className="p-1 rounded-md text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                      aria-label="Close settings"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
+        {/* Theme toggle */}
+        {setIsDarkMode && (
+          <button
+            type="button"
+            onClick={() => setIsDarkMode(!isDarkMode)}
+            className={iconBtnClass}
+            title={isDarkMode ? 'Light mode' : 'Dark mode'}
+            aria-label="Toggle color theme"
+          >
+            {isDarkMode
+              ? <Sun className="h-3.5 w-3.5 text-amber-400" />
+              : <Moon className="h-3.5 w-3.5" />
+            }
+          </button>
+        )}
 
-                  {/* Section: Gradient Theme Toggle */}
-                  <div className="py-3 space-y-2 border-b border-neutral-100 dark:border-neutral-800/80">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
-                        Header Gradient Theme
-                      </span>
-                      <span className="text-[10px] font-semibold text-neutral-400 dark:text-neutral-500">
-                        {isGreen ? 'Darker Green' : isBlue ? 'Darker Blue' : 'Crystal White'}
-                      </span>
-                    </div>
+        {/* Separator */}
+        <div className="h-5 w-px bg-neutral-200 dark:bg-white/[0.08] mx-1.5 hidden sm:block" />
 
-                    <div className="grid grid-cols-3 gap-2">
-                      {/* Darker Green Option */}
-                      <button
-                        type="button"
-                        onClick={() => setAccent('green')}
-                        className={`group relative flex flex-col p-2 rounded-xl border text-left transition-all active:scale-[0.97] cursor-pointer ${
-                          isGreen
-                            ? 'bg-emerald-500/10 border-emerald-500/40 dark:border-emerald-500/50 shadow-2xs ring-1 ring-emerald-500/30'
-                            : 'bg-neutral-50 hover:bg-neutral-100/80 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-neutral-200/70 dark:border-neutral-800'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-1.5">
-                          <div className="h-3.5 w-8 rounded-full bg-gradient-to-r from-[#0A7E58] via-[#086B4A] to-[#044F36] shadow-2xs ring-1 ring-black/10" />
-                          {isGreen && (
-                            <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-emerald-600 text-white shadow-2xs">
-                              <Check className="h-2 w-2 stroke-[3]" />
-                            </span>
-                          )}
-                        </div>
-                        <span className={`text-[11px] font-bold leading-tight ${isGreen ? 'text-emerald-700 dark:text-emerald-300' : 'text-neutral-800 dark:text-neutral-200'}`}>
-                          Dark Green
-                        </span>
-                        <span className="text-[9px] text-neutral-500 dark:text-neutral-400 truncate mt-0.5">
-                          Deep Forest
-                        </span>
-                      </button>
-
-                      {/* Darker Blue Option */}
-                      <button
-                        type="button"
-                        onClick={() => setAccent('blue')}
-                        className={`group relative flex flex-col p-2 rounded-xl border text-left transition-all active:scale-[0.97] cursor-pointer ${
-                          isBlue
-                            ? 'bg-blue-500/10 border-blue-500/40 dark:border-blue-500/50 shadow-2xs ring-1 ring-blue-500/30'
-                            : 'bg-neutral-50 hover:bg-neutral-100/80 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-neutral-200/70 dark:border-neutral-800'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-1.5">
-                          <div className="h-3.5 w-8 rounded-full bg-gradient-to-r from-[#1b64ff] via-[#155dfc] to-[#0f52dc] shadow-2xs ring-1 ring-black/10" />
-                          {isBlue && (
-                            <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-blue-600 text-white shadow-2xs">
-                              <Check className="h-2 w-2 stroke-[3]" />
-                            </span>
-                          )}
-                        </div>
-                        <span className={`text-[11px] font-bold leading-tight ${isBlue ? 'text-blue-700 dark:text-blue-300' : 'text-neutral-800 dark:text-neutral-200'}`}>
-                          Dark Blue
-                        </span>
-                        <span className="text-[9px] text-neutral-500 dark:text-neutral-400 truncate mt-0.5">
-                          Cobalt Royal
-                        </span>
-                      </button>
-
-                      {/* Crystal White Option */}
-                      <button
-                        type="button"
-                        onClick={() => setAccent('crystal')}
-                        className={`group relative flex flex-col p-2 rounded-xl border text-left transition-all active:scale-[0.97] cursor-pointer ${
-                          isCrystal
-                            ? 'bg-slate-500/10 border-slate-400 dark:border-slate-500 shadow-2xs ring-1 ring-slate-400/30'
-                            : 'bg-neutral-50 hover:bg-neutral-100/80 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-neutral-200/70 dark:border-neutral-800'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-1.5">
-                          <div className="h-3.5 w-8 rounded-full bg-gradient-to-r from-white via-[#F8FAFC] to-[#EEF2F6] shadow-2xs ring-1 ring-black/20" />
-                          {isCrystal && (
-                            <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-slate-900 text-white shadow-2xs">
-                              <Check className="h-2 w-2 stroke-[3]" />
-                            </span>
-                          )}
-                        </div>
-                        <span className={`text-[11px] font-bold leading-tight ${isCrystal ? 'text-slate-900 dark:text-slate-100' : 'text-neutral-800 dark:text-neutral-200'}`}>
-                          Crystal White
-                        </span>
-                        <span className="text-[9px] text-neutral-500 dark:text-neutral-400 truncate mt-0.5">
-                          Black text
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Section: Mode Appearance (Dark/Light) */}
-                  {setIsDarkMode && (
-                    <div className="py-3 border-b border-neutral-100 dark:border-neutral-800/80">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
-                          Appearance
-                        </span>
-                        <span className="text-[10px] font-medium text-neutral-400 dark:text-neutral-500">
-                          {isDarkMode ? 'Dark Mode' : 'Light Mode'}
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 p-0.5 rounded-xl bg-neutral-100 dark:bg-white/[0.06]">
-                        <button
-                          type="button"
-                          onClick={() => setIsDarkMode(false)}
-                          className={`flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer active:scale-95 ${
-                            !isDarkMode
-                              ? 'bg-white text-neutral-900 shadow-2xs'
-                              : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
-                          }`}
-                        >
-                          <Sun className="h-3.5 w-3.5 text-amber-500" />
-                          <span>Light</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setIsDarkMode(true)}
-                          className={`flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer active:scale-95 ${
-                            isDarkMode
-                              ? 'bg-[#1F2128] text-white shadow-2xs'
-                              : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
-                          }`}
-                        >
-                          <Moon className="h-3.5 w-3.5 text-blue-400" />
-                          <span>Dark</span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Telemetry / Live sync status footer */}
-                  <div className="pt-3 flex items-center justify-between text-[11px] text-neutral-500 dark:text-neutral-400">
-                    <span className="truncate">
-                      {lastSynced ? `Synced: ${lastSynced}` : 'Live data connected'}
-                    </span>
-                    {onSync && (
-                      <button
-                        type="button"
-                        onClick={onSync}
-                        disabled={isSyncing}
-                        className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer disabled:opacity-50"
-                      >
-                        {isSyncing ? 'Syncing...' : 'Sync Now'}
-                      </button>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {onOpenNotifications && (
-            <button
-              type="button"
-              onClick={onOpenNotifications}
-              className="relative flex h-7.5 w-7.5 items-center justify-center rounded-lg text-xs font-medium transition-all cursor-pointer active:scale-95 text-neutral-700 dark:text-neutral-200 hover:bg-white dark:hover:bg-white/[0.1] hover:shadow-2xs"
-              title={`Alerts & Notifications (${unreadNotificationsCount} unread)`}
-              aria-label="Open notifications"
-            >
-              <Bell className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-300" />
-              {unreadNotificationsCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[#FF3B30] px-1 text-[9px] font-bold text-white shadow-2xs">
-                  {unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount}
-                </span>
-              )}
-            </button>
-          )}
-
-          {setIsDarkMode && (
-            <button
-              type="button"
-              onClick={() => setIsDarkMode(!isDarkMode)}
-              className="flex h-7.5 w-7.5 items-center justify-center rounded-lg text-xs font-medium transition-all cursor-pointer active:scale-95 text-neutral-700 dark:text-neutral-200 hover:bg-white dark:hover:bg-white/[0.1] hover:shadow-2xs"
-              title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-              aria-label="Toggle color theme"
-            >
-              {isDarkMode ? (
-                <Moon className="h-3.5 w-3.5 text-blue-400" />
-              ) : (
-                <Sun className="h-3.5 w-3.5 text-amber-500" />
-              )}
-            </button>
-          )}
-        </div>
-
-        {/* ======================================================================= */}
-        {/* ── 4. APPLE HIG ACCOUNT CAPSULE & REDESIGNED POPOVER ──                */}
-        {/* ======================================================================= */}
+        {/* ── 4. ACCOUNT AVATAR & MENU ── */}
         <div className="relative" ref={userMenuRef}>
           <button
             type="button"
             onClick={() => setIsUserMenuOpen(prev => !prev)}
-            className={`group flex items-center gap-2 h-8 pl-1 pr-2.5 rounded-full border transition-all cursor-pointer active:scale-95 ${isUserMenuOpen
-              ? 'bg-white dark:bg-white/[0.12] border-black/[0.15] dark:border-white/[0.2] shadow-xs'
-              : 'bg-white/60 hover:bg-white/90 dark:bg-white/[0.05] dark:hover:bg-white/[0.09] border-black/[0.07] hover:border-black/[0.12] dark:border-white/[0.08] dark:hover:border-white/[0.14] shadow-2xs'
+            className={`flex h-8 w-8 items-center justify-center rounded-full cursor-pointer transition-all duration-100 active:scale-95 ring-1 ring-transparent ${isUserMenuOpen
+              ? 'ring-neutral-300 dark:ring-neutral-600'
+              : 'hover:ring-neutral-200 dark:hover:ring-neutral-700'
               }`}
             title={`${displayName} — ${displayRole}`}
             aria-expanded={isUserMenuOpen}
             aria-haspopup="true"
           >
-            <div className="relative shrink-0">
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-tr from-[#0066FF] to-[#43B4FF] text-[10.5px] font-bold text-white shadow-2xs">
+            <div className="relative">
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-800 dark:bg-neutral-200 text-[10px] font-semibold text-white dark:text-neutral-800 tracking-tight">
                 {initials}
               </div>
-              <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-500 ring-1 ring-white dark:ring-[#0E0F12]" />
+              <span className="absolute -bottom-px -right-px h-2 w-2 rounded-full bg-emerald-500 ring-[1.5px] ring-white dark:ring-[#111215]" />
             </div>
-
-            <div className="hidden lg:flex flex-col text-left leading-none">
-              <span className="truncate text-xs font-semibold text-neutral-800 dark:text-neutral-100 max-w-[100px]">
-                {displayName.split(' ')[0]}
-              </span>
-              <span className="text-[9px] font-bold text-blue-600 dark:text-blue-400 tracking-wider uppercase mt-0.5">
-                {displayRole.split(' ')[0]}
-              </span>
-            </div>
-
-            <ChevronDown className={`h-3 w-3 text-neutral-400 transition-transform duration-150 ${isUserMenuOpen ? 'rotate-180' : ''}`} />
           </button>
 
-          {/* Redesigned Apple HIG Popover Menu */}
+          {/* Account Popover */}
           <AnimatePresence>
             {isUserMenuOpen && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.96, y: -4 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.96, y: -4 }}
-                transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
-                className="absolute right-0 top-full mt-2 w-72 rounded-2xl border p-2 shadow-[0_20px_50px_rgba(0,0,0,0.16)] dark:shadow-[0_24px_64px_rgba(0,0,0,0.7)] z-50 backdrop-blur-3xl bg-white/95 dark:bg-[#161822]/95 border-black/[0.08] dark:border-white/[0.12] text-slate-900 dark:text-white"
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.12, ease: [0.2, 1, 0.4, 1] }}
+                className="absolute right-0 top-full mt-2 w-72 rounded-xl border p-1.5 z-50 bg-white dark:bg-[#18191F] border-neutral-200 dark:border-neutral-800 shadow-lg shadow-black/[0.08] dark:shadow-black/[0.5] text-neutral-900 dark:text-neutral-100"
               >
-                {/* Account Details Header: Apple ID style */}
-                <div className="p-2.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.04] dark:border-white/[0.05]">
+                {/* Identity header */}
+                <div className="px-3 py-2.5 mb-0.5">
                   <div className="flex items-center gap-2.5">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-[#0066FF] to-[#43B4FF] text-xs font-bold text-white shadow-2xs ring-1 ring-white/20">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-neutral-800 dark:bg-neutral-200 text-[11px] font-semibold text-white dark:text-neutral-800 tracking-tight">
                       {initials}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="font-semibold text-[13.5px] text-neutral-900 dark:text-white truncate leading-tight">
+                      <div className="font-semibold text-[13px] text-neutral-900 dark:text-white truncate leading-tight">
                         {displayName}
                       </div>
-                      <div className="truncate text-[11px] text-neutral-500 dark:text-neutral-400 font-mono mt-0.5">
+                      <div className="truncate text-[11px] text-neutral-400 dark:text-neutral-500 mt-0.5">
                         {displayEmail}
                       </div>
                     </div>
                   </div>
-
-                  <div className="mt-2.5 pt-2 border-t border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-500/10 text-[9.5px] font-bold text-blue-600 dark:text-blue-400 tracking-wider uppercase border border-blue-500/20">
+                  <div className="mt-2 flex items-center justify-between">
+                    <span className="text-[10px] font-medium text-neutral-400 dark:text-neutral-500 tracking-wide">
                       {displayRole}
                     </span>
-                    <span className="flex items-center gap-1.5 text-[10.5px] text-emerald-600 dark:text-emerald-400 font-medium">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> Online
+                    <span className="flex items-center gap-1.5 text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Online
                     </span>
                   </div>
                 </div>
 
-                {/* Apple Standard Menu Actions */}
-                <div className="mt-1.5 space-y-0.5">
-                  {onOpenSecurityModal && (
+                <div className="h-px bg-neutral-100 dark:bg-white/[0.06] mx-1" />
+
+                {/* Menu items */}
+                <div className="py-1 space-y-0.5">
+                  {onNavigate && (
                     <button
                       type="button"
                       onClick={() => {
                         setIsUserMenuOpen(false);
-                        onOpenSecurityModal();
+                        onNavigate('account');
                       }}
-                      className="group flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-medium transition-colors hover:bg-black/[0.04] dark:hover:bg-white/[0.08] text-neutral-700 dark:text-neutral-200 cursor-pointer active:scale-[0.99]"
+                      className="group flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[12.5px] font-medium transition-colors hover:bg-neutral-50 dark:hover:bg-white/[0.06] text-neutral-700 dark:text-neutral-300 cursor-pointer"
                     >
-                      <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                        <ShieldCheck className="h-3.5 w-3.5" />
-                      </div>
-                      <span className="flex-1 text-left">Security & Sessions</span>
-                      <ChevronRight className="h-3 w-3 text-neutral-400 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                      <UserCircle className="h-4 w-4 text-neutral-400 dark:text-neutral-500" />
+                      <span className="flex-1 text-left">My account</span>
+                      <ChevronRight className="h-3 w-3 text-neutral-300 dark:text-neutral-600 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </button>
                   )}
 
+                  {/* Theme */}
+                  <button
+                    type="button"
+                    onClick={() => setIsThemeOpen(prev => !prev)}
+                    className={`group flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[12.5px] font-medium transition-colors cursor-pointer ${
+                      isThemeOpen
+                        ? 'bg-neutral-50 dark:bg-white/[0.06] text-neutral-900 dark:text-white'
+                        : 'hover:bg-neutral-50 dark:hover:bg-white/[0.06] text-neutral-700 dark:text-neutral-300'
+                    }`}
+                    aria-expanded={isThemeOpen}
+                    aria-label="Set theme"
+                  >
+                    <Palette className="h-4 w-4 text-neutral-400 dark:text-neutral-500" />
+                    <span className="flex-1 text-left">Theme</span>
+                    <span className="text-[10px] text-neutral-400 dark:text-neutral-500 mr-0.5">
+                      {isGreen ? 'Green' : isBlue ? 'Blue' : 'Crystal'}
+                    </span>
+                    <ChevronDown
+                      className={`h-3 w-3 text-neutral-400 dark:text-neutral-500 transition-transform duration-150 ${
+                        isThemeOpen ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
+
+                  {/* Theme panel */}
+                  <AnimatePresence>
+                    {isThemeOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.15, ease: [0.2, 1, 0.4, 1] }}
+                        className="overflow-hidden"
+                      >
+                        <div className="px-3 py-2 space-y-3">
+                          {/* Accent */}
+                          <div>
+                            <div className="text-[10px] font-medium text-neutral-400 dark:text-neutral-500 mb-1.5">
+                              Sidebar accent
+                            </div>
+                            <div className="flex gap-1.5">
+                              {[
+                                { key: 'green' as const, active: isGreen, gradient: 'from-[#0A7E58] to-[#044F36]', label: 'Green' },
+                                { key: 'blue' as const, active: isBlue, gradient: 'from-[#1b64ff] to-[#0f52dc]', label: 'Blue' },
+                                { key: 'crystal' as const, active: isCrystal, gradient: 'from-[#CBD5E1] to-[#94A3B8]', label: 'Crystal' },
+                              ].map(opt => (
+                                <button
+                                  key={opt.key}
+                                  type="button"
+                                  onClick={() => setAccent(opt.key)}
+                                  className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer active:scale-95 border ${
+                                    opt.active
+                                      ? 'bg-neutral-100 dark:bg-white/[0.08] border-neutral-300 dark:border-neutral-600 text-neutral-900 dark:text-white'
+                                      : 'bg-transparent border-transparent hover:bg-neutral-50 dark:hover:bg-white/[0.04] text-neutral-500 dark:text-neutral-400'
+                                  }`}
+                                >
+                                  <div className={`h-2.5 w-5 rounded-full bg-gradient-to-r ${opt.gradient}`} />
+                                  {opt.label}
+                                  {opt.active && <Check className="h-3 w-3 ml-auto" />}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Appearance */}
+                          {setIsDarkMode && (
+                            <div>
+                              <div className="text-[10px] font-medium text-neutral-400 dark:text-neutral-500 mb-1.5">
+                                Appearance
+                              </div>
+                              <div className="flex gap-1.5 p-0.5 rounded-lg bg-neutral-100 dark:bg-white/[0.05]">
+                                <button
+                                  type="button"
+                                  onClick={() => setIsDarkMode(false)}
+                                  className={`flex-1 flex items-center justify-center gap-1.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer ${
+                                    !isDarkMode
+                                      ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm'
+                                      : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'
+                                  }`}
+                                >
+                                  <Sun className="h-3 w-3 text-amber-500" />
+                                  Light
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setIsDarkMode(true)}
+                                  className={`flex-1 flex items-center justify-center gap-1.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer ${
+                                    isDarkMode
+                                      ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm'
+                                      : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'
+                                  }`}
+                                >
+                                  <Moon className="h-3 w-3 text-blue-400" />
+                                  Dark
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
                   {onSignOut && (
                     <>
-                      <div className="h-px bg-black/[0.06] dark:bg-white/[0.08] my-1 mx-1" />
+                      <div className="h-px bg-neutral-100 dark:bg-white/[0.06] mx-1 my-0.5" />
                       <button
                         type="button"
                         onClick={() => {
                           setIsUserMenuOpen(false);
                           onSignOut();
                         }}
-                        className="group flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-semibold text-[#FF3B30] hover:bg-[#FF3B30]/10 transition-colors cursor-pointer active:scale-[0.99]"
+                        className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[12.5px] font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/[0.08] transition-colors cursor-pointer"
                       >
-                        <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#FF3B30]/10 text-[#FF3B30]">
-                          <LogOut className="h-3.5 w-3.5" />
-                        </div>
-                        <span className="flex-1 text-left">Sign Out</span>
+                        <LogOut className="h-4 w-4" />
+                        <span className="flex-1 text-left">Sign out</span>
                       </button>
                     </>
                   )}

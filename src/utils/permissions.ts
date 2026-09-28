@@ -501,6 +501,8 @@ const VIEW_PERMISSION_KEYS: Partial<Record<ConsoleView, string[]>> = {
 };
 
 export function isViewAllowedForRole(role: string, view: ConsoleView): boolean {
+  // My Account is per-user (own profile/security) and open to every signed-in role.
+  if (view === 'account') return true;
   if (view === 'leave-requests') return isViewAllowedForRole(role, 'leave');
   if (view === 'employee-certifications') return isViewAllowedForRole(role, 'certifications');
   // Fail-closed: an unrecognized role grants no console views (unchanged from
@@ -517,7 +519,7 @@ export function isViewAllowedForRole(role: string, view: ConsoleView): boolean {
 }
 
 export function isViewAllowedForUser(user: Pick<SystemUser, 'role' | 'effectivePermissions'> | null | undefined, view: ConsoleView): boolean {
-  if (view === 'command-centre' || view === 'metrics') return true;
+  if (view === 'command-centre' || view === 'metrics' || view === 'account') return true;
   if (view === 'leave-requests') return isViewAllowedForUser(user, 'leave');
   if (view === 'employee-certifications') return isViewAllowedForUser(user, 'certifications');
 

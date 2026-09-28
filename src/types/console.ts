@@ -30,7 +30,8 @@ export type ConsoleView =
   | 'certifications'
   | 'employee-certifications'
   | 'announcements'
-  | 'employee-master';
+  | 'employee-master'
+  | 'account';
 
 export type UserRole = 'ServerAdmin' | 'SUPER ADMIN' | 'OPERATOR' | 'QC_MANAGER' | 'DISPATCH_CLERK' | 'FINANCE_MANAGER' | 'TESTER';
 

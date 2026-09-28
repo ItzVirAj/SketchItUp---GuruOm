@@ -25,6 +25,7 @@ import { useUrlModal } from '../../../hooks/useUrlModal';
 import { useCanPerformCta } from '../../../hooks/useCtaPermission';
 import { GroupedByPoList } from '../../common/GroupedByPoList';
 import { groupByPo, inspectionBucket } from '../../../utils/poGroups';
+import { useAccentTheme } from '../../../context/AccentThemeContext';
 
 interface QCViewProps {
   qcItems?: QCInspection[];
@@ -41,6 +42,7 @@ export const QCView: React.FC<QCViewProps> = ({
   onInspectSubmit,
   onUpdateQC
 }) => {
+  const { accent, isGreen, isBlue, isCrystal } = useAccentTheme();
   const canPerformCta = useCanPerformCta();
   const initialItems = qcItems || qcQueue || [];
   const [localQc, setLocalQc] = useState<QCInspection[]>(initialItems);
@@ -251,345 +253,476 @@ export const QCView: React.FC<QCViewProps> = ({
 
   return (
     <div className="space-y-4 sm:space-y-6 font-sans w-full max-w-full min-w-0 pb-6">
-      
+
       {/* ========================================================================= */}
-      {/* ── TOP HEADER & TELEMETRY (macOS Executive Window) ──                     */}
+      {/* ── MOBILE-FIRST TOP HEADER (< md) ──                                      */}
       {/* ========================================================================= */}
-      <section className={`overflow-hidden rounded-2xl border transition-all ${
-        isDarkMode
-          ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]'
-          : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
-      }`}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 px-6 py-6 sm:py-7">
-          <div className="min-w-0 space-y-1.5">
-            <div className="flex items-center gap-2.5">
-              <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wide ${
-                isDarkMode
-                  ? 'bg-white/10 border border-white/15 text-white'
-                  : 'bg-white/20 border border-white/30 backdrop-blur-md text-white shadow-xs'
-              }`}>
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Quality Assurance &amp; Metrology</span>
-              </span>
-              <span className="text-sm font-semibold text-white/80">•</span>
-              <span className="text-xs sm:text-sm font-semibold text-white/95">
-                {totalCount} Inspection Lots
+      <div className="block md:hidden space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                Quality &amp; Metrology
               </span>
             </div>
-
-            <h1 className="text-3xl sm:text-[32px] font-black tracking-tight text-white leading-tight">
-              Quality Control &amp; Metrology
+            <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+              QC Inspection ({filteredQc.length})
             </h1>
-
-            <p className="text-xs sm:text-sm text-white/95 font-medium leading-relaxed max-w-2xl">
-              Inspect manufactured components against engineering tolerances, record defect root-causes, and clear passed batches for Pre-Dispatch Inspection (PDI).
-            </p>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          {pendingCount > 0 && canPerformCta('UPLOAD_QC_REPORT') && (
             <button
               type="button"
-              onClick={handleExportCSV}
-              className={`inline-flex items-center gap-2 px-4 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
-                isDarkMode
-                  ? 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
-                  : 'bg-white/20 hover:bg-white/30 text-white border border-white/30 backdrop-blur-md'
-              }`}
+              onClick={() => {
+                const firstPending = deduplicatedItems.find(q => q.qcStatus === 'PENDING') || deduplicatedItems[0];
+                if (firstPending) openInspection(firstPending);
+              }}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#181920] hover:bg-[#252730] text-white text-xs font-bold shadow-md active:scale-[0.96] transition-ui cursor-pointer shrink-0"
             >
-              <Download className="w-4 h-4 stroke-[2.5]" />
-              <span>Export CSV</span>
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>Audit Next ({pendingCount})</span>
             </button>
+          )}
+        </div>
 
-            {pendingCount > 0 && canPerformCta('UPLOAD_QC_REPORT') && (
+        {/* Mobile 2x2 Telemetry Matrix */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Total Lots</div>
+            <div className="text-base font-black text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)] tracking-tight mt-0.5">
+              {totalCount} <span className="text-xs font-normal text-slate-400">Lots</span>
+            </div>
+          </div>
+
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Pending Audit</div>
+            <div className="text-base font-black text-amber-500 tracking-tight mt-0.5">
+              {pendingCount} <span className="text-xs font-normal text-slate-400">Lots</span>
+            </div>
+          </div>
+
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">First-Pass Yield</div>
+            <div className="text-base font-black text-emerald-500 tracking-tight mt-0.5">
+              {yieldRate}% <span className="text-xs font-normal text-slate-400">Passed</span>
+            </div>
+          </div>
+
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Defect / Hold</div>
+            <div className={`text-base font-black tracking-tight mt-0.5 ${holdCount + rejectCount > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+              {holdCount + rejectCount > 0 ? `${holdCount + rejectCount} Defect` : '0 Defects'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* ── DESKTOP HEADER & INTEGRATED KPI ROW (≥ md) ──                          */}
+      {/* ========================================================================= */}
+      <div className="hidden md:block space-y-4">
+        <section className={`relative isolate overflow-hidden rounded-2xl border transition-all duration-300 ${
+          isDarkMode
+            ? isCrystal
+              ? 'border-white/10 bg-gradient-to-b from-[#181C24] via-[#10131A] to-[#0A0C10] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6)]'
+              : isGreen
+                ? 'border-emerald-500/20 bg-gradient-to-b from-[#0D241B] via-[#081711] to-[#030B07] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(16,185,129,0.12)]'
+                : 'border-blue-500/20 bg-gradient-to-b from-[#0a1836] via-[#071126] to-[#030712] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(21,93,252,0.15)]'
+            : isCrystal
+              ? 'border-slate-300/80 bg-gradient-to-b from-white via-[#F8FAFC] to-[#EEF2F6] text-slate-950 shadow-[0_16px_40px_rgba(0,0,0,0.06),inset_0_1px_0_0_rgba(255,255,255,0.95)]'
+              : isGreen
+                ? 'border-emerald-600/30 bg-gradient-to-b from-[#0A7E58] via-[#086B4A] to-[#044F36] text-white shadow-[0_16px_40px_rgba(10,126,88,0.22)]'
+                : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
+        }`}>
+          {/* Light-scheme only: whisper-faint drafting grid for crystal theme */}
+          {!isDarkMode && isCrystal && (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 -z-10 bg-grid-pattern opacity-40 [mask-image:linear-gradient(to_bottom,black,transparent_72%)] [-webkit-mask-image:linear-gradient(to_bottom,black,transparent_72%)]"
+            />
+          )}
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 px-6 py-6 sm:py-7">
+            <div className="min-w-0 space-y-1.5">
+              <div className="flex items-center gap-2.5">
+                <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wide ${
+                  isDarkMode
+                    ? 'bg-white/10 border border-white/15 text-white'
+                    : isCrystal
+                      ? 'bg-slate-900/[0.06] border border-slate-900/10 text-slate-800'
+                      : 'bg-white/20 border border-white/30 backdrop-blur-md text-white shadow-xs'
+                }`}>
+                  <span className={`h-2 w-2 rounded-full animate-pulse ${
+                    isCrystal && !isDarkMode ? 'bg-emerald-500' : isGreen ? 'bg-emerald-400' : 'bg-sky-400'
+                  }`} />
+                  <span>Quality Assurance &amp; Metrology</span>
+                </span>
+                <span className={`text-sm font-semibold ${isCrystal && !isDarkMode ? 'text-slate-400' : 'text-white/80'}`}>•</span>
+                <span className={`text-xs sm:text-sm font-semibold ${isCrystal && !isDarkMode ? 'text-slate-600' : 'text-white/95'}`}>
+                  {totalCount} Inspection Lots
+                </span>
+              </div>
+
+              <h1 className={`text-3xl sm:text-[32px] font-black tracking-tight leading-tight ${
+                isCrystal && !isDarkMode ? 'text-slate-950' : 'text-white'
+              }`}>
+                Quality Control &amp; Metrology
+              </h1>
+
+              <p className={`text-xs sm:text-sm font-medium leading-relaxed max-w-2xl ${
+                isCrystal && !isDarkMode ? 'text-slate-600' : 'text-white/95'
+              }`}>
+                Inspect manufactured components against engineering tolerances, record defect root-causes, and clear passed batches for Pre-Dispatch Inspection (PDI).
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
-                onClick={() => {
-                  const firstPending = deduplicatedItems.find(q => q.qcStatus === 'PENDING') || deduplicatedItems[0];
-                  if (firstPending) openInspection(firstPending);
-                }}
-                className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
+                onClick={handleExportCSV}
+                className={`inline-flex items-center gap-2 px-4 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
                   isDarkMode
-                    ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
-                    : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
+                    ? 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
+                    : isCrystal
+                      ? 'bg-slate-900/[0.06] hover:bg-slate-900/10 text-slate-800 border border-slate-900/15'
+                      : 'bg-white/20 hover:bg-white/30 text-white border border-white/30 backdrop-blur-md'
                 }`}
               >
-                <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
-                <span>Audit Next Pending ({pendingCount})</span>
+                <Download className="w-4 h-4 stroke-[2.5]" />
+                <span>Export CSV</span>
               </button>
-            )}
-          </div>
-        </div>
 
-        {/* Integrated 4-Column Metric Strip (border-t) */}
-        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t ${
-          isDarkMode
-            ? 'border-white/10 bg-gradient-to-b from-black/40 to-black/70 backdrop-blur-md'
-            : 'border-white/20 bg-white/[0.06] backdrop-blur-sm'
-        }`}>
-          {[
-            {
-              label: 'Total Lots in Queue',
-              value: String(totalCount),
-              detail: 'Batches registered in queue',
-              icon: ShieldCheck,
-              iconColor: 'text-blue-600',
-              iconBg: 'bg-white shadow-md shadow-black/10',
-            },
-            {
-              label: 'Pending Metrology',
-              value: String(pendingCount),
-              detail: 'Awaiting QC clearance',
-              icon: Clock,
-              iconColor: 'text-white',
-              iconBg: pendingCount > 0 ? 'bg-amber-500 shadow-xs' : 'bg-emerald-500 shadow-xs',
-            },
-            {
-              label: 'First-Pass Yield',
-              value: `${yieldRate}%`,
-              detail: `${passCount} lots cleared clean`,
-              icon: CheckCircle2,
-              iconColor: 'text-white',
-              iconBg: 'bg-emerald-500 shadow-xs',
-            },
-            {
-              label: 'QC Hold / Defect',
-              value: String(holdCount + rejectCount),
-              detail: holdCount > 0 ? `${holdCount} on hold` : 'Zero defect clearance',
-              icon: AlertTriangle,
-              iconColor: 'text-white',
-              iconBg: (holdCount + rejectCount > 0) ? 'bg-rose-500 shadow-xs' : 'bg-emerald-500 shadow-xs',
-            },
-          ].map((metric, index) => {
-            const MetricIcon = metric.icon;
-            return (
-              <div
-                key={metric.label}
-                className={`flex items-center gap-4 px-6 py-5 transition-all ${
-                  index > 0 ? (isDarkMode ? 'lg:border-l border-white/10' : 'lg:border-l border-white/20') : ''
-                }`}
-              >
-                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${metric.iconBg} ${metric.iconColor}`}>
-                  <MetricIcon className="h-5 w-5 stroke-[2.5]" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-xs font-bold uppercase tracking-wider text-white/85">
-                    {metric.label}
-                  </div>
-                  <div className="text-2xl sm:text-[26px] font-black tracking-tight text-white tabular-nums my-0.5 leading-tight">
-                    {metric.value}
-                  </div>
-                  <div className="text-xs font-medium text-white/90 truncate">
-                    {metric.detail}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Apple Quality Metrology Distribution Bar */}
-        <div className={`px-6 py-4 border-t ${
-          isDarkMode ? 'border-white/10 bg-black/40' : 'border-white/20 bg-black/10'
-        }`}>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
-            <div className="flex items-center gap-2">
-              <Activity className="w-4 h-4 text-white" />
-              <span className="text-xs font-bold tracking-tight text-white">
-                Quality Assurance Distribution &amp; First-Pass Yield (FPY)
-              </span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                {yieldRate}% First-Pass Yield
-              </span>
-            </div>
-            <span className="text-xs text-white/70">
-              {inspectedCount} of {totalCount} lots audited
-            </span>
-          </div>
-
-          {/* Multi-Segmented Pro Bar */}
-          <div className="h-2.5 w-full rounded-full bg-white/20 overflow-hidden flex p-0.5 gap-0.5 border border-white/15">
-            {passCount > 0 && (
-              <div 
-                style={{ width: `${(passCount / (totalCount || 1)) * 100}%` }} 
-                className="h-full bg-emerald-400 rounded-full transition-all duration-500" 
-                title={`Passed: ${passCount} (${passPct}%)`}
-              />
-            )}
-            {pendingCount > 0 && (
-              <div 
-                style={{ width: `${(pendingCount / (totalCount || 1)) * 100}%` }} 
-                className="h-full bg-amber-400 rounded-full transition-all duration-500" 
-                title={`Pending: ${pendingCount} (${pendingPct}%)`}
-              />
-            )}
-            {holdCount > 0 && (
-              <div 
-                style={{ width: `${(holdCount / (totalCount || 1)) * 100}%` }} 
-                className="h-full bg-orange-400 rounded-full transition-all duration-500" 
-                title={`Hold: ${holdCount} (${holdPct}%)`}
-              />
-            )}
-            {rejectCount > 0 && (
-              <div 
-                style={{ width: `${(rejectCount / (totalCount || 1)) * 100}%` }} 
-                className="h-full bg-rose-400 rounded-full transition-all duration-500" 
-                title={`Rejected: ${rejectCount} (${rejectPct}%)`}
-              />
-            )}
-          </div>
-
-          {/* Legend Pills */}
-          <div className="flex items-center flex-wrap gap-3 sm:gap-5 mt-2.5 text-xs">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400" />
-              <span className="text-white/70 font-medium">Passed:</span>
-              <span className="font-bold text-white tabular-nums">{passCount} ({passPct}%)</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-amber-400" />
-              <span className="text-white/70 font-medium">Pending:</span>
-              <span className="font-bold text-white tabular-nums">{pendingCount} ({pendingPct}%)</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-orange-400" />
-              <span className="text-white/70 font-medium">QC Hold:</span>
-              <span className="font-bold text-white tabular-nums">{holdCount} ({holdPct}%)</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-rose-400" />
-              <span className="text-white/70 font-medium">Rejected:</span>
-              <span className="font-bold text-white tabular-nums">{rejectCount} ({rejectPct}%)</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ========================================================================= */}
-      {/* ── FILTER & SEARCH TOOLBAR (Apple Segmented Control & View Mode) ──       */}
-      {/* ========================================================================= */}
-      <div className={`rounded-2xl border p-3.5 space-y-3 transition-all ${
-        isDarkMode
-          ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] shadow-[0_8px_28px_rgba(0,0,0,0.5)]'
-          : 'border-slate-200/80 bg-gradient-to-b from-white/95 via-slate-50/90 to-slate-100/70 shadow-[0_4px_20px_rgba(0,0,0,0.03)]'
-      }`}>
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          {/* Tier 1: Apple Segmented Pill Rail */}
-          <div className={`inline-flex items-center gap-1 rounded-xl p-1 border overflow-x-auto no-scrollbar shrink-0 ${
-            isDarkMode ? 'border-white/10 bg-black/40' : 'border-slate-200/80 bg-slate-100/80'
-          }`}>
-            {[
-              { id: 'ALL', label: 'All Lots', count: totalCount },
-              { id: 'PENDING', label: 'Pending', count: pendingCount, isAlert: pendingCount > 0 },
-              { id: 'PASS', label: 'Passed', count: passCount },
-              { id: 'QC_HOLD', label: 'QC Hold', count: holdCount, isAlert: holdCount > 0 },
-              { id: 'REJECTED', label: 'Rejected', count: rejectCount, isAlert: rejectCount > 0 },
-            ].map(tab => {
-              const isActive = filterStatus === tab.id;
-              return (
+              {pendingCount > 0 && canPerformCta('UPLOAD_QC_REPORT') && (
                 <button
-                  key={tab.id}
                   type="button"
-                  onClick={() => setFilterStatus(tab.id)}
-                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
-                    isActive
-                      ? isDarkMode
-                        ? 'bg-white/15 text-white shadow-xs border border-white/20'
-                        : 'bg-white text-slate-900 shadow-xs border border-slate-200/90'
-                      : tab.isAlert
-                      ? 'text-rose-500 hover:text-rose-600'
-                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  onClick={() => {
+                    const firstPending = deduplicatedItems.find(q => q.qcStatus === 'PENDING') || deduplicatedItems[0];
+                    if (firstPending) openInspection(firstPending);
+                  }}
+                  className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
+                    isDarkMode
+                      ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
+                      : isCrystal
+                        ? 'bg-slate-950 hover:bg-slate-900 text-white shadow-[0_4px_16px_rgba(0,0,0,0.15)]'
+                        : isGreen
+                          ? 'bg-white hover:bg-emerald-50 text-[#065F46] shadow-[0_4px_16px_rgba(0,0,0,0.15)]'
+                          : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
                   }`}
                 >
-                  <span>{tab.label}</span>
-                  <span className={`rounded-full px-1.5 py-0.5 font-mono text-[10px] font-bold ${
-                    isActive
-                      ? isDarkMode ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-900'
-                      : tab.isAlert
-                      ? 'bg-rose-500/10 text-rose-500'
-                      : isDarkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-200/70 text-slate-600'
-                  }`}>
-                    {tab.count}
-                  </span>
+                  <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
+                  <span>Audit Next Pending ({pendingCount})</span>
                 </button>
+              )}
+            </div>
+          </div>
+
+          {/* Integrated 4-Column Metric Strip (border-t) */}
+          <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t ${
+            isDarkMode
+              ? 'border-white/10 bg-gradient-to-b from-black/40 to-black/70 backdrop-blur-md'
+              : isCrystal
+                ? 'border-slate-200/80 bg-slate-50/70'
+                : 'border-white/20 bg-white/[0.06] backdrop-blur-sm'
+          }`}>
+            {[
+              {
+                label: 'Total Lots in Queue',
+                value: String(totalCount),
+                detail: 'Batches registered in queue',
+                icon: ShieldCheck,
+                iconColor: isDarkMode ? 'text-white' : (isCrystal ? 'text-white' : (isGreen ? 'text-[#065F46]' : 'text-[#155dfc]')),
+                iconBg: isDarkMode ? (isGreen ? 'bg-emerald-600 shadow-xs' : 'bg-blue-600 shadow-xs') : (isCrystal ? 'bg-slate-900 shadow-xs' : 'bg-white shadow-xs'),
+              },
+              {
+                label: 'Pending Metrology',
+                value: String(pendingCount),
+                detail: 'Awaiting QC clearance',
+                icon: Clock,
+                iconColor: 'text-white',
+                iconBg: pendingCount > 0 ? 'bg-amber-500 shadow-xs' : 'bg-emerald-500 shadow-xs',
+              },
+              {
+                label: 'First-Pass Yield',
+                value: `${yieldRate}%`,
+                detail: `${passCount} lots cleared clean`,
+                icon: CheckCircle2,
+                iconColor: 'text-white',
+                iconBg: 'bg-emerald-500 shadow-xs',
+              },
+              {
+                label: 'QC Hold / Defect',
+                value: String(holdCount + rejectCount),
+                detail: holdCount > 0 ? `${holdCount} on hold` : 'Zero defect clearance',
+                icon: AlertTriangle,
+                iconColor: 'text-white',
+                iconBg: (holdCount + rejectCount > 0) ? 'bg-rose-500 shadow-xs' : 'bg-emerald-500 shadow-xs',
+              },
+            ].map((metric, index) => {
+              const MetricIcon = metric.icon;
+              return (
+                <div
+                  key={metric.label}
+                  className={`flex items-center gap-4 px-6 py-5 transition-all ${
+                    index > 0 ? (isDarkMode ? 'lg:border-l border-white/10' : (isCrystal ? 'lg:border-l border-slate-200/80' : 'lg:border-l border-white/20')) : ''
+                  }`}
+                >
+                  <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${metric.iconBg} ${metric.iconColor}`}>
+                    <MetricIcon className="h-5 w-5 stroke-[2.5]" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className={`text-xs font-bold uppercase tracking-wider ${
+                      isCrystal && !isDarkMode ? 'text-slate-500' : 'text-white/85'
+                    }`}>
+                      {metric.label}
+                    </div>
+                    <div className={`text-2xl sm:text-[26px] font-black tracking-tight tabular-nums my-0.5 leading-tight ${
+                      isCrystal && !isDarkMode ? 'text-slate-950' : 'text-white'
+                    }`}>
+                      {metric.value}
+                    </div>
+                    <div className={`text-xs font-medium truncate ${
+                      isCrystal && !isDarkMode ? 'text-slate-600' : 'text-white/90'
+                    }`}>
+                      {metric.detail}
+                    </div>
+                  </div>
+                </div>
               );
             })}
           </div>
 
-          {/* Tier 2: Spotlight search & View switchers */}
-          <div className="flex items-center gap-2.5">
-            <div className={`relative flex items-center rounded-xl border px-3.5 py-1.5 transition-all w-full sm:w-80 ${
-              isDarkMode
-                ? 'border-white/10 bg-black/40 text-white focus-within:border-blue-500'
-                : 'border-slate-200/90 bg-white text-slate-900 focus-within:border-blue-500 shadow-2xs'
+          {/* Apple Quality Metrology Distribution Bar */}
+          <div className={`px-6 py-4 border-t ${
+            isDarkMode
+              ? 'border-white/10 bg-black/40'
+              : isCrystal
+                ? 'border-slate-200/80 bg-slate-100/60'
+                : 'border-white/20 bg-black/10'
+          }`}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
+              <div className="flex items-center gap-2">
+                <Activity className={`w-4 h-4 ${isCrystal && !isDarkMode ? 'text-slate-700' : 'text-white'}`} />
+                <span className={`text-xs font-bold tracking-tight ${isCrystal && !isDarkMode ? 'text-slate-900' : 'text-white'}`}>
+                  Quality Assurance Distribution &amp; First-Pass Yield (FPY)
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
+                  {yieldRate}% First-Pass Yield
+                </span>
+              </div>
+              <span className={`text-xs ${isCrystal && !isDarkMode ? 'text-slate-500 font-medium' : 'text-white/70'}`}>
+                {inspectedCount} of {totalCount} lots audited
+              </span>
+            </div>
+
+            {/* Multi-Segmented Pro Bar */}
+            <div className={`h-2.5 w-full rounded-full overflow-hidden flex p-0.5 gap-0.5 border ${
+              isCrystal && !isDarkMode ? 'bg-slate-200/80 border-slate-300/60' : 'bg-white/20 border-white/15'
             }`}>
-              <Search className="w-4 h-4 text-slate-400 shrink-0 mr-2" />
-              <input
-                type="text"
-                placeholder="Search Job #, Part Code, PO..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-transparent outline-none text-xs w-full placeholder:text-slate-400 font-medium"
-              />
-              {searchQuery ? (
-                <button type="button" onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-600 dark:hover:text-white ml-2">
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              ) : (
-                <kbd className={`hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono font-bold rounded border ${
-                  isDarkMode ? 'border-white/10 bg-white/5 text-slate-400' : 'border-slate-200 bg-slate-100 text-slate-500'
-                }`}>
-                  ⌘F
-                </kbd>
+              {passCount > 0 && (
+                <div 
+                  style={{ width: `${(passCount / (totalCount || 1)) * 100}%` }} 
+                  className="h-full bg-emerald-400 rounded-full transition-all duration-500" 
+                  title={`Passed: ${passCount} (${passPct}%)`}
+                />
+              )}
+              {pendingCount > 0 && (
+                <div 
+                  style={{ width: `${(pendingCount / (totalCount || 1)) * 100}%` }} 
+                  className="h-full bg-amber-400 rounded-full transition-all duration-500" 
+                  title={`Pending: ${pendingCount} (${pendingPct}%)`}
+                />
+              )}
+              {holdCount > 0 && (
+                <div 
+                  style={{ width: `${(holdCount / (totalCount || 1)) * 100}%` }} 
+                  className="h-full bg-orange-400 rounded-full transition-all duration-500" 
+                  title={`Hold: ${holdCount} (${holdPct}%)`}
+                />
+              )}
+              {rejectCount > 0 && (
+                <div 
+                  style={{ width: `${(rejectCount / (totalCount || 1)) * 100}%` }} 
+                  className="h-full bg-rose-400 rounded-full transition-all duration-500" 
+                  title={`Rejected: ${rejectCount} (${rejectPct}%)`}
+                />
               )}
             </div>
 
-            {/* Apple View Mode Switcher */}
-            <div className={`hidden sm:flex items-center p-0.5 rounded-xl border shrink-0 ${
-              isDarkMode ? 'border-white/10 bg-black/40' : 'border-slate-200/80 bg-slate-100/80'
-            }`}>
-              <button
-                type="button"
-                onClick={() => setViewMode('grouped')}
-                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-                  viewMode === 'grouped'
-                    ? isDarkMode ? 'bg-white/15 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                }`}
-                title="Group by PO"
-                aria-label="Group by PO"
-                aria-pressed={viewMode === 'grouped'}
-              >
-                <Layers className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('table')}
-                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-                  viewMode === 'table'
-                    ? isDarkMode ? 'bg-white/15 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                }`}
-                title="Table Register View"
-              >
-                <List className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('grid')}
-                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-                  viewMode === 'grid'
-                    ? isDarkMode ? 'bg-white/15 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                }`}
-                title="Inspector Card Grid"
-              >
-                <LayoutGrid className="w-3.5 h-3.5" />
-              </button>
+            {/* Legend Pills */}
+            <div className="flex items-center flex-wrap gap-3 sm:gap-5 mt-2.5 text-xs">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                <span className={`font-medium ${isCrystal && !isDarkMode ? 'text-slate-500' : 'text-white/70'}`}>Passed:</span>
+                <span className={`font-bold tabular-nums ${isCrystal && !isDarkMode ? 'text-slate-900' : 'text-white'}`}>{passCount} ({passPct}%)</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-400" />
+                <span className={`font-medium ${isCrystal && !isDarkMode ? 'text-slate-500' : 'text-white/70'}`}>Pending:</span>
+                <span className={`font-bold tabular-nums ${isCrystal && !isDarkMode ? 'text-slate-900' : 'text-white'}`}>{pendingCount} ({pendingPct}%)</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-orange-400" />
+                <span className={`font-medium ${isCrystal && !isDarkMode ? 'text-slate-500' : 'text-white/70'}`}>QC Hold:</span>
+                <span className={`font-bold tabular-nums ${isCrystal && !isDarkMode ? 'text-slate-900' : 'text-white'}`}>{holdCount} ({holdPct}%)</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-rose-400" />
+                <span className={`font-medium ${isCrystal && !isDarkMode ? 'text-slate-500' : 'text-white/70'}`}>Rejected:</span>
+                <span className={`font-bold tabular-nums ${isCrystal && !isDarkMode ? 'text-slate-900' : 'text-white'}`}>{rejectCount} ({rejectPct}%)</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── APPLE 2-TIER COMMAND DECK & FILTERS ── */}
+        <div className={`rounded-2xl border p-3.5 transition-all ${
+          isDarkMode
+            ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] shadow-[0_8px_28px_rgba(0,0,0,0.5)]'
+            : 'border-slate-200 bg-white shadow-xs'
+        }`}>
+          <div className="space-y-3">
+            {/* Tier 1: Segmented tab buttons with counts + Live telemetry chip + View Switchers */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className={`inline-flex items-center p-1 rounded-xl border text-xs overflow-x-auto max-w-full ${
+                isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200/80 bg-slate-200/50 shadow-inner'
+              }`}>
+                {[
+                  { id: 'ALL', label: 'All Lots', count: totalCount, isAlert: false },
+                  { id: 'PENDING', label: 'Pending', count: pendingCount, isAlert: pendingCount > 0 },
+                  { id: 'PASS', label: 'Passed', count: passCount, isAlert: false },
+                  { id: 'QC_HOLD', label: 'QC Hold', count: holdCount, isAlert: holdCount > 0 },
+                  { id: 'REJECTED', label: 'Rejected', count: rejectCount, isAlert: rejectCount > 0 },
+                ].map(tab => {
+                  const isActive = filterStatus === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setFilterStatus(tab.id)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                        isActive
+                          ? isDarkMode
+                            ? tab.isAlert
+                              ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30 shadow-xs'
+                              : 'bg-white/15 text-white shadow-xs border border-white/10'
+                            : tab.isAlert
+                            ? 'bg-rose-50 text-rose-700 border border-rose-200 shadow-xs'
+                            : 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                          : isDarkMode
+                          ? tab.isAlert
+                            ? 'text-rose-400 hover:text-rose-300 hover:bg-rose-500/10'
+                            : 'text-slate-400 hover:text-white'
+                          : tab.isAlert
+                          ? 'text-rose-700 hover:text-rose-800 hover:bg-rose-100/50'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <span>{tab.label}</span>
+                      <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
+                        isActive
+                          ? isDarkMode
+                            ? tab.isAlert ? 'bg-rose-500/30 text-rose-200' : 'bg-white/20 text-white'
+                            : tab.isAlert ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-800'
+                          : isDarkMode
+                          ? tab.isAlert ? 'bg-rose-500/20 text-rose-300' : 'bg-white/5 text-slate-400'
+                          : tab.isAlert ? 'bg-rose-100 text-rose-800' : 'bg-slate-300/60 text-slate-600'
+                      }`}>
+                        {tab.count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Telemetry pill & View switcher */}
+              <div className="flex items-center gap-2">
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-semibold border ${
+                  isDarkMode ? 'border-white/10 bg-white/[0.03] text-slate-400' : 'border-slate-200 bg-white text-slate-600 shadow-2xs'
+                }`}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  Showing {filteredQc.length} of {totalCount} records
+                </span>
+
+                {/* View switcher */}
+                <div className={`flex items-center p-0.5 rounded-xl border shrink-0 ${
+                  isDarkMode ? 'border-white/10 bg-black/40' : 'border-slate-200/80 bg-slate-100/80'
+                }`}>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('grouped')}
+                    className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                      viewMode === 'grouped'
+                        ? isDarkMode ? 'bg-white/15 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
+                        : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                    }`}
+                    title="Group by PO"
+                    aria-label="Group by PO"
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('table')}
+                    className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                      viewMode === 'table'
+                        ? isDarkMode ? 'bg-white/15 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
+                        : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                    }`}
+                    title="Table View"
+                    aria-label="Table View"
+                  >
+                    <List className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('grid')}
+                    className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                      viewMode === 'grid'
+                        ? isDarkMode ? 'bg-white/15 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
+                        : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                    }`}
+                    title="Cards Grid View"
+                    aria-label="Cards Grid View"
+                  >
+                    <LayoutGrid className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
             </div>
 
-            <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0 hidden lg:inline font-mono">
-              {filteredQc.length} of {totalCount}
-            </span>
+            {/* Tier 2: Spotlight search */}
+            <div className={`relative flex items-center rounded-xl border transition-all ${
+              isDarkMode
+                ? 'border-white/10 bg-black/40 text-white focus-within:border-white/25 focus-within:bg-black/60'
+                : 'border-slate-200/90 bg-white text-slate-900 focus-within:border-slate-400 focus-within:shadow-xs'
+            }`}>
+              <Search className="absolute left-3.5 h-4 w-4 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search Job Card #, Customer PO, Part Code, Description..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-transparent pl-10 pr-24 py-2.5 text-xs font-medium outline-none placeholder:text-slate-400 font-sans"
+              />
+              <div className="absolute right-3 flex items-center gap-2">
+                {searchQuery ? (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                ) : (
+                  <kbd className={`hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono font-bold rounded border ${
+                    isDarkMode ? 'border-white/10 bg-white/5 text-slate-400' : 'border-slate-200 bg-slate-100 text-slate-500'
+                  }`}>
+                    ⌘F
+                  </kbd>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -612,8 +745,8 @@ export const QCView: React.FC<QCViewProps> = ({
       {viewMode !== 'grouped' && (
       <div className="block md:hidden space-y-3">
         {filteredQc.length === 0 ? (
-          <div className={`p-8 text-center rounded-2xl border text-xs ${
-            isDarkMode ? 'bg-[#09090B] border-white/10 text-slate-400' : 'bg-white border-slate-200 text-slate-500'
+          <div className={`p-8 text-center rounded-2xl border text-xs font-mono ${
+            isDarkMode ? 'bg-[#121215] border-white/[0.08] text-slate-400' : 'bg-white border-slate-200 text-slate-500'
           }`}>
             No inspection records found matching your filters.
           </div>
@@ -627,45 +760,45 @@ export const QCView: React.FC<QCViewProps> = ({
               <div
                 key={qc.id}
                 onClick={() => openInspection(qc)}
-                className={`p-4 rounded-2xl border transition-all space-y-3 shadow-xs cursor-pointer ${
+                className={`p-4 rounded-2xl border transition-all space-y-3.5 shadow-sm cursor-pointer ${
                   isPassed
-                    ? isDarkMode ? 'bg-[#09090B] border-emerald-500/30' : 'bg-emerald-50/40 border-emerald-200'
+                    ? isDarkMode ? 'bg-[#121215] border-emerald-500/30' : 'bg-emerald-50/40 border-emerald-200'
                     : isHold
-                    ? isDarkMode ? 'bg-[#09090B] border-amber-500/30' : 'bg-amber-50/40 border-amber-200'
+                    ? isDarkMode ? 'bg-[#121215] border-amber-500/30' : 'bg-amber-50/40 border-amber-200'
                     : isRejected
-                    ? isDarkMode ? 'bg-[#09090B] border-rose-500/30' : 'bg-rose-50/40 border-rose-200'
-                    : isDarkMode ? 'bg-[#09090B] border-white/10' : 'bg-white border-slate-200'
+                    ? isDarkMode ? 'bg-[#121215] border-rose-500/30' : 'bg-rose-50/40 border-rose-200'
+                    : isDarkMode ? 'bg-[#121215] border-white/[0.08]' : 'bg-white border-slate-200'
                 }`}
               >
                 {/* Header: Job Card # + Status Pill */}
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-xs text-[#5B75F8] dark:text-[#7B92FF]">
+                      <span className="font-mono font-bold text-xs text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">
                         {qc.jobNo}
                       </span>
                       {qc.orderPo && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF] border border-blue-500/20">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-blue-500/10 text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/20">
                           {qc.orderPo}
                         </span>
                       )}
                     </div>
-                    <h3 className={`text-xs font-semibold mt-1 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    <h3 className={`text-xs font-bold font-sans mt-1 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                       {qc.partDescription}
                     </h3>
                   </div>
 
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase border shrink-0 ${
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border shrink-0 ${
                     isPassed
-                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                      ? isDarkMode ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' : 'border-emerald-200 bg-emerald-50 text-emerald-700'
                       : isHold
-                      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                      ? isDarkMode ? 'border-amber-500/30 bg-amber-500/10 text-amber-300' : 'border-amber-200 bg-amber-50 text-amber-700'
                       : isRejected
-                      ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
-                      : 'bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF] border-blue-500/20'
+                      ? isDarkMode ? 'border-rose-500/30 bg-rose-500/10 text-rose-300' : 'border-rose-200 bg-rose-50 text-rose-700'
+                      : isDarkMode ? 'border-blue-500/30 bg-blue-500/10 text-blue-300' : 'border-blue-200 bg-blue-50 text-blue-700'
                   }`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${
-                      isPassed ? 'bg-emerald-500' : isHold ? 'bg-amber-500' : isRejected ? 'bg-rose-500' : 'bg-[#5B75F8]'
+                      isPassed ? 'bg-emerald-500' : isHold ? 'bg-amber-500' : isRejected ? 'bg-rose-500' : 'bg-blue-500'
                     }`} />
                     <span>{qc.qcStatus || 'PENDING'}</span>
                   </span>
@@ -676,12 +809,12 @@ export const QCView: React.FC<QCViewProps> = ({
                   isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-50 border-slate-100'
                 }`}>
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase block">Part Code</span>
-                    <span className="font-semibold text-slate-700 dark:text-slate-200">{qc.partCode || '—'}</span>
+                    <span className="text-[10px] text-slate-400 uppercase font-mono block">Part Code</span>
+                    <span className="font-semibold font-mono text-slate-700 dark:text-slate-200">{qc.partCode || '—'}</span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase block">Inspect Quantity</span>
-                    <span className="font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{qc.qty} NOS</span>
+                    <span className="text-[10px] text-slate-400 uppercase font-mono block">Inspect Quantity</span>
+                    <span className="font-bold font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">{qc.qty} NOS</span>
                   </div>
                 </div>
 
@@ -690,7 +823,7 @@ export const QCView: React.FC<QCViewProps> = ({
                   <div className={`p-2.5 rounded-xl border text-xs ${
                     isDarkMode ? 'bg-black/40 border-white/10 text-slate-300' : 'bg-slate-50 border-slate-100 text-slate-600'
                   }`}>
-                    <span className="text-slate-400 font-semibold block text-[10px] uppercase">Notes:</span>
+                    <span className="text-slate-400 font-semibold block text-[10px] uppercase font-mono">Notes:</span>
                     <span>{qc.inspectorNotes}</span>
                   </div>
                 )}
@@ -703,7 +836,7 @@ export const QCView: React.FC<QCViewProps> = ({
                       e.stopPropagation();
                       openInspection(qc);
                     }}
-                    className={`w-full py-2 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition-all active:scale-[0.98] ${
+                    className={`w-full py-2 rounded-xl text-xs font-bold font-mono flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition-all active:scale-[0.98] ${
                       isDarkMode 
                         ? 'bg-white text-slate-900 hover:bg-slate-100 shadow-sm' 
                         : 'bg-[#181920] text-white hover:bg-[#252730] shadow-sm'
@@ -724,41 +857,41 @@ export const QCView: React.FC<QCViewProps> = ({
       {/* ── DESKTOP VIEW: TABLE OR INSPECTOR CARD GRID (Viewport >= md) ──         */}
       {/* ========================================================================= */}
       {viewMode === 'table' ? (
-        <div className={`hidden md:block overflow-hidden rounded-3xl border transition-all ${
+        <div className={`hidden md:block overflow-hidden rounded-3xl border transition-all duration-300 ${
           isDarkMode
-            ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#08090c] to-[#010203] shadow-[0_16px_40px_rgba(0,0,0,0.5)]'
-            : 'border-slate-200/90 bg-gradient-to-b from-white via-slate-50/40 to-[#f6f8fc] shadow-[0_4px_24px_rgba(0,0,0,0.04)]'
+            ? 'border-white/[0.08] bg-gradient-to-b from-[#111318] via-[#08090c] to-[#010203] shadow-[0_24px_50px_rgba(0,0,0,0.6)]'
+            : 'border-slate-200 bg-white shadow-xs'
         }`}>
-          <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-white/70 dark:via-white/10 to-transparent" />
-          <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+          {/* Specular top edge highlight line */}
+          <div className="h-px w-full bg-gradient-to-r from-transparent via-white/20 dark:via-white/10 to-transparent" />
+
+          <div className={`flex items-center justify-between border-b px-6 py-4 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200 bg-white'}`}>
             <div>
-              <div className="text-xs font-extrabold text-slate-900 dark:text-white">Quality Control (QC) Metrology Register</div>
-              <div className="mt-0.5 text-[10px] text-slate-400">Incoming, in-process, and final inspection clearance tracking</div>
+              <div className="text-sm font-extrabold text-slate-900 dark:text-white">Quality Control (QC) Metrology Register</div>
+              <div className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Incoming, in-process, and final inspection clearance tracking</div>
             </div>
-            <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>
+            <span className={`rounded-full border px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-300' : 'border-slate-200 bg-slate-50 text-slate-600'}`}>
               {filteredQc.length} records
             </span>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className={`border-b font-mono text-[10px] font-bold uppercase tracking-[0.14em] ${
-                  isDarkMode ? 'border-white/[0.07] bg-black/20 text-slate-500' : 'border-slate-200 bg-slate-50/80 text-slate-400'
-                }`}>
-                  <th className="py-4 px-5">Job Card #</th>
-                  <th className="py-4 px-5">Customer PO</th>
-                  <th className="py-4 px-5">Part Description</th>
-                  <th className="py-4 px-5 text-right">Inspect Qty</th>
-                  <th className="py-4 px-5 text-center">QC Status</th>
-                  <th className="py-4 px-5">Inspector Notes</th>
-                  <th className="py-4 px-5 text-right">Action</th>
+              <thead className={`border-b ${isDarkMode ? 'border-white/[0.06] bg-white/[0.02]' : 'border-slate-200 bg-slate-50/80'}`}>
+                <tr className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-slate-600 dark:text-slate-400">
+                  <th className="py-4 px-6">Job Card #</th>
+                  <th className="py-4 px-6">Customer PO</th>
+                  <th className="py-4 px-6">Part Description</th>
+                  <th className="py-4 px-6 text-right">Inspect Qty</th>
+                  <th className="py-4 px-6 text-center">QC Status</th>
+                  <th className="py-4 px-6">Inspector Notes</th>
+                  <th className="py-4 px-6 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
+              <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200/80'}`}>
                 {filteredQc.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-400 font-mono text-xs">
+                    <td colSpan={7} className="py-16 text-center text-slate-400 font-mono text-xs">
                       No QC inspection records matching your query.
                     </td>
                   </tr>
@@ -772,21 +905,23 @@ export const QCView: React.FC<QCViewProps> = ({
                       <tr 
                         key={qc.id} 
                         onClick={() => openInspection(qc)}
-                        className={`group transition-colors cursor-pointer ${
-                          isDarkMode ? 'hover:bg-white/[0.035]' : 'hover:bg-slate-50/80'
+                        className={`group transition-all duration-200 cursor-pointer ${
+                          isDarkMode 
+                            ? 'hover:bg-white/[0.03] border-b border-white/[0.04]' 
+                            : 'hover:bg-slate-50/90 border-b border-slate-100'
                         }`}
                       >
                         <td className="py-4 px-6">
                           <div className="flex items-center gap-3.5">
-                            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-2xs border ${
-                              isDarkMode 
-                                ? 'bg-white/10 text-white border-white/15' 
-                                : 'bg-slate-100 text-slate-800 border-slate-200'
+                            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 border transition-all duration-300 group-hover:scale-105 group-hover:shadow-md ${
+                              isDarkMode
+                                ? 'bg-gradient-to-br from-white/[0.08] to-white/[0.02] border-white/10 text-white'
+                                : 'bg-gradient-to-br from-slate-50 to-slate-100/80 border-slate-200/80 text-slate-800 shadow-xs'
                             }`}>
-                              <ShieldCheck className="w-5 h-5 stroke-[2]" />
+                              <ShieldCheck className="w-5 h-5 text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]" />
                             </div>
                             <div className="min-w-0">
-                              <div className="font-mono text-sm tracking-tight text-slate-900 dark:text-white font-black">
+                              <div className="font-mono text-sm tracking-tight text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)] font-black">
                                 {qc.jobNo}
                               </div>
                               <div className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate mt-0.5">
@@ -795,52 +930,52 @@ export const QCView: React.FC<QCViewProps> = ({
                             </div>
                           </div>
                         </td>
-                        <td className="py-4 px-5 font-mono text-xs">
+                        <td className="py-4 px-6 font-mono text-xs">
                           {qc.orderPo ? (
-                            <span className="font-bold text-slate-800 dark:text-slate-200">
+                            <span className="font-bold text-slate-900 dark:text-slate-100">
                               {qc.orderPo}
                             </span>
                           ) : (
                             <span className="text-slate-400">—</span>
                           )}
                         </td>
-                        <td className={`py-4 px-5 font-medium ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
+                        <td className={`py-4 px-6 font-medium ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
                           <span className="font-semibold text-slate-900 dark:text-white">{qc.partCode}</span>
                           {qc.partDescription && (
                             <span className="text-slate-400 dark:text-slate-500"> — {qc.partDescription}</span>
                           )}
                         </td>
-                        <td className={`py-4 px-5 text-right font-bold font-mono tabular-nums ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                        <td className={`py-4 px-6 text-right font-black font-mono text-xs tabular-nums ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                           {qc.qty} NOS
                         </td>
-                        <td className="py-4 px-5 text-center">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
+                        <td className="py-4 px-6 text-center">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border ${
                             isPassed
-                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                              ? isDarkMode ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' : 'border-emerald-200 bg-emerald-50 text-emerald-700'
                               : isHold
-                              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                              ? isDarkMode ? 'border-amber-500/30 bg-amber-500/10 text-amber-300' : 'border-amber-200 bg-amber-50 text-amber-700'
                               : isRejected
-                              ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
-                              : 'bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF] border-blue-500/20'
+                              ? isDarkMode ? 'border-rose-500/30 bg-rose-500/10 text-rose-300' : 'border-rose-200 bg-rose-50 text-rose-700'
+                              : isDarkMode ? 'border-blue-500/30 bg-blue-500/10 text-blue-300' : 'border-blue-200 bg-blue-50 text-blue-700'
                           }`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${
-                              isPassed ? 'bg-emerald-500' : isHold ? 'bg-amber-500' : isRejected ? 'bg-rose-500' : 'bg-[#5B75F8]'
+                              isPassed ? 'bg-emerald-500' : isHold ? 'bg-amber-500' : isRejected ? 'bg-rose-500' : 'bg-blue-500'
                             }`} />
                             <span>{qc.qcStatus || 'PENDING'}</span>
                           </span>
                         </td>
-                        <td className={`py-4 px-5 text-xs truncate max-w-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                        <td className={`py-4 px-6 text-xs truncate max-w-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                           {qc.inspectorNotes || <span className="text-slate-400/60 italic">Awaiting audit notes</span>}
                         </td>
-                        <td className="py-4 px-5 text-right" onClick={(e) => e.stopPropagation()}>
+                        <td className="py-4 px-6 text-right" onClick={(e) => e.stopPropagation()}>
                           {canPerformCta('UPLOAD_QC_REPORT') && (
                             <button
                               type="button"
                               onClick={() => openInspection(qc)}
-                              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold shadow-xs active:scale-95 cursor-pointer shrink-0 ${
+                              className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-xs ${
                                 isDarkMode 
-                                  ? 'bg-white text-slate-900 hover:bg-slate-100 shadow-sm' 
-                                  : 'bg-[#181920] text-white hover:bg-[#252730] shadow-sm'
+                                  ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-sm' 
+                                  : 'bg-[#181920] hover:bg-[#252730] text-white shadow-sm'
                               }`}
                             >
                               <CheckCircle2 className="w-3.5 h-3.5" />
@@ -887,7 +1022,7 @@ export const QCView: React.FC<QCViewProps> = ({
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <span className="font-bold text-xs text-[#5B75F8] dark:text-[#7B92FF]">
+                      <span className="font-mono font-bold text-xs text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">
                         {qc.jobNo}
                       </span>
                       <h3 className={`text-sm font-bold mt-1 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
@@ -898,17 +1033,17 @@ export const QCView: React.FC<QCViewProps> = ({
                       </p>
                     </div>
 
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase border shrink-0 ${
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border shrink-0 ${
                       isPassed
-                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                        ? isDarkMode ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' : 'border-emerald-200 bg-emerald-50 text-emerald-700'
                         : isHold
-                        ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                        ? isDarkMode ? 'border-amber-500/30 bg-amber-500/10 text-amber-300' : 'border-amber-200 bg-amber-50 text-amber-700'
                         : isRejected
-                        ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
-                        : 'bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF] border-blue-500/20'
+                        ? isDarkMode ? 'border-rose-500/30 bg-rose-500/10 text-rose-300' : 'border-rose-200 bg-rose-50 text-rose-700'
+                        : isDarkMode ? 'border-blue-500/30 bg-blue-500/10 text-blue-300' : 'border-blue-200 bg-blue-50 text-blue-700'
                     }`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${
-                        isPassed ? 'bg-emerald-500' : isHold ? 'bg-amber-500' : isRejected ? 'bg-rose-500' : 'bg-[#5B75F8]'
+                        isPassed ? 'bg-emerald-500' : isHold ? 'bg-amber-500' : isRejected ? 'bg-rose-500' : 'bg-blue-500'
                       }`} />
                       <span>{qc.qcStatus || 'PENDING'}</span>
                     </span>
@@ -918,12 +1053,12 @@ export const QCView: React.FC<QCViewProps> = ({
                     isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-50 border-slate-100'
                   }`}>
                     <div>
-                      <span className="text-[10px] text-slate-400 uppercase block">Customer PO</span>
-                      <span className="font-semibold text-slate-700 dark:text-slate-200">{qc.orderPo || '—'}</span>
+                      <span className="text-[10px] text-slate-400 uppercase font-mono block">Customer PO</span>
+                      <span className="font-semibold font-mono text-slate-700 dark:text-slate-200">{qc.orderPo || '—'}</span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-400 uppercase block">Lot Size</span>
-                      <span className="font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{qc.qty} NOS</span>
+                      <span className="text-[10px] text-slate-400 uppercase font-mono block">Lot Size</span>
+                      <span className="font-bold font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">{qc.qty} NOS</span>
                     </div>
                   </div>
 
@@ -931,7 +1066,7 @@ export const QCView: React.FC<QCViewProps> = ({
                     <div className={`p-2.5 rounded-xl border text-xs line-clamp-2 ${
                       isDarkMode ? 'bg-black/40 border-white/10 text-slate-300' : 'bg-slate-50 border-slate-100 text-slate-600'
                     }`}>
-                      <span className="text-slate-400 font-semibold block text-[10px] uppercase">Notes:</span>
+                      <span className="text-slate-400 font-semibold block text-[10px] uppercase font-mono">Notes:</span>
                       <span>{qc.inspectorNotes}</span>
                     </div>
                   ) : (
@@ -944,10 +1079,10 @@ export const QCView: React.FC<QCViewProps> = ({
                       <button
                         type="button"
                         onClick={() => openInspection(qc)}
-                        className={`px-3.5 py-1.5 rounded-full text-xs font-semibold shadow-xs flex items-center gap-1 transition-all active:scale-[0.98] cursor-pointer ${
+                        className={`px-3.5 py-1.5 rounded-xl text-xs font-bold font-mono shadow-xs flex items-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer ${
                           isDarkMode 
-                            ? 'bg-white text-slate-900 hover:bg-slate-100 shadow-sm' 
-                            : 'bg-[#181920] text-white hover:bg-[#252730] shadow-sm'
+                            ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-sm' 
+                            : 'bg-[#181920] hover:bg-[#252730] text-white shadow-sm'
                         }`}
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" />

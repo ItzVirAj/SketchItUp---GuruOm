@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Modal } from '../../common/Modal';
 import { useUrlModal } from '../../../hooks/useUrlModal';
+import { useAccentTheme } from '../../../context/AccentThemeContext';
 import { LeaveRequest, LeaveType, LeaveStatus } from '../../../services/consoleApiServices';
 
 interface LeaveRequestsViewProps {
@@ -81,6 +82,8 @@ export const LeaveRequestsView: React.FC<LeaveRequestsViewProps> = ({
   onDecideLeaveRequest,
   onCancelLeaveRequest
 }) => {
+  const { accent, isGreen, isBlue, isCrystal } = useAccentTheme();
+
   // Navigation tabs: 'mine' is always available; 'all' is ONLY available if canViewAllLeave
   const [activeTab, setActiveTab] = useState<'mine' | 'all'>('mine');
 
@@ -102,8 +105,14 @@ export const LeaveRequestsView: React.FC<LeaveRequestsViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
 
   const cardBase = isDarkMode
-    ? 'bg-[#09090B] border-white/10 text-white shadow-[0_16px_40px_rgba(0,0,0,0.6)]'
-    : 'bg-white border-slate-200/80 shadow-sm text-slate-900';
+    ? isCrystal
+      ? 'border-white/10 bg-gradient-to-b from-[#181C24] via-[#10131A] to-[#0A0C10] text-white shadow-[0_16px_40px_rgba(0,0,0,0.6)]'
+      : isGreen
+        ? 'border-emerald-500/20 bg-gradient-to-b from-[#0D241B] via-[#081711] to-[#030B07] text-white shadow-[0_16px_40px_rgba(0,0,0,0.6)]'
+        : 'border-white/10 bg-[#09090B] text-white shadow-[0_16px_40px_rgba(0,0,0,0.6)]'
+    : isCrystal
+      ? 'border-slate-300/80 bg-gradient-to-b from-white via-[#F8FAFC] to-[#EEF2F6] text-slate-900 shadow-sm'
+      : 'border-slate-200/80 bg-white text-slate-900 shadow-sm';
 
   const inputCls = `w-full mt-1.5 p-3 rounded-xl border text-sm font-sans transition-ui focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]/40 ${
     isDarkMode
@@ -184,160 +193,308 @@ export const LeaveRequestsView: React.FC<LeaveRequestsViewProps> = ({
 
   return (
     <div className="space-y-4 sm:space-y-6 font-sans">
-      {/* 1. Luminous Dual-Mode Hero & Integrated Mini Dashboard */}
-      <div className={`relative overflow-hidden rounded-[28px] border transition-all duration-300 p-6 sm:p-8 ${
-        isDarkMode
-          ? 'bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] border-white/10 shadow-[0_24px_50px_rgba(0,0,0,0.7)] text-white'
-          : 'bg-gradient-to-r from-[#1b64ff] via-[#155dfc] to-[#0f52dc] border-blue-400/30 shadow-[0_16px_36px_rgba(21,93,252,0.28)] text-white'
-      }`}>
-        {/* Ambient Top Glow */}
-        <div
-          aria-hidden="true"
-          className={`pointer-events-none absolute -top-24 -right-10 w-96 h-96 rounded-full blur-3xl transition-opacity duration-500 ${
-            isDarkMode ? 'bg-blue-500/10' : 'bg-white/20'
-          }`}
-        />
-
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold tracking-wide backdrop-blur-md border bg-white/15 text-white border-white/20 shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>HR Module • Leave Administration &amp; Time-Off Approvals</span>
+      {/* ========================================================================= */}
+      {/* ── MOBILE VIEW (< md): Header + 2x2 Matrix ──                            */}
+      {/* ========================================================================= */}
+      <div className="block md:hidden space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                HR Operations
+              </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 text-white shadow-inner">
-                <CalendarOff className="h-5 w-5" />
-              </div>
-              Leave Requests &amp; Approvals
+            <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+              Leave Requests ({currentList.length})
             </h1>
-            <p className={`text-xs sm:text-sm max-w-2xl font-normal leading-relaxed ${
-              isDarkMode ? 'text-white/60' : 'text-blue-100'
-            }`}>
-              File time-off applications, review team calendar availability, and process management approvals with automated balance tracking.
+          </div>
+          <button
+            type="button"
+            onClick={() => formModal.open()}
+            className="flex h-9 items-center gap-1.5 px-3 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold shadow-sm active:scale-95 transition-transform cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Apply</span>
+          </button>
+        </div>
+
+        {/* 2x2 Telemetry Matrix */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className={`p-3 rounded-2xl border transition-all ${
+            isDarkMode
+              ? isCrystal ? 'border-white/10 bg-white/[0.04]' : isGreen ? 'border-emerald-500/15 bg-emerald-950/20' : 'border-blue-500/15 bg-blue-950/20'
+              : isCrystal ? 'border-slate-200 bg-white shadow-xs' : isGreen ? 'border-emerald-100 bg-emerald-50/50' : 'border-blue-100 bg-blue-50/50'
+          }`}>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500 text-white shadow-xs">
+                <Clock className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Pending</span>
+            </div>
+            <p className="text-xl font-black font-mono text-amber-500 tabular-nums">
+              {pendingCount}
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 shrink-0 self-start lg:self-center">
-            <button
-              type="button"
-              onClick={() => formModal.open()}
-              className={`flex h-11 shrink-0 items-center gap-2 rounded-full px-5 text-xs font-bold transition-all active:scale-[0.96] cursor-pointer shadow-lg ${
-                isDarkMode
-                  ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
-                  : 'bg-white hover:bg-blue-50 text-blue-700 shadow-blue-900/30'
-              }`}
-            >
-              <Plus className="w-4 h-4" />
-              <span>Apply for Leave</span>
-            </button>
+          <div className={`p-3 rounded-2xl border transition-all ${
+            isDarkMode
+              ? isCrystal ? 'border-white/10 bg-white/[0.04]' : isGreen ? 'border-emerald-500/15 bg-emerald-950/20' : 'border-blue-500/15 bg-blue-950/20'
+              : isCrystal ? 'border-slate-200 bg-white shadow-xs' : isGreen ? 'border-emerald-100 bg-emerald-50/50' : 'border-blue-100 bg-blue-50/50'
+          }`}>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-xs">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Approved</span>
+            </div>
+            <p className="text-xl font-black font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">
+              {approvedCount}
+            </p>
+          </div>
+
+          <div className={`p-3 rounded-2xl border transition-all ${
+            isDarkMode
+              ? isCrystal ? 'border-white/10 bg-white/[0.04]' : isGreen ? 'border-emerald-500/15 bg-emerald-950/20' : 'border-blue-500/15 bg-blue-950/20'
+              : isCrystal ? 'border-slate-200 bg-white shadow-xs' : isGreen ? 'border-emerald-100 bg-emerald-50/50' : 'border-blue-100 bg-blue-50/50'
+          }`}>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--accent-primary)] text-white shadow-xs">
+                <Calendar className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Days Granted</span>
+            </div>
+            <p className="text-xl font-black font-mono text-slate-900 dark:text-white tabular-nums">
+              {totalDays}
+            </p>
+          </div>
+
+          <div className={`p-3 rounded-2xl border transition-all ${
+            isDarkMode
+              ? isCrystal ? 'border-white/10 bg-white/[0.04]' : isGreen ? 'border-emerald-500/15 bg-emerald-950/20' : 'border-blue-500/15 bg-blue-950/20'
+              : isCrystal ? 'border-slate-200 bg-white shadow-xs' : isGreen ? 'border-emerald-100 bg-emerald-50/50' : 'border-blue-100 bg-blue-50/50'
+          }`}>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-600 text-white shadow-xs">
+                <XCircle className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Rejected</span>
+            </div>
+            <p className="text-xl font-black font-mono text-rose-500 tabular-nums">
+              {rejectedCount}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* ── DESKTOP VIEW (hidden md:block): Executive Hero Banner ──               */}
+      {/* ========================================================================= */}
+      <section className={`hidden md:block relative overflow-hidden rounded-2xl border transition-all duration-300 ${
+        isDarkMode
+          ? isCrystal
+            ? 'border-white/10 bg-gradient-to-b from-[#181C24] via-[#10131A] to-[#0A0C10] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6)]'
+            : isGreen
+              ? 'border-emerald-500/20 bg-gradient-to-b from-[#0D241B] via-[#081711] to-[#030B07] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(16,185,129,0.12)]'
+              : 'border-blue-500/20 bg-gradient-to-b from-[#0a1836] via-[#071126] to-[#030712] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(21,93,252,0.15)]'
+          : isCrystal
+            ? 'border-slate-300/80 bg-gradient-to-b from-white via-[#F8FAFC] to-[#EEF2F6] text-slate-950 shadow-[0_16px_40px_rgba(0,0,0,0.06),inset_0_1px_0_0_rgba(255,255,255,0.95)]'
+            : isGreen
+              ? 'border-emerald-600/30 bg-gradient-to-b from-[#0A7E58] via-[#086B4A] to-[#044F36] text-white shadow-[0_16px_40px_rgba(10,126,88,0.22)]'
+              : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
+      }`}>
+        {/* Subtle Drafting Grid Pattern */}
+        {!isDarkMode && isCrystal && (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 -z-10 bg-grid-pattern opacity-40 [mask-image:linear-gradient(to_bottom,black,transparent_72%)] [-webkit-mask-image:linear-gradient(to_bottom,black,transparent_72%)]"
+          />
+        )}
+
+        <div className="p-6 lg:p-8">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold tracking-wide backdrop-blur-md border shadow-xs transition-colors">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className={
+                  !isDarkMode && isCrystal ? 'text-slate-600' : 'text-white/90'
+                }>
+                  HR Module • Leave Administration &amp; Time-Off Approvals
+                </span>
+              </div>
+              <h1 className={`text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight flex items-center gap-3 ${
+                !isDarkMode && isCrystal ? 'text-slate-900' : 'text-white'
+              }`}>
+                <div className={`flex h-10 w-10 items-center justify-center rounded-2xl shadow-inner ${
+                  !isDarkMode && isCrystal
+                    ? 'bg-slate-100 border border-slate-200 text-slate-800'
+                    : 'bg-white/15 backdrop-blur-md border border-white/20 text-white'
+                }`}>
+                  <CalendarOff className="h-5 w-5" />
+                </div>
+                Leave Requests &amp; Approvals
+              </h1>
+              <p className={`text-xs sm:text-sm max-w-2xl font-normal leading-relaxed ${
+                !isDarkMode && isCrystal ? 'text-slate-600' : isDarkMode ? 'text-white/60' : 'text-white/80'
+              }`}>
+                File time-off applications, review team calendar availability, and process management approvals with automated balance tracking.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 shrink-0 self-start lg:self-center">
+              <button
+                type="button"
+                onClick={() => formModal.open()}
+                className={`flex h-11 shrink-0 items-center gap-2 rounded-full px-5 text-xs font-bold transition-all active:scale-[0.96] cursor-pointer shadow-lg ${
+                  !isDarkMode && isCrystal
+                    ? 'bg-slate-950 hover:bg-slate-800 text-white shadow-slate-900/20'
+                    : isDarkMode
+                      ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
+                      : 'bg-white hover:bg-blue-50 text-blue-700 shadow-blue-900/30'
+                }`}
+              >
+                <Plus className="w-4 h-4" />
+                <span>Apply for Leave</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Mini Metric Dashboard Strip with SOLID VIBRANT ICON SQUIRCLES */}
-        <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-3">
-          {/* Card 1: Pending Requests */}
-          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
-            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+        {/* 4-Column Metric Strip */}
+        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t ${
+          isDarkMode
+            ? 'border-white/10 bg-gradient-to-b from-black/40 to-black/70 backdrop-blur-md'
+            : isCrystal
+              ? 'border-slate-200/80 bg-slate-50/70'
+              : 'border-white/20 bg-white/[0.06] backdrop-blur-sm'
+        }`}>
+          {/* Pending Review */}
+          <div className={`p-4 sm:p-5 flex items-center gap-4 transition-colors ${
+            !isDarkMode && isCrystal ? 'border-b sm:border-b-0 sm:border-r border-slate-200/80' : 'border-b sm:border-b-0 sm:border-r border-white/10'
           }`}>
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-amber-500 shadow-md shadow-black/10">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-sm shadow-amber-500/30">
               <Clock className="w-5 h-5" />
             </div>
             <div className="min-w-0 flex-1">
-              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                !isDarkMode && isCrystal ? 'text-slate-500' : isDarkMode ? 'text-white/50' : 'text-blue-100'
+              }`}>
                 Pending Review
               </span>
-              <span className="text-xl sm:text-2xl font-bold font-mono text-white block tabular-nums">
+              <span className={`text-2xl font-bold font-mono block tabular-nums ${
+                !isDarkMode && isCrystal ? 'text-amber-600' : 'text-amber-400'
+              }`}>
                 {pendingCount}
               </span>
-              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
+              <span className={`text-[10px] truncate block ${
+                !isDarkMode && isCrystal ? 'text-slate-400' : isDarkMode ? 'text-white/40' : 'text-blue-100/80'
+              }`}>
                 Awaiting approval
               </span>
             </div>
           </div>
 
-          {/* Card 2: Approved Leaves */}
-          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
-            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+          {/* Approved Leaves */}
+          <div className={`p-4 sm:p-5 flex items-center gap-4 transition-colors ${
+            !isDarkMode && isCrystal ? 'border-b sm:border-b-0 sm:border-r border-slate-200/80' : 'border-b sm:border-b-0 sm:border-r border-white/10'
           }`}>
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-md shadow-emerald-500/30">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-sm shadow-emerald-500/30">
               <CheckCircle2 className="w-5 h-5" />
             </div>
             <div className="min-w-0 flex-1">
-              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                !isDarkMode && isCrystal ? 'text-slate-500' : isDarkMode ? 'text-white/50' : 'text-blue-100'
+              }`}>
                 Approved Leaves
               </span>
-              <span className="text-xl sm:text-2xl font-bold font-mono text-white block tabular-nums">
+              <span className={`text-2xl font-bold font-mono block tabular-nums ${
+                !isDarkMode && isCrystal ? 'text-emerald-700' : 'text-emerald-400'
+              }`}>
                 {approvedCount}
               </span>
-              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
+              <span className={`text-[10px] truncate block ${
+                !isDarkMode && isCrystal ? 'text-slate-400' : isDarkMode ? 'text-white/40' : 'text-blue-100/80'
+              }`}>
                 Confirmed time-off
               </span>
             </div>
           </div>
 
-          {/* Card 3: Days Approved */}
-          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
-            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+          {/* Days Granted */}
+          <div className={`p-4 sm:p-5 flex items-center gap-4 transition-colors ${
+            !isDarkMode && isCrystal ? 'border-b sm:border-b-0 sm:border-r border-slate-200/80' : 'border-b sm:border-b-0 sm:border-r border-white/10'
           }`}>
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/30">
+            <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl shadow-sm ${
+              !isDarkMode && isCrystal
+                ? 'bg-slate-100 text-slate-800 border border-slate-200'
+                : 'bg-white text-blue-600'
+            }`}>
               <Calendar className="w-5 h-5" />
             </div>
             <div className="min-w-0 flex-1">
-              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                !isDarkMode && isCrystal ? 'text-slate-500' : isDarkMode ? 'text-white/50' : 'text-blue-100'
+              }`}>
                 Days Granted
               </span>
-              <span className="text-xl sm:text-2xl font-bold font-mono text-white block tabular-nums">
+              <span className={`text-2xl font-bold font-mono block tabular-nums ${
+                !isDarkMode && isCrystal ? 'text-slate-900' : 'text-white'
+              }`}>
                 {totalDays}
               </span>
-              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
+              <span className={`text-[10px] truncate block ${
+                !isDarkMode && isCrystal ? 'text-slate-400' : isDarkMode ? 'text-white/40' : 'text-blue-100/80'
+              }`}>
                 Work days approved
               </span>
             </div>
           </div>
 
-          {/* Card 4: Rejected / Withdrawn */}
-          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
-            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
-          }`}>
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-600 text-white shadow-md shadow-rose-500/30">
+          {/* Rejected / Withdrawn */}
+          <div className="p-4 sm:p-5 flex items-center gap-4 transition-colors">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-rose-600 text-white shadow-sm shadow-rose-500/30">
               <XCircle className="w-5 h-5" />
             </div>
             <div className="min-w-0 flex-1">
-              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                !isDarkMode && isCrystal ? 'text-slate-500' : isDarkMode ? 'text-white/50' : 'text-blue-100'
+              }`}>
                 Rejected / Cancelled
               </span>
-              <span className="text-xl sm:text-2xl font-bold font-mono text-white block tabular-nums">
+              <span className="text-2xl font-bold font-mono text-rose-500 block tabular-nums">
                 {rejectedCount}
               </span>
-              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
+              <span className={`text-[10px] truncate block ${
+                !isDarkMode && isCrystal ? 'text-slate-400' : isDarkMode ? 'text-white/40' : 'text-blue-100/80'
+              }`}>
                 Unapproved requests
               </span>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* ── TAB BAR (Apple HIG Command Deck Rail) ── */}
-      <div className={`p-2.5 sm:p-3 rounded-2xl sm:rounded-3xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-        isDarkMode ? 'border-white/10 bg-[#09090B]' : 'border-slate-200/80 bg-white shadow-sm'
-      }`}>
-        <div className={`p-1 rounded-full border flex items-center gap-1 overflow-x-auto scrollbar-none w-full sm:w-auto ${
-          isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-slate-100/80 border-slate-200/80'
+      <div className={`p-2.5 sm:p-3 rounded-2xl sm:rounded-3xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${cardBase}`}>
+        <div className={`inline-flex items-center p-1 rounded-xl border text-xs overflow-x-auto max-w-full ${
+          isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200/80 bg-slate-200/50 shadow-inner'
         }`}>
           <button
             type="button"
             onClick={() => setActiveTab('mine')}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'mine'
-                ? isDarkMode ? 'bg-white text-slate-950 shadow-sm' : 'bg-[#155dfc] text-white shadow-sm'
-                : isDarkMode ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                ? isDarkMode
+                  ? 'bg-white/15 text-white shadow-xs border border-white/10'
+                  : 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <span>My Leave</span>
-            <span className={`px-1.5 py-0.5 rounded-full text-[10px] tabular-nums font-bold ${
+            <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
               activeTab === 'mine'
-                ? isDarkMode ? 'bg-slate-900 text-white' : 'bg-white/20 text-white'
-                : isDarkMode ? 'bg-white/10 text-slate-400' : 'bg-slate-200 text-slate-700'
+                ? isDarkMode ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-800'
+                : isDarkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-300/60 text-slate-600'
             }`}>
               {myRequests.length}
             </span>
@@ -348,18 +505,20 @@ export const LeaveRequestsView: React.FC<LeaveRequestsViewProps> = ({
             <button
               type="button"
               onClick={() => setActiveTab('all')}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                 activeTab === 'all'
-                  ? isDarkMode ? 'bg-white text-slate-950 shadow-sm' : 'bg-[#155dfc] text-white shadow-sm'
-                  : isDarkMode ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                  ? isDarkMode
+                    ? 'bg-white/15 text-white shadow-xs border border-white/10'
+                    : 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               <ShieldCheck className="w-3.5 h-3.5" />
               <span>All Requests</span>
-              <span className={`px-1.5 py-0.5 rounded-full text-[10px] tabular-nums font-bold ${
+              <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
                 activeTab === 'all'
-                  ? isDarkMode ? 'bg-slate-900 text-white' : 'bg-white/20 text-white'
-                  : isDarkMode ? 'bg-white/10 text-slate-400' : 'bg-slate-200 text-slate-700'
+                  ? isDarkMode ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-800'
+                  : isDarkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-300/60 text-slate-600'
               }`}>
                 {leaveRequests.length}
               </span>

@@ -34,6 +34,7 @@ import { ProductionView } from './views/ProductionView';
 import { FinishedGoodsView } from './views/FinishedGoodsView';
 import { PlatingOutworkView } from './views/PlatingOutworkView';
 import { ReportsView } from './views/ReportsView';
+import { MetricsView } from './views/MetricsView';
 import { QCView } from './views/QCView';
 import { PDIView } from './views/PDIView';
 import { DispatchView } from './views/DispatchView';
@@ -655,7 +656,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
   const pendingApprovalsCount = (approvals || []).filter(a => a.status === 'PENDING').length;
 
   return (
-    <div className="h-screen w-screen flex font-sans overflow-hidden bg-black text-white p-2.5 sm:p-3 lg:p-3.5 gap-3 lg:gap-3.5 select-none">
+    <div className="h-screen w-screen flex font-sans overflow-hidden bg-[#F7F7F7] dark:bg-[#262626] text-slate-900 dark:text-[#F4F4F5] select-none">
       {/* Desktop Persistent Full-Height Sidebar (≥1024px) */}
       <ConsoleSidebar
         currentView={currentView}
@@ -693,8 +694,8 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
         pendingApprovalsCount={pendingApprovalsCount}
       />
 
-      {/* Main Content: Large white rounded container, inset from the outer shell with generous margins and rounded corners */}
-      <div className="flex-1 min-h-0 min-w-0 h-full rounded-2xl lg:rounded-3xl bg-white dark:bg-[#09090B] text-slate-900 dark:text-[#F4F4F5] shadow-2xl overflow-hidden flex flex-col border border-white/10 dark:border-white/10">
+      {/* Main Content Area */}
+      <div className="flex-1 min-h-0 min-w-0 h-full bg-[#F7F7F7] dark:bg-[#09090B] text-slate-900 dark:text-[#F4F4F5] overflow-hidden flex flex-col">
         {/* ── Static Top Bar: Apple HIG Breadcrumb + Controls (always visible) ── */}
         <ConsoleTopBar
           currentView={currentView}
@@ -719,12 +720,12 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
 
         <main
           ref={mainScrollRef}
-          className={`flex-1 min-h-0 min-w-0 ${currentView === 'command-centre'
-              ? 'overflow-hidden p-2.5 sm:p-3.5 lg:p-4 pb-2.5 lg:pb-3.5 flex flex-col'
-              : 'overflow-y-auto scroll-smooth overscroll-y-contain overscroll-x-hidden p-3 sm:p-4 md:p-6 lg:p-8 pb-24 lg:pb-8'
+          className={`flex-1 min-h-0 min-w-0 overflow-y-auto scroll-smooth overscroll-y-contain overscroll-x-hidden ${currentView === 'command-centre'
+            ? 'p-2.5 sm:p-3.5 lg:p-4 pb-24 lg:pb-12'
+            : 'p-3 sm:p-4 md:p-6 lg:p-8 pb-24 lg:pb-8'
             } bg-transparent`}
         >
-          <div key={currentView} className={currentView === 'command-centre' ? 'h-full flex-1 flex flex-col overflow-hidden' : 'space-y-6'}>
+          <div key={currentView} className={currentView === 'command-centre' ? 'space-y-4' : 'space-y-6'}>
             {!isViewAllowedForUser(currentUser, currentView) ? (
               <AccessRestrictedGate
                 currentUser={currentUser}
@@ -992,6 +993,21 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
                     productionLogs={productionLogs}
                     qcItems={qcQueue}
                     isDarkMode={isDarkMode}
+                  />
+                )}
+
+                {currentView === 'metrics' && (
+                  <MetricsView
+                    orders={orders}
+                    stock={stock}
+                    jobCards={jobCards}
+                    qcItems={qcQueue}
+                    dispatches={dispatches}
+                    invoices={invoices}
+                    payables={payables}
+                    productionLogs={productionLogs}
+                    isDarkMode={isDarkMode}
+                    onNavigate={(view) => handleNavigateView(view)}
                   />
                 )}
 

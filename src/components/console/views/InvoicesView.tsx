@@ -54,6 +54,7 @@ import { printElementById } from '../../../utils/printDocument';
 
 import { useUrlModal } from '../../../hooks/useUrlModal';
 import { useRevealMore } from '../../../hooks/useRevealMore';
+import { useAccentTheme } from '../../../context/AccentThemeContext';
 
 interface InvoicesViewProps {
   invoices: CustomerInvoice[];
@@ -90,6 +91,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
   preselectedOrderPo,
   onInvoiceModalOpened
 }) => {
+  const { accent, isGreen, isBlue, isCrystal } = useAccentTheme();
   const canPerformCta = useCanPerformCta();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -541,53 +543,21 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
       )}
 
       {/* ========================================================================= */}
-      {/* ── 1. EXECUTIVE CONTROL DECK & KPI OVERVIEW ──                            */}
+      {/* ── MOBILE VIEW (< md): Header + 2x2 Matrix ──                            */}
       {/* ========================================================================= */}
-      <section className={`overflow-hidden rounded-2xl border transition-all ${
-        isDarkMode
-          ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]'
-          : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
-      }`}>
-        {/* Top Header Row */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 p-6 sm:p-7">
-          <div className="flex items-start gap-4">
-            <div className={`p-3.5 rounded-2xl shrink-0 shadow-inner ${
-              isDarkMode
-                ? 'bg-white/10 text-white border border-white/15'
-                : 'bg-white/20 text-white border border-white/30 backdrop-blur-md'
-            }`}>
-              <Receipt className="w-6 h-6" />
+      <div className="block md:hidden space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                Finance & Billing
+              </span>
             </div>
-            <div className="space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wide ${
-                  isDarkMode
-                    ? 'bg-white/10 border border-white/15 text-white'
-                    : 'bg-white/20 border border-white/30 backdrop-blur-md text-white shadow-xs'
-                }`}>
-                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>Customer Billing & Accounts Receivable</span>
-                </span>
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
-                  isDarkMode
-                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                    : 'bg-white/20 text-white border border-white/30 backdrop-blur-md'
-                }`}>
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  <span>GST Statutory Regime Active</span>
-                </span>
-              </div>
-              <h1 className="text-xl sm:text-2xl md:text-[26px] font-black tracking-tight text-white">
-                Customer Invoices & Billing
-              </h1>
-              <p className={`text-xs max-w-2xl leading-relaxed font-normal mt-1 ${
-                isDarkMode ? 'text-white/60' : 'text-blue-100/90'
-              }`}>
-                Issue statutory GST tax invoices against dispatch challans, verify CGST/SGST vs IGST splits, and track payment realization.
-              </p>
-            </div>
+            <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+              Invoices ({invoices.length})
+            </h1>
           </div>
-
           {canPerformCta('GENERATE_INVOICE') && (
             <button
               type="button"
@@ -597,81 +567,277 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                 setModalError(null);
                 createInvoiceModal.open();
               }}
-              className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
-                isDarkMode
-                  ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
-                  : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
-              }`}
+              className="flex h-9 items-center gap-1.5 px-3 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold shadow-sm active:scale-95 transition-transform cursor-pointer"
             >
-              <Plus className="w-4 h-4" />
-              <span>New Tax Invoice</span>
+              <Plus className="w-3.5 h-3.5" />
+              <span>New Invoice</span>
             </button>
           )}
         </div>
 
-        {/* Integrated 4-Column Apple Metric Strip */}
-        <div className={`grid grid-cols-2 lg:grid-cols-4 border-t divide-y sm:divide-y-0 sm:divide-x ${
-          isDarkMode
-            ? 'border-white/10 bg-gradient-to-b from-black/40 to-black/70 divide-white/10 backdrop-blur-md'
-            : 'border-white/20 bg-white/[0.06] divide-white/15 backdrop-blur-sm'
-        }`}>
-          {[
-            {
-              label: 'Total Invoiced',
-              value: `₹${totalInvoiced.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`,
-              sub: `${invoices.length} invoices raised`,
-              icon: Receipt,
-              iconBg: 'bg-white text-blue-600 shadow-md shadow-black/10',
-            },
-            {
-              label: 'Realized Collections',
-              value: `₹${totalReceived.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`,
-              sub: 'Settled to bank accounts',
-              icon: CreditCard,
-              iconBg: 'bg-emerald-600 text-white shadow-md shadow-emerald-500/30',
-            },
-            {
-              label: 'Outstanding Dues',
-              value: `₹${totalBalance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`,
-              sub: overdueCount > 0 ? `${overdueCount} overdue invoices` : 'Within credit terms',
-              icon: Clock,
-              iconBg: 'bg-rose-600 text-white shadow-md shadow-rose-500/30',
-            },
-            {
-              label: 'Awaiting Invoicing',
-              value: `${dispatchesAwaitingInvoicing.length}`,
-              sub: 'Challans ready for billing',
-              icon: Truck,
-              iconBg: 'bg-amber-500 text-white shadow-md shadow-amber-500/30',
-            },
-          ].map((m) => {
-            const Icon = m.icon;
-            return (
-              <div
-                key={m.label}
-                className="p-4 sm:p-5 flex flex-col justify-between"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <span className={`text-[11px] font-mono uppercase tracking-wider font-bold ${
-                    isDarkMode ? 'text-white/50' : 'text-blue-100/70'
-                  }`}>
-                    {m.label}
-                  </span>
-                  <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${m.iconBg}`}>
-                    <Icon className="w-5 h-5" />
-                  </div>
-                </div>
-                <div className="text-2xl sm:text-[26px] font-black tracking-tight text-white tabular-nums my-0.5 leading-tight">
-                  {m.value}
-                </div>
-                <div className={`text-[11px] font-medium truncate ${
-                  isDarkMode ? 'text-white/50' : 'text-blue-100/80'
-                }`}>
-                  {m.sub}
-                </div>
+        {/* 2x2 Telemetry Matrix */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className={`p-3 rounded-2xl border transition-all ${
+            isDarkMode
+              ? isCrystal ? 'border-white/10 bg-white/[0.04]' : isGreen ? 'border-emerald-500/15 bg-emerald-950/20' : 'border-blue-500/15 bg-blue-950/20'
+              : isCrystal ? 'border-slate-200 bg-white shadow-xs' : isGreen ? 'border-emerald-100 bg-emerald-50/50' : 'border-blue-100 bg-blue-50/50'
+          }`}>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--accent-primary)] text-white shadow-xs">
+                <Receipt className="w-3.5 h-3.5" />
               </div>
-            );
-          })}
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Invoiced</span>
+            </div>
+            <p className="text-lg font-black font-mono text-slate-900 dark:text-white tabular-nums">
+              ₹{totalInvoiced >= 100000 ? `${(totalInvoiced / 100000).toFixed(1)}L` : totalInvoiced.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+            </p>
+          </div>
+
+          <div className={`p-3 rounded-2xl border transition-all ${
+            isDarkMode
+              ? isCrystal ? 'border-white/10 bg-white/[0.04]' : isGreen ? 'border-emerald-500/15 bg-emerald-950/20' : 'border-blue-500/15 bg-blue-950/20'
+              : isCrystal ? 'border-slate-200 bg-white shadow-xs' : isGreen ? 'border-emerald-100 bg-emerald-50/50' : 'border-blue-100 bg-blue-50/50'
+          }`}>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-xs">
+                <CreditCard className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Collected</span>
+            </div>
+            <p className="text-lg font-black font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">
+              ₹{totalReceived >= 100000 ? `${(totalReceived / 100000).toFixed(1)}L` : totalReceived.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+            </p>
+          </div>
+
+          <div className={`p-3 rounded-2xl border transition-all ${
+            isDarkMode
+              ? isCrystal ? 'border-white/10 bg-white/[0.04]' : isGreen ? 'border-emerald-500/15 bg-emerald-950/20' : 'border-blue-500/15 bg-blue-950/20'
+              : isCrystal ? 'border-slate-200 bg-white shadow-xs' : isGreen ? 'border-emerald-100 bg-emerald-50/50' : 'border-blue-100 bg-blue-50/50'
+          }`}>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-600 text-white shadow-xs">
+                <Clock className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Balance</span>
+            </div>
+            <p className="text-lg font-black font-mono text-rose-600 dark:text-rose-400 tabular-nums">
+              ₹{totalBalance >= 100000 ? `${(totalBalance / 100000).toFixed(1)}L` : totalBalance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+            </p>
+          </div>
+
+          <div className={`p-3 rounded-2xl border transition-all ${
+            isDarkMode
+              ? isCrystal ? 'border-white/10 bg-white/[0.04]' : isGreen ? 'border-emerald-500/15 bg-emerald-950/20' : 'border-blue-500/15 bg-blue-950/20'
+              : isCrystal ? 'border-slate-200 bg-white shadow-xs' : isGreen ? 'border-emerald-100 bg-emerald-50/50' : 'border-blue-100 bg-blue-50/50'
+          }`}>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500 text-white shadow-xs">
+                <Truck className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Awaiting</span>
+            </div>
+            <p className="text-lg font-black font-mono text-amber-500 tabular-nums">
+              {dispatchesAwaitingInvoicing.length}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* ── DESKTOP VIEW (hidden md:block): Executive Hero Banner ──               */}
+      {/* ========================================================================= */}
+      <section className={`hidden md:block relative overflow-hidden rounded-2xl border transition-all duration-300 ${
+        isDarkMode
+          ? isCrystal
+            ? 'border-white/10 bg-gradient-to-b from-[#181C24] via-[#10131A] to-[#0A0C10] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6)]'
+            : isGreen
+              ? 'border-emerald-500/20 bg-gradient-to-b from-[#0D241B] via-[#081711] to-[#030B07] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(16,185,129,0.12)]'
+              : 'border-blue-500/20 bg-gradient-to-b from-[#0a1836] via-[#071126] to-[#030712] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(21,93,252,0.15)]'
+          : isCrystal
+            ? 'border-slate-300/80 bg-gradient-to-b from-white via-[#F8FAFC] to-[#EEF2F6] text-slate-950 shadow-[0_16px_40px_rgba(0,0,0,0.06),inset_0_1px_0_0_rgba(255,255,255,0.95)]'
+            : isGreen
+              ? 'border-emerald-600/30 bg-gradient-to-b from-[#0A7E58] via-[#086B4A] to-[#044F36] text-white shadow-[0_16px_40px_rgba(10,126,88,0.22)]'
+              : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
+      }`}>
+        {/* Subtle Drafting Grid Pattern */}
+        {!isDarkMode && isCrystal && (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 -z-10 bg-grid-pattern opacity-40 [mask-image:linear-gradient(to_bottom,black,transparent_72%)] [-webkit-mask-image:linear-gradient(to_bottom,black,transparent_72%)]"
+          />
+        )}
+
+        <div className="p-6 lg:p-8">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold tracking-wide backdrop-blur-md border shadow-xs transition-colors">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className={
+                  !isDarkMode && isCrystal ? 'text-slate-600' : 'text-white/90'
+                }>
+                  Finance & Accounts • Customer Billing & Accounts Receivable
+                </span>
+                <span className="text-slate-400 mx-1">•</span>
+                <span className={!isDarkMode && isCrystal ? 'text-emerald-700 font-medium' : 'text-emerald-300 font-medium'}>
+                  GST Statutory Regime Active
+                </span>
+              </div>
+              <h1 className={`text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight flex items-center gap-3 ${
+                !isDarkMode && isCrystal ? 'text-slate-900' : 'text-white'
+              }`}>
+                <div className={`flex h-10 w-10 items-center justify-center rounded-2xl shadow-inner ${
+                  !isDarkMode && isCrystal
+                    ? 'bg-slate-100 border border-slate-200 text-slate-800'
+                    : 'bg-white/15 backdrop-blur-md border border-white/20 text-white'
+                }`}>
+                  <Receipt className="h-5 w-5" />
+                </div>
+                Customer Invoices & Billing
+              </h1>
+              <p className={`text-xs sm:text-sm max-w-2xl font-normal leading-relaxed ${
+                !isDarkMode && isCrystal ? 'text-slate-600' : isDarkMode ? 'text-white/60' : 'text-white/80'
+              }`}>
+                Issue statutory GST tax invoices against dispatch challans, verify CGST/SGST vs IGST splits, and track payment realization.
+              </p>
+            </div>
+
+            {canPerformCta('GENERATE_INVOICE') && (
+              <div className="flex items-center gap-2.5 shrink-0 self-start lg:self-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedDispatchNo('');
+                    setInvoiceLines([]);
+                    setModalError(null);
+                    createInvoiceModal.open();
+                  }}
+                  className={`inline-flex h-11 items-center gap-2 px-5 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
+                    !isDarkMode && isCrystal
+                      ? 'bg-slate-900 hover:bg-slate-800 text-white shadow-slate-900/10'
+                      : 'bg-white hover:bg-slate-50 text-[var(--accent-primary)] shadow-md'
+                  }`}
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>New Tax Invoice</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Integrated 4-Column Apple Metric Strip */}
+        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t ${
+          isDarkMode
+            ? 'border-white/10 bg-gradient-to-b from-black/40 to-black/70 backdrop-blur-md'
+            : isCrystal
+              ? 'border-slate-200/80 bg-slate-50/70'
+              : 'border-white/20 bg-white/[0.06] backdrop-blur-sm'
+        }`}>
+          {/* Total Invoiced */}
+          <div className={`p-4 sm:p-5 flex items-center gap-4 transition-colors ${
+            !isDarkMode && isCrystal ? 'border-b sm:border-b-0 sm:border-r border-slate-200/80' : 'border-b sm:border-b-0 sm:border-r border-white/10'
+          }`}>
+            <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl shadow-sm ${
+              !isDarkMode && isCrystal
+                ? 'bg-slate-100 text-slate-800 border border-slate-200'
+                : 'bg-white text-blue-600'
+            }`}>
+              <Receipt className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                !isDarkMode && isCrystal ? 'text-slate-500' : isDarkMode ? 'text-white/50' : 'text-blue-100'
+              }`}>
+                Total Invoiced
+              </span>
+              <span className={`text-2xl font-bold font-mono block tabular-nums ${
+                !isDarkMode && isCrystal ? 'text-slate-900' : 'text-white'
+              }`}>
+                ₹{totalInvoiced.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+              </span>
+              <span className={`text-[10px] truncate block ${
+                !isDarkMode && isCrystal ? 'text-slate-400' : isDarkMode ? 'text-white/40' : 'text-blue-100/80'
+              }`}>
+                {invoices.length} invoices raised
+              </span>
+            </div>
+          </div>
+
+          {/* Realized Collections */}
+          <div className={`p-4 sm:p-5 flex items-center gap-4 transition-colors ${
+            !isDarkMode && isCrystal ? 'border-b sm:border-b-0 sm:border-r border-slate-200/80' : 'border-b sm:border-b-0 sm:border-r border-white/10'
+          }`}>
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-sm shadow-emerald-500/30">
+              <CreditCard className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                !isDarkMode && isCrystal ? 'text-slate-500' : isDarkMode ? 'text-white/50' : 'text-blue-100'
+              }`}>
+                Realized Collections
+              </span>
+              <span className={`text-2xl font-bold font-mono block tabular-nums ${
+                !isDarkMode && isCrystal ? 'text-emerald-700' : 'text-emerald-400'
+              }`}>
+                ₹{totalReceived.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+              </span>
+              <span className={`text-[10px] truncate block ${
+                !isDarkMode && isCrystal ? 'text-slate-400' : isDarkMode ? 'text-white/40' : 'text-blue-100/80'
+              }`}>
+                Settled to bank accounts
+              </span>
+            </div>
+          </div>
+
+          {/* Outstanding Dues */}
+          <div className={`p-4 sm:p-5 flex items-center gap-4 transition-colors ${
+            !isDarkMode && isCrystal ? 'border-b sm:border-b-0 sm:border-r border-slate-200/80' : 'border-b sm:border-b-0 sm:border-r border-white/10'
+          }`}>
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-rose-600 text-white shadow-sm shadow-rose-500/30">
+              <Clock className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                !isDarkMode && isCrystal ? 'text-slate-500' : isDarkMode ? 'text-white/50' : 'text-blue-100'
+              }`}>
+                Outstanding Dues
+              </span>
+              <span className={`text-2xl font-bold font-mono block tabular-nums ${
+                !isDarkMode && isCrystal ? 'text-rose-700' : 'text-rose-400'
+              }`}>
+                ₹{totalBalance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+              </span>
+              <span className={`text-[10px] truncate block ${
+                !isDarkMode && isCrystal ? 'text-slate-400' : isDarkMode ? 'text-white/40' : 'text-blue-100/80'
+              }`}>
+                {overdueCount > 0 ? `${overdueCount} overdue invoices` : 'Within credit terms'}
+              </span>
+            </div>
+          </div>
+
+          {/* Awaiting Invoicing */}
+          <div className="p-4 sm:p-5 flex items-center gap-4 transition-colors">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-sm shadow-amber-500/30">
+              <Truck className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                !isDarkMode && isCrystal ? 'text-slate-500' : isDarkMode ? 'text-white/50' : 'text-blue-100'
+              }`}>
+                Awaiting Invoicing
+              </span>
+              <span className={`text-2xl font-bold font-mono block tabular-nums ${
+                !isDarkMode && isCrystal ? 'text-amber-700' : 'text-amber-400'
+              }`}>
+                {dispatchesAwaitingInvoicing.length}
+              </span>
+              <span className={`text-[10px] truncate block ${
+                !isDarkMode && isCrystal ? 'text-slate-400' : isDarkMode ? 'text-white/40' : 'text-blue-100/80'
+              }`}>
+                Challans ready for billing
+              </span>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -685,7 +851,9 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
       }`}>
         {/* Tier 1: Segmented status tabs with count badges */}
         <div className="flex items-center justify-between gap-3 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-          <div className="flex items-center gap-1.5 min-w-max">
+          <div className={`inline-flex items-center p-1 rounded-xl border text-xs overflow-x-auto max-w-full ${
+            isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200/80 bg-slate-200/50 shadow-inner'
+          }`}>
             {[
               { id: 'ALL', label: 'All Invoices', count: invoices.length },
               { id: 'DRAFT', label: 'Drafts', count: invoices.filter(i => i.status === 'DRAFT').length },
@@ -700,21 +868,19 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                   key={tab.id}
                   type="button"
                   onClick={() => setStatusFilter(tab.id)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                     isActive
                       ? isDarkMode
-                        ? 'bg-white text-slate-950 shadow-sm'
-                        : 'bg-[#155dfc] text-white shadow-sm'
-                      : isDarkMode
-                      ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                        ? 'bg-white/15 text-white shadow-xs border border-white/10'
+                        : 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   <span>{tab.label}</span>
-                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] tabular-nums font-bold ${
+                  <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
                     isActive
-                      ? isDarkMode ? 'bg-slate-900 text-white' : 'bg-white/20 text-white'
-                      : isDarkMode ? 'bg-white/10 text-slate-400' : 'bg-slate-200 text-slate-700'
+                      ? isDarkMode ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-800'
+                      : isDarkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-300/60 text-slate-600'
                   }`}>
                     {tab.count}
                   </span>

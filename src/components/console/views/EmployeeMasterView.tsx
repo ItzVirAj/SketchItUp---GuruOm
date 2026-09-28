@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { EmployeeMasterRecord } from '../../../types/console';
 import { Modal } from '../../common/Modal';
+import { useAccentTheme } from '../../../context/AccentThemeContext';
 import { getRoleColor } from '../../../utils/permissions';
 import { toast } from '../../../context/ToastContext';
 
@@ -60,6 +61,7 @@ export const EmployeeMasterView: React.FC<Props> = ({
   onUpdateEmployee,
   onRefresh
 }) => {
+  const { accent, isGreen, isBlue, isCrystal } = useAccentTheme();
   const [search, setSearch] = useState('');
   const [department, setDepartment] = useState('ALL');
   const [status, setStatus] = useState<StatusType>('ALL');
@@ -137,8 +139,14 @@ export const EmployeeMasterView: React.FC<Props> = ({
   };
 
   const cardBase = isDarkMode
-    ? 'bg-[#09090B] border-white/10 text-white shadow-[0_16px_40px_rgba(0,0,0,0.6)]'
-    : 'bg-white border-slate-200/80 shadow-sm text-slate-900';
+    ? isCrystal
+      ? 'border-white/10 bg-gradient-to-b from-[#181C24] via-[#10131A] to-[#0A0C10] text-white shadow-[0_16px_40px_rgba(0,0,0,0.6)]'
+      : isGreen
+        ? 'border-emerald-500/20 bg-gradient-to-b from-[#0D241B] via-[#081711] to-[#030B07] text-white shadow-[0_16px_40px_rgba(0,0,0,0.6)]'
+        : 'border-white/10 bg-[#09090B] text-white shadow-[0_16px_40px_rgba(0,0,0,0.6)]'
+    : isCrystal
+      ? 'border-slate-300/80 bg-gradient-to-b from-white via-[#F8FAFC] to-[#EEF2F6] text-slate-900 shadow-sm'
+      : 'border-slate-200/80 bg-white text-slate-900 shadow-sm';
 
   const inputClass = `w-full rounded-xl border px-3.5 py-2.5 text-sm transition-ui outline-none ${
     isDarkMode
@@ -148,173 +156,350 @@ export const EmployeeMasterView: React.FC<Props> = ({
 
   return (
     <div className="space-y-4 sm:space-y-6 font-sans">
-      {/* 1. Luminous Dual-Mode Hero & Integrated Mini Dashboard */}
-      <div className={`relative overflow-hidden rounded-[28px] border transition-all duration-300 p-6 sm:p-8 ${
-        isDarkMode
-          ? 'bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] border-white/10 shadow-[0_24px_50px_rgba(0,0,0,0.7)] text-white'
-          : 'bg-gradient-to-r from-[#1b64ff] via-[#155dfc] to-[#0f52dc] border-blue-400/30 shadow-[0_16px_36px_rgba(21,93,252,0.28)] text-white'
-      }`}>
-        {/* Ambient Top Glow */}
-        <div
-          aria-hidden="true"
-          className={`pointer-events-none absolute -top-24 -right-10 w-96 h-96 rounded-full blur-3xl transition-opacity duration-500 ${
-            isDarkMode ? 'bg-blue-500/10' : 'bg-white/20'
-          }`}
-        />
-
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold tracking-wide backdrop-blur-md border bg-white/15 text-white border-white/20 shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>HR / People Operations • Internal Staff Roster</span>
+      {/* ========================================================================= */}
+      {/* ── MOBILE VIEW (< md): Header + 2x2 Matrix ──                            */}
+      {/* ========================================================================= */}
+      <div className="block md:hidden space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                HR Operations
+              </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 text-white shadow-inner">
-                <Users className="h-5 w-5" />
-              </div>
-              Employee Management
+            <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+              Employees ({filtered.length})
             </h1>
-            <p className={`text-xs sm:text-sm max-w-2xl font-normal leading-relaxed ${
-              isDarkMode ? 'text-white/60' : 'text-blue-100'
-            }`}>
-              Canonical staff records projected from internal accounts. Manage roles, department assignments, and contact records.
-            </p>
           </div>
-
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0 self-start lg:self-center">
-            {/* View Switcher (macOS Segmented Toggle) */}
-            <div className={`p-1 rounded-full border backdrop-blur-md flex items-center gap-1 ${
-              isDarkMode ? 'border-white/15 bg-white/[0.06]' : 'border-white/25 bg-white/20'
-            }`}>
-              <button
-                type="button"
-                onClick={() => setViewMode('table')}
-                title="Table View"
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                  viewMode === 'table'
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : isDarkMode ? 'text-white/70 hover:text-white' : 'text-white/90 hover:text-white'
-                }`}
-              >
-                <TableIcon className="h-3.5 w-3.5" />
-                <span>Table</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('grid')}
-                title="Cards Grid View"
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                  viewMode === 'grid'
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : isDarkMode ? 'text-white/70 hover:text-white' : 'text-white/90 hover:text-white'
-                }`}
-              >
-                <LayoutGrid className="h-3.5 w-3.5" />
-                <span>Cards</span>
-              </button>
-            </div>
-
-            {/* Refresh Action */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setViewMode(viewMode === 'table' ? 'grid' : 'table')}
+              className="flex h-9 items-center gap-1.5 px-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.06] text-xs font-bold text-slate-700 dark:text-slate-200 shadow-xs cursor-pointer"
+            >
+              {viewMode === 'table' ? <LayoutGrid className="w-3.5 h-3.5" /> : <TableIcon className="w-3.5 h-3.5" />}
+              <span>{viewMode === 'table' ? 'Cards' : 'Table'}</span>
+            </button>
             <button
               type="button"
               onClick={() => onRefresh?.()}
               disabled={isLoadingEmployees}
-              className="inline-flex h-11 items-center gap-2 rounded-full border border-white/20 bg-white/10 hover:bg-white/15 text-white text-xs font-semibold transition-all cursor-pointer active:scale-95 shadow-sm disabled:opacity-50 px-4 backdrop-blur-md"
+              className="flex h-9 items-center gap-1.5 px-3 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold shadow-sm active:scale-95 transition-transform cursor-pointer disabled:opacity-50"
             >
-              <RefreshCw className={`h-3.5 w-3.5 ${isLoadingEmployees ? 'animate-spin text-white' : ''}`} />
-              <span>Refresh</span>
+              <RefreshCw className={`w-3.5 h-3.5 ${isLoadingEmployees ? 'animate-spin' : ''}`} />
+              <span>Sync</span>
             </button>
           </div>
         </div>
 
-        {/* Mini Metric Dashboard Strip with SOLID VIBRANT ICON SQUIRCLES */}
-        <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-3">
-          {/* Card 1: Total Staff */}
-          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
-            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+        {/* 2x2 Telemetry Matrix */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className={`p-3 rounded-2xl border transition-all ${
+            isDarkMode
+              ? isCrystal ? 'border-white/10 bg-white/[0.04]' : isGreen ? 'border-emerald-500/15 bg-emerald-950/20' : 'border-blue-500/15 bg-blue-950/20'
+              : isCrystal ? 'border-slate-200 bg-white shadow-xs' : isGreen ? 'border-emerald-100 bg-emerald-50/50' : 'border-blue-100 bg-blue-50/50'
           }`}>
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-md shadow-black/10">
-              <Users className="w-5 h-5" />
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--accent-primary)] text-white shadow-xs">
+                <Users className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Staff</span>
             </div>
-            <div className="min-w-0 flex-1">
-              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
-                Total Staff
-              </span>
-              <span className="text-xl sm:text-2xl font-bold font-mono text-white block tabular-nums">
-                {employees.length}
-              </span>
-              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
-                Enrolled employees
-              </span>
-            </div>
+            <p className="text-xl font-black font-mono text-slate-900 dark:text-white tabular-nums">
+              {employees.length}
+            </p>
           </div>
 
-          {/* Card 2: Active Staff */}
-          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
-            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+          <div className={`p-3 rounded-2xl border transition-all ${
+            isDarkMode
+              ? isCrystal ? 'border-white/10 bg-white/[0.04]' : isGreen ? 'border-emerald-500/15 bg-emerald-950/20' : 'border-blue-500/15 bg-blue-950/20'
+              : isCrystal ? 'border-slate-200 bg-white shadow-xs' : isGreen ? 'border-emerald-100 bg-emerald-50/50' : 'border-blue-100 bg-blue-50/50'
           }`}>
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-md shadow-emerald-500/30">
-              <ShieldCheck className="w-5 h-5" />
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-xs">
+                <ShieldCheck className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Active</span>
             </div>
-            <div className="min-w-0 flex-1">
-              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
-                Active Staff
-              </span>
-              <span className="text-xl sm:text-2xl font-bold font-mono text-white block tabular-nums">
-                {employees.filter(e => e.status === 'ACTIVE').length}
-              </span>
-              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
-                Active credentials
-              </span>
-            </div>
+            <p className="text-xl font-black font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">
+              {employees.filter(e => e.status === 'ACTIVE').length}
+            </p>
           </div>
 
-          {/* Card 3: Departments */}
-          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
-            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+          <div className={`p-3 rounded-2xl border transition-all ${
+            isDarkMode
+              ? isCrystal ? 'border-white/10 bg-white/[0.04]' : isGreen ? 'border-emerald-500/15 bg-emerald-950/20' : 'border-blue-500/15 bg-blue-950/20'
+              : isCrystal ? 'border-slate-200 bg-white shadow-xs' : isGreen ? 'border-emerald-100 bg-emerald-50/50' : 'border-blue-100 bg-blue-50/50'
           }`}>
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-purple-600 text-white shadow-md shadow-purple-500/30">
-              <Building2 className="w-5 h-5" />
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-600 text-white shadow-xs">
+                <Building2 className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Depts</span>
             </div>
-            <div className="min-w-0 flex-1">
-              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
-                Departments
-              </span>
-              <span className="text-xl sm:text-2xl font-bold font-mono text-white block tabular-nums">
-                {departments.length}
-              </span>
-              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
-                Functional units
-              </span>
-            </div>
+            <p className="text-xl font-black font-mono text-purple-500 tabular-nums">
+              {departments.length}
+            </p>
           </div>
 
-          {/* Card 4: Filtered Staff */}
-          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
-            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+          <div className={`p-3 rounded-2xl border transition-all ${
+            isDarkMode
+              ? isCrystal ? 'border-white/10 bg-white/[0.04]' : isGreen ? 'border-emerald-500/15 bg-emerald-950/20' : 'border-blue-500/15 bg-blue-950/20'
+              : isCrystal ? 'border-slate-200 bg-white shadow-xs' : isGreen ? 'border-emerald-100 bg-emerald-50/50' : 'border-blue-100 bg-blue-50/50'
           }`}>
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-md shadow-amber-500/30">
-              <UserCheck className="w-5 h-5" />
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500 text-white shadow-xs">
+                <UserCheck className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Filtered</span>
             </div>
-            <div className="min-w-0 flex-1">
-              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
-                Filtered Roster
-              </span>
-              <span className="text-xl sm:text-2xl font-bold font-mono text-white block tabular-nums">
-                {filtered.length}
-              </span>
-              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
-                Matching view
-              </span>
-            </div>
+            <p className="text-xl font-black font-mono text-amber-500 tabular-nums">
+              {filtered.length}
+            </p>
           </div>
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* ── CONTROLS & APPLE SEGMENTED FILTER BAR ──                            */}
+      {/* ── DESKTOP VIEW (hidden md:block): Executive Hero Banner ──               */}
       {/* ========================================================================= */}
-      <div className={`p-3 sm:p-4 rounded-3xl border transition-ui space-y-3 ${cardBase}`}>
+      <section className={`hidden md:block relative overflow-hidden rounded-2xl border transition-all duration-300 ${
+        isDarkMode
+          ? isCrystal
+            ? 'border-white/10 bg-gradient-to-b from-[#181C24] via-[#10131A] to-[#0A0C10] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6)]'
+            : isGreen
+              ? 'border-emerald-500/20 bg-gradient-to-b from-[#0D241B] via-[#081711] to-[#030B07] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(16,185,129,0.12)]'
+              : 'border-blue-500/20 bg-gradient-to-b from-[#0a1836] via-[#071126] to-[#030712] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(21,93,252,0.15)]'
+          : isCrystal
+            ? 'border-slate-300/80 bg-gradient-to-b from-white via-[#F8FAFC] to-[#EEF2F6] text-slate-950 shadow-[0_16px_40px_rgba(0,0,0,0.06),inset_0_1px_0_0_rgba(255,255,255,0.95)]'
+            : isGreen
+              ? 'border-emerald-600/30 bg-gradient-to-b from-[#0A7E58] via-[#086B4A] to-[#044F36] text-white shadow-[0_16px_40px_rgba(10,126,88,0.22)]'
+              : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
+      }`}>
+        {/* Subtle Drafting Grid Pattern */}
+        {!isDarkMode && isCrystal && (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 -z-10 bg-grid-pattern opacity-40 [mask-image:linear-gradient(to_bottom,black,transparent_72%)] [-webkit-mask-image:linear-gradient(to_bottom,black,transparent_72%)]"
+          />
+        )}
+
+        <div className="p-6 lg:p-8">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold tracking-wide backdrop-blur-md border shadow-xs transition-colors">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className={
+                  !isDarkMode && isCrystal ? 'text-slate-600' : 'text-white/90'
+                }>
+                  HR / People Operations • Internal Staff Roster
+                </span>
+              </div>
+              <h1 className={`text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight flex items-center gap-3 ${
+                !isDarkMode && isCrystal ? 'text-slate-900' : 'text-white'
+              }`}>
+                <div className={`flex h-10 w-10 items-center justify-center rounded-2xl shadow-inner ${
+                  !isDarkMode && isCrystal
+                    ? 'bg-slate-100 border border-slate-200 text-slate-800'
+                    : 'bg-white/15 backdrop-blur-md border border-white/20 text-white'
+                }`}>
+                  <Users className="h-5 w-5" />
+                </div>
+                Employee Management
+              </h1>
+              <p className={`text-xs sm:text-sm max-w-2xl font-normal leading-relaxed ${
+                !isDarkMode && isCrystal ? 'text-slate-600' : isDarkMode ? 'text-white/60' : 'text-white/80'
+              }`}>
+                Canonical staff records projected from internal accounts. Manage roles, department assignments, and contact records.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5 shrink-0 self-start lg:self-center">
+              {/* View Switcher */}
+              <div className={`p-1 rounded-full border backdrop-blur-md flex items-center gap-1 ${
+                !isDarkMode && isCrystal
+                  ? 'border-slate-300/80 bg-slate-200/50'
+                  : isDarkMode ? 'border-white/15 bg-white/[0.06]' : 'border-white/25 bg-white/20'
+              }`}>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('table')}
+                  title="Table View"
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                    viewMode === 'table'
+                      ? !isDarkMode && isCrystal
+                        ? 'bg-slate-950 text-white shadow-xs'
+                        : 'bg-white text-slate-900 shadow-sm'
+                      : !isDarkMode && isCrystal
+                        ? 'text-slate-600 hover:text-slate-900'
+                        : isDarkMode ? 'text-white/70 hover:text-white' : 'text-white/90 hover:text-white'
+                  }`}
+                >
+                  <TableIcon className="h-3.5 w-3.5" />
+                  <span>Table</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('grid')}
+                  title="Cards Grid View"
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                    viewMode === 'grid'
+                      ? !isDarkMode && isCrystal
+                        ? 'bg-slate-950 text-white shadow-xs'
+                        : 'bg-white text-slate-900 shadow-sm'
+                      : !isDarkMode && isCrystal
+                        ? 'text-slate-600 hover:text-slate-900'
+                        : isDarkMode ? 'text-white/70 hover:text-white' : 'text-white/90 hover:text-white'
+                  }`}
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                  <span>Cards</span>
+                </button>
+              </div>
+
+              {/* Refresh Action */}
+              <button
+                type="button"
+                onClick={() => onRefresh?.()}
+                disabled={isLoadingEmployees}
+                className={`inline-flex h-11 items-center gap-2 rounded-full border text-xs font-semibold transition-all cursor-pointer active:scale-95 shadow-sm disabled:opacity-50 px-4 backdrop-blur-md ${
+                  !isDarkMode && isCrystal
+                    ? 'border-slate-300/80 bg-white/80 hover:bg-white text-slate-700'
+                    : 'border-white/20 bg-white/10 hover:bg-white/15 text-white'
+                }`}
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${isLoadingEmployees ? 'animate-spin' : ''}`} />
+                <span>Refresh</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* 4-Column Metric Strip */}
+        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t ${
+          isDarkMode
+            ? 'border-white/10 bg-gradient-to-b from-black/40 to-black/70 backdrop-blur-md'
+            : isCrystal
+              ? 'border-slate-200/80 bg-slate-50/70'
+              : 'border-white/20 bg-white/[0.06] backdrop-blur-sm'
+        }`}>
+          {/* Total Staff */}
+          <div className={`p-4 sm:p-5 flex items-center gap-4 transition-colors ${
+            !isDarkMode && isCrystal ? 'border-b sm:border-b-0 sm:border-r border-slate-200/80' : 'border-b sm:border-b-0 sm:border-r border-white/10'
+          }`}>
+            <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl shadow-sm ${
+              !isDarkMode && isCrystal
+                ? 'bg-slate-100 text-slate-800 border border-slate-200'
+                : 'bg-white text-blue-600'
+            }`}>
+              <Users className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                !isDarkMode && isCrystal ? 'text-slate-500' : isDarkMode ? 'text-white/50' : 'text-blue-100'
+              }`}>
+                Total Staff
+              </span>
+              <span className={`text-2xl font-bold font-mono block tabular-nums ${
+                !isDarkMode && isCrystal ? 'text-slate-900' : 'text-white'
+              }`}>
+                {employees.length}
+              </span>
+              <span className={`text-[10px] truncate block ${
+                !isDarkMode && isCrystal ? 'text-slate-400' : isDarkMode ? 'text-white/40' : 'text-blue-100/80'
+              }`}>
+                Enrolled employees
+              </span>
+            </div>
+          </div>
+
+          {/* Active Staff */}
+          <div className={`p-4 sm:p-5 flex items-center gap-4 transition-colors ${
+            !isDarkMode && isCrystal ? 'border-b sm:border-b-0 sm:border-r border-slate-200/80' : 'border-b sm:border-b-0 sm:border-r border-white/10'
+          }`}>
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-sm shadow-emerald-500/30">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                !isDarkMode && isCrystal ? 'text-slate-500' : isDarkMode ? 'text-white/50' : 'text-blue-100'
+              }`}>
+                Active Staff
+              </span>
+              <span className={`text-2xl font-bold font-mono block tabular-nums ${
+                !isDarkMode && isCrystal ? 'text-emerald-700' : 'text-emerald-400'
+              }`}>
+                {employees.filter(e => e.status === 'ACTIVE').length}
+              </span>
+              <span className={`text-[10px] truncate block ${
+                !isDarkMode && isCrystal ? 'text-slate-400' : isDarkMode ? 'text-white/40' : 'text-blue-100/80'
+              }`}>
+                Active credentials
+              </span>
+            </div>
+          </div>
+
+          {/* Departments */}
+          <div className={`p-4 sm:p-5 flex items-center gap-4 transition-colors ${
+            !isDarkMode && isCrystal ? 'border-b sm:border-b-0 sm:border-r border-slate-200/80' : 'border-b sm:border-b-0 sm:border-r border-white/10'
+          }`}>
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-purple-600 text-white shadow-sm shadow-purple-500/30">
+              <Building2 className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                !isDarkMode && isCrystal ? 'text-slate-500' : isDarkMode ? 'text-white/50' : 'text-blue-100'
+              }`}>
+                Departments
+              </span>
+              <span className={`text-2xl font-bold font-mono block tabular-nums ${
+                !isDarkMode && isCrystal ? 'text-purple-700' : 'text-purple-400'
+              }`}>
+                {departments.length}
+              </span>
+              <span className={`text-[10px] truncate block ${
+                !isDarkMode && isCrystal ? 'text-slate-400' : isDarkMode ? 'text-white/40' : 'text-blue-100/80'
+              }`}>
+                Functional units
+              </span>
+            </div>
+          </div>
+
+          {/* Filtered Staff */}
+          <div className="p-4 sm:p-5 flex items-center gap-4 transition-colors">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-sm shadow-amber-500/30">
+              <UserCheck className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                !isDarkMode && isCrystal ? 'text-slate-500' : isDarkMode ? 'text-white/50' : 'text-blue-100'
+              }`}>
+                Filtered Roster
+              </span>
+              <span className={`text-2xl font-bold font-mono block tabular-nums ${
+                !isDarkMode && isCrystal ? 'text-amber-600' : 'text-amber-400'
+              }`}>
+                {filtered.length}
+              </span>
+              <span className={`text-[10px] truncate block ${
+                !isDarkMode && isCrystal ? 'text-slate-400' : isDarkMode ? 'text-white/40' : 'text-blue-100/80'
+              }`}>
+                Matching view
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* ── CONTROLS & SEGMENTED FILTER BAR ──                                  */}
+      {/* ========================================================================= */}
+      <div className={`p-2.5 sm:p-3 rounded-2xl border transition-all space-y-3 ${
+        isDarkMode
+          ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204]'
+          : 'border-slate-200 bg-white shadow-xs'
+      }`}>
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
           {/* SF-Style Inset Search Field */}
           <div className="relative min-w-0 flex-1">
@@ -323,10 +508,10 @@ export const EmployeeMasterView: React.FC<Props> = ({
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search staff by name, code, email, role, department..."
-              className={`h-10 w-full rounded-xl border pl-10 pr-9 text-xs sm:text-sm transition-ui outline-none ${
+              className={`h-10 w-full rounded-xl border pl-10 pr-9 text-xs sm:text-sm transition-ui outline-none focus:border-[var(--accent-primary)] focus:ring-4 focus:ring-[var(--accent-primary)]/15 ${
                 isDarkMode
-                  ? 'border-white/10 bg-black/40 text-white placeholder:text-slate-500 focus:border-[var(--accent-primary)] focus:bg-black/60 focus:ring-2 focus:ring-[var(--accent-ring)]'
-                  : 'border-slate-200 bg-slate-50/80 text-slate-900 placeholder:text-slate-400 focus:border-[var(--accent-primary)] focus:bg-white focus:ring-2 focus:ring-[var(--accent-ring)] shadow-2xs'
+                  ? 'border-white/10 bg-black/40 text-white placeholder:text-slate-500'
+                  : 'border-slate-200 bg-slate-50/80 text-slate-900 placeholder:text-slate-400 shadow-2xs'
               }`}
             />
             {search && (
@@ -346,10 +531,10 @@ export const EmployeeMasterView: React.FC<Props> = ({
               <select
                 value={department}
                 onChange={e => setDepartment(e.target.value)}
-                className={`h-10 w-full rounded-xl border px-3.5 text-xs font-semibold transition-ui outline-none cursor-pointer ${
+                className={`h-10 w-full rounded-xl border px-3.5 text-xs font-semibold transition-ui outline-none cursor-pointer focus:border-[var(--accent-primary)] focus:ring-4 focus:ring-[var(--accent-primary)]/15 ${
                   isDarkMode
-                    ? 'border-white/10 bg-black/40 text-slate-200 focus:border-[var(--accent-primary)]'
-                    : 'border-slate-200 bg-white text-slate-700 focus:border-[var(--accent-primary)] shadow-2xs'
+                    ? 'border-white/10 bg-black/40 text-slate-200'
+                    : 'border-slate-200 bg-white text-slate-700 shadow-2xs'
                 }`}
               >
                 <option value="ALL">All Departments ({departments.length})</option>
@@ -361,10 +546,10 @@ export const EmployeeMasterView: React.FC<Props> = ({
               </select>
             </div>
 
-            {/* Apple Segmented Control for Status */}
+            {/* Segmented Control for Status (Inventory-aligned) */}
             <div
-              className={`p-1 rounded-full border flex items-center gap-1 overflow-x-auto scrollbar-none w-full sm:w-auto ${
-                isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-slate-100/80 border-slate-200/80'
+              className={`inline-flex items-center p-1 rounded-xl border text-xs overflow-x-auto max-w-full ${
+                isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200/80 bg-slate-200/50 shadow-inner'
               }`}
             >
               {statuses.map(s => {
@@ -375,20 +560,20 @@ export const EmployeeMasterView: React.FC<Props> = ({
                     key={s}
                     type="button"
                     onClick={() => setStatus(s)}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
                       isActive
-                        ? isDarkMode ? 'bg-white text-slate-950 shadow-sm' : 'bg-[#155dfc] text-white shadow-sm'
-                        : isDarkMode
-                          ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                        ? isDarkMode
+                          ? 'bg-white/15 text-white shadow-xs border border-white/10'
+                          : 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     <span>{s === 'ALL' ? 'All' : s}</span>
                     <span
-                      className={`px-1.5 py-0.5 rounded-full text-[10px] tabular-nums font-bold ${
+                      className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
                         isActive
-                          ? isDarkMode ? 'bg-slate-900 text-white' : 'bg-white/20 text-white'
-                          : isDarkMode ? 'bg-white/10 text-slate-400' : 'bg-slate-200 text-slate-700'
+                          ? isDarkMode ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-800'
+                          : isDarkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-300/60 text-slate-600'
                       }`}
                     >
                       {count}
@@ -406,6 +591,7 @@ export const EmployeeMasterView: React.FC<Props> = ({
       {/* ========================================================================= */}
       {viewMode === 'table' && (
         <div className={`overflow-hidden rounded-3xl border transition-ui ${cardBase}`}>
+          <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-white/70 dark:via-white/10 to-transparent" />
           <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
             <div>
               <div className="text-xs font-extrabold text-slate-900 dark:text-white">Staff Roster Directory</div>

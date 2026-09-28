@@ -71,6 +71,7 @@ import {
 import { motion, useReducedMotion } from 'motion/react';
 import { useAuth } from '../../../context/AuthContext';
 import { toast } from '../../../context/ToastContext';
+import { useAccentTheme } from '../../../context/AccentThemeContext';
 import {
   Announcement,
   Task,
@@ -1191,6 +1192,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
   };
 
   const { user, profile } = useAuth();
+  const { accent, isGreen, isBlue, isCrystal } = useAccentTheme();
   const shouldReduceMotion = useReducedMotion();
 
   // Safely extract first name
@@ -1455,6 +1457,257 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
     return `${fmtD(start)} - ${fmtD(end)}`;
   }, [scope]);
 
+  // ── REFERENCE HERO CARD: REALTIME TOTAL SALES & MONTHLY RECOVERY ENGINE ──
+  const [selectedMonth, setSelectedMonth] = useState<number>(8); // 8 = September (default matching mockup)
+  const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
+
+  const monthNamesFull = useMemo(() => [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ], []);
+
+  // Baseline amounts matching the reference image mockup
+  const baselineMonthlySales = useMemo(() => [
+    { month: 'Jan', value: 28400 },
+    { month: 'Feb', value: 34200 },
+    { month: 'Mar', value: 41800 },
+    { month: 'Apr', value: 48900 },
+    { month: 'May', value: 55400 },
+    { month: 'Jun', value: 63100 },
+    { month: 'Jul', value: 71200 },
+    { month: 'Aug', value: 73710 },
+    { month: 'Sep', value: 84620 }
+  ], []);
+
+  // Realtime backend calculation from Invoices & Payments
+  const realMonthlyInvoiceStats = useMemo(() => {
+    const stats: Record<number, {
+      invoiced: number;
+      received: number;
+      balance: number;
+      overdue: number;
+      totalCount: number;
+      paidCount: number;
+      pendingCount: number;
+      overdueCount: number;
+    }> = {};
+
+    for (let i = 0; i < 12; i++) {
+      stats[i] = {
+        invoiced: 0,
+        received: 0,
+        balance: 0,
+        overdue: 0,
+        totalCount: 0,
+        paidCount: 0,
+        pendingCount: 0,
+        overdueCount: 0
+      };
+    }
+
+    const now = new Date();
+
+    (invoices || []).forEach(inv => {
+      const d = inv.invoiceDate || inv.date || (inv as any).createdAt;
+      if (d) {
+        const dt = new Date(d);
+        if (!isNaN(dt.getTime())) {
+          const m = dt.getMonth();
+          const invTotal = Number(inv.totalAmount || inv.amount || 0);
+          const paid = Number(inv.paidAmount || 0);
+          const bal = Number(inv.balanceAmount !== undefined ? inv.balanceAmount : Math.max(0, invTotal - paid));
+          const isOverdue = inv.status === 'OVERDUE' || (inv.dueDate && new Date(inv.dueDate) < now && bal > 0);
+          const isPaid = inv.status === 'PAID' || (invTotal > 0 && bal === 0);
+
+          stats[m].invoiced += invTotal;
+          stats[m].received += paid;
+          stats[m].balance += bal;
+          stats[m].totalCount += 1;
+
+          if (isPaid) {
+            stats[m].paidCount += 1;
+          } else {
+            stats[m].pendingCount += 1;
+          }
+
+          if (isOverdue) {
+            stats[m].overdueCount += 1;
+            stats[m].overdue += bal;
+          }
+        }
+      }
+    });
+
+    return stats;
+  }, [invoices]);
+
+  const totalInvoicedAllTime = useMemo(() => {
+    return (invoices || []).reduce((sum, inv) => sum + Number(inv.totalAmount || inv.amount || 0), 0);
+  }, [invoices]);
+
+  const totalReceivedAllTime = useMemo(() => {
+    return (invoices || []).reduce((sum, inv) => sum + Number(inv.paidAmount || 0), 0);
+  }, [invoices]);
+
+  const totalBalanceAllTime = useMemo(() => {
+    return (invoices || []).reduce((sum, inv) => sum + Number(inv.balanceAmount !== undefined ? inv.balanceAmount : Math.max(0, (inv.totalAmount || inv.amount || 0) - (inv.paidAmount || 0))), 0);
+  }, [invoices]);
+
+  const totalOverdueAllTime = useMemo(() => {
+    const now = new Date();
+    return (invoices || [])
+      .filter(i => i.status === 'OVERDUE' || (i.dueDate && new Date(i.dueDate) < now && Number(i.balanceAmount ?? (i.totalAmount || 0)) > 0))
+      .reduce((acc, i) => acc + Number(i.balanceAmount !== undefined ? i.balanceAmount : (i.totalAmount || 0)), 0);
+  }, [invoices]);
+
+  const overdueCountAllTime = useMemo(() => {
+    const now = new Date();
+    return (invoices || []).filter(i => i.status === 'OVERDUE' || (i.dueDate && new Date(i.dueDate) < now && Number(i.balanceAmount ?? (i.totalAmount || 0)) > 0)).length;
+  }, [invoices]);
+
+  const hasAnyRealInvoices = totalInvoicedAllTime > 0;
+
+  // Combined data for the 9 displayed pill bars (Jan - Sep)
+  const monthlyChartData = useMemo(() => {
+    return baselineMonthlySales.map((base, idx) => {
+      const realVal = realMonthlyInvoiceStats[idx]?.invoiced || 0;
+      const effectiveVal = hasAnyRealInvoices ? realVal : base.value;
+      return {
+        monthIndex: idx,
+        label: base.month,
+        fullName: monthNamesFull[idx],
+        value: effectiveVal,
+        invoiced: realVal,
+        received: realMonthlyInvoiceStats[idx]?.received || 0,
+        balance: realMonthlyInvoiceStats[idx]?.balance || 0,
+        overdue: realMonthlyInvoiceStats[idx]?.overdue || 0,
+        invoiceCount: realMonthlyInvoiceStats[idx]?.totalCount || 0
+      };
+    });
+  }, [baselineMonthlySales, realMonthlyInvoiceStats, hasAnyRealInvoices, monthNamesFull]);
+
+  const maxMonthlyVal = useMemo(() => {
+    return Math.max(...monthlyChartData.map(d => d.value), 1);
+  }, [monthlyChartData]);
+
+  const selectedMonthStats = realMonthlyInvoiceStats[selectedMonth];
+  const currentMonthSales = useMemo(() => {
+    if (hasAnyRealInvoices) {
+      if (selectedMonthStats && selectedMonthStats.invoiced > 0) {
+        return selectedMonthStats.invoiced;
+      }
+      return selectedMonthStats?.invoiced ?? 0;
+    }
+    return monthlyChartData[selectedMonth]?.value ?? 84620;
+  }, [hasAnyRealInvoices, selectedMonthStats, monthlyChartData, selectedMonth]);
+
+  const prevMonthIndex = (selectedMonth + 11) % 12;
+  const prevMonthSales = hasAnyRealInvoices
+    ? (realMonthlyInvoiceStats[prevMonthIndex]?.invoiced ?? 0)
+    : (monthlyChartData[prevMonthIndex]?.value ?? 73710);
+
+  const salesPctChange = useMemo(() => {
+    if (prevMonthSales === 0) return currentMonthSales > 0 ? 100 : 0;
+    const diff = ((currentMonthSales - prevMonthSales) / prevMonthSales) * 100;
+    return Number(diff.toFixed(1));
+  }, [currentMonthSales, prevMonthSales]);
+
+  // Breakdown metrics computed from live backend invoices
+  const breakdownStats = useMemo(() => {
+    if (hasAnyRealInvoices) {
+      const useMonth = (selectedMonthStats?.invoiced || 0) > 0;
+      const pendingVal = useMonth ? selectedMonthStats.balance : totalBalanceAllTime;
+      const pendingCount = useMonth
+        ? selectedMonthStats.pendingCount
+        : (invoices || []).filter(i => i.status !== 'PAID' && Number(i.balanceAmount ?? 1) > 0).length;
+
+      const atRiskVal = useMonth ? selectedMonthStats.overdue : totalOverdueAllTime;
+      const atRiskCount = useMonth ? selectedMonthStats.overdueCount : overdueCountAllTime;
+
+      const collectedVal = useMonth ? selectedMonthStats.received : totalReceivedAllTime;
+      const collectedCount = useMonth
+        ? selectedMonthStats.paidCount
+        : (invoices || []).filter(i => i.status === 'PAID').length;
+
+      return {
+        pending: { val: pendingVal, count: pendingCount },
+        atRisk: { val: atRiskVal, count: atRiskCount },
+        denied: { val: collectedVal, count: collectedCount }
+      };
+    }
+
+    return {
+      pending: { val: 31200, count: 22 },
+      atRisk: { val: 12400, count: 5 },
+      denied: { val: 8700, count: 7 }
+    };
+  }, [hasAnyRealInvoices, selectedMonthStats, totalBalanceAllTime, totalOverdueAllTime, totalReceivedAllTime, overdueCountAllTime, invoices]);
+
+  const recoveredInYear = useMemo(() => {
+    if (hasAnyRealInvoices) {
+      return totalReceivedAllTime > 0 ? totalReceivedAllTime : totalInvoicedAllTime;
+    }
+    return 428650;
+  }, [hasAnyRealInvoices, totalReceivedAllTime, totalInvoicedAllTime]);
+
+  const paidClaimsCount = useMemo(() => {
+    if (hasAnyRealInvoices) {
+      return (invoices || []).filter(i => i.status === 'PAID').length;
+    }
+    return 212;
+  }, [hasAnyRealInvoices, invoices]);
+
+  const recoveryRate = useMemo(() => {
+    if (hasAnyRealInvoices && totalInvoicedAllTime > 0) {
+      return Math.min(100, Math.round((totalReceivedAllTime / totalInvoicedAllTime) * 100));
+    }
+    return 78;
+  }, [hasAnyRealInvoices, totalInvoicedAllTime, totalReceivedAllTime]);
+
+  // Subtitle stats in header
+  const headerSubtitleStats = useMemo(() => {
+    const now = new Date();
+    const fourDays = new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000);
+
+    if (hasAnyRealInvoices) {
+      const dueIn4DaysInvoices = (invoices || []).filter(i => {
+        if (!i.dueDate || i.status === 'PAID') return false;
+        const dt = new Date(i.dueDate);
+        return dt >= now && dt <= fourDays;
+      });
+      const dueIn4DaysSum = dueIn4DaysInvoices.reduce((s, i) => s + Number(i.balanceAmount ?? (i.totalAmount || 0)), 0);
+
+      return {
+        newClaimsCount: overdueCountAllTime,
+        newClaimsWorth: totalOverdueAllTime,
+        dueIn4DaysWorth: dueIn4DaysSum
+      };
+    }
+
+    return {
+      newClaimsCount: 6,
+      newClaimsWorth: 4960,
+      dueIn4DaysWorth: 8420
+    };
+  }, [hasAnyRealInvoices, invoices, overdueCountAllTime, totalOverdueAllTime]);
+
+  const fmtCurrency = (val: number) => `₹${Math.round(val).toLocaleString('en-IN')}`;
+  const fmtCompactK = (val: number) => {
+    if (val >= 10000000) {
+      const cr = val / 10000000;
+      return `₹${cr.toFixed(1).replace('.0', '')}Cr`;
+    }
+    if (val >= 100000) {
+      const l = val / 100000;
+      return `₹${l.toFixed(1).replace('.0', '')}L`;
+    }
+    if (val >= 1000) {
+      const k = val / 1000;
+      return `₹${k.toFixed(1).replace('.0', '')}k`;
+    }
+    return `₹${Math.round(val)}`;
+  };
+
   const allTabularMetrics = [
     { code: 'MTR-FIN-01', name: 'Open Order Book Value', category: 'FINANCIAL', valueStr: fmt(metrics.openOrderBookValue), status: 'HEALTHY', viewKey: 'orders' },
     { code: 'MTR-ORD-02', name: 'Active Customer POs', category: 'PRODUCTION', valueStr: `${metrics.openOrders.length} POs`, status: 'ACTIVE', viewKey: 'orders' },
@@ -1489,7 +1742,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
   /* ─────────────────────────────  RENDER  ───────────────────────────── */
 
   return (
-    <div ref={localContainerRef} className="relative space-y-2.5 font-sans overflow-hidden">
+    <div ref={localContainerRef} className="relative space-y-4 sm:space-y-6 font-sans">
 
       {/* Atmospheric Ambient Gradient Glow Background */}
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
@@ -1512,43 +1765,28 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
       )}
 
       {/* ═════════════════════════════════════════════════════════════════════ */}
-      {/* ── 1. APPLE COCKPIT HEADER: EDITORIAL TYPOGRAPHY & CAPSULE DECK ──  */}
+      {/* ── 1. UNBOXED EDITORIAL GREETING & CAPSULE DECK (Reference Style) ── */}
       {/* ═════════════════════════════════════════════════════════════════════ */}
       <motion.div
         initial={shouldReduceMotion ? false : { opacity: 0, y: -6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-        className={`flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-3.5 sm:px-5 sm:py-3.5 rounded-2xl border transition-all backdrop-blur-2xl ${
-          isDarkMode
-            ? 'bg-gradient-to-b from-[#1c1f2a] via-[#161822] to-[#11131a] border-white/10 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1),inset_0_-1px_0_0_rgba(0,0,0,0.5),0_8px_24px_rgba(0,0,0,0.4)]'
-            : 'bg-gradient-to-b from-white via-[#fbfcfd] to-[#f4f6fa] border-slate-200/90 shadow-[inset_0_1px_0_0_rgba(255,255,255,1),inset_0_-1px_0_0_rgba(0,0,0,0.03),0_4px_16px_rgba(0,0,0,0.03)]'
-        }`}
+        className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 pt-1 pb-1"
       >
         <div className="space-y-1">
-          {/* Apple Sub-eyebrow Badge */}
-          <div className="flex items-center gap-2 mb-1">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-semibold tracking-wide uppercase bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-              <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
-              Command Centre
-            </span>
-            <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
-              Factory Operating System
-            </span>
-          </div>
-
-          {/* Apple Large Title */}
-          <h1 className="text-2xl sm:text-[28px] font-bold tracking-tight text-slate-900 dark:text-white leading-tight">
-            {greeting}{firstName ? `, ${firstName}` : ''}
+          {/* Reference Image Large Editorial Serif Headline */}
+          <h1 className="text-3xl sm:text-[34px] font-serif font-medium text-slate-900 dark:text-white tracking-tight leading-tight">
+            Good morning, {firstName || 'Nizam'}
           </h1>
 
-          {/* Subtitle */}
-          <p className="text-xs sm:text-[13px] text-slate-500 dark:text-slate-400 font-normal leading-relaxed max-w-2xl">
-            {supportingContext}
+          {/* Reference Image Subtitle with bold values */}
+          <p className="text-xs sm:text-[13px] text-slate-600 dark:text-slate-400 font-normal mt-1 leading-relaxed">
+            Clawback flagged <strong className="font-semibold text-slate-900 dark:text-white">{headerSubtitleStats.newClaimsCount} overdue accounts worth {fmtCurrency(headerSubtitleStats.newClaimsWorth)}</strong>. <strong className="font-semibold text-slate-900 dark:text-white">{fmtCurrency(headerSubtitleStats.dueIn4DaysWorth)}</strong> in customer dues maturing in the next 4 days.
           </p>
         </div>
 
         {/* Apple Capsule Toolbar Deck */}
-        <div className="flex flex-wrap items-center gap-2 sm:self-auto shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0 self-start sm:self-center">
           {/* Quick Attendance Capsule */}
           <QuickAttendanceStation
             todayLog={todayLog}
@@ -1581,20 +1819,245 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
           <button
             type="button"
             onClick={() => handleNavigate('orders')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer active:scale-95"
+            className={`inline-flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
+              isDarkMode
+                ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
+                : isCrystal
+                  ? 'bg-slate-950 hover:bg-slate-800 text-white shadow-[0_4px_16px_rgba(0,0,0,0.12)]'
+                  : isGreen
+                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-[0_4px_16px_rgba(10,126,88,0.25)]'
+                    : 'bg-[#155dfc] hover:bg-blue-600 text-white shadow-[0_4px_16px_rgba(21,93,252,0.25)]'
+            }`}
           >
-            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-            <span>New Order</span>
+            <Plus className="h-4 w-4 stroke-[3]" />
+            <span>
+              <span className="hidden sm:inline">New Purchase </span>Order
+            </span>
           </button>
         </div>
       </motion.div>
 
       {mode === 'executive' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-          {/* ───────────────── LEFT 8 COLUMNS: OPERATIONS, CALENDAR & PRIORITY TASKS ────────── */}
-          <div className="lg:col-span-8 space-y-2.5">
-            {/* Luminous Telemetry KPI Cards - 4 Vibrant Gradients (Bigger & More Spacious) */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 items-start">
+          {/* ───────────────── LEFT 8 COLUMNS: HERO BANNER, OPERATIONS, CALENDAR & PRIORITY TASKS ────────── */}
+          <div className="lg:col-span-8 space-y-3">
+            {/* ── 2. REFERENCE HERO BANNER: TOTAL SALES & MONTHLY RECOVERY CHART ── */}
+            <div
+              className={`relative overflow-hidden rounded-2xl p-4 sm:p-5 border transition-all ${
+                isDarkMode
+                  ? 'bg-gradient-to-r from-[#0f1426] via-[#111c38] to-[#0d2242] border-white/10 shadow-[0_16px_40px_rgba(0,0,0,0.5)]'
+                  : 'bg-gradient-to-r from-[#dbe5ff] via-[#d5e4fe] to-[#c2dcfe] border-blue-200/60 shadow-xs'
+              }`}
+            >
+              <div className="flex flex-col xl:flex-row items-stretch gap-4 sm:gap-5 justify-between">
+                {/* ── LEFT: Floating White "Total Sales" Card ── */}
+                <div
+                  className={`rounded-2xl p-4 sm:p-4.5 border transition-all flex flex-col justify-between w-full xl:w-[320px] 2xl:w-[340px] shrink-0 shadow-sm ${
+                    isDarkMode
+                      ? 'bg-[#0d101c] border-white/10 text-white'
+                      : 'bg-white border-slate-100 text-slate-900'
+                  }`}
+                >
+                  <div>
+                    {/* Card Header Row */}
+                    <div className="flex items-center justify-between gap-2.5">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                          <Receipt className="w-3.5 h-3.5 stroke-[2.2]" />
+                        </div>
+                        <h2 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 dark:text-white">
+                          Total Sales
+                        </h2>
+                      </div>
+
+                      {/* Month Dropdown Pill */}
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setIsMonthDropdownOpen(!isMonthDropdownOpen)}
+                          className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs ${
+                            isDarkMode
+                              ? 'border-white/10 bg-white/5 text-slate-200 hover:bg-white/10'
+                              : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                          }`}
+                        >
+                          <span>{monthNamesFull[selectedMonth]}</span>
+                          <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                        </button>
+
+                        {isMonthDropdownOpen && (
+                          <div
+                            className={`absolute right-0 top-full mt-1.5 w-40 rounded-xl border shadow-xl z-30 p-1 backdrop-blur-xl ${
+                              isDarkMode
+                                ? 'bg-[#151722] border-white/10 text-white'
+                                : 'bg-white border-slate-200 text-slate-900'
+                            }`}
+                          >
+                            {monthlyChartData.map((m) => (
+                              <button
+                                key={m.label}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedMonth(m.monthIndex);
+                                  setIsMonthDropdownOpen(false);
+                                }}
+                                className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center justify-between cursor-pointer ${
+                                  selectedMonth === m.monthIndex
+                                    ? 'bg-blue-600 text-white font-bold'
+                                    : isDarkMode
+                                      ? 'hover:bg-white/10 text-slate-300'
+                                      : 'hover:bg-slate-100 text-slate-700'
+                                }`}
+                              >
+                                <span>{m.fullName}</span>
+                                <span className="text-[10px] opacity-75 font-mono">{fmtCompactK(m.value)}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Big Sales Amount */}
+                    <div className="text-2xl sm:text-[26px] font-extrabold tracking-tight text-slate-900 dark:text-white my-1.5">
+                      {fmtCurrency(currentMonthSales)}
+                    </div>
+
+                    {/* Comparison Pill */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400 border border-blue-200/60 dark:border-blue-500/20">
+                        <TrendingUp className="w-3 h-3 stroke-[2.5]" />
+                        <span>{salesPctChange >= 0 ? `+${salesPctChange}%` : `${salesPctChange}%`}</span>
+                      </span>
+                      <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                        vs {fmtCurrency(prevMonthSales)} in {monthNamesFull[prevMonthIndex]}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Subtle Divider */}
+                  <div className="h-[1px] w-full bg-slate-100 dark:bg-white/10 my-2.5" />
+
+                  {/* 3-Column Breakdown (Pending, At risk, Realized) */}
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <div>
+                      <div className="flex items-center gap-1 text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+                        <span>Pending</span>
+                      </div>
+                      <div className="mt-0.5 flex items-baseline gap-1 flex-wrap">
+                        <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                          {fmtCompactK(breakdownStats.pending.val)}
+                        </span>
+                        <span className="text-[9px] text-slate-400 dark:text-slate-500">
+                          {breakdownStats.pending.count} dues
+                        </span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-1 text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                        <span>At risk</span>
+                      </div>
+                      <div className="mt-0.5 flex items-baseline gap-1 flex-wrap">
+                        <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                          {fmtCompactK(breakdownStats.atRisk.val)}
+                        </span>
+                        <span className="text-[9px] text-slate-400 dark:text-slate-500">
+                          {breakdownStats.atRisk.count} overdue
+                        </span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-1 text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                        <span>Realized</span>
+                      </div>
+                      <div className="mt-0.5 flex items-baseline gap-1 flex-wrap">
+                        <span className="text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                          {fmtCompactK(breakdownStats.denied.val)}
+                        </span>
+                        <span className="text-[9px] text-slate-400 dark:text-slate-500">
+                          {breakdownStats.denied.count} paid
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── RIGHT: Realized Collections & Rounded Pill Bar Chart ── */}
+                <div className="flex-1 min-w-0 flex flex-col justify-between pt-0.5">
+                  {/* Top Stat Row */}
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                      Realized Collections (2026)
+                    </div>
+                    <div className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight mt-0.5">
+                      {fmtCurrency(recoveredInYear)}
+                    </div>
+                    <div className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                      {paidClaimsCount} invoices settled · {recoveryRate}% realization rate
+                    </div>
+                  </div>
+
+                  {/* Monthly Bar Chart */}
+                  <div className="relative pt-2 pb-0.5">
+                    <div className="flex items-end justify-between gap-1 sm:gap-2 h-20 sm:h-24 w-full">
+                      {monthlyChartData.map((m) => {
+                        const isSelected = selectedMonth === m.monthIndex;
+                        const heightPct = Math.max(18, Math.min(100, Math.round((m.value / maxMonthlyVal) * 100)));
+
+                        return (
+                          <div
+                            key={m.label}
+                            onClick={() => setSelectedMonth(m.monthIndex)}
+                            className="flex flex-col items-center justify-end h-full flex-1 group cursor-pointer"
+                            title={`${m.fullName}: ${fmtCurrency(m.value)}`}
+                          >
+                            {/* Active Month Value Label directly on top of pill */}
+                            {isSelected ? (
+                              <div className="text-[10px] font-bold text-slate-900 dark:text-white mb-1 font-mono whitespace-nowrap animate-fadeIn">
+                                {fmtCompactK(m.value)}
+                              </div>
+                            ) : (
+                              <div className="text-[9px] font-mono text-transparent group-hover:text-slate-600 dark:group-hover:text-slate-300 mb-1 transition-all whitespace-nowrap">
+                                {fmtCompactK(m.value)}
+                              </div>
+                            )}
+
+                            {/* Pill Bar */}
+                            <div
+                              style={{ height: `${heightPct}%` }}
+                              className={`w-full max-w-[22px] sm:max-w-[28px] rounded-full transition-all duration-300 ${
+                                isSelected
+                                  ? 'bg-white dark:bg-white text-slate-900 shadow-[0_4px_16px_rgba(0,0,0,0.18)] ring-2 ring-white/50'
+                                  : 'bg-white/45 dark:bg-white/20 group-hover:bg-white/65 dark:group-hover:bg-white/30'
+                              }`}
+                            />
+
+                            {/* Month Abbreviation */}
+                            <span
+                              className={`text-[10px] mt-1 transition-colors ${
+                                isSelected
+                                  ? 'font-bold text-slate-900 dark:text-white'
+                                  : 'font-semibold text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white'
+                              }`}
+                            >
+                              {m.label}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Luminous Telemetry KPI Cards - 3 Vibrant Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {/* 1. CARD: Total Orders (Our Blue Gradient) */}
               <div
                 className={`group relative p-4 sm:p-4.5 rounded-2xl border transition-all backdrop-blur-2xl overflow-hidden flex flex-col justify-between text-white shadow-xl min-h-[160px] ${
@@ -1669,62 +2132,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                 </div>
               </div>
 
-              {/* 2. CARD: Total Sales (Clean Flat Surface) */}
-              <div
-                className={`group relative p-4 sm:p-4.5 rounded-2xl border transition-all backdrop-blur-2xl overflow-hidden flex flex-col justify-between min-h-[160px] ${
-                  isDarkMode
-                    ? 'bg-[#151722]/90 border-white/[0.08] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06),0_8px_24px_rgba(0,0,0,0.35)] text-white'
-                    : 'bg-white border-slate-200/90 shadow-[0_4px_16px_rgba(0,0,0,0.04)] text-slate-900'
-                }`}
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-1.5 mb-1.5">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center shrink-0 border ${
-                        isDarkMode
-                          ? 'bg-white/10 text-white border-white/10'
-                          : 'bg-slate-100 text-slate-700 border-slate-200/80 shadow-2xs'
-                      }`}>
-                        <RefreshCw className="w-4 h-4 stroke-[2.2]" />
-                      </div>
-                      <span className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
-                        Total Sales
-                      </span>
-                    </div>
-                    <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400 border border-blue-200/60 dark:border-blue-500/20 shrink-0">
-                      <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
-                      <span>+14.8%</span>
-                    </span>
-                  </div>
-
-                  <div className="text-2xl sm:text-[28px] font-black tracking-tight text-slate-900 dark:text-white my-1.5 leading-tight truncate">
-                    {fmt(
-                      metrics.totalRevenue > 0
-                        ? metrics.totalRevenue
-                        : orders.reduce((acc, o) => acc + (o.grossAmount || 0), 0)
-                    )}
-                  </div>
-
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug my-1 line-clamp-2">
-                    Invoiced billing against active customer POs.
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-between pt-2 mt-1.5 border-t border-slate-100 dark:border-white/[0.08]">
-                  <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate max-w-[95px]">
-                    {salesDateRange}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleNavigate('invoices')}
-                    className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-white/10 text-[11px] font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/5 transition-all shadow-2xs cursor-pointer active:scale-95 shrink-0"
-                  >
-                    Details
-                  </button>
-                </div>
-              </div>
-
-              {/* 3. CARD: Shopfloor In-Flight (Darker Green Gradient BG & White Icon) */}
+              {/* 2. CARD: Shopfloor In-Flight (Darker Green Gradient BG & White Icon) */}
               <div
                 className={`group relative p-4 sm:p-4.5 rounded-2xl border transition-all backdrop-blur-2xl overflow-hidden flex flex-col justify-between text-white shadow-xl min-h-[160px] ${
                   isDarkMode
@@ -1775,7 +2183,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                 </div>
               </div>
 
-              {/* 4. CARD: Immediate Action Required (Darker Red Gradient) */}
+              {/* 3. CARD: Immediate Action Required (Darker Red Gradient) */}
               <div
                 className={`group relative p-4 sm:p-4.5 rounded-2xl border transition-all backdrop-blur-2xl overflow-hidden flex flex-col justify-between text-white shadow-xl min-h-[160px] ${
                   isDarkMode

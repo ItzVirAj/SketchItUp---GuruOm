@@ -478,6 +478,7 @@ const VIEW_PERMISSION_KEYS: Partial<Record<ConsoleView, string[]>> = {
   'finished-goods': ['inventory:view'],
   'plating-outwork': ['production:view'],
   'reports': ['reports:view', 'orders:view', 'inventory:view', 'production:view', 'finance:view'],
+  'metrics': ['reports:view', 'orders:view', 'inventory:view', 'production:view', 'finance:view'],
   'qc': ['qc:view'],
   'pdi': ['qc:view'],
   'dispatch': ['dispatch:view'],
@@ -516,7 +517,7 @@ export function isViewAllowedForRole(role: string, view: ConsoleView): boolean {
 }
 
 export function isViewAllowedForUser(user: Pick<SystemUser, 'role' | 'effectivePermissions'> | null | undefined, view: ConsoleView): boolean {
-  if (view === 'command-centre') return true;
+  if (view === 'command-centre' || view === 'metrics') return true;
   if (view === 'leave-requests') return isViewAllowedForUser(user, 'leave');
   if (view === 'employee-certifications') return isViewAllowedForUser(user, 'certifications');
 

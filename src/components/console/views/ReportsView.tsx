@@ -12,6 +12,7 @@ import {
   Package
 } from 'lucide-react';
 import { ProductionLogReport } from '../../../types/console';
+import { useAccentTheme } from '../../../context/AccentThemeContext';
 
 interface ReportsViewProps {
   logs?: ProductionLogReport[];
@@ -29,6 +30,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   stock = [], 
   isDarkMode = true 
 }) => {
+  const { accent, isGreen, isBlue, isCrystal } = useAccentTheme();
   const activeLogs = logs || productionLogs || [];
   const [fromDate, setFromDate] = useState('2026-08-01');
   const [toDate, setToDate] = useState('2026-08-20');
@@ -126,10 +128,18 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       {/* ── DESKTOP HEADER & INTEGRATED KPI ROW (≥ md) ──                          */}
       {/* ========================================================================= */}
       <div className="hidden md:block space-y-4">
-        <section className={`overflow-hidden rounded-2xl border transition-all ${
+        <section className={`overflow-hidden rounded-2xl border transition-all duration-300 ${
           isDarkMode
-            ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]'
-            : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
+            ? isCrystal
+              ? 'border-white/10 bg-gradient-to-b from-[#181C24] via-[#10131A] to-[#0A0C10] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6)]'
+              : isGreen
+                ? 'border-emerald-500/20 bg-gradient-to-b from-[#0D241B] via-[#081711] to-[#030B07] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(16,185,129,0.12)]'
+                : 'border-blue-500/20 bg-gradient-to-b from-[#0a1836] via-[#071126] to-[#030712] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(21,93,252,0.15)]'
+            : isCrystal
+              ? 'border-slate-300/80 bg-gradient-to-b from-white via-[#F8FAFC] to-[#EEF2F6] text-slate-950 shadow-[0_16px_40px_rgba(0,0,0,0.06),inset_0_1px_0_0_rgba(255,255,255,0.95)]'
+              : isGreen
+                ? 'border-emerald-600/30 bg-gradient-to-b from-[#0A7E58] via-[#086B4A] to-[#044F36] text-white shadow-[0_16px_40px_rgba(10,126,88,0.22)]'
+                : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
         }`}>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 px-6 py-6 sm:py-7">
             <div className="min-w-0 space-y-1.5">
@@ -137,22 +147,30 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                 <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wide ${
                   isDarkMode
                     ? 'bg-white/10 border border-white/15 text-white'
-                    : 'bg-white/20 border border-white/30 backdrop-blur-md text-white shadow-xs'
+                    : isCrystal
+                      ? 'bg-slate-900/[0.06] border border-slate-900/10 text-slate-800'
+                      : 'bg-white/20 border border-white/30 backdrop-blur-md text-white shadow-xs'
                 }`}>
-                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className={`h-2 w-2 rounded-full animate-pulse ${
+                    isCrystal && !isDarkMode ? 'bg-emerald-500' : isGreen ? 'bg-emerald-400' : 'bg-sky-400'
+                  }`} />
                   <span>Audit Logs &amp; Analytics Engine</span>
                 </span>
-                <span className="text-sm font-semibold text-white/80">•</span>
-                <span className="text-xs sm:text-sm font-semibold text-white/95">
+                <span className={`text-sm font-semibold ${isCrystal && !isDarkMode ? 'text-slate-400' : 'text-white/80'}`}>•</span>
+                <span className={`text-xs sm:text-sm font-semibold ${isCrystal && !isDarkMode ? 'text-slate-600' : 'text-white/95'}`}>
                   {filteredLogs.length} Operation Records
                 </span>
               </div>
 
-              <h1 className="text-3xl sm:text-[32px] font-black tracking-tight text-white leading-tight">
+              <h1 className={`text-3xl sm:text-[32px] font-black tracking-tight leading-tight ${
+                isCrystal && !isDarkMode ? 'text-slate-950' : 'text-white'
+              }`}>
                 Production &amp; Shift Logs
               </h1>
 
-              <p className="text-xs sm:text-sm text-white/95 font-medium leading-relaxed max-w-2xl">
+              <p className={`text-xs sm:text-sm font-medium leading-relaxed max-w-2xl ${
+                isCrystal && !isDarkMode ? 'text-slate-600' : 'text-white/95'
+              }`}>
                 Audit operation steps completed across all shopfloor job cards, analyze machine output, and export compliance reports.
               </p>
             </div>
@@ -164,7 +182,11 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                 className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
                   isDarkMode
                     ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
-                    : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
+                    : isCrystal
+                      ? 'bg-slate-950 hover:bg-slate-900 text-white shadow-[0_4px_16px_rgba(0,0,0,0.15)]'
+                      : isGreen
+                        ? 'bg-white hover:bg-emerald-50 text-[#065F46] shadow-[0_4px_16px_rgba(0,0,0,0.15)]'
+                        : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
                 }`}
               >
                 <Download className="h-4 w-4 stroke-[2.5]" />
@@ -177,7 +199,9 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t ${
             isDarkMode
               ? 'border-white/10 bg-gradient-to-b from-black/40 to-black/70 backdrop-blur-md'
-              : 'border-white/20 bg-white/[0.06] backdrop-blur-sm'
+              : isCrystal
+                ? 'border-slate-200/80 bg-slate-50/70'
+                : 'border-white/20 bg-white/[0.06] backdrop-blur-sm'
           }`}>
             {[
               {
@@ -185,8 +209,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                 value: `${activeLogs.length}`,
                 detail: 'Recorded terminal executions',
                 icon: FileText,
-                iconColor: isDarkMode ? 'text-white' : 'text-[#155dfc]',
-                iconBg: isDarkMode ? 'bg-blue-600 shadow-xs' : 'bg-white shadow-xs',
+                iconColor: isDarkMode ? 'text-white' : (isCrystal ? 'text-white' : (isGreen ? 'text-[#065F46]' : 'text-[#155dfc]')),
+                iconBg: isDarkMode ? 'bg-blue-600 shadow-xs' : (isCrystal ? 'bg-slate-900 shadow-xs' : 'bg-white shadow-xs'),
               },
               {
                 label: 'Total Output Volume',
@@ -218,20 +242,26 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                 <div
                   key={metric.label}
                   className={`flex items-center gap-4 px-6 py-5 transition-all ${
-                    index > 0 ? (isDarkMode ? 'lg:border-l border-white/10' : 'lg:border-l border-white/20') : ''
+                    index > 0 ? (isDarkMode ? 'lg:border-l border-white/10' : (isCrystal ? 'lg:border-l border-slate-200/80' : 'lg:border-l border-white/20')) : ''
                   }`}
                 >
                   <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${metric.iconBg} ${metric.iconColor}`}>
                     <MetricIcon className="h-5 w-5 stroke-[2.5]" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="text-xs font-bold uppercase tracking-wider text-white/85">
+                    <div className={`text-xs font-bold uppercase tracking-wider ${
+                      isCrystal && !isDarkMode ? 'text-slate-500' : 'text-white/85'
+                    }`}>
                       {metric.label}
                     </div>
-                    <div className="text-2xl sm:text-[26px] font-black tracking-tight text-white tabular-nums my-0.5 leading-tight">
+                    <div className={`text-2xl sm:text-[26px] font-black tracking-tight tabular-nums my-0.5 leading-tight ${
+                      isCrystal && !isDarkMode ? 'text-slate-950' : 'text-white'
+                    }`}>
                       {metric.value}
                     </div>
-                    <div className="text-xs font-medium text-white/90 truncate">
+                    <div className={`text-xs font-medium truncate ${
+                      isCrystal && !isDarkMode ? 'text-slate-600' : 'text-white/90'
+                    }`}>
                       {metric.detail}
                     </div>
                   </div>
@@ -245,14 +275,14 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         <div className={`rounded-2xl border p-3.5 transition-all ${
           isDarkMode
             ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] shadow-[0_8px_28px_rgba(0,0,0,0.5)]'
-            : 'border-slate-200/80 bg-gradient-to-b from-white/95 via-slate-50/90 to-slate-100/70 shadow-[0_4px_20px_rgba(0,0,0,0.03)]'
+            : 'border-slate-200 bg-white shadow-xs'
         }`}>
           <div className="space-y-3">
             {/* Tier 1: Date pickers + Live Telemetry chip */}
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2 font-mono text-xs">
                 <div className={`flex h-9 items-center gap-2 rounded-xl border px-3 transition-all ${
-                  isDarkMode ? 'border-white/10 bg-black/40 text-white' : 'border-slate-200/90 bg-slate-100/80 text-slate-900'
+                  isDarkMode ? 'border-white/10 bg-black/60 text-white' : 'border-slate-200/80 bg-slate-200/50 shadow-inner text-slate-900'
                 }`}>
                   <Calendar className="h-3.5 w-3.5 text-slate-400" />
                   <span className="text-slate-400 font-bold uppercase text-[9px]">From:</span>
@@ -265,7 +295,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                 </div>
 
                 <div className={`flex h-9 items-center gap-2 rounded-xl border px-3 transition-all ${
-                  isDarkMode ? 'border-white/10 bg-black/40 text-white' : 'border-slate-200/90 bg-slate-100/80 text-slate-900'
+                  isDarkMode ? 'border-white/10 bg-black/60 text-white' : 'border-slate-200/80 bg-slate-200/50 shadow-inner text-slate-900'
                 }`}>
                   <Calendar className="h-3.5 w-3.5 text-slate-400" />
                   <span className="text-slate-400 font-bold uppercase text-[9px]">To:</span>
@@ -396,12 +426,12 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       <div className={`hidden md:block overflow-hidden rounded-3xl border transition-all duration-300 ${
         isDarkMode 
           ? 'border-white/[0.08] bg-gradient-to-b from-[#111318] via-[#08090c] to-[#010203] shadow-[0_24px_50px_rgba(0,0,0,0.6)]' 
-          : 'border-slate-200/80 bg-gradient-to-b from-white via-slate-50/40 to-[#f6f8fc] shadow-[0_16px_40px_rgba(15,23,42,0.06)]'
+          : 'border-slate-200 bg-white shadow-xs'
       }`}>
         {/* Specular top edge highlight line */}
         <div className="h-px w-full bg-gradient-to-r from-transparent via-white/20 dark:via-white/10 to-transparent" />
 
-        <div className={`flex items-center justify-between border-b px-6 py-4 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
+        <div className={`flex items-center justify-between border-b px-6 py-4 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200 bg-white'}`}>
           <div>
             <div className="text-sm font-extrabold text-slate-900 dark:text-white">Shopfloor Production Log Ledger</div>
             <div className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Step completions, machine outputs, and operator timestamps</div>
@@ -413,7 +443,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
-            <thead className={`border-b ${isDarkMode ? 'border-white/[0.06] bg-white/[0.02]' : 'border-slate-200/80 bg-slate-50/60'}`}>
+            <thead className={`border-b ${isDarkMode ? 'border-white/[0.06] bg-white/[0.02]' : 'border-slate-200 bg-slate-50/80'}`}>
               <tr className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-slate-600 dark:text-slate-400">
                 <th className="py-4 px-6">Item Code &amp; Part</th>
                 <th className="py-4 px-6">Description</th>

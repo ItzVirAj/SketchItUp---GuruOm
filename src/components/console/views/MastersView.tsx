@@ -48,6 +48,7 @@ import { Modal } from '../../common/Modal';
 import { useUrlModal } from '../../../hooks/useUrlModal';
 import { fetchVendorScorecard } from '../../../services/supabaseServices';
 import { VendorPerformanceMetric } from '../../../utils/procurementEngine';
+import { useAccentTheme } from '../../../context/AccentThemeContext';
 
 import { 
   INDIAN_STATES,
@@ -182,6 +183,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
   onDeleteMachine,
   onImportOMGST
 }) => {
+  const { accent, isGreen, isBlue, isCrystal } = useAccentTheme();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -1051,185 +1053,339 @@ export const MastersView: React.FC<MastersViewProps> = ({
   return (
     <div className="space-y-6 font-sans">
       
-      {/* Top Banner Header with Summary Telemetry */}
-      <section className={`overflow-hidden rounded-2xl border transition-all ${
-        isDarkMode
-          ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]'
-          : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
-      }`}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 md:gap-6 p-6 sm:p-7">
-          <div className="min-w-0 space-y-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wide ${
-                isDarkMode ? 'bg-white/10 border border-white/15 text-white' : 'bg-white/20 border border-white/30 backdrop-blur-md text-white shadow-xs'
-              }`}>
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Precision Master Data Registry</span>
-              </span>
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
-                isDarkMode ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-white/20 text-white border border-white/30 backdrop-blur-md'
-              }`}>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                <span>ERP Core Modules Specification</span>
+      {/* ========================================================================= */}
+      {/* ── MOBILE-FIRST TOP HEADER (< md) ──                                      */}
+      {/* ========================================================================= */}
+      <div className="block md:hidden space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                Master Data Registry
               </span>
             </div>
-            
-            <h1 className="text-xl sm:text-2xl md:text-[26px] font-black tracking-tight text-white">
-              Master Data Hub
+            <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+              Master Hub ({activeTab === 'CUSTOMERS' ? customers.length : activeTab === 'VENDORS' ? vendors.length : activeTab === 'ITEMS' ? masters.length : machines.length})
             </h1>
-            
-            <p className={`text-xs leading-relaxed max-w-2xl font-normal mt-1 ${
-              isDarkMode ? 'text-white/60' : 'text-blue-100/90'
-            }`}>
-              Manage Customers, Vendors, Item Catalog, Machine Routing Fleet &amp; Users with strict GSTIN/PAN and conditional rules.
-            </p>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
             {activeTab === 'CUSTOMERS' && (
               <button
+                type="button"
                 onClick={openCustomerModal}
-                className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
-                  isDarkMode
-                    ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
-                    : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
-                }`}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold shadow-md active:scale-[0.96] transition-ui cursor-pointer"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-3.5 h-3.5" />
                 <span>New Customer</span>
               </button>
             )}
-
             {activeTab === 'VENDORS' && (
               <button
+                type="button"
                 onClick={openVendorModal}
-                className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
-                  isDarkMode
-                    ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
-                    : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
-                }`}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold shadow-md active:scale-[0.96] transition-ui cursor-pointer"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-3.5 h-3.5" />
                 <span>New Vendor</span>
               </button>
             )}
-
             {activeTab === 'ITEMS' && (
               <button
+                type="button"
                 onClick={openItemModal}
-                className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
-                  isDarkMode
-                    ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
-                    : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
-                }`}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold shadow-md active:scale-[0.96] transition-ui cursor-pointer"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-3.5 h-3.5" />
                 <span>New Item</span>
               </button>
             )}
-
             {activeTab === 'MACHINES' && (
               <button
+                type="button"
                 onClick={openMachineModal}
-                className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
-                  isDarkMode
-                    ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
-                    : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
-                }`}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold shadow-md active:scale-[0.96] transition-ui cursor-pointer"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-3.5 h-3.5" />
                 <span>New Machine</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* Master Metrics Strip with Solid Vibrant Icon Colors */}
-        <div className={`grid grid-cols-2 lg:grid-cols-4 border-t divide-y sm:divide-y-0 sm:divide-x ${
+        {/* Mobile 2x2 Telemetry Matrix */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Customers</div>
+            <div className="text-base font-black text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)] tracking-tight mt-0.5">
+              {customers.length} <span className="text-xs font-normal text-slate-400">Accts</span>
+            </div>
+          </div>
+
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Vendors</div>
+            <div className="text-base font-black text-purple-500 tracking-tight mt-0.5">
+              {vendors.length} <span className="text-xs font-normal text-slate-400">Suppliers</span>
+            </div>
+          </div>
+
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Item Catalog</div>
+            <div className="text-base font-black text-emerald-500 tracking-tight mt-0.5">
+              {masters.length} <span className="text-xs font-normal text-slate-400">SKUs</span>
+            </div>
+          </div>
+
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Machine Fleet</div>
+            <div className="text-base font-black text-amber-500 tracking-tight mt-0.5">
+              {machines.length} <span className="text-xs font-normal text-slate-400">Units</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* ── DESKTOP HEADER & INTEGRATED KPI ROW (≥ md) ──                          */}
+      {/* ========================================================================= */}
+      <div className="hidden md:block space-y-4">
+        <section className={`relative overflow-hidden rounded-2xl border transition-all duration-300 ${
           isDarkMode
-            ? 'border-white/10 bg-gradient-to-b from-black/40 to-black/70 divide-white/10 backdrop-blur-md'
-            : 'border-white/20 bg-white/[0.06] divide-white/15 backdrop-blur-sm'
+            ? isCrystal
+              ? 'border-white/10 bg-gradient-to-b from-[#181C24] via-[#10131A] to-[#0A0C10] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6)]'
+              : isGreen
+                ? 'border-emerald-500/20 bg-gradient-to-b from-[#0D241B] via-[#081711] to-[#030B07] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(16,185,129,0.12)]'
+                : 'border-blue-500/20 bg-gradient-to-b from-[#0a1836] via-[#071126] to-[#030712] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(21,93,252,0.15)]'
+            : isCrystal
+              ? 'border-slate-300/80 bg-gradient-to-b from-white via-[#F8FAFC] to-[#EEF2F6] text-slate-950 shadow-[0_16px_40px_rgba(0,0,0,0.06),inset_0_1px_0_0_rgba(255,255,255,0.95)]'
+              : isGreen
+                ? 'border-emerald-600/30 bg-gradient-to-b from-[#0A7E58] via-[#086B4A] to-[#044F36] text-white shadow-[0_16px_40px_rgba(10,126,88,0.22)]'
+                : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
         }`}>
-          {[
-            {
-              label: 'Total Customers',
-              value: `${customers.length} Accounts`,
-              detail: `${customers.filter(c => c.status === 'Active').length} Active Accounts`,
-              icon: Users,
-              iconBg: 'bg-white text-blue-600 shadow-md shadow-black/10',
-            },
-            {
-              label: 'Total Vendors',
-              value: `${vendors.length} Suppliers`,
-              detail: `${vendors.filter(v => v.vendorType === 'Subcontractor / Job Worker').length} Subcontractors`,
-              icon: Building,
-              iconBg: 'bg-purple-600 text-white shadow-md shadow-purple-500/30',
-            },
-            {
-              label: 'Item Master Parts',
-              value: `${masters.length} SKUs`,
-              detail: `${masters.filter(m => m.isFinishedGoods || m.itemType === 'Finished Good').length} FG / ${masters.filter(m => m.itemType === 'Raw Material').length} RM`,
-              icon: Package,
-              iconBg: 'bg-emerald-600 text-white shadow-md shadow-emerald-500/30',
-            },
-            {
-              label: 'Machine Fleet',
-              value: `${machines.length} Units`,
-              detail: `${machines.filter(m => m.status === 'Active').length} Operational Units`,
-              icon: Wrench,
-              iconBg: 'bg-amber-500 text-white shadow-md shadow-amber-500/30',
-            },
-          ].map((metric) => {
-            const MetricIcon = metric.icon;
-            return (
-              <div key={metric.label} className="p-4 sm:p-5 flex flex-col justify-between">
-                <div className="flex items-center justify-between mb-3">
-                  <span className={`text-[11px] font-mono uppercase tracking-wider font-bold ${
-                    isDarkMode ? 'text-white/50' : 'text-blue-100/70'
-                  }`}>
-                    {metric.label}
-                  </span>
-                  <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${metric.iconBg}`}>
-                    <MetricIcon className="w-5 h-5" />
+          {!isDarkMode && isCrystal && (
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-grid-pattern opacity-40 [mask-image:linear-gradient(to_bottom,black,transparent_72%)] [-webkit-mask-image:linear-gradient(to_bottom,black,transparent_72%)]" />
+          )}
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 px-6 py-6 sm:py-7">
+            <div className="min-w-0 space-y-1.5">
+              <div className="flex items-center gap-2.5">
+                <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wide ${
+                  isDarkMode
+                    ? 'bg-white/10 border border-white/15 text-white'
+                    : isCrystal
+                      ? 'bg-slate-900/[0.06] border border-slate-900/10 text-slate-800'
+                      : 'bg-white/20 border border-white/30 backdrop-blur-md text-white shadow-xs'
+                }`}>
+                  <span className={`h-2 w-2 rounded-full animate-pulse ${
+                    isCrystal && !isDarkMode ? 'bg-emerald-500' : isGreen ? 'bg-emerald-400' : 'bg-sky-400'
+                  }`} />
+                  <span>Precision Master Data Registry</span>
+                </span>
+                <span className={`text-sm font-semibold ${isCrystal && !isDarkMode ? 'text-slate-400' : 'text-white/80'}`}>•</span>
+                <span className={`text-xs sm:text-sm font-semibold ${isCrystal && !isDarkMode ? 'text-slate-600' : 'text-white/95'}`}>
+                  ERP Core Modules
+                </span>
+              </div>
+
+              <h1 className={`text-3xl sm:text-[32px] font-black tracking-tight leading-tight ${
+                isCrystal && !isDarkMode ? 'text-slate-950' : 'text-white'
+              }`}>
+                Master Data Hub
+              </h1>
+
+              <p className={`text-xs sm:text-sm font-medium leading-relaxed max-w-2xl ${
+                isCrystal && !isDarkMode ? 'text-slate-600' : 'text-white/95'
+              }`}>
+                Manage Customers, Vendors, Item Catalog, Machine Routing Fleet &amp; Users with strict GSTIN/PAN and conditional rules.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              {activeTab === 'CUSTOMERS' && (
+                <button
+                  type="button"
+                  onClick={openCustomerModal}
+                  className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
+                    isDarkMode
+                      ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
+                      : isCrystal
+                        ? 'bg-slate-950 hover:bg-slate-900 text-white shadow-[0_4px_16px_rgba(0,0,0,0.15)]'
+                        : isGreen
+                          ? 'bg-white hover:bg-emerald-50 text-[#065F46] shadow-[0_4px_16px_rgba(0,0,0,0.15)]'
+                          : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
+                  }`}
+                >
+                  <Plus className="h-4 w-4 stroke-[3]" />
+                  <span>New Customer</span>
+                </button>
+              )}
+
+              {activeTab === 'VENDORS' && (
+                <button
+                  type="button"
+                  onClick={openVendorModal}
+                  className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
+                    isDarkMode
+                      ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
+                      : isCrystal
+                        ? 'bg-slate-950 hover:bg-slate-900 text-white shadow-[0_4px_16px_rgba(0,0,0,0.15)]'
+                        : isGreen
+                          ? 'bg-white hover:bg-emerald-50 text-[#065F46] shadow-[0_4px_16px_rgba(0,0,0,0.15)]'
+                          : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
+                  }`}
+                >
+                  <Plus className="h-4 w-4 stroke-[3]" />
+                  <span>New Vendor</span>
+                </button>
+              )}
+
+              {activeTab === 'ITEMS' && (
+                <button
+                  type="button"
+                  onClick={openItemModal}
+                  className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
+                    isDarkMode
+                      ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
+                      : isCrystal
+                        ? 'bg-slate-950 hover:bg-slate-900 text-white shadow-[0_4px_16px_rgba(0,0,0,0.15)]'
+                        : isGreen
+                          ? 'bg-white hover:bg-emerald-50 text-[#065F46] shadow-[0_4px_16px_rgba(0,0,0,0.15)]'
+                          : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
+                  }`}
+                >
+                  <Plus className="h-4 w-4 stroke-[3]" />
+                  <span>New Item</span>
+                </button>
+              )}
+
+              {activeTab === 'MACHINES' && (
+                <button
+                  type="button"
+                  onClick={openMachineModal}
+                  className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
+                    isDarkMode
+                      ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
+                      : isCrystal
+                        ? 'bg-slate-950 hover:bg-slate-900 text-white shadow-[0_4px_16px_rgba(0,0,0,0.15)]'
+                        : isGreen
+                          ? 'bg-white hover:bg-emerald-50 text-[#065F46] shadow-[0_4px_16px_rgba(0,0,0,0.15)]'
+                          : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
+                  }`}
+                >
+                  <Plus className="h-4 w-4 stroke-[3]" />
+                  <span>New Machine</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Integrated 4-Column Metric Strip (border-t) */}
+          <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t ${
+            isDarkMode
+              ? 'border-white/10 bg-gradient-to-b from-black/40 to-black/70 backdrop-blur-md'
+              : isCrystal
+                ? 'border-slate-200/80 bg-slate-50/70'
+                : 'border-white/20 bg-white/[0.06] backdrop-blur-sm'
+          }`}>
+            {[
+              {
+                label: 'Total Customers',
+                value: `${customers.length} Accounts`,
+                detail: `${customers.filter(c => c.status === 'Active').length} Active Accounts`,
+                icon: Building,
+                iconColor: isDarkMode ? 'text-white' : (isCrystal ? 'text-white' : (isGreen ? 'text-[#065F46]' : 'text-[#155dfc]')),
+                iconBg: isDarkMode ? 'bg-blue-600 shadow-xs' : (isCrystal ? 'bg-slate-900 shadow-xs' : 'bg-white shadow-xs'),
+              },
+              {
+                label: 'Total Vendors',
+                value: `${vendors.length} Suppliers`,
+                detail: `${vendors.filter(v => v.vendorType === 'Subcontractor / Job Worker').length} Subcontractors`,
+                icon: Users,
+                iconColor: 'text-white',
+                iconBg: 'bg-purple-500 shadow-xs',
+              },
+              {
+                label: 'Item Master Parts',
+                value: `${masters.length} SKUs`,
+                detail: `${masters.filter(m => m.isFinishedGoods || m.itemType === 'Finished Good').length} FG / ${masters.filter(m => m.itemType === 'Raw Material').length} RM`,
+                icon: Package,
+                iconColor: 'text-white',
+                iconBg: 'bg-emerald-500 shadow-xs',
+              },
+              {
+                label: 'Machine Fleet',
+                value: `${machines.length} Units`,
+                detail: `${machines.filter(m => m.status === 'Active').length} Operational Units`,
+                icon: Wrench,
+                iconColor: 'text-white',
+                iconBg: 'bg-amber-500 shadow-xs',
+              },
+            ].map((metric, index) => {
+              const MetricIcon = metric.icon;
+              return (
+                <div
+                  key={metric.label}
+                  className={`flex items-center gap-4 px-6 py-5 transition-all ${
+                    index > 0 ? (isDarkMode ? 'lg:border-l border-white/10' : (isCrystal ? 'lg:border-l border-slate-200/80' : 'lg:border-l border-white/20')) : ''
+                  }`}
+                >
+                  <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${metric.iconBg} ${metric.iconColor}`}>
+                    <MetricIcon className="h-5 w-5 stroke-[2.5]" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className={`text-xs font-bold uppercase tracking-wider ${
+                      isCrystal && !isDarkMode ? 'text-slate-500' : 'text-white/85'
+                    }`}>
+                      {metric.label}
+                    </div>
+                    <div className={`text-2xl sm:text-[26px] font-black tracking-tight tabular-nums my-0.5 leading-tight ${
+                      isCrystal && !isDarkMode ? 'text-slate-950' : 'text-white'
+                    }`}>
+                      {metric.value}
+                    </div>
+                    <div className={`text-xs font-medium truncate ${
+                      isCrystal && !isDarkMode ? 'text-slate-600' : 'text-white/90'
+                    }`}>
+                      {metric.detail}
+                    </div>
                   </div>
                 </div>
-                <div className="text-2xl sm:text-[26px] font-black tracking-tight text-white tabular-nums my-0.5 leading-tight">
-                  {metric.value}
-                </div>
-                <div className={`text-[11px] font-medium truncate ${
-                  isDarkMode ? 'text-white/50' : 'text-blue-100/80'
-                }`}>
-                  {metric.detail}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
+              );
+            })}
+          </div>
+        </section>
+      </div>
 
       {/* Main Tab Controls Bar (Apple 2-Tier Command Deck) */}
       <div className={`rounded-2xl border p-3.5 space-y-3 transition-all ${
         isDarkMode
           ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] shadow-[0_8px_28px_rgba(0,0,0,0.5)]'
-          : 'border-slate-200/80 bg-gradient-to-b from-white/95 via-slate-50/90 to-slate-100/70 shadow-[0_4px_20px_rgba(0,0,0,0.03)]'
+          : isCrystal
+            ? 'border-slate-300/80 bg-gradient-to-b from-white via-[#F8FAFC] to-[#EEF2F6] shadow-[0_4px_20px_rgba(0,0,0,0.03)]'
+            : 'border-slate-200 bg-white shadow-xs'
       }`}>
         {/* Tier 1: Segmented Module Navigation Rail */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+        <div className={`inline-flex items-center p-1 rounded-xl border text-xs overflow-x-auto max-w-full ${
+          isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200/80 bg-slate-200/50 shadow-inner'
+        }`}>
           <button
             type="button"
             onClick={() => handleSelectTab('CUSTOMERS')}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'CUSTOMERS'
-                ? isDarkMode ? 'bg-white text-slate-950 shadow-sm' : 'bg-[#155dfc] text-white shadow-sm'
-                : isDarkMode ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                ? isDarkMode
+                  ? 'bg-white/15 text-white shadow-xs border border-white/10'
+                  : 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <Building className="w-3.5 h-3.5" />
             <span>Customers</span>
-            <span className={`px-1.5 py-0.5 rounded-full text-[10px] tabular-nums font-bold ${
+            <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
               activeTab === 'CUSTOMERS'
-                ? isDarkMode ? 'bg-slate-900 text-white' : 'bg-white/20 text-white'
-                : isDarkMode ? 'bg-white/10 text-slate-400' : 'bg-slate-200 text-slate-700'
+                ? isDarkMode ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-800'
+                : isDarkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-300/60 text-slate-600'
             }`}>
               {customers.length}
             </span>
@@ -1238,18 +1394,20 @@ export const MastersView: React.FC<MastersViewProps> = ({
           <button
             type="button"
             onClick={() => handleSelectTab('VENDORS')}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'VENDORS'
-                ? isDarkMode ? 'bg-white text-slate-950 shadow-sm' : 'bg-[#155dfc] text-white shadow-sm'
-                : isDarkMode ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                ? isDarkMode
+                  ? 'bg-white/15 text-white shadow-xs border border-white/10'
+                  : 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <Users className="w-3.5 h-3.5" />
             <span>Vendors</span>
-            <span className={`px-1.5 py-0.5 rounded-full text-[10px] tabular-nums font-bold ${
+            <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
               activeTab === 'VENDORS'
-                ? isDarkMode ? 'bg-slate-900 text-white' : 'bg-white/20 text-white'
-                : isDarkMode ? 'bg-white/10 text-slate-400' : 'bg-slate-200 text-slate-700'
+                ? isDarkMode ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-800'
+                : isDarkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-300/60 text-slate-600'
             }`}>
               {vendors.length}
             </span>
@@ -1258,18 +1416,20 @@ export const MastersView: React.FC<MastersViewProps> = ({
           <button
             type="button"
             onClick={() => handleSelectTab('ITEMS')}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'ITEMS'
-                ? isDarkMode ? 'bg-white text-slate-950 shadow-sm' : 'bg-[#155dfc] text-white shadow-sm'
-                : isDarkMode ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                ? isDarkMode
+                  ? 'bg-white/15 text-white shadow-xs border border-white/10'
+                  : 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <Package className="w-3.5 h-3.5" />
             <span>Items</span>
-            <span className={`px-1.5 py-0.5 rounded-full text-[10px] tabular-nums font-bold ${
+            <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
               activeTab === 'ITEMS'
-                ? isDarkMode ? 'bg-slate-900 text-white' : 'bg-white/20 text-white'
-                : isDarkMode ? 'bg-white/10 text-slate-400' : 'bg-slate-200 text-slate-700'
+                ? isDarkMode ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-800'
+                : isDarkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-300/60 text-slate-600'
             }`}>
               {masters.length}
             </span>
@@ -1278,18 +1438,20 @@ export const MastersView: React.FC<MastersViewProps> = ({
           <button
             type="button"
             onClick={() => handleSelectTab('MACHINES')}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'MACHINES'
-                ? isDarkMode ? 'bg-white text-slate-950 shadow-sm' : 'bg-[#155dfc] text-white shadow-sm'
-                : isDarkMode ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                ? isDarkMode
+                  ? 'bg-white/15 text-white shadow-xs border border-white/10'
+                  : 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <Wrench className="w-3.5 h-3.5" />
             <span>Machines</span>
-            <span className={`px-1.5 py-0.5 rounded-full text-[10px] tabular-nums font-bold ${
+            <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
               activeTab === 'MACHINES'
-                ? isDarkMode ? 'bg-slate-900 text-white' : 'bg-white/20 text-white'
-                : isDarkMode ? 'bg-white/10 text-slate-400' : 'bg-slate-200 text-slate-700'
+                ? isDarkMode ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-800'
+                : isDarkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-300/60 text-slate-600'
             }`}>
               {machines.length}
             </span>
@@ -1298,10 +1460,12 @@ export const MastersView: React.FC<MastersViewProps> = ({
           <button
             type="button"
             onClick={() => handleSelectTab('IMPORT_OMGST')}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'IMPORT_OMGST'
-                ? isDarkMode ? 'bg-white text-slate-950 shadow-sm' : 'bg-[#155dfc] text-white shadow-sm'
-                : isDarkMode ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                ? isDarkMode
+                  ? 'bg-white/15 text-white shadow-xs border border-white/10'
+                  : 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <FileSpreadsheet className="w-3.5 h-3.5" />
@@ -1321,8 +1485,8 @@ export const MastersView: React.FC<MastersViewProps> = ({
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className={`h-10 w-full pl-10 pr-16 rounded-full border text-xs font-medium outline-none transition-all ${
                   isDarkMode 
-                    ? 'border-white/10 bg-black/60 text-white placeholder:text-slate-500 focus:border-[#5B75F8] focus:ring-4 focus:ring-[#5B75F8]/15' 
-                    : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-[#155dfc] focus:ring-4 focus:ring-[#155dfc]/15 shadow-xs'
+                    ? 'border-white/10 bg-black/60 text-white placeholder:text-slate-500 focus:border-[var(--accent-primary)] focus:ring-4 focus:ring-[var(--accent-primary)]/15' 
+                    : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-[var(--accent-primary)] focus:ring-4 focus:ring-[var(--accent-primary)]/15 shadow-xs'
                 }`}
               />
               <div className="absolute right-3 top-2.5 flex items-center gap-1.5">
@@ -1475,8 +1639,12 @@ export const MastersView: React.FC<MastersViewProps> = ({
           {/* Desktop Table (Viewport >= md) */}
           <div className={`hidden md:block overflow-hidden rounded-3xl border transition-all ${
             isDarkMode
-              ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#08090c] to-[#010203] shadow-[0_16px_40px_rgba(0,0,0,0.5)]'
-              : 'border-slate-200/90 bg-gradient-to-b from-white via-slate-50/40 to-[#f6f8fc] shadow-[0_4px_24px_rgba(0,0,0,0.04)]'
+              ? isCrystal
+                ? 'border-white/10 bg-gradient-to-b from-[#181C24] via-[#10131A] to-[#0A0C10] shadow-[0_16px_40px_rgba(0,0,0,0.5)]'
+                : 'border-white/10 bg-gradient-to-b from-[#111318] via-[#08090c] to-[#010203] shadow-[0_16px_40px_rgba(0,0,0,0.5)]'
+              : isCrystal
+                ? 'border-slate-300/80 bg-gradient-to-b from-white via-[#F8FAFC] to-[#EEF2F6] shadow-[0_4px_24px_rgba(0,0,0,0.04)]'
+                : 'border-slate-200/90 bg-gradient-to-b from-white via-slate-50/40 to-[#f6f8fc] shadow-[0_4px_24px_rgba(0,0,0,0.04)]'
           }`}>
             {/* Top Specular Highlight */}
             <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-white/70 dark:via-white/10 to-transparent" />
@@ -1791,9 +1959,17 @@ export const MastersView: React.FC<MastersViewProps> = ({
           </div>
 
           {/* Desktop Table (Viewport >= md) */}
-          <div className={`hidden md:block rounded-3xl border overflow-hidden transition-ui shadow-xl ${
-            isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-sm'
+          <div className={`hidden md:block overflow-hidden rounded-3xl border transition-all ${
+            isDarkMode
+              ? isCrystal
+                ? 'border-white/10 bg-gradient-to-b from-[#181C24] via-[#10131A] to-[#0A0C10] shadow-[0_16px_40px_rgba(0,0,0,0.5)]'
+                : 'border-white/10 bg-gradient-to-b from-[#111318] via-[#08090c] to-[#010203] shadow-[0_16px_40px_rgba(0,0,0,0.5)]'
+              : isCrystal
+                ? 'border-slate-300/80 bg-gradient-to-b from-white via-[#F8FAFC] to-[#EEF2F6] shadow-[0_4px_24px_rgba(0,0,0,0.04)]'
+                : 'border-slate-200/90 bg-gradient-to-b from-white via-slate-50/40 to-[#f6f8fc] shadow-[0_4px_24px_rgba(0,0,0,0.04)]'
           }`}>
+            {/* Top Specular Highlight */}
+            <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-white/70 dark:via-white/10 to-transparent" />
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
@@ -2114,9 +2290,17 @@ export const MastersView: React.FC<MastersViewProps> = ({
           </div>
 
           {/* Desktop Table (Viewport >= md) */}
-          <div className={`hidden md:block rounded-3xl border overflow-hidden transition-ui shadow-xl ${
-            isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-sm'
+          <div className={`hidden md:block overflow-hidden rounded-3xl border transition-all ${
+            isDarkMode
+              ? isCrystal
+                ? 'border-white/10 bg-gradient-to-b from-[#181C24] via-[#10131A] to-[#0A0C10] shadow-[0_16px_40px_rgba(0,0,0,0.5)]'
+                : 'border-white/10 bg-gradient-to-b from-[#111318] via-[#08090c] to-[#010203] shadow-[0_16px_40px_rgba(0,0,0,0.5)]'
+              : isCrystal
+                ? 'border-slate-300/80 bg-gradient-to-b from-white via-[#F8FAFC] to-[#EEF2F6] shadow-[0_4px_24px_rgba(0,0,0,0.04)]'
+                : 'border-slate-200/90 bg-gradient-to-b from-white via-slate-50/40 to-[#f6f8fc] shadow-[0_4px_24px_rgba(0,0,0,0.04)]'
           }`}>
+            {/* Top Specular Highlight */}
+            <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-white/70 dark:via-white/10 to-transparent" />
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
@@ -2346,9 +2530,17 @@ export const MastersView: React.FC<MastersViewProps> = ({
           </div>
 
           {/* Desktop Table (Viewport >= md) */}
-          <div className={`hidden md:block rounded-3xl border overflow-hidden transition-ui shadow-xl ${
-            isDarkMode ? 'bg-slate-900/80 border-slate-800/80 backdrop-blur-xl' : 'bg-white border-slate-200 shadow-sm'
+          <div className={`hidden md:block overflow-hidden rounded-3xl border transition-all ${
+            isDarkMode
+              ? isCrystal
+                ? 'border-white/10 bg-gradient-to-b from-[#181C24] via-[#10131A] to-[#0A0C10] shadow-[0_16px_40px_rgba(0,0,0,0.5)]'
+                : 'border-white/10 bg-gradient-to-b from-[#111318] via-[#08090c] to-[#010203] shadow-[0_16px_40px_rgba(0,0,0,0.5)]'
+              : isCrystal
+                ? 'border-slate-300/80 bg-gradient-to-b from-white via-[#F8FAFC] to-[#EEF2F6] shadow-[0_4px_24px_rgba(0,0,0,0.04)]'
+                : 'border-slate-200/90 bg-gradient-to-b from-white via-slate-50/40 to-[#f6f8fc] shadow-[0_4px_24px_rgba(0,0,0,0.04)]'
           }`}>
+            {/* Top Specular Highlight */}
+            <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-white/70 dark:via-white/10 to-transparent" />
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>

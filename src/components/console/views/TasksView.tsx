@@ -22,6 +22,7 @@ import { Modal } from '../../common/Modal';
 import { useUrlModal } from '../../../hooks/useUrlModal';
 import { Task, TaskPriority, TaskStatus, TaskTemplate, fetchTaskTemplates, applyTaskTemplate } from '../../../services/consoleApiServices';
 import { toast } from '../../../context/ToastContext';
+import { useAccentTheme } from '../../../context/AccentThemeContext';
 import { SystemUser } from '../../../types/console';
 import { TaskScheduleCalendar } from './tasks/TaskScheduleCalendar';
 
@@ -112,6 +113,7 @@ export const TasksView: React.FC<TasksViewProps> = ({
   onAddComment,
   onCancelTask
 }) => {
+  const { accent, isGreen, isBlue, isCrystal } = useAccentTheme();
   const taskModal = useUrlModal<{ id?: string }>('task-form');
   const templateModal = useUrlModal('apply-template');
   const [templates, setTemplates] = useState<TaskTemplate[]>([]);
@@ -178,8 +180,12 @@ export const TasksView: React.FC<TasksViewProps> = ({
   ).length;
 
   const cardBase = isDarkMode
-    ? 'bg-[#09090B] border-white/10 text-white shadow-[0_16px_40px_rgba(0,0,0,0.6)] backdrop-blur-2xl'
-    : 'bg-white border-slate-200/80 shadow-sm text-slate-900';
+    ? isCrystal
+      ? 'border-white/10 bg-gradient-to-b from-[#181C24] via-[#10131A] to-[#0A0C10] shadow-[0_16px_40px_rgba(0,0,0,0.5)] text-white'
+      : 'bg-[#09090B] border-white/10 text-white shadow-[0_16px_40px_rgba(0,0,0,0.6)] backdrop-blur-2xl'
+    : isCrystal
+      ? 'border-slate-300/80 bg-gradient-to-b from-white via-[#F8FAFC] to-[#EEF2F6] shadow-[0_4px_24px_rgba(0,0,0,0.04)] text-slate-950'
+      : 'bg-white border-slate-200/80 shadow-sm text-slate-900';
 
   const moveStatus = (task: Task, direction: 1 | -1) => {
     const idx = COLUMNS.findIndex((c) => c.id === task.status);
@@ -248,182 +254,356 @@ export const TasksView: React.FC<TasksViewProps> = ({
 
   return (
     <div className="space-y-4 sm:space-y-6 font-sans">
-      {/* 1. Luminous Dual-Mode Hero & Integrated Mini Dashboard */}
-      <div className={`relative overflow-hidden rounded-[28px] border transition-all duration-300 p-6 sm:p-8 ${
-        isDarkMode
-          ? 'bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] border-white/10 shadow-[0_24px_50px_rgba(0,0,0,0.7)] text-white'
-          : 'bg-gradient-to-r from-[#1b64ff] via-[#155dfc] to-[#0f52dc] border-blue-400/30 shadow-[0_16px_36px_rgba(21,93,252,0.28)] text-white'
-      }`}>
-        {/* Ambient Top Glow */}
-        <div
-          aria-hidden="true"
-          className={`pointer-events-none absolute -top-24 -right-10 w-96 h-96 rounded-full blur-3xl transition-opacity duration-500 ${
-            isDarkMode ? 'bg-blue-500/10' : 'bg-white/20'
-          }`}
-        />
-
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold tracking-wide backdrop-blur-md border bg-white/15 text-white border-white/20 shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>HR Module • Team Action Items &amp; Kanban Dispatch</span>
+      {/* ========================================================================= */}
+      {/* ── MOBILE VIEW (< md): Header + 2x2 Matrix ──                            */}
+      {/* ========================================================================= */}
+      <div className="block md:hidden space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                HR Operations
+              </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 text-white shadow-inner">
-                <ListTodo className="h-5 w-5" />
-              </div>
-              Tasks &amp; Assignments
+            <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+              Tasks ({tasks.length})
             </h1>
-            <p className={`text-xs sm:text-sm max-w-2xl font-normal leading-relaxed ${
-              isDarkMode ? 'text-white/60' : 'text-blue-100'
-            }`}>
-              Internal deliverables, milestone tracking, and task delegation. Assign work with automated due-date reminders and real-time status sync.
-            </p>
           </div>
-
-          <div className="flex flex-wrap items-center gap-3 shrink-0 self-start lg:self-center">
-            {/* Primary View Switcher: Schedule & Calendar vs Board */}
-            <div className={`flex items-center p-1 rounded-full border backdrop-blur-md ${
-              isDarkMode ? 'border-white/15 bg-white/[0.06]' : 'border-white/25 bg-white/20'
-            }`}>
-              <button
-                type="button"
-                onClick={() => setMainView('calendar')}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                  mainView === 'calendar'
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : isDarkMode ? 'text-white/70 hover:text-white' : 'text-white/90 hover:text-white'
-                }`}
-              >
-                <Calendar className="w-3.5 h-3.5" />
-                <span>Schedule &amp; Calendar</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setMainView('board')}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                  mainView === 'board'
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : isDarkMode ? 'text-white/70 hover:text-white' : 'text-white/90 hover:text-white'
-                }`}
-              >
-                <ListTodo className="w-3.5 h-3.5" />
-                <span>Board View</span>
-              </button>
-            </div>
-
-            {canManageTasks && (
-              <button
-                type="button"
-                onClick={() => templateModal.open()}
-                className="flex h-11 shrink-0 items-center gap-2 rounded-full border border-white/20 bg-white/10 hover:bg-white/15 px-4 text-xs font-semibold text-white shadow-sm transition-all active:scale-[0.98] cursor-pointer backdrop-blur-md"
-              >
-                <Sparkles className="w-4 h-4" />
-                <span>Apply Template</span>
-              </button>
-            )}
-
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setMainView(mainView === 'calendar' ? 'board' : 'calendar')}
+              className="flex h-9 items-center gap-1.5 px-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.06] text-xs font-bold text-slate-700 dark:text-slate-200 shadow-xs cursor-pointer"
+            >
+              {mainView === 'calendar' ? <ListTodo className="w-3.5 h-3.5" /> : <Calendar className="w-3.5 h-3.5" />}
+              <span>{mainView === 'calendar' ? 'Board' : 'Calendar'}</span>
+            </button>
             {canManageTasks && (
               <button
                 type="button"
                 onClick={() => taskModal.open()}
-                className={`flex h-11 shrink-0 items-center gap-2 rounded-full px-5 text-xs font-bold transition-all active:scale-[0.96] cursor-pointer shadow-lg ${
-                  isDarkMode
-                    ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
-                    : 'bg-white hover:bg-blue-50 text-blue-700 shadow-blue-900/30'
-                }`}
+                className="flex h-9 items-center gap-1.5 px-3 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold shadow-sm active:scale-95 transition-transform cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
-                <span>Assign Task</span>
+                <span>Assign</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* Mini Metric Dashboard Strip with SOLID VIBRANT ICON SQUIRCLES */}
-        <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-3">
-          {/* Card 1: Total Tasks */}
-          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
-            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+        {/* 2x2 Telemetry Matrix */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className={`p-3 rounded-2xl border transition-all ${
+            isDarkMode
+              ? isCrystal ? 'border-white/10 bg-white/[0.04]' : isGreen ? 'border-emerald-500/15 bg-emerald-950/20' : 'border-blue-500/15 bg-blue-950/20'
+              : isCrystal ? 'border-slate-200 bg-white shadow-xs' : isGreen ? 'border-emerald-100 bg-emerald-50/50' : 'border-blue-100 bg-blue-50/50'
           }`}>
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-md shadow-black/10">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--accent-primary)] text-white shadow-xs">
+                <ListTodo className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Tasks</span>
+            </div>
+            <p className="text-xl font-black font-mono text-slate-900 dark:text-white tabular-nums">
+              {tasks.length}
+            </p>
+          </div>
+
+          <div className={`p-3 rounded-2xl border transition-all ${
+            isDarkMode
+              ? isCrystal ? 'border-white/10 bg-white/[0.04]' : isGreen ? 'border-emerald-500/15 bg-emerald-950/20' : 'border-blue-500/15 bg-blue-950/20'
+              : isCrystal ? 'border-slate-200 bg-white shadow-xs' : isGreen ? 'border-emerald-100 bg-emerald-50/50' : 'border-blue-100 bg-blue-50/50'
+          }`}>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-500 text-white shadow-xs">
+                <AlertTriangle className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Overdue</span>
+            </div>
+            <p className="text-xl font-black font-mono text-rose-500 tabular-nums">
+              {overdueCount}
+            </p>
+          </div>
+
+          <div className={`p-3 rounded-2xl border transition-all ${
+            isDarkMode
+              ? isCrystal ? 'border-white/10 bg-white/[0.04]' : isGreen ? 'border-emerald-500/15 bg-emerald-950/20' : 'border-blue-500/15 bg-blue-950/20'
+              : isCrystal ? 'border-slate-200 bg-white shadow-xs' : isGreen ? 'border-emerald-100 bg-emerald-50/50' : 'border-blue-100 bg-blue-50/50'
+          }`}>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500 text-white shadow-xs">
+                <Clock className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Due Today</span>
+            </div>
+            <p className="text-xl font-black font-mono text-amber-500 tabular-nums">
+              {dueTodayCount}
+            </p>
+          </div>
+
+          <div className={`p-3 rounded-2xl border transition-all ${
+            isDarkMode
+              ? isCrystal ? 'border-white/10 bg-white/[0.04]' : isGreen ? 'border-emerald-500/15 bg-emerald-950/20' : 'border-blue-500/15 bg-blue-950/20'
+              : isCrystal ? 'border-slate-200 bg-white shadow-xs' : isGreen ? 'border-emerald-100 bg-emerald-50/50' : 'border-blue-100 bg-blue-50/50'
+          }`}>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-xs">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Completed</span>
+            </div>
+            <p className="text-xl font-black font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">
+              {tasks.filter(t => t.status === 'DONE').length}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* ── DESKTOP VIEW (hidden md:block): Executive Hero Banner ──               */}
+      {/* ========================================================================= */}
+      <section className={`hidden md:block relative overflow-hidden rounded-2xl border transition-all duration-300 ${
+        isDarkMode
+          ? isCrystal
+            ? 'border-white/10 bg-gradient-to-b from-[#181C24] via-[#10131A] to-[#0A0C10] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6)]'
+            : isGreen
+              ? 'border-emerald-500/20 bg-gradient-to-b from-[#0D241B] via-[#081711] to-[#030B07] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(16,185,129,0.12)]'
+              : 'border-blue-500/20 bg-gradient-to-b from-[#0a1836] via-[#071126] to-[#030712] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(21,93,252,0.15)]'
+          : isCrystal
+            ? 'border-slate-300/80 bg-gradient-to-b from-white via-[#F8FAFC] to-[#EEF2F6] text-slate-950 shadow-[0_16px_40px_rgba(0,0,0,0.06),inset_0_1px_0_0_rgba(255,255,255,0.95)]'
+            : isGreen
+              ? 'border-emerald-600/30 bg-gradient-to-b from-[#0A7E58] via-[#086B4A] to-[#044F36] text-white shadow-[0_16px_40px_rgba(10,126,88,0.22)]'
+              : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
+      }`}>
+        {/* Subtle Drafting Grid Pattern */}
+        {!isDarkMode && isCrystal && (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 -z-10 bg-grid-pattern opacity-40 [mask-image:linear-gradient(to_bottom,black,transparent_72%)] [-webkit-mask-image:linear-gradient(to_bottom,black,transparent_72%)]"
+          />
+        )}
+
+        <div className="p-6 lg:p-8">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold tracking-wide backdrop-blur-md border shadow-xs transition-colors">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className={
+                  !isDarkMode && isCrystal ? 'text-slate-600' : 'text-white/90'
+                }>
+                  HR Module • Team Action Items &amp; Kanban Dispatch
+                </span>
+              </div>
+              <h1 className={`text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight flex items-center gap-3 ${
+                !isDarkMode && isCrystal ? 'text-slate-900' : 'text-white'
+              }`}>
+                <div className={`flex h-10 w-10 items-center justify-center rounded-2xl shadow-inner ${
+                  !isDarkMode && isCrystal
+                    ? 'bg-slate-100 border border-slate-200 text-slate-800'
+                    : 'bg-white/15 backdrop-blur-md border border-white/20 text-white'
+                }`}>
+                  <ListTodo className="h-5 w-5" />
+                </div>
+                Tasks &amp; Assignments
+              </h1>
+              <p className={`text-xs sm:text-sm max-w-2xl font-normal leading-relaxed ${
+                !isDarkMode && isCrystal ? 'text-slate-600' : isDarkMode ? 'text-white/60' : 'text-white/80'
+              }`}>
+                Internal deliverables, milestone tracking, and task delegation. Assign work with automated due-date reminders and real-time status sync.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 shrink-0 self-start lg:self-center">
+              {/* Primary View Switcher */}
+              <div className={`flex items-center p-1 rounded-full border backdrop-blur-md ${
+                !isDarkMode && isCrystal
+                  ? 'border-slate-300/80 bg-slate-200/50'
+                  : isDarkMode ? 'border-white/15 bg-white/[0.06]' : 'border-white/25 bg-white/20'
+              }`}>
+                <button
+                  type="button"
+                  onClick={() => setMainView('calendar')}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    mainView === 'calendar'
+                      ? !isDarkMode && isCrystal
+                        ? 'bg-slate-950 text-white shadow-xs'
+                        : 'bg-white text-slate-900 shadow-sm'
+                      : !isDarkMode && isCrystal
+                        ? 'text-slate-600 hover:text-slate-900'
+                        : isDarkMode ? 'text-white/70 hover:text-white' : 'text-white/90 hover:text-white'
+                  }`}
+                >
+                  <Calendar className="w-3.5 h-3.5" />
+                  <span>Schedule &amp; Calendar</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMainView('board')}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    mainView === 'board'
+                      ? !isDarkMode && isCrystal
+                        ? 'bg-slate-950 text-white shadow-xs'
+                        : 'bg-white text-slate-900 shadow-sm'
+                      : !isDarkMode && isCrystal
+                        ? 'text-slate-600 hover:text-slate-900'
+                        : isDarkMode ? 'text-white/70 hover:text-white' : 'text-white/90 hover:text-white'
+                  }`}
+                >
+                  <ListTodo className="w-3.5 h-3.5" />
+                  <span>Board View</span>
+                </button>
+              </div>
+
+              {canManageTasks && (
+                <button
+                  type="button"
+                  onClick={() => templateModal.open()}
+                  className={`flex h-11 shrink-0 items-center gap-2 rounded-full border px-4 text-xs font-semibold shadow-xs transition-all active:scale-[0.98] cursor-pointer backdrop-blur-md ${
+                    !isDarkMode && isCrystal
+                      ? 'border-slate-300/80 bg-white/80 hover:bg-white text-slate-700'
+                      : 'border-white/20 bg-white/10 hover:bg-white/15 text-white'
+                  }`}
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>Apply Template</span>
+                </button>
+              )}
+
+              {canManageTasks && (
+                <button
+                  type="button"
+                  onClick={() => taskModal.open()}
+                  className={`flex h-11 shrink-0 items-center gap-2 rounded-full px-5 text-xs font-bold transition-all active:scale-[0.96] cursor-pointer shadow-lg ${
+                    !isDarkMode && isCrystal
+                      ? 'bg-slate-950 hover:bg-slate-800 text-white shadow-slate-900/20'
+                      : isDarkMode
+                        ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
+                        : 'bg-white hover:bg-blue-50 text-blue-700 shadow-blue-900/30'
+                  }`}
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Assign Task</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* 4-Column Metric Strip */}
+        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t ${
+          isDarkMode
+            ? 'border-white/10 bg-gradient-to-b from-black/40 to-black/70 backdrop-blur-md'
+            : isCrystal
+              ? 'border-slate-200/80 bg-slate-50/70'
+              : 'border-white/20 bg-white/[0.06] backdrop-blur-sm'
+        }`}>
+          {/* Total Tasks */}
+          <div className={`p-4 sm:p-5 flex items-center gap-4 transition-colors ${
+            !isDarkMode && isCrystal ? 'border-b sm:border-b-0 sm:border-r border-slate-200/80' : 'border-b sm:border-b-0 sm:border-r border-white/10'
+          }`}>
+            <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl shadow-sm ${
+              !isDarkMode && isCrystal
+                ? 'bg-slate-100 text-slate-800 border border-slate-200'
+                : 'bg-white text-blue-600'
+            }`}>
               <ListTodo className="w-5 h-5" />
             </div>
             <div className="min-w-0 flex-1">
-              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                !isDarkMode && isCrystal ? 'text-slate-500' : isDarkMode ? 'text-white/50' : 'text-blue-100'
+              }`}>
                 Total Tasks
               </span>
-              <span className="text-xl sm:text-2xl font-bold font-mono text-white block tabular-nums">
+              <span className={`text-2xl font-bold font-mono block tabular-nums ${
+                !isDarkMode && isCrystal ? 'text-slate-900' : 'text-white'
+              }`}>
                 {tasks.length}
               </span>
-              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
+              <span className={`text-[10px] truncate block ${
+                !isDarkMode && isCrystal ? 'text-slate-400' : isDarkMode ? 'text-white/40' : 'text-blue-100/80'
+              }`}>
                 Active assignments
               </span>
             </div>
           </div>
 
-          {/* Card 2: Overdue Tasks */}
-          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
-            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+          {/* Overdue */}
+          <div className={`p-4 sm:p-5 flex items-center gap-4 transition-colors ${
+            !isDarkMode && isCrystal ? 'border-b sm:border-b-0 sm:border-r border-slate-200/80' : 'border-b sm:border-b-0 sm:border-r border-white/10'
           }`}>
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-600 text-white shadow-md shadow-rose-500/30">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-rose-600 text-white shadow-sm shadow-rose-500/30">
               <AlertTriangle className="w-5 h-5" />
             </div>
             <div className="min-w-0 flex-1">
-              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                !isDarkMode && isCrystal ? 'text-slate-500' : isDarkMode ? 'text-white/50' : 'text-blue-100'
+              }`}>
                 Overdue
               </span>
-              <span className="text-xl sm:text-2xl font-bold font-mono text-white block tabular-nums flex items-center gap-1.5">
+              <span className="text-2xl font-bold font-mono text-rose-500 block tabular-nums flex items-center gap-1.5">
                 {overdueCount}
                 {overdueCount > 0 && <span className="h-2 w-2 rounded-full bg-rose-400 animate-pulse" />}
               </span>
-              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
+              <span className={`text-[10px] truncate block ${
+                !isDarkMode && isCrystal ? 'text-slate-400' : isDarkMode ? 'text-white/40' : 'text-blue-100/80'
+              }`}>
                 Needs immediate action
               </span>
             </div>
           </div>
 
-          {/* Card 3: Due Today */}
-          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
-            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
+          {/* Due Today */}
+          <div className={`p-4 sm:p-5 flex items-center gap-4 transition-colors ${
+            !isDarkMode && isCrystal ? 'border-b sm:border-b-0 sm:border-r border-slate-200/80' : 'border-b sm:border-b-0 sm:border-r border-white/10'
           }`}>
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-md shadow-amber-500/30">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-sm shadow-amber-500/30">
               <Clock className="w-5 h-5" />
             </div>
             <div className="min-w-0 flex-1">
-              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                !isDarkMode && isCrystal ? 'text-slate-500' : isDarkMode ? 'text-white/50' : 'text-blue-100'
+              }`}>
                 Due Today
               </span>
-              <span className="text-xl sm:text-2xl font-bold font-mono text-white block tabular-nums">
+              <span className={`text-2xl font-bold font-mono block tabular-nums ${
+                !isDarkMode && isCrystal ? 'text-amber-600' : 'text-amber-400'
+              }`}>
                 {dueTodayCount}
               </span>
-              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
+              <span className={`text-[10px] truncate block ${
+                !isDarkMode && isCrystal ? 'text-slate-400' : isDarkMode ? 'text-white/40' : 'text-blue-100/80'
+              }`}>
                 Current day deliverables
               </span>
             </div>
           </div>
 
-          {/* Card 4: Completed */}
-          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
-            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
-          }`}>
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-md shadow-emerald-500/30">
+          {/* Completed */}
+          <div className="p-4 sm:p-5 flex items-center gap-4 transition-colors">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-sm shadow-emerald-500/30">
               <CheckCircle2 className="w-5 h-5" />
             </div>
             <div className="min-w-0 flex-1">
-              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                !isDarkMode && isCrystal ? 'text-slate-500' : isDarkMode ? 'text-white/50' : 'text-blue-100'
+              }`}>
                 Completed
               </span>
-              <span className="text-xl sm:text-2xl font-bold font-mono text-white block tabular-nums">
+              <span className={`text-2xl font-bold font-mono block tabular-nums ${
+                !isDarkMode && isCrystal ? 'text-emerald-700' : 'text-emerald-400'
+              }`}>
                 {tasks.filter(t => t.status === 'DONE').length}
               </span>
-              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
+              <span className={`text-[10px] truncate block ${
+                !isDarkMode && isCrystal ? 'text-slate-400' : isDarkMode ? 'text-white/40' : 'text-blue-100/80'
+              }`}>
                 Resolved items
               </span>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       {mainView === 'calendar' ? (
         <TaskScheduleCalendar
@@ -443,44 +623,44 @@ export const TasksView: React.FC<TasksViewProps> = ({
       ) : (
         <>
           {/* ========================================================================= */}
-          {/* ── APPLE SEGMENTED FILTER BAR ──                                        */}
+          {/* ── COMMAND DECK / APPLE SEGMENTED FILTER BAR ──                          */}
           {/* ========================================================================= */}
-      <div className={`p-2.5 sm:p-3 rounded-2xl sm:rounded-3xl border transition-ui flex items-center justify-between gap-3 overflow-x-auto scrollbar-none ${cardBase}`}>
-        <div
-          className={`p-1 rounded-full border flex items-center gap-1 overflow-x-auto scrollbar-none w-full sm:w-auto ${
-            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-slate-100/80 border-slate-200/80'
-          }`}
-        >
-          {[
-            { id: 'MINE', label: 'My Tasks' },
-            { id: 'ASSIGNED_BY_ME', label: 'Assigned by Me' },
-            ...(canManageTasks ? [{ id: 'ALL', label: 'All Tasks' }] : [])
-          ].map((tab) => {
-            const isActive = viewFilter === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setViewFilter(tab.id as typeof viewFilter)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  isActive
-                    ? isDarkMode ? 'bg-white text-slate-950 shadow-sm' : 'bg-[#155dfc] text-white shadow-sm'
-                    : isDarkMode
-                      ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-                }`}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
+          <div className={`p-2.5 sm:p-3 rounded-2xl sm:rounded-3xl border transition-ui flex items-center justify-between gap-3 overflow-x-auto scrollbar-none ${cardBase}`}>
+            <div
+              className={`inline-flex items-center p-1 rounded-xl border text-xs overflow-x-auto max-w-full ${
+                isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200/80 bg-slate-200/50 shadow-inner'
+              }`}
+            >
+              {[
+                { id: 'MINE', label: 'My Tasks' },
+                { id: 'ASSIGNED_BY_ME', label: 'Assigned by Me' },
+                ...(canManageTasks ? [{ id: 'ALL', label: 'All Tasks' }] : [])
+              ].map((tab) => {
+                const isActive = viewFilter === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setViewFilter(tab.id as typeof viewFilter)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                      isActive
+                        ? isDarkMode
+                          ? 'bg-white/15 text-white shadow-xs border border-white/10'
+                          : 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
 
-        <div className={`hidden md:flex items-center gap-2 text-xs font-mono pr-2 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-          <Sparkles className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
-          <span>Active workstreams: {visibleTasks.length} tasks</span>
-        </div>
-      </div>
+            <div className={`hidden md:flex items-center gap-2 text-xs font-mono pr-2 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              <Sparkles className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
+              <span>Active workstreams: {visibleTasks.length} tasks</span>
+            </div>
+          </div>
 
       {/* ========================================================================= */}
       {/* ── KANBAN BOARD (Apple Grouped Columns) ──                              */}

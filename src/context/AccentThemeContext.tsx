@@ -1,138 +1,149 @@
-import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useMemo,
+  useCallback,
+} from 'react';
 
-export type AccentColor = 'electric' | 'teal' | 'red' | 'brand';
+export type AccentColor = 'green' | 'blue' | 'crystal' | 'white' | 'electric' | 'teal' | 'red' | 'brand';
 
 export interface AccentThemeConfig {
-  id: AccentColor;
+  id: 'green' | 'blue' | 'crystal';
   label: string;
-  primary: string;       // Main brand accent
-  hover: string;         // Hover state
-  active: string;        // Active/pressed state
-  textLight: string;     // Text color in light mode
-  textDark: string;      // Text color in dark mode
-  softLight: string;     // Background tint in light mode
-  softDark: string;      // Background tint in dark mode
-  borderLight: string;   // Border tint in light mode
-  borderDark: string;    // Border tint in dark mode
-  ring: string;          // Focus ring
-  shadow: string;        // Glow/shadow color
-  gradientFrom: string;  // Gradient start
-  gradientTo: string;    // Gradient end
-  dotColor: string;      // Color picker dot
+  description: string;
+  primary: string;
+  hover: string;
+  active: string;
+  textLight: string;
+  textDark: string;
+  softLight: string;
+  softDark: string;
+  borderLight: string;
+  borderDark: string;
+  ring: string;
+  shadow: string;
+  gradientFrom: string;
+  gradientTo: string;
+  dotColor: string;
+  headerGradientLight: string;
+  headerGradientDark: string;
+  headerBorderLight: string;
+  headerBorderDark: string;
+  headerButtonText: string;
+  headerButtonHover: string;
 }
 
-export const ACCENT_PRESETS: Record<AccentColor, AccentThemeConfig> = {
-  electric: {
-    id: 'electric',
-    label: 'Obsidian',
-    primary: '#181920',
-    hover: '#232530',
-    active: '#101116',
-    textLight: '#181920',
-    textDark: '#FFFFFF',
-    softLight: 'rgba(24, 25, 32, 0.08)',
-    softDark: 'rgba(255, 255, 255, 0.12)',
-    borderLight: 'rgba(24, 25, 32, 0.25)',
-    borderDark: 'rgba(255, 255, 255, 0.20)',
-    ring: 'rgba(24, 25, 32, 0.40)',
-    shadow: 'rgba(24, 25, 32, 0.20)',
-    gradientFrom: '#181920',
-    gradientTo: '#232530',
-    dotColor: '#181920'
+/**
+ * Curated, intentional theme presets following frontend-design principles:
+ * - 'green': Original Darker Green (Deep forest & emerald gradient with spruce accents)
+ * - 'blue': Original Darker Blue (Royal cobalt & sapphire gradient with blue accents)
+ * - 'crystal': Crystal White gradient (Pristine frost & crystal gradient with crisp black text)
+ */
+export const ACCENT_PRESETS: Record<'green' | 'blue' | 'crystal', AccentThemeConfig> = {
+  green: {
+    id: 'green',
+    label: 'Darker Green',
+    description: 'Deep Forest & Emerald gradient',
+    primary: '#0A7E58',
+    hover: '#086B4A',
+    active: '#044F36',
+    textLight: '#065F46',
+    textDark: '#34D399',
+    softLight: 'rgba(10, 126, 88, 0.09)',
+    softDark: 'rgba(10, 126, 88, 0.16)',
+    borderLight: 'rgba(10, 126, 88, 0.28)',
+    borderDark: 'rgba(52, 211, 153, 0.24)',
+    ring: 'rgba(10, 126, 88, 0.45)',
+    shadow: 'rgba(10, 126, 88, 0.25)',
+    gradientFrom: '#0A7E58',
+    gradientTo: '#044F36',
+    dotColor: '#0A7E58',
+    headerGradientLight: 'from-[#0A7E58] via-[#086B4A] to-[#044F36]',
+    headerGradientDark: 'from-[#0D241B] via-[#081711] to-[#030B07]',
+    headerBorderLight: 'border-emerald-600/30 shadow-[0_16px_40px_rgba(10,126,88,0.22)]',
+    headerBorderDark: 'border-emerald-500/20 shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(16,185,129,0.12)]',
+    headerButtonText: 'text-[#065F46]',
+    headerButtonHover: 'hover:bg-emerald-50/90',
   },
-  teal: {
-    id: 'teal',
-    label: 'Obsidian',
-    primary: '#181920',
-    hover: '#232530',
-    active: '#101116',
-    textLight: '#181920',
-    textDark: '#FFFFFF',
-    softLight: 'rgba(24, 25, 32, 0.08)',
-    softDark: 'rgba(255, 255, 255, 0.12)',
-    borderLight: 'rgba(24, 25, 32, 0.25)',
-    borderDark: 'rgba(255, 255, 255, 0.20)',
-    ring: 'rgba(24, 25, 32, 0.40)',
-    shadow: 'rgba(24, 25, 32, 0.20)',
-    gradientFrom: '#181920',
-    gradientTo: '#232530',
-    dotColor: '#181920'
+  blue: {
+    id: 'blue',
+    label: 'Darker Blue',
+    description: 'Royal Cobalt & Sapphire gradient',
+    primary: '#155dfc',
+    hover: '#1049c7',
+    active: '#0d3ca8',
+    textLight: '#155dfc',
+    textDark: '#60A5FA',
+    softLight: 'rgba(21, 93, 252, 0.09)',
+    softDark: 'rgba(21, 93, 252, 0.16)',
+    borderLight: 'rgba(21, 93, 252, 0.28)',
+    borderDark: 'rgba(96, 165, 250, 0.24)',
+    ring: 'rgba(21, 93, 252, 0.45)',
+    shadow: 'rgba(21, 93, 252, 0.25)',
+    gradientFrom: '#1b64ff',
+    gradientTo: '#0f52dc',
+    dotColor: '#155dfc',
+    headerGradientLight: 'from-[#1b64ff] via-[#155dfc] to-[#0f52dc]',
+    headerGradientDark: 'from-[#0a1836] via-[#071126] to-[#030712]',
+    headerBorderLight: 'border-[#155dfc]/30 shadow-[0_16px_40px_rgba(21,93,252,0.25)]',
+    headerBorderDark: 'border-blue-500/20 shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(21,93,252,0.15)]',
+    headerButtonText: 'text-[#155dfc]',
+    headerButtonHover: 'hover:bg-blue-50/90',
   },
-  red: {
-    id: 'red',
-    label: 'Obsidian',
-    primary: '#181920',
-    hover: '#232530',
-    active: '#101116',
-    textLight: '#181920',
-    textDark: '#FFFFFF',
-    softLight: 'rgba(24, 25, 32, 0.08)',
-    softDark: 'rgba(255, 255, 255, 0.12)',
-    borderLight: 'rgba(24, 25, 32, 0.25)',
-    borderDark: 'rgba(255, 255, 255, 0.20)',
-    ring: 'rgba(24, 25, 32, 0.40)',
-    shadow: 'rgba(24, 25, 32, 0.20)',
-    gradientFrom: '#181920',
-    gradientTo: '#232530',
-    dotColor: '#181920'
+  crystal: {
+    id: 'crystal',
+    label: 'Crystal White',
+    description: 'Pristine Frost & Crystal gradient (Black text)',
+    primary: '#0f172a',
+    hover: '#1e293b',
+    active: '#334155',
+    textLight: '#0f172a',
+    textDark: '#f8fafc',
+    softLight: 'rgba(15, 23, 42, 0.06)',
+    softDark: 'rgba(248, 250, 252, 0.12)',
+    borderLight: 'rgba(15, 23, 42, 0.14)',
+    borderDark: 'rgba(248, 250, 252, 0.18)',
+    ring: 'rgba(15, 23, 42, 0.35)',
+    shadow: 'rgba(0, 0, 0, 0.12)',
+    gradientFrom: '#F8FAFC',
+    gradientTo: '#E2E8F0',
+    dotColor: '#0f172a',
+    headerGradientLight: 'from-white via-[#F8FAFC] to-[#EEF2F6]',
+    headerGradientDark: 'from-[#181C24] via-[#10131A] to-[#0A0C10]',
+    headerBorderLight: 'border-slate-300/80 shadow-[0_16px_40px_rgba(0,0,0,0.06),inset_0_1px_0_0_rgba(255,255,255,0.95)]',
+    headerBorderDark: 'border-white/10 shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]',
+    headerButtonText: 'text-white',
+    headerButtonHover: 'hover:bg-slate-800',
   },
-  brand: {
-    id: 'brand',
-    label: 'Obsidian',
-    primary: '#181920',
-    hover: '#232530',
-    active: '#101116',
-    textLight: '#181920',
-    textDark: '#FFFFFF',
-    softLight: 'rgba(24, 25, 32, 0.08)',
-    softDark: 'rgba(255, 255, 255, 0.12)',
-    borderLight: 'rgba(24, 25, 32, 0.25)',
-    borderDark: 'rgba(255, 255, 255, 0.20)',
-    ring: 'rgba(24, 25, 32, 0.40)',
-    shadow: 'rgba(24, 25, 32, 0.20)',
-    gradientFrom: '#181920',
-    gradientTo: '#232530',
-    dotColor: '#181920'
-  }
 };
 
-export const ACCENT_COLORS: AccentColor[] = ['electric'];
+export const ACCENT_COLORS: AccentColor[] = ['green', 'blue', 'crystal'];
 
-const STORAGE_KEY = 'sketchitup-accent-color';
+const STORAGE_KEY = 'ownerOS_accent_theme';
 
 interface AccentThemeContextType {
-  accent: AccentColor;
+  accent: 'green' | 'blue' | 'crystal';
   setAccent: (accent: AccentColor) => void;
+  toggleTheme: () => void;
+  isGreen: boolean;
+  isBlue: boolean;
+  isCrystal: boolean;
   currentTheme: AccentThemeConfig;
   availableAccents: typeof ACCENT_PRESETS;
 }
 
 const AccentThemeContext = createContext<AccentThemeContextType | undefined>(undefined);
 
+function normalizeAccent(value: string | null | undefined): 'green' | 'blue' | 'crystal' {
+  if (value === 'crystal' || value === 'white') return 'crystal';
+  if (value === 'blue' || value === 'electric') return 'blue';
+  return 'green';
+}
+
 function applyAccentCssVariables(config: AccentThemeConfig) {
   const root = document.documentElement;
-  if (config.id === 'brand') {
-    // Brand Colors is scoped specifically to the Inventory page for now.
-    // Keep root on the app's default (Electric Blue) so other pages remain unaffected.
-    const defaultPreset = ACCENT_PRESETS.electric;
-    root.setAttribute('data-accent', 'electric');
-    root.setAttribute('data-brand-accent-active', 'true');
-    root.style.setProperty('--accent-primary', defaultPreset.primary);
-    root.style.setProperty('--accent-hover', defaultPreset.hover);
-    root.style.setProperty('--accent-active', defaultPreset.active);
-    root.style.setProperty('--accent-text-light', defaultPreset.textLight);
-    root.style.setProperty('--accent-text-dark', defaultPreset.textDark);
-    root.style.setProperty('--accent-soft-light', defaultPreset.softLight);
-    root.style.setProperty('--accent-soft-dark', defaultPreset.softDark);
-    root.style.setProperty('--accent-border-light', defaultPreset.borderLight);
-    root.style.setProperty('--accent-border-dark', defaultPreset.borderDark);
-    root.style.setProperty('--accent-ring', defaultPreset.ring);
-    root.style.setProperty('--accent-shadow', defaultPreset.shadow);
-    root.style.setProperty('--accent-gradient-from', defaultPreset.gradientFrom);
-    root.style.setProperty('--accent-gradient-to', defaultPreset.gradientTo);
-    return;
-  }
-  root.removeAttribute('data-brand-accent-active');
   root.setAttribute('data-accent', config.id);
   root.style.setProperty('--accent-primary', config.primary);
   root.style.setProperty('--accent-hover', config.hover);
@@ -149,28 +160,34 @@ function applyAccentCssVariables(config: AccentThemeConfig) {
   root.style.setProperty('--accent-gradient-to', config.gradientTo);
 }
 
-export const AccentThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [accent, setAccentState] = useState<AccentColor>(() => {
+export const AccentThemeProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [accent, setAccentState] = useState<'green' | 'blue' | 'crystal'>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved && ACCENT_COLORS.includes(saved as AccentColor)) {
-        return saved as AccentColor;
-      }
-    } catch (_) {}
-    return 'electric';
+      return normalizeAccent(saved);
+    } catch {
+      return 'green';
+    }
   });
 
   const setAccent = useCallback((newAccent: AccentColor) => {
-    let resolved = newAccent;
-    if (!ACCENT_COLORS.includes(resolved)) {
-      resolved = 'electric';
-    }
+    const resolved = normalizeAccent(newAccent);
     setAccentState(resolved);
     try {
       localStorage.setItem(STORAGE_KEY, resolved);
-    } catch (_) {}
+    } catch {}
     applyAccentCssVariables(ACCENT_PRESETS[resolved]);
   }, []);
+
+  const toggleTheme = useCallback(() => {
+    setAccent(prev => {
+      if (prev === 'green') return 'blue';
+      if (prev === 'blue') return 'crystal';
+      return 'green';
+    });
+  }, [setAccent]);
 
   // Sync initial state to DOM
   useEffect(() => {
@@ -181,24 +198,30 @@ export const AccentThemeProvider: React.FC<{ children: React.ReactNode }> = ({ c
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {
       if (e.key === STORAGE_KEY && e.newValue) {
-        if (ACCENT_COLORS.includes(e.newValue as AccentColor)) {
-          setAccentState(e.newValue as AccentColor);
-          applyAccentCssVariables(ACCENT_PRESETS[e.newValue as AccentColor]);
-        }
+        const resolved = normalizeAccent(e.newValue);
+        setAccentState(resolved);
+        applyAccentCssVariables(ACCENT_PRESETS[resolved]);
       }
     };
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
-  const currentTheme = useMemo(() => ACCENT_PRESETS[accent] || ACCENT_PRESETS.electric, [accent]);
+  const currentTheme = useMemo(() => ACCENT_PRESETS[accent], [accent]);
 
-  const contextValue = useMemo(() => ({
-    accent,
-    setAccent,
-    currentTheme,
-    availableAccents: ACCENT_PRESETS
-  }), [accent, setAccent, currentTheme]);
+  const contextValue = useMemo(
+    () => ({
+      accent,
+      setAccent,
+      toggleTheme,
+      isGreen: accent === 'green',
+      isBlue: accent === 'blue',
+      isCrystal: accent === 'crystal',
+      currentTheme,
+      availableAccents: ACCENT_PRESETS,
+    }),
+    [accent, setAccent, toggleTheme, currentTheme]
+  );
 
   return (
     <AccentThemeContext.Provider value={contextValue}>
@@ -214,3 +237,5 @@ export const useAccentTheme = (): AccentThemeContextType => {
   }
   return context;
 };
+
+export default AccentThemeContext;

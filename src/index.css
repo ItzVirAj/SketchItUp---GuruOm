@@ -15,6 +15,14 @@
 }
 
 @theme {
+  --default-border-width: 1.1px;
+  --border-width: 1.1px;
+  --border-width-DEFAULT: 1.1px;
+  --border-width-1: 1.1px;
+  --border-width-2: 2.2px;
+  --border-width-4: 4.4px;
+  --border-width-8: 8.8px;
+
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-noto: 'Noto Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
@@ -31,17 +39,21 @@
      Anchors are exact: 50=Frost White, 400=Cool Silver, 700=Graphite,
      950=Carbon. The steps in between are linearly interpolated to keep the
      ramp smooth rather than jumping straight from one named color to the next. */
-  --color-slate-50:  #F4F7FA; /* Frost White  — clean light dashboard canvas base */
+  --color-slate-50: #E3E3E3;
+  /* #E3E3E3 — overall light dashboard canvas base */
   --color-slate-100: #E9EDF1;
   --color-slate-200: #D4D9E0;
   --color-slate-300: #BFC6CE;
-  --color-slate-400: #AAB2BD; /* Cool Silver  — sleek aluminum midtone */
+  --color-slate-400: #AAB2BD;
+  /* Cool Silver  — sleek aluminum midtone */
   --color-slate-500: #838A93;
   --color-slate-600: #5B626A;
-  --color-slate-700: #343A40; /* Graphite     — solid structural element container */
+  --color-slate-700: #343A40;
+  /* Graphite     — solid structural element container */
   --color-slate-800: #262A30;
   --color-slate-900: #171B1F;
-  --color-slate-950: #101317; /* Carbon       — sharp dark UI bedrock layer */
+  --color-slate-950: #101317;
+  /* Carbon       — sharp dark UI bedrock layer */
   /* True Neutral Carbon/Obsidian Primitives (better-colors overhaul) */
   --color-carbon-950: #09090B;
   --color-carbon-900: #121215;
@@ -62,9 +74,120 @@
   --color-rose-500: #F43F5E;
 }
 
+/* ========================================================================== */
+/* BORDER THICKNESS ADJUSTMENT (1.10X across all modules & sub-modules)        */
+/* Increases standard 1px borders to 1.1px (1.10x thickness) for crispness.    */
+/* ========================================================================== */
+:root {
+  --default-border-width: 1.1px;
+}
+
+/* Enforce 1.10X scale across all core Tailwind border utilities */
+.border {
+  border-width: 1.5px;
+}
+
+.border-t {
+  border-top-width: 1.2px;
+}
+
+.border-b {
+  border-bottom-width: 1.2px;
+}
+
+.border-l {
+  border-left-width: 1.2px;
+}
+
+.border-r {
+  border-right-width: 1.2px;
+}
+
+.border-x {
+  border-left-width: 1.2px;
+  border-right-width: 1.2px;
+}
+
+.border-y {
+  border-top-width: 1.2px;
+  border-bottom-width: 1.2px;
+}
+
+.border-2 {
+  border-width: 2.2px;
+}
+
+.border-t-2 {
+  border-top-width: 2.2px;
+}
+
+.border-b-2 {
+  border-bottom-width: 2.2px;
+}
+
+.border-l-2 {
+  border-left-width: 2.2px;
+}
+
+.border-r-2 {
+  border-right-width: 2.2px;
+}
+
+.border-x-2 {
+  border-left-width: 2.2px;
+  border-right-width: 2.2px;
+}
+
+.border-y-2 {
+  border-top-width: 2.2px;
+  border-bottom-width: 2.2px;
+}
+
+.border-4 {
+  border-width: 4.4px;
+}
+
+.border-t-4 {
+  border-top-width: 4.4px;
+}
+
+.border-b-4 {
+  border-bottom-width: 4.4px;
+}
+
+.border-l-4 {
+  border-left-width: 4.4px;
+}
+
+.border-r-4 {
+  border-right-width: 4.4px;
+}
+
+/* Dividers across tables, lists, and grids */
+.divide-y> :not([hidden])~ :not([hidden]) {
+  border-top-width: 1.1px;
+}
+
+.divide-x> :not([hidden])~ :not([hidden]) {
+  border-left-width: 1.1px;
+}
+
+.divide-y-2> :not([hidden])~ :not([hidden]) {
+  border-top-width: 2.2px;
+}
+
+.divide-x-2> :not([hidden])~ :not([hidden]) {
+  border-left-width: 2.2px;
+}
+
+hr {
+  border-top-width: 1.1px;
+}
+
 /* Centralized Accent Color Tokens */
 :root {
-  --chart-background: #F4F7FA;
+  --bg-canvas-light: #F7F7F7;
+  --chart-background: #F7F7F7;
   --chart-foreground: #101317;
   --chart-foreground-muted: #5B626A;
   --chart-line-primary: #3B82F6;
@@ -73,13 +196,18 @@
   --chart-grid: rgba(52, 58, 64, 0.12);
   --chart-tooltip-foreground: #101317;
   --chart-tooltip-muted: #5B626A;
-  --chart-marker-background: #F4F7FA;
+  --chart-marker-background: #F7F7F7;
   --chart-marker-border: #BFC6CE;
   --chart-marker-foreground: #343A40;
   --chart-marker-badge-background: #101317;
   --chart-marker-badge-foreground: #F4F7FA;
   --chart-segment-background: rgba(59, 130, 246, 0.08);
   --chart-segment-line: rgba(59, 130, 246, 0.30);
+}
+
+html:not(.dark),
+body:not(.dark) {
+  background-color: #F7F7F7;
 }
 
 .dark {
@@ -101,7 +229,13 @@
   --chart-segment-line: rgba(96, 165, 250, 0.35);
 }
 
-:root, [data-accent="electric"], [data-accent="teal"], [data-accent="red"], [data-accent="brand"], [data-accent="obsidian"], [data-accent="default"] {
+:root,
+[data-accent="electric"],
+[data-accent="teal"],
+[data-accent="red"],
+[data-accent="brand"],
+[data-accent="obsidian"],
+[data-accent="default"] {
   --accent-primary: #181920;
   --accent-hover: #232530;
   --accent-active: #101116;
@@ -143,7 +277,7 @@
 .brand-theme-active .brand-btn-primary {
   background: linear-gradient(180deg, #109367 0%, #086B4A 100%) !important;
   color: #FFFFFF !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border: 1.1px solid rgba(255, 255, 255, 0.2) !important;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15), 0 8px 24px -4px rgba(10, 126, 88, 0.45) !important;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
@@ -569,9 +703,9 @@
 }
 
 /* Explicit Google Noto Sans Font & Scaled Styling for all tables across the application */
-table, 
-th, 
-td, 
+table,
+th,
+td,
 .font-table {
   font-family: 'Noto Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
   font-feature-settings: "tnum" 1, "cv05" 1;
@@ -606,13 +740,13 @@ tbody tr {
 /* Custom subtle grid background */
 .bg-grid-pattern {
   background-size: 32px 32px;
-  background-image: 
+  background-image:
     linear-gradient(to right, rgba(148, 163, 184, 0.08) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
 }
 
 .dark .bg-grid-pattern {
-  background-image: 
+  background-image:
     linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
 }
@@ -690,9 +824,9 @@ tbody tr {
 }
 
 /* Explicit Google Noto Sans Font & Scaled Styling for all tables across the application */
-table, 
-th, 
-td, 
+table,
+th,
+td,
 .font-table {
   font-family: 'Noto Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
   font-feature-settings: "tnum" 1, "cv05" 1;
@@ -727,13 +861,13 @@ tbody tr {
 /* Custom subtle grid background */
 .bg-grid-pattern {
   background-size: 32px 32px;
-  background-image: 
+  background-image:
     linear-gradient(to right, rgba(148, 163, 184, 0.08) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
 }
 
 .dark .bg-grid-pattern {
-  background-image: 
+  background-image:
     linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
 }
@@ -767,7 +901,8 @@ tbody tr {
 }
 
 /* Lenis butter-smooth delayed momentum scrolling rules for desktop */
-html.lenis, html.lenis body {
+html.lenis,
+html.lenis body {
   height: auto;
 }
 
@@ -795,8 +930,10 @@ html.lenis, html.lenis body {
   * {
     -webkit-tap-highlight-color: transparent;
   }
-  
-  main, .overflow-y-auto, .overflow-x-auto {
+
+  main,
+  .overflow-y-auto,
+  .overflow-x-auto {
     -webkit-overflow-scrolling: touch;
   }
 }
@@ -805,13 +942,15 @@ html.lenis, html.lenis body {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
 
 /* Modal active scroll lock */
-body.modal-open, html.modal-open {
+body.modal-open,
+html.modal-open {
   overflow: hidden !important;
   touch-action: none;
 }
@@ -833,7 +972,8 @@ body.modal-open, html.modal-open {
     margin: 8mm;
   }
 
-  body, html {
+  body,
+  html {
     background: #ffffff !important;
     color: #000000 !important;
     font-size: 10pt !important;
@@ -844,7 +984,12 @@ body.modal-open, html.modal-open {
     min-height: 100% !important;
   }
 
-  .no-print, header, aside, nav, button, .lucide-x {
+  .no-print,
+  header,
+  aside,
+  nav,
+  button,
+  .lucide-x {
     display: none !important;
   }
 
@@ -879,8 +1024,8 @@ body.modal-open, html.modal-open {
     display: block !important;
   }
 
-  #challan-print-container > div,
-  #job-card-print-container > div {
+  #challan-print-container>div,
+  #job-card-print-container>div {
     overflow: visible !important;
     height: auto !important;
     max-height: none !important;
@@ -908,7 +1053,8 @@ body.modal-open, html.modal-open {
     width: 100% !important;
   }
 
-  th, td {
+  th,
+  td {
     border: 1pt solid #333333 !important;
     color: #000000 !important;
     padding: 4pt 6pt !important;
@@ -928,6 +1074,7 @@ body.modal-open, html.modal-open {
   from {
     width: 100%;
   }
+
   to {
     width: 0%;
   }
@@ -966,6 +1113,7 @@ select:-webkit-autofill {
     opacity: 0;
     transform: scale(0.97) translateY(8px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -996,18 +1144,18 @@ select:-webkit-autofill {
 /* ========================================================================== */
 :root {
   --shadow-surface-card:
-    0px 0px 0px 1px oklch(0 0 0 / 0.06),
+    0px 0px 0px 1.1px oklch(0 0 0 / 0.06),
     0px 1px 2px -1px oklch(0 0 0 / 0.06),
     0px 2px 4px 0px oklch(0 0 0 / 0.04);
   --shadow-surface-hover:
-    0px 0px 0px 1px oklch(0 0 0 / 0.08),
+    0px 0px 0px 1.1px oklch(0 0 0 / 0.08),
     0px 1px 2px -1px oklch(0 0 0 / 0.08),
     0px 2px 4px 0px oklch(0 0 0 / 0.06);
 }
 
 .dark {
-  --shadow-surface-card: 0 0 0 1px oklch(1 0 0 / 0.08);
-  --shadow-surface-hover: 0 0 0 1px oklch(1 0 0 / 0.13);
+  --shadow-surface-card: 0 0 0 1.1px oklch(1 0 0 / 0.08);
+  --shadow-surface-hover: 0 0 0 1.1px oklch(1 0 0 / 0.13);
 }
 
 .card-elevated {
@@ -1020,4 +1168,3 @@ select:-webkit-autofill {
 .card-elevated:hover {
   box-shadow: var(--shadow-surface-hover);
 }
-

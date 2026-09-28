@@ -5,7 +5,11 @@ import { productionService } from '../production/production.service';
 import { qcService } from '../qc/qc.service';
 import { dispatchService } from '../dispatch/dispatch.service';
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+function getGroqClient(): Groq | null {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) return null;
+  return new Groq({ apiKey });
+}
 
 // Llama 3.3 70B was retired on Groq — this is their current recommended
 // replacement for tool-calling workloads.
@@ -72,6 +76,14 @@ async function executeReadTool(name: string, args: any): Promise<any> {
 
 export const copilotService = {
   async chat(incomingMessages: any[], actorContext: { role?: string; name?: string }) {
+    const groq = getGroqClient();
+    if (!groq) {
+      return {
+        reply: "AI Owner Copilot is currently offline because `GROQ_API_KEY` is not configured in the server environment (.env).",
+        done: true,
+      };
+    }
+
     const messages: any[] = [{ role: 'system', content: buildSystemPrompt() }, ...incomingMessages];
 
     for (let round = 0; round < 5; round++) {
@@ -129,6 +141,6 @@ export const copilotService = {
         rate: l.rate,
       })),
     };
-    return ordersService.createOrder(body, actorContext);
+    return ordersService.createOrder(body as any, actorContext);
   },
 };

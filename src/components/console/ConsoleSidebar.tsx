@@ -3,14 +3,16 @@ import { AnimatePresence, motion } from 'motion/react';
 import {
   ChevronDown,
   LayoutGrid,
-  LogOut,
   PanelLeftClose,
+  PanelLeft,
   Search,
-  ShieldCheck,
-  Sun,
-  Moon,
   Bell,
   RefreshCw,
+  Sun,
+  Moon,
+  LogOut,
+  Shield,
+  Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { ConsoleUser, ConsoleView, UserRole } from '../../types/console';
@@ -61,6 +63,7 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
+  // Collapsed state persisted in localStorage
   const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
     try {
       return JSON.parse(
@@ -71,10 +74,10 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
     }
   });
 
+  // Open navigation sections
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(
     () => {
       const activeParent = findParentSectionId(currentView);
-
       return Object.fromEntries(
         NAVIGATION_SECTIONS.map(section => [
           section.id,
@@ -84,34 +87,33 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
     }
   );
 
+  // Track hover flyout in collapsed mode
   const [hoveredSection, setHoveredSection] = useState<string | null>(null);
 
+  // Smooth scroll
   useSmoothScroll(scrollContainerRef, [openSections, isCollapsed], {
-    duration: 1.1,
+    duration: 1.0,
     wheelMultiplier: 0.95,
-    touchMultiplier: 1.25,
+    touchMultiplier: 1.2,
   });
 
+  // Auto-expand section if active view changes
   useEffect(() => {
     const parent = findParentSectionId(currentView);
-
     if (parent) {
-      setOpenSections(previous => ({
-        ...previous,
+      setOpenSections(prev => ({
+        ...prev,
         [parent]: true,
       }));
     }
   }, [currentView]);
 
   const toggleCollapse = () => {
-    setIsCollapsed(previous => {
-      const next = !previous;
-
+    setIsCollapsed(prev => {
+      const next = !prev;
       localStorage.setItem('guruom_sidebar_collapsed', JSON.stringify(next));
-
       return next;
     });
-
     setHoveredSection(null);
   };
 
@@ -121,102 +123,83 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
     setHoveredSection(null);
   };
 
-  const handleThemeToggle = () => {
-    setIsDarkMode?.(!isDarkMode);
-  };
-
   const { profile: authProfile } = useAuth();
-
   const activeUser = currentUser || authProfile;
-
-  const displayName =
-    activeUser?.name ||
-    (activeUser as any)?.fullName ||
-    userName ||
-    'GuruOm Admin';
-
-  const displayEmail = activeUser?.email || 'owner@guruom.in';
   const displayRole = activeUser?.role || currentRole || 'SUPER ADMIN';
+  const displayName = activeUser?.name || userName || 'Sachin Gharbude';
 
-  const initials =
-    (displayName || 'GO')
-      .split(' ')
-      .filter(Boolean)
-      .map(part => part[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase() || 'GO';
+  // Compute initials for avatar
+  const initials = displayName
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(p => p[0]?.toUpperCase())
+    .join('') || 'SG';
 
-  /*
-   * Theme tokens
-   *
-   * A drafting-ledger palette: cool graphite paper in light mode, ink
-   * charcoal in dark mode, one signature blueprint-blue accent that carries
-   * every "you are here" signal so it never competes with itself.
-   */
-  const ACCENT = '#3B6FE0';
-  const ACCENT_SOFT_LIGHT = 'rgba(59,111,224,0.10)';
-  const ACCENT_SOFT_DARK = 'rgba(59,111,224,0.16)';
+  // Design Tokens (Precision Drafting / Industrial Executive)
+  const ACCENT_COLOR = '#3B6FE0';
+  const ACCENT_BG = isDarkMode ? 'rgba(59, 111, 224, 0.16)' : 'rgba(59, 111, 224, 0.10)';
+  const ACCENT_BORDER = isDarkMode ? 'rgba(59, 111, 224, 0.35)' : 'rgba(59, 111, 224, 0.25)';
 
-  const ink = isDarkMode ? 'text-[#EDEEF0]' : 'text-[#17181B]';
-  const inkMuted = isDarkMode ? 'text-[#8B909A]' : 'text-[#6B6E76]';
-  const hairline = isDarkMode ? 'border-[#2A2D33]' : 'border-[#DEDCD4]';
-
-  const sectionHeaderClass = `
-    mb-2 flex items-center justify-between px-2
-    text-[11px] font-semibold ${inkMuted}
-  `;
+  const bgSidebar = isDarkMode ? 'bg-[#111215]' : 'bg-[#FCFCFC]';
+  const borderSidebar = isDarkMode ? 'border-[#22242B]' : 'border-[#E2DFD6]';
+  const textPrimary = isDarkMode ? 'text-[#F3F4F6]' : 'text-[#141518]';
+  const textMuted = isDarkMode ? 'text-[#8E939E]' : 'text-[#646872]';
+  const cardBg = isDarkMode ? 'bg-[#17181D]' : 'bg-[#FFFFFF]';
+  const cardBorder = isDarkMode ? 'border-[#262831]' : 'border-[#E5E2D9]';
+  const hoverBg = isDarkMode ? 'hover:bg-white/[0.05]' : 'hover:bg-black/[0.04]';
 
   return (
     <aside
-      className={`hidden h-full shrink-0 font-sans transition-[width] duration-300
-        lg:flex select-none
-        ${isCollapsed ? 'w-[84px]' : 'w-[280px]'}`}
+      aria-label="Application Sidebar Navigation"
+      className={`hidden h-full shrink-0 font-sans select-none lg:flex transition-[width] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] ${
+        isCollapsed ? 'w-[74px]' : 'w-[280px]'
+      }`}
     >
       <div
-        className={`
-          console-sidebar relative flex h-full w-full flex-col
-          border rounded-2xl
-          select-none overflow-hidden
-          transition-colors duration-300
-          ${isDarkMode
-            ? `${ink} ${hairline} bg-[#101114]`
-            : `${ink} ${hairline} bg-[#F6F5F1]`
-          }
-        `}
+        className={`console-sidebar relative flex h-full w-full flex-col overflow-hidden border-r shadow-xs ${bgSidebar} ${borderSidebar} ${textPrimary}`}
       >
         {/* ===================================================================== */}
-        {/* TOP: BRAND & COLLAPSE TRIGGER                                         */}
+        {/* 1. BRAND HEADER & COLLAPSE CONTROL                                    */}
         {/* ===================================================================== */}
-
         <div
-          className={`
-            flex h-[72px] shrink-0 items-center border-b
-            transition-colors duration-300 ${hairline}
-            ${isCollapsed ? 'justify-center px-2.5' : 'justify-between px-4'}
-          `}
+          className={`flex h-[66px] shrink-0 items-center border-b px-3.5 ${cardBorder} ${
+            isCollapsed ? 'justify-center px-2' : 'justify-between'
+          }`}
         >
           {!isCollapsed ? (
             <div className="flex min-w-0 items-center gap-3">
               <div
-                className={`
-                  relative flex h-9 w-9 shrink-0 items-center justify-center
-                  rounded-lg border p-1 overflow-hidden
-                  ${isDarkMode ? 'bg-black border-white/15' : 'bg-white border-black/10'}
-                `}
+                className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border p-1 shadow-xs overflow-hidden ${
+                  isDarkMode
+                    ? 'border-white/10 bg-black/60 shadow-black/40'
+                    : 'border-black/10 bg-white shadow-neutral-200/50'
+                }`}
               >
-                <img src="/logo.png" alt="OwnerOS" className="h-full w-full object-contain" />
+                <img
+                  src="/logo.png"
+                  alt="OwnerOS Logo"
+                  className="h-full w-full object-contain"
+                />
               </div>
 
-              <div className="flex min-w-0 flex-col leading-none">
-                <span className={`truncate text-[17px] font-bold tracking-tight ${ink}`}>
-                  OwnerOS
-                </span>
-                <span
-                  className="mt-1 truncate text-[11px] font-medium"
-                  style={{ color: ACCENT }}
-                >
-                  SketchitUp Solutions
+              <div className="flex min-w-0 flex-col leading-tight">
+                <div className="flex items-center gap-1.5">
+                  <span className="truncate text-[15px] font-bold tracking-tight">
+                    OwnerOS
+                  </span>
+                  <span
+                    className={`rounded-[4px] px-1 py-[1px] text-[9px] font-semibold tracking-wide uppercase ${
+                      isDarkMode
+                        ? 'bg-blue-950/60 text-blue-400 border border-blue-800/40'
+                        : 'bg-blue-50 text-blue-600 border border-blue-200'
+                    }`}
+                  >
+                    PRO
+                  </span>
+                </div>
+                <span className={`truncate text-[11px] font-medium ${textMuted}`}>
+                  GuruOm Precision
                 </span>
               </div>
             </div>
@@ -224,155 +207,171 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
             <button
               type="button"
               onClick={toggleCollapse}
-              className={`
-                relative flex h-9 w-9 shrink-0 items-center justify-center
-                rounded-lg border p-1 overflow-hidden cursor-pointer
-                transition-transform duration-150 active:scale-95
-                ${isDarkMode ? 'bg-black border-white/15' : 'bg-white border-black/10'}
-              `}
+              aria-label="Expand sidebar navigation"
+              className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border p-1 shadow-xs transition-transform duration-150 cursor-pointer active:scale-[0.95] focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${
+                isDarkMode
+                  ? 'border-white/15 bg-black/60 hover:bg-black/90'
+                  : 'border-black/10 bg-white hover:bg-neutral-50'
+              }`}
               title="Expand sidebar"
             >
-              <img src="/logo.png" alt="OwnerOS" className="h-full w-full object-contain" />
+              <img
+                src="/logo.png"
+                alt="OwnerOS"
+                className="h-full w-full object-contain"
+              />
             </button>
           )}
 
           {!isCollapsed && (
-            <div className="flex items-center gap-1.5">
-              {setIsDarkMode && (
-                <button
-                  type="button"
-                  onClick={handleThemeToggle}
-                  title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-                  aria-label="Toggle theme"
-                  className={`
-                    flex h-8 w-8 shrink-0 items-center justify-center rounded-lg
-                    transition-colors duration-150 active:scale-95 cursor-pointer
-                    ${isDarkMode ? `${inkMuted} hover:bg-white/[0.06] hover:text-white` : `${inkMuted} hover:bg-black/[0.05] hover:text-black`}
-                  `}
-                >
-                  {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                </button>
-              )}
+            <button
+              type="button"
+              onClick={toggleCollapse}
+              aria-label="Collapse sidebar navigation"
+              title="Collapse sidebar"
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all duration-150 cursor-pointer active:scale-[0.95] focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${textMuted} ${hoverBg} ${
+                isDarkMode ? 'hover:text-white' : 'hover:text-black'
+              }`}
+            >
+              <PanelLeftClose className="h-4 w-4" />
+            </button>
+          )}
+        </div>
 
+        {/* ===================================================================== */}
+        {/* 2. COMMAND SEARCH BAR (Expanded) / QUICK ICON (Collapsed)              */}
+        {/* ===================================================================== */}
+        <div className="shrink-0 px-3 pt-3 pb-1">
+          {!isCollapsed ? (
+            <button
+              type="button"
+              onClick={onOpenCommandPalette}
+              aria-label="Open command palette (Ctrl+K)"
+              className={`group flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left shadow-xs transition-all duration-150 cursor-pointer active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${cardBg} ${cardBorder} ${
+                isDarkMode
+                  ? 'hover:border-white/20 text-[#8E939E] hover:text-[#EDEEF0]'
+                  : 'hover:border-black/20 text-[#646872] hover:text-[#17181B]'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Search className="h-3.5 w-3.5 shrink-0 opacity-70 group-hover:opacity-100 transition-opacity" />
+                <span className="text-[12.5px] font-normal">Search or command...</span>
+              </div>
+              <kbd
+                className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium tracking-wide ${
+                  isDarkMode
+                    ? 'bg-white/[0.08] text-white/70 border border-white/10'
+                    : 'bg-black/[0.05] text-black/60 border border-black/10'
+                }`}
+              >
+                ⌘K
+              </kbd>
+            </button>
+          ) : (
+            <div className="flex justify-center">
               <button
                 type="button"
-                onClick={toggleCollapse}
-                title="Collapse sidebar"
-                className={`
-                  flex h-8 w-8 shrink-0 items-center justify-center rounded-lg
-                  transition-colors duration-150 active:scale-95 cursor-pointer
-                  ${isDarkMode ? `${inkMuted} hover:bg-white/[0.06] hover:text-white` : `${inkMuted} hover:bg-black/[0.05] hover:text-black`}
-                `}
+                onClick={onOpenCommandPalette}
+                aria-label="Open command palette"
+                title="Command Palette (⌘K)"
+                className={`flex h-10 w-10 items-center justify-center rounded-xl border transition-all duration-150 cursor-pointer active:scale-[0.95] focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${cardBg} ${cardBorder} ${textMuted} ${hoverBg} ${
+                  isDarkMode ? 'hover:text-white' : 'hover:text-black'
+                }`}
               >
-                <PanelLeftClose className="h-4 w-4" />
+                <Search className="h-4 w-4" />
               </button>
             </div>
           )}
         </div>
 
         {/* ===================================================================== */}
-        {/* QUICK FIND                                                            */}
+        {/* 3. SCROLLABLE NAVIGATION TREE                                         */}
         {/* ===================================================================== */}
-
-        {onOpenCommandPalette && !isCollapsed && (
-          <div className="shrink-0 px-3.5 pt-3.5">
-            <button
-              type="button"
-              onClick={onOpenCommandPalette}
-              className={`
-                flex w-full items-center gap-2 rounded-lg border px-3 py-2
-                text-left text-[13px] transition-colors duration-150 cursor-pointer
-                ${isDarkMode
-                  ? `${hairline} ${inkMuted} hover:border-white/25 hover:text-white`
-                  : `${hairline} ${inkMuted} hover:border-black/20 hover:text-black`
-                }
-              `}
-            >
-              <Search className="h-3.5 w-3.5 shrink-0" />
-              <span className="flex-1">Jump to&hellip;</span>
-              <kbd
-                className={`
-                  rounded border px-1.5 py-0.5 font-mono text-[10px]
-                  ${isDarkMode ? 'border-white/15 text-white/50' : 'border-black/10 text-black/45'}
-                `}
-              >
-                &#8984;K
-              </kbd>
-            </button>
-          </div>
-        )}
-
-        {/* ===================================================================== */}
-        {/* MIDDLE: SCROLLABLE NAVIGATION TREE                                    */}
-        {/* ===================================================================== */}
-
         <div
           ref={scrollContainerRef}
           data-lenis-prevent="true"
-          className="no-scrollbar flex-1 overflow-y-auto px-3.5 py-4 space-y-5"
+          className="no-scrollbar flex-1 overflow-y-auto px-3 py-2 space-y-4"
         >
-          {/* Workspace Root */}
+          {/* Executive Workspace Anchor */}
           <div>
-            {!isCollapsed && <div className={sectionHeaderClass}>Workspace</div>}
+            {!isCollapsed && (
+              <div className={`mb-1.5 flex items-center justify-between px-2 text-[10.5px] font-bold tracking-wider uppercase ${textMuted}`}>
+                <span>Cockpit</span>
+                <span className="flex items-center gap-1 text-[10px] text-emerald-500 font-bold lowercase">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  live
+                </span>
+              </div>
+            )}
 
             <button
               type="button"
               onClick={() => handleSelectView('command-centre')}
-              title="Command Centre"
-              className={`
-                group relative flex w-full items-center rounded-xl
-                transition-colors duration-150 cursor-pointer active:scale-[0.99]
-                ${isCollapsed ? 'h-11 justify-center px-2' : 'h-11 gap-3 px-3.5'}
-                ${currentView === 'command-centre'
+              aria-current={currentView === 'command-centre' ? 'page' : undefined}
+              title="Command Centre (Executive Overview)"
+              className={`group relative flex w-full items-center rounded-xl border transition-all duration-150 cursor-pointer active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${
+                isCollapsed ? 'h-11 justify-center px-1' : 'h-10 gap-3 px-3'
+              } ${
+                currentView === 'command-centre'
                   ? isDarkMode
-                    ? 'bg-white text-black font-semibold'
-                    : 'bg-[#17181B] text-white font-semibold'
-                  : isDarkMode
-                    ? `${ink} hover:bg-white/[0.06]`
-                    : `${ink} hover:bg-black/[0.04]`
-                }
-              `}
+                    ? 'bg-blue-600/15 border-blue-500/40 text-blue-400 font-bold shadow-xs'
+                    : 'bg-blue-50/90 border-blue-300 text-blue-700 font-bold shadow-xs'
+                  : `border-transparent ${textMuted} ${hoverBg} ${
+                      isDarkMode ? 'hover:text-white' : 'hover:text-black'
+                    }`
+              }`}
             >
-              <LayoutGrid className="h-[18px] w-[18px] shrink-0" />
+              {/* Active side indicator */}
+              {currentView === 'command-centre' && (
+                <span
+                  className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-[#3B6FE0] shadow-[0_0_8px_rgba(59,111,224,0.6)]"
+                  aria-hidden="true"
+                />
+              )}
+
+              <LayoutGrid
+                className={`h-[17px] w-[17px] shrink-0 transition-transform duration-150 group-hover:scale-105 ${
+                  currentView === 'command-centre' ? 'text-blue-500' : ''
+                }`}
+              />
 
               {!isCollapsed && (
                 <>
-                  <span className="flex-1 text-left text-[14px] font-medium">Command Centre</span>
+                  <span className="flex-1 text-left text-[13.5px] tracking-tight font-bold">
+                    Command Centre
+                  </span>
                   <span
-                    className={`
-                      flex items-center gap-1.5 text-[10px] font-medium
-                      ${currentView === 'command-centre'
-                        ? isDarkMode ? 'text-black/60' : 'text-white/60'
-                        : 'text-emerald-600'
-                      }
-                    `}
+                    className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold ${
+                      currentView === 'command-centre'
+                        ? isDarkMode
+                          ? 'bg-blue-500/20 text-blue-300'
+                          : 'bg-blue-100 text-blue-800'
+                        : isDarkMode
+                        ? 'bg-white/[0.06] text-neutral-400'
+                        : 'bg-black/[0.05] text-neutral-600'
+                    }`}
                   >
-                    <span
-                      className={`h-1.5 w-1.5 rounded-full ${currentView === 'command-centre'
-                          ? isDarkMode ? 'bg-black/60' : 'bg-white/60'
-                          : 'bg-emerald-500 animate-pulse'
-                        }`}
-                    />
-                    Live
+                    Ops
                   </span>
                 </>
               )}
             </button>
           </div>
 
-          {/* Departments */}
+          {/* Department Groupings */}
           <div>
             {!isCollapsed && (
-              <div className={sectionHeaderClass}>
+              <div className={`mb-1.5 flex items-center justify-between px-2 text-[10.5px] font-bold tracking-wider uppercase ${textMuted}`}>
                 <span>Departments</span>
-                <span className={inkMuted}>{NAVIGATION_SECTIONS.length}</span>
+                <span className="text-[10px] font-mono font-bold opacity-70">
+                  {NAVIGATION_SECTIONS.length}
+                </span>
               </div>
             )}
 
-            <div className="space-y-0.5">
+            <div className="space-y-1">
               {NAVIGATION_SECTIONS.map(section => {
                 const SectionIcon = section.icon;
-
                 const allowedItems = section.items.filter(item =>
                   isViewAllowedForUser(currentUser || { role: displayRole }, item.id)
                 );
@@ -380,7 +379,6 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
                 if (allowedItems.length === 0) return null;
 
                 const isOpen = openSections[section.id] ?? false;
-
                 const hasActiveChild = allowedItems.some(
                   item =>
                     item.id === currentView ||
@@ -394,70 +392,102 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
                     onMouseEnter={() => isCollapsed && setHoveredSection(section.id)}
                     onMouseLeave={() => isCollapsed && setHoveredSection(null)}
                   >
+                    {/* Section Toggle Button */}
                     <button
                       type="button"
+                      aria-expanded={!isCollapsed ? isOpen : undefined}
+                      aria-label={`${section.label} section`}
                       onClick={() => {
                         if (isCollapsed) {
                           setIsCollapsed(false);
                           localStorage.setItem('guruom_sidebar_collapsed', 'false');
-                          setOpenSections(previous => ({ ...previous, [section.id]: true }));
+                          setOpenSections(prev => ({ ...prev, [section.id]: true }));
                         } else {
-                          setOpenSections(previous => ({ ...previous, [section.id]: !isOpen }));
+                          setOpenSections(prev => ({ ...prev, [section.id]: !isOpen }));
                         }
                       }}
                       title={isCollapsed ? section.label : undefined}
-                      className={`
-                        group relative flex w-full items-center rounded-lg
-                        transition-colors duration-150 cursor-pointer
-                        ${isCollapsed ? 'h-11 justify-center px-2' : 'h-10 gap-3 px-2.5'}
-                        ${isDarkMode ? 'hover:bg-white/[0.05]' : 'hover:bg-black/[0.035]'}
-                      `}
+                      className={`group relative flex w-full items-center rounded-xl border transition-all duration-150 cursor-pointer active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${
+                        isCollapsed ? 'h-11 justify-center px-1' : 'h-10 gap-3 px-3'
+                      } ${
+                        hasActiveChild && !isOpen && !isCollapsed
+                          ? isDarkMode
+                            ? 'bg-white/[0.05] border-white/10 text-white font-bold'
+                            : 'bg-black/[0.04] border-black/10 text-black font-bold'
+                          : isOpen && !isCollapsed
+                          ? isDarkMode
+                            ? 'bg-white/[0.03] border-white/5 text-white'
+                            : 'bg-black/[0.02] border-black/5 text-neutral-900'
+                          : `border-transparent ${textMuted} ${hoverBg} ${
+                              isDarkMode ? 'hover:text-white' : 'hover:text-black'
+                            }`
+                      }`}
                       style={
-                        hasActiveChild && !isCollapsed
-                          ? { backgroundColor: isDarkMode ? ACCENT_SOFT_DARK : ACCENT_SOFT_LIGHT }
+                        hasActiveChild && isCollapsed
+                          ? {
+                              backgroundColor: ACCENT_BG,
+                              borderColor: ACCENT_BORDER,
+                            }
                           : undefined
                       }
                     >
-                      {hasActiveChild && (
+                      {/* Active indicator dot on collapsed button */}
+                      {hasActiveChild && isCollapsed && (
                         <span
-                          className="absolute left-0 top-1/2 h-5 w-[2.5px] -translate-y-1/2 rounded-full"
-                          style={{ backgroundColor: ACCENT }}
+                          className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#3B6FE0] ring-2 ring-[#111215]"
+                          aria-hidden="true"
                         />
                       )}
 
                       <SectionIcon
-                        className={`h-[17px] w-[17px] shrink-0 ${hasActiveChild ? '' : inkMuted
-                          }`}
-                        style={hasActiveChild ? { color: ACCENT } : undefined}
+                        className={`h-[17px] w-[17px] shrink-0 transition-transform duration-150 group-hover:scale-105 ${
+                          hasActiveChild ? 'text-blue-500' : ''
+                        }`}
                       />
 
                       {!isCollapsed && (
                         <>
                           <span
-                            className={`min-w-0 flex-1 truncate text-left text-[13.5px] ${hasActiveChild ? `font-semibold ${ink}` : `font-medium ${ink}`
-                              }`}
+                            className={`min-w-0 flex-1 truncate text-left text-[13px] tracking-tight font-bold ${
+                              hasActiveChild ? 'text-current' : ''
+                            }`}
                           >
                             {section.label}
                           </span>
 
-                          <ChevronDown
-                            className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${inkMuted} ${isOpen ? 'rotate-180' : ''
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span
+                              className={`rounded-full px-1.5 py-[1px] text-[10px] font-mono font-bold ${
+                                isDarkMode ? 'bg-white/[0.06] text-neutral-300' : 'bg-black/[0.05] text-neutral-700'
                               }`}
-                          />
+                            >
+                              {allowedItems.length}
+                            </span>
+                            <ChevronDown
+                              className={`h-3.5 w-3.5 transition-transform duration-200 ${textMuted} ${
+                                isOpen ? 'rotate-180' : ''
+                              }`}
+                            />
+                          </div>
                         </>
                       )}
                     </button>
 
+                    {/* Expanded Sub-items List */}
                     <AnimatePresence initial={false}>
                       {!isCollapsed && isOpen && (
                         <motion.div
                           initial={{ height: 0, opacity: 0 }}
                           animate={{ height: 'auto', opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+                          transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
                           className="overflow-hidden"
                         >
-                          <div className={`relative ml-[19px] space-y-0.5 border-l py-1 pl-4 ${hairline}`}>
+                          <div
+                            className={`relative ml-[19px] mt-1 space-y-0.5 border-l py-1 pl-3.5 ${
+                              isDarkMode ? 'border-white/10' : 'border-black/10'
+                            }`}
+                          >
                             {allowedItems.map(item => {
                               const ItemIcon = item.icon;
                               const isActive =
@@ -469,33 +499,40 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
                                   key={item.id}
                                   type="button"
                                   onClick={() => handleSelectView(item.id)}
-                                  className={`
-                                    flex w-full items-center gap-2.5 rounded-md
-                                    px-2.5 py-[7px] text-left
-                                    transition-colors duration-150 cursor-pointer
-                                    ${isActive
-                                      ? ''
-                                      : isDarkMode
-                                        ? `${inkMuted} hover:bg-white/[0.05] hover:text-white`
-                                        : `${inkMuted} hover:bg-black/[0.04] hover:text-black`
-                                    }
-                                  `}
-                                  style={
+                                  aria-current={isActive ? 'page' : undefined}
+                                  className={`group/sub relative flex w-full items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-left transition-all duration-150 cursor-pointer active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${
                                     isActive
-                                      ? {
-                                        backgroundColor: isDarkMode ? ACCENT_SOFT_DARK : ACCENT_SOFT_LIGHT,
-                                        color: ACCENT,
-                                      }
-                                      : undefined
-                                  }
+                                      ? isDarkMode
+                                        ? 'bg-blue-600/15 text-blue-400 font-bold'
+                                        : 'bg-blue-50 text-blue-700 font-bold'
+                                      : `${textMuted} ${hoverBg} ${
+                                          isDarkMode ? 'hover:text-white' : 'hover:text-black'
+                                        }`
+                                  }`}
                                 >
-                                  <ItemIcon className="h-[15px] w-[15px] shrink-0" />
-                                  <span
-                                    className={`min-w-0 flex-1 truncate text-[13px] ${isActive ? 'font-semibold' : 'font-medium'
-                                      }`}
-                                  >
+                                  {/* Left rail indicator line */}
+                                  {isActive && (
+                                    <span
+                                      className="absolute -left-[16px] top-1/2 -translate-y-1/2 h-3.5 w-[2.5px] rounded-full bg-[#3B6FE0] shadow-[0_0_8px_rgba(59,111,224,0.7)]"
+                                      aria-hidden="true"
+                                    />
+                                  )}
+
+                                  <ItemIcon
+                                    className={`h-[15px] w-[15px] shrink-0 transition-transform duration-150 group-hover/sub:scale-105 ${
+                                      isActive ? 'text-blue-500' : 'opacity-70 group-hover/sub:opacity-100'
+                                    }`}
+                                  />
+                                  <span className="min-w-0 flex-1 truncate text-[12.5px] font-bold">
                                     {item.label}
                                   </span>
+
+                                  {/* Badge count if applicable */}
+                                  {item.badgeKey === 'approvals' && (
+                                    <span className="rounded-full bg-amber-500/15 px-1.5 py-0.2 text-[10px] font-bold text-amber-500">
+                                      Queue
+                                    </span>
+                                  )}
                                 </button>
                               );
                             })}
@@ -504,57 +541,64 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
                       )}
                     </AnimatePresence>
 
-                    {/* COLLAPSED HOVER FLYOUT */}
-                    {isCollapsed && hoveredSection === section.id && (
-                      <div
-                        className={`
-                          absolute left-full top-0 z-50 ml-3 w-64 overflow-hidden
-                          rounded-xl border p-2.5 shadow-2xl
-                          ${isDarkMode ? 'border-white/15 bg-[#17181B]' : 'border-black/10 bg-white'}
-                        `}
-                      >
-                        <div className={`flex items-center gap-2 border-b px-2 pb-2 text-[13px] font-semibold ${hairline} ${ink}`}>
-                          <SectionIcon className="h-4 w-4" style={{ color: ACCENT }} />
-                          <span>{section.label}</span>
-                        </div>
+                    {/* Collapsed Mode Origin-Aware Hover Flyout with AnimatePresence */}
+                    <AnimatePresence>
+                      {isCollapsed && hoveredSection === section.id && (
+                        <motion.div
+                          role="menu"
+                          aria-label={`${section.label} menu`}
+                          initial={{ opacity: 0, scale: 0.95, x: -4 }}
+                          animate={{ opacity: 1, scale: 1, x: 0 }}
+                          exit={{ opacity: 0, scale: 0.96, x: -2 }}
+                          transition={{ duration: 0.16, ease: [0.23, 1, 0.32, 1] }}
+                          style={{ transformOrigin: 'left center' }}
+                          className={`absolute left-[78px] top-0 z-50 w-64 overflow-hidden rounded-2xl border p-2 shadow-2xl backdrop-blur-xl ${
+                            isDarkMode
+                              ? 'border-white/15 bg-[#17181E]/95 text-white shadow-black/80'
+                              : 'border-black/10 bg-white/95 text-neutral-900 shadow-xl'
+                          }`}
+                        >
+                          <div
+                            className={`flex items-center gap-2 border-b px-2.5 pb-2 text-[13px] font-bold ${
+                              isDarkMode ? 'border-white/10' : 'border-black/10'
+                            }`}
+                          >
+                            <SectionIcon className="h-4 w-4 text-[#3B6FE0]" />
+                            <span className="truncate font-bold">{section.label}</span>
+                          </div>
 
-                        <div className="space-y-0.5 pt-2">
-                          {allowedItems.map(item => {
-                            const ItemIcon = item.icon;
-                            const isActive =
-                              currentView === item.id ||
-                              (currentView === 'order-detail' && item.id === 'orders');
+                          <div className="space-y-0.5 pt-1.5">
+                            {allowedItems.map(item => {
+                              const ItemIcon = item.icon;
+                              const isActive =
+                                currentView === item.id ||
+                                (currentView === 'order-detail' && item.id === 'orders');
 
-                            return (
-                              <button
-                                key={item.id}
-                                type="button"
-                                onClick={() => handleSelectView(item.id)}
-                                className={`
-                                  flex w-full items-center gap-2.5 rounded-md
-                                  px-2.5 py-[7px] text-left text-[13px] font-medium
-                                  transition-colors duration-150 cursor-pointer
-                                  ${isActive
-                                    ? ''
-                                    : isDarkMode
-                                      ? `${inkMuted} hover:bg-white/[0.06] hover:text-white`
-                                      : `${inkMuted} hover:bg-black/[0.05] hover:text-black`
-                                  }
-                                `}
-                                style={
-                                  isActive
-                                    ? { backgroundColor: isDarkMode ? ACCENT_SOFT_DARK : ACCENT_SOFT_LIGHT, color: ACCENT }
-                                    : undefined
-                                }
-                              >
-                                <ItemIcon className="h-[15px] w-[15px] shrink-0" />
-                                <span className="truncate">{item.label}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
+                              return (
+                                <button
+                                  key={item.id}
+                                  type="button"
+                                  role="menuitem"
+                                  onClick={() => handleSelectView(item.id)}
+                                  className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-left text-[12.5px] font-bold transition-all duration-150 cursor-pointer active:scale-[0.98] ${
+                                    isActive
+                                      ? isDarkMode
+                                        ? 'bg-blue-600/20 text-blue-400'
+                                        : 'bg-blue-50 text-blue-700'
+                                      : isDarkMode
+                                      ? 'text-neutral-300 hover:bg-white/[0.06] hover:text-white'
+                                      : 'text-neutral-700 hover:bg-black/[0.04] hover:text-neutral-900'
+                                  }`}
+                                >
+                                  <ItemIcon className="h-3.5 w-3.5 shrink-0 opacity-80" />
+                                  <span className="truncate flex-1 font-bold">{item.label}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 );
               })}
@@ -563,115 +607,146 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
         </div>
 
         {/* ===================================================================== */}
-        {/* BOTTOM: STATUS & PROFILE                                              */}
+        {/* 4. BOTTOM UTILITY DOCK & USER PROFILE COCKPIT                          */}
         {/* ===================================================================== */}
-
-        <div className={`shrink-0 border-t px-3 py-3 ${hairline}`}>
-          {!isCollapsed && (onSync || onOpenNotifications) && (
-            <div className="mb-2.5 flex items-center justify-between px-1">
-              {onSync ? (
-                <button
-                  type="button"
-                  onClick={onSync}
-                  disabled={isSyncing}
-                  title={lastSynced ? `Last synced ${lastSynced}` : 'Sync now'}
-                  className={`
-                    flex items-center gap-1.5 text-[11px] font-medium
-                    transition-colors duration-150 cursor-pointer disabled:cursor-wait
-                    ${inkMuted} ${isDarkMode ? 'hover:text-white' : 'hover:text-black'}
-                  `}
-                >
-                  <RefreshCw className={`h-3 w-3 ${isSyncing ? 'animate-spin' : ''}`} />
-                  {isSyncing ? 'Syncing…' : lastSynced ? `Synced ${lastSynced}` : 'Sync'}
-                </button>
-              ) : (
-                <span />
-              )}
-
-              {onOpenNotifications && (
-                <button
-                  type="button"
-                  onClick={onOpenNotifications}
-                  title="Notifications"
-                  className={`
-                    relative flex h-7 w-7 items-center justify-center rounded-lg
-                    transition-colors duration-150 cursor-pointer
-                    ${inkMuted} ${isDarkMode ? 'hover:bg-white/[0.06] hover:text-white' : 'hover:bg-black/[0.05] hover:text-black'}
-                  `}
-                >
-                  <Bell className="h-4 w-4" />
-                  {unreadNotificationsCount > 0 && (
-                    <span
-                      className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-0.5 text-[9px] font-bold text-white"
-                      style={{ backgroundColor: ACCENT }}
-                    >
-                      {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
-                    </span>
-                  )}
-                </button>
-              )}
-            </div>
-          )}
-
+        <div
+          className={`shrink-0 border-t p-2.5 space-y-2 ${cardBorder} ${
+            isDarkMode ? 'bg-[#14151A]/80' : 'bg-[#EFECE5]/60'
+          }`}
+        >
+          {/* Quick Action Tools Bar */}
           <div
-            className={`
-              flex items-center rounded-xl
-              ${isCollapsed ? 'justify-center' : 'gap-2.5 px-1'}
-            `}
+            className={`flex items-center rounded-xl border p-1 ${cardBg} ${cardBorder} ${
+              isCollapsed ? 'flex-col gap-1 justify-center' : 'justify-between'
+            }`}
           >
-            <div
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[12px] font-bold text-white"
-              style={{ backgroundColor: ACCENT }}
-              title={displayName}
+            {/* Sync Trigger */}
+            <button
+              type="button"
+              onClick={onSync}
+              disabled={isSyncing}
+              aria-label={isSyncing ? 'Syncing data with cloud' : `Sync data (Last synced: ${lastSynced || 'just now'})`}
+              title={isSyncing ? 'Syncing...' : `Sync cloud database (${lastSynced || 'Live'})`}
+              className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-150 cursor-pointer active:scale-[0.95] focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${textMuted} ${hoverBg} ${
+                isDarkMode ? 'hover:text-white' : 'hover:text-black'
+              }`}
             >
-              {initials}
-            </div>
+              <RefreshCw
+                className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin text-blue-500' : ''}`}
+              />
+            </button>
 
-            {!isCollapsed && (
-              <div className="min-w-0 flex-1 leading-none">
-                <div className={`truncate text-[13px] font-semibold ${ink}`}>{displayName}</div>
-                <div className={`mt-1 truncate text-[11px] ${inkMuted}`}>{displayEmail}</div>
-              </div>
+            {/* Notification Center Trigger */}
+            <button
+              type="button"
+              onClick={onOpenNotifications}
+              aria-label={`Open notifications (${unreadNotificationsCount} unread)`}
+              title={`Notifications (${unreadNotificationsCount} unread)`}
+              className={`relative flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-150 cursor-pointer active:scale-[0.95] focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${textMuted} ${hoverBg} ${
+                isDarkMode ? 'hover:text-white' : 'hover:text-black'
+              }`}
+            >
+              <Bell className="h-3.5 w-3.5" />
+              {unreadNotificationsCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500" />
+                </span>
+              )}
+            </button>
+
+            {/* Dark / Light Mode Switch */}
+            <button
+              type="button"
+              onClick={() => setIsDarkMode?.(!isDarkMode)}
+              aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+              title={isDarkMode ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+              className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-150 cursor-pointer active:scale-[0.95] focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${textMuted} ${hoverBg} ${
+                isDarkMode ? 'hover:text-amber-300' : 'hover:text-amber-600'
+              }`}
+            >
+              {isDarkMode ? (
+                <Sun className="h-3.5 w-3.5" />
+              ) : (
+                <Moon className="h-3.5 w-3.5" />
+              )}
+            </button>
+
+            {/* Security Sessions Trigger */}
+            {onOpenSecurityModal && (
+              <button
+                type="button"
+                onClick={onOpenSecurityModal}
+                aria-label="Security & Session Audit"
+                title="Security & Active Sessions"
+                className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-150 cursor-pointer active:scale-[0.95] focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${textMuted} ${hoverBg} ${
+                  isDarkMode ? 'hover:text-emerald-400' : 'hover:text-emerald-600'
+                }`}
+              >
+                <Shield className="h-3.5 w-3.5" />
+              </button>
             )}
 
-            {!isCollapsed && (
-              <div className="flex shrink-0 items-center gap-0.5">
-                {onOpenSecurityModal && (
-                  <button
-                    type="button"
-                    onClick={onOpenSecurityModal}
-                    title="Security"
-                    className={`
-                      flex h-7 w-7 items-center justify-center rounded-lg
-                      transition-colors duration-150 cursor-pointer
-                      ${inkMuted} ${isDarkMode ? 'hover:bg-white/[0.06] hover:text-white' : 'hover:bg-black/[0.05] hover:text-black'}
-                    `}
-                  >
-                    <ShieldCheck className="h-4 w-4" />
-                  </button>
-                )}
-
-                {onSignOut && (
-                  <button
-                    type="button"
-                    onClick={onSignOut}
-                    title="Sign out"
-                    className={`
-                      flex h-7 w-7 items-center justify-center rounded-lg
-                      transition-colors duration-150 cursor-pointer
-                      ${inkMuted} hover:bg-red-500/10 hover:text-red-500
-                    `}
-                  >
-                    <LogOut className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
+            {/* Sign Out Trigger (Collapsed Only) */}
+            {isCollapsed && onSignOut && (
+              <button
+                type="button"
+                onClick={onSignOut}
+                aria-label="Sign out from OwnerOS"
+                title="Sign Out"
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-rose-500/80 hover:text-rose-500 hover:bg-rose-500/10 transition-all duration-150 cursor-pointer active:scale-[0.95] focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:outline-none"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+              </button>
             )}
           </div>
 
+          {/* User Profile Identity Pill (Expanded Only) */}
           {!isCollapsed && (
-            <div className={`mt-2.5 px-1 text-[10px] font-medium uppercase tracking-wide ${inkMuted}`}>
-              {displayRole}
+            <div
+              className={`flex items-center justify-between rounded-xl border p-2 ${cardBg} ${cardBorder}`}
+            >
+              <div className="flex min-w-0 items-center gap-2.5">
+                {/* User Avatar with Initials */}
+                <div
+                  className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg font-mono text-[11px] font-bold ${
+                    isDarkMode
+                      ? 'bg-blue-600/20 text-blue-300 border border-blue-500/30'
+                      : 'bg-blue-100 text-blue-700 border border-blue-200'
+                  }`}
+                >
+                  {initials}
+                  <span
+                    className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-[#111215]"
+                    title="Active online"
+                  />
+                </div>
+
+                <div className="flex min-w-0 flex-col leading-none">
+                  <span className="truncate text-[12.5px] font-semibold">
+                    {displayName}
+                  </span>
+                  <span
+                    className="mt-1 truncate text-[10px] font-medium opacity-70"
+                    title={`Role: ${displayRole}`}
+                  >
+                    {displayRole}
+                  </span>
+                </div>
+              </div>
+
+              {/* Sign Out Action */}
+              {onSignOut && (
+                <button
+                  type="button"
+                  onClick={onSignOut}
+                  aria-label="Sign out of account"
+                  title="Sign out"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-rose-500/80 hover:text-rose-500 hover:bg-rose-500/10 transition-all duration-150 cursor-pointer active:scale-[0.95] focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:outline-none"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
           )}
         </div>

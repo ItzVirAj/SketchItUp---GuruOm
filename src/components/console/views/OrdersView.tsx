@@ -35,6 +35,7 @@ import { CustomerOrder, OrderStatus, OrderLineItem, CustomerMaster, QCInspection
 import { ORDER_STAGE_LABELS, ORDER_STAGE_STEPS, OrderStage, OrderSubType, normalizeOrderState } from '../../../utils/orderStateMachine';
 import { Modal } from '../../common/Modal';
 import { useUrlModal } from '../../../hooks/useUrlModal';
+import { useAccentTheme } from '../../../context/AccentThemeContext';
 
 interface OrdersViewProps {
   orders: CustomerOrder[];
@@ -59,6 +60,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
   onNavigateToCustomers,
   onNavigateToMasters
 }) => {
+  const { accent, isGreen, isBlue, isCrystal } = useAccentTheme();
   const createOrderModal = useUrlModal('create-order');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [subTypeFilter, setSubTypeFilter] = useState<string>('ALL');
@@ -870,16 +872,24 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
       {/* ========================================================================= */}
       <div className="hidden md:block space-y-4">
         {/* Apple macOS Frosted Header & Integrated Metrics */}
-        <section className={`relative isolate overflow-hidden rounded-2xl border transition-all ${
+        <section className={`relative isolate overflow-hidden rounded-2xl border transition-all duration-300 ${
           isDarkMode
-            ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]'
-            : 'border-slate-200/90 bg-[radial-gradient(120%_120%_at_100%_0%,#c2e7fd_0%,rgba(194,231,253,0.45)_24%,rgba(194,231,253,0)_60%),linear-gradient(180deg,#ffffff_0%,#fbfdff_52%,#eff6fe_100%)] text-black shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_32px_-12px_rgba(15,23,42,0.12),inset_0_1px_0_0_rgba(255,255,255,0.9)]'
+            ? isCrystal
+              ? 'border-white/10 bg-gradient-to-b from-[#181C24] via-[#10131A] to-[#0A0C10] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6)]'
+              : isGreen
+                ? 'border-emerald-500/20 bg-gradient-to-b from-[#0D241B] via-[#081711] to-[#030B07] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(16,185,129,0.12)]'
+                : 'border-blue-500/20 bg-gradient-to-b from-[#0a1836] via-[#071126] to-[#030712] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(21,93,252,0.15)]'
+            : isCrystal
+              ? 'border-slate-300/80 bg-gradient-to-b from-white via-[#F8FAFC] to-[#EEF2F6] text-slate-950 shadow-[0_16px_40px_rgba(0,0,0,0.06),inset_0_1px_0_0_rgba(255,255,255,0.95)]'
+              : isGreen
+                ? 'border-emerald-600/30 bg-gradient-to-b from-[#0A7E58] via-[#086B4A] to-[#044F36] text-white shadow-[0_16px_40px_rgba(10,126,88,0.22)]'
+                : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
         }`}>
-          {/* Light-scheme only: whisper-faint drafting grid, dissolved before the KPI shelf */}
-          {!isDarkMode && (
+          {/* Light-scheme only: whisper-faint drafting grid for crystal theme */}
+          {!isDarkMode && isCrystal && (
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute inset-0 -z-10 bg-grid-pattern opacity-70 [mask-image:linear-gradient(to_bottom,black,transparent_72%)] [-webkit-mask-image:linear-gradient(to_bottom,black,transparent_72%)]"
+              className="pointer-events-none absolute inset-0 -z-10 bg-grid-pattern opacity-40 [mask-image:linear-gradient(to_bottom,black,transparent_72%)] [-webkit-mask-image:linear-gradient(to_bottom,black,transparent_72%)]"
             />
           )}
 
@@ -889,22 +899,30 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                 <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wide ${
                   isDarkMode
                     ? 'bg-white/10 border border-white/15 text-white'
-                    : 'bg-white/80 border border-slate-200/90 backdrop-blur-md text-black shadow-2xs'
+                    : isCrystal
+                      ? 'bg-slate-900/[0.06] border border-slate-900/10 text-slate-800 shadow-xs'
+                      : 'bg-white/20 border border-white/30 backdrop-blur-md text-white shadow-xs'
                 }`}>
-                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className={`h-2 w-2 rounded-full animate-pulse ${
+                    isCrystal && !isDarkMode
+                      ? 'bg-emerald-500'
+                      : isGreen
+                        ? 'bg-emerald-400'
+                        : 'bg-sky-400'
+                  }`} />
                   <span>Active Order Book</span>
                 </span>
-                <span className={`text-sm font-semibold ${isDarkMode ? 'text-white/80' : 'text-black/45'}`}>•</span>
-                <span className={`text-xs sm:text-sm font-semibold ${isDarkMode ? 'text-white/95' : 'text-black/70'}`}>
+                <span className={`text-sm font-semibold ${isCrystal && !isDarkMode ? 'text-slate-400' : 'text-white/80'}`}>•</span>
+                <span className={`text-xs sm:text-sm font-semibold ${isCrystal && !isDarkMode ? 'text-slate-800' : 'text-white/95'}`}>
                   {orders.length} Purchase Orders
                 </span>
               </div>
 
-              <h1 className={`text-3xl sm:text-[32px] font-black tracking-tight leading-tight ${isDarkMode ? 'text-white' : 'text-black'}`}>
+              <h1 className={`text-3xl sm:text-[32px] font-black tracking-tight leading-tight ${isCrystal && !isDarkMode ? 'text-slate-950' : 'text-white'}`}>
                 Customer Purchase Orders
               </h1>
 
-              <p className={`text-xs sm:text-sm font-medium leading-relaxed max-w-2xl ${isDarkMode ? 'text-white/95' : 'text-black/70'}`}>
+              <p className={`text-xs sm:text-sm font-medium leading-relaxed max-w-2xl ${isCrystal && !isDarkMode ? 'text-slate-600' : 'text-white/95'}`}>
                 Real-time commercial value, engineering handoffs, and gated production commitments.
               </p>
             </div>
@@ -914,7 +932,11 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
               className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 self-start sm:self-auto ${
                 isDarkMode
                   ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
-                  : 'bg-white hover:bg-slate-50 text-black border border-slate-200/90 shadow-md shadow-slate-900/10 hover:shadow-lg hover:shadow-slate-900/15'
+                  : isCrystal
+                    ? 'bg-slate-950 hover:bg-slate-800 text-white shadow-[0_4px_16px_rgba(0,0,0,0.12)]'
+                    : isGreen
+                      ? 'bg-white hover:bg-emerald-50/90 text-[#065F46] shadow-[0_4px_16px_rgba(0,0,0,0.12)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.18)]'
+                      : 'bg-white hover:bg-blue-50/90 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.12)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.18)]'
               }`}
             >
               <Plus className="h-4 w-4 stroke-[3]" />
@@ -925,7 +947,9 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
           <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t ${
             isDarkMode
               ? 'border-white/10 bg-gradient-to-b from-black/40 to-black/70 backdrop-blur-md'
-              : 'border-slate-200/70 bg-white/55 backdrop-blur-md'
+              : isCrystal
+                ? 'border-slate-200/80 bg-slate-50/70 backdrop-blur-sm'
+                : 'border-white/20 bg-white/[0.06] backdrop-blur-sm'
           }`}>
             {[
               {
@@ -933,53 +957,79 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                 value: `₹${totalActiveValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`,
                 detail: `${orders.length} total active contracts`,
                 icon: TrendingUp,
-                iconColor: isDarkMode ? 'text-white' : 'text-[#1d4ed8]',
-                iconBg: isDarkMode ? 'bg-blue-600 shadow-xs' : 'bg-[#e8f2fe] ring-1 ring-inset ring-black/[0.04] shadow-2xs',
+                iconColor: isDarkMode
+                  ? 'text-white'
+                  : isCrystal
+                    ? 'text-slate-900'
+                    : isGreen
+                      ? 'text-[#065F46]'
+                      : 'text-[#155dfc]',
+                iconBg: isDarkMode
+                  ? isCrystal
+                    ? 'bg-slate-800 shadow-xs'
+                    : isGreen
+                      ? 'bg-emerald-600 shadow-xs'
+                      : 'bg-blue-600 shadow-xs'
+                  : isCrystal
+                    ? 'bg-white border border-slate-200 shadow-xs'
+                    : 'bg-white shadow-xs',
               },
               {
                 label: 'In Production',
                 value: String(inProdCount),
                 detail: 'Shopfloor active jobs',
                 icon: Package,
-                iconColor: isDarkMode ? 'text-white' : 'text-[#b45309]',
-                iconBg: isDarkMode ? 'bg-amber-500 shadow-xs' : 'bg-[#fdf5e6] ring-1 ring-inset ring-black/[0.04] shadow-2xs',
+                iconColor: 'text-white',
+                iconBg: isCrystal && !isDarkMode ? 'bg-amber-600 shadow-xs' : 'bg-amber-500 shadow-xs',
               },
               {
                 label: 'Quality Gate',
                 value: String(qcGateCount),
                 detail: 'Under inspection & NCR',
                 icon: ShieldCheck,
-                iconColor: isDarkMode ? 'text-white' : 'text-[#6d28d9]',
-                iconBg: isDarkMode ? 'bg-purple-600 shadow-xs' : 'bg-[#f4efff] ring-1 ring-inset ring-black/[0.04] shadow-2xs',
+                iconColor: 'text-white',
+                iconBg: isCrystal && !isDarkMode ? 'bg-purple-600 shadow-xs' : 'bg-purple-600 shadow-xs',
               },
               {
                 label: 'Ready for Dispatch',
                 value: String(dispatchReadyCount),
                 detail: 'PDI cleared shipments',
                 icon: Truck,
-                iconColor: isDarkMode ? 'text-white' : 'text-[#047857]',
-                iconBg: isDarkMode ? 'bg-emerald-500 shadow-xs' : 'bg-[#e9f7f1] ring-1 ring-inset ring-black/[0.04] shadow-2xs',
+                iconColor: 'text-white',
+                iconBg: isCrystal && !isDarkMode ? 'bg-emerald-600 shadow-xs' : 'bg-emerald-500 shadow-xs',
               },
             ].map((metric, index) => {
               const MetricIcon = metric.icon;
               return (
                 <div
                   key={metric.label}
-                  className={`flex items-center gap-4 px-6 py-5 transition-all ${isDarkMode ? '' : 'hover:bg-white/60'} ${
-                    index > 0 ? (isDarkMode ? 'lg:border-l border-white/10' : 'lg:border-l border-slate-200/70') : ''
+                  className={`flex items-center gap-4 px-6 py-5 transition-all ${
+                    index > 0
+                      ? isDarkMode
+                        ? 'lg:border-l border-white/10'
+                        : isCrystal
+                          ? 'lg:border-l border-slate-200/80'
+                          : 'lg:border-l border-white/20'
+                      : ''
                   }`}
                 >
                   <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${metric.iconBg} ${metric.iconColor}`}>
                     <MetricIcon className="h-5 w-5 stroke-[2.5]" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-white/85' : 'text-black/60'}`}>
+                    <div className={`text-xs font-bold uppercase tracking-wider ${
+                      isCrystal && !isDarkMode ? 'text-slate-500' : 'text-white/85'
+                    }`}>
                       {metric.label}
                     </div>
-                    <div className={`text-2xl sm:text-[26px] font-black tracking-tight tabular-nums my-0.5 leading-tight ${isDarkMode ? 'text-white' : 'text-black'}`}>
+                    <div className={`text-2xl sm:text-[26px] font-black tracking-tight tabular-nums my-0.5 leading-tight ${
+                      isCrystal && !isDarkMode ? 'text-slate-950' : 'text-white'
+                    }`}>
                       {metric.value}
                     </div>
-                    <div className={`text-xs font-medium truncate ${isDarkMode ? 'text-white/90' : 'text-black/60'}`}>
+                    <div className={`text-xs font-medium truncate ${
+                      isCrystal && !isDarkMode ? 'text-slate-600' : 'text-white/90'
+                    }`}>
                       {metric.detail}
                     </div>
                   </div>
@@ -993,7 +1043,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
         <div className={`rounded-2xl border p-3.5 space-y-3 transition-all backdrop-blur-xl ${
           isDarkMode
             ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] shadow-[0_8px_28px_rgba(0,0,0,0.5),inset_0_1px_0_0_rgba(255,255,255,0.06)]'
-            : 'border-slate-200/80 bg-gradient-to-b from-white/95 via-slate-50/90 to-slate-100/70 shadow-[0_2px_12px_rgba(0,0,0,0.03),inset_0_1px_0_0_rgba(255,255,255,0.9)]'
+            : 'border-slate-200 bg-white shadow-xs'
         }`}>
           {/* Top Tier: Apple Segmented Stage Filter Rail */}
           <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -1375,13 +1425,13 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
           <div className={`overflow-hidden rounded-3xl border transition-all ${
             isDarkMode
               ? 'border-white/[0.08] bg-gradient-to-b from-[#111318] via-[#08090c] to-[#010203] shadow-[0_20px_50px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]'
-              : 'border-slate-200/90 bg-gradient-to-b from-white via-slate-50/40 to-[#f6f8fc] shadow-[0_16px_40px_rgba(15,23,42,0.05),inset_0_1px_0_0_rgba(255,255,255,1)]'
+              : 'border-slate-200 bg-white shadow-xs'
           }`}>
             {/* Table Queue Header Bar */}
             <div className={`flex items-center justify-between border-b px-6 py-4.5 transition-all ${
               isDarkMode
                 ? 'border-white/[0.08] bg-gradient-to-r from-black/60 via-black/30 to-black/60'
-                : 'border-slate-200/80 bg-gradient-to-r from-slate-50/90 via-white/60 to-slate-50/90'
+                : 'border-slate-200 bg-white'
             }`}>
               <div className="flex items-center gap-3.5">
                 <div className={`flex h-10 w-10 items-center justify-center rounded-2xl shadow-xs ${

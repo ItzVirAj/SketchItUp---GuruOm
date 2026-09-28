@@ -34,6 +34,7 @@ import {
 import { VendorBill, VendorMaster } from '../../../types/console';
 import { Modal } from '../../common/Modal';
 import { useUrlModal } from '../../../hooks/useUrlModal';
+import { useAccentTheme } from '../../../context/AccentThemeContext';
 import { insertVendorBill, scanVendorBillReceipt } from '../../../services/supabaseServices';
 
 interface PayablesViewProps {
@@ -53,6 +54,7 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
   onRecordPayment,
   onRecordDisbursement,
 }) => {
+  const { accent, isGreen, isBlue, isCrystal } = useAccentTheme();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
@@ -343,67 +345,30 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
       )}
 
       {/* ========================================================================= */}
-      {/* ── 1. EXECUTIVE CONTROL DECK & KPI OVERVIEW ──                            */}
+      {/* ── MOBILE VIEW (< md): Header + 2x2 Matrix ──                            */}
       {/* ========================================================================= */}
-      <section className={`overflow-hidden rounded-2xl border transition-all ${
-        isDarkMode
-          ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]'
-          : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
-      }`}>
-        {/* Top Header Row */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 p-6 sm:p-7">
-          <div className="flex items-start gap-4">
-            <div className={`p-3.5 rounded-2xl shrink-0 shadow-inner ${
-              isDarkMode
-                ? 'bg-white/10 text-white border border-white/15'
-                : 'bg-white/20 text-white border border-white/30 backdrop-blur-md'
-            }`}>
-              <Building className="w-6 h-6" />
+      <div className="block md:hidden space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                Accounts Payable
+              </span>
             </div>
-            <div className="space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wide ${
-                  isDarkMode
-                    ? 'bg-white/10 border border-white/15 text-white'
-                    : 'bg-white/20 border border-white/30 backdrop-blur-md text-white shadow-xs'
-                }`}>
-                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>Vendor Accounts & Accounts Payable</span>
-                </span>
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
-                  isDarkMode
-                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                    : 'bg-white/20 text-white border border-white/30 backdrop-blur-md'
-                }`}>
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  <span>3-Way Match Verified</span>
-                </span>
-              </div>
-              <h1 className="text-xl sm:text-2xl md:text-[26px] font-black tracking-tight text-white">
-                Vendor Bills & Payables
-              </h1>
-              <p className={`text-xs max-w-2xl leading-relaxed font-normal mt-1 ${
-                isDarkMode ? 'text-white/60' : 'text-blue-100/90'
-              }`}>
-                Manage raw material supplier bills, outwork plating invoices, disbursement schedules, and statutory TDS compliance.
-              </p>
-            </div>
+            <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+              Payables ({payables.length})
+            </h1>
           </div>
-
-          <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-center">
+          <div className="flex items-center gap-2">
             <label
-              htmlFor="header-receipt-scan-input"
-              className={`inline-flex items-center gap-2 px-4 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
-                isDarkMode
-                  ? 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
-                  : 'bg-white/20 hover:bg-white/30 text-white border border-white/30 backdrop-blur-md'
-              }`}
+              htmlFor="mobile-receipt-scan-input"
+              className="flex h-9 items-center justify-center px-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.06] text-slate-700 dark:text-slate-200 text-xs font-bold shadow-xs cursor-pointer active:scale-95 transition-transform"
             >
-              <Sparkles className="w-4 h-4 text-white" />
-              <span>AI Scan & Upload Bill</span>
+              <Sparkles className="w-3.5 h-3.5" />
             </label>
             <input
-              id="header-receipt-scan-input"
+              id="mobile-receipt-scan-input"
               type="file"
               accept="application/pdf,image/png,image/jpeg,image/webp"
               className="hidden"
@@ -416,88 +381,305 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                 e.target.value = '';
               }}
             />
-
             <button
               type="button"
               onClick={() => {
                 setFormError(null);
                 createBillModal.open();
               }}
-              className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
-                isDarkMode
-                  ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
-                  : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
-              }`}
+              className="flex h-9 items-center gap-1.5 px-3 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold shadow-sm active:scale-95 transition-transform cursor-pointer"
             >
-              <Plus className="w-4 h-4" />
-              <span>New Vendor Bill</span>
+              <Plus className="w-3.5 h-3.5" />
+              <span>New Bill</span>
             </button>
           </div>
         </div>
 
-        {/* Integrated 4-Column Metric Strip */}
-        <div className={`grid grid-cols-2 lg:grid-cols-4 border-t divide-y sm:divide-y-0 sm:divide-x ${
-          isDarkMode
-            ? 'border-white/10 bg-gradient-to-b from-black/40 to-black/70 divide-white/10 backdrop-blur-md'
-            : 'border-white/20 bg-white/[0.06] divide-white/15 backdrop-blur-sm'
-        }`}>
-          {[
-            {
-              label: 'Total Payables',
-              value: `₹${totalAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`,
-              detail: `${payables.length} vendor bills`,
-              icon: Building,
-              iconBg: 'bg-white text-blue-600 shadow-md shadow-black/10',
-            },
-            {
-              label: 'Disbursed Payments',
-              value: `₹${paidAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`,
-              detail: 'Settled to vendors',
-              icon: CreditCard,
-              iconBg: 'bg-emerald-600 text-white shadow-md shadow-emerald-500/30',
-            },
-            {
-              label: 'Outstanding Liabilities',
-              value: `₹${balanceAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`,
-              detail: 'Unsettled balances',
-              icon: Clock,
-              iconBg: 'bg-purple-600 text-white shadow-md shadow-purple-500/30',
-            },
-            {
-              label: 'Pending / Due Bills',
-              value: `${overdueCount} Bills`,
-              detail: overdueCount > 0 ? 'Disbursement due' : 'All accounts settled',
-              icon: AlertCircle,
-              iconBg: 'bg-amber-500 text-white shadow-md shadow-amber-500/30',
-            },
-          ].map((m) => {
-            const Icon = m.icon;
-            return (
-              <div
-                key={m.label}
-                className="p-4 sm:p-5 flex flex-col justify-between"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <span className={`text-[11px] font-mono uppercase tracking-wider font-bold ${
-                    isDarkMode ? 'text-white/50' : 'text-blue-100/70'
-                  }`}>
-                    {m.label}
-                  </span>
-                  <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${m.iconBg}`}>
-                    <Icon className="w-5 h-5" />
-                  </div>
-                </div>
-                <div className="text-2xl sm:text-[26px] font-black tracking-tight text-white tabular-nums my-0.5 leading-tight">
-                  {m.value}
-                </div>
-                <div className={`text-[11px] font-medium truncate ${
-                  isDarkMode ? 'text-white/50' : 'text-blue-100/80'
-                }`}>
-                  {m.detail}
-                </div>
+        {/* 2x2 Telemetry Matrix */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className={`p-3 rounded-2xl border transition-all ${
+            isDarkMode
+              ? isCrystal ? 'border-white/10 bg-white/[0.04]' : isGreen ? 'border-emerald-500/15 bg-emerald-950/20' : 'border-blue-500/15 bg-blue-950/20'
+              : isCrystal ? 'border-slate-200 bg-white shadow-xs' : isGreen ? 'border-emerald-100 bg-emerald-50/50' : 'border-blue-100 bg-blue-50/50'
+          }`}>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--accent-primary)] text-white shadow-xs">
+                <Building className="w-3.5 h-3.5" />
               </div>
-            );
-          })}
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total</span>
+            </div>
+            <p className="text-lg font-black font-mono text-slate-900 dark:text-white tabular-nums">
+              ₹{totalAmount >= 100000 ? `${(totalAmount / 100000).toFixed(1)}L` : totalAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+            </p>
+          </div>
+
+          <div className={`p-3 rounded-2xl border transition-all ${
+            isDarkMode
+              ? isCrystal ? 'border-white/10 bg-white/[0.04]' : isGreen ? 'border-emerald-500/15 bg-emerald-950/20' : 'border-blue-500/15 bg-blue-950/20'
+              : isCrystal ? 'border-slate-200 bg-white shadow-xs' : isGreen ? 'border-emerald-100 bg-emerald-50/50' : 'border-blue-100 bg-blue-50/50'
+          }`}>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-xs">
+                <CreditCard className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Settled</span>
+            </div>
+            <p className="text-lg font-black font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">
+              ₹{paidAmount >= 100000 ? `${(paidAmount / 100000).toFixed(1)}L` : paidAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+            </p>
+          </div>
+
+          <div className={`p-3 rounded-2xl border transition-all ${
+            isDarkMode
+              ? isCrystal ? 'border-white/10 bg-white/[0.04]' : isGreen ? 'border-emerald-500/15 bg-emerald-950/20' : 'border-blue-500/15 bg-blue-950/20'
+              : isCrystal ? 'border-slate-200 bg-white shadow-xs' : isGreen ? 'border-emerald-100 bg-emerald-50/50' : 'border-blue-100 bg-blue-50/50'
+          }`}>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-600 text-white shadow-xs">
+                <Clock className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Liabilities</span>
+            </div>
+            <p className="text-lg font-black font-mono text-purple-600 dark:text-purple-400 tabular-nums">
+              ₹{balanceAmount >= 100000 ? `${(balanceAmount / 100000).toFixed(1)}L` : balanceAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+            </p>
+          </div>
+
+          <div className={`p-3 rounded-2xl border transition-all ${
+            isDarkMode
+              ? isCrystal ? 'border-white/10 bg-white/[0.04]' : isGreen ? 'border-emerald-500/15 bg-emerald-950/20' : 'border-blue-500/15 bg-blue-950/20'
+              : isCrystal ? 'border-slate-200 bg-white shadow-xs' : isGreen ? 'border-emerald-100 bg-emerald-50/50' : 'border-blue-100 bg-blue-50/50'
+          }`}>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500 text-white shadow-xs">
+                <AlertCircle className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Due Bills</span>
+            </div>
+            <p className="text-lg font-black font-mono text-amber-500 tabular-nums">
+              {overdueCount}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* ── DESKTOP VIEW (hidden md:block): Executive Hero Banner ──               */}
+      {/* ========================================================================= */}
+      <section className={`hidden md:block relative overflow-hidden rounded-2xl border transition-all duration-300 ${
+        isDarkMode
+          ? isCrystal
+            ? 'border-white/10 bg-gradient-to-b from-[#181C24] via-[#10131A] to-[#0A0C10] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6)]'
+            : isGreen
+              ? 'border-emerald-500/20 bg-gradient-to-b from-[#0D241B] via-[#081711] to-[#030B07] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(16,185,129,0.12)]'
+              : 'border-blue-500/20 bg-gradient-to-b from-[#0a1836] via-[#071126] to-[#030712] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(21,93,252,0.15)]'
+          : isCrystal
+            ? 'border-slate-300/80 bg-gradient-to-b from-white via-[#F8FAFC] to-[#EEF2F6] text-slate-950 shadow-[0_16px_40px_rgba(0,0,0,0.06),inset_0_1px_0_0_rgba(255,255,255,0.95)]'
+            : isGreen
+              ? 'border-emerald-600/30 bg-gradient-to-b from-[#0A7E58] via-[#086B4A] to-[#044F36] text-white shadow-[0_16px_40px_rgba(10,126,88,0.22)]'
+              : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
+      }`}>
+        {/* Subtle Drafting Grid Pattern */}
+        {!isDarkMode && isCrystal && (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 -z-10 bg-grid-pattern opacity-40 [mask-image:linear-gradient(to_bottom,black,transparent_72%)] [-webkit-mask-image:linear-gradient(to_bottom,black,transparent_72%)]"
+          />
+        )}
+
+        <div className="p-6 lg:p-8">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold tracking-wide backdrop-blur-md border shadow-xs transition-colors">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className={
+                  !isDarkMode && isCrystal ? 'text-slate-600' : 'text-white/90'
+                }>
+                  Finance & Accounts • Vendor Accounts & Accounts Payable
+                </span>
+                <span className="text-slate-400 mx-1">•</span>
+                <span className={!isDarkMode && isCrystal ? 'text-emerald-700 font-medium' : 'text-emerald-300 font-medium'}>
+                  3-Way Match Verified
+                </span>
+              </div>
+              <h1 className={`text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight flex items-center gap-3 ${
+                !isDarkMode && isCrystal ? 'text-slate-900' : 'text-white'
+              }`}>
+                <div className={`flex h-10 w-10 items-center justify-center rounded-2xl shadow-inner ${
+                  !isDarkMode && isCrystal
+                    ? 'bg-slate-100 border border-slate-200 text-slate-800'
+                    : 'bg-white/15 backdrop-blur-md border border-white/20 text-white'
+                }`}>
+                  <Building className="h-5 w-5" />
+                </div>
+                Vendor Bills & Payables
+              </h1>
+              <p className={`text-xs sm:text-sm max-w-2xl font-normal leading-relaxed ${
+                !isDarkMode && isCrystal ? 'text-slate-600' : isDarkMode ? 'text-white/60' : 'text-white/80'
+              }`}>
+                Manage raw material supplier bills, outwork plating invoices, disbursement schedules, and statutory TDS compliance.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5 shrink-0 self-start lg:self-center">
+              <label
+                htmlFor="header-receipt-scan-input"
+                className={`inline-flex h-11 items-center gap-2 px-4 rounded-full border text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer backdrop-blur-md ${
+                  !isDarkMode && isCrystal
+                    ? 'border-slate-300/80 bg-white/80 hover:bg-white text-slate-800'
+                    : 'border-white/20 bg-white/10 hover:bg-white/15 text-white'
+                }`}
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>AI Scan & Upload Bill</span>
+              </label>
+              <input
+                id="header-receipt-scan-input"
+                type="file"
+                accept="application/pdf,image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    createBillModal.open();
+                    handleScanReceipt(file);
+                  }
+                  e.target.value = '';
+                }}
+              />
+
+              <button
+                type="button"
+                onClick={() => {
+                  setFormError(null);
+                  createBillModal.open();
+                }}
+                className={`inline-flex h-11 items-center gap-2 px-5 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
+                  !isDarkMode && isCrystal
+                    ? 'bg-slate-900 hover:bg-slate-800 text-white shadow-slate-900/10'
+                    : 'bg-white hover:bg-slate-50 text-[var(--accent-primary)] shadow-md'
+                }`}
+              >
+                <Plus className="w-4 h-4" />
+                <span>New Vendor Bill</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Integrated 4-Column Apple Metric Strip */}
+        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t ${
+          isDarkMode
+            ? 'border-white/10 bg-gradient-to-b from-black/40 to-black/70 backdrop-blur-md'
+            : isCrystal
+              ? 'border-slate-200/80 bg-slate-50/70'
+              : 'border-white/20 bg-white/[0.06] backdrop-blur-sm'
+        }`}>
+          {/* Total Payables */}
+          <div className={`p-4 sm:p-5 flex items-center gap-4 transition-colors ${
+            !isDarkMode && isCrystal ? 'border-b sm:border-b-0 sm:border-r border-slate-200/80' : 'border-b sm:border-b-0 sm:border-r border-white/10'
+          }`}>
+            <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl shadow-sm ${
+              !isDarkMode && isCrystal
+                ? 'bg-slate-100 text-slate-800 border border-slate-200'
+                : 'bg-white text-blue-600'
+            }`}>
+              <Building className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                !isDarkMode && isCrystal ? 'text-slate-500' : isDarkMode ? 'text-white/50' : 'text-blue-100'
+              }`}>
+                Total Payables
+              </span>
+              <span className={`text-2xl font-bold font-mono block tabular-nums ${
+                !isDarkMode && isCrystal ? 'text-slate-900' : 'text-white'
+              }`}>
+                ₹{totalAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+              </span>
+              <span className={`text-[10px] truncate block ${
+                !isDarkMode && isCrystal ? 'text-slate-400' : isDarkMode ? 'text-white/40' : 'text-blue-100/80'
+              }`}>
+                {payables.length} vendor bills
+              </span>
+            </div>
+          </div>
+
+          {/* Disbursed Payments */}
+          <div className={`p-4 sm:p-5 flex items-center gap-4 transition-colors ${
+            !isDarkMode && isCrystal ? 'border-b sm:border-b-0 sm:border-r border-slate-200/80' : 'border-b sm:border-b-0 sm:border-r border-white/10'
+          }`}>
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-sm shadow-emerald-500/30">
+              <CreditCard className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                !isDarkMode && isCrystal ? 'text-slate-500' : isDarkMode ? 'text-white/50' : 'text-blue-100'
+              }`}>
+                Disbursed Payments
+              </span>
+              <span className={`text-2xl font-bold font-mono block tabular-nums ${
+                !isDarkMode && isCrystal ? 'text-emerald-700' : 'text-emerald-400'
+              }`}>
+                ₹{paidAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+              </span>
+              <span className={`text-[10px] truncate block ${
+                !isDarkMode && isCrystal ? 'text-slate-400' : isDarkMode ? 'text-white/40' : 'text-blue-100/80'
+              }`}>
+                Settled to vendors
+              </span>
+            </div>
+          </div>
+
+          {/* Outstanding Liabilities */}
+          <div className={`p-4 sm:p-5 flex items-center gap-4 transition-colors ${
+            !isDarkMode && isCrystal ? 'border-b sm:border-b-0 sm:border-r border-slate-200/80' : 'border-b sm:border-b-0 sm:border-r border-white/10'
+          }`}>
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-purple-600 text-white shadow-sm shadow-purple-500/30">
+              <Clock className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                !isDarkMode && isCrystal ? 'text-slate-500' : isDarkMode ? 'text-white/50' : 'text-blue-100'
+              }`}>
+                Outstanding Liabilities
+              </span>
+              <span className={`text-2xl font-bold font-mono block tabular-nums ${
+                !isDarkMode && isCrystal ? 'text-purple-700' : 'text-purple-400'
+              }`}>
+                ₹{balanceAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+              </span>
+              <span className={`text-[10px] truncate block ${
+                !isDarkMode && isCrystal ? 'text-slate-400' : isDarkMode ? 'text-white/40' : 'text-blue-100/80'
+              }`}>
+                Unsettled balances
+              </span>
+            </div>
+          </div>
+
+          {/* Pending / Due Bills */}
+          <div className="p-4 sm:p-5 flex items-center gap-4 transition-colors">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-sm shadow-amber-500/30">
+              <AlertCircle className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                !isDarkMode && isCrystal ? 'text-slate-500' : isDarkMode ? 'text-white/50' : 'text-blue-100'
+              }`}>
+                Pending / Due Bills
+              </span>
+              <span className={`text-2xl font-bold font-mono block tabular-nums ${
+                !isDarkMode && isCrystal ? 'text-amber-700' : 'text-amber-400'
+              }`}>
+                {overdueCount} Bills
+              </span>
+              <span className={`text-[10px] truncate block ${
+                !isDarkMode && isCrystal ? 'text-slate-400' : isDarkMode ? 'text-white/40' : 'text-blue-100/80'
+              }`}>
+                {overdueCount > 0 ? 'Disbursement due' : 'All accounts settled'}
+              </span>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -511,7 +693,9 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
       }`}>
         {/* Tier 1: Segmented status tabs with count badges */}
         <div className="flex items-center justify-between gap-3 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-          <div className="flex items-center gap-1.5 min-w-max">
+          <div className={`inline-flex items-center p-1 rounded-xl border text-xs overflow-x-auto max-w-full ${
+            isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200/80 bg-slate-200/50 shadow-inner'
+          }`}>
             {[
               { id: 'ALL', label: 'All Bills', count: payables.length },
               { id: 'OPEN', label: 'Open', count: payables.filter(b => b.status === 'OPEN').length },
@@ -524,21 +708,19 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                   key={tab.id}
                   type="button"
                   onClick={() => setStatusFilter(tab.id)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                     isActive
                       ? isDarkMode
-                        ? 'bg-white text-slate-950 shadow-sm'
-                        : 'bg-[#155dfc] text-white shadow-sm'
-                      : isDarkMode
-                      ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                        ? 'bg-white/15 text-white shadow-xs border border-white/10'
+                        : 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   <span>{tab.label}</span>
-                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] tabular-nums font-bold ${
+                  <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
                     isActive
-                      ? isDarkMode ? 'bg-slate-900 text-white' : 'bg-white/20 text-white'
-                      : isDarkMode ? 'bg-white/10 text-slate-400' : 'bg-slate-200 text-slate-700'
+                      ? isDarkMode ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-800'
+                      : isDarkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-300/60 text-slate-600'
                   }`}>
                     {tab.count}
                   </span>

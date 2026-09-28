@@ -36,6 +36,7 @@ import { useUrlModal } from '../../../hooks/useUrlModal';
 import { GroupedByPoList } from '../../common/GroupedByPoList';
 import { groupByPo, inspectionBucket } from '../../../utils/poGroups';
 import { printElementById } from '../../../utils/printDocument';
+import { useAccentTheme } from '../../../context/AccentThemeContext';
 
 interface PDIViewProps {
   pdiItems?: PDIInspection[];
@@ -58,6 +59,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
   onPassPDI, 
   onFailPDI 
 }) => {
+  const { accent, isGreen, isBlue, isCrystal } = useAccentTheme();
   const rawPdiItems = pdiItems || pdiQueue || [];
   
   // Local state for instant optimistic updates
@@ -569,273 +571,468 @@ export const PDIView: React.FC<PDIViewProps> = ({
 
   return (
     <div className="space-y-4 sm:space-y-6 font-sans w-full max-w-full min-w-0 pb-6">
-      
+
       {/* ========================================================================= */}
-      {/* ── TOP HEADER & TELEMETRY WIDGETS (Apple Executive Window) ──             */}
+      {/* ── MOBILE-FIRST TOP HEADER (< md) ──                                      */}
       {/* ========================================================================= */}
-      <section className={`overflow-hidden rounded-2xl border transition-all ${
-        isDarkMode
-          ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]'
-          : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
-      }`}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 px-6 py-6 sm:py-7">
-          <div className="min-w-0 space-y-1.5">
-            <div className="flex items-center gap-2.5">
-              <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wide ${
-                isDarkMode
-                  ? 'bg-white/10 border border-white/15 text-white'
-                  : 'bg-white/20 border border-white/30 backdrop-blur-md text-white shadow-xs'
-              }`}>
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Pre-Dispatch Clearance &amp; Verification</span>
-              </span>
-              <span className="text-sm font-semibold text-white/80">•</span>
-              <span className="text-xs sm:text-sm font-semibold text-white/95">
-                {totalCount} Inspection Lots
+      <div className="block md:hidden space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                Pre-Dispatch Clearance
               </span>
             </div>
-
-            <h1 className="text-3xl sm:text-[32px] font-black tracking-tight text-white leading-tight">
-              PDI Queue (Pre-Dispatch Inspection)
+            <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+              PDI Queue ({filteredPdi.length})
             </h1>
-
-            <p className="text-xs sm:text-sm text-white/95 font-medium leading-relaxed max-w-2xl">
-              Final pre-dispatch compliance verification for Job Cards and Customer POs, dimensional checklists, and outward CoC generation.
-            </p>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={handleExportCSV}
-              className={`inline-flex items-center gap-2 px-4 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
-                isDarkMode
-                  ? 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
-                  : 'bg-white/20 hover:bg-white/30 text-white border border-white/30 backdrop-blur-md'
-              }`}
-            >
-              <Download className="w-4 h-4 stroke-[2.5]" />
-              <span>Export CSV</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setIsGlobalAuditOpen(true);
-                globalAuditModal.open();
-                setGlobalAuditSearch('');
-              }}
-              className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md cursor-pointer transition-all active:scale-95 shrink-0 ${
-                isDarkMode
-                  ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
-                  : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
-              }`}
-              title="Open Global PDI Audit Box"
-            >
-              <ClipboardCheck className="w-4 h-4 stroke-[2.5]" />
-              <span>Global PDI Audit Box</span>
-              <span className={`rounded-full px-2 py-0.5 font-mono text-[11px] font-bold ${
-                isDarkMode ? 'bg-black/15 text-slate-950' : 'bg-blue-100 text-[#155dfc]'
-              }`}>
-                {pendingCount} Left
-              </span>
-              {pendingCount > 0 && (
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-              )}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setIsGlobalAuditOpen(true);
+              globalAuditModal.open();
+              setGlobalAuditSearch('');
+            }}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#181920] hover:bg-[#252730] text-white text-xs font-bold shadow-md active:scale-[0.96] transition-ui cursor-pointer shrink-0"
+          >
+            <ClipboardCheck className="w-3.5 h-3.5" />
+            <span>Audit Box ({pendingCount})</span>
+          </button>
         </div>
 
-        {/* Integrated 4-Column Metric Strip (border-t) */}
-        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t ${
+        {/* Mobile 2x2 Telemetry Matrix */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Total Lots</div>
+            <div className="text-base font-black text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)] tracking-tight mt-0.5">
+              {totalCount} <span className="text-xs font-normal text-slate-400">Lots</span>
+            </div>
+          </div>
+
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Pending Audit</div>
+            <div className="text-base font-black text-amber-500 tracking-tight mt-0.5">
+              {pendingCount} <span className="text-xs font-normal text-slate-400">Lots</span>
+            </div>
+          </div>
+
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Passed Qty</div>
+            <div className="text-base font-black text-emerald-500 tracking-tight mt-0.5">
+              {totalPassedQty.toLocaleString('en-IN')} <span className="text-xs font-normal text-slate-400">NOS</span>
+            </div>
+          </div>
+
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Compliance</div>
+            <div className={`text-base font-black tracking-tight mt-0.5 ${failedCount > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+              {complianceRate}% <span className="text-xs font-normal text-slate-400">CoC</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* ── DESKTOP HEADER & INTEGRATED KPI ROW (≥ md) ──                          */}
+      {/* ========================================================================= */}
+      <div className="hidden md:block space-y-4">
+        <section className={`relative isolate overflow-hidden rounded-2xl border transition-all duration-300 ${
           isDarkMode
-            ? 'border-white/10 bg-gradient-to-b from-black/40 to-black/70 backdrop-blur-md'
-            : 'border-white/20 bg-white/[0.06] backdrop-blur-sm'
+            ? isCrystal
+              ? 'border-white/10 bg-gradient-to-b from-[#181C24] via-[#10131A] to-[#0A0C10] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6)]'
+              : isGreen
+                ? 'border-emerald-500/20 bg-gradient-to-b from-[#0D241B] via-[#081711] to-[#030B07] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(16,185,129,0.12)]'
+                : 'border-blue-500/20 bg-gradient-to-b from-[#0a1836] via-[#071126] to-[#030712] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(21,93,252,0.15)]'
+            : isCrystal
+              ? 'border-slate-300/80 bg-gradient-to-b from-white via-[#F8FAFC] to-[#EEF2F6] text-slate-950 shadow-[0_16px_40px_rgba(0,0,0,0.06),inset_0_1px_0_0_rgba(255,255,255,0.95)]'
+              : isGreen
+                ? 'border-emerald-600/30 bg-gradient-to-b from-[#0A7E58] via-[#086B4A] to-[#044F36] text-white shadow-[0_16px_40px_rgba(10,126,88,0.22)]'
+                : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
         }`}>
-          {[
-            {
-              label: 'Total PDI Lots',
-              value: String(totalCount),
-              detail: 'Registered in PDI queue',
-              icon: Package,
-              iconColor: 'text-blue-600',
-              iconBg: 'bg-white shadow-md shadow-black/10',
-            },
-            {
-              label: 'Passed Quantity',
-              value: `${totalPassedQty.toLocaleString('en-IN')} NOS`,
-              detail: `${passedCount} lots cleared for dispatch`,
-              icon: CheckCircle2,
-              iconColor: 'text-white',
-              iconBg: 'bg-emerald-500 shadow-xs',
-            },
-            {
-              label: 'Pending Audit',
-              value: String(pendingCount),
-              detail: 'Awaiting pre-shipment signoff',
-              icon: Clock,
-              iconColor: 'text-white',
-              iconBg: pendingCount > 0 ? 'bg-amber-500 shadow-xs' : 'bg-emerald-500 shadow-xs',
-            },
-            {
-              label: 'Compliance Rate',
-              value: `${complianceRate}%`,
-              detail: 'First-pass outward CoC rate',
-              icon: ShieldCheck,
-              iconColor: 'text-white',
-              iconBg: 'bg-indigo-500 shadow-xs',
-            },
-          ].map((metric, index) => {
-            const MetricIcon = metric.icon;
-            return (
-              <div
-                key={metric.label}
-                className={`flex items-center gap-4 px-6 py-5 transition-all ${
-                  index > 0 ? (isDarkMode ? 'lg:border-l border-white/10' : 'lg:border-l border-white/20') : ''
+          {/* Light-scheme only: whisper-faint drafting grid for crystal theme */}
+          {!isDarkMode && isCrystal && (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 -z-10 bg-grid-pattern opacity-40 [mask-image:linear-gradient(to_bottom,black,transparent_72%)] [-webkit-mask-image:linear-gradient(to_bottom,black,transparent_72%)]"
+            />
+          )}
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 px-6 py-6 sm:py-7">
+            <div className="min-w-0 space-y-1.5">
+              <div className="flex items-center gap-2.5">
+                <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wide ${
+                  isDarkMode
+                    ? 'bg-white/10 border border-white/15 text-white'
+                    : isCrystal
+                      ? 'bg-slate-900/[0.06] border border-slate-900/10 text-slate-800'
+                      : 'bg-white/20 border border-white/30 backdrop-blur-md text-white shadow-xs'
+                }`}>
+                  <span className={`h-2 w-2 rounded-full animate-pulse ${
+                    isCrystal && !isDarkMode ? 'bg-emerald-500' : isGreen ? 'bg-emerald-400' : 'bg-sky-400'
+                  }`} />
+                  <span>Pre-Dispatch Clearance &amp; Verification</span>
+                </span>
+                <span className={`text-sm font-semibold ${isCrystal && !isDarkMode ? 'text-slate-400' : 'text-white/80'}`}>•</span>
+                <span className={`text-xs sm:text-sm font-semibold ${isCrystal && !isDarkMode ? 'text-slate-600' : 'text-white/95'}`}>
+                  {totalCount} Inspection Lots
+                </span>
+              </div>
+
+              <h1 className={`text-3xl sm:text-[32px] font-black tracking-tight leading-tight ${
+                isCrystal && !isDarkMode ? 'text-slate-950' : 'text-white'
+              }`}>
+                PDI Queue (Pre-Dispatch Inspection)
+              </h1>
+
+              <p className={`text-xs sm:text-sm font-medium leading-relaxed max-w-2xl ${
+                isCrystal && !isDarkMode ? 'text-slate-600' : 'text-white/95'
+              }`}>
+                Final pre-dispatch compliance verification for Job Cards and Customer POs, dimensional checklists, and outward CoC generation.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleExportCSV}
+                className={`inline-flex items-center gap-2 px-4 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
+                  isDarkMode
+                    ? 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
+                    : isCrystal
+                      ? 'bg-slate-900/[0.06] hover:bg-slate-900/10 text-slate-800 border border-slate-900/15'
+                      : 'bg-white/20 hover:bg-white/30 text-white border border-white/30 backdrop-blur-md'
                 }`}
               >
-                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${metric.iconBg} ${metric.iconColor}`}>
-                  <MetricIcon className="h-5 w-5 stroke-[2.5]" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-xs font-bold uppercase tracking-wider text-white/85">
-                    {metric.label}
-                  </div>
-                  <div className="text-2xl sm:text-[26px] font-black tracking-tight text-white tabular-nums my-0.5 leading-tight">
-                    {metric.value}
-                  </div>
-                  <div className="text-xs font-medium text-white/90 truncate">
-                    {metric.detail}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
+                <Download className="w-4 h-4 stroke-[2.5]" />
+                <span>Export CSV</span>
+              </button>
 
-      {/* ========================================================================= */}
-      {/* ── SEARCH & FILTER CONTROLS BAR (Apple Unified Search & Segmented Pill) ── */}
-      {/* ========================================================================= */}
-      <div className={`rounded-2xl border p-3.5 space-y-3 transition-all ${
-        isDarkMode
-          ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] shadow-[0_8px_28px_rgba(0,0,0,0.5)]'
-          : 'border-slate-200/80 bg-gradient-to-b from-white/95 via-slate-50/90 to-slate-100/70 shadow-[0_4px_20px_rgba(0,0,0,0.03)]'
-      }`}>
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          {/* Tier 1: Apple Segmented Pill Rail */}
-          <div className={`inline-flex items-center gap-1 rounded-xl p-1 border overflow-x-auto no-scrollbar shrink-0 ${
-            isDarkMode ? 'border-white/10 bg-black/40' : 'border-slate-200/80 bg-slate-100/80'
+              <button
+                type="button"
+                onClick={() => {
+                  setIsGlobalAuditOpen(true);
+                  globalAuditModal.open();
+                  setGlobalAuditSearch('');
+                }}
+                className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md cursor-pointer transition-all active:scale-95 shrink-0 ${
+                  isDarkMode
+                    ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
+                    : isCrystal
+                      ? 'bg-slate-950 hover:bg-slate-900 text-white shadow-[0_4px_16px_rgba(0,0,0,0.15)]'
+                      : isGreen
+                        ? 'bg-white hover:bg-emerald-50 text-[#065F46] shadow-[0_4px_16px_rgba(0,0,0,0.15)]'
+                        : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
+                }`}
+                title="Open Global PDI Audit Box"
+              >
+                <ClipboardCheck className="w-4 h-4 stroke-[2.5]" />
+                <span>Global PDI Audit Box</span>
+                <span className={`rounded-full px-2 py-0.5 font-mono text-[11px] font-bold ${
+                  isDarkMode ? 'bg-black/15 text-slate-950' : 'bg-blue-100 text-[#155dfc]'
+                }`}>
+                  {pendingCount} Left
+                </span>
+                {pendingCount > 0 && (
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Integrated 4-Column Metric Strip (border-t) */}
+          <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t ${
+            isDarkMode
+              ? 'border-white/10 bg-gradient-to-b from-black/40 to-black/70 backdrop-blur-md'
+              : isCrystal
+                ? 'border-slate-200/80 bg-slate-50/70'
+                : 'border-white/20 bg-white/[0.06] backdrop-blur-sm'
           }`}>
-            {(['ALL', 'PENDING', 'PASS', 'FAIL'] as const).map((status) => {
-              const isActive = filterStatus === status;
-              const count = status === 'ALL' ? totalCount : status === 'PASS' ? passedCount : status === 'FAIL' ? failedCount : pendingCount;
-              const isAlert = status === 'FAIL' && failedCount > 0;
+            {[
+              {
+                label: 'Total PDI Lots',
+                value: String(totalCount),
+                detail: 'Registered in PDI queue',
+                icon: Package,
+                iconColor: isDarkMode ? 'text-white' : (isCrystal ? 'text-white' : (isGreen ? 'text-[#065F46]' : 'text-[#155dfc]')),
+                iconBg: isDarkMode ? (isGreen ? 'bg-emerald-600 shadow-xs' : 'bg-blue-600 shadow-xs') : (isCrystal ? 'bg-slate-900 shadow-xs' : 'bg-white shadow-xs'),
+              },
+              {
+                label: 'Passed Quantity',
+                value: `${totalPassedQty.toLocaleString('en-IN')} NOS`,
+                detail: `${passedCount} lots cleared for dispatch`,
+                icon: CheckCircle2,
+                iconColor: 'text-white',
+                iconBg: 'bg-emerald-500 shadow-xs',
+              },
+              {
+                label: 'Pending Audit',
+                value: String(pendingCount),
+                detail: 'Awaiting pre-shipment signoff',
+                icon: Clock,
+                iconColor: 'text-white',
+                iconBg: pendingCount > 0 ? 'bg-amber-500 shadow-xs' : 'bg-emerald-500 shadow-xs',
+              },
+              {
+                label: 'Compliance Rate',
+                value: `${complianceRate}%`,
+                detail: 'First-pass outward CoC rate',
+                icon: ShieldCheck,
+                iconColor: 'text-white',
+                iconBg: failedCount > 0 ? 'bg-rose-500 shadow-xs' : 'bg-indigo-500 shadow-xs',
+              },
+            ].map((metric, index) => {
+              const MetricIcon = metric.icon;
               return (
-                <button
-                  key={status}
-                  type="button"
-                  onClick={() => setFilterStatus(status)}
-                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
-                    isActive
-                      ? isDarkMode
-                        ? 'bg-white/15 text-white shadow-xs border border-white/20'
-                        : 'bg-white text-slate-900 shadow-xs border border-slate-200/90'
-                      : isAlert
-                      ? 'text-rose-500 hover:text-rose-600'
-                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                <div
+                  key={metric.label}
+                  className={`flex items-center gap-4 px-6 py-5 transition-all ${
+                    index > 0 ? (isDarkMode ? 'lg:border-l border-white/10' : (isCrystal ? 'lg:border-l border-slate-200/80' : 'lg:border-l border-white/20')) : ''
                   }`}
                 >
-                  <span>{status === 'ALL' ? 'All Lots' : status === 'PASS' ? 'Passed' : status === 'FAIL' ? 'Failed' : 'Pending'}</span>
-                  <span className={`rounded-full px-1.5 py-0.5 font-mono text-[10px] font-bold ${
-                    isActive
-                      ? isDarkMode ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-900'
-                      : isAlert
-                      ? 'bg-rose-500/10 text-rose-500'
-                      : isDarkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-200/70 text-slate-600'
-                  }`}>
-                    {count}
-                  </span>
-                </button>
+                  <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${metric.iconBg} ${metric.iconColor}`}>
+                    <MetricIcon className="h-5 w-5 stroke-[2.5]" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className={`text-xs font-bold uppercase tracking-wider ${
+                      isCrystal && !isDarkMode ? 'text-slate-500' : 'text-white/85'
+                    }`}>
+                      {metric.label}
+                    </div>
+                    <div className={`text-2xl sm:text-[26px] font-black tracking-tight tabular-nums my-0.5 leading-tight ${
+                      isCrystal && !isDarkMode ? 'text-slate-950' : 'text-white'
+                    }`}>
+                      {metric.value}
+                    </div>
+                    <div className={`text-xs font-medium truncate ${
+                      isCrystal && !isDarkMode ? 'text-slate-600' : 'text-white/90'
+                    }`}>
+                      {metric.detail}
+                    </div>
+                  </div>
+                </div>
               );
             })}
           </div>
 
-          {/* Tier 2: Spotlight search & View switchers */}
-          <div className="flex items-center gap-2.5">
-            <div className={`relative flex items-center rounded-xl border px-3.5 py-1.5 transition-all w-full sm:w-80 ${
-              isDarkMode
-                ? 'border-white/10 bg-black/40 text-white focus-within:border-blue-500'
-                : 'border-slate-200/90 bg-white text-slate-900 focus-within:border-blue-500 shadow-2xs'
+          {/* Apple PDI Compliance & Verification Bar */}
+          <div className={`px-6 py-4 border-t ${
+            isDarkMode
+              ? 'border-white/10 bg-black/40'
+              : isCrystal
+                ? 'border-slate-200/80 bg-slate-100/60'
+                : 'border-white/20 bg-black/10'
+          }`}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
+              <div className="flex items-center gap-2">
+                <Activity className={`w-4 h-4 ${isCrystal && !isDarkMode ? 'text-slate-700' : 'text-white'}`} />
+                <span className={`text-xs font-bold tracking-tight ${isCrystal && !isDarkMode ? 'text-slate-900' : 'text-white'}`}>
+                  Pre-Dispatch Compliance &amp; Outward CoC Clearance
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
+                  {complianceRate}% Compliance Rate
+                </span>
+              </div>
+              <span className={`text-xs ${isCrystal && !isDarkMode ? 'text-slate-500 font-medium' : 'text-white/70'}`}>
+                {passedCount} of {totalCount} lots certified for dispatch
+              </span>
+            </div>
+
+            {/* Multi-Segmented Pro Bar */}
+            <div className={`h-2.5 w-full rounded-full overflow-hidden flex p-0.5 gap-0.5 border ${
+              isCrystal && !isDarkMode ? 'bg-slate-200/80 border-slate-300/60' : 'bg-white/20 border-white/15'
             }`}>
-              <Search className="w-4 h-4 text-slate-400 shrink-0 mr-2" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search Job Card, PO, component..."
-                className="bg-transparent outline-none text-xs w-full placeholder:text-slate-400 font-medium"
-              />
-              {searchQuery ? (
-                <button type="button" onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-600 dark:hover:text-white ml-2">
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              ) : (
-                <kbd className={`hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono font-bold rounded border ${
-                  isDarkMode ? 'border-white/10 bg-white/5 text-slate-400' : 'border-slate-200 bg-slate-100 text-slate-500'
-                }`}>
-                  ⌘F
-                </kbd>
+              {passedCount > 0 && (
+                <div 
+                  style={{ width: `${(passedCount / (totalCount || 1)) * 100}%` }} 
+                  className="h-full bg-emerald-400 rounded-full transition-all duration-500" 
+                  title={`Passed: ${passedCount}`}
+                />
+              )}
+              {pendingCount > 0 && (
+                <div 
+                  style={{ width: `${(pendingCount / (totalCount || 1)) * 100}%` }} 
+                  className="h-full bg-amber-400 rounded-full transition-all duration-500" 
+                  title={`Pending: ${pendingCount}`}
+                />
+              )}
+              {failedCount > 0 && (
+                <div 
+                  style={{ width: `${(failedCount / (totalCount || 1)) * 100}%` }} 
+                  className="h-full bg-rose-400 rounded-full transition-all duration-500" 
+                  title={`Failed: ${failedCount}`}
+                />
               )}
             </div>
 
-            {/* View Mode Switcher */}
-            <div className={`hidden sm:flex items-center p-0.5 rounded-xl border shrink-0 ${
-              isDarkMode ? 'border-white/10 bg-black/40' : 'border-slate-200/80 bg-slate-100/80'
-            }`}>
-              <button
-                type="button"
-                onClick={() => setViewMode('grouped')}
-                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-                  viewMode === 'grouped'
-                    ? isDarkMode ? 'bg-white/15 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                }`}
-                title="Group by PO"
-                aria-label="Group by PO"
-                aria-pressed={viewMode === 'grouped'}
-              >
-                <Layers className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('table')}
-                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-                  viewMode === 'table'
-                    ? isDarkMode ? 'bg-white/15 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                }`}
-                title="Table View"
-              >
-                <List className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('grid')}
-                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-                  viewMode === 'grid'
-                    ? isDarkMode ? 'bg-white/15 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                }`}
-                title="Cards Grid View"
-              >
-                <LayoutGrid className="w-3.5 h-3.5" />
-              </button>
+            {/* Legend Pills */}
+            <div className="flex items-center flex-wrap gap-3 sm:gap-5 mt-2.5 text-xs">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                <span className={`font-medium ${isCrystal && !isDarkMode ? 'text-slate-500' : 'text-white/70'}`}>Passed (CoC):</span>
+                <span className={`font-bold tabular-nums ${isCrystal && !isDarkMode ? 'text-slate-900' : 'text-white'}`}>{passedCount}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-400" />
+                <span className={`font-medium ${isCrystal && !isDarkMode ? 'text-slate-500' : 'text-white/70'}`}>Pending PDI:</span>
+                <span className={`font-bold tabular-nums ${isCrystal && !isDarkMode ? 'text-slate-900' : 'text-white'}`}>{pendingCount}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-rose-400" />
+                <span className={`font-medium ${isCrystal && !isDarkMode ? 'text-slate-500' : 'text-white/70'}`}>Failed:</span>
+                <span className={`font-bold tabular-nums ${isCrystal && !isDarkMode ? 'text-slate-900' : 'text-white'}`}>{failedCount}</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── APPLE 2-TIER COMMAND DECK & FILTERS ── */}
+        <div className={`rounded-2xl border p-3.5 transition-all ${
+          isDarkMode
+            ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] shadow-[0_8px_28px_rgba(0,0,0,0.5)]'
+            : 'border-slate-200 bg-white shadow-xs'
+        }`}>
+          <div className="space-y-3">
+            {/* Tier 1: Segmented tab buttons with counts + Live telemetry chip + View Switchers */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className={`inline-flex items-center p-1 rounded-xl border text-xs overflow-x-auto max-w-full ${
+                isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200/80 bg-slate-200/50 shadow-inner'
+              }`}>
+                {(['ALL', 'PENDING', 'PASS', 'FAIL'] as const).map((status) => {
+                  const isActive = filterStatus === status;
+                  const count = status === 'ALL' ? totalCount : status === 'PASS' ? passedCount : status === 'FAIL' ? failedCount : pendingCount;
+                  const isAlert = status === 'FAIL' && failedCount > 0;
+                  const label = status === 'ALL' ? 'All Lots' : status === 'PASS' ? 'Passed (CoC)' : status === 'FAIL' ? 'Failed' : 'Pending PDI';
+                  return (
+                    <button
+                      key={status}
+                      type="button"
+                      onClick={() => setFilterStatus(status)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                        isActive
+                          ? isDarkMode
+                            ? isAlert
+                              ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30 shadow-xs'
+                              : 'bg-white/15 text-white shadow-xs border border-white/10'
+                            : isAlert
+                            ? 'bg-rose-50 text-rose-700 border border-rose-200 shadow-xs'
+                            : 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                          : isDarkMode
+                          ? isAlert
+                            ? 'text-rose-400 hover:text-rose-300 hover:bg-rose-500/10'
+                            : 'text-slate-400 hover:text-white'
+                          : isAlert
+                          ? 'text-rose-700 hover:text-rose-800 hover:bg-rose-100/50'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <span>{label}</span>
+                      <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
+                        isActive
+                          ? isDarkMode
+                            ? isAlert ? 'bg-rose-500/30 text-rose-200' : 'bg-white/20 text-white'
+                            : isAlert ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-800'
+                          : isDarkMode
+                          ? isAlert ? 'bg-rose-500/20 text-rose-300' : 'bg-white/5 text-slate-400'
+                          : isAlert ? 'bg-rose-100 text-rose-800' : 'bg-slate-300/60 text-slate-600'
+                      }`}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Telemetry pill & View switcher */}
+              <div className="flex items-center gap-2">
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-semibold border ${
+                  isDarkMode ? 'border-white/10 bg-white/[0.03] text-slate-400' : 'border-slate-200 bg-white text-slate-600 shadow-2xs'
+                }`}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  Showing {filteredPdi.length} of {totalCount} records
+                </span>
+
+                {/* View switcher */}
+                <div className={`flex items-center p-0.5 rounded-xl border shrink-0 ${
+                  isDarkMode ? 'border-white/10 bg-black/40' : 'border-slate-200/80 bg-slate-100/80'
+                }`}>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('grouped')}
+                    className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                      viewMode === 'grouped'
+                        ? isDarkMode ? 'bg-white/15 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
+                        : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                    }`}
+                    title="Group by PO"
+                    aria-label="Group by PO"
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('table')}
+                    className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                      viewMode === 'table'
+                        ? isDarkMode ? 'bg-white/15 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
+                        : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                    }`}
+                    title="Table View"
+                    aria-label="Table View"
+                  >
+                    <List className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('grid')}
+                    className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                      viewMode === 'grid'
+                        ? isDarkMode ? 'bg-white/15 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
+                        : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                    }`}
+                    title="Cards Grid View"
+                    aria-label="Cards Grid View"
+                  >
+                    <LayoutGrid className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
             </div>
 
-            <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0 hidden lg:inline font-mono">
-              {filteredPdi.length} of {totalCount}
-            </span>
+            {/* Tier 2: Spotlight search */}
+            <div className={`relative flex items-center rounded-xl border transition-all ${
+              isDarkMode
+                ? 'border-white/10 bg-black/40 text-white focus-within:border-white/25 focus-within:bg-black/60'
+                : 'border-slate-200/90 bg-white text-slate-900 focus-within:border-slate-400 focus-within:shadow-xs'
+            }`}>
+              <Search className="absolute left-3.5 h-4 w-4 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search Job Card #, Customer PO, Part Code, Description..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-transparent pl-10 pr-24 py-2.5 text-xs font-medium outline-none placeholder:text-slate-400 font-sans"
+              />
+              <div className="absolute right-3 flex items-center gap-2">
+                {searchQuery ? (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                ) : (
+                  <kbd className={`hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono font-bold rounded border ${
+                    isDarkMode ? 'border-white/10 bg-white/5 text-slate-400' : 'border-slate-200 bg-slate-100 text-slate-500'
+                  }`}>
+                    ⌘F
+                  </kbd>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -879,9 +1076,9 @@ export const PDIView: React.FC<PDIViewProps> = ({
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-xs text-[#5B75F8] dark:text-[#7B92FF]">{pdi.jobNo}</span>
+                      <span className="font-bold text-xs font-mono text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{pdi.jobNo}</span>
                       {pdi.orderPo && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF] border border-blue-500/20">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/20">
                           {pdi.orderPo}
                         </span>
                       )}
@@ -947,7 +1144,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
                     className={`flex-1 min-h-[38px] py-1.5 px-4 rounded-xl text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-[0.96] shadow-xs ${
                       isPassed
                         ? 'bg-amber-600 hover:bg-amber-500 shadow-amber-600/20'
-                        : 'bg-[#5B75F8] hover:bg-[#4E67F0] shadow-[#5B75F8]/25'
+                        : 'bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] shadow-[var(--accent-primary)]/25'
                     }`}
                   >
                     {isPassed ? <RotateCcw className="w-3.5 h-3.5" /> : <ClipboardCheck className="w-3.5 h-3.5" />}
@@ -963,8 +1160,8 @@ export const PDIView: React.FC<PDIViewProps> = ({
                       }}
                       className={`px-3.5 min-h-[38px] rounded-xl border flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer transition-all active:scale-[0.96] shadow-xs ${
                         isDarkMode 
-                          ? 'bg-white/[0.06] border-white/10 text-slate-200 hover:bg-[#5B75F8]/20 hover:border-[#5B75F8]/50 hover:text-blue-300' 
-                          : 'bg-white border-slate-200 text-slate-700 hover:bg-blue-50 hover:border-[#5B75F8]/60 hover:text-[#5B75F8]'
+                          ? 'bg-white/[0.06] border-white/10 text-slate-200 hover:bg-[var(--accent-primary)]/20 hover:border-[var(--accent-primary)]/50 hover:text-[var(--accent-text-dark)]' 
+                          : 'bg-white border-slate-200 text-slate-700 hover:bg-[var(--accent-primary)]/10 hover:border-[var(--accent-primary)]/60 hover:text-[var(--accent-primary)]'
                       }`}
                       title="View CoC Certificate"
                     >
@@ -986,8 +1183,12 @@ export const PDIView: React.FC<PDIViewProps> = ({
       {viewMode === 'table' ? (
         <div className={`hidden md:block overflow-hidden rounded-3xl border transition-all ${
           isDarkMode
-            ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#08090c] to-[#010203] shadow-[0_16px_40px_rgba(0,0,0,0.5)]'
-            : 'border-slate-200/90 bg-gradient-to-b from-white via-slate-50/40 to-[#f6f8fc] shadow-[0_4px_24px_rgba(0,0,0,0.04)]'
+            ? isCrystal
+              ? 'border-white/10 bg-gradient-to-b from-[#181C24] via-[#10131A] to-[#0A0C10] shadow-[0_16px_40px_rgba(0,0,0,0.5)]'
+              : 'border-white/10 bg-gradient-to-b from-[#111318] via-[#08090c] to-[#010203] shadow-[0_16px_40px_rgba(0,0,0,0.5)]'
+            : isCrystal
+              ? 'border-slate-300/80 bg-gradient-to-b from-white via-[#F8FAFC] to-[#EEF2F6] shadow-[0_4px_24px_rgba(0,0,0,0.04)]'
+              : 'border-slate-200/90 bg-gradient-to-b from-white via-slate-50/40 to-[#f6f8fc] shadow-[0_4px_24px_rgba(0,0,0,0.04)]'
         }`}>
           <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-white/70 dark:via-white/10 to-transparent" />
           <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
@@ -1041,15 +1242,15 @@ export const PDIView: React.FC<PDIViewProps> = ({
                       >
                         <td className="py-4 px-6">
                           <div className="flex items-center gap-3.5">
-                            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-2xs border ${
+                            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 border transition-all duration-300 group-hover:scale-105 group-hover:shadow-md ${
                               isDarkMode 
-                                ? 'bg-white/10 text-white border-white/15' 
-                                : 'bg-slate-100 text-slate-800 border-slate-200'
+                                ? 'bg-gradient-to-br from-white/[0.08] to-white/[0.02] border-white/10 text-white' 
+                                : 'bg-gradient-to-br from-slate-50 to-slate-100/80 border-slate-200/80 text-slate-800 shadow-xs'
                             }`}>
-                              <ClipboardCheck className="w-5 h-5 stroke-[2]" />
+                              <ClipboardCheck className="w-5 h-5 text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)] stroke-[2]" />
                             </div>
                             <div className="min-w-0">
-                              <div className="font-mono text-sm tracking-tight text-slate-900 dark:text-white font-black">
+                              <div className="font-mono text-sm tracking-tight text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)] font-black">
                                 {pdi.jobNo}
                               </div>
                               <div className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate mt-0.5">
@@ -1129,8 +1330,8 @@ export const PDIView: React.FC<PDIViewProps> = ({
                                   }}
                                   className={`w-[80px] h-8 px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 active:scale-[0.96] shadow-xs shrink-0 ${
                                     isDarkMode 
-                                      ? 'bg-white/[0.06] border-white/10 text-slate-200 hover:bg-[#5B75F8]/20 hover:border-[#5B75F8]/50 hover:text-blue-300' 
-                                      : 'bg-white border-slate-200 text-slate-700 hover:bg-blue-50 hover:border-[#5B75F8]/60 hover:text-[#5B75F8]'
+                                      ? 'bg-white/[0.06] border-white/10 text-slate-200 hover:bg-[var(--accent-primary)]/20 hover:border-[var(--accent-primary)]/50 hover:text-[var(--accent-text-dark)]' 
+                                      : 'bg-white border-slate-200 text-slate-700 hover:bg-[var(--accent-primary)]/10 hover:border-[var(--accent-primary)]/60 hover:text-[var(--accent-primary)]'
                                   }`}
                                   title="View Compliance Certificate"
                                 >
@@ -1149,7 +1350,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
                                 className={`w-full h-8 px-4 py-1.5 rounded-xl text-white text-xs font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 shadow-xs active:scale-[0.96] ${
                                   isFailed
                                     ? 'bg-rose-600 hover:bg-rose-500 shadow-rose-600/25'
-                                    : 'bg-[#5B75F8] hover:bg-[#4E67F0] shadow-[#5B75F8]/25'
+                                    : 'bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] shadow-[var(--accent-primary)]/25'
                                 }`}
                                 title={isFailed ? `Re-Audit Failed PDI for ${pdi.jobNo}` : `Inspect PDI for ${pdi.jobNo}`}
                               >
@@ -1203,7 +1404,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <span className="font-bold text-xs text-[#5B75F8] dark:text-[#7B92FF]">
+                      <span className="font-bold text-xs font-mono text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">
                         {pdi.jobNo}
                       </span>
                       <h3 className={`text-sm font-bold mt-1 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
@@ -1267,7 +1468,7 @@ export const PDIView: React.FC<PDIViewProps> = ({
                           }
                         }}
                         className={`px-3.5 py-1.5 rounded-xl text-white text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all active:scale-[0.96] cursor-pointer ${
-                          isPassed ? 'bg-amber-600 hover:bg-amber-500' : 'bg-[#5B75F8] hover:bg-[#4E67F0]'
+                          isPassed ? 'bg-amber-600 hover:bg-amber-500' : 'bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)]'
                         }`}
                       >
                         {isPassed ? <RotateCcw className="w-3.5 h-3.5" /> : <ClipboardCheck className="w-3.5 h-3.5" />}
@@ -1282,8 +1483,8 @@ export const PDIView: React.FC<PDIViewProps> = ({
                           }}
                           className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 active:scale-[0.96] shadow-xs ${
                             isDarkMode 
-                              ? 'bg-white/[0.06] border-white/10 text-slate-200 hover:bg-[#5B75F8]/20 hover:border-[#5B75F8]/50 hover:text-blue-300' 
-                              : 'bg-white border-slate-200 text-slate-700 hover:bg-blue-50 hover:border-[#5B75F8]/60 hover:text-[#5B75F8]'
+                              ? 'bg-white/[0.06] border-white/10 text-slate-200 hover:bg-[var(--accent-primary)]/20 hover:border-[var(--accent-primary)]/50 hover:text-[var(--accent-text-dark)]' 
+                              : 'bg-white border-slate-200 text-slate-700 hover:bg-[var(--accent-primary)]/10 hover:border-[var(--accent-primary)]/60 hover:text-[var(--accent-primary)]'
                           }`}
                           title="View CoC Certificate"
                         >

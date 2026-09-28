@@ -7,6 +7,7 @@ import {
   Boxes,
   Wrench,
   FileText,
+  BarChart3,
   ShieldCheck,
   ClipboardCheck,
   Truck,
@@ -64,6 +65,7 @@ export const NAVIGATION_SECTIONS: NavSectionConfig[] = [
       { id: 'finished-goods', label: 'Finished Goods', shortLabel: 'FG', icon: Boxes, description: 'Ready Stock & Warehouse', path: '/operations/finished-goods' },
       { id: 'plating-outwork', label: 'Plating / Outwork', shortLabel: 'Outwork', icon: Wrench, description: 'Vendor Processing & Subcontracting', path: '/operations/plating-outwork' },
       { id: 'reports', label: 'Reports', shortLabel: 'Reports', icon: FileText, description: 'Operational Insights & Analytics', path: '/operations/reports' },
+      { id: 'metrics', label: 'Metrics & Telemetry', shortLabel: 'Metrics', icon: BarChart3, description: 'Live Factory Velocity, Trends & KPI Telemetry', path: '/operations/metrics' },
     ]
   },
   {
@@ -265,6 +267,8 @@ export function getCanonicalPathForView(view: ConsoleView, orderId?: string | nu
       return '/operations/plating-outwork';
     case 'reports':
       return '/operations/reports';
+    case 'metrics':
+      return '/operations/metrics';
     case 'qc':
       return '/quality-dispatch/qc-inspection';
     case 'pdi':

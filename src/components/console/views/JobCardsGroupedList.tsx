@@ -153,10 +153,10 @@ export const JobCardsGroupedList: React.FC<JobCardsGroupedListProps> = ({
       {/* ── macOS / iOS APPLE TOOLBAR HEADER ──                                    */}
       {/* ========================================================================= */}
       <div
-        className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2.5 sm:px-4 sm:py-2.5 rounded-2xl border transition-all ${
+        className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2 sm:px-3 sm:py-2 rounded-2xl border transition-all ${
           isDarkMode
-            ? 'bg-[#121215]/70 border-white/[0.08] backdrop-blur-xl shadow-[0_4px_20px_rgba(0,0,0,0.2)]'
-            : 'bg-white/80 border-slate-200/70 backdrop-blur-xl shadow-[0_4px_20px_rgba(15,23,42,0.03)]'
+            ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204]'
+            : 'border-slate-200 bg-white shadow-xs'
         }`}
       >
         {/* Left: Summary Metrics Pill */}
@@ -164,7 +164,7 @@ export const JobCardsGroupedList: React.FC<JobCardsGroupedListProps> = ({
           <div
             className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-medium ${
               isDarkMode
-                ? 'bg-white/[0.04] border-white/[0.06] text-slate-300'
+                ? 'bg-white/[0.04] border-white/10 text-slate-300'
                 : 'bg-slate-100/80 border-slate-200/60 text-slate-700'
             }`}
           >
@@ -205,8 +205,8 @@ export const JobCardsGroupedList: React.FC<JobCardsGroupedListProps> = ({
         <div className="flex items-center flex-wrap gap-2">
           {/* Apple Segmented Control for Sort */}
           <div
-            className={`flex items-center p-0.5 rounded-xl border shrink-0 ${
-              isDarkMode ? 'bg-black/40 border-white/[0.08]' : 'bg-slate-100/90 border-slate-200/70'
+            className={`flex items-center p-1 rounded-xl border shrink-0 ${
+              isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200/80 bg-slate-200/50 shadow-inner'
             }`}
             role="radiogroup"
             aria-label="Sort job card groups"
@@ -221,14 +221,14 @@ export const JobCardsGroupedList: React.FC<JobCardsGroupedListProps> = ({
                   role="radio"
                   aria-checked={isActive}
                   onClick={() => setSort(opt.id)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[10px] text-[11px] font-medium transition-all duration-150 cursor-pointer ${
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all duration-150 cursor-pointer ${
                     isActive
                       ? isDarkMode
-                        ? 'bg-white/10 text-white shadow-xs font-semibold'
-                        : 'bg-white text-slate-900 shadow-xs font-semibold'
+                        ? 'bg-white/15 text-white shadow-xs border border-white/10'
+                        : 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
                       : isDarkMode
-                        ? 'text-slate-400 hover:text-slate-200'
-                        : 'text-slate-500 hover:text-slate-800'
+                        ? 'text-slate-400 hover:text-white'
+                        : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   <Icon className="w-3 h-3 stroke-[2]" />
@@ -240,8 +240,8 @@ export const JobCardsGroupedList: React.FC<JobCardsGroupedListProps> = ({
 
           {/* Quick Expand / Collapse Capsule Buttons */}
           <div
-            className={`flex items-center p-0.5 rounded-xl border shrink-0 ${
-              isDarkMode ? 'bg-black/40 border-white/[0.08]' : 'bg-slate-100/90 border-slate-200/70'
+            className={`flex items-center p-1 rounded-xl border shrink-0 ${
+              isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200/80 bg-slate-200/50 shadow-inner'
             }`}
           >
             <button
@@ -316,7 +316,7 @@ export const JobCardsGroupedList: React.FC<JobCardsGroupedListProps> = ({
               className={`group/card rounded-[22px] border transition-all duration-200 overflow-hidden ${
                 isDarkMode
                   ? 'border-white/[0.08] bg-[#121215]/85 backdrop-blur-xl shadow-[0_4px_24px_rgba(0,0,0,0.3)] hover:border-white/[0.16]'
-                  : 'border-slate-200/80 bg-white/90 backdrop-blur-xl shadow-[0_4px_20px_rgba(15,23,42,0.04)] hover:border-slate-300 hover:shadow-[0_8px_30px_rgba(15,23,42,0.07)]'
+                  : 'border-slate-200 bg-white shadow-xs hover:border-slate-300 hover:shadow-sm'
               }`}
             >
               {/* ── CARD HEADER ROW (Apple HIG Aligned Grid Columns: exact match to GroupedByPoList) ── */}

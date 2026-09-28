@@ -25,6 +25,7 @@ import {
   Stamp
 } from 'lucide-react';
 import { CompanyProfile } from '../../../types/console';
+import { useAccentTheme } from '../../../context/AccentThemeContext';
 
 interface CompanyProfileViewProps {
   profile?: CompanyProfile | null;
@@ -37,6 +38,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
   isDarkMode = true,
   onSaveProfile,
 }) => {
+  const { accent, isGreen, isBlue, isCrystal } = useAccentTheme();
   const [legalName, setLegalName] = useState(profile?.legalName && profile.legalName !== 'Test Tech Ltd' ? profile.legalName : 'GuruOm Industries LLP');
   const [address, setAddress] = useState(
     !profile?.address || profile.address.includes('MIDC') || profile.address.includes('Metoda') || profile.address.includes('Rajkot') || profile.address.includes('123 Test St')
@@ -189,7 +191,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
     }
   };
 
-  const inputClass = `h-11 w-full rounded-xl border px-3.5 text-xs font-medium outline-none transition-[border-color,box-shadow,background-color] duration-150 focus:border-[#5B75F8] focus:ring-4 focus:ring-[#5B75F8]/15 ${isDarkMode
+  const inputClass = `h-11 w-full rounded-xl border px-3.5 text-xs font-medium outline-none transition-[border-color,box-shadow,background-color] duration-150 focus:border-[var(--accent-primary)] focus:ring-4 focus:ring-[var(--accent-primary)]/15 ${isDarkMode
     ? 'border-white/10 bg-black/60 text-white placeholder:text-slate-500 hover:border-white/20 focus:bg-black/80'
     : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:bg-white'
     }`;
@@ -197,161 +199,289 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-sans pb-12">
 
-      {/* 1. Luminous Dual-Mode Hero & Integrated Mini Dashboard */}
-      <div className={`relative overflow-hidden rounded-[28px] border transition-all duration-300 p-6 sm:p-8 ${
-        isDarkMode
-          ? 'bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] border-white/10 shadow-[0_24px_50px_rgba(0,0,0,0.7)] text-white'
-          : 'bg-gradient-to-r from-[#1b64ff] via-[#155dfc] to-[#0f52dc] border-blue-400/30 shadow-[0_16px_36px_rgba(21,93,252,0.28)] text-white'
-      }`}>
-        {/* Ambient Top Glow */}
-        <div
-          aria-hidden="true"
-          className={`pointer-events-none absolute -top-24 -right-10 w-96 h-96 rounded-full blur-3xl transition-opacity duration-500 ${
-            isDarkMode ? 'bg-blue-500/10' : 'bg-white/20'
-          }`}
-        />
-
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold tracking-wide backdrop-blur-md border bg-white/15 text-white border-white/20 shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Enterprise Master Settings • Rule 55 &amp; GST Compliant</span>
+      {/* ========================================================================= */}
+      {/* ── MOBILE-FIRST TOP HEADER (< md) ──                                      */}
+      {/* ========================================================================= */}
+      <div className="block md:hidden space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                Enterprise Settings
+              </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white">
-              Company Profile &amp; Tax Settings
+            <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+              Company Profile
             </h1>
-            <p className={`text-xs sm:text-sm max-w-2xl font-normal leading-relaxed ${
-              isDarkMode ? 'text-white/60' : 'text-blue-100'
-            }`}>
-              Master organizational entity details rendered on all GST Tax Invoices, Delivery Challans (Rule 55), E-Way Bills, and inspection certificates.
-            </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0 self-start lg:self-center">
-            {savedSuccess && (
-              <div className="px-3.5 py-2 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center gap-1.5 animate-in fade-in duration-200">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                <span>Saved &amp; Synchronized</span>
-              </div>
-            )}
-
-            <button
-              type="button"
-              onClick={handleResetToCurrent}
-              title="Reset fields to current saved profile"
-              className="flex h-11 shrink-0 items-center gap-2 rounded-full border border-white/20 bg-white/10 hover:bg-white/15 text-white px-5 text-xs font-semibold transition-all cursor-pointer active:scale-[0.98] shadow-sm backdrop-blur-md"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Reset</span>
-            </button>
-
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
               type="button"
               onClick={handleSave}
               disabled={isSaving}
-              className={`flex h-11 shrink-0 items-center gap-2 rounded-full px-6 text-xs font-bold transition-all active:scale-[0.96] cursor-pointer shadow-lg disabled:opacity-50 ${
-                isDarkMode
-                  ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
-                  : 'bg-white hover:bg-blue-50 text-blue-700 shadow-blue-900/30'
-              }`}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold shadow-md active:scale-[0.96] transition-ui cursor-pointer"
             >
-              {isSaving ? (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  <span>Saving...</span>
-                </>
-              ) : (
-                <>
-                  <Save className="w-3.5 h-3.5" />
-                  <span>Save changes</span>
-                </>
-              )}
+              {isSaving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+              <span>Save</span>
             </button>
           </div>
         </div>
 
-        {/* Mini Metric Dashboard Strip with SOLID VIBRANT ICON SQUIRCLES */}
-        <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-3">
-          {/* Metric 1: Legal Entity */}
-          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
-            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
-          }`}>
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-md shadow-black/10">
-              <Building2 className="w-5 h-5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
-                Legal Entity
-              </span>
-              <span className="text-sm font-bold text-white block truncate">
-                {legalName || 'GuruOm Industries'}
-              </span>
-              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
-                Manufacturing LLP
-              </span>
+        {/* Mobile 2x2 Telemetry Matrix */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">Entity</div>
+            <div className="text-sm font-black text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)] tracking-tight mt-0.5 truncate">
+              {legalName || 'GuruOm Industries'}
             </div>
           </div>
 
-          {/* Metric 2: GSTIN Registration */}
-          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
-            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
-          }`}>
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-md shadow-emerald-500/30">
-              <Receipt className="w-5 h-5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
-                GSTIN Registration
-              </span>
-              <span className="text-sm font-bold font-mono text-white block truncate">
-                {gstin || '27AABCG1234F1Z5'}
-              </span>
-              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
-                {isGstinValid ? 'Rule 55 Active' : 'Format Pending'}
-              </span>
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">GSTIN</div>
+            <div className="text-xs font-black font-mono text-emerald-500 tracking-tight mt-0.5 truncate">
+              {gstin || '27AABCG1234F1Z5'}
             </div>
           </div>
 
-          {/* Metric 3: Corporate PAN */}
-          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
-            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
-          }`}>
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-purple-600 text-white shadow-md shadow-purple-500/30">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
-                Corporate PAN
-              </span>
-              <span className="text-sm font-bold font-mono text-white block truncate">
-                {pan || 'AABCG1234F'}
-              </span>
-              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
-                {isPanValid ? 'Income Tax Verified' : 'Check Format'}
-              </span>
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">PAN</div>
+            <div className="text-xs font-black font-mono text-purple-500 tracking-tight mt-0.5 truncate">
+              {pan || 'AABCG1234F'}
             </div>
           </div>
 
-          {/* Metric 4: State Jurisdiction */}
-          <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
-            isDarkMode ? 'bg-white/[0.04] border-white/10' : 'bg-white/15 border-white/25'
-          }`}>
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-md shadow-amber-500/30">
-              <MapPin className="w-5 h-5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-white/50' : 'text-blue-100'}`}>
-                State Jurisdiction
-              </span>
-              <span className="text-sm font-bold text-white block truncate">
-                {state || 'Maharashtra'}
-              </span>
-              <span className={`text-[10px] truncate block ${isDarkMode ? 'text-white/40' : 'text-blue-100/80'}`}>
-                State Code: {stateCode || '27'}
-              </span>
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="text-[10px] font-bold uppercase text-slate-400 font-mono">State Code</div>
+            <div className="text-sm font-black text-amber-500 tracking-tight mt-0.5">
+              {stateCode || '27'} ({state || 'MH'})
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* ── DESKTOP EXECUTIVE HERO BANNER & KPI MATRIX (≥ md) ──                   */}
+      {/* ========================================================================= */}
+      <div className="hidden md:block">
+        <section className={`relative overflow-hidden rounded-[28px] border transition-all duration-300 p-6 sm:p-8 ${
+          isDarkMode
+            ? isCrystal
+              ? 'border-white/10 bg-gradient-to-b from-[#181C24] via-[#10131A] to-[#0A0C10] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6)]'
+              : isGreen
+                ? 'border-emerald-500/20 bg-gradient-to-b from-[#0D241B] via-[#081711] to-[#030B07] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(16,185,129,0.12)]'
+                : 'border-blue-500/20 bg-gradient-to-b from-[#0a1836] via-[#071126] to-[#030712] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(21,93,252,0.15)]'
+            : isCrystal
+              ? 'border-slate-300/80 bg-gradient-to-b from-white via-[#F8FAFC] to-[#EEF2F6] text-slate-950 shadow-[0_16px_40px_rgba(0,0,0,0.06),inset_0_1px_0_0_rgba(255,255,255,0.95)]'
+              : isGreen
+                ? 'border-emerald-600/30 bg-gradient-to-b from-[#0A7E58] via-[#086B4A] to-[#044F36] text-white shadow-[0_16px_40px_rgba(10,126,88,0.22)]'
+                : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
+        }`}>
+          {!isDarkMode && isCrystal && (
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-grid-pattern opacity-40 [mask-image:linear-gradient(to_bottom,black,transparent_72%)] [-webkit-mask-image:linear-gradient(to_bottom,black,transparent_72%)]" />
+          )}
+
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="space-y-2">
+              <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold tracking-wide border shadow-sm ${
+                isDarkMode
+                  ? 'bg-white/10 border-white/15 text-white'
+                  : isCrystal
+                    ? 'bg-slate-900/[0.06] border-slate-900/10 text-slate-800'
+                    : 'bg-white/20 border-white/30 backdrop-blur-md text-white'
+              }`}>
+                <span className={`w-2 h-2 rounded-full animate-pulse ${
+                  isCrystal && !isDarkMode ? 'bg-emerald-500' : isGreen ? 'bg-emerald-400' : 'bg-emerald-400'
+                }`} />
+                <span>Enterprise Master Settings • Rule 55 &amp; GST Compliant</span>
+              </div>
+              <h1 className={`text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight ${
+                isCrystal && !isDarkMode ? 'text-slate-950' : 'text-white'
+              }`}>
+                Company Profile &amp; Tax Settings
+              </h1>
+              <p className={`text-xs sm:text-sm max-w-2xl font-normal leading-relaxed ${
+                isCrystal && !isDarkMode ? 'text-slate-600' : (isDarkMode ? 'text-white/60' : 'text-blue-100')
+              }`}>
+                Master organizational entity details rendered on all GST Tax Invoices, Delivery Challans (Rule 55), E-Way Bills, and inspection certificates.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5 shrink-0 self-start lg:self-center">
+              {savedSuccess && (
+                <div className="px-3.5 py-2 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center gap-1.5 animate-in fade-in duration-200">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <span>Saved &amp; Synchronized</span>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={handleResetToCurrent}
+                title="Reset fields to current saved profile"
+                className={`flex h-11 shrink-0 items-center gap-2 rounded-full border px-5 text-xs font-semibold transition-all cursor-pointer active:scale-[0.98] shadow-sm backdrop-blur-md ${
+                  isCrystal && !isDarkMode
+                    ? 'border-slate-300 bg-white hover:bg-slate-50 text-slate-800'
+                    : 'border-white/20 bg-white/10 hover:bg-white/15 text-white'
+                }`}
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Reset</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={isSaving}
+                className={`flex h-11 shrink-0 items-center gap-2 rounded-full px-6 text-xs font-bold transition-all active:scale-[0.96] cursor-pointer shadow-lg disabled:opacity-50 ${
+                  isDarkMode
+                    ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
+                    : isCrystal
+                      ? 'bg-slate-950 hover:bg-slate-900 text-white shadow-[0_4px_16px_rgba(0,0,0,0.15)]'
+                      : isGreen
+                        ? 'bg-white hover:bg-emerald-50 text-[#065F46] shadow-[0_4px_16px_rgba(0,0,0,0.15)]'
+                        : 'bg-white hover:bg-blue-50 text-blue-700 shadow-blue-900/30'
+                }`}
+              >
+                {isSaving ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-3.5 h-3.5" />
+                    <span>Save changes</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Mini Metric Dashboard Strip with SOLID VIBRANT ICON SQUIRCLES */}
+          <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-3">
+            {/* Metric 1: Legal Entity */}
+            <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
+              isDarkMode 
+                ? 'bg-white/[0.04] border-white/10' 
+                : isCrystal 
+                  ? 'bg-white/80 border-slate-200/80 shadow-xs' 
+                  : 'bg-white/15 border-white/25'
+            }`}>
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-md shadow-black/10">
+                <Building2 className="w-5 h-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                  isCrystal && !isDarkMode ? 'text-slate-500' : (isDarkMode ? 'text-white/50' : 'text-blue-100')
+                }`}>
+                  Legal Entity
+                </span>
+                <span className={`text-sm font-bold block truncate ${
+                  isCrystal && !isDarkMode ? 'text-slate-950' : 'text-white'
+                }`}>
+                  {legalName || 'GuruOm Industries'}
+                </span>
+                <span className={`text-[10px] truncate block ${
+                  isCrystal && !isDarkMode ? 'text-slate-500' : (isDarkMode ? 'text-white/40' : 'text-blue-100/80')
+                }`}>
+                  Manufacturing LLP
+                </span>
+              </div>
+            </div>
+
+            {/* Metric 2: GSTIN Registration */}
+            <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
+              isDarkMode 
+                ? 'bg-white/[0.04] border-white/10' 
+                : isCrystal 
+                  ? 'bg-white/80 border-slate-200/80 shadow-xs' 
+                  : 'bg-white/15 border-white/25'
+            }`}>
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-md shadow-emerald-500/30">
+                <Receipt className="w-5 h-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                  isCrystal && !isDarkMode ? 'text-slate-500' : (isDarkMode ? 'text-white/50' : 'text-blue-100')
+                }`}>
+                  GSTIN Registration
+                </span>
+                <span className={`text-sm font-bold font-mono block truncate ${
+                  isCrystal && !isDarkMode ? 'text-slate-950' : 'text-white'
+                }`}>
+                  {gstin || '27AABCG1234F1Z5'}
+                </span>
+                <span className={`text-[10px] truncate block ${
+                  isCrystal && !isDarkMode ? 'text-slate-500' : (isDarkMode ? 'text-white/40' : 'text-blue-100/80')
+                }`}>
+                  {isGstinValid ? 'Rule 55 Active' : 'Format Pending'}
+                </span>
+              </div>
+            </div>
+
+            {/* Metric 3: Corporate PAN */}
+            <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
+              isDarkMode 
+                ? 'bg-white/[0.04] border-white/10' 
+                : isCrystal 
+                  ? 'bg-white/80 border-slate-200/80 shadow-xs' 
+                  : 'bg-white/15 border-white/25'
+            }`}>
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-purple-600 text-white shadow-md shadow-purple-500/30">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                  isCrystal && !isDarkMode ? 'text-slate-500' : (isDarkMode ? 'text-white/50' : 'text-blue-100')
+                }`}>
+                  Corporate PAN
+                </span>
+                <span className={`text-sm font-bold font-mono block truncate ${
+                  isCrystal && !isDarkMode ? 'text-slate-950' : 'text-white'
+                }`}>
+                  {pan || 'AABCG1234F'}
+                </span>
+                <span className={`text-[10px] truncate block ${
+                  isCrystal && !isDarkMode ? 'text-slate-500' : (isDarkMode ? 'text-white/40' : 'text-blue-100/80')
+                }`}>
+                  {isPanValid ? 'Income Tax Verified' : 'Check Format'}
+                </span>
+              </div>
+            </div>
+
+            {/* Metric 4: State Jurisdiction */}
+            <div className={`p-4 rounded-2xl border backdrop-blur-md flex items-center gap-3.5 transition-colors ${
+              isDarkMode 
+                ? 'bg-white/[0.04] border-white/10' 
+                : isCrystal 
+                  ? 'bg-white/80 border-slate-200/80 shadow-xs' 
+                  : 'bg-white/15 border-white/25'
+            }`}>
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-md shadow-amber-500/30">
+                <MapPin className="w-5 h-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                  isCrystal && !isDarkMode ? 'text-slate-500' : (isDarkMode ? 'text-white/50' : 'text-blue-100')
+                }`}>
+                  State Jurisdiction
+                </span>
+                <span className={`text-sm font-bold block truncate ${
+                  isCrystal && !isDarkMode ? 'text-slate-950' : 'text-white'
+                }`}>
+                  {state || 'Maharashtra'}
+                </span>
+                <span className={`text-[10px] truncate block ${
+                  isCrystal && !isDarkMode ? 'text-slate-500' : (isDarkMode ? 'text-white/40' : 'text-blue-100/80')
+                }`}>
+                  State Code: {stateCode || '27'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
 
       {/* 2. Main Two-Column Interactive Layout */}

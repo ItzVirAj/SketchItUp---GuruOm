@@ -32,6 +32,7 @@ import { ChallanDetailModal } from '../modals/ChallanDetailModal';
 import { Modal } from '../../common/Modal';
 import { useUrlModal } from '../../../hooks/useUrlModal';
 import { useCanPerformCta } from '../../../hooks/useCtaPermission';
+import { useAccentTheme } from '../../../context/AccentThemeContext';
 
 interface DispatchViewProps {
   dispatches?: DispatchChallan[];
@@ -64,6 +65,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
   preselectedOrderPo,
   onDispatchModalOpened
 }) => {
+  const { accent, isGreen, isBlue, isCrystal } = useAccentTheme();
   const canPerformCta = useCanPerformCta();
   // URL-driven modal hooks
   const createChallanModal = useUrlModal('issue-delivery-challan');
@@ -339,38 +341,117 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
     <div className="space-y-4 sm:space-y-6 font-sans w-full max-w-full min-w-0 pb-6">
       
       {/* ========================================================================= */}
-      {/* ── TOP HEADER & TELEMETRY WIDGETS (Apple Executive Window) ──             */}
+      {/* ── MOBILE-FIRST TOP HEADER (< md) ──                                      */}
       {/* ========================================================================= */}
+      <div className="md:hidden flex items-center justify-between pb-1">
+        <div className="flex items-center gap-2">
+          <span className="relative flex h-2 w-2">
+            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+              isCrystal ? 'bg-indigo-400' : isGreen ? 'bg-emerald-400' : 'bg-blue-400'
+            }`} />
+            <span className={`relative inline-flex rounded-full h-2 w-2 ${
+              isCrystal ? 'bg-indigo-500' : isGreen ? 'bg-emerald-500' : 'bg-blue-600'
+            }`} />
+          </span>
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            Outward Logistics
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400">
+            {dispatches.length} challans
+          </span>
+        </div>
+      </div>
+
+      {/* Mobile 2x2 Telemetry Matrix (< md) */}
+      <div className="md:hidden grid grid-cols-2 gap-2">
+        <div className={`p-3 rounded-xl border ${isDarkMode ? 'bg-[#09090B] border-white/10' : 'bg-white border-slate-200'}`}>
+          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Dispatches</div>
+          <div className="text-lg font-black font-mono text-slate-900 dark:text-white tabular-nums mt-0.5">{totalCount}</div>
+          <div className="text-[10px] text-slate-400">Delivery challans</div>
+        </div>
+        <div className={`p-3 rounded-xl border ${isDarkMode ? 'bg-[#09090B] border-white/10' : 'bg-white border-slate-200'}`}>
+          <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-500">Delivered (POD)</div>
+          <div className="text-lg font-black font-mono text-emerald-600 dark:text-emerald-400 tabular-nums mt-0.5">{deliveredCount}</div>
+          <div className="text-[10px] text-slate-400">Proof archived</div>
+        </div>
+        <div className={`p-3 rounded-xl border ${isDarkMode ? 'bg-[#09090B] border-white/10' : 'bg-white border-slate-200'}`}>
+          <div className="text-[10px] font-bold uppercase tracking-wider text-purple-500">In Transit</div>
+          <div className="text-lg font-black font-mono text-purple-600 dark:text-purple-400 tabular-nums mt-0.5">{inTransitCount}</div>
+          <div className="text-[10px] text-slate-400">En route</div>
+        </div>
+        <div className={`p-3 rounded-xl border ${isDarkMode ? 'bg-[#09090B] border-white/10' : 'bg-white border-slate-200'}`}>
+          <div className="text-[10px] font-bold uppercase tracking-wider text-indigo-500">Fulfillment</div>
+          <div className="text-lg font-black font-mono text-indigo-600 dark:text-indigo-400 tabular-nums mt-0.5">{deliveryRate}%</div>
+          <div className="text-[10px] text-slate-400">Completion rate</div>
+        </div>
+      </div>
+
       {/* ========================================================================= */}
-      {/* ── TOP HEADER & TELEMETRY WIDGETS (Apple Executive Window) ──             */}
+      {/* ── DESKTOP EXECUTIVE HERO HEADER (Viewport >= md) ──                       */}
       {/* ========================================================================= */}
-      <section className={`overflow-hidden rounded-2xl border transition-all ${
+      <section className={`hidden md:block relative overflow-hidden rounded-3xl border transition-all ${
         isDarkMode
-          ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]'
-          : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
+          ? isCrystal
+            ? 'border-white/10 bg-gradient-to-b from-[#181C24] via-[#10131A] to-[#0A0C10] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6)]'
+            : isGreen
+              ? 'border-emerald-500/20 bg-gradient-to-b from-[#0D241B] via-[#081711] to-[#030B07] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(16,185,129,0.12)]'
+              : 'border-blue-500/20 bg-gradient-to-b from-[#0a1836] via-[#071126] to-[#030712] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(21,93,252,0.15)]'
+          : isCrystal
+            ? 'border-slate-300/80 bg-gradient-to-b from-white via-[#F8FAFC] to-[#EEF2F6] text-slate-950 shadow-[0_16px_40px_rgba(0,0,0,0.06),inset_0_1px_0_0_rgba(255,255,255,0.95)]'
+            : isGreen
+              ? 'border-emerald-600/30 bg-gradient-to-b from-[#0A7E58] via-[#086B4A] to-[#044F36] text-white shadow-[0_16px_40px_rgba(10,126,88,0.22)]'
+              : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
       }`}>
+        {/* Subtle grid pattern background for Crystal Light mode */}
+        {!isDarkMode && isCrystal && (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 -z-10 bg-grid-pattern opacity-40 [mask-image:linear-gradient(to_bottom,black,transparent_72%)] [-webkit-mask-image:linear-gradient(to_bottom,black,transparent_72%)]"
+          />
+        )}
+
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 px-6 py-6 sm:py-7">
           <div className="min-w-0 space-y-1.5">
             <div className="flex items-center gap-2.5">
-              <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wide ${
+              <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wide border ${
                 isDarkMode
-                  ? 'bg-white/10 border border-white/15 text-white'
-                  : 'bg-white/20 border border-white/30 backdrop-blur-md text-white shadow-xs'
+                  ? isCrystal
+                    ? 'border-white/10 bg-white/5 text-slate-300'
+                    : isGreen
+                      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                      : 'border-blue-500/30 bg-blue-500/10 text-blue-300'
+                  : isCrystal
+                    ? 'border-slate-300 bg-white text-slate-700 shadow-xs'
+                    : isGreen
+                      ? 'border-white/30 bg-white/20 text-white shadow-xs backdrop-blur-md'
+                      : 'border-white/30 bg-white/20 text-white shadow-xs backdrop-blur-md'
               }`}>
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className={`h-2 w-2 rounded-full animate-pulse ${
+                  isGreen ? 'bg-emerald-400' : isCrystal ? 'bg-indigo-400' : 'bg-cyan-300'
+                }`} />
                 <span>Outward Logistics &amp; Consignments</span>
               </span>
-              <span className="text-sm font-semibold text-white/80">•</span>
-              <span className="text-xs sm:text-sm font-semibold text-white/95">
+              <span className={`text-sm font-semibold ${
+                !isDarkMode && isCrystal ? 'text-slate-400' : 'text-white/60'
+              }`}>•</span>
+              <span className={`text-xs sm:text-sm font-semibold font-mono ${
+                !isDarkMode && isCrystal ? 'text-slate-600' : 'text-white/90'
+              }`}>
                 {dispatches.length} Delivery Challans
               </span>
             </div>
 
-            <h1 className="text-3xl sm:text-[32px] font-black tracking-tight text-white leading-tight">
+            <h1 className={`text-3xl sm:text-[32px] font-black tracking-tight leading-tight ${
+              isDarkMode ? 'text-white' : isCrystal ? 'text-slate-950' : 'text-white'
+            }`}>
               Dispatch &amp; Delivery Hub
             </h1>
 
-            <p className="text-xs sm:text-sm text-white/95 font-medium leading-relaxed max-w-2xl">
+            <p className={`text-xs sm:text-sm font-medium leading-relaxed max-w-2xl ${
+              isDarkMode ? 'text-slate-400' : isCrystal ? 'text-slate-600' : 'text-white/90'
+            }`}>
               Generate delivery challans for PDI-approved finished goods, manage freight transporters, and track outbound shipments to customer plants.
             </p>
           </div>
@@ -379,10 +460,12 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
             <button
               type="button"
               onClick={handleExportCSV}
-              className={`inline-flex items-center gap-2 px-4 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
+              className={`inline-flex items-center gap-2 px-4 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 border ${
                 isDarkMode
-                  ? 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
-                  : 'bg-white/20 hover:bg-white/30 text-white border border-white/30 backdrop-blur-md'
+                  ? 'bg-white/10 hover:bg-white/15 text-white border-white/15'
+                  : isCrystal
+                    ? 'bg-white hover:bg-slate-50 text-slate-800 border-slate-300/80 shadow-xs'
+                    : 'bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-md'
               }`}
               title="Export Delivery Challans to CSV"
             >
@@ -396,8 +479,16 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                 onClick={handleOpenCreateModal}
                 className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
                   isDarkMode
-                    ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
-                    : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
+                    ? isCrystal
+                      ? 'bg-gradient-to-r from-indigo-500 to-blue-600 text-white hover:from-indigo-600 hover:to-blue-700 shadow-indigo-500/20'
+                      : isGreen
+                        ? 'bg-emerald-500 text-white hover:bg-emerald-400 shadow-emerald-500/25'
+                        : 'bg-blue-600 text-white hover:bg-blue-500 shadow-blue-500/25'
+                    : isCrystal
+                      ? 'bg-slate-950 text-white hover:bg-slate-800 shadow-slate-950/20'
+                      : isGreen
+                        ? 'bg-white text-emerald-800 hover:bg-emerald-50 shadow-black/10'
+                        : 'bg-white text-blue-700 hover:bg-blue-50 shadow-black/10'
                 }`}
               >
                 <Plus className="w-4 h-4 stroke-[3]" />
@@ -410,8 +501,16 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
         {/* Integrated 4-Column Metric Strip (border-t) */}
         <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t ${
           isDarkMode
-            ? 'border-white/10 bg-gradient-to-b from-black/40 to-black/70 backdrop-blur-md'
-            : 'border-white/20 bg-white/[0.06] backdrop-blur-sm'
+            ? isCrystal
+              ? 'border-white/10 bg-[#0c0e14]/60'
+              : isGreen
+                ? 'border-emerald-500/15 bg-black/40'
+                : 'border-blue-500/15 bg-black/40'
+            : isCrystal
+              ? 'border-slate-200/90 bg-white/70 shadow-xs'
+              : isGreen
+                ? 'border-white/20 bg-black/15'
+                : 'border-white/20 bg-black/15'
         }`}>
           {[
             {
@@ -419,32 +518,44 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
               value: String(totalCount),
               detail: 'Statutory delivery challans',
               icon: Truck,
-              iconColor: 'text-blue-600',
-              iconBg: 'bg-white shadow-md shadow-black/10',
+              iconColor: isDarkMode
+                ? isCrystal ? 'text-indigo-400' : isGreen ? 'text-emerald-400' : 'text-blue-400'
+                : isCrystal ? 'text-indigo-600' : isGreen ? 'text-emerald-700' : 'text-blue-600',
+              iconBg: isDarkMode
+                ? 'bg-white/10 border border-white/10'
+                : isCrystal ? 'bg-indigo-50 border border-indigo-200/60' : 'bg-white shadow-xs',
             },
             {
               label: 'Delivered (POD)',
               value: String(deliveredCount),
               detail: 'Proof of Delivery archived',
               icon: CheckCircle2,
-              iconColor: 'text-white',
-              iconBg: 'bg-emerald-500 shadow-xs',
+              iconColor: isDarkMode ? 'text-emerald-400' : isCrystal ? 'text-emerald-600' : 'text-emerald-700',
+              iconBg: isDarkMode
+                ? 'bg-emerald-500/15 border border-emerald-500/30'
+                : isCrystal ? 'bg-emerald-50 border border-emerald-200/60' : 'bg-white shadow-xs',
             },
             {
               label: 'In Transit',
               value: String(inTransitCount),
               detail: 'Active consignments en route',
               icon: Package,
-              iconColor: 'text-white',
-              iconBg: 'bg-purple-500 shadow-xs',
+              iconColor: isDarkMode ? 'text-purple-400' : isCrystal ? 'text-purple-600' : 'text-purple-700',
+              iconBg: isDarkMode
+                ? 'bg-purple-500/15 border border-purple-500/30'
+                : isCrystal ? 'bg-purple-50 border border-purple-200/60' : 'bg-white shadow-xs',
             },
             {
               label: 'Fulfillment Rate',
               value: `${deliveryRate}%`,
               detail: 'Overall logistics completion',
               icon: TrendingUp,
-              iconColor: 'text-white',
-              iconBg: 'bg-indigo-500 shadow-xs',
+              iconColor: isDarkMode
+                ? isCrystal ? 'text-indigo-400' : isGreen ? 'text-emerald-400' : 'text-blue-400'
+                : isCrystal ? 'text-indigo-600' : isGreen ? 'text-emerald-700' : 'text-blue-700',
+              iconBg: isDarkMode
+                ? 'bg-white/10 border border-white/10'
+                : isCrystal ? 'bg-slate-100 border border-slate-200' : 'bg-white shadow-xs',
             },
           ].map((metric, index) => {
             const MetricIcon = metric.icon;
@@ -452,20 +563,32 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
               <div
                 key={metric.label}
                 className={`flex items-center gap-4 px-6 py-5 transition-all ${
-                  index > 0 ? (isDarkMode ? 'lg:border-l border-white/10' : 'lg:border-l border-white/20') : ''
+                  index > 0
+                    ? isDarkMode
+                      ? 'lg:border-l border-white/10'
+                      : isCrystal
+                        ? 'lg:border-l border-slate-200/90'
+                        : 'lg:border-l border-white/20'
+                    : ''
                 }`}
               >
                 <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${metric.iconBg} ${metric.iconColor}`}>
                   <MetricIcon className="h-5 w-5 stroke-[2.5]" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-xs font-bold uppercase tracking-wider text-white/85">
+                  <div className={`text-xs font-bold uppercase tracking-wider ${
+                    isDarkMode ? 'text-slate-400' : isCrystal ? 'text-slate-500' : 'text-white/80'
+                  }`}>
                     {metric.label}
                   </div>
-                  <div className="text-2xl sm:text-[26px] font-black tracking-tight text-white tabular-nums my-0.5 leading-tight">
+                  <div className={`text-2xl sm:text-[26px] font-black tracking-tight tabular-nums my-0.5 leading-tight ${
+                    isDarkMode ? 'text-white' : isCrystal ? 'text-slate-950' : 'text-white'
+                  }`}>
                     {metric.value}
                   </div>
-                  <div className="text-xs font-medium text-white/90 truncate">
+                  <div className={`text-xs font-medium truncate ${
+                    isDarkMode ? 'text-slate-400' : isCrystal ? 'text-slate-500' : 'text-white/90'
+                  }`}>
                     {metric.detail}
                   </div>
                 </div>
@@ -476,43 +599,57 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
 
         {/* ── Apple Outward Logistics Distribution Bar ── */}
         <div className={`px-6 py-4 border-t ${
-          isDarkMode ? 'border-white/10 bg-black/40' : 'border-white/20 bg-black/10'
+          isDarkMode
+            ? isCrystal ? 'border-white/10 bg-[#08090d]/80' : 'border-white/10 bg-black/40'
+            : isCrystal ? 'border-slate-200/90 bg-slate-50/90' : 'border-white/20 bg-black/15'
         }`}>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
             <div className="flex items-center gap-2">
-              <Activity className="w-4 h-4 text-white" />
-              <span className="text-xs font-bold tracking-tight text-white">
+              <Activity className={`w-4 h-4 ${
+                !isDarkMode && isCrystal ? 'text-slate-700' : 'text-white'
+              }`} />
+              <span className={`text-xs font-bold tracking-tight ${
+                !isDarkMode && isCrystal ? 'text-slate-900' : 'text-white'
+              }`}>
                 Outward Freight Fulfillment &amp; Delivery Clearance
               </span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                !isDarkMode && isCrystal
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+              }`}>
                 {deliveryRate}% Fulfillment
               </span>
             </div>
-            <span className="text-xs text-white/70">
+            <span className={`text-xs font-mono ${
+              !isDarkMode && isCrystal ? 'text-slate-500' : 'text-white/70'
+            }`}>
               {deliveredCount} of {totalCount} consignments delivered
             </span>
           </div>
 
           {/* Multi-Segmented Pro Bar */}
-          <div className="h-2.5 w-full rounded-full bg-white/20 overflow-hidden flex p-0.5 gap-0.5 border border-white/15">
+          <div className={`h-2.5 w-full rounded-full overflow-hidden flex p-0.5 gap-0.5 border ${
+            !isDarkMode && isCrystal ? 'bg-slate-200/80 border-slate-300/80' : 'bg-white/20 border-white/15'
+          }`}>
             {deliveredCount > 0 && (
               <div 
                 style={{ width: `${(deliveredCount / (totalCount || 1)) * 100}%` }} 
-                className="h-full bg-emerald-400 rounded-full transition-all duration-500" 
+                className="h-full bg-emerald-500 rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]" 
                 title={`Delivered (POD): ${deliveredCount} (${deliveredPct}%)`}
               />
             )}
             {inTransitCount > 0 && (
               <div 
                 style={{ width: `${(inTransitCount / (totalCount || 1)) * 100}%` }} 
-                className="h-full bg-purple-400 rounded-full transition-all duration-500" 
+                className="h-full bg-purple-500 rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(168,85,247,0.3)]" 
                 title={`In Transit: ${inTransitCount} (${inTransitPct}%)`}
               />
             )}
             {draftCount > 0 && (
               <div 
                 style={{ width: `${(draftCount / (totalCount || 1)) * 100}%` }} 
-                className="h-full bg-amber-400 rounded-full transition-all duration-500" 
+                className="h-full bg-amber-500 rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(245,158,11,0.3)]" 
                 title={`Staging / Draft: ${draftCount} (${draftPct}%)`}
               />
             )}
@@ -521,115 +658,157 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
           {/* Legend Pills */}
           <div className="flex items-center flex-wrap gap-3 sm:gap-5 mt-2.5 text-xs">
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400" />
-              <span className="text-white/70 font-medium">Delivered (POD):</span>
-              <span className="font-bold text-white tabular-nums">{deliveredCount} ({deliveredPct}%)</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span className={`font-medium ${!isDarkMode && isCrystal ? 'text-slate-600' : 'text-white/70'}`}>Delivered (POD):</span>
+              <span className={`font-bold tabular-nums font-mono ${!isDarkMode && isCrystal ? 'text-slate-900' : 'text-white'}`}>
+                {deliveredCount} ({deliveredPct}%)
+              </span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-purple-400" />
-              <span className="text-white/70 font-medium">In Transit:</span>
-              <span className="font-bold text-white tabular-nums">{inTransitCount} ({inTransitPct}%)</span>
+              <span className="w-2 h-2 rounded-full bg-purple-500" />
+              <span className={`font-medium ${!isDarkMode && isCrystal ? 'text-slate-600' : 'text-white/70'}`}>In Transit:</span>
+              <span className={`font-bold tabular-nums font-mono ${!isDarkMode && isCrystal ? 'text-slate-900' : 'text-white'}`}>
+                {inTransitCount} ({inTransitPct}%)
+              </span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-amber-400" />
-              <span className="text-white/70 font-medium">Staging / Draft:</span>
-              <span className="font-bold text-white tabular-nums">{draftCount} ({draftPct}%)</span>
+              <span className="w-2 h-2 rounded-full bg-amber-500" />
+              <span className={`font-medium ${!isDarkMode && isCrystal ? 'text-slate-600' : 'text-white/70'}`}>Staging / Draft:</span>
+              <span className={`font-bold tabular-nums font-mono ${!isDarkMode && isCrystal ? 'text-slate-900' : 'text-white'}`}>
+                {draftCount} ({draftPct}%)
+              </span>
             </div>
           </div>
         </div>
       </section>
 
       {/* ========================================================================= */}
-      {/* ── FILTER & SEARCH TOOLBAR (Apple Segmented Control & Finder Search) ──   */}
+      {/* ── APPLE 2-TIER COMMAND DECK (Status Deck & Spotlight Search) ──           */}
       {/* ========================================================================= */}
-      <div className={`p-3 sm:p-4 rounded-2xl border transition-all space-y-3 ${
-        isDarkMode ? 'bg-[#09090B] border-white/10' : 'bg-white/90 border-slate-200/80 shadow-xs'
+      <div className={`p-4 rounded-3xl border transition-all ${
+        isDarkMode
+          ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] shadow-[0_8px_30px_rgba(0,0,0,0.4)]'
+          : 'border-slate-200/90 bg-gradient-to-b from-white via-slate-50/50 to-[#f6f8fc] shadow-[0_4px_20px_rgba(0,0,0,0.03)]'
       }`}>
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          {/* Apple Segmented Control */}
-          <div className={`flex items-center gap-1 p-1 rounded-xl border overflow-x-auto no-scrollbar shrink-0 ${
-            isDarkMode ? 'bg-black/60 border-white/10' : 'bg-slate-100/80 border-slate-200/80'
-          }`}>
-            {[
-              { id: 'ALL', label: 'All Dispatches', count: dispatches.length },
-              { id: 'DRAFT', label: 'Staging / Ready', count: draftCount },
-              { id: 'IN_TRANSIT', label: 'In Transit', count: inTransitCount },
-              { id: 'DELIVERED', label: 'Delivered (POD)', count: deliveredCount },
-            ].map(tab => {
-              const isActive = statusTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setStatusTab(tab.id as any)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
-                    isActive
-                      ? isDarkMode ? 'bg-white text-slate-900 shadow-xs font-bold' : 'bg-[#181920] text-white shadow-xs font-bold'
-                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 font-medium'
-                  }`}
-                >
-                  <span>{tab.label}</span>
-                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-semibold ${
-                    isActive 
-                      ? isDarkMode ? 'bg-black/15 text-slate-900' : 'bg-white/20 text-white' 
-                      : isDarkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-200 text-slate-600'
-                  }`}>
-                    {tab.count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Search Field & View Mode Switcher */}
-          <div className="flex items-center gap-2.5">
-            {/* macOS Finder Capsule */}
-            <div className={`relative flex items-center rounded-full border px-3.5 py-1.5 transition-all w-full sm:w-80 ${
-              isDarkMode ? 'bg-black/60 border-white/10 text-white focus-within:border-[#5B75F8]' : 'bg-slate-50 border-slate-200 text-slate-900 focus-within:border-[#5B75F8]'
+        <div className="flex flex-col gap-3">
+          {/* Tier 1: Segmented tab controls, Telemetry live pill, View mode switcher */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            {/* Segmented Filter Pills */}
+            <div className={`inline-flex items-center p-1 rounded-xl border text-xs overflow-x-auto max-w-full ${
+              isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200/80 bg-slate-200/50 shadow-inner'
             }`}>
-              <Search className="w-3.5 h-3.5 text-slate-400 shrink-0 mr-2" />
-              <input
-                type="text"
-                placeholder="Search Challan #, PO, Vehicle..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-transparent outline-none text-xs w-full placeholder:text-slate-400"
-              />
-              {searchQuery && (
-                <button type="button" onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-600 dark:hover:text-white ml-2">
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
+              {[
+                { id: 'ALL', label: 'All Dispatches', count: dispatches.length },
+                { id: 'DRAFT', label: 'Staging / Ready', count: draftCount },
+                { id: 'IN_TRANSIT', label: 'In Transit', count: inTransitCount },
+                { id: 'DELIVERED', label: 'Delivered (POD)', count: deliveredCount },
+              ].map(tab => {
+                const isActive = statusTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setStatusTab(tab.id as any)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                      isActive
+                        ? isDarkMode
+                          ? 'bg-white/15 text-white shadow-xs border border-white/10'
+                          : 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <span>{tab.label}</span>
+                    <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
+                      isActive
+                        ? isDarkMode
+                          ? 'bg-white/20 text-white'
+                          : 'bg-slate-100 text-slate-800'
+                        : isDarkMode
+                          ? 'bg-white/5 text-slate-400'
+                          : 'bg-slate-300/60 text-slate-600'
+                    }`}>
+                      {tab.count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
-            {/* Apple View Mode Switcher (Table vs Grid) */}
-            <div className={`hidden sm:flex items-center p-0.5 rounded-xl border shrink-0 ${
-              isDarkMode ? 'bg-black/60 border-white/10' : 'bg-slate-100/80 border-slate-200/80'
-            }`}>
-              <button
-                type="button"
-                onClick={() => setViewMode('table')}
-                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-                  viewMode === 'table'
-                    ? isDarkMode ? 'bg-white/10 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                }`}
-                title="Table Register View"
-              >
-                <List className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('grid')}
-                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-                  viewMode === 'grid'
-                    ? isDarkMode ? 'bg-white/10 text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                }`}
-                title="Consignment Inspector Grid"
-              >
-                <LayoutGrid className="w-3.5 h-3.5" />
-              </button>
+            {/* Right Controls: Telemetry indicator & View Mode Switcher */}
+            <div className="flex items-center gap-2">
+              <span className={`hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-medium border ${
+                isDarkMode ? 'border-white/10 bg-white/5 text-slate-400' : 'border-slate-200 bg-white text-slate-600'
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  isGreen ? 'bg-emerald-400' : isCrystal ? 'bg-indigo-400' : 'bg-blue-400'
+                } animate-pulse`} />
+                <span className="font-mono">{filteredDispatches.length}</span> / <span className="font-mono">{dispatches.length}</span> manifests
+              </span>
+
+              {/* View Switcher: Table vs Cards Grid */}
+              <div className={`flex items-center p-1 rounded-xl border shrink-0 ${
+                isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200/80 bg-slate-200/50 shadow-inner'
+              }`}>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('table')}
+                  className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                    viewMode === 'table'
+                      ? isDarkMode ? 'bg-white/15 text-white shadow-xs border border-white/10' : 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                      : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                  }`}
+                  title="Table Register View"
+                  aria-label="Table Register View"
+                >
+                  <List className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('grid')}
+                  className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                    viewMode === 'grid'
+                      ? isDarkMode ? 'bg-white/15 text-white shadow-xs border border-white/10' : 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                      : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                  }`}
+                  title="Cards Grid View"
+                  aria-label="Cards Grid View"
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Tier 2: Spotlight search */}
+          <div className={`relative flex items-center rounded-xl border transition-all ${
+            isDarkMode
+              ? 'border-white/10 bg-black/40 text-white focus-within:border-white/25 focus-within:bg-black/60'
+              : 'border-slate-200/90 bg-white text-slate-900 focus-within:border-slate-400 focus-within:shadow-xs'
+          }`}>
+            <Search className="absolute left-3.5 h-4 w-4 text-slate-400 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search Challan #, Customer Order PO, Transporter, Vehicle Registration #..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-transparent pl-10 pr-24 py-2.5 text-xs font-medium outline-none placeholder:text-slate-400 font-sans"
+            />
+            <div className="absolute right-3 flex items-center gap-2">
+              {searchQuery ? (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              ) : (
+                <kbd className={`hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono font-bold rounded border ${
+                  isDarkMode ? 'border-white/10 bg-white/5 text-slate-400' : 'border-slate-200 bg-slate-100 text-slate-500'
+                }`}>
+                  ⌘F
+                </kbd>
+              )}
             </div>
           </div>
         </div>
@@ -666,11 +845,11 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-xs text-[#5B75F8] dark:text-[#7B92FF]">
+                      <span className="font-bold text-xs font-mono text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">
                         {disp.challanNo}
                       </span>
                       {disp.orderPo && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF] border border-blue-500/20">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)] border border-[var(--accent-primary)]/20">
                           {disp.orderPo}
                         </span>
                       )}
@@ -713,16 +892,16 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                   <button
                     type="button"
                     onClick={() => handleRowClick(disp)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1 border transition-all ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 border transition-all ${
                       isDarkMode ? 'border-white/10 bg-black/60 text-slate-200 hover:bg-white/10' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
                     }`}
                   >
-                    <Eye className="w-3.5 h-3.5 text-[#5B75F8] dark:text-[#7B92FF]" />
+                    <Eye className="w-3.5 h-3.5 text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]" />
                     <span>View Challan</span>
                   </button>
 
                   {isDelivered ? (
-                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                    <span className="px-3 py-1 rounded-xl text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       <span>POD Confirmed</span>
                     </span>
@@ -730,7 +909,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                     <button
                       type="button"
                       onClick={(e) => handleOpenDeliveryModal(disp, e)}
-                      className="px-3.5 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1 shadow-xs transition-all active:scale-[0.98]"
+                      className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1 shadow-xs transition-all active:scale-[0.98]"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       <span>Mark Delivered</span>
@@ -749,13 +928,17 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
       {viewMode === 'table' ? (
         <div className={`hidden md:block overflow-hidden rounded-3xl border transition-all ${
           isDarkMode
-            ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#08090c] to-[#010203] shadow-[0_16px_40px_rgba(0,0,0,0.5)]'
-            : 'border-slate-200/90 bg-gradient-to-b from-white via-slate-50/40 to-[#f6f8fc] shadow-[0_4px_24px_rgba(0,0,0,0.04)]'
+            ? isCrystal
+              ? 'border-white/10 bg-gradient-to-b from-[#181C24] via-[#10131A] to-[#0A0C10] shadow-[0_16px_40px_rgba(0,0,0,0.5)]'
+              : 'border-white/10 bg-gradient-to-b from-[#111318] via-[#08090c] to-[#010203] shadow-[0_16px_40px_rgba(0,0,0,0.5)]'
+            : isCrystal
+              ? 'border-slate-300/80 bg-gradient-to-b from-white via-[#F8FAFC] to-[#EEF2F6] shadow-[0_4px_24px_rgba(0,0,0,0.04)]'
+              : 'border-slate-200/90 bg-gradient-to-b from-white via-slate-50/40 to-[#f6f8fc] shadow-[0_4px_24px_rgba(0,0,0,0.04)]'
         }`}>
           <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-white/70 dark:via-white/10 to-transparent" />
           <div className={`flex items-center justify-between border-b px-5 py-3 ${isDarkMode ? 'border-white/[0.07]' : 'border-slate-200'}`}>
             <div>
-              <div className="text-xs font-extrabold text-slate-900 dark:text-white">Delivery Challan & Dispatch Register</div>
+              <div className="text-xs font-extrabold text-slate-900 dark:text-white">Delivery Challan &amp; Dispatch Register</div>
               <div className="mt-0.5 text-[10px] text-slate-400">Goods delivery documentation, vehicle logs, and POD delivery receipts</div>
             </div>
             <span className={`rounded-lg border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-white/[0.08] bg-white/[0.04] text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>
@@ -796,15 +979,15 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                     >
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-3.5">
-                          <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-2xs border ${
+                          <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 border transition-all duration-300 group-hover:scale-105 group-hover:shadow-md ${
                             isDarkMode 
-                              ? 'bg-white/10 text-white border-white/15' 
-                              : 'bg-slate-100 text-slate-800 border-slate-200'
+                              ? 'bg-gradient-to-br from-white/[0.08] to-white/[0.02] border-white/10 text-white' 
+                              : 'bg-gradient-to-br from-slate-50 to-slate-100/80 border-slate-200/80 text-slate-800 shadow-xs'
                           }`}>
-                            <Truck className="w-5 h-5 stroke-[2]" />
+                            <Truck className="w-5 h-5 text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)] stroke-[2]" />
                           </div>
                           <div className="min-w-0">
-                            <div className="font-mono text-sm tracking-tight text-slate-900 dark:text-white font-black">
+                            <div className="font-mono text-sm tracking-tight text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)] font-black">
                               {disp.challanNo}
                             </div>
                             <div className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate mt-0.5">
@@ -871,11 +1054,11 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                             onClick={() => handleRowClick(disp)}
                             className={`h-8 px-3 py-1.5 rounded-xl border transition-all inline-flex items-center gap-1.5 text-xs font-bold active:scale-[0.96] cursor-pointer ${
                               isDarkMode 
-                                ? 'border-white/10 bg-black/60 text-slate-200 hover:bg-white/10' 
-                                : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                                ? 'border-white/10 bg-white/[0.06] text-slate-200 hover:bg-[var(--accent-primary)]/20 hover:border-[var(--accent-primary)]/50 hover:text-[var(--accent-text-dark)]' 
+                                : 'border-slate-200 bg-white text-slate-700 hover:bg-[var(--accent-primary)]/10 hover:border-[var(--accent-primary)]/60 hover:text-[var(--accent-primary)]'
                             }`}
                           >
-                            <Eye className="w-3.5 h-3.5 text-[#5B75F8] dark:text-[#7B92FF]" />
+                            <Eye className="w-3.5 h-3.5" />
                             <span>View</span>
                           </button>
                         </div>
@@ -915,7 +1098,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <span className="font-bold text-xs text-[#5B75F8] dark:text-[#7B92FF]">
+                      <span className="font-bold text-xs font-mono text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">
                         {disp.challanNo}
                       </span>
                       <h3 className={`text-sm font-bold mt-1 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
@@ -974,14 +1157,14 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
                       <button
                         type="button"
                         onClick={() => handleRowClick(disp)}
-                        className={`p-1.5 rounded-full border text-xs font-semibold transition-all cursor-pointer inline-flex items-center gap-1 ${
+                        className={`p-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 ${
                           isDarkMode 
-                            ? 'border-white/10 bg-black/60 text-slate-200 hover:bg-white/10' 
-                            : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                            ? 'border-white/10 bg-white/[0.06] text-slate-200 hover:bg-[var(--accent-primary)]/20 hover:border-[var(--accent-primary)]/50 hover:text-[var(--accent-text-dark)]' 
+                            : 'border-slate-200 bg-white text-slate-700 hover:bg-[var(--accent-primary)]/10 hover:border-[var(--accent-primary)]/60 hover:text-[var(--accent-primary)]'
                         }`}
                         title="View Delivery Challan"
                       >
-                        <Eye className="w-3.5 h-3.5 text-[#5B75F8] dark:text-[#7B92FF]" />
+                        <Eye className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>

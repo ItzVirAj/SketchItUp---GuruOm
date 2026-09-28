@@ -7,6 +7,7 @@ export type ConsoleView =
   | 'finished-goods'
   | 'plating-outwork'
   | 'reports'
+  | 'metrics'
   | 'qc'
   | 'pdi'
   | 'dispatch'

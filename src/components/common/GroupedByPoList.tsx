@@ -167,7 +167,7 @@ export function GroupedByPoList<T>({
                 : 'bg-slate-100/80 border-slate-200/60 text-slate-700'
             }`}
           >
-            <Package className="w-3.5 h-3.5 text-[#5B75F8] dark:text-[#7B92FF]" />
+            <Package className="w-3.5 h-3.5 text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]" />
             <span className="font-semibold tabular-nums text-slate-900 dark:text-white">
               {groups.length}
             </span>
@@ -298,7 +298,7 @@ export function GroupedByPoList<T>({
             if (bucket === 'PASS') {
               return isAllPassed
                 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]'
-                : 'bg-[#5B75F8] shadow-[0_0_8px_rgba(91,117,248,0.3)]';
+                : 'bg-[var(--accent-primary)] shadow-[0_0_8px_rgba(91,117,248,0.3)]';
             }
             if (bucket === 'PENDING') {
               return 'bg-slate-200 dark:bg-slate-700/60';
@@ -344,7 +344,7 @@ export function GroupedByPoList<T>({
                         : isAllPassed
                           ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                           : isInProgress
-                            ? 'bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF] border-blue-500/20'
+                            ? 'bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)] border-[var(--accent-primary)]/20'
                             : 'bg-slate-100/80 dark:bg-white/[0.04] text-slate-400 dark:text-slate-500 border-slate-200/80 dark:border-white/10'
                     }`}
                   >
@@ -360,7 +360,7 @@ export function GroupedByPoList<T>({
                   {/* PO Title & Chips */}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center flex-wrap gap-2">
-                      <span className="font-mono font-bold text-sm tracking-tight text-slate-900 dark:text-white group-hover/card:text-[#5B75F8] dark:group-hover/card:text-[#7B92FF] transition-colors truncate">
+                      <span className="font-mono font-bold text-sm tracking-tight text-slate-900 dark:text-white group-hover/card:text-[var(--accent-primary)] dark:group-hover/card:text-[var(--accent-text-dark)] transition-colors truncate">
                         {g.orderPo}
                       </span>
 
@@ -419,7 +419,7 @@ export function GroupedByPoList<T>({
                         isAllPassed
                           ? 'text-emerald-600 dark:text-emerald-400'
                           : isInProgress
-                            ? 'text-[#5B75F8] dark:text-[#7B92FF]'
+                            ? 'text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]'
                             : 'text-slate-400 dark:text-slate-500'
                       }`}
                     >
@@ -457,7 +457,7 @@ export function GroupedByPoList<T>({
                           isAllPassed
                             ? 'bg-emerald-500'
                             : isInProgress
-                              ? 'bg-[#5B75F8]'
+                              ? 'bg-[var(--accent-primary)]'
                               : 'bg-slate-300 dark:bg-slate-600'
                         }`}
                       />
@@ -466,7 +466,7 @@ export function GroupedByPoList<T>({
                           isAllPassed
                             ? 'text-emerald-600 dark:text-emerald-400'
                             : isInProgress
-                              ? 'text-[#5B75F8] dark:text-[#7B92FF]'
+                              ? 'text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]'
                               : 'text-slate-500 dark:text-slate-400'
                         }`}
                       >
@@ -519,7 +519,7 @@ export function GroupedByPoList<T>({
                   <div
                     className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all duration-300 shrink-0 ${
                       open
-                        ? 'bg-[#5B75F8] text-white border-[#5B75F8] shadow-xs'
+                        ? 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)] shadow-xs'
                         : isDarkMode
                           ? 'bg-white/[0.04] border-white/10 text-slate-400 group-hover/card:bg-white/[0.08] group-hover/card:text-white'
                           : 'bg-slate-100 border-slate-200 text-slate-500 group-hover/card:bg-slate-200 group-hover/card:text-slate-800'
@@ -589,7 +589,7 @@ export function GroupedByPoList<T>({
                             [g.key]: limit + rowsPerGroup
                           }))
                         }
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-[#5B75F8] dark:text-[#7B92FF] hover:bg-blue-500/10 transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)] hover:bg-[var(--accent-primary)]/10 transition-colors cursor-pointer"
                       >
                         <ChevronDown className="w-3.5 h-3.5" />
                         <span>
@@ -620,7 +620,7 @@ export function GroupedByPoList<T>({
                 : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300'
             }`}
           >
-            <ChevronDown className="w-4 h-4 text-[#5B75F8] dark:text-[#7B92FF]" />
+            <ChevronDown className="w-4 h-4 text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]" />
             <span>
               Show {Math.min(pageSize, sorted.length - groupLimit)} more POs ({sorted.length - groupLimit} remaining)
             </span>

@@ -1559,30 +1559,30 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 )}
 
                 <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-all ${isCancelled ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20' :
-                  isQcRejected ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20' :
-                    isQcHold || hasNcr ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
-                      order.status === 'DRAFT' || order.status === 'PO_RECEIVED' || order.status === 'SUBMITTED' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
-                        order.status === 'CONFIRMED' || order.status === 'APPROVED' ? 'bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF] border-blue-500/20' :
-                          order.status === 'MATERIAL_CHECKED' || order.status === 'MATERIAL_CHECK' || order.status === 'MATERIAL_READY' ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20' :
-                            order.status === 'IN_PRODUCTION' || order.status === 'JOB_RELEASED' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
-                              order.status === 'READY_FOR_QC' || order.status === 'MANUFACTURING_COMPLETED' || order.status === 'QC_INSPECTION' || order.status === 'QC' ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20' :
-                                order.status === 'READY_TO_DISPATCH' || order.status === 'READY_FOR_DISPATCH' || order.status === 'PDI_COMPLETE' ? 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20' :
-                                  order.status === 'PARTIALLY_DISPATCHED' || order.status === 'DISPATCHED' ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20' :
-                                    order.status === 'CLOSED' || order.status === 'COMPLETED' ? 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20' :
-                                      'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                    isQcRejected ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20' :
+                      isQcHold || hasNcr ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
+                        order.status === 'DRAFT' || order.status === 'PO_RECEIVED' || order.status === 'SUBMITTED' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
+                          order.status === 'CONFIRMED' || order.status === 'APPROVED' ? 'bg-blue-500/10 text-[#5B75F8] dark:text-[#7B92FF] border-blue-500/20' :
+                            order.status === 'MATERIAL_CHECKED' || order.status === 'MATERIAL_CHECK' || order.status === 'MATERIAL_READY' ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20' :
+                              order.status === 'IN_PRODUCTION' || order.status === 'JOB_RELEASED' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
+                                order.status === 'READY_FOR_QC' || order.status === 'MANUFACTURING_COMPLETED' || order.status === 'QC_INSPECTION' || order.status === 'QC' ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20' :
+                                  order.status === 'READY_TO_DISPATCH' || order.status === 'READY_FOR_DISPATCH' || order.status === 'PDI_COMPLETE' ? 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20' :
+                                    order.status === 'PARTIALLY_DISPATCHED' || order.status === 'DISPATCHED' ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20' :
+                                      order.status === 'CLOSED' || order.status === 'COMPLETED' ? 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20' :
+                                        'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                   }`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${isCancelled ? 'bg-rose-500' :
-                    isQcRejected ? 'bg-rose-500 animate-pulse' :
-                      isQcHold || hasNcr ? 'bg-amber-500 animate-pulse' :
-                        order.status === 'DRAFT' || order.status === 'PO_RECEIVED' || order.status === 'SUBMITTED' ? 'bg-amber-500 animate-pulse' :
-                          order.status === 'CONFIRMED' || order.status === 'APPROVED' ? 'bg-[#5B75F8]' :
-                            order.status === 'MATERIAL_CHECKED' || order.status === 'MATERIAL_CHECK' || order.status === 'MATERIAL_READY' ? 'bg-indigo-500' :
-                              order.status === 'IN_PRODUCTION' || order.status === 'JOB_RELEASED' ? 'bg-amber-500 animate-pulse' :
-                                order.status === 'READY_FOR_QC' || order.status === 'MANUFACTURING_COMPLETED' ? 'bg-purple-500 animate-pulse' :
-                                  order.status === 'QC_INSPECTION' || order.status === 'QC' ? 'bg-purple-500' :
-                                    order.status === 'READY_TO_DISPATCH' || order.status === 'READY_FOR_DISPATCH' || order.status === 'PDI_COMPLETE' ? 'bg-cyan-500' :
-                                      order.status === 'PARTIALLY_DISPATCHED' || order.status === 'DISPATCHED' ? 'bg-teal-500' :
-                                        order.status === 'CLOSED' || order.status === 'COMPLETED' ? 'bg-slate-400' : 'bg-emerald-500'
+                      isQcRejected ? 'bg-rose-500 animate-pulse' :
+                        isQcHold || hasNcr ? 'bg-amber-500 animate-pulse' :
+                          order.status === 'DRAFT' || order.status === 'PO_RECEIVED' || order.status === 'SUBMITTED' ? 'bg-amber-500 animate-pulse' :
+                            order.status === 'CONFIRMED' || order.status === 'APPROVED' ? 'bg-[#5B75F8]' :
+                              order.status === 'MATERIAL_CHECKED' || order.status === 'MATERIAL_CHECK' || order.status === 'MATERIAL_READY' ? 'bg-indigo-500' :
+                                order.status === 'IN_PRODUCTION' || order.status === 'JOB_RELEASED' ? 'bg-amber-500 animate-pulse' :
+                                  order.status === 'READY_FOR_QC' || order.status === 'MANUFACTURING_COMPLETED' ? 'bg-purple-500 animate-pulse' :
+                                    order.status === 'QC_INSPECTION' || order.status === 'QC' ? 'bg-purple-500' :
+                                      order.status === 'READY_TO_DISPATCH' || order.status === 'READY_FOR_DISPATCH' || order.status === 'PDI_COMPLETE' ? 'bg-cyan-500' :
+                                        order.status === 'PARTIALLY_DISPATCHED' || order.status === 'DISPATCHED' ? 'bg-teal-500' :
+                                          order.status === 'CLOSED' || order.status === 'COMPLETED' ? 'bg-slate-400' : 'bg-emerald-500'
                     }`} />
                   <span>
                     {isCancelled ? 'Order Cancelled' : isQcRejected ? 'QC Rejected' : (isQcHold || hasNcr) ? 'QC Hold / NCR' : (order.status || order.stage || 'DRAFT').replace(/_/g, ' ')}
@@ -1728,33 +1728,33 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 <div
                   key={st.name}
                   className={`relative flex-1 min-w-[125px] sm:min-w-[145px] px-3.5 pt-2.5 pb-3 rounded-[13px] border flex items-center gap-2.5 transition-all duration-200 select-none overflow-hidden ${isClosedState && isCurrent
-                    ? isDarkMode
-                      ? 'bg-[#18261e] text-white border-emerald-500/40 shadow-[0_4px_16px_rgba(0,0,0,0.45),0_0_0_1px_rgba(16,185,129,0.25)]'
-                      : 'bg-white text-slate-900 border-emerald-500/35 shadow-[0_4px_14px_rgba(16,185,129,0.12),0_1px_3px_rgba(0,0,0,0.06)]'
-                    : isCurrent
                       ? isDarkMode
-                        ? 'bg-[#25252a] text-white border-blue-500/40 shadow-[0_4px_16px_rgba(0,0,0,0.45),0_0_0_1px_rgba(59,130,246,0.25)]'
-                        : 'bg-white text-slate-900 border-blue-500/35 shadow-[0_4px_14px_rgba(59,130,246,0.12),0_1px_3px_rgba(0,0,0,0.06)]'
-                      : isCompleted
+                        ? 'bg-[#18261e] text-white border-emerald-500/40 shadow-[0_4px_16px_rgba(0,0,0,0.45),0_0_0_1px_rgba(16,185,129,0.25)]'
+                        : 'bg-white text-slate-900 border-emerald-500/35 shadow-[0_4px_14px_rgba(16,185,129,0.12),0_1px_3px_rgba(0,0,0,0.06)]'
+                      : isCurrent
                         ? isDarkMode
-                          ? 'bg-[#1a1a1d] text-slate-200 border-white/[0.07] hover:bg-[#202024] hover:border-white/[0.12] shadow-[0_2px_6px_rgba(0,0,0,0.2)]'
-                          : 'bg-white/95 text-slate-800 border-slate-200/80 hover:border-slate-300 shadow-[0_1px_3px_rgba(0,0,0,0.04)]'
-                        : isDarkMode
-                          ? 'bg-white/[0.025] text-slate-400 border-white/[0.04] hover:bg-white/[0.05] hover:border-white/[0.08]'
-                          : 'bg-white/60 text-slate-500 border-slate-200/50 hover:bg-white hover:border-slate-200/80'
+                          ? 'bg-[#25252a] text-white border-blue-500/40 shadow-[0_4px_16px_rgba(0,0,0,0.45),0_0_0_1px_rgba(59,130,246,0.25)]'
+                          : 'bg-white text-slate-900 border-blue-500/35 shadow-[0_4px_14px_rgba(59,130,246,0.12),0_1px_3px_rgba(0,0,0,0.06)]'
+                        : isCompleted
+                          ? isDarkMode
+                            ? 'bg-[#1a1a1d] text-slate-200 border-white/[0.07] hover:bg-[#202024] hover:border-white/[0.12] shadow-[0_2px_6px_rgba(0,0,0,0.2)]'
+                            : 'bg-white/95 text-slate-800 border-slate-200/80 hover:border-slate-300 shadow-[0_1px_3px_rgba(0,0,0,0.04)]'
+                          : isDarkMode
+                            ? 'bg-white/[0.025] text-slate-400 border-white/[0.04] hover:bg-white/[0.05] hover:border-white/[0.08]'
+                            : 'bg-white/60 text-slate-500 border-slate-200/50 hover:bg-white hover:border-slate-200/80'
                     }`}
                 >
                   <div className={`w-7 h-7 rounded-[9px] flex items-center justify-center shrink-0 text-xs font-semibold transition-all ${isClosedState && isCurrent
-                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm shadow-emerald-500/35'
-                    : isCurrent
-                      ? 'bg-gradient-to-br from-[#4d8eff] to-[#2563eb] text-white shadow-sm shadow-blue-500/35'
-                      : isCompleted
-                        ? isDarkMode
-                          ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25'
-                          : 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
-                        : isDarkMode
-                          ? 'bg-white/[0.06] text-slate-400 border border-white/[0.06]'
-                          : 'bg-slate-200/70 text-slate-500 border border-slate-300/50'
+                      ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm shadow-emerald-500/35'
+                      : isCurrent
+                        ? 'bg-gradient-to-br from-[#4d8eff] to-[#2563eb] text-white shadow-sm shadow-blue-500/35'
+                        : isCompleted
+                          ? isDarkMode
+                            ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25'
+                            : 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
+                          : isDarkMode
+                            ? 'bg-white/[0.06] text-slate-400 border border-white/[0.06]'
+                            : 'bg-slate-200/70 text-slate-500 border border-slate-300/50'
                     }`}>
                     {isFinished ? (
                       <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
@@ -1779,10 +1779,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                       <span className="truncate">{st.name}</span>
                     </div>
                     <div className={`text-[10px] truncate ${isClosedState && isCurrent
-                      ? 'text-emerald-600 dark:text-emerald-400 font-medium'
-                      : isCurrent
-                        ? 'text-blue-600 dark:text-blue-400 font-medium'
-                        : 'text-slate-400 dark:text-slate-500'
+                        ? 'text-emerald-600 dark:text-emerald-400 font-medium'
+                        : isCurrent
+                          ? 'text-blue-600 dark:text-blue-400 font-medium'
+                          : 'text-slate-400 dark:text-slate-500'
                       }`}>
                       {st.subtitle}
                     </div>
@@ -2667,10 +2667,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Inventory Gate</span>
                   <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${isMaterialShort
-                    ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
-                    : isMaterialReady
-                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                      : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                      ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                      : isMaterialReady
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                        : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
                     }`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${isMaterialShort ? 'bg-rose-500' : isMaterialReady ? 'bg-emerald-500' : 'bg-amber-500'}`} />
                     {isMaterialShort ? 'Shortage' : isMaterialReady ? 'Verified' : 'Checking'}
@@ -2713,10 +2713,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Production</span>
                   <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${totalJc === 0
-                    ? 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20'
-                    : isComplete
-                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                      : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+                      ? 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20'
+                      : isComplete
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                        : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
                     }`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${totalJc === 0 ? 'bg-slate-400' : isComplete ? 'bg-emerald-500' : 'bg-blue-500'}`} />
                     {totalJc === 0 ? 'Not Created' : `${completedJc}/${totalJc} Done`}
@@ -2765,12 +2765,12 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Quality Gate</span>
                   <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${isQcRejected
-                    ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
-                    : (isQcHold || hasNcr)
-                      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
-                      : allQcPassed
-                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                        : 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
+                      ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                      : (isQcHold || hasNcr)
+                        ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                        : allQcPassed
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                          : 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
                     }`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${isQcRejected ? 'bg-rose-500' : (isQcHold || hasNcr) ? 'bg-amber-500' : allQcPassed ? 'bg-emerald-500' : 'bg-purple-500'
                       }`} />
@@ -2812,8 +2812,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Outbound</span>
                   <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${isDispatched
-                    ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
-                    : 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20'
+                      ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
+                      : 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20'
                     }`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${isDispatched ? 'bg-purple-500' : 'bg-slate-400'}`} />
                     {isDispatched ? 'Dispatched' : 'Pending'}
@@ -2856,8 +2856,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Consignee Sign</span>
                   <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${order.podReceivedDate
-                    ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20'
-                    : 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20'
+                      ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20'
+                      : 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20'
                     }`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${order.podReceivedDate ? 'bg-teal-500' : 'bg-slate-400'}`} />
                     {order.podReceivedDate ? 'Signed ✓' : 'Awaiting'}
@@ -2896,10 +2896,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Settlement</span>
                   <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${invPaid
-                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                    : order.paymentStatus === 'PARTIAL'
-                      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
-                      : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                      : order.paymentStatus === 'PARTIAL'
+                        ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                        : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
                     }`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${invPaid ? 'bg-emerald-500' : order.paymentStatus === 'PARTIAL' ? 'bg-amber-500' : 'bg-rose-500'}`} />
                     {invPaid ? 'Fully Paid' : order.paymentStatus === 'PARTIAL' ? 'Partial' : 'Unpaid'}
@@ -2963,8 +2963,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
         return (
           <div className={`p-4 sm:p-5 rounded-[26px] border transition-all ${isDarkMode
-            ? 'bg-[#161618]/95 border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.36)] backdrop-blur-2xl'
-            : 'bg-white/95 border-slate-200/80 shadow-[0_4px_24px_rgba(0,0,0,0.04)] backdrop-blur-2xl'
+              ? 'bg-[#161618]/95 border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.36)] backdrop-blur-2xl'
+              : 'bg-white/95 border-slate-200/80 shadow-[0_4px_24px_rgba(0,0,0,0.04)] backdrop-blur-2xl'
             }`}>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2.5">
@@ -2997,8 +2997,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     key={card.key}
                     onClick={() => handleOpenStageDetailModal(card.key as StageKey)}
                     className={`min-w-[220px] sm:min-w-[240px] flex-1 max-w-[320px] p-4 rounded-[20px] border transition-all duration-200 shrink-0 cursor-pointer group hover:-translate-y-0.5 active:scale-[0.99] ${isDarkMode
-                      ? `bg-[#202024] hover:bg-[#25252a] border-white/[0.08] shadow-[0_4px_20px_rgba(0,0,0,0.35)] ${colors.border}`
-                      : `bg-white hover:bg-slate-50/90 border-slate-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] ${colors.border}`
+                        ? `bg-[#202024] hover:bg-[#25252a] border-white/[0.08] shadow-[0_4px_20px_rgba(0,0,0,0.35)] ${colors.border}`
+                        : `bg-white hover:bg-slate-50/90 border-slate-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] ${colors.border}`
                       }`}
                     style={{ scrollSnapAlign: 'start' }}
                   >
@@ -3023,8 +3023,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                           handleOpenStageDetailModal(card.key as StageKey);
                         }}
                         className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer group-hover:opacity-100 opacity-60 shrink-0 ${isDarkMode
-                          ? 'bg-white/[0.08] hover:bg-white/[0.16] text-slate-300 hover:text-white border border-white/[0.06]'
-                          : 'bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 border border-slate-200/60'
+                            ? 'bg-white/[0.08] hover:bg-white/[0.16] text-slate-300 hover:text-white border border-white/[0.06]'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 border border-slate-200/60'
                           }`}
                         title={`Expand ${card.title} realtime detailed view`}
                         aria-label={`Expand ${card.title}`}
@@ -3154,8 +3154,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
               type="button"
               onClick={() => uploadPoModal.open()}
               className={`h-8 sm:h-8.5 px-3.5 rounded-full border text-xs font-sans font-medium transition-all cursor-pointer flex items-center gap-1.5 shrink-0 active:scale-[0.97] ${isDarkMode
-                ? 'bg-white/[0.08] hover:bg-white/[0.15] text-white border-white/[0.12] shadow-sm'
-                : 'bg-slate-900 hover:bg-slate-800 text-white border-transparent shadow-sm'
+                  ? 'bg-white/[0.08] hover:bg-white/[0.15] text-white border-white/[0.12] shadow-sm'
+                  : 'bg-slate-900 hover:bg-slate-800 text-white border-transparent shadow-sm'
                 }`}
             >
               <Upload className="w-3.5 h-3.5" />
@@ -3356,8 +3356,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
       {uploadPoModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md font-sans animate-fade-in">
           <div className={`relative w-full max-w-md rounded-[24px] border p-6 space-y-5 font-sans text-xs z-10 shadow-2xl transition-all ${isDarkMode
-            ? 'bg-[#18181b]/95 border-white/[0.1] text-white shadow-[0_16px_48px_rgba(0,0,0,0.5)]'
-            : 'bg-white border-slate-200/90 text-slate-900 shadow-[0_16px_48px_rgba(0,0,0,0.12)]'
+              ? 'bg-[#18181b]/95 border-white/[0.1] text-white shadow-[0_16px_48px_rgba(0,0,0,0.5)]'
+              : 'bg-white border-slate-200/90 text-slate-900 shadow-[0_16px_48px_rgba(0,0,0,0.12)]'
             }`}>
             <div className={`flex items-center justify-between pb-3.5 border-b ${isDarkMode ? 'border-white/[0.08]' : 'border-slate-100'}`}>
               <div className="flex items-center gap-2.5">
@@ -3373,8 +3373,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 type="button"
                 onClick={() => uploadPoModal.close()}
                 className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ${isDarkMode
-                  ? 'bg-white/[0.06] hover:bg-white/[0.12] text-slate-400 hover:text-white'
-                  : 'bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900'
+                    ? 'bg-white/[0.06] hover:bg-white/[0.12] text-slate-400 hover:text-white'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900'
                   }`}
                 title="Close"
               >
@@ -3390,8 +3390,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 onChange={handleFileUpload}
                 accept=".pdf,.png,.jpg,.jpeg"
                 className={`w-full p-3 border rounded-xl text-xs cursor-pointer transition-all ${isDarkMode
-                  ? 'border-white/[0.1] bg-white/[0.04] text-slate-200 hover:border-white/[0.2] file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-white/[0.1] file:text-white hover:file:bg-white/[0.2]'
-                  : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-slate-300 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-slate-200 file:text-slate-800 hover:file:bg-slate-300'
+                    ? 'border-white/[0.1] bg-white/[0.04] text-slate-200 hover:border-white/[0.2] file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-white/[0.1] file:text-white hover:file:bg-white/[0.2]'
+                    : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-slate-300 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-slate-200 file:text-slate-800 hover:file:bg-slate-300'
                   }`}
               />
             </div>
@@ -3400,8 +3400,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 type="button"
                 onClick={() => uploadPoModal.close()}
                 className={`px-4 py-2 rounded-full border text-xs font-medium transition-all cursor-pointer ${isDarkMode
-                  ? 'bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 border-white/[0.08]'
-                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+                    ? 'bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 border-white/[0.08]'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
                   }`}
               >
                 Close
@@ -4480,8 +4480,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           ];
 
           const modalInputClass = `h-11 w-full rounded-xl border px-3.5 text-xs font-medium outline-none transition-[border-color,box-shadow,background-color] duration-150 focus:border-[var(--accent-primary)] focus:ring-4 focus:ring-[var(--accent-primary)]/15 ${isDarkMode
-            ? 'border-white/10 bg-black/50 text-white placeholder:text-slate-500 hover:border-white/20 focus:bg-black/70'
-            : 'border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-400 focus:bg-white shadow-2xs'
+              ? 'border-white/10 bg-black/50 text-white placeholder:text-slate-500 hover:border-white/20 focus:bg-black/70'
+              : 'border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-400 focus:bg-white shadow-2xs'
             }`;
 
           return (
@@ -4519,8 +4519,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
               {/* 1. Commercial Summary Apple Bento Card */}
               <div className={`relative overflow-hidden rounded-2xl p-4 sm:p-5 border transition-all ${isDarkMode
-                ? 'bg-gradient-to-br from-white/[0.05] via-white/[0.02] to-transparent border-white/[0.12] shadow-inner'
-                : 'bg-gradient-to-br from-slate-50 via-white to-slate-100/70 border-slate-200/90 shadow-2xs'
+                  ? 'bg-gradient-to-br from-white/[0.05] via-white/[0.02] to-transparent border-white/[0.12] shadow-inner'
+                  : 'bg-gradient-to-br from-slate-50 via-white to-slate-100/70 border-slate-200/90 shadow-2xs'
                 }`}>
                 {/* Ambient radial lighting glow */}
                 <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full blur-3xl pointer-events-none bg-[var(--accent-primary)]/10" />
@@ -4533,10 +4533,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     PO: <strong>{order.poNo || 'Direct'}</strong>
                   </span>
                   <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${currentPercent === 100
-                    ? isDarkMode ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300' : 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                    : currentPercent > 0
-                      ? isDarkMode ? 'bg-amber-500/15 border-amber-500/30 text-amber-300' : 'bg-amber-50 border-amber-200 text-amber-700'
-                      : isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-500'
+                      ? isDarkMode ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300' : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                      : currentPercent > 0
+                        ? isDarkMode ? 'bg-amber-500/15 border-amber-500/30 text-amber-300' : 'bg-amber-50 border-amber-200 text-amber-700'
+                        : isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-500'
                     }`}>
                     {currentPercent === 100 ? 'Fully Cleared' : currentPercent > 0 ? `${currentPercent}% Realized` : 'Uncollected'}
                   </span>
@@ -4611,10 +4611,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                       type="button"
                       onClick={() => setPaymentAmount(remainingOutstanding)}
                       className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer active:scale-95 ${paymentAmount === remainingOutstanding
-                        ? 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)] shadow-2xs'
-                        : isDarkMode
-                          ? 'bg-white/[0.05] text-slate-300 border-white/10 hover:bg-white/10'
-                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100 shadow-2xs'
+                          ? 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)] shadow-2xs'
+                          : isDarkMode
+                            ? 'bg-white/[0.05] text-slate-300 border-white/10 hover:bg-white/10'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100 shadow-2xs'
                         }`}
                     >
                       ⚡ Full (₹{remainingOutstanding.toLocaleString('en-IN')})
@@ -4624,10 +4624,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                         type="button"
                         onClick={() => setPaymentAmount(Math.round(remainingOutstanding * 0.75))}
                         className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer active:scale-95 ${paymentAmount === Math.round(remainingOutstanding * 0.75)
-                          ? 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)] shadow-2xs'
-                          : isDarkMode
-                            ? 'bg-white/[0.05] text-slate-300 border-white/10 hover:bg-white/10'
-                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100 shadow-2xs'
+                            ? 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)] shadow-2xs'
+                            : isDarkMode
+                              ? 'bg-white/[0.05] text-slate-300 border-white/10 hover:bg-white/10'
+                              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100 shadow-2xs'
                           }`}
                       >
                         75%
@@ -4638,10 +4638,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                         type="button"
                         onClick={() => setPaymentAmount(Math.round(remainingOutstanding / 2))}
                         className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer active:scale-95 ${paymentAmount === Math.round(remainingOutstanding / 2)
-                          ? 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)] shadow-2xs'
-                          : isDarkMode
-                            ? 'bg-white/[0.05] text-slate-300 border-white/10 hover:bg-white/10'
-                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100 shadow-2xs'
+                            ? 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)] shadow-2xs'
+                            : isDarkMode
+                              ? 'bg-white/[0.05] text-slate-300 border-white/10 hover:bg-white/10'
+                              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100 shadow-2xs'
                           }`}
                       >
                         50% Partial
@@ -4652,10 +4652,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                         type="button"
                         onClick={() => setPaymentAmount(Math.round(remainingOutstanding * 0.25))}
                         className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer active:scale-95 ${paymentAmount === Math.round(remainingOutstanding * 0.25)
-                          ? 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)] shadow-2xs'
-                          : isDarkMode
-                            ? 'bg-white/[0.05] text-slate-300 border-white/10 hover:bg-white/10'
-                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100 shadow-2xs'
+                            ? 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)] shadow-2xs'
+                            : isDarkMode
+                              ? 'bg-white/[0.05] text-slate-300 border-white/10 hover:bg-white/10'
+                              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100 shadow-2xs'
                           }`}
                       >
                         25%
@@ -4676,8 +4676,8 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                     value={paymentAmount || ''}
                     onChange={(e) => setPaymentAmount(parseFloat(e.target.value) || 0)}
                     className={`w-full pl-10 pr-4 py-3 rounded-xl border font-mono font-black text-xl sm:text-2xl outline-none transition-all ${isDarkMode
-                      ? 'bg-black/50 border-white/[0.12] text-emerald-400 focus:border-[var(--accent-primary)] focus:ring-4 focus:ring-[var(--accent-primary)]/15'
-                      : 'bg-white border-slate-300 text-emerald-600 focus:border-[var(--accent-primary)] focus:ring-4 focus:ring-[var(--accent-primary)]/15 shadow-2xs'
+                        ? 'bg-black/50 border-white/[0.12] text-emerald-400 focus:border-[var(--accent-primary)] focus:ring-4 focus:ring-[var(--accent-primary)]/15'
+                        : 'bg-white border-slate-300 text-emerald-600 focus:border-[var(--accent-primary)] focus:ring-4 focus:ring-[var(--accent-primary)]/15 shadow-2xs'
                       }`}
                     placeholder="0.00"
                     required
@@ -4711,21 +4711,21 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                         type="button"
                         onClick={() => setPaymentMode(mode.id)}
                         className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer relative active:scale-[0.98] ${isSelected
-                          ? isDarkMode
-                            ? 'bg-[var(--accent-primary)]/15 border-[var(--accent-primary)] text-white ring-1 ring-[var(--accent-primary)]/30 shadow-[0_4px_16px_var(--accent-shadow)]'
-                            : 'bg-[var(--accent-primary)]/10 border-[var(--accent-primary)] text-slate-900 ring-1 ring-[var(--accent-primary)]/30 shadow-2xs'
-                          : isDarkMode
-                            ? 'bg-white/[0.02] border-white/[0.08] hover:border-white/20 text-slate-300 hover:bg-white/[0.04]'
-                            : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700 hover:bg-slate-50 shadow-2xs'
+                            ? isDarkMode
+                              ? 'bg-[var(--accent-primary)]/15 border-[var(--accent-primary)] text-white ring-1 ring-[var(--accent-primary)]/30 shadow-[0_4px_16px_var(--accent-shadow)]'
+                              : 'bg-[var(--accent-primary)]/10 border-[var(--accent-primary)] text-slate-900 ring-1 ring-[var(--accent-primary)]/30 shadow-2xs'
+                            : isDarkMode
+                              ? 'bg-white/[0.02] border-white/[0.08] hover:border-white/20 text-slate-300 hover:bg-white/[0.04]'
+                              : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700 hover:bg-slate-50 shadow-2xs'
                           }`}
                       >
                         <div className="flex items-center justify-between gap-1.5">
                           <div className="flex items-center gap-2 min-w-0">
                             <div className={`p-1.5 rounded-lg border shrink-0 ${isSelected
-                              ? 'bg-[var(--accent-primary)] text-white border-transparent'
-                              : isDarkMode
-                                ? 'bg-white/5 border-white/10 text-slate-400'
-                                : 'bg-slate-100 border-slate-200 text-slate-600'
+                                ? 'bg-[var(--accent-primary)] text-white border-transparent'
+                                : isDarkMode
+                                  ? 'bg-white/5 border-white/10 text-slate-400'
+                                  : 'bg-slate-100 border-slate-200 text-slate-600'
                               }`}>
                               <ModeIcon className="w-3.5 h-3.5" />
                             </div>

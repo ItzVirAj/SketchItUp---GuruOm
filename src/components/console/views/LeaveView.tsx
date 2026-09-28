@@ -253,21 +253,25 @@ export const LeaveView: React.FC<LeaveViewProps> = ({
       </div>
 
       {/* ========================================================================= */}
-      {/* ── APPLE SEGMENTED FILTER BAR ──                                        */}
+      {/* ── SEGMENTED FILTER BAR (Inventory-aligned) ──                           */}
       {/* ========================================================================= */}
-      <div className={`p-2.5 sm:p-3 rounded-3xl border transition-ui flex flex-col md:flex-row md:items-center justify-between gap-3 ${cardBase}`}>
+      <div className={`p-2 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-3 ${
+        isDarkMode
+          ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204]'
+          : 'border-slate-200 bg-white shadow-xs'
+      }`}>
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-none w-full md:w-auto">
           {/* Status Tabs */}
           <div
-            className={`p-1 rounded-2xl border flex items-center shrink-0 ${
-              isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-100 border-slate-200'
+            className={`inline-flex items-center p-1 rounded-xl border text-xs overflow-x-auto max-w-full shrink-0 ${
+              isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200/80 bg-slate-200/50 shadow-inner'
             }`}
           >
             {[
-              { id: 'ALL', label: 'All' },
-              { id: 'PENDING', label: `Pending (${pendingCount})` },
-              { id: 'APPROVED', label: 'Approved' },
-              { id: 'REJECTED', label: 'Declined' }
+              { id: 'ALL', label: 'All', count: leaveRequests.length },
+              { id: 'PENDING', label: 'Pending', count: pendingCount },
+              { id: 'APPROVED', label: 'Approved', count: approvedCount },
+              { id: 'REJECTED', label: 'Declined', count: rejectedCount }
             ].map((tab) => {
               const isActive = statusFilter === tab.id;
               return (
@@ -275,15 +279,22 @@ export const LeaveView: React.FC<LeaveViewProps> = ({
                   key={tab.id}
                   type="button"
                   onClick={() => setStatusFilter(tab.id as typeof statusFilter)}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-ui cursor-pointer whitespace-nowrap ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                     isActive
-                      ? 'bg-[var(--accent-primary)] text-white shadow-sm'
-                      : isDarkMode
-                        ? 'text-slate-400 hover:text-white'
-                        : 'text-slate-600 hover:text-slate-900'
+                      ? isDarkMode
+                        ? 'bg-white/15 text-white shadow-xs border border-white/10'
+                        : 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  {tab.label}
+                  <span>{tab.label}</span>
+                  <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
+                    isActive
+                      ? isDarkMode ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-800'
+                      : isDarkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-300/60 text-slate-600'
+                  }`}>
+                    {tab.count}
+                  </span>
                 </button>
               );
             })}
@@ -292,8 +303,8 @@ export const LeaveView: React.FC<LeaveViewProps> = ({
           {/* Scope filter if manager */}
           {canViewAllLeave && (
             <div
-              className={`p-1 rounded-2xl border flex items-center shrink-0 ${
-                isDarkMode ? 'bg-black/40 border-white/10' : 'bg-slate-100 border-slate-200'
+              className={`inline-flex items-center p-1 rounded-xl border text-xs overflow-x-auto shrink-0 ${
+                isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200/80 bg-slate-200/50 shadow-inner'
               }`}
             >
               {[
@@ -306,12 +317,12 @@ export const LeaveView: React.FC<LeaveViewProps> = ({
                     key={tab.id}
                     type="button"
                     onClick={() => setScopeFilter(tab.id as typeof scopeFilter)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-mono font-semibold transition-ui cursor-pointer whitespace-nowrap ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                       isActive
-                        ? 'bg-[var(--accent-primary)] text-white shadow-sm'
-                        : isDarkMode
-                          ? 'text-slate-400 hover:text-white'
-                          : 'text-slate-600 hover:text-slate-900'
+                        ? isDarkMode
+                          ? 'bg-white/15 text-white shadow-xs border border-white/10'
+                          : 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     {tab.label}

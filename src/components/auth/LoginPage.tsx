@@ -662,7 +662,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   };
 
   return (
-    <section className="min-h-screen bg-white p-3 text-black antialiased [font-synthesis:none] dark:bg-[#050505] dark:text-white">
+    <section className="min-h-screen bg-[#E3E3E3] p-3 text-black antialiased [font-synthesis:none] dark:bg-[#050505] dark:text-white">
       <div className="grid min-h-[calc(100vh-1.5rem)] gap-6 lg:grid-cols-[0.94fr_1.06fr]">
         {/* Left Side: Authentication Form */}
         <div className="flex min-h-[760px] items-start rounded-md border border-black/20 bg-white px-6 py-12 sm:px-10 dark:border-white/10 dark:bg-[#0a0a0a] lg:min-h-0 lg:px-14 lg:py-16 xl:px-20">

@@ -21,6 +21,7 @@ import {
   ArrowUpRight
 } from 'lucide-react';
 import { PendingApproval, CustomerOrder, ConsoleUser, SystemUser, UserRole } from '../../../types/console';
+import { useAccentTheme } from '../../../context/AccentThemeContext';
 
 interface ApprovalsViewProps {
   approvals: PendingApproval[];
@@ -45,6 +46,7 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
   currentUser,
   currentRole
 }) => {
+  const { accent, isGreen, isBlue, isCrystal } = useAccentTheme();
   const [filterType, setFilterType] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
@@ -286,126 +288,297 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
     <div className="space-y-4 sm:space-y-6 font-sans w-full max-w-full min-w-0 pb-10">
       
       {/* ========================================================================= */}
-      {/* ── TOP HEADER & INTEGRATED EXECUTIVE DESK BANNER ──                       */}
+      {/* ── MOBILE VIEW (< md): Header + 2x2 Matrix ──                            */}
       {/* ========================================================================= */}
-      <section className={`overflow-hidden rounded-2xl border transition-all ${
-        isDarkMode
-          ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]'
-          : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
-      }`}>
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 p-6 sm:p-7">
-          <div className="min-w-0 space-y-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wide ${
-                isDarkMode ? 'bg-white/10 border border-white/15 text-white' : 'bg-white/20 border border-white/30 backdrop-blur-md text-white shadow-xs'
-              }`}>
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Executive Governance Desk</span>
-              </span>
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
-                isDarkMode ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-white/20 text-white border border-white/30 backdrop-blur-md'
-              }`}>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                <span>Stage 1 Gated Gatekeeper</span>
+      <div className="block md:hidden space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                Governance Desk
               </span>
             </div>
-            
-            <h1 className="text-xl sm:text-2xl md:text-[26px] font-black tracking-tight text-white">
-              Management Approvals & Authorization Queue
+            <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+              Approvals ({totalPendingCount})
             </h1>
-            
-            <p className={`text-xs leading-relaxed max-w-2xl font-normal mt-1 ${
-              isDarkMode ? 'text-white/60' : 'text-blue-100/90'
-            }`}>
-              Multi-level commercial governance, credit authorization, high-value procurement sign-offs, discount overrides, and Stage 1 customer order releases.
+          </div>
+          <div className={`px-2.5 py-1 rounded-full border flex items-center gap-1.5 font-mono text-[10px] ${
+            isDarkMode
+              ? 'border-white/15 bg-white/10 text-white'
+              : isCrystal
+                ? 'border-slate-300 bg-white text-slate-800 shadow-xs'
+                : 'border-white/30 bg-white/20 text-white'
+          }`}>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="font-bold">{isAuthorizedSignatory ? 'Signatory' : 'View Only'}</span>
+          </div>
+        </div>
+
+        {/* 2x2 Telemetry Matrix */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className={`p-3 rounded-2xl border transition-all ${
+            isDarkMode
+              ? isCrystal ? 'border-white/10 bg-white/[0.04]' : isGreen ? 'border-emerald-500/15 bg-emerald-950/20' : 'border-blue-500/15 bg-blue-950/20'
+              : isCrystal ? 'border-slate-200 bg-white shadow-xs' : isGreen ? 'border-emerald-100 bg-emerald-50/50' : 'border-blue-100 bg-blue-50/50'
+          }`}>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--accent-primary)] text-white shadow-xs">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Pending</span>
+            </div>
+            <p className="text-lg font-black font-mono text-slate-900 dark:text-white tabular-nums">
+              {totalPendingCount}
             </p>
           </div>
 
-          {/* Signatory Authorization Lozenge */}
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            <div className={`p-3 px-4 rounded-full border flex items-center gap-2.5 font-mono text-xs shadow-inner ${
-              isDarkMode
-                ? 'border-white/15 bg-white/10 text-white'
-                : 'border-white/30 bg-white/20 text-white backdrop-blur-md shadow-xs'
-            }`}>
-              <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-              <div>
-                <span className="font-bold block text-xs leading-tight text-white">
-                  {isAuthorizedSignatory ? 'Authorized Signatory' : 'View Only Mode'}
+          <div className={`p-3 rounded-2xl border transition-all ${
+            isDarkMode
+              ? isCrystal ? 'border-white/10 bg-white/[0.04]' : isGreen ? 'border-emerald-500/15 bg-emerald-950/20' : 'border-blue-500/15 bg-blue-950/20'
+              : isCrystal ? 'border-slate-200 bg-white shadow-xs' : isGreen ? 'border-emerald-100 bg-emerald-50/50' : 'border-blue-100 bg-blue-50/50'
+          }`}>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-xs">
+                <DollarSign className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Gated Value</span>
+            </div>
+            <p className="text-lg font-black font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">
+              ₹{totalGatedOrderValue >= 100000 ? `${(totalGatedOrderValue / 100000).toFixed(1)}L` : totalGatedOrderValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+            </p>
+          </div>
+
+          <div className={`p-3 rounded-2xl border transition-all ${
+            isDarkMode
+              ? isCrystal ? 'border-white/10 bg-white/[0.04]' : isGreen ? 'border-emerald-500/15 bg-emerald-950/20' : 'border-blue-500/15 bg-blue-950/20'
+              : isCrystal ? 'border-slate-200 bg-white shadow-xs' : isGreen ? 'border-emerald-100 bg-emerald-50/50' : 'border-blue-100 bg-blue-50/50'
+          }`}>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-600 text-white shadow-xs">
+                <ShieldCheck className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">High POs</span>
+            </div>
+            <p className="text-lg font-black font-mono text-purple-600 dark:text-purple-400 tabular-nums">
+              {highValuePOCount}
+            </p>
+          </div>
+
+          <div className={`p-3 rounded-2xl border transition-all ${
+            isDarkMode
+              ? isCrystal ? 'border-white/10 bg-white/[0.04]' : isGreen ? 'border-emerald-500/15 bg-emerald-950/20' : 'border-blue-500/15 bg-blue-950/20'
+              : isCrystal ? 'border-slate-200 bg-white shadow-xs' : isGreen ? 'border-emerald-100 bg-emerald-50/50' : 'border-blue-100 bg-blue-50/50'
+          }`}>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500 text-white shadow-xs">
+                <Percent className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Overrides</span>
+            </div>
+            <p className="text-lg font-black font-mono text-amber-500 tabular-nums">
+              {overridesCount}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* ── DESKTOP VIEW (hidden md:block): Executive Hero Banner ──               */}
+      {/* ========================================================================= */}
+      <section className={`hidden md:block relative overflow-hidden rounded-2xl border transition-all duration-300 ${
+        isDarkMode
+          ? isCrystal
+            ? 'border-white/10 bg-gradient-to-b from-[#181C24] via-[#10131A] to-[#0A0C10] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6)]'
+            : isGreen
+              ? 'border-emerald-500/20 bg-gradient-to-b from-[#0D241B] via-[#081711] to-[#030B07] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(16,185,129,0.12)]'
+              : 'border-blue-500/20 bg-gradient-to-b from-[#0a1836] via-[#071126] to-[#030712] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(21,93,252,0.15)]'
+          : isCrystal
+            ? 'border-slate-300/80 bg-gradient-to-b from-white via-[#F8FAFC] to-[#EEF2F6] text-slate-950 shadow-[0_16px_40px_rgba(0,0,0,0.06),inset_0_1px_0_0_rgba(255,255,255,0.95)]'
+            : isGreen
+              ? 'border-emerald-600/30 bg-gradient-to-b from-[#0A7E58] via-[#086B4A] to-[#044F36] text-white shadow-[0_16px_40px_rgba(10,126,88,0.22)]'
+              : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
+      }`}>
+        {/* Subtle Drafting Grid Pattern */}
+        {!isDarkMode && isCrystal && (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 -z-10 bg-grid-pattern opacity-40 [mask-image:linear-gradient(to_bottom,black,transparent_72%)] [-webkit-mask-image:linear-gradient(to_bottom,black,transparent_72%)]"
+          />
+        )}
+
+        <div className="p-6 lg:p-8">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold tracking-wide backdrop-blur-md border shadow-xs transition-colors">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className={
+                  !isDarkMode && isCrystal ? 'text-slate-600' : 'text-white/90'
+                }>
+                  Finance Governance • Executive Authorization Queue
                 </span>
-                <span className={`text-[10px] uppercase tracking-wider block font-semibold ${
-                  isDarkMode ? 'text-white/50' : 'text-blue-100/80'
+                <span className="text-slate-400 mx-1">•</span>
+                <span className={!isDarkMode && isCrystal ? 'text-emerald-700 font-medium' : 'text-emerald-300 font-medium'}>
+                  Stage 1 Gated Gatekeeper
+                </span>
+              </div>
+              <h1 className={`text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight flex items-center gap-3 ${
+                !isDarkMode && isCrystal ? 'text-slate-900' : 'text-white'
+              }`}>
+                <div className={`flex h-10 w-10 items-center justify-center rounded-2xl shadow-inner ${
+                  !isDarkMode && isCrystal
+                    ? 'bg-slate-100 border border-slate-200 text-slate-800'
+                    : 'bg-white/15 backdrop-blur-md border border-white/20 text-white'
                 }`}>
-                  Server Admin • Owner • Admin • HR
-                </span>
+                  <ShieldCheck className="h-5 w-5" />
+                </div>
+                Management Approvals & Authorization Queue
+              </h1>
+              <p className={`text-xs sm:text-sm max-w-2xl font-normal leading-relaxed ${
+                !isDarkMode && isCrystal ? 'text-slate-600' : isDarkMode ? 'text-white/60' : 'text-white/80'
+              }`}>
+                Multi-level commercial governance, credit authorization, high-value procurement sign-offs, discount overrides, and Stage 1 customer order releases.
+              </p>
+            </div>
+
+            {/* Signatory Authorization Lozenge */}
+            <div className="flex flex-wrap items-center gap-2.5 shrink-0 self-start lg:self-center">
+              <div className={`p-3 px-4 rounded-full border flex items-center gap-2.5 font-mono text-xs shadow-inner backdrop-blur-md ${
+                !isDarkMode && isCrystal
+                  ? 'border-slate-300/80 bg-white/80 text-slate-900 shadow-xs'
+                  : isDarkMode
+                    ? 'border-white/15 bg-white/10 text-white'
+                    : 'border-white/30 bg-white/20 text-white shadow-xs'
+              }`}>
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                <div>
+                  <span className={`font-bold block text-xs leading-tight ${!isDarkMode && isCrystal ? 'text-slate-900' : 'text-white'}`}>
+                    {isAuthorizedSignatory ? 'Authorized Signatory' : 'View Only Mode'}
+                  </span>
+                  <span className={`text-[10px] uppercase tracking-wider block font-semibold ${
+                    !isDarkMode && isCrystal ? 'text-slate-500' : isDarkMode ? 'text-white/50' : 'text-blue-100/80'
+                  }`}>
+                    Server Admin • Owner • Admin • HR
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Integrated 4-Column Apple Inset Metric Strip */}
-        <div className={`grid grid-cols-2 md:grid-cols-4 border-t divide-y sm:divide-y-0 sm:divide-x ${
+        {/* Integrated 4-Column Apple Metric Strip */}
+        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t ${
           isDarkMode
-            ? 'border-white/10 bg-gradient-to-b from-black/40 to-black/70 divide-white/10 backdrop-blur-md'
-            : 'border-white/20 bg-white/[0.06] divide-white/15 backdrop-blur-sm'
+            ? 'border-white/10 bg-gradient-to-b from-black/40 to-black/70 backdrop-blur-md'
+            : isCrystal
+              ? 'border-slate-200/80 bg-slate-50/70'
+              : 'border-white/20 bg-white/[0.06] backdrop-blur-sm'
         }`}>
-          {[
-            { 
-              label: 'Total Pending Actions', 
-              value: String(totalPendingCount), 
-              detail: `${pendingOrders.length} orders · ${activeApprovals.length} overrides`, 
-              icon: CheckCircle2, 
-              iconBg: 'bg-white text-blue-600 shadow-md shadow-black/10',
-            },
-            { 
-              label: 'Gated Order Value', 
-              value: `₹${totalGatedOrderValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`, 
-              detail: 'Stage 1 order pipeline', 
-              icon: DollarSign, 
-              iconBg: 'bg-emerald-600 text-white shadow-md shadow-emerald-500/30',
-            },
-            { 
-              label: 'High-Value POs', 
-              value: String(highValuePOCount), 
-              detail: 'Procurement sign-offs', 
-              icon: ShieldCheck, 
-              iconBg: 'bg-purple-600 text-white shadow-md shadow-purple-500/30',
-            },
-            { 
-              label: 'Commercial Overrides', 
-              value: String(overridesCount), 
-              detail: 'Discounts & write-offs', 
-              icon: Percent, 
-              iconBg: 'bg-amber-500 text-white shadow-md shadow-amber-500/30',
-            },
-          ].map((metric) => {
-            const MetricIcon = metric.icon;
-            return (
-              <div 
-                key={metric.label} 
-                className="p-4 sm:p-5 flex flex-col justify-between"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <span className={`text-[11px] font-mono uppercase tracking-wider font-bold ${
-                    isDarkMode ? 'text-white/50' : 'text-blue-100/70'
-                  }`}>
-                    {metric.label}
-                  </span>
-                  <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${metric.iconBg}`}>
-                    <MetricIcon className="w-5 h-5" />
-                  </div>
-                </div>
-                <div className="text-2xl sm:text-[26px] font-black tracking-tight text-white tabular-nums my-0.5 leading-tight">
-                  {metric.value}
-                </div>
-                <div className={`text-[11px] font-medium truncate ${
-                  isDarkMode ? 'text-white/50' : 'text-blue-100/80'
-                }`}>
-                  {metric.detail}
-                </div>
-              </div>
-            );
-          })}
+          {/* Total Pending Actions */}
+          <div className={`p-4 sm:p-5 flex items-center gap-4 transition-colors ${
+            !isDarkMode && isCrystal ? 'border-b sm:border-b-0 sm:border-r border-slate-200/80' : 'border-b sm:border-b-0 sm:border-r border-white/10'
+          }`}>
+            <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl shadow-sm ${
+              !isDarkMode && isCrystal
+                ? 'bg-slate-100 text-slate-800 border border-slate-200'
+                : 'bg-white text-blue-600'
+            }`}>
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                !isDarkMode && isCrystal ? 'text-slate-500' : isDarkMode ? 'text-white/50' : 'text-blue-100'
+              }`}>
+                Pending Actions
+              </span>
+              <span className={`text-2xl font-bold font-mono block tabular-nums ${
+                !isDarkMode && isCrystal ? 'text-slate-900' : 'text-white'
+              }`}>
+                {totalPendingCount}
+              </span>
+              <span className={`text-[10px] truncate block ${
+                !isDarkMode && isCrystal ? 'text-slate-400' : isDarkMode ? 'text-white/40' : 'text-blue-100/80'
+              }`}>
+                {pendingOrders.length} orders · {activeApprovals.length} overrides
+              </span>
+            </div>
+          </div>
+
+          {/* Gated Order Value */}
+          <div className={`p-4 sm:p-5 flex items-center gap-4 transition-colors ${
+            !isDarkMode && isCrystal ? 'border-b sm:border-b-0 sm:border-r border-slate-200/80' : 'border-b sm:border-b-0 sm:border-r border-white/10'
+          }`}>
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-sm shadow-emerald-500/30">
+              <DollarSign className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                !isDarkMode && isCrystal ? 'text-slate-500' : isDarkMode ? 'text-white/50' : 'text-blue-100'
+              }`}>
+                Gated Order Value
+              </span>
+              <span className={`text-2xl font-bold font-mono block tabular-nums ${
+                !isDarkMode && isCrystal ? 'text-emerald-700' : 'text-emerald-400'
+              }`}>
+                ₹{totalGatedOrderValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+              </span>
+              <span className={`text-[10px] truncate block ${
+                !isDarkMode && isCrystal ? 'text-slate-400' : isDarkMode ? 'text-white/40' : 'text-blue-100/80'
+              }`}>
+                Stage 1 order pipeline
+              </span>
+            </div>
+          </div>
+
+          {/* High-Value POs */}
+          <div className={`p-4 sm:p-5 flex items-center gap-4 transition-colors ${
+            !isDarkMode && isCrystal ? 'border-b sm:border-b-0 sm:border-r border-slate-200/80' : 'border-b sm:border-b-0 sm:border-r border-white/10'
+          }`}>
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-purple-600 text-white shadow-sm shadow-purple-500/30">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                !isDarkMode && isCrystal ? 'text-slate-500' : isDarkMode ? 'text-white/50' : 'text-blue-100'
+              }`}>
+                High-Value POs
+              </span>
+              <span className={`text-2xl font-bold font-mono block tabular-nums ${
+                !isDarkMode && isCrystal ? 'text-purple-700' : 'text-purple-400'
+              }`}>
+                {highValuePOCount}
+              </span>
+              <span className={`text-[10px] truncate block ${
+                !isDarkMode && isCrystal ? 'text-slate-400' : isDarkMode ? 'text-white/40' : 'text-blue-100/80'
+              }`}>
+                Procurement sign-offs
+              </span>
+            </div>
+          </div>
+
+          {/* Commercial Overrides */}
+          <div className="p-4 sm:p-5 flex items-center gap-4 transition-colors">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-sm shadow-amber-500/30">
+              <Percent className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                !isDarkMode && isCrystal ? 'text-slate-500' : isDarkMode ? 'text-white/50' : 'text-blue-100'
+              }`}>
+                Commercial Overrides
+              </span>
+              <span className={`text-2xl font-bold font-mono block tabular-nums ${
+                !isDarkMode && isCrystal ? 'text-amber-700' : 'text-amber-400'
+              }`}>
+                {overridesCount}
+              </span>
+              <span className={`text-[10px] truncate block ${
+                !isDarkMode && isCrystal ? 'text-slate-400' : isDarkMode ? 'text-white/40' : 'text-blue-100/80'
+              }`}>
+                Discounts & write-offs
+              </span>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -419,7 +592,9 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
       }`}>
         {/* Tier 1: Segmented Filter Control */}
         <div className="flex items-center justify-between gap-3 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-          <div className="flex items-center gap-1.5 min-w-max">
+          <div className={`inline-flex items-center p-1 rounded-xl border text-xs overflow-x-auto max-w-full ${
+            isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200/80 bg-slate-200/50 shadow-inner'
+          }`}>
             {[
               { id: 'ALL', label: 'All Items', count: totalPendingCount },
               { id: 'ORDER_CONFIRMATIONS', label: 'Customer Orders', count: pendingOrders.length },
@@ -434,21 +609,19 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
                   key={tab.id}
                   type="button"
                   onClick={() => setFilterType(tab.id)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                     isActive
                       ? isDarkMode
-                        ? 'bg-white text-slate-950 shadow-sm'
-                        : 'bg-[#155dfc] text-white shadow-sm'
-                      : isDarkMode
-                      ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                        ? 'bg-white/15 text-white shadow-xs border border-white/10'
+                        : 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   <span>{tab.label}</span>
-                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] tabular-nums font-bold ${
+                  <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
                     isActive
-                      ? isDarkMode ? 'bg-slate-900 text-white' : 'bg-white/20 text-white'
-                      : isDarkMode ? 'bg-white/10 text-slate-400' : 'bg-slate-200 text-slate-700'
+                      ? isDarkMode ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-800'
+                      : isDarkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-300/60 text-slate-600'
                   }`}>
                     {tab.count}
                   </span>

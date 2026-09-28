@@ -218,6 +218,7 @@ export const SYSTEM_MODULES: { id: string; label: string; description: string; c
   { id: 'users-audit', label: 'Users & Audit Vault', description: 'Staff credentials, RBAC matrix & immutable audit logs', category: 'Administration' },
   { id: 'approvals', label: 'Approval Queue', description: 'Multi-level authorization for high-value orders & POs', category: 'Governance' },
   { id: 'reports', label: 'Intelligence Reports', description: 'OEE, gross margins, scrap variance & financial summaries', category: 'Governance' },
+  { id: 'metrics', label: 'Metrics & Telemetry', description: 'Real-time operational KPIs, factory velocity & trend history', category: 'Governance' },
   { id: 'company-profile', label: 'Company Profile', description: 'Statutory GSTIN, PAN, bank accounts & factory plant details', category: 'Administration' }
 ];
 
@@ -231,16 +232,16 @@ export const ALL_MODULES = SYSTEM_MODULES.map(m => ({
 // Default modules access mapping by User Role
 export const ROLE_DEFAULT_MODULES: Record<string, string[]> = {
   'Admin/Owner': SYSTEM_MODULES.map(m => m.id),
-  'Sales Executive': ['command-centre', 'orders', 'invoices', 'masters', 'reports'],
-  'Purchase Executive': ['command-centre', 'purchasing', 'grn', 'payables', 'inventory', 'masters', 'plating-outwork'],
-  'Production Supervisor': ['command-centre', 'production', 'finished-goods', 'plating-outwork', 'qc', 'bom', 'masters'],
-  'Store/Inventory Executive': ['command-centre', 'inventory', 'grn', 'dispatch', 'finished-goods', 'masters'],
-  'Accounts Executive': ['command-centre', 'invoices', 'payables', 'reports', 'masters'],
+  'Sales Executive': ['command-centre', 'orders', 'invoices', 'masters', 'reports', 'metrics'],
+  'Purchase Executive': ['command-centre', 'purchasing', 'grn', 'payables', 'inventory', 'masters', 'plating-outwork', 'metrics'],
+  'Production Supervisor': ['command-centre', 'production', 'finished-goods', 'plating-outwork', 'qc', 'bom', 'masters', 'metrics'],
+  'Store/Inventory Executive': ['command-centre', 'inventory', 'grn', 'dispatch', 'finished-goods', 'masters', 'metrics'],
+  'Accounts Executive': ['command-centre', 'invoices', 'payables', 'reports', 'masters', 'metrics'],
   'Machine Operator': ['production'],
   'Quality Inspector': ['qc', 'pdi', 'finished-goods', 'plating-outwork'],
   'Dispatch Executive': ['dispatch', 'finished-goods', 'orders'],
-  'Management/Viewer': ['command-centre', 'orders', 'inventory', 'production', 'reports', 'users-audit'],
-  'Other': ['command-centre']
+  'Management/Viewer': ['command-centre', 'orders', 'inventory', 'production', 'reports', 'metrics', 'users-audit'],
+  'Other': ['command-centre', 'metrics']
 };
 
 // ============================================================================

@@ -14,6 +14,146 @@ const SEED_PDI_QUEUE: any[] = [];
 export class QcService {
   private db = getDbClient();
 
+  /** Resolves an order header by PO number or id (records may carry either in order_po). */
+  private async resolveOrderRow(
+    orderRef: string
+  ): Promise<{ id: string; po_no: string; status?: string; stage?: string } | null> {
+    if (!orderRef) return null;
+    const cols = 'id, po_no, status, stage';
+    const byPo = await this.db.from('customer_orders').select(cols).eq('po_no', orderRef).maybeSingle();
+    if (byPo.error) throw byPo.error;
+    if (byPo.data) return byPo.data as any;
+    const byId = await this.db.from('customer_orders').select(cols).eq('id', orderRef).maybeSingle();
+    if (byId.error) throw byId.error;
+    return (byId.data as any) || null;
+  }
+
+  /**
+   * True only when EVERY non-cancelled job card on the order has finished production AND has a
+   * qc_inspections row with qc_status = 'PASS'. Used to gate the order's advance to QC_INSPECTION
+   * so passing one job card (of several on the same PO) can never flip the whole order.
+   * Fail-closed: any lookup error returns false (order stays where it is).
+   */
+  private async isOrderQcComplete(orderRef: string): Promise<boolean> {
+    if (!orderRef) return false;
+    const norm = (v: unknown) => String(v ?? '').trim().toUpperCase();
+    try {
+      const orderRow = await this.resolveOrderRow(orderRef);
+      const refs = Array.from(new Set([orderRef, orderRow?.po_no, orderRow?.id].filter(Boolean) as string[]));
+
+      const { data: cardRows, error: cardErr } = await this.db
+        .from('job_cards').select('job_no, status').in('order_po', refs);
+      if (cardErr) throw cardErr;
+      const cards = (cardRows || []).filter((c: any) => norm(c.status) !== 'CANCELLED');
+      if (cards.length === 0) return false;
+
+      // Every job card must have finished production first.
+      if (cards.some((c: any) => norm(c.status) !== 'COMPLETED')) return false;
+
+      const { data: qcRows, error: qcErr } = await this.db
+        .from('qc_inspections').select('job_no, qc_status').in('order_po', refs);
+      if (qcErr) throw qcErr;
+      const qcByJob = new Map<string, string>();
+      for (const q of qcRows || []) qcByJob.set(norm((q as any).job_no), norm((q as any).qc_status));
+
+      // Every job card needs a QC record, and every one of them must be PASS.
+      return cards.every((c: any) => qcByJob.get(norm(c.job_no)) === 'PASS');
+    } catch (err) {
+      logger.warn(`isOrderQcComplete check failed for ${orderRef}; order NOT auto-advanced:`, err);
+      return false;
+    }
+  }
+
+  /**
+   * True only when EVERY non-cancelled job card that has passed QC also has a pdi_inspections row
+   * with pdi_status = 'PASS'. Mirrors isOrderQcComplete for the QC -> PDI -> dispatch-ready step.
+   */
+  private async isOrderPdiComplete(orderRef: string): Promise<boolean> {
+    if (!orderRef) return false;
+    const norm = (v: unknown) => String(v ?? '').trim().toUpperCase();
+    try {
+      const orderRow = await this.resolveOrderRow(orderRef);
+      const refs = Array.from(new Set([orderRef, orderRow?.po_no, orderRow?.id].filter(Boolean) as string[]));
+
+      const { data: qcRows, error: qcErr } = await this.db
+        .from('qc_inspections').select('job_no, qc_status').in('order_po', refs);
+      if (qcErr) throw qcErr;
+      const passedJobs = (qcRows || []).filter((q: any) => norm(q.qc_status) === 'PASS').map((q: any) => norm(q.job_no));
+      if (passedJobs.length === 0) return false;
+
+      const { data: pdiRows, error: pdiErr } = await this.db
+        .from('pdi_inspections').select('job_no, pdi_status').in('order_po', refs);
+      if (pdiErr) throw pdiErr;
+      const pdiByJob = new Map<string, string>();
+      for (const p of pdiRows || []) pdiByJob.set(norm((p as any).job_no), norm((p as any).pdi_status));
+
+      return passedJobs.every(jobNo => pdiByJob.get(jobNo) === 'PASS');
+    } catch (err) {
+      logger.warn(`isOrderPdiComplete check failed for ${orderRef}; order NOT auto-advanced:`, err);
+      return false;
+    }
+  }
+
+  /**
+   * Moves an order to a target stage through the order state machine, never overriding a rule
+   * rejection. Shared by the QC-pass -> QC_INSPECTION and PDI-pass -> READY_TO_DISPATCH advances,
+   * mirroring productionService.moveOrderToReadyForQc's fail-closed design:
+   * - Success: transitionOrderStage persists and broadcasts.
+   * - Rejected by a rule (HTTP 400 - a gate said no, or the order is in a stage that may not move
+   *   to this target): NEVER overridden. Logged + audited so a stuck order is explainable.
+   * - Any other failure (lookup miss, lock timeout, concurrent edit, DB error): a guarded direct
+   *   write, conditional on the order really being in one of `fromStatuses`, announced only if a
+   *   row actually moved. A 404 still broadcasts (records can exist for POs without an order row).
+   */
+  private async moveOrderToStage(
+    orderRef: string,
+    targetStage: 'QC_INSPECTION' | 'READY_TO_DISPATCH',
+    progressStep: number,
+    fromStatuses: string[],
+    actor: { role: string; name: string }
+  ): Promise<void> {
+    try {
+      const { ordersService } = await import('../orders/orders.service');
+      await ordersService.transitionOrderStage(orderRef, targetStage as any, {}, actor);
+      return;
+    } catch (err: any) {
+      const status = err?.statusCode;
+
+      if (status === 400) {
+        logger.warn(`Order ${orderRef} not advanced to ${targetStage}: ${err.message}`);
+        await auditService.recordAuditLog({
+          actorEmail: actor.name,
+          actorRole: actor.role,
+          action: 'ORDER_STAGE_ADVANCE_BLOCKED',
+          entityType: 'customer_orders',
+          entityId: orderRef,
+          details: `Automatic advance to ${targetStage} blocked: ${err.message}`
+        } as any).catch(() => {});
+        return;
+      }
+
+      logger.warn(`transitionOrderStage(${targetStage}) failed for ${orderRef}; using guarded fallback:`, err);
+      const nowIso = new Date().toISOString();
+      const { data: moved, error: updErr } = await this.db
+        .from('customer_orders')
+        .update({ status: targetStage, stage: targetStage, progress_step: progressStep, updated_at: nowIso })
+        .or(`po_no.eq.${orderRef},id.eq.${orderRef}`)
+        .in('status', fromStatuses)
+        .select('id');
+      if (updErr) logger.warn(`Guarded ${targetStage} fallback update failed for ${orderRef}:`, updErr);
+
+      const didMove = !updErr && (moved?.length || 0) > 0;
+      if (!didMove && status !== 404) return;
+
+      notificationsService.broadcastEvent('order_transitioned', {
+        orderId: orderRef, poNo: orderRef, status: targetStage, stage: targetStage, progressStep, updatedAt: nowIso
+      });
+      notificationsService.broadcastEvent('order_updated', {
+        id: orderRef, orderId: orderRef, poNo: orderRef, status: targetStage, stage: targetStage, progressStep, updatedAt: nowIso
+      });
+    }
+  }
+
   async getQCQueue() {
     try {
       const { data, error } = await this.db
@@ -73,7 +213,38 @@ export class QcService {
 
   async createQCInspection(data: z.infer<typeof QCInspectionSchema>, actorEmail?: string, actorRole?: string) {
     const validated = QCInspectionSchema.parse(data);
-    const qcId = validated.id || `qc-${Date.now()}`;
+    // Extra entropy beyond Date.now(): two job cards can complete production in the same
+    // millisecond (e.g. a bulk 'complete all steps' action), and a bare timestamp id would collide.
+    const qcId = validated.id || `qc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    // Idempotency guard: production completion can trigger this from two independent code paths
+    // (completeOperation and recordProductionLog). Without this check a job could end up with two
+    // qc_inspections rows, and reviewing the visible one would silently leave the other PENDING -
+    // which reads exactly like "I passed QC and it reverted to pending" once the queue refreshes.
+    if (validated.jobNo) {
+      try {
+        const { data: existing, error: lookupErr } = await this.db
+          .from('qc_inspections').select('*').eq('job_no', validated.jobNo).maybeSingle();
+        if (!lookupErr && existing) {
+          logger.info(`QC inspection already exists for job ${validated.jobNo} (${existing.id}); skipping duplicate creation.`);
+          return {
+            id: existing.id,
+            jobNo: existing.job_no,
+            orderPo: existing.order_po,
+            partCode: existing.part_code,
+            partDescription: existing.part_description,
+            qty: Number(existing.qty || 0),
+            jobStatus: existing.job_status,
+            qcStatus: existing.qc_status,
+            inspectorNotes: existing.inspector_notes,
+            defectCategory: existing.defect_category,
+            inspectedAt: existing.inspected_at
+          };
+        }
+      } catch (lookupErr) {
+        logger.warn(`QC inspection existence check failed for job ${validated.jobNo}; proceeding to create:`, lookupErr);
+      }
+    }
 
     try {
       const { error } = await this.db.from('qc_inspections').insert({
@@ -123,6 +294,10 @@ export class QcService {
     const inspectedAt = new Date().toISOString();
     const target = (await this.getQCById(id)) || SEED_QC_QUEUE.find(q => q.id === id);
 
+    const effectiveEmail = (actorEmail && actorEmail.includes('@')) ? actorEmail : (actorEmail || 'qc@guruom.in');
+    const effectiveRole = actorRole || 'Quality Manager';
+    const actor = { role: effectiveRole, name: effectiveEmail };
+
     try {
       await this.db.from('qc_inspections').update({
         qc_status: qcStatus,
@@ -133,25 +308,19 @@ export class QcService {
 
       if (target) {
         if (qcStatus === 'PASS') {
-          // Advance order to QC_INSPECTION (Stage 6) and clear NCR hold
-          await this.db.from('customer_orders').update({
-            status: 'QC_INSPECTION',
-            stage: 'QC_INSPECTION',
-            progress_step: 6,
-            has_open_ncr: false
-          }).or(`po_no.eq.${target.orderPo},id.eq.${target.orderPo}`);
-
           await this.db.from('job_cards').update({
             status: 'COMPLETED'
           }).or(`job_no.eq.${target.jobNo},id.eq.${target.jobNo}`);
 
+          // Close ONLY the NCR(s) tied to THIS job - an order-wide filter here would also close an
+          // unrelated sibling job's still-open NCR just because a different job passed QC.
           await this.db.from('ncrs').update({
             status: 'CLOSED',
             disposition: 'USE_AS_IS_CONCESSION'
-          }).or(`order_po.eq.${target.orderPo},job_no.eq.${target.jobNo}`);
+          }).eq('job_no', target.jobNo).in('status', ['OPEN', 'UNDER_REVIEW', 'REWORK_PLANNED']);
 
           const existingPdiIdx = SEED_PDI_QUEUE.findIndex(p => p.orderPo === target.orderPo && (p.jobNo === target.jobNo || p.partCode === target.partCode));
-          const pdiId = existingPdiIdx >= 0 ? SEED_PDI_QUEUE[existingPdiIdx].id : `pdi-${Date.now()}`;
+          const pdiId = existingPdiIdx >= 0 ? SEED_PDI_QUEUE[existingPdiIdx].id : `pdi-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
           try {
             await this.db.from('pdi_inspections').upsert({
@@ -187,27 +356,33 @@ export class QcService {
             SEED_PDI_QUEUE.unshift(pdiRecord as any);
           }
 
-          // Real-Time Push: Auto-create PDI inspection in PDI queue & update order
+          // Real-Time Push: Auto-create PDI inspection in PDI queue
           notificationsService.broadcastEvent('pdi_created', pdiRecord);
-          notificationsService.broadcastEvent('order_transitioned', {
-            orderId: target.orderPo,
-            poNo: target.orderPo,
-            status: 'QC_INSPECTION',
-            stage: 'QC_INSPECTION',
-            progressStep: 6,
-            hasOpenNcr: false,
-            updatedAt: new Date().toISOString()
-          });
+
+          // Whole-order state only moves once EVERY job card on this PO has passed QC - passing
+          // ONE of several job cards must never advance the order or clear its NCR flag for the rest.
+          let orderStillHasOpenNcr = true;
+          try {
+            const { data: openNcrs, error: ncrCheckErr } = await this.db
+              .from('ncrs').select('id')
+              .or(`order_po.eq.${target.orderPo}`)
+              .in('status', ['OPEN', 'UNDER_REVIEW', 'REWORK_PLANNED']);
+            if (!ncrCheckErr) orderStillHasOpenNcr = (openNcrs?.length || 0) > 0;
+          } catch (ncrCheckErr) {
+            logger.warn(`Open-NCR recheck failed for ${target.orderPo}; leaving has_open_ncr untouched:`, ncrCheckErr);
+            orderStillHasOpenNcr = true; // fail closed: don't clear a hold flag we can't verify
+          }
+          if (!orderStillHasOpenNcr) {
+            await this.db.from('customer_orders').update({ has_open_ncr: false })
+              .or(`po_no.eq.${target.orderPo},id.eq.${target.orderPo}`);
+          }
           notificationsService.broadcastEvent('order_updated', {
-            id: target.orderPo,
-            orderId: target.orderPo,
-            poNo: target.orderPo,
-            status: 'QC_INSPECTION',
-            stage: 'QC_INSPECTION',
-            progressStep: 6,
-            hasOpenNcr: false,
-            updatedAt: new Date().toISOString()
+            id: target.orderPo, orderId: target.orderPo, poNo: target.orderPo, hasOpenNcr: orderStillHasOpenNcr
           });
+
+          if (await this.isOrderQcComplete(target.orderPo)) {
+            await this.moveOrderToStage(target.orderPo, 'QC_INSPECTION', 6, ['READY_FOR_QC', 'QC_HOLD', 'IN_PRODUCTION'], actor);
+          }
         } else if (qcStatus === 'QC_HOLD' || qcStatus === 'REJECTED') {
           // Set open NCR block on parent order & put job card on QC hold
           await this.db.from('customer_orders').update({
@@ -251,9 +426,6 @@ export class QcService {
     }
 
     const result = { id, qcStatus, inspectorNotes, defectCategory, inspectedAt };
-    
-    const effectiveEmail = (actorEmail && actorEmail.includes('@')) ? actorEmail : (actorEmail || 'qc@guruom.in');
-    const effectiveRole = actorRole || 'Quality Manager';
 
     await auditService.recordAuditLog({
       actorEmail: effectiveEmail,
@@ -356,13 +528,6 @@ export class QcService {
           notes: `PDI passed for PO ${pdi.order_po} — ${pdi.qty} × ${pdi.part_description} added to Finished Goods stock`
         });
 
-        // Advance parent order status to READY_TO_DISPATCH (Stage 7)
-        await this.db.from('customer_orders').update({
-          status: 'READY_TO_DISPATCH',
-          stage: 'READY_TO_DISPATCH',
-          progress_step: 7,
-          updated_at: new Date().toISOString()
-        }).or(`po_no.eq.${pdi.order_po},id.eq.${pdi.order_po}`);
       }
     } catch (err) {
       logger.warn('Database passPDIInspection fallback:', err);
@@ -380,17 +545,12 @@ export class QcService {
     const partDesc = dbPdi?.part_description || local?.partDescription || 'Manufactured Item';
     const qty = dbPdi?.qty || local?.qty;
 
-    if (orderPo && orderPo !== 'PO') {
-      try {
-        const { ordersService } = await import('../orders/orders.service');
-        await ordersService.updateOrder(orderPo, {
-          status: 'READY_TO_DISPATCH',
-          stage: 'READY_TO_DISPATCH',
-          progressStep: 7
-        });
-      } catch (err) {
-        logger.warn('ordersService updateOrder on PDI pass fallback:', err);
-      }
+    // Whole-order advance to READY_TO_DISPATCH only once EVERY job card that passed QC also has a
+    // PASS PDI record - passing PDI for ONE of several job cards on the PO must never advance the
+    // whole order (dispatch creation is separately gated by checkDispatchEligibility either way,
+    // but the order's displayed stage/status must not lie about being ready before it really is).
+    if (orderPo && orderPo !== 'PO' && await this.isOrderPdiComplete(orderPo)) {
+      await this.moveOrderToStage(orderPo, 'READY_TO_DISPATCH', 7, ['QC_INSPECTION'], { role: effectiveRole, name: effectiveEmail });
     }
 
     try {
@@ -422,23 +582,6 @@ export class QcService {
     // Real-Time Push: Broadcast PDI pass, Finished Goods update, and Order progression
     notificationsService.broadcastEvent('pdi_updated', { id, pdiStatus: 'PASS', certificateNo: certNo, reportDate, orderPo });
     notificationsService.broadcastEvent('finished_goods_updated', { orderPo, partCode, qty });
-    notificationsService.broadcastEvent('order_transitioned', {
-      orderId: orderPo,
-      poNo: orderPo,
-      status: 'READY_TO_DISPATCH',
-      stage: 'READY_TO_DISPATCH',
-      progressStep: 7,
-      updatedAt: new Date().toISOString()
-    });
-    notificationsService.broadcastEvent('order_updated', {
-      id: orderPo,
-      orderId: orderPo,
-      poNo: orderPo,
-      status: 'READY_TO_DISPATCH',
-      stage: 'READY_TO_DISPATCH',
-      progressStep: 7,
-      updatedAt: new Date().toISOString()
-    });
 
     return { id, pdiStatus: 'PASS', certificateNo: certNo, reportDate };
   }

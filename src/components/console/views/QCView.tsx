@@ -91,13 +91,14 @@ export const QCView: React.FC<QCViewProps> = ({
 
   // Deduplicate items by unique orderPo + jobNo (keep the latest)
   const deduplicatedItems = useMemo(() => {
+    // localQc is ordered newest-first (created_at DESC), so keep the FIRST item seen per key - if a
+    // job ever ends up with more than one QC record, the newest one wins, not a stale earlier one.
     const map = new Map<string, QCInspection>();
     for (const item of localQc) {
       const key = `${(item.orderPo || '').trim().toUpperCase()}_${(item.jobNo || '').trim().toUpperCase()}`;
-      if (key !== '_') {
-        map.set(key, item);
-      } else {
-        map.set(item.id, item);
+      const dedupeKey = key !== '_' ? key : item.id;
+      if (!map.has(dedupeKey)) {
+        map.set(dedupeKey, item);
       }
     }
     return Array.from(map.values());
@@ -118,11 +119,11 @@ export const QCView: React.FC<QCViewProps> = ({
     e.preventDefault();
     if (!inspectingItem) return;
     
-    const targetPo = inspectingItem.orderPo;
-
-    // Instant optimistic update in local state for this item and all items matching the same orderPo/jobNo
+    // Instant optimistic update for ONLY the reviewed item. A sibling job card on the same order
+    // has not been reviewed - marking it too here would flash the wrong status until the next
+    // refresh corrects it, which is exactly the "shows pass then reverts to pending" symptom.
     setLocalQc(prev => prev.map(q => {
-      if (q.id === inspectingItem.id || (targetPo && q.orderPo === targetPo)) {
+      if (q.id === inspectingItem.id) {
         return {
           ...q,
           qcStatus: qcDecision,

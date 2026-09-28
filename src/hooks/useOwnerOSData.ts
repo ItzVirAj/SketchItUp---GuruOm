@@ -781,31 +781,20 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     let updatedJobCard: JobCard | null = null;
     try {
       updatedJobCard = await startJobCardOperation(jobNo, { ...payload, actualStartTime: nowIso });
-    } catch (e) {
-      console.warn('REST startJobCardOperation error, applying local state update:', e);
+    } catch (e: any) {
+      // The save genuinely failed - do NOT mark the step "started" in the UI. Doing so used to show
+      // instant success and then silently revert once loadAllData() refetched the real (unstarted)
+      // state, with no indication of what happened or why. Re-throwing (instead of swallowing) lets
+      // every existing caller's own catch block (which already surfaces an inline/error message)
+      // handle this the same way it handles any other failure.
+      console.warn('REST startJobCardOperation failed; NOT applying an optimistic local update:', e);
+      toast.error(e?.message || `Could not start Op ${payload.sequenceNo} for ${jobNo}. Nothing was saved - please try again.`, 'Operation Not Started');
+      throw e;
     }
 
     setJobCards(prev => prev.map(j => {
       if (j.jobNo === jobNo || j.id === jobNo) {
-        if (updatedJobCard) return { ...j, ...updatedJobCard };
-        const ops = (j.operations || []).map(op => {
-          if (op.sequenceNo === payload.sequenceNo) {
-            return {
-              ...op,
-              machineId: payload.machineId,
-              operatorName: payload.operatorName,
-              actualStartTime: nowIso,
-              opStatus: 'IN_PROGRESS'
-            };
-          }
-          return op;
-        });
-        return {
-          ...j,
-          status: 'RUNNING',
-          jobStatus: 'IN_PROGRESS',
-          operations: ops
-        };
+        return { ...j, ...updatedJobCard };
       }
       return j;
     }));
@@ -821,42 +810,22 @@ export function useOwnerOSData(currentUser?: SystemUser) {
     let updatedJobCard: JobCard | null = null;
     try {
       updatedJobCard = await completeJobCardOperation(jobNo, { ...payload, actualEndTime: endIso });
-    } catch (e) {
-      console.warn('REST completeJobCardOperation error, applying local state update:', e);
+    } catch (e: any) {
+      // The save genuinely failed - do NOT mark the step "completed" in the UI. Doing so used to
+      // show instant success (and could even fire the order-advance logic below on a step that was
+      // never actually saved), then silently revert once loadAllData() refetched the true state.
+      // Re-throwing lets every existing caller's own catch block handle this like any other failure.
+      console.warn('REST completeJobCardOperation failed; NOT applying an optimistic local update:', e);
+      toast.error(e?.message || `Could not complete Op ${payload.sequenceNo} for ${jobNo}. Nothing was saved - please try again.`, 'Operation Not Completed');
+      throw e;
     }
 
     let targetJobCard: JobCard | undefined;
 
     setJobCards(prev => prev.map(j => {
       if (j.jobNo === jobNo || j.id === jobNo) {
-        if (updatedJobCard) {
-          targetJobCard = updatedJobCard;
-          return { ...j, ...updatedJobCard };
-        }
-        const ops = (j.operations || []).map(op => {
-          if (op.sequenceNo === payload.sequenceNo) {
-            return {
-              ...op,
-              qtyProcessed: payload.qtyProcessed,
-              qtyRejected: payload.qtyRejected,
-              actualTimeMinutes: payload.actualMinutes,
-              actualStartTime: payload.actualStartTime || op.actualStartTime || new Date(Date.now() - (payload.actualMinutes || 15) * 60000).toISOString(),
-              actualEndTime: endIso,
-              notes: payload.notes,
-              opStatus: 'COMPLETED'
-            };
-          }
-          return op;
-        });
-        const allDone = ops.length > 0 && ops.every(o => o.opStatus === 'COMPLETED');
-        const updated = {
-          ...j,
-          status: allDone ? 'COMPLETED' : 'IN_PROGRESS',
-          jobStatus: allDone ? 'COMPLETED' : 'IN_PROGRESS',
-          operations: ops
-        };
-        targetJobCard = updated;
-        return updated;
+        targetJobCard = updatedJobCard as JobCard;
+        return { ...j, ...updatedJobCard };
       }
       return j;
     }));
@@ -917,9 +886,11 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       const targetOrderPo = target?.orderPo;
       const targetJobNo = target?.jobNo;
 
-      // Synchronize all QC entries for this order/job to prevent conflicting statuses
+      // Only the reviewed record changes. Reviewing ONE job card's QC must never optimistically
+      // flip a sibling job card's QC entry on the same order - that sibling has not been reviewed,
+      // and it will correctly (and confusingly) revert to its real status on the next data refresh.
       setQcQueue(prev => prev.map(q => {
-        if (q.id === id || (targetOrderPo && q.orderPo === targetOrderPo)) {
+        if (q.id === id) {
           return {
             ...q,
             qcStatus,
@@ -930,16 +901,31 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         return q;
       }));
 
+      // The order only advances once EVERY job card on it has passed QC. Guess optimistically ONLY
+      // when this review is genuinely the last one needed (every other QC entry for the order is
+      // already PASS); otherwise leave the order's displayed stage alone and let the backend's
+      // authoritative (and correctly gated) state arrive on the next refresh.
       if (targetOrderPo) {
+        const siblingQc = qcQueue.filter(q => q.orderPo === targetOrderPo && q.id !== id);
+        const allSiblingsAlreadyPassed = siblingQc.every(q => q.qcStatus === 'PASS');
+        const orderNowQcComplete = qcStatus === 'PASS' && allSiblingsAlreadyPassed;
+
         setOrders(prev => prev.map(ord => {
           if (ord.poNo === targetOrderPo || ord.id === targetOrderPo) {
-            return {
-              ...ord,
-              hasOpenNcr: qcStatus !== 'PASS',
-              stage: qcStatus === 'PASS' ? 'QC_INSPECTION' : ord.stage,
-              status: qcStatus === 'PASS' ? 'QC_INSPECTION' : ord.status,
-              progressStep: qcStatus === 'PASS' ? Math.max(ord.progressStep || 1, 6) : ord.progressStep
-            };
+            if (qcStatus !== 'PASS') {
+              // A hold/rejection on any single job card genuinely does flag the whole order.
+              return { ...ord, hasOpenNcr: true };
+            }
+            if (orderNowQcComplete) {
+              return {
+                ...ord,
+                hasOpenNcr: false,
+                stage: 'QC_INSPECTION',
+                status: 'QC_INSPECTION',
+                progressStep: Math.max(ord.progressStep || 1, 6)
+              };
+            }
+            return ord; // some other job card on this order still hasn't passed QC
           }
           return ord;
         }));
@@ -985,9 +971,10 @@ export function useOwnerOSData(currentUser?: SystemUser) {
 
       const normPo = targetOrderPo.toUpperCase();
 
+      // Only the reviewed record changes. Passing ONE job card's PDI must never optimistically mark
+      // a sibling job card's PDI entry on the same order as passed - it has not been inspected.
       setPdiQueue(prev => prev.map(p => {
-        const match = p.id === id || (normPo && (p.orderPo || '').trim().toUpperCase() === normPo);
-        if (match) {
+        if (p.id === id) {
           return {
             ...p,
             ...payload,
@@ -999,27 +986,26 @@ export function useOwnerOSData(currentUser?: SystemUser) {
         return p;
       }));
 
+      // The order only advances to READY_TO_DISPATCH once EVERY job card that passed QC also has a
+      // PASS PDI record. Guess optimistically ONLY when this is genuinely the last one needed;
+      // otherwise leave the order's displayed stage alone. The backend (passPDIInspection) applies
+      // the same gate authoritatively - it is the ONLY place that actually writes the order's stage;
+      // this file must not also force it directly, or it would bypass that gate entirely.
       if (normPo) {
-        setOrders(prev => prev.map(ord => {
-          if ((ord.poNo || '').trim().toUpperCase() === normPo || (ord.id || '').trim().toUpperCase() === normPo) {
-            return {
-              ...ord,
-              stage: 'READY_TO_DISPATCH' as any,
-              status: 'READY_TO_DISPATCH' as any,
-              progressStep: Math.max(ord.progressStep || 1, 7)
-            };
-          }
-          return ord;
-        }));
-
-        // Explicitly update the order status
-        const matchedOrder = orders.find(o => (o.poNo || '').trim().toUpperCase() === normPo || (o.id || '').trim().toUpperCase() === normPo);
-        if (matchedOrder) {
-          await updateOrder(matchedOrder.id, {
-            stage: 'READY_TO_DISPATCH' as any,
-            status: 'READY_TO_DISPATCH' as any,
-            progressStep: 7
-          }).catch(() => { });
+        const siblingPdi = pdiQueue.filter(p => (p.orderPo || '').trim().toUpperCase() === normPo && p.id !== id);
+        const orderNowPdiComplete = siblingPdi.every(p => p.pdiStatus === 'PASS');
+        if (orderNowPdiComplete) {
+          setOrders(prev => prev.map(ord => {
+            if ((ord.poNo || '').trim().toUpperCase() === normPo || (ord.id || '').trim().toUpperCase() === normPo) {
+              return {
+                ...ord,
+                stage: 'READY_TO_DISPATCH' as any,
+                status: 'READY_TO_DISPATCH' as any,
+                progressStep: Math.max(ord.progressStep || 1, 7)
+              };
+            }
+            return ord;
+          }));
         }
       }
 

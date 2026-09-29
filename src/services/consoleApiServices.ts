@@ -1649,6 +1649,14 @@ export interface AttendanceLog {
   orgId?: string;
   createdAt: string;
   updatedAt?: string;
+  ipAddress?: string | null;
+  ip?: string | null;
+  device?: string | null;
+  deviceName?: string | null;
+  deviceType?: string | null;
+  browser?: string | null;
+  os?: string | null;
+  userAgent?: string | null;
   user?: {
     id: string;
     name?: string;

@@ -1171,6 +1171,7 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
                     onCheckOut={handleCheckOut}
                     onCreateAttendance={handleCreateAttendance}
                     onUpdateAttendance={handleUpdateAttendance}
+                    users={users}
                   />
                 )}
 

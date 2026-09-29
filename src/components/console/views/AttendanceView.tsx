@@ -14,7 +14,14 @@ import {
   Palmtree,
   ShieldCheck,
   Building2,
-  Sparkles
+  Sparkles,
+  Globe,
+  Laptop,
+  Smartphone,
+  Monitor,
+  Hash,
+  Copy,
+  Check
 } from 'lucide-react';
 import { Modal } from '../../common/Modal';
 import { useAccentTheme } from '../../../context/AccentThemeContext';
@@ -54,6 +61,7 @@ interface AttendanceViewProps {
       notes?: string | null;
     }
   ) => Promise<AttendanceLog>;
+  users?: any[];
 }
 
 const STATUS_STYLE: Record<
@@ -130,12 +138,14 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({
   onCheckIn,
   onCheckOut,
   onCreateAttendance,
-  onUpdateAttendance
+  onUpdateAttendance,
+  users = []
 }) => {
   const { accent, isGreen, isBlue, isCrystal } = useAccentTheme();
   const [activeTab, setActiveTab] = useState<'my' | 'all'>('my');
   const [isProcessing, setIsProcessing] = useState(false);
   const [localSearch, setLocalSearch] = useState(searchQuery);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [manualForm, setManualForm] = useState({
     userId: '',
@@ -143,6 +153,15 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({
     status: 'PRESENT' as AttendanceStatus,
     notes: ''
   });
+
+  const handleCopyId = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(id);
+    setCopiedId(id);
+    setTimeout(() => {
+      setCopiedId((curr) => (curr === id ? null : curr));
+    }, 1500);
+  };
 
   // Debounce search query changes
   useEffect(() => {
@@ -199,15 +218,39 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({
       if (statusFilter !== 'ALL' && log.status !== statusFilter) return false;
       if (activeTab === 'all' && localSearch.trim()) {
         const query = localSearch.toLowerCase();
-        const matchesName = (log.employeeName || log.user?.name || '').toLowerCase().includes(query);
+        const matchedUser = users?.find(
+          (u: any) =>
+            u.id === log.userId ||
+            u.userId === log.userId ||
+            u.id === log.employeeId ||
+            u.userId === log.employeeId ||
+            (log.user?.email && u.email?.toLowerCase() === log.user.email.toLowerCase())
+        );
+        const resolvedName = (log.employeeName || log.user?.name || matchedUser?.name || matchedUser?.fullName || '').toLowerCase();
+        const resolvedUserId = (log.userId || log.employeeId || log.user?.id || matchedUser?.id || '').toLowerCase();
         const matchesDate = (log.workDate || log.logDate || '').toLowerCase().includes(query);
         const matchesShift = (log.shift || '').toLowerCase().includes(query);
-        const matchesEmail = (log.user?.email || '').toLowerCase().includes(query);
-        if (!matchesName && !matchesDate && !matchesShift && !matchesEmail) return false;
+        const matchesEmail = (log.user?.email || matchedUser?.email || '').toLowerCase().includes(query);
+        const matchesIp = (log.ipAddress || log.ip || '').toLowerCase().includes(query);
+        const matchesDevice = (log.device || log.deviceName || '').toLowerCase().includes(query);
+        const matchesNotes = (log.notes || '').toLowerCase().includes(query);
+
+        if (
+          !resolvedName.includes(query) &&
+          !resolvedUserId.includes(query) &&
+          !matchesDate &&
+          !matchesShift &&
+          !matchesEmail &&
+          !matchesIp &&
+          !matchesDevice &&
+          !matchesNotes
+        ) {
+          return false;
+        }
       }
       return true;
     });
-  }, [currentList, statusFilter, activeTab, localSearch]);
+  }, [currentList, statusFilter, activeTab, localSearch, users]);
 
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -627,7 +670,7 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({
                 type="text"
                 value={localSearch}
                 onChange={(e) => setLocalSearch(e.target.value)}
-                placeholder="Search employee by name or email…"
+                placeholder="Search by name, ID, email, IP, device…"
                 className={`w-full pl-9.5 pr-4 py-2 rounded-xl text-xs font-sans border transition-ui focus:outline-none focus:border-[var(--accent-primary)] focus:ring-4 focus:ring-[var(--accent-primary)]/15 ${
                   isDarkMode
                     ? 'bg-black/40 border-white/10 text-white placeholder:text-slate-500'
@@ -714,23 +757,123 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({
             const checkInVal = log.checkIn || log.checkInAt;
             const checkOutVal = log.checkOut || log.checkOutAt;
             const duration = calculateDuration(checkInVal, checkOutVal);
-            const employeeDisplay = log.user?.name || log.employeeName;
+
+            // User Resolution
+            const matchedUser = users?.find(
+              (u: any) =>
+                u.id === log.userId ||
+                u.userId === log.userId ||
+                u.id === log.employeeId ||
+                u.userId === log.employeeId ||
+                (log.user?.email && u.email?.toLowerCase() === log.user.email.toLowerCase())
+            );
+
+            const userName =
+              log.user?.name ||
+              log.employeeName ||
+              matchedUser?.name ||
+              matchedUser?.fullName ||
+              (matchedUser?.email ? matchedUser.email.split('@')[0] : null) ||
+              'Staff Member';
+
+            const resolvedUserId =
+              log.userId ||
+              log.employeeId ||
+              log.user?.id ||
+              matchedUser?.id ||
+              matchedUser?.userId ||
+              '—';
+
+            const userDept = log.user?.department || matchedUser?.department;
+
+            // IP Resolution
+            let ip = log.ipAddress || log.ip;
+            if (!ip && log.notes) {
+              const ipMatch = log.notes.match(/\[(?:IP|IP_Address):\s*([^\]]+)\]/i);
+              if (ipMatch) ip = ipMatch[1].trim();
+            }
+            const displayIp = ip || '127.0.0.1 (Local)';
+
+            // Device Resolution
+            let device = log.device || log.deviceName;
+            if (!device && log.notes) {
+              const devMatch = log.notes.match(/\[(?:Device|Device_Name):\s*([^\]]+)\]/i);
+              if (devMatch) device = devMatch[1].trim();
+            }
+            const displayDevice = device || 'Web Workstation';
+            const isMobile =
+              log.deviceType === 'mobile' ||
+              /mobile|iphone|android/i.test(displayDevice);
+            const isTablet =
+              log.deviceType === 'tablet' ||
+              /tablet|ipad/i.test(displayDevice);
+
+            // Clean notes from internal meta tags for user display
+            const cleanNotes = log.notes
+              ? log.notes
+                  .replace(/\[(?:IP|IP_Address):\s*[^\]]+\]/gi, '')
+                  .replace(/\[(?:Device|Device_Name):\s*[^\]]+\]/gi, '')
+                  .trim()
+              : null;
+
+            const isCopied = copiedId === resolvedUserId;
 
             return (
               <div
                 key={log.id}
                 className={`p-4 sm:p-5 rounded-2xl border transition-all hover:border-[var(--accent-primary)]/40 ${cardBase}`}
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 shrink-0">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  {/* Left Column: User identity, date, badges, telemetry */}
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 shrink-0 mt-0.5">
                       <Calendar className="w-4 h-4 text-[var(--accent-text-light)] dark:text-[var(--accent-text-dark)]" />
                     </div>
-                    <div>
+
+                    <div className="space-y-1.5 min-w-0 flex-1">
+                      {/* Row 1: User Name + User ID Badge + Work Date + Shift */}
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-bold font-mono">
-                          {log.workDate || log.logDate}
+                        {/* User Name */}
+                        <div className="flex items-center gap-1.5 text-sm font-bold text-slate-900 dark:text-white">
+                          <User className="w-3.5 h-3.5 text-[var(--accent-primary)] shrink-0" />
+                          <span className="truncate">{userName}</span>
+                          {userDept && (
+                            <span className="text-[11px] font-normal text-slate-500 dark:text-slate-400">
+                              ({userDept})
+                            </span>
+                          )}
+                        </div>
+
+                        {/* User ID pill with copy button */}
+                        {resolvedUserId && resolvedUserId !== '—' && (
+                          <button
+                            type="button"
+                            onClick={(e) => handleCopyId(resolvedUserId, e)}
+                            title={`Click to copy User ID: ${resolvedUserId}`}
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono transition-all border cursor-pointer ${
+                              isCopied
+                                ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30'
+                                : isDarkMode
+                                  ? 'bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border-white/10'
+                                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border-slate-200'
+                            }`}
+                          >
+                            <Hash className="w-2.5 h-2.5 opacity-60" />
+                            <span>ID: {resolvedUserId.length > 14 ? `${resolvedUserId.slice(0, 8)}…` : resolvedUserId}</span>
+                            {isCopied ? (
+                              <Check className="w-2.5 h-2.5 text-emerald-500" />
+                            ) : (
+                              <Copy className="w-2.5 h-2.5 opacity-50 hover:opacity-100" />
+                            )}
+                          </button>
+                        )}
+
+                        {/* Work Date */}
+                        <span className="text-xs font-mono font-medium text-slate-500 dark:text-slate-400">
+                          • {log.workDate || log.logDate}
                         </span>
+
+                        {/* Shift badge */}
                         {log.shift && (
                           <span
                             className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold ${
@@ -740,31 +883,46 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({
                             {log.shift}
                           </span>
                         )}
-                        {employeeDisplay && (
-                          <span
-                            className={`inline-flex items-center gap-1 text-xs font-medium ${
-                              isDarkMode ? 'text-slate-400' : 'text-slate-600'
-                            }`}
-                          >
-                            <User className="w-3.5 h-3.5 text-slate-400" />
-                            <span>{employeeDisplay}</span>
-                            {log.user?.department && (
-                              <span className="text-[10px] text-slate-500">
-                                ({log.user.department})
-                              </span>
-                            )}
-                          </span>
-                        )}
                       </div>
-                      {log.notes && (
+
+                      {/* Row 2: IP Address & Device Telemetry */}
+                      <div className="flex items-center gap-3 flex-wrap text-xs text-slate-500 dark:text-slate-400">
+                        {/* IP Address */}
+                        <div className="inline-flex items-center gap-1.5 text-[11px] font-mono">
+                          <Globe className="w-3.5 h-3.5 text-sky-500 shrink-0" />
+                          <span className="font-semibold text-slate-500 dark:text-slate-400">IP:</span>
+                          <span className="text-slate-700 dark:text-slate-300">{displayIp}</span>
+                        </div>
+
+                        <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">•</span>
+
+                        {/* Device */}
+                        <div className="inline-flex items-center gap-1.5 text-[11px] font-mono">
+                          {isMobile ? (
+                            <Smartphone className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                          ) : isTablet ? (
+                            <Monitor className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                          ) : (
+                            <Laptop className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                          )}
+                          <span className="font-semibold text-slate-500 dark:text-slate-400">Device:</span>
+                          <span className="text-slate-700 dark:text-slate-300 truncate max-w-[240px] sm:max-w-none">
+                            {displayDevice}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Notes (if any) */}
+                      {cleanNotes && (
                         <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                          {log.notes}
+                          {cleanNotes}
                         </p>
                       )}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 sm:gap-4 flex-wrap text-xs font-mono">
+                  {/* Right Column: Punch times, Duration, Status badge */}
+                  <div className="flex items-center gap-3 sm:gap-4 flex-wrap text-xs font-mono shrink-0 pl-10 lg:pl-0">
                     {/* Punch in */}
                     <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
                       <LogIn className="w-3.5 h-3.5" />

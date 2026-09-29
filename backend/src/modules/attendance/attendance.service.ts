@@ -15,6 +15,15 @@ export interface AttendanceActor {
   name?: string;
 }
 
+export interface AttendanceMeta {
+  ipAddress?: string;
+  device?: string;
+  deviceType?: string;
+  browser?: string;
+  os?: string;
+  userAgent?: string;
+}
+
 export class AttendanceNotFoundError extends Error {
   readonly statusCode = 404;
   constructor(message = 'Attendance record not found.') {
@@ -46,6 +55,21 @@ export class AttendanceService {
     const createdBy = row.created_by || row.marked_by;
     const user = row.users || row.user;
 
+    let ipAddress = row.ip_address || row.ip || null;
+    let device = row.device || row.device_name || null;
+    let deviceType = row.device_type || null;
+    let browser = row.browser || null;
+    let os = row.os || null;
+
+    // Fallback extraction from notes if serialized inside
+    if ((!ipAddress || !device) && row.notes) {
+      const ipMatch = row.notes.match(/\[(?:IP|IP_Address):\s*([^\]]+)\]/i);
+      if (ipMatch && !ipAddress) ipAddress = ipMatch[1].trim();
+
+      const devMatch = row.notes.match(/\[(?:Device|Device_Name):\s*([^\]]+)\]/i);
+      if (devMatch && !device) device = devMatch[1].trim();
+    }
+
     return {
       id: row.id,
       userId,
@@ -64,6 +88,13 @@ export class AttendanceService {
       markedBy: createdBy,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+      ipAddress,
+      ip: ipAddress,
+      device,
+      deviceName: device,
+      deviceType,
+      browser,
+      os,
       user: user
         ? {
             id: user.id,
@@ -140,7 +171,28 @@ export class AttendanceService {
     }
 
     if (error) throw error;
-    return (data || []).map((row: any) => this.mapLog(row));
+
+    const rows = data || [];
+    const missingUserIds = Array.from(new Set(rows.map((r: any) => r.user_id || r.employee_id).filter(Boolean)));
+    const userMap = new Map<string, any>();
+    if (missingUserIds.length > 0) {
+      try {
+        const { data: userRows } = await this.db
+          .from('users')
+          .select('id, full_name, name, email, department, role')
+          .in('id', missingUserIds);
+        if (userRows) {
+          userRows.forEach((u: any) => userMap.set(u.id, u));
+        }
+      } catch (uErr) {
+        logger.warn('[AttendanceService] Could not batch fetch users:', uErr);
+      }
+    }
+
+    return rows.map((row: any) => {
+      const u = row.users || row.user || userMap.get(row.user_id || row.employee_id);
+      return this.mapLog({ ...row, user: u });
+    });
   }
 
   async getMyAttendance(
@@ -155,11 +207,12 @@ export class AttendanceService {
 
   async createAttendance(
     input: z.input<typeof CreateAttendanceSchema>,
-    actor: AttendanceActor
+    actor: AttendanceActor,
+    meta?: AttendanceMeta
   ) {
     const validated = CreateAttendanceSchema.parse(input);
 
-    const fullRow = {
+    const fullRow: any = {
       user_id: validated.userId,
       employee_id: validated.userId,
       work_date: validated.workDate,
@@ -171,6 +224,12 @@ export class AttendanceService {
       check_out_at: validated.checkOut,
       source: validated.source || 'MANUAL',
       notes: validated.notes || null,
+      ip_address: meta?.ipAddress || null,
+      device: meta?.device || null,
+      device_type: meta?.deviceType || null,
+      browser: meta?.browser || null,
+      os: meta?.os || null,
+      user_agent: meta?.userAgent || null,
       created_by: actor.id,
       marked_by: actor.id,
       created_at: new Date().toISOString(),
@@ -183,14 +242,22 @@ export class AttendanceService {
       .select('*')
       .single();
 
-    if (error && (error.code === 'PGRST204' || error.message?.includes('schema cache'))) {
+    if (error && (error.code === 'PGRST204' || error.message?.includes('schema cache') || error.message?.includes('does not exist'))) {
+      let fallbackNotes = validated.notes || '';
+      if (meta?.ipAddress && !fallbackNotes.includes('[IP:')) {
+        fallbackNotes = `${fallbackNotes} [IP: ${meta.ipAddress}]`.trim();
+      }
+      if (meta?.device && !fallbackNotes.includes('[Device:')) {
+        fallbackNotes = `${fallbackNotes} [Device: ${meta.device}]`.trim();
+      }
+
       const compatRow = {
         employee_id: validated.userId,
         log_date: validated.workDate,
         status: validated.status,
         check_in_at: validated.checkIn,
         check_out_at: validated.checkOut,
-        notes: validated.notes || null,
+        notes: fallbackNotes || null,
         marked_by: actor.id,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -225,7 +292,8 @@ export class AttendanceService {
   async updateAttendance(
     id: string,
     input: z.input<typeof UpdateAttendanceSchema>,
-    actor: AttendanceActor
+    actor: AttendanceActor,
+    meta?: AttendanceMeta
   ) {
     const validated = UpdateAttendanceSchema.parse(input);
 
@@ -254,6 +322,8 @@ export class AttendanceService {
     }
     if (validated.source !== undefined) updatePayload.source = validated.source;
     if (validated.notes !== undefined) updatePayload.notes = validated.notes;
+    if (meta?.ipAddress && !existing.ip_address) updatePayload.ip_address = meta.ipAddress;
+    if (meta?.device && !existing.device) updatePayload.device = meta.device;
 
     let { data: updated, error: updateError } = await this.db
       .from('attendance_logs')
@@ -262,7 +332,7 @@ export class AttendanceService {
       .select('*')
       .single();
 
-    if (updateError && (updateError.code === 'PGRST204' || updateError.message?.includes('schema cache'))) {
+    if (updateError && (updateError.code === 'PGRST204' || updateError.message?.includes('schema cache') || updateError.message?.includes('does not exist'))) {
       const compatPayload: any = { updated_at: now };
       if (validated.status !== undefined) compatPayload.status = validated.status;
       if (validated.checkIn !== undefined) compatPayload.check_in_at = validated.checkIn;
@@ -297,7 +367,7 @@ export class AttendanceService {
     return this.mapLog(updated);
   }
 
-  async checkIn(actor: AttendanceActor, shiftOverride?: string) {
+  async checkIn(actor: AttendanceActor, shiftOverride?: string, meta?: AttendanceMeta) {
     const today = todayDateString();
 
     const { data: user } = await this.db
@@ -328,11 +398,12 @@ export class AttendanceService {
         source: 'MANUAL',
         notes: `Shift: ${shift}`
       },
-      actor
+      actor,
+      meta
     );
   }
 
-  async checkOut(actor: AttendanceActor) {
+  async checkOut(actor: AttendanceActor, meta?: AttendanceMeta) {
     const today = todayDateString();
     const { data: existing } = await this.db
       .from('attendance_logs')
@@ -349,7 +420,7 @@ export class AttendanceService {
     }
 
     const now = new Date().toISOString();
-    return this.updateAttendance(existing.id, { checkOut: now }, actor);
+    return this.updateAttendance(existing.id, { checkOut: now }, actor, meta);
   }
 }
 

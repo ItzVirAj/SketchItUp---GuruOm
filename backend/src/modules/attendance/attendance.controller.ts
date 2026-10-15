@@ -8,9 +8,12 @@ import {
   UpdateAttendanceSchema,
   CheckInSchema
 } from './attendance.schema';
+import '../../middleware/auth.middleware';
+import '../../middleware/rbac.middleware';
+import { isScopeRestrictedToOwnRecords } from '../../../../src/utils/rbacMatrix';
 
 function actorFromRequest(req: Request): AttendanceActor {
-  const user = req.user;
+  const user = (req as any).user || req.user;
   const id = user?.id || (user as any)?.userId || (user as any)?.sub;
   if (!user || !id) {
     throw Object.assign(new Error('Authenticated actor is required.'), { statusCode: 401 });
@@ -43,7 +46,10 @@ export class AttendanceController {
     try {
       const actor = actorFromRequest(req);
       const query = AttendanceListQuerySchema.parse(req.query);
-      const isOwnRecordsOnly = req.rbacScope?.isOwnRecordsOnly ?? true;
+      const isOwnRecordsOnly =
+        req.rbacScope?.isOwnRecordsOnly ??
+        (req as any).rbacScope?.isOwnRecordsOnly ??
+        isScopeRestrictedToOwnRecords(actor.role || '', 'attendance');
 
       const data = await attendanceService.listAttendance(actor, isOwnRecordsOnly, query);
       return res.json({ data });

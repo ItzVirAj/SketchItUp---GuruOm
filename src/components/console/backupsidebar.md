@@ -533,7 +533,7 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({
                       )}
                     </AnimatePresence>
                   </div>
-                );a
+                ); a
               })}
             </div>
           </div>

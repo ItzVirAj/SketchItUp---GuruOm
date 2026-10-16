@@ -131,6 +131,7 @@ The following checks were run during implementation:
 - `npx tsc -p tsconfig.backend.json --noEmit` — passed.
 - `npx vitest run tests/command-centre.test.ts` — 8 tests passed.
 - `npx vitest run tests/command-centre.test.ts tests/command-centre-widgets.test.ts` — 12 tests passed.
+- `npx vitest run` — not green in the current repository baseline: 42 test files passed and 12 failed; 613 tests passed and 65 failed. The failures are in pre-existing migration-integrity, workflow, service-contract, and provider-wrapped view tests outside this redesign. The focused Command Centre suite passes.
 - `npm run build` — passed; Vite and the bundled Express server completed.
 - `npx eslint src/features/command-centre src/components/console/views/CommandCentreView.tsx tests/command-centre-widgets.test.ts` — 0 errors; only two unused-import warnings were fixed afterward.
 - `node .agents/skills/design-taste-frontend/scripts/lint.mjs src/features/command-centre` — 0 FAILs and 6 justified warnings for dashboard form/card borders required by the existing console visual language.

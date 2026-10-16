@@ -113,3 +113,16 @@ The service uses existing tables and indexes only. No migrations, tables, writes
 - Add render tests for loading, empty, error and populated states for the key widgets.
 - Run `tsc --noEmit`, backend typecheck, ESLint, Vitest, production build, the taste lint/inspection where browser tooling permits, and record actual results in the final report.
 - Manually verify light/dark mode, range changes, isolated widget failure, keyboard focus, responsive widths, SSE/poll refresh, and unchanged neighboring views.
+
+## Final implementation state
+
+Implemented on `feat/command-centre-redesign`:
+
+- The route now renders `src/features/command-centre/components/CommandCentrePage.tsx` through the existing `CommandCentreView` compatibility entry point.
+- The four read-only endpoints are mounted at `/api/v1/command-centre` and covered by backend contract/aggregation tests.
+- The feature hook requests summary, trend, operations and feeds in parallel, caches by range, aborts stale requests, and pauses polling while the tab is hidden.
+- The UI has explicit loading, empty, unsupported, error/retry and refreshing states for every endpoint-backed section.
+- Existing workflow views remain the destination for order, QC/PDI, dispatch, invoice and approval actions; no workflow logic was moved into the dashboard.
+- No dependency, database table, migration or Supabase project/data change was made.
+
+The remaining manual checks and current data limitations are recorded in `docs/command-centre-redesign-report.md`. In particular, route-level bundle comparison is not supported by the existing single-bundle Vite build, and historical inventory, OEE, geography and radar metrics remain intentionally skipped because the current data does not support them.

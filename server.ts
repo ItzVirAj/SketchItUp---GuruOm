@@ -40,6 +40,7 @@ import testingRoutes from './backend/src/modules/testing/testing.routes';
 import adminRoutes from './backend/src/modules/admin/admin.routes';
 import copilotRoutes from './backend/src/modules/copilot/copilot.routes';
 import metricsRoutes from './backend/src/modules/metrics/metrics.routes';
+import commandCentreRoutes from './backend/src/modules/command-centre/command-centre.routes';
 
 
 import { checkRbacRoleConsistency } from './backend/src/utils/rbacConsistencyCheck';
@@ -181,6 +182,7 @@ async function startServer() {
   // ============================================================================
 
   app.use('/api/v1/metrics', metricsRoutes);
+  app.use('/api/v1/command-centre', commandCentreRoutes);
 
 
 

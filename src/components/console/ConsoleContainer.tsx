@@ -736,42 +736,12 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
               <>
                 {currentView === 'command-centre' && (
                   <CommandCentreView
-                    orders={orders}
-                    stock={stock}
-                    shortages={shortages}
-                    qcItems={qcQueue}
-                    jobCards={jobCards}
-                    dispatches={dispatches}
-                    invoices={invoices}
-                    payables={payables}
-                    productionLogs={productionLogs}
-                    pdiQueue={pdiQueue}
-                    machines={machines}
-                    users={users}
-                    auditLogs={auditLogs}
-                    approvals={approvals}
-                    announcements={announcements}
-                    containerScrollRef={mainScrollRef}
                     isDarkMode={isDarkMode}
-                    isRealtimeStreaming={isRealtimeStreaming}
-                    onToggleRealtimeStreaming={() => setIsRealtimeStreaming(!isRealtimeStreaming)}
-                    onResetAllData={handleSync}
                     onNavigate={(view) => handleNavigateView(view)}
-                    onNavigateView={(view) => handleNavigateView(view)}
                     onSelectOrder={handleSelectOrder}
-                    scope={scope}
-                    setScope={setScope}
-                    showCustomizeModal={showCustomizeModal}
-                    setShowCustomizeModal={setShowCustomizeModal}
-                    tasks={tasks}
-                    isLoadingTasks={isLoadingTasks}
-                    onUpdateTaskStatus={handleUpdateStatus}
-                    onCreateTask={handleCreateTask}
-                    todayLog={todayLog}
-                    onCheckIn={handleCheckIn}
-                    onCheckOut={handleCheckOut}
-                    meetings={meetings}
                     currentUser={currentUser}
+                    onOpenNotifications={() => setIsNotificationOpen(true)}
+                    unreadNotificationsCount={unreadCount}
                   />
                 )}
 

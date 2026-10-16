@@ -118,7 +118,8 @@ async function executeRequest<T>(
   body?: any,
   headers?: Record<string, string>,
   retryCount = 0,
-  rawBody?: FormData
+  rawBody?: FormData,
+  signal?: AbortSignal
 ): Promise<T> {
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
   const requestHeaders: Record<string, string> = {
@@ -135,7 +136,8 @@ async function executeRequest<T>(
       method,
       headers: requestHeaders,
       credentials: 'include', // Includes httpOnly refresh token cookie
-      body: rawBody ? rawBody : (body ? JSON.stringify(body) : undefined)
+      body: rawBody ? rawBody : (body ? JSON.stringify(body) : undefined),
+      signal
     });
 
     // 401 Interceptor: Try silent refresh once if unauthorized
@@ -157,7 +159,7 @@ async function executeRequest<T>(
             isRefreshing = false;
             onRefreshed(newToken);
             // Retry original request
-            return executeRequest<T>(method, endpoint, body, headers, 1, rawBody);
+            return executeRequest<T>(method, endpoint, body, headers, 1, rawBody, signal);
           } else {
             isRefreshing = false;
             notifyAuthFailure();
@@ -171,7 +173,7 @@ async function executeRequest<T>(
         return new Promise((resolve, reject) => {
           subscribeTokenRefresh(async (newToken) => {
             try {
-              const res = await executeRequest<T>(method, endpoint, body, headers, 1, rawBody);
+               const res = await executeRequest<T>(method, endpoint, body, headers, 1, rawBody, signal);
               resolve(res);
             } catch (err) {
               reject(err);
@@ -184,13 +186,14 @@ async function executeRequest<T>(
     return await handleResponse<T>(response);
   } catch (err: any) {
     if (err instanceof ApiError) throw err;
+    if (err?.name === 'AbortError') throw err;
     throw new ApiError(err.message || 'Network failure connecting to Owner OS API.', 0);
   }
 }
 
 export const apiClient = {
-  get<T>(endpoint: string, headers?: Record<string, string>): Promise<T> {
-    return executeRequest<T>('GET', endpoint, undefined, headers);
+  get<T>(endpoint: string, headers?: Record<string, string>, signal?: AbortSignal): Promise<T> {
+    return executeRequest<T>('GET', endpoint, undefined, headers, 0, undefined, signal);
   },
 
   post<T>(endpoint: string, body?: any, headers?: Record<string, string>): Promise<T> {

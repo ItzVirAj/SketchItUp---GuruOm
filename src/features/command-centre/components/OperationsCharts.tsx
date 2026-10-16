@@ -40,7 +40,7 @@ export function Heatmap({ cells }: { cells: HeatmapCell[] }) {
           {weekdays.map((day, weekday) => {
             const value = findCell(weekday, hour);
             const intensity = value === 0 ? 0 : 0.16 + (value / max) * 0.76;
-            return <span key={`${day}-${hour}`} className="cc-heat-cell" style={{ '--heat-intensity': intensity } as React.CSSProperties} title={`${day}, ${hour}:00 — ${value} completions`}><span>{value > 0 && value}</span></span>;
+            return <span key={`${day}-${hour}`} className="cc-heat-cell" style={{ '--heat-intensity': intensity } as React.CSSProperties} title={`${day}, ${hour}:00 - ${value} completions`}><span>{value > 0 && value}</span></span>;
           })}
         </React.Fragment>
       ))}
@@ -102,7 +102,7 @@ export function VendorList({ items }: { items: VendorBreakdown[] }) {
       {items.slice(0, 5).map(item => (
         <div key={item.status} className="cc-vendor-row" role="listitem">
           <span className="cc-vendor-status"><i className={`cc-status-dot is-${item.status.toLowerCase()}`} />{item.status.replaceAll('_', ' ')}</span>
-          <span className="cc-vendor-share">{total > 0 ? formatPercent((item.balance / total) * 100) : '—'}</span>
+          <span className="cc-vendor-share">{total > 0 ? formatPercent((item.balance / total) * 100) : '-'}</span>
           <strong className="tabular-nums">{formatCurrency(item.balance)}</strong>
         </div>
       ))}

@@ -133,8 +133,29 @@ The following checks were run during implementation:
 - `npx vitest run tests/command-centre.test.ts tests/command-centre-widgets.test.ts` — 12 tests passed.
 - `npm run build` — passed; Vite and the bundled Express server completed.
 - `npx eslint src/features/command-centre src/components/console/views/CommandCentreView.tsx tests/command-centre-widgets.test.ts` — 0 errors; only two unused-import warnings were fixed afterward.
+- `node .agents/skills/design-taste-frontend/scripts/lint.mjs src/features/command-centre` — 0 FAILs and 6 justified warnings for dashboard form/card borders required by the existing console visual language.
 - `npm run lint:eslint` — not green because the repository already contains a large baseline of unrelated errors/warnings in legacy files. The changed Command Centre paths have no ESLint errors when linted directly.
 - `git diff --check` — passed.
+
+## Manual verification checklist
+
+This workspace does not contain an authenticated owner/admin session, and no credentials or Supabase project/data were accessed. The checks below distinguish code evidence from browser checks that require that session.
+
+| Check | Result | Evidence / gap |
+| --- | --- | --- |
+| 1. Page loads with real data and no console errors | **Blocked** | Requires a local authenticated Owner OS session. Backend and frontend type/build checks pass. |
+| 2. KPI matches underlying module page | **Blocked** | Requires live records and hand-check against Orders/Invoices/Inventory. |
+| 3. Range selector changes all widgets and deltas | **Partial** | Shared typed range is passed to all four parallel requests and delta is server-side; browser hand-check not run. |
+| 4. Empty range has helpful states and no NaN/Infinity | **Pass in component tests** | Widget state tests pass; live empty-range browser check not run. |
+| 5. Killing one endpoint isolates its error state | **Partial** | `Promise.allSettled` isolates endpoint state in code; fault-injection browser/network check not run. |
+| 6. Role-restricted users do not fetch forbidden data | **Pass for endpoint contract** | Auth and reports `VIEW_ONLY` middleware tests pass; full role matrix network observation not run. |
+| 7. Light and dark mode contrast | **Blocked** | CSS includes explicit light/dark tokens; screenshot contrast review requires browser session. |
+| 8. 1920/1440/1280/1024/768/390 responsive widths | **Partial** | Responsive breakpoints and no fixed page width are implemented; browser overflow review not run. |
+| 9. Keyboard navigation and screen-reader labels | **Pass in code/tests** | SVG chart has role/name/focus support, tables are semantic, controls are buttons/labels; screen-reader run not available. |
+| 10. No loading layout shift | **Pass in code/tests** | Fixed skeleton/card geometry and loading render test; browser measurement not run. |
+| 11. Real-time refresh behavior | **Partial** | Existing shell SSE remains intact and feature polling pauses when hidden; live event observation not run. |
+| 12. Other pages unchanged | **Partial** | Only Command Centre adapter/container wiring and shared API abort support changed; full existing suite has unrelated baseline failures. |
+| 13. No duplicate requests or waterfalls | **Partial** | Four endpoint requests are launched in one parallel batch with range cache; authenticated network inspection not run. |
 
 ## Bundle-size note
 

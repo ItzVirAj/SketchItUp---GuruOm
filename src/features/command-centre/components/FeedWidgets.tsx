@@ -24,8 +24,8 @@ export function RecentOrders({ items, onOpen }: { items: OrderFeedItem[]; onOpen
         <thead><tr><th>Order</th><th>Customer</th><th>Status</th><th>Value</th><th>Due</th><th><span className="sr-only">Open</span></th></tr></thead>
         <tbody>
           {items.slice(0, 8).map(item => <tr key={item.id || item.poNo}>
-            <td><button type="button" className="cc-table-link" onClick={() => item.id && onOpen?.(item.id)}>{item.poNo || item.id || '—'}</button></td>
-            <td>{item.customer || '—'}</td>
+            <td><button type="button" className="cc-table-link" onClick={() => item.id && onOpen?.(item.id)}>{item.poNo || item.id || '-'}</button></td>
+            <td>{item.customer || '-'}</td>
             <td><StatusPill status={item.status} /></td>
             <td className="tabular-nums">{formatCurrency(item.amount)}</td>
             <td className="tabular-nums">{formatShortDate(item.date)}</td>

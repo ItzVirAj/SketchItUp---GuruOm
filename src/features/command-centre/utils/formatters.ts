@@ -1,7 +1,7 @@
 const INDIA_LOCALE = 'en-IN';
 
 export function formatCurrency(value: number | null | undefined): string {
-  if (value === null || value === undefined || !Number.isFinite(value)) return '—';
+  if (value === null || value === undefined || !Number.isFinite(value)) return '-';
   return new Intl.NumberFormat(INDIA_LOCALE, {
     style: 'currency',
     currency: 'INR',
@@ -11,19 +11,19 @@ export function formatCurrency(value: number | null | undefined): string {
 }
 
 export function formatNumber(value: number | null | undefined): string {
-  if (value === null || value === undefined || !Number.isFinite(value)) return '—';
+  if (value === null || value === undefined || !Number.isFinite(value)) return '-';
   return new Intl.NumberFormat(INDIA_LOCALE, { maximumFractionDigits: 0 }).format(value);
 }
 
 export function formatPercent(value: number | null | undefined): string {
-  if (value === null || value === undefined || !Number.isFinite(value)) return '—';
+  if (value === null || value === undefined || !Number.isFinite(value)) return '-';
   return `${value.toFixed(value % 1 === 0 ? 0 : 1)}%`;
 }
 
 export function formatShortDate(value: string | null | undefined): string {
-  if (!value) return '—';
+  if (!value) return '-';
   const date = new Date(`${value.slice(0, 10)}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return '—';
+  if (Number.isNaN(date.getTime())) return '-';
   return new Intl.DateTimeFormat(INDIA_LOCALE, { day: 'numeric', month: 'short' }).format(date);
 }
 
@@ -32,9 +32,9 @@ export function formatDateRange(from: string, to: string): string {
 }
 
 export function formatRelativeTime(value: string | null | undefined): string {
-  if (!value) return '—';
+  if (!value) return '-';
   const timestamp = new Date(value).getTime();
-  if (Number.isNaN(timestamp)) return '—';
+  if (Number.isNaN(timestamp)) return '-';
   const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
   if (seconds < 60) return 'Just now';
   const minutes = Math.floor(seconds / 60);

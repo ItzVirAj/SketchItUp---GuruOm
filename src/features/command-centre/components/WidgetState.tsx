@@ -45,7 +45,7 @@ export function WidgetState({
   if (availability === 'unsupported') {
     return (
       <div className="cc-state cc-state-empty">
-        <span className="cc-state-mark" aria-hidden="true">—</span>
+        <span className="cc-state-mark" aria-hidden="true">-</span>
         <p>{reason || 'This metric is not supported by the current data.'}</p>
       </div>
     );

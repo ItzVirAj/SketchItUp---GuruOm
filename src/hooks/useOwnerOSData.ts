@@ -1500,11 +1500,13 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       setMasters(prev => [created, ...prev.filter(m => m.code !== created.code)]);
       await addAuditLog('masters', 'add_master', `Added item master ${created.code} (${created.name})`);
       toast.success(`Added item master ${created.code} (${created.name})`, 'Item Master Created');
+      await loadAllData();
+      return created;
     } catch (err: any) {
       console.warn('handleAddMasterItem error:', err);
       toast.error(err?.message || 'Failed to add item master', 'Error Adding Item');
+      throw err;
     }
-    await loadAllData();
   };
 
   const handleUpdateMasterItem = async (code: string, item: Partial<MasterItem>) => {
@@ -1513,11 +1515,13 @@ export function useOwnerOSData(currentUser?: SystemUser) {
       setMasters(prev => prev.map(m => m.code === code ? { ...m, ...updated } : m));
       await addAuditLog('masters', 'update_master', `Updated item master ${code} (${item.name || item.description || ''})`);
       toast.success(`Updated item master ${code}`, 'Item Master Updated');
+      await loadAllData();
+      return updated;
     } catch (err: any) {
       console.warn('handleUpdateMasterItem error:', err);
       toast.error(err?.message || 'Failed to update item master', 'Error Updating Item');
+      throw err;
     }
-    await loadAllData();
   };
 
   const handleDeleteMasterItem = async (code: string) => {

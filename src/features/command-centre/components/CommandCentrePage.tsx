@@ -70,8 +70,7 @@ export function CommandCentrePage({
     <div className="command-centre-page" data-theme={undefined}>
       <header className="cc-page-header">
         <div>
-          <h1>Command Centre</h1>
-          <p>Good morning, {firstName}. Here is the live operating picture.</p>
+          <h1>Good morning, {firstName}. Here is the live operating picture.</h1>
         </div>
         <div className="cc-header-actions">
           <button type="button" className="cc-icon-button" aria-label="Search Command Centre" title="Search Command Centre" onClick={() => document.getElementById('cc-search')?.focus()}><Search size={17} /></button>

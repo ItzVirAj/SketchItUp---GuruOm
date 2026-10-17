@@ -57,6 +57,8 @@ import {
   VENDOR_CATEGORIES,
   ITEM_TYPES,
   ITEM_UOMS,
+  ITEM_CATEGORIES,
+  formatItemDimensions,
   GST_RATES,
   PAYMENT_TERMS,
   MACHINE_TYPES,
@@ -76,6 +78,7 @@ import {
   maskBankAccount,
   getStateCodeByName
 } from '../../../utils/masterValidation';
+import { IncompleteBadge, isRecordIncomplete, isFieldBlank } from '../../../utils/recordCompleteness';
 
 interface MastersViewProps {
   masters: MasterItem[];
@@ -201,6 +204,8 @@ export const MastersView: React.FC<MastersViewProps> = ({
 
   const handleSelectTab = (tab: 'ITEMS' | 'CUSTOMERS' | 'VENDORS' | 'MACHINES' | 'IMPORT_OMGST') => {
     setActiveTab(tab);
+    setTypeFilter('ALL');
+    setIncompleteOnly(false);
     const subPath = tab === 'CUSTOMERS' ? '/admin/master-catalogs/customers' :
                     tab === 'VENDORS' ? '/admin/master-catalogs/vendors' :
                     tab === 'MACHINES' ? '/admin/master-catalogs/machines' :
@@ -214,6 +219,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'Active' | 'Inactive'>('ALL');
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
+  const [incompleteOnly, setIncompleteOnly] = useState(false);
   
   // URL-driven modal hooks
   const addCustomerModal = useUrlModal('add-customer');
@@ -301,7 +307,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
   const [vCode, setVCode] = useState('');
   const [vName, setVName] = useState('');
   const [vLegalName, setVLegalName] = useState('');
-  const [vVendorType, setVVendorType] = useState<string>('Supplier');
+  const [vVendorType, setVVendorType] = useState<string>('');
   const [vVendorCategory, setVVendorCategory] = useState<string>('Raw Material');
   const [vContactPerson, setVContactPerson] = useState('');
   const [vMobile, setVMobile] = useState('');
@@ -350,7 +356,11 @@ export const MastersView: React.FC<MastersViewProps> = ({
   const [iCode, setICode] = useState('');
   const [iName, setIName] = useState('');
   const [iItemType, setIItemType] = useState<string>('Raw Material');
-  const [iCategory, setICategory] = useState('');
+  const [iCategory, setICategory] = useState('None');
+  const [iDimDiameter, setIDimDiameter] = useState('');
+  const [iDimLength, setIDimLength] = useState('');
+  const [iDimWidth, setIDimWidth] = useState('');
+  const [iDimThickness, setIDimThickness] = useState('');
   const [iDescription, setIDescription] = useState('');
   const [iPartNo, setIPartNo] = useState('');
   const [iUnit, setIUnit] = useState<string>('Nos');
@@ -390,6 +400,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
   const [editingCustomer, setEditingCustomer] = useState<CustomerMaster | null>(null);
   const [editingVendor, setEditingVendor] = useState<VendorMaster | null>(null);
   const [editingItem, setEditingItem] = useState<MasterItem | null>(null);
+  const [viewingItem, setViewingItem] = useState<MasterItem | null>(null);
   const [editingMachine, setEditingMachine] = useState<MachineMaster | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{
     isOpen: boolean;
@@ -465,7 +476,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
     setVCode(nextCode);
     setVName('');
     setVLegalName('');
-    setVVendorType('Supplier');
+    setVVendorType('');
     setVVendorCategory('Raw Material');
     setVContactPerson('');
     setVMobile('');
@@ -497,7 +508,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
     setVCode(v.code);
     setVName(v.name);
     setVLegalName(v.legalName || '');
-    setVVendorType(v.vendorType || 'Supplier');
+    setVVendorType(v.vendorType || '');
     setVVendorCategory(v.vendorCategory || 'Raw Material');
     setVContactPerson(v.contactPerson || '');
     setVMobile(v.mobile || '');
@@ -535,11 +546,13 @@ export const MastersView: React.FC<MastersViewProps> = ({
   const openItemModal = () => {
     setFormErrors({});
     setEditingItem(null);
-    const prefix = getItemPrefix(iItemType);
-    const nextCode = generateNextCode(masters.map(m => m.code), prefix);
-    setICode(nextCode);
+    setICode('');
     setIName('');
-    setICategory('Metals & Bars');
+    setICategory('None');
+    setIDimDiameter('');
+    setIDimLength('');
+    setIDimWidth('');
+    setIDimThickness('');
     setIDescription('');
     setIPartNo('');
     setIUnit('Nos');
@@ -563,7 +576,24 @@ export const MastersView: React.FC<MastersViewProps> = ({
     setICode(item.code);
     setIName(item.name || item.description || '');
     setIItemType(item.itemType || (item.isFinishedGoods ? 'Finished Good' : 'Raw Material'));
-    setICategory(item.category || '');
+
+    // For existing items whose category is an old value (e.g. "Metals & Bars"),
+    // show the dropdown with no selection and make the user pick one of the three options before saving.
+    const isStandardCategory = ITEM_CATEGORIES.includes(item.category as any);
+    if (isStandardCategory) {
+      setICategory(item.category || 'None');
+      setIDimDiameter(item.dimDiameter != null ? String(item.dimDiameter) : '');
+      setIDimLength(item.dimLength != null ? String(item.dimLength) : '');
+      setIDimWidth(item.dimWidth != null ? String(item.dimWidth) : '');
+      setIDimThickness(item.dimThickness != null ? String(item.dimThickness) : '');
+    } else {
+      setICategory('');
+      setIDimDiameter('');
+      setIDimLength('');
+      setIDimWidth('');
+      setIDimThickness('');
+    }
+
     setIDescription(item.description || item.name || '');
     setIPartNo(item.partNo || '');
     setIUnit(item.unit || 'Nos');
@@ -670,12 +700,8 @@ export const MastersView: React.FC<MastersViewProps> = ({
     }
   }, [deleteMasterModal.isOpen, deleteMasterModal.params.type, deleteMasterModal.params.code, deleteMasterModal.params.name]);
 
-  // Dynamic Item Prefix update on type change
   const handleItemTypeChange = (newType: string) => {
     setIItemType(newType);
-    const prefix = getItemPrefix(newType);
-    const nextCode = generateNextCode(masters.map(m => m.code), prefix);
-    setICode(nextCode);
 
     if (newType === 'Finished Good') {
       setIStandardCost(0);
@@ -687,6 +713,18 @@ export const MastersView: React.FC<MastersViewProps> = ({
       if (iStandardCost === 0) setIStandardCost(100);
       setIDefaultWarehouse('Main Raw Material Store');
     }
+  };
+
+  const handleCategoryChange = (newCat: string) => {
+    setICategory(newCat);
+    setIDimDiameter('');
+    setIDimLength('');
+    setIDimWidth('');
+    setIDimThickness('');
+    setFormErrors(prev => {
+      const { category, dimDiameter, dimLength, dimWidth, dimThickness, ...rest } = prev;
+      return rest;
+    });
   };
 
   // ----------------------------------------------------
@@ -778,6 +816,15 @@ export const MastersView: React.FC<MastersViewProps> = ({
     e.preventDefault();
     const errors: Record<string, string> = {};
 
+    if (!vCode.trim()) {
+      errors.code = 'Vendor ID code is required';
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (vEmail.trim() && !emailRegex.test(vEmail.trim())) {
+      errors.email = 'Please enter a valid email address';
+    }
+
     // DEV PURPOSE ONLY: If gstin is entered and invalid, flag it, otherwise auto-generate or use exempt
     let effectiveGstin = vGstin.trim().toUpperCase();
     if (!vGstExempt && !effectiveGstin) {
@@ -795,7 +842,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
     }
 
     // DEV PURPOSE ONLY: Auto-randomize any missing required fields to satisfy backend schema
-    const finalName = vName.trim() || (editingVendor ? vCode : `Vendor ${vCode || 'VEND-0001'}`);
+    const finalName = vName.trim() || (editingVendor ? vCode : `Vendor ${vCode || '1'}`);
     const finalContactPerson = vContactPerson.trim() || generateDevContact();
     const finalMobile = (vMobile.trim() && INDIAN_MOBILE_REGEX.test(vMobile.trim()))
       ? vMobile.trim()
@@ -824,10 +871,10 @@ export const MastersView: React.FC<MastersViewProps> = ({
       : undefined;
 
     const newVend: VendorMaster = {
-      code: vCode,
+      code: vCode.trim(),
       name: finalName,
       legalName: vLegalName.trim(),
-      vendorType: vVendorType || 'Supplier',
+      vendorType: vVendorType.trim(),
       vendorCategory: vVendorCategory || 'Raw Material',
       contactPerson: finalContactPerson,
       mobile: finalMobile,
@@ -864,11 +911,56 @@ export const MastersView: React.FC<MastersViewProps> = ({
     addVendorModal.close();
   };
 
-  const handleSaveItem = (e: React.FormEvent) => {
+  const handleSaveItem = async (e: React.FormEvent) => {
     e.preventDefault();
     const errors: Record<string, string> = {};
 
+    // 1. Normalise to uppercase and trim spaces. Allow letters, numbers, hyphen and underscore only, max 100
+    const cleanCode = iCode.trim().toUpperCase();
+    if (!cleanCode) {
+      errors.code = 'Item Code is required';
+    } else if (!/^[A-Z0-9\-_]+$/.test(cleanCode)) {
+      errors.code = 'Item Code must contain only letters, numbers, hyphens, and underscores';
+    } else if (cleanCode.length > 100) {
+      errors.code = 'Item Code cannot exceed 100 characters';
+    }
+
     if (!iName.trim()) errors.name = 'Item Name is mandatory';
+
+    // 2. Validate category & dimensions
+    if (!iCategory || !ITEM_CATEGORIES.includes(iCategory as any)) {
+      errors.category = 'Please select a category (None, Round Bar, Plate, or Angle)';
+    } else {
+      const isValidPositiveDimension = (val: string) => {
+        if (!val || !val.trim()) return false;
+        const num = parseFloat(val.trim());
+        if (isNaN(num) || num <= 0) return false;
+        const parts = val.trim().split('.');
+        if (parts.length > 2) return false;
+        if (parts.length === 2 && parts[1].length > 2) return false;
+        return true;
+      };
+
+      if (iCategory === 'Round Bar') {
+        if (!isValidPositiveDimension(iDimDiameter)) {
+          errors.dimDiameter = 'Diameter is required and must be a positive number (up to 2 decimals)';
+        }
+        if (!isValidPositiveDimension(iDimLength)) {
+          errors.dimLength = 'Length is required and must be a positive number (up to 2 decimals)';
+        }
+      } else if (iCategory === 'Plate' || iCategory === 'Angle') {
+        if (!isValidPositiveDimension(iDimLength)) {
+          errors.dimLength = 'Length is required and must be a positive number (up to 2 decimals)';
+        }
+        if (!isValidPositiveDimension(iDimWidth)) {
+          errors.dimWidth = 'Width is required and must be a positive number (up to 2 decimals)';
+        }
+        if (!isValidPositiveDimension(iDimThickness)) {
+          errors.dimThickness = 'Thickness is required and must be a positive number (up to 2 decimals)';
+        }
+      }
+    }
+
     if (!iHsnCode.trim() || !HSN_CODE_REGEX.test(iHsnCode.trim())) {
       errors.hsnCode = 'HSN code must be 4 to 8 digits for GST invoicing';
     }
@@ -892,12 +984,20 @@ export const MastersView: React.FC<MastersViewProps> = ({
     }
 
     const isFG = iItemType === 'Finished Good';
+    const numDiameter = iCategory === 'Round Bar' && iDimDiameter ? Math.round(parseFloat(iDimDiameter) * 100) / 100 : null;
+    const numLength = (iCategory === 'Round Bar' || iCategory === 'Plate' || iCategory === 'Angle') && iDimLength ? Math.round(parseFloat(iDimLength) * 100) / 100 : null;
+    const numWidth = (iCategory === 'Plate' || iCategory === 'Angle') && iDimWidth ? Math.round(parseFloat(iDimWidth) * 100) / 100 : null;
+    const numThickness = (iCategory === 'Plate' || iCategory === 'Angle') && iDimThickness ? Math.round(parseFloat(iDimThickness) * 100) / 100 : null;
 
     const newItem: MasterItem = {
-      code: iCode,
+      code: cleanCode,
       name: iName.trim(),
       itemType: iItemType,
-      category: iCategory.trim(),
+      category: iCategory,
+      dimDiameter: numDiameter,
+      dimLength: numLength,
+      dimWidth: numWidth,
+      dimThickness: numThickness,
       description: iDescription.trim() || iName.trim(),
       partNo: iPartNo.trim() || iName.trim(),
       unit: iUnit,
@@ -918,18 +1018,22 @@ export const MastersView: React.FC<MastersViewProps> = ({
       status: iStatus
     };
 
-    if (editingItem && onUpdateMaster) {
-      onUpdateMaster(iCode, newItem);
-    } else if (onAddMasterItem) {
-      const { code, ...restItem } = newItem;
-      onAddMasterItem(restItem as any);
-    } else if (onAddMaster) {
-      const { code, ...restItem } = newItem;
-      onAddMaster(restItem as any);
+    try {
+      if (editingItem && onUpdateMaster) {
+        await onUpdateMaster(cleanCode, newItem);
+      } else if (onAddMasterItem) {
+        await onAddMasterItem(newItem);
+      } else if (onAddMaster) {
+        await onAddMaster(newItem);
+      }
+      setEditingItem(null);
+      addItemModal.close();
+    } catch (err: any) {
+      const errMsg = err?.message || '';
+      if (err?.statusCode === 409 || errMsg.toLowerCase().includes('already exists') || errMsg.toLowerCase().includes('duplicate')) {
+        setFormErrors(prev => ({ ...prev, code: 'Item code already exists' }));
+      }
     }
-
-    setEditingItem(null);
-    addItemModal.close();
   };
 
   const handleSaveMachine = (e: React.FormEvent) => {
@@ -1002,9 +1106,10 @@ export const MastersView: React.FC<MastersViewProps> = ({
       
       const matchesStatus = statusFilter === 'ALL' || c.status === statusFilter;
       const matchesType = typeFilter === 'ALL' || c.customerType === typeFilter;
-      return matchesSearch && matchesStatus && matchesType;
+      const matchesIncomplete = !incompleteOnly || isRecordIncomplete('customer', c);
+      return matchesSearch && matchesStatus && matchesType && matchesIncomplete;
     });
-  }, [customers, searchTerm, statusFilter, typeFilter]);
+  }, [customers, searchTerm, statusFilter, typeFilter, incompleteOnly]);
 
   const filteredVendors = useMemo(() => {
     return vendors.filter(v => {
@@ -1013,13 +1118,15 @@ export const MastersView: React.FC<MastersViewProps> = ({
         v.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
         v.gstin.toLowerCase().includes(searchTerm.toLowerCase()) ||
         v.pan.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        v.city.toLowerCase().includes(searchTerm.toLowerCase());
+        v.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (v.vendorType || '').toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesStatus = statusFilter === 'ALL' || v.status === statusFilter;
       const matchesType = typeFilter === 'ALL' || v.vendorType === typeFilter;
-      return matchesSearch && matchesStatus && matchesType;
+      const matchesIncomplete = !incompleteOnly || isRecordIncomplete('vendor', v);
+      return matchesSearch && matchesStatus && matchesType && matchesIncomplete;
     });
-  }, [vendors, searchTerm, statusFilter, typeFilter]);
+  }, [vendors, searchTerm, statusFilter, typeFilter, incompleteOnly]);
 
   const filteredItems = useMemo(() => {
     return masters.filter(m => {
@@ -1502,7 +1609,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
               </div>
             </div>
 
-            {/* Status Filter */}
+            {/* Status & Type Filters */}
             <div className="flex items-center gap-2">
               <select
                 value={statusFilter}
@@ -1517,6 +1624,41 @@ export const MastersView: React.FC<MastersViewProps> = ({
                 <option value="Active">Active Only</option>
                 <option value="Inactive">Inactive</option>
               </select>
+
+              {activeTab === 'VENDORS' && (
+                <select
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
+                  className={`h-10 px-4 rounded-full border text-xs font-bold font-mono outline-none cursor-pointer ${
+                    isDarkMode 
+                      ? 'bg-black/60 border-white/10 text-white hover:bg-black/80' 
+                      : 'bg-white border-slate-200 text-slate-900 hover:bg-slate-50 shadow-xs'
+                  }`}
+                >
+                  <option value="ALL">Type: All</option>
+                  {Array.from(new Set(vendors.map(v => v.vendorType).filter(Boolean))).map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              )}
+
+              {(activeTab === 'CUSTOMERS' || activeTab === 'VENDORS') && (
+                <button
+                  type="button"
+                  onClick={() => setIncompleteOnly(!incompleteOnly)}
+                  className={`h-10 px-3.5 rounded-full border text-xs font-bold font-mono transition-colors flex items-center gap-1.5 cursor-pointer ${
+                    incompleteOnly
+                      ? 'bg-amber-500/20 text-amber-500 dark:text-amber-400 border-amber-500/40 ring-1 ring-amber-500/30'
+                      : isDarkMode
+                        ? 'bg-black/60 border-white/10 text-slate-400 hover:text-white hover:bg-black/80'
+                        : 'bg-white border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 shadow-xs'
+                  }`}
+                  title="Filter records missing key information"
+                >
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Incomplete only</span>
+                </button>
+              )}
 
               <span className={`text-xs font-mono font-bold px-3 py-1.5 rounded-full border ${
                 isDarkMode ? 'border-white/10 bg-white/5 text-slate-400' : 'border-slate-200 bg-slate-100 text-slate-600'
@@ -1555,9 +1697,12 @@ export const MastersView: React.FC<MastersViewProps> = ({
                   {/* Header: Code + Name + Status */}
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <span className="font-mono font-bold text-xs text-blue-500 dark:text-blue-400">
-                        {cust.code}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono font-bold text-xs text-blue-500 dark:text-blue-400">
+                          {cust.code}
+                        </span>
+                        <IncompleteBadge entity="customer" record={cust} />
+                      </div>
                       <h3 className={`text-xs font-bold font-sans mt-0.5 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                         {cust.name}
                       </h3>
@@ -1685,7 +1830,12 @@ export const MastersView: React.FC<MastersViewProps> = ({
                             : isDarkMode ? 'hover:bg-slate-800/40 text-slate-200' : 'hover:bg-slate-50 text-slate-900'
                         }`}
                       >
-                        <td className="py-4 px-5 font-mono font-bold text-xs text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{cust.code}</td>
+                        <td className="py-4 px-5 font-mono font-bold text-xs">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{cust.code}</span>
+                            <IncompleteBadge entity="customer" record={cust} />
+                          </div>
+                        </td>
                         <td className="py-4 px-5">
                           <div className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{cust.name}</div>
                           <div className="text-[10px] font-mono flex items-center gap-1.5 mt-1">
@@ -1807,9 +1957,12 @@ export const MastersView: React.FC<MastersViewProps> = ({
                   {/* Header: Code + Name + Status */}
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <span className="font-mono font-bold text-xs text-indigo-500 dark:text-indigo-400">
-                        {vend.code}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono font-bold text-xs text-indigo-500 dark:text-indigo-400">
+                          {vend.code}
+                        </span>
+                        <IncompleteBadge entity="vendor" record={vend} />
+                      </div>
                       <h3 className={`text-xs font-bold font-sans mt-0.5 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                         {vend.name}
                       </h3>
@@ -1822,7 +1975,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
                           ? isDarkMode ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-200'
                           : isDarkMode ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' : 'bg-indigo-50 text-indigo-700 border-indigo-200'
                       }`}>
-                        {vend.vendorType === 'Subcontractor / Job Worker' ? 'Subcontractor' : 'Supplier'}
+                        {vend.vendorType || '—'}
                       </span>
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase border ${
                         vend.status === 'Active'
@@ -1903,6 +2056,12 @@ export const MastersView: React.FC<MastersViewProps> = ({
                   <div className={`p-2.5 rounded-2xl border space-y-1.5 text-xs font-mono ${
                     isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50 border-slate-200'
                   }`}>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-[10px] text-slate-400">Vendor Type:</span>
+                      <span className="font-bold text-indigo-400">
+                        {vend.vendorType || '—'}
+                      </span>
+                    </div>
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] text-slate-400">PAN / GSTIN:</span>
                       <span className="font-bold text-emerald-400">
@@ -1918,7 +2077,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
                     <div className="flex items-center justify-between text-[11px]">
                       <span className="text-[10px] text-slate-400">Contact:</span>
                       <span className={isDarkMode ? 'text-slate-200' : 'text-slate-800'}>
-                        {vend.contactPerson} (+91 {vend.mobile})
+                        {vend.contactPerson} (+91 {vend.mobile}){vend.email ? ` • ${vend.email}` : ''}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-[11px]">
@@ -2007,7 +2166,12 @@ export const MastersView: React.FC<MastersViewProps> = ({
                             : isDarkMode ? 'hover:bg-slate-800/40 text-slate-200' : 'hover:bg-slate-50 text-slate-900'
                         }`}
                       >
-                        <td className="py-4 px-5 font-mono font-bold text-xs text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{vend.code}</td>
+                        <td className="py-4 px-5 font-mono font-bold text-xs">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[var(--accent-primary)] dark:text-[var(--accent-text-dark)]">{vend.code}</span>
+                            <IncompleteBadge entity="vendor" record={vend} />
+                          </div>
+                        </td>
                         <td className="py-4 px-5">
                           <div className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{vend.name}</div>
                           <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-mono mt-1">
@@ -2079,7 +2243,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
                               ? isDarkMode ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-200'
                               : isDarkMode ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' : 'bg-indigo-50 text-indigo-700 border-indigo-200'
                           }`}>
-                            {vend.vendorType}
+                            {vend.vendorType || '—'}
                           </span>
                           {vend.vendorType === 'Subcontractor / Job Worker' && vend.processType && (
                             <div className="text-[11px] text-amber-600 dark:text-amber-400 font-mono font-semibold mt-1">
@@ -2114,6 +2278,11 @@ export const MastersView: React.FC<MastersViewProps> = ({
                             <Phone className="w-3 h-3 text-indigo-500" />
                             <span>+91 {vend.mobile}</span>
                           </div>
+                          {vend.email && (
+                            <div className={`text-[10px] mt-0.5 truncate max-w-[180px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                              {vend.email}
+                            </div>
+                          )}
                         </td>
                         <td className="py-4 px-5">
                           <div className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{vend.city}</div>
@@ -2236,6 +2405,34 @@ export const MastersView: React.FC<MastersViewProps> = ({
                   <div className={`p-2.5 rounded-2xl border space-y-1.5 text-xs font-mono ${
                     isDarkMode ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-50 border-slate-200'
                   }`}>
+                    {item.category && item.category !== 'None' && (
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-[10px] text-slate-400">Category:</span>
+                        <span className={`font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+                          {item.category}
+                        </span>
+                      </div>
+                    )}
+                    {formatItemDimensions(item) && (
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-[10px] text-slate-400">Size (Dimensions):</span>
+                        <span className="font-bold text-cyan-500 dark:text-cyan-400">
+                          {formatItemDimensions(item)} mm
+                        </span>
+                      </div>
+                    )}
+                    {item.category === 'Round Bar' && (item.dimDiameter != null || item.dimLength != null) && (
+                      <div className="flex items-center justify-between text-[10px] text-slate-400">
+                        <span>Dimensions:</span>
+                        <span>Ø {item.dimDiameter ?? '—'} mm • L: {item.dimLength ?? '—'} mm</span>
+                      </div>
+                    )}
+                    {(item.category === 'Plate' || item.category === 'Angle') && (item.dimLength != null || item.dimWidth != null || item.dimThickness != null) && (
+                      <div className="flex items-center justify-between text-[10px] text-slate-400">
+                        <span>Dimensions:</span>
+                        <span>L: {item.dimLength ?? '—'} mm • W: {item.dimWidth ?? '—'} mm • T: {item.dimThickness ?? '—'} mm</span>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] text-slate-400">HSN & Tax:</span>
                       <span className={isDarkMode ? 'text-slate-200' : 'text-slate-800'}>
@@ -2268,6 +2465,14 @@ export const MastersView: React.FC<MastersViewProps> = ({
 
                   {/* Actions */}
                   <div className="flex items-center gap-2 pt-1 border-t border-slate-800/60">
+                    <button
+                      type="button"
+                      onClick={() => setViewingItem(item)}
+                      className="px-3 py-2 rounded-xl bg-blue-500/15 text-blue-400 border border-blue-500/30 font-mono text-xs font-bold flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>View</span>
+                    </button>
                     <button
                       type="button"
                       onClick={() => openEditItem(item)}
@@ -2310,6 +2515,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
                     <th className="py-4 px-5">Item Code</th>
                     <th className="py-4 px-5">Item Name / Part Description</th>
                     <th className="py-4 px-5">Type & Category</th>
+                    <th className="py-4 px-5">Size</th>
                     <th className="py-4 px-5">HSN & GST%</th>
                     <th className="py-4 px-5">UOM</th>
                     <th className="py-4 px-5">Standard Cost / Selling Price</th>
@@ -2322,7 +2528,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
                 <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800/60' : 'divide-slate-200/70'}`}>
                   {filteredItems.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="py-14 text-center">
+                      <td colSpan={11} className="py-14 text-center">
                         <Package className="w-9 h-9 mx-auto mb-2 opacity-40 text-slate-400" />
                         <p className={`text-sm font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-800'}`}>No item catalog records found.</p>
                         <p className={`text-xs mt-1 ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>Click "New Item" to register raw material or finished goods.</p>
@@ -2353,7 +2559,16 @@ export const MastersView: React.FC<MastersViewProps> = ({
                           }`}>
                             {item.itemType || (item.isFinishedGoods ? 'Finished Good' : 'Raw Material')}
                           </span>
-                          {item.category && <div className={`text-[10px] mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{item.category}</div>}
+                          {item.category && item.category !== 'None' && <div className={`text-[10px] mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{item.category}</div>}
+                        </td>
+                        <td className="py-4 px-5 font-mono">
+                          {formatItemDimensions(item) ? (
+                            <span className="font-bold text-cyan-600 dark:text-cyan-400">
+                              {formatItemDimensions(item)} <span className="text-[10px] text-slate-400 font-normal">mm</span>
+                            </span>
+                          ) : (
+                            <span className="text-slate-400">—</span>
+                          )}
                         </td>
                         <td className="py-4 px-5 font-mono">
                           <div className={`font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>HSN: {item.hsnCode}</div>
@@ -2389,6 +2604,19 @@ export const MastersView: React.FC<MastersViewProps> = ({
                         </td>
                         <td className="py-4 px-5 text-right">
                           <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setViewingItem(item)}
+                              className={`px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-ui cursor-pointer ${
+                                isDarkMode 
+                                  ? 'bg-slate-800 hover:bg-slate-700 text-blue-400 border-slate-700 hover:border-blue-500/50' 
+                                  : 'bg-white hover:bg-blue-50 text-blue-600 border-slate-200 hover:border-blue-300 shadow-xs'
+                              }`}
+                              title="View Item Details"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              <span>View</span>
+                            </button>
                             <button
                               type="button"
                               onClick={() => openEditItem(item)}
@@ -2813,10 +3041,16 @@ export const MastersView: React.FC<MastersViewProps> = ({
                 className={`w-full p-2.5 rounded-xl border ${
                   formErrors.contactPerson 
                     ? 'border-rose-500 ring-1 ring-rose-500' 
-                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:bg-white'
+                    : Boolean(editingCustomer) && isFieldBlank(cContactPerson)
+                      ? 'border-amber-500/60 ring-1 ring-amber-500/30 bg-amber-500/5 text-slate-900 dark:text-white'
+                      : isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:bg-white'
                 }`}
               />
-              {formErrors.contactPerson && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.contactPerson}</p>}
+              {formErrors.contactPerson ? (
+                <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.contactPerson}</p>
+              ) : Boolean(editingCustomer) && isFieldBlank(cContactPerson) ? (
+                <p className="text-[10px] text-amber-500 font-medium mt-0.5">Please fill in contact person</p>
+              ) : null}
             </div>
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
@@ -2833,11 +3067,17 @@ export const MastersView: React.FC<MastersViewProps> = ({
                   className={`w-full pl-11 pr-3 py-2.5 rounded-xl border font-mono ${
                     formErrors.mobile 
                       ? 'border-rose-500 ring-1 ring-rose-500' 
-                      : isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:bg-white'
+                      : Boolean(editingCustomer) && isFieldBlank(cMobile)
+                        ? 'border-amber-500/60 ring-1 ring-amber-500/30 bg-amber-500/5 text-slate-900 dark:text-white'
+                        : isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:bg-white'
                   }`}
                 />
               </div>
-              {formErrors.mobile && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.mobile}</p>}
+              {formErrors.mobile ? (
+                <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.mobile}</p>
+              ) : Boolean(editingCustomer) && isFieldBlank(cMobile) ? (
+                <p className="text-[10px] text-amber-500 font-medium mt-0.5">Please fill in mobile number</p>
+              ) : null}
             </div>
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
@@ -2939,10 +3179,16 @@ export const MastersView: React.FC<MastersViewProps> = ({
                   className={`w-full p-2.5 rounded-xl border font-mono uppercase font-bold tracking-wider ${
                     formErrors.pan 
                       ? 'border-rose-500 ring-1 ring-rose-500' 
-                      : isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400'
+                      : Boolean(editingCustomer) && isFieldBlank(cPan)
+                        ? 'border-amber-500/60 ring-1 ring-amber-500/30 bg-amber-500/5 text-slate-900 dark:text-white'
+                        : isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400'
                   }`}
                 />
-                {formErrors.pan && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.pan}</p>}
+                {formErrors.pan ? (
+                  <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.pan}</p>
+                ) : Boolean(editingCustomer) && isFieldBlank(cPan) ? (
+                  <p className="text-[10px] text-amber-500 font-medium mt-0.5">Please fill in PAN</p>
+                ) : null}
               </div>
             </div>
           </div>
@@ -3257,16 +3503,23 @@ export const MastersView: React.FC<MastersViewProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                {editingVendor ? 'Vendor ID' : 'Vendor ID (Auto)'}
+                {editingVendor ? 'Vendor ID' : 'Vendor ID (e.g. 1-12 or VEND-0001)'}
               </label>
               <input
                 type="text"
                 value={vCode}
-                readOnly
+                onChange={(e) => setVCode(e.target.value.trim())}
+                readOnly={Boolean(editingVendor)}
+                placeholder="e.g. 1 or VEND-0001"
                 className={`w-full p-2.5 rounded-xl border font-mono font-bold ${
-                  isDarkMode ? 'bg-slate-800/80 border-slate-700 text-indigo-400' : 'bg-slate-100 border-slate-200 text-indigo-600'
+                  formErrors.code
+                    ? 'border-rose-500 ring-1 ring-rose-500'
+                    : editingVendor
+                      ? isDarkMode ? 'bg-slate-800/80 border-slate-700 text-indigo-400' : 'bg-slate-100 border-slate-200 text-indigo-600'
+                      : isDarkMode ? 'bg-slate-800 border-slate-700 text-indigo-300 focus:bg-slate-900' : 'bg-slate-50 border-slate-300 text-indigo-700 focus:bg-white'
                 }`}
               />
+              {formErrors.code && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.code}</p>}
             </div>
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
@@ -3301,21 +3554,30 @@ export const MastersView: React.FC<MastersViewProps> = ({
             </div>
           </div>
 
-          {/* Row 2: Vendor Type, Vendor Category, Contact Person, Mobile */}
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          {/* Row 2: Vendor Type & Category */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                Vendor Type <span className="text-rose-500">*</span>
+                Vendor Type
               </label>
-              <select
+              <input
+                type="text"
+                list="vendor-type-options"
+                placeholder="e.g. Supplier, Machining, Plating"
                 value={vVendorType}
                 onChange={(e) => setVVendorType(e.target.value)}
-                className={`w-full p-2.5 rounded-xl border font-bold ${
-                  isDarkMode ? 'bg-slate-800 border-slate-700 text-indigo-300' : 'bg-slate-50 border-slate-300 text-indigo-700 focus:bg-white'
+                className={`w-full p-2.5 rounded-xl border font-medium ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-indigo-300 placeholder:text-slate-500' : 'bg-slate-50 border-slate-300 text-indigo-700 placeholder:text-slate-400 focus:bg-white'
                 }`}
-              >
-                {VENDOR_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
+              />
+              <datalist id="vendor-type-options">
+                {VENDOR_TYPES.map(t => <option key={t} value={t} />)}
+                <option value="Machining" />
+                <option value="Plating" />
+                <option value="Heat Treatment" />
+                <option value="Grinding" />
+                <option value="Fabrication" />
+              </datalist>
             </div>
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
@@ -3331,9 +3593,13 @@ export const MastersView: React.FC<MastersViewProps> = ({
                 {VENDOR_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
+          </div>
+
+          {/* Row 2b: Contact Person, Mobile, Email */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                Contact Person <span className="text-rose-500">*</span>
+                Contact Person {editingVendor ? null : <span className="text-rose-500">*</span>}
               </label>
               <input
                 type="text"
@@ -3343,14 +3609,20 @@ export const MastersView: React.FC<MastersViewProps> = ({
                 className={`w-full p-2.5 rounded-xl border ${
                   formErrors.contactPerson 
                     ? 'border-rose-500 ring-1 ring-rose-500' 
-                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                    : Boolean(editingVendor) && isFieldBlank(vContactPerson)
+                      ? 'border-amber-500/60 ring-1 ring-amber-500/30 bg-amber-500/5 text-slate-900 dark:text-white'
+                      : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
                 }`}
               />
-              {formErrors.contactPerson && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.contactPerson}</p>}
+              {formErrors.contactPerson ? (
+                <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.contactPerson}</p>
+              ) : Boolean(editingVendor) && isFieldBlank(vContactPerson) ? (
+                <p className="text-[10px] text-amber-500 font-medium mt-0.5">Please fill in contact person</p>
+              ) : null}
             </div>
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                Mobile (10-digit) <span className="text-rose-500">*</span>
+                Mobile (10-digit) {editingVendor ? null : <span className="text-rose-500">*</span>}
               </label>
               <input
                 type="text"
@@ -3361,10 +3633,33 @@ export const MastersView: React.FC<MastersViewProps> = ({
                 className={`w-full p-2.5 rounded-xl border font-mono ${
                   formErrors.mobile 
                     ? 'border-rose-500 ring-1 ring-rose-500' 
-                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                    : Boolean(editingVendor) && isFieldBlank(vMobile)
+                      ? 'border-amber-500/60 ring-1 ring-amber-500/30 bg-amber-500/5 text-slate-900 dark:text-white'
+                      : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
                 }`}
               />
-              {formErrors.mobile && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.mobile}</p>}
+              {formErrors.mobile ? (
+                <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.mobile}</p>
+              ) : Boolean(editingVendor) && isFieldBlank(vMobile) ? (
+                <p className="text-[10px] text-amber-500 font-medium mt-0.5">Please fill in mobile number</p>
+              ) : null}
+            </div>
+            <div>
+              <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Email Address
+              </label>
+              <input
+                type="email"
+                placeholder="vendor@company.com"
+                value={vEmail}
+                onChange={(e) => setVEmail(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border ${
+                  formErrors.email 
+                    ? 'border-rose-500 ring-1 ring-rose-500' 
+                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:bg-white'
+                }`}
+              />
+              {formErrors.email && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.email}</p>}
             </div>
           </div>
 
@@ -3417,7 +3712,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
           }`}>
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                PAN (TDS Mandated) <span className="text-rose-500">*</span>
+                PAN (TDS Mandated) {editingVendor ? null : <span className="text-rose-500">*</span>}
               </label>
               <input
                 type="text"
@@ -3428,10 +3723,16 @@ export const MastersView: React.FC<MastersViewProps> = ({
                 className={`w-full p-2.5 rounded-xl border font-mono ${
                   formErrors.pan 
                     ? 'border-rose-500 ring-1 ring-rose-500' 
-                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                    : Boolean(editingVendor) && isFieldBlank(vPan)
+                      ? 'border-amber-500/60 ring-1 ring-amber-500/30 bg-amber-500/5 text-slate-900 dark:text-white'
+                      : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
                 }`}
               />
-              {formErrors.pan && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.pan}</p>}
+              {formErrors.pan ? (
+                <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.pan}</p>
+              ) : Boolean(editingVendor) && isFieldBlank(vPan) ? (
+                <p className="text-[10px] text-amber-500 font-medium mt-0.5">Please fill in PAN</p>
+              ) : null}
             </div>
             <div>
               <div className="flex items-center justify-between mb-1">
@@ -3510,7 +3811,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
               </div>
               <div>
                 <label className={`block text-[10px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                  Bank Account Number <span className="text-rose-500">*</span>
+                  Bank Account Number {editingVendor ? null : <span className="text-rose-500">*</span>}
                 </label>
                 <input
                   type="text"
@@ -3520,13 +3821,20 @@ export const MastersView: React.FC<MastersViewProps> = ({
                   className={`w-full p-2 rounded-xl border text-xs font-mono ${
                     formErrors.bankAccountNumber 
                       ? 'border-rose-500 ring-1 ring-rose-500' 
-                      : isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                      : Boolean(editingVendor) && isFieldBlank(vBankAccountNumber)
+                        ? 'border-amber-500/60 ring-1 ring-amber-500/30 bg-amber-500/5 text-slate-900 dark:text-white'
+                        : isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
                   }`}
                 />
+                {formErrors.bankAccountNumber ? (
+                  <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.bankAccountNumber}</p>
+                ) : Boolean(editingVendor) && isFieldBlank(vBankAccountNumber) ? (
+                  <p className="text-[10px] text-amber-500 font-medium mt-0.5">Please fill in bank account number</p>
+                ) : null}
               </div>
               <div>
                 <label className={`block text-[10px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                  IFSC Code (11-char) <span className="text-rose-500">*</span>
+                  IFSC Code (11-char) {editingVendor ? null : <span className="text-rose-500">*</span>}
                 </label>
                 <input
                   type="text"
@@ -3537,9 +3845,16 @@ export const MastersView: React.FC<MastersViewProps> = ({
                   className={`w-full p-2 rounded-xl border text-xs font-mono ${
                     formErrors.ifsc 
                       ? 'border-rose-500 ring-1 ring-rose-500' 
-                      : isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                      : Boolean(editingVendor) && isFieldBlank(vIfsc)
+                        ? 'border-amber-500/60 ring-1 ring-amber-500/30 bg-amber-500/5 text-slate-900 dark:text-white'
+                        : isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
                   }`}
                 />
+                {formErrors.ifsc ? (
+                  <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.ifsc}</p>
+                ) : Boolean(editingVendor) && isFieldBlank(vIfsc) ? (
+                  <p className="text-[10px] text-amber-500 font-medium mt-0.5">Please fill in IFSC code</p>
+                ) : null}
               </div>
             </div>
           </div>
@@ -3660,7 +3975,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
         isDarkMode={isDarkMode}
         icon={<Package className="w-5 h-5" />}
         title={editingItem ? "Edit Item Master" : "New Item Master"}
-        subtitle={editingItem ? `Edit Master: ${iCode} • Dynamic Cost / Price & Vendor Requirements` : `Auto ID: ${iCode} • Dynamic Cost / Price & Vendor Requirements`}
+        subtitle={editingItem ? `Edit Master: ${iCode} • Dynamic Cost / Price & Vendor Requirements` : `Dynamic Cost / Price & Vendor Requirements`}
         footer={
           <div className="flex items-center justify-end gap-3 w-full">
             <button
@@ -3690,7 +4005,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
       >
         <form id="save-item-form" onSubmit={handleSaveItem} className="space-y-4 text-xs">
           
-          {/* Row 1: Item Type, Auto Code, Item Name */}
+          {/* Row 1: Item Type, Item Code, Item Name */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
@@ -3710,16 +4025,36 @@ export const MastersView: React.FC<MastersViewProps> = ({
             </div>
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                {editingItem ? 'Item Code' : 'Item Code (Auto-Prefixed)'}
+                Item Code <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
+                required
+                readOnly={!!editingItem}
+                disabled={!!editingItem}
+                placeholder="e.g. FG-0006"
                 value={iCode}
-                readOnly
+                onChange={(e) => {
+                  const cleaned = e.target.value.toUpperCase().replace(/[^A-Z0-9_\-]/g, '');
+                  setICode(cleaned);
+                  if (formErrors.code) {
+                    setFormErrors(prev => {
+                      const { code, ...rest } = prev;
+                      return rest;
+                    });
+                  }
+                }}
+                maxLength={100}
                 className={`w-full p-2.5 rounded-xl border font-mono font-bold ${
-                  isDarkMode ? 'bg-slate-800/80 border-slate-700 text-emerald-400' : 'bg-slate-100 border-slate-200 text-emerald-600'
+                  formErrors.code
+                    ? 'border-rose-500 ring-1 ring-rose-500'
+                    : isDarkMode
+                      ? editingItem ? 'bg-slate-800/80 border-slate-700 text-slate-400' : 'bg-slate-800 border-slate-700 text-emerald-400'
+                      : editingItem ? 'bg-slate-100 border-slate-200 text-slate-500' : 'bg-slate-50 border-slate-300 text-emerald-600 focus:bg-white'
                 }`}
               />
+              <p className="text-[10px] text-slate-500 font-sans mt-0.5">Enter a unique code, e.g. FG-0006</p>
+              {formErrors.code && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.code}</p>}
             </div>
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
@@ -3759,17 +4094,28 @@ export const MastersView: React.FC<MastersViewProps> = ({
             </div>
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                Category
+                Category <span className="text-rose-500">*</span>
               </label>
-              <input
-                type="text"
-                placeholder="e.g. Structural Steel, Fasteners"
+              <select
                 value={iCategory}
-                onChange={(e) => setICategory(e.target.value)}
-                className={`w-full p-2.5 rounded-xl border ${
-                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                onChange={(e) => handleCategoryChange(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border font-bold ${
+                  formErrors.category
+                    ? 'border-rose-500 ring-1 ring-rose-500'
+                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
                 }`}
-              />
+              >
+                {!iCategory && <option value="">-- Select Category --</option>}
+                {ITEM_CATEGORIES.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+              {formErrors.category && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.category}</p>}
+              {editingItem && editingItem.category && !ITEM_CATEGORIES.includes(editingItem.category as any) && !iCategory && (
+                <p className="text-[10px] text-amber-500 mt-0.5">
+                  Current: "{editingItem.category}". Please select None, Round Bar, Plate, or Angle.
+                </p>
+              )}
             </div>
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
@@ -3786,6 +4132,155 @@ export const MastersView: React.FC<MastersViewProps> = ({
               />
             </div>
           </div>
+
+          {/* Dimension Fields (dynamic based on Category) */}
+          {iCategory === 'Round Bar' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60">
+              <div>
+                <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Diameter <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    placeholder="e.g. 25"
+                    value={iDimDiameter}
+                    onChange={(e) => {
+                      setIDimDiameter(e.target.value);
+                      if (formErrors.dimDiameter) setFormErrors(prev => { const { dimDiameter, ...rest } = prev; return rest; });
+                    }}
+                    className={`w-full p-2.5 pr-10 rounded-xl border ${
+                      formErrors.dimDiameter
+                        ? 'border-rose-500 ring-1 ring-rose-500'
+                        : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                    }`}
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-mono font-bold text-slate-400">
+                    mm
+                  </span>
+                </div>
+                {formErrors.dimDiameter && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.dimDiameter}</p>}
+              </div>
+
+              <div>
+                <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Length <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    placeholder="e.g. 3000"
+                    value={iDimLength}
+                    onChange={(e) => {
+                      setIDimLength(e.target.value);
+                      if (formErrors.dimLength) setFormErrors(prev => { const { dimLength, ...rest } = prev; return rest; });
+                    }}
+                    className={`w-full p-2.5 pr-10 rounded-xl border ${
+                      formErrors.dimLength
+                        ? 'border-rose-500 ring-1 ring-rose-500'
+                        : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                    }`}
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-mono font-bold text-slate-400">
+                    mm
+                  </span>
+                </div>
+                {formErrors.dimLength && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.dimLength}</p>}
+              </div>
+            </div>
+          )}
+
+          {(iCategory === 'Plate' || iCategory === 'Angle') && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60">
+              <div>
+                <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Length <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    placeholder="e.g. 3000"
+                    value={iDimLength}
+                    onChange={(e) => {
+                      setIDimLength(e.target.value);
+                      if (formErrors.dimLength) setFormErrors(prev => { const { dimLength, ...rest } = prev; return rest; });
+                    }}
+                    className={`w-full p-2.5 pr-10 rounded-xl border ${
+                      formErrors.dimLength
+                        ? 'border-rose-500 ring-1 ring-rose-500'
+                        : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                    }`}
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-mono font-bold text-slate-400">
+                    mm
+                  </span>
+                </div>
+                {formErrors.dimLength && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.dimLength}</p>}
+              </div>
+
+              <div>
+                <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Width <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    placeholder="e.g. 1500"
+                    value={iDimWidth}
+                    onChange={(e) => {
+                      setIDimWidth(e.target.value);
+                      if (formErrors.dimWidth) setFormErrors(prev => { const { dimWidth, ...rest } = prev; return rest; });
+                    }}
+                    className={`w-full p-2.5 pr-10 rounded-xl border ${
+                      formErrors.dimWidth
+                        ? 'border-rose-500 ring-1 ring-rose-500'
+                        : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                    }`}
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-mono font-bold text-slate-400">
+                    mm
+                  </span>
+                </div>
+                {formErrors.dimWidth && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.dimWidth}</p>}
+              </div>
+
+              <div>
+                <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Thickness <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    placeholder="e.g. 10"
+                    value={iDimThickness}
+                    onChange={(e) => {
+                      setIDimThickness(e.target.value);
+                      if (formErrors.dimThickness) setFormErrors(prev => { const { dimThickness, ...rest } = prev; return rest; });
+                    }}
+                    className={`w-full p-2.5 pr-10 rounded-xl border ${
+                      formErrors.dimThickness
+                        ? 'border-rose-500 ring-1 ring-rose-500'
+                        : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                    }`}
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-mono font-bold text-slate-400">
+                    mm
+                  </span>
+                </div>
+                {formErrors.dimThickness && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.dimThickness}</p>}
+              </div>
+            </div>
+          )}
 
           {/* Row 3: UOM, HSN Code, GST Rate % */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -4009,6 +4504,204 @@ export const MastersView: React.FC<MastersViewProps> = ({
           </div>
 
         </form>
+      </Modal>
+
+      {/* ========================================================================= */}
+      {/* MODAL 3B: VIEW ITEM DETAIL */}
+      {/* ========================================================================= */}
+      <Modal
+        isOpen={!!viewingItem}
+        onClose={() => setViewingItem(null)}
+        maxWidth="3xl"
+        isDarkMode={isDarkMode}
+        icon={<Package className="w-5 h-5 text-blue-500" />}
+        title={viewingItem ? `Item: ${viewingItem.code}` : "Item Details"}
+        subtitle={viewingItem?.name || viewingItem?.description || "Master Item Details"}
+        footer={
+          <div className="flex items-center justify-between w-full">
+            <button
+              type="button"
+              onClick={() => {
+                if (viewingItem) {
+                  const it = viewingItem;
+                  setViewingItem(null);
+                  openEditItem(it);
+                }
+              }}
+              className="px-4 py-2 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25 font-bold text-xs flex items-center gap-1.5 transition-ui cursor-pointer"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              <span>Edit Item</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewingItem(null)}
+              className={`px-4 py-2 rounded-xl font-bold text-xs transition-ui cursor-pointer ${
+                isDarkMode 
+                  ? 'text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700' 
+                  : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
+              }`}
+            >
+              Close
+            </button>
+          </div>
+        }
+      >
+        {viewingItem && (
+          <div className="space-y-4 text-xs">
+            {/* Header Summary Box */}
+            <div className={`p-4 rounded-2xl border ${
+              isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+            }`}>
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-base font-bold text-emerald-500 dark:text-emerald-400">
+                    {viewingItem.code}
+                  </span>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase border ${
+                    viewingItem.itemType === 'Finished Good' || viewingItem.isFinishedGoods
+                      ? isDarkMode ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' : 'bg-purple-50 text-purple-700 border-purple-200'
+                      : viewingItem.itemType === 'Raw Material'
+                      ? isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : isDarkMode ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30' : 'bg-cyan-50 text-cyan-700 border-cyan-200'
+                  }`}>
+                    {viewingItem.itemType || (viewingItem.isFinishedGoods ? 'Finished Good' : 'Raw Material')}
+                  </span>
+                </div>
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono font-bold uppercase border ${
+                  (viewingItem.status || 'Active') === 'Active'
+                    ? isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : isDarkMode ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${(viewingItem.status || 'Active') === 'Active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                  <span>{viewingItem.status || 'Active'}</span>
+                </span>
+              </div>
+              <h3 className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                {viewingItem.name || viewingItem.description}
+              </h3>
+              {viewingItem.partNo && (
+                <p className="text-[11px] font-mono text-slate-400 mt-0.5">
+                  Part / DWG: {viewingItem.partNo}
+                </p>
+              )}
+            </div>
+
+            {/* Category & Dimensions Grid */}
+            <div className={`p-4 rounded-2xl border space-y-3 ${
+              isDarkMode ? 'bg-slate-900/40 border-slate-800' : 'bg-slate-50 border-slate-200'
+            }`}>
+              <div className="flex items-center justify-between border-b border-slate-800/40 pb-2">
+                <span className="text-[11px] font-semibold text-slate-400">
+                  {viewingItem.category === 'None' || !viewingItem.category ? 'Category' : 'Category & Size'}
+                </span>
+                {viewingItem.category !== 'None' && formatItemDimensions(viewingItem) && (
+                  <span className="font-mono font-bold text-cyan-500 dark:text-cyan-400 text-xs">
+                    Size: {formatItemDimensions(viewingItem)} mm
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono">
+                <div>
+                  <span className="block text-[10px] text-slate-400 font-sans">Category</span>
+                  <span className={`font-bold text-xs ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+                    {viewingItem.category || 'None'}
+                  </span>
+                </div>
+                {viewingItem.category === 'Round Bar' ? (
+                  <>
+                    <div>
+                      <span className="block text-[10px] text-slate-400 font-sans">Diameter (Ø)</span>
+                      <span className="font-bold text-xs text-cyan-500">{viewingItem.dimDiameter != null ? `${viewingItem.dimDiameter} mm` : '—'}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] text-slate-400 font-sans">Length</span>
+                      <span className="font-bold text-xs text-cyan-500">{viewingItem.dimLength != null ? `${viewingItem.dimLength} mm` : '—'}</span>
+                    </div>
+                  </>
+                ) : (viewingItem.category === 'Plate' || viewingItem.category === 'Angle') ? (
+                  <>
+                    <div>
+                      <span className="block text-[10px] text-slate-400 font-sans">Length</span>
+                      <span className="font-bold text-xs text-cyan-500">{viewingItem.dimLength != null ? `${viewingItem.dimLength} mm` : '—'}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] text-slate-400 font-sans">Width</span>
+                      <span className="font-bold text-xs text-cyan-500">{viewingItem.dimWidth != null ? `${viewingItem.dimWidth} mm` : '—'}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] text-slate-400 font-sans">Thickness</span>
+                      <span className="font-bold text-xs text-cyan-500">{viewingItem.dimThickness != null ? `${viewingItem.dimThickness} mm` : '—'}</span>
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            </div>
+
+            {/* Commercial, Inventory & Warehouse Details */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className={`p-3.5 rounded-2xl border space-y-2 font-mono ${
+                isDarkMode ? 'bg-slate-900/40 border-slate-800' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <div className="text-[11px] font-semibold text-slate-400 font-sans border-b border-slate-800/40 pb-1">
+                  Tax & Commercials
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-sans">HSN Code:</span>
+                  <span className="font-bold">{viewingItem.hsnCode || '—'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-sans">GST Rate:</span>
+                  <span className="font-bold text-blue-400">{viewingItem.gstRate ?? 18}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-sans">UOM:</span>
+                  <span className="font-bold">{viewingItem.unit}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-sans">
+                    {viewingItem.itemType === 'Finished Good' || viewingItem.isFinishedGoods ? 'Selling Price:' : 'Standard Cost:'}
+                  </span>
+                  <span className="font-bold text-emerald-400">
+                    ₹{viewingItem.itemType === 'Finished Good' || viewingItem.isFinishedGoods
+                      ? (viewingItem.sellingPrice || viewingItem.saleRate || 0)
+                      : (viewingItem.standardCost || viewingItem.purchaseRate || 0)}
+                  </span>
+                </div>
+              </div>
+
+              <div className={`p-3.5 rounded-2xl border space-y-2 font-mono ${
+                isDarkMode ? 'bg-slate-900/40 border-slate-800' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <div className="text-[11px] font-semibold text-slate-400 font-sans border-b border-slate-800/40 pb-1">
+                  Inventory & Procurement
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-sans">Reorder Level:</span>
+                  <span className="font-bold text-amber-400">{viewingItem.reorderLevel} {viewingItem.unit}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-sans">Min / Max Stock:</span>
+                  <span>{viewingItem.minStock || 0} / {viewingItem.maxStock || 0} {viewingItem.unit}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-sans">Lead Time:</span>
+                  <span>{viewingItem.leadTimeDays ?? 7} days</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-sans">Warehouse:</span>
+                  <span className="text-right truncate max-w-[150px]">{viewingItem.defaultWarehouse || viewingItem.storeLocation || 'Main Store'}</span>
+                </div>
+                {viewingItem.preferredVendor && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-400 font-sans">Vendor:</span>
+                    <span className="text-right truncate max-w-[150px]">{viewingItem.preferredVendor}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </Modal>
 
       {/* ========================================================================= */}

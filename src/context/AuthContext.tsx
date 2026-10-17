@@ -50,6 +50,8 @@ interface AuthContextType {
   profile: SystemUser | null;
   loading: boolean;
   isLoggingOut: boolean;
+  mustChangePassword: boolean;
+  clearMustChangePassword: () => void;
   sessionSettings: SessionSecuritySettings;
   updateSessionSettings: (updates: Partial<SessionSecuritySettings>) => void;
   lastActivityAt: number;
@@ -260,6 +262,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => window.removeEventListener('guruom:security_sync', handleSecuritySync);
   }, [user, profile]);
 
+  // Handle PASSWORD_CHANGE_REQUIRED (403 from any API call)
+  useEffect(() => {
+    const handlePasswordChangeRequired = () => {
+      setUser((prev: any) => {
+        if (!prev) return prev;
+        const updated = { ...prev, mustChangePassword: true, isTemporaryPassword: true };
+        try {
+          localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updated));
+        } catch (_) {}
+        return updated;
+      });
+      setProfile((prev: any) => {
+        if (!prev) return prev;
+        return { ...prev, mustChangePassword: true, isTemporaryPassword: true };
+      });
+    };
+
+    window.addEventListener('guruom:password_change_required', handlePasswordChangeRequired);
+    return () => window.removeEventListener('guruom:password_change_required', handlePasswordChangeRequired);
+  }, []);
+
   // Passive Activity Listeners (detect mouse, keyboard, touch, scroll)
   useEffect(() => {
     if (!user) return;
@@ -348,7 +371,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const startTime = Date.now();
 
     try {
-      const res = await apiClient.post<{ access_token: string; user: SystemUser }>('/auth/login', {
+      const res = await apiClient.post<{ access_token: string; user: SystemUser; mustChangePassword?: boolean }>('/auth/login', {
         email: cleanEmail,
         password
       });
@@ -360,6 +383,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (elapsed < targetDuration) {
           await new Promise(resolve => setTimeout(resolve, targetDuration - elapsed));
         }
+
+        const mustChange = Boolean(res.user.mustChangePassword ?? (res.user as any).isTemporaryPassword ?? res.mustChangePassword);
+        res.user.mustChangePassword = mustChange;
 
         persistSession(res.user, res.access_token);
         setUser(res.user);
@@ -441,8 +467,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const refreshProfile = useCallback(async () => {
     try {
-      const res = await apiClient.get<{ user: SystemUser }>('/auth/me');
+      const res = await apiClient.get<{ user: SystemUser; mustChangePassword?: boolean }>('/auth/me');
       if (res?.user) {
+        const mustChange = Boolean(res.user.mustChangePassword ?? (res.user as any).isTemporaryPassword ?? res.mustChangePassword);
+        res.user.mustChangePassword = mustChange;
         setUser(res.user);
         setProfile(res.user);
         localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(res.user));
@@ -452,12 +480,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  const clearMustChangePassword = useCallback(() => {
+    setUser((prev: any) => {
+      if (!prev) return prev;
+      const updated = { ...prev, mustChangePassword: false, isTemporaryPassword: false };
+      try {
+        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updated));
+      } catch (_) {}
+      return updated;
+    });
+    setProfile((prev: any) => {
+      if (!prev) return prev;
+      return { ...prev, mustChangePassword: false, isTemporaryPassword: false };
+    });
+  }, []);
+
+  const mustChangePassword = Boolean(
+    user?.mustChangePassword || user?.isTemporaryPassword || profile?.mustChangePassword || profile?.isTemporaryPassword
+  );
+
   const contextValue = useMemo(() => ({
     user,
     session,
     profile,
     loading,
     isLoggingOut,
+    mustChangePassword,
+    clearMustChangePassword,
     sessionSettings,
     updateSessionSettings,
     lastActivityAt,
@@ -475,6 +524,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     profile,
     loading,
     isLoggingOut,
+    mustChangePassword,
+    clearMustChangePassword,
     sessionSettings,
     updateSessionSettings,
     lastActivityAt,

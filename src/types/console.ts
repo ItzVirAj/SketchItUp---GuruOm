@@ -641,12 +641,19 @@ export interface VendorBill {
   attachmentId?: string;
 }
 
+export const ITEM_CATEGORIES = ['None', 'Round Bar', 'Plate', 'Angle'] as const;
+export type ItemCategory = (typeof ITEM_CATEGORIES)[number];
+
 export interface MasterItem {
   id?: string;
-  code: string; // RM-#### / FG-#### / SF-#### / CO-#### / BO-#### / ITM-####
+  code: string;
   name?: string; // item_name*
   itemType?: 'Raw Material' | 'Semi-Finished' | 'Finished Good' | 'Consumable' | 'Bought-Out' | 'Other' | string;
-  category?: string;
+  category?: ItemCategory;
+  dimDiameter?: number | null;
+  dimLength?: number | null;
+  dimWidth?: number | null;
+  dimThickness?: number | null;
   description: string;
   partNo?: string;
   unit: 'Nos' | 'Kg' | 'Meter' | 'Litre' | 'Set' | 'Box' | string; // uom*
@@ -697,10 +704,10 @@ export interface CustomerMaster {
 
 export interface VendorMaster {
   id?: string;
-  code: string; // VEND-####
+  code: string; // e.g. 1 to 12 or VEND-####
   name: string; // vendor_name*
   legalName?: string;
-  vendorType: 'Supplier' | 'Transporter' | 'Subcontractor / Job Worker' | 'ServiceProvider' | 'EquipmentVendor' | 'ProfessionalService' | 'ManpowerProvider' | 'Other' | string;
+  vendorType?: string;
   vendorCategory: 'Raw Material' | 'Components' | 'Consumables' | 'Packaging' | 'Machinery' | 'Maintenance' | 'Transport' | 'IT' | 'Professional' | 'Manpower' | 'Other' | string;
   contactPerson: string;
   mobile: string; // 10-digit Indian*
@@ -768,6 +775,8 @@ export interface SystemUser {
   shift?: string;
   status: 'ACTIVE' | 'INACTIVE' | 'Active' | 'Inactive' | 'REVOKED' | string;
   lastLogin?: string;
+  mustChangePassword?: boolean;
+  isTemporaryPassword?: boolean;
 }
 
 export interface EmployeeMasterRecord {

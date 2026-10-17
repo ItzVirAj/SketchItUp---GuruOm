@@ -122,7 +122,7 @@ async function main() {
   console.log('\n--- Final Verification from Supabase Database ---');
   const { data: dbRecords, error } = await db
     .from('machine_masters')
-    .select('id, code, name, machine_type, department, location, hourly_cost, manufacturer, model, serial_number, installation_date, capacity, capacity_uom, operating_hours, shift, status, responsible_person')
+    .select('id, code, name, machine_type, department, location, hourly_cost, manufacturer, model, serial_number, installation_date, capacity, capacity_uom, shift, status, responsible_person')
     .order('code');
 
   if (error) {

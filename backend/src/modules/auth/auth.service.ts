@@ -183,7 +183,7 @@ export class AuthService {
   /**
    * Finds a user record by ID.
    */
-  private async findUserById(id: string): Promise<UserRecord | null> {
+  async findUserById(id: string): Promise<UserRecord | null> {
     // 1. Try users table (primary authoritative user table)
     try {
       const { data, error } = await this.db
@@ -376,14 +376,14 @@ export class AuthService {
       throw new Error(`Account "${user.full_name}" is revoked or suspended. Contact Super Admin.`);
     }
 
-    const isValidPassword = 
-      (password === 'Pass@123' && (user.email?.toLowerCase() === 'serveradmin@guruom.in' || user.email?.toLowerCase() === 'owner@guruom.in' || user.email?.toLowerCase() === 'user@guruom.in')) || 
+    const isValidPassword =
+      (password === 'Pass@123' && (user.email?.toLowerCase() === 'serveradmin@guruom.in' || user.email?.toLowerCase() === 'owner@guruom.in' || user.email?.toLowerCase() === 'user@guruom.in')) ||
       await verifyPassword(password, user.password_hash);
     if (!isValidPassword) {
       const failedCount = (user.failed_login_attempts || 0) + 1;
       try {
         await this.db.from('users').update({ failed_login_attempts: failedCount }).eq('id', user.id);
-      } catch (_) {}
+      } catch (_) { }
 
       await this.logSecurityEvent({
         user_id: user.id,
@@ -423,7 +423,8 @@ export class AuthService {
       name: user.full_name,
       role: user.role,
       department: user.department,
-      orgId: user.org_id
+      orgId: user.org_id,
+      isTemporaryPassword: Boolean(user.is_temporary_password)
     };
 
     const tokenFamilyId = crypto.randomUUID();
@@ -542,6 +543,8 @@ export class AuthService {
         department: user.department,
         phone: user.phone,
         status: user.status,
+        isTemporaryPassword: Boolean(user.is_temporary_password),
+        mustChangePassword: Boolean(user.is_temporary_password),
         lastLogin: new Date().toLocaleString('en-IN', { hour12: true })
       }
     };
@@ -686,7 +689,8 @@ export class AuthService {
       name: user.full_name,
       role: user.role,
       department: user.department,
-      orgId: user.org_id
+      orgId: user.org_id,
+      isTemporaryPassword: Boolean(user.is_temporary_password)
     };
 
     const { accessToken, refreshToken: newRefreshToken, expiresAt } = generateTokens(jwtPayload, tokenFamilyId);
@@ -761,6 +765,8 @@ export class AuthService {
         department: user.department,
         phone: user.phone,
         status: user.status,
+        isTemporaryPassword: Boolean(user.is_temporary_password),
+        mustChangePassword: Boolean(user.is_temporary_password),
         lastLogin: user.last_login_at || new Date().toLocaleString('en-IN', { hour12: true })
       }
     };
@@ -850,7 +856,7 @@ export class AuthService {
       const isCurrent = Boolean(
         currentTokenHash &&
         (s.refresh_token_hash === currentTokenHash ||
-         IN_MEMORY_SESSIONS.some(m => m.token_family_id === s.token_family_id && m.refresh_token_hash === currentTokenHash))
+          IN_MEMORY_SESSIONS.some(m => m.token_family_id === s.token_family_id && m.refresh_token_hash === currentTokenHash))
       );
 
       return {
@@ -888,7 +894,7 @@ export class AuthService {
         .maybeSingle();
 
       if (data) targetSession = data as SessionRecord;
-    } catch (_) {}
+    } catch (_) { }
 
     if (!targetSession) {
       targetSession = IN_MEMORY_SESSIONS.find(s => s.id === sessionId && s.user_id === userId) || null;
@@ -965,7 +971,7 @@ export class AuthService {
           .eq('refresh_token_hash', currentTokenHash)
           .maybeSingle();
         if (data) currentFamilyId = data.token_family_id;
-      } catch (_) {}
+      } catch (_) { }
     }
 
     let revokedCount = 0;
@@ -1066,8 +1072,17 @@ export class AuthService {
    * Changes user password, verifies old password with Argon2id, and invalidates other sessions.
    */
   async changePassword(userId: string, oldPassword: string, newPassword: string, currentRefreshToken?: string) {
-    if (!newPassword || newPassword.length < 8) {
+    const current = (oldPassword || '').trim();
+    const next = (newPassword || '').trim();
+
+    if (!next || next.length < 8) {
       throw new Error('New password must be at least 8 characters long.');
+    }
+    if (next === 'Pass@123') {
+      throw new Error('New password cannot be the default temporary password "Pass@123".');
+    }
+    if (next === current) {
+      throw new Error('New password must differ from current password.');
     }
 
     const user = await this.findUserById(userId);
@@ -1075,12 +1090,12 @@ export class AuthService {
       throw new Error('User not found.');
     }
 
-    const isValidOld = await verifyPassword(oldPassword, user.password_hash);
+    const isValidOld = await verifyPassword(current, user.password_hash);
     if (!isValidOld) {
       throw new Error('Incorrect current password.');
     }
 
-    const newHash = await hashPassword(newPassword);
+    const newHash = await hashPassword(next);
 
     try {
       await this.db.from('users').update({
@@ -1114,7 +1129,33 @@ export class AuthService {
       metadata: { changedAt: new Date().toISOString() }
     });
 
-    return { success: true, message: 'Password updated successfully. Other active sessions have been signed out.' };
+    const jwtPayload: JwtUserPayload = {
+      id: user.id,
+      email: user.email,
+      name: user.full_name,
+      role: user.role,
+      department: user.department,
+      orgId: user.org_id,
+      isTemporaryPassword: false
+    };
+    const { accessToken, refreshToken, expiresAt } = generateTokens(jwtPayload);
+
+    return {
+      success: true,
+      message: 'Password updated successfully. Other active sessions have been signed out.',
+      accessToken,
+      refreshToken,
+      expiresAt,
+      user: {
+        id: user.id,
+        name: user.full_name,
+        email: user.email,
+        role: user.role,
+        department: user.department,
+        isTemporaryPassword: false,
+        mustChangePassword: false
+      }
+    };
   }
 
   /**
@@ -1192,7 +1233,8 @@ export class AuthService {
       department: user.department,
       phone: user.phone,
       status: user.status,
-      isTemporaryPassword: user.is_temporary_password || false,
+      isTemporaryPassword: Boolean(user.is_temporary_password),
+      mustChangePassword: Boolean(user.is_temporary_password),
       lastLogin: user.last_login_at || new Date().toLocaleString('en-IN', { hour12: true })
     };
   }
@@ -1242,7 +1284,7 @@ export class AuthService {
           userAgent,
           details: `Password reset requested for ${user.email}`
         });
-      } catch (_) {}
+      } catch (_) { }
 
       // Optional email notification dispatch
       const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${rawToken}`;
@@ -1337,7 +1379,7 @@ export class AuthService {
         userAgent,
         details: `Password reset successfully completed for ${user.email}`
       });
-    } catch (_) {}
+    } catch (_) { }
 
     return {
       success: true,
@@ -1595,7 +1637,7 @@ export class AuthService {
           updated_at: nowIso
         })
         .eq('id', id);
-    } catch (_) {}
+    } catch (_) { }
 
     // Update in-memory seed if applicable
     const seed = SEED_USERS.find(u => u.id === id || u.email.toLowerCase() === existing.email.toLowerCase());
@@ -1615,7 +1657,7 @@ export class AuthService {
       entityType: 'users',
       entityId: id,
       details: `User master updated: [Name: ${beforeState.name} → ${afterState.name}, Email: ${beforeState.email} → ${afterState.email}, Role: ${beforeState.role} → ${afterState.role}]`
-    }).catch(() => {});
+    }).catch(() => { });
 
     notificationsService.broadcastEvent('user_updated', {
       id,
@@ -1674,7 +1716,7 @@ export class AuthService {
         afterState,
         metadata: { role }
       });
-    } catch (_) {}
+    } catch (_) { }
 
     notificationsService.broadcastEvent('user_updated', { id, role });
     return { id, role };
@@ -1714,7 +1756,7 @@ export class AuthService {
         afterState,
         metadata: { status }
       });
-    } catch (_) {}
+    } catch (_) { }
 
     notificationsService.broadcastEvent('user_updated', { id, status });
     return { id, status };
@@ -1744,7 +1786,7 @@ export class AuthService {
         afterState: null,
         metadata: { deletedId: id }
       });
-    } catch (_) {}
+    } catch (_) { }
 
     notificationsService.broadcastEvent('user_deleted', { id });
     return { id, success: true };

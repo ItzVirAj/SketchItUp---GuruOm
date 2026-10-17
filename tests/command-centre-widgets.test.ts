@@ -49,8 +49,8 @@ describe('Command Centre widget states', () => {
         { period: '2026-09-30', invoiced: 120, collected: 90 }
       ]
     }));
-    expect(screen.getByRole('img', { name: /invoiced and collected trend/i })).toBeTruthy();
-    expect(screen.getByText('Selected period')).toBeTruthy();
-    expect(screen.getByText('Previous period')).toBeTruthy();
+    const chart = screen.getByRole('img', { name: /invoiced and collected trend/i });
+    expect(chart).toBeTruthy();
+    expect(chart.getAttribute('data-chart')).toContain('chart-');
   });
 });

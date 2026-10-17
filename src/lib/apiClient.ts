@@ -85,7 +85,14 @@ async function handleResponse<T>(response: Response): Promise<T> {
         errorMessage = errorMessage || 'Unauthorized session. Please log in again to continue.';
         break;
       case 403:
-        errorMessage = 'Access denied. You do not have permissions for this action.';
+        if (data && typeof data === 'object' && ((data as any).code === 'PASSWORD_CHANGE_REQUIRED' || (data as any).error === 'PASSWORD_CHANGE_REQUIRED')) {
+          errorMessage = (data as any).message || 'Password change is required before using the application.';
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('guruom:password_change_required'));
+          }
+        } else {
+          errorMessage = 'Access denied. You do not have permissions for this action.';
+        }
         break;
       case 404:
         errorMessage = 'Requested resource not found on server.';

@@ -12,6 +12,7 @@ import { setDarkModeWithoutTransitions } from './utils/themeTransitions';
 import { Agentation } from 'agentation';
 
 import { AuthTransitionScreen } from './components/auth/AuthTransitionScreen';
+import { ChangePasswordPage } from './components/auth/ChangePasswordPage';
 
 // Helper component to reset scroll position on page route changes
 function ScrollToTop() {
@@ -25,7 +26,7 @@ function ScrollToTop() {
 }
 
 function MainApp() {
-  const { user, loading, isLoggingOut, signOut } = useAuth();
+  const { user, loading, isLoggingOut, signOut, mustChangePassword } = useAuth();
   const reduceMotion = useReducedMotion();
   const wasUnauthenticatedRef = useRef(false);
 
@@ -83,6 +84,23 @@ function MainApp() {
           <LoginPage
             isDarkMode={isDarkMode}
             onToggleTheme={() => setIsDarkMode(!isDarkMode)}
+          />
+        </motion.div>
+      ) : mustChangePassword ? (
+        <motion.div
+          key="change-password-screen"
+          initial={false}
+          exit={
+            reduceMotion
+              ? { opacity: 0 }
+              : { opacity: 0, scale: 0.985 }
+          }
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="w-full"
+        >
+          <ChangePasswordPage
+            isDarkMode={isDarkMode}
+            onSignOut={signOut}
           />
         </motion.div>
       ) : (

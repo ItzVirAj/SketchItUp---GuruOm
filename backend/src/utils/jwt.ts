@@ -18,6 +18,7 @@ export interface JwtUserPayload {
   role: string;
   department?: string;
   orgId?: string;
+  isTemporaryPassword?: boolean;
 }
 
 export interface TokenPair {
@@ -41,7 +42,8 @@ export function generateTokens(user: JwtUserPayload, existingFamilyId?: string):
       name: user.name,
       role: user.role,
       department: user.department,
-      orgId: user.orgId || '00000000-0000-0000-0000-000000000001'
+      orgId: user.orgId || '00000000-0000-0000-0000-000000000001',
+      isTemporaryPassword: Boolean(user.isTemporaryPassword)
     },
     requireSecret(ENV.JWT_ACCESS_SECRET, 'JWT_ACCESS_SECRET'),
     {
@@ -84,7 +86,8 @@ export function verifyAccessToken(token: string): JwtUserPayload {
     name: decoded.name,
     role: decoded.role,
     department: decoded.department,
-    orgId: decoded.orgId
+    orgId: decoded.orgId,
+    isTemporaryPassword: Boolean(decoded.isTemporaryPassword)
   };
 }
 

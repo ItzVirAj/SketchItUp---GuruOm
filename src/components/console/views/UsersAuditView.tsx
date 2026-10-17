@@ -44,6 +44,7 @@ import {
   CheckSquare,
   Calendar,
   ShieldAlert,
+  AlertTriangle,
   RefreshCw
 } from 'lucide-react';
 import { 
@@ -68,6 +69,7 @@ import { useUrlModal } from '../../../hooks/useUrlModal';
 import { useAccentTheme } from '../../../context/AccentThemeContext';
 
 import { getRoleColor } from '../../../utils/permissions';
+import { IncompleteBadge, isRecordIncomplete, isFieldBlank } from '../../../utils/recordCompleteness';
 import { 
   ROLE_DEFAULT_MODULES, 
   ALL_MODULES, 
@@ -198,6 +200,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
   const [activeTab, setActiveTab] = useState<'AUDIT' | 'USERS' | 'RBAC_MATRIX'>('AUDIT');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'REVOKED'>('ALL');
+  const [incompleteOnly, setIncompleteOnly] = useState(false);
   const [selectedSection, setSelectedSection] = useState<SectionCategory>('ALL');
   const [selectedActor, setSelectedActor] = useState<string>('ALL');
   const [selectedActionType, setSelectedActionType] = useState<string>('ALL');
@@ -641,8 +644,9 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
       usr.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (usr.userRole || usr.role || '').toLowerCase().includes(searchTerm.toLowerCase());
     
-    if (statusFilter === 'ALL') return matchesSearch;
-    return matchesSearch && usr.status === statusFilter;
+    const matchesStatus = statusFilter === 'ALL' || usr.status === statusFilter;
+    const matchesIncomplete = !incompleteOnly || isRecordIncomplete('user', usr);
+    return matchesSearch && matchesStatus && matchesIncomplete;
   });
 
   const handleExportCSV = async () => {
@@ -1171,19 +1175,37 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
             {/* Status Filter for Users */}
             <div className="flex items-center gap-2">
               {activeTab === 'USERS' && (
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as any)}
-                  className={`h-10 px-4 rounded-full border text-xs font-bold font-mono outline-none cursor-pointer ${
-                    isDarkMode 
-                      ? 'bg-black/60 border-white/10 text-white hover:bg-black/80' 
-                      : 'bg-white border-slate-200 text-slate-900 hover:bg-slate-50 shadow-xs'
-                  }`}
-                >
-                  <option value="ALL">All Status ({users.length})</option>
-                  <option value="ACTIVE">Active Only ({users.filter(u => u.status === 'ACTIVE' || u.status === 'Active').length})</option>
-                  <option value="REVOKED">Revoked Only ({users.filter(u => u.status === 'REVOKED' || u.status === 'Inactive').length})</option>
-                </select>
+                <>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value as any)}
+                    className={`h-10 px-4 rounded-full border text-xs font-bold font-mono outline-none cursor-pointer ${
+                      isDarkMode 
+                        ? 'bg-black/60 border-white/10 text-white hover:bg-black/80' 
+                        : 'bg-white border-slate-200 text-slate-900 hover:bg-slate-50 shadow-xs'
+                    }`}
+                  >
+                    <option value="ALL">All Status ({users.length})</option>
+                    <option value="ACTIVE">Active Only ({users.filter(u => u.status === 'ACTIVE' || u.status === 'Active').length})</option>
+                    <option value="REVOKED">Revoked Only ({users.filter(u => u.status === 'REVOKED' || u.status === 'Inactive').length})</option>
+                  </select>
+
+                  <button
+                    type="button"
+                    onClick={() => setIncompleteOnly(!incompleteOnly)}
+                    className={`h-10 px-3.5 rounded-full border text-xs font-bold font-mono transition-colors flex items-center gap-1.5 cursor-pointer ${
+                      incompleteOnly
+                        ? 'bg-amber-500/20 text-amber-500 dark:text-amber-400 border-amber-500/40 ring-1 ring-amber-500/30'
+                        : isDarkMode
+                          ? 'bg-black/60 border-white/10 text-slate-400 hover:text-white hover:bg-black/80'
+                          : 'bg-white border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 shadow-xs'
+                    }`}
+                    title="Filter users missing key details"
+                  >
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Incomplete only</span>
+                  </button>
+                </>
               )}
 
               <span className={`text-xs font-mono font-bold px-3 py-1.5 rounded-full border ${
@@ -1709,6 +1731,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                         <div>
                           <div className={`font-bold text-xs flex items-center gap-1.5 ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>
                             <span>{usr.name}</span>
+                            <IncompleteBadge entity="user" record={usr} />
                             {isCurrent && (
                               <span className="px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 text-[9px] font-mono font-bold">
                                 YOU
@@ -1867,6 +1890,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                               <div className={`font-bold text-xs flex items-center gap-1.5 ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>
                                 <span>{usr.name}</span>
                                 {usr.code && <span className="font-mono text-[10px] text-indigo-400">({usr.code})</span>}
+                                <IncompleteBadge entity="user" record={usr} />
                                 {isCurrent && (
                                   <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-400 border border-blue-500/30 text-[9px] font-mono font-bold">
                                     ACTIVE YOU
@@ -1874,7 +1898,7 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                                 )}
                               </div>
                               <div className={`text-[11px] font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                                {usr.email} • +91 {usr.mobile || usr.phone || '9822000000'}
+                                {usr.email} • {usr.mobile || usr.phone ? `+91 ${usr.mobile || usr.phone}` : <span className="text-amber-500/90 font-mono italic">No phone</span>}
                               </div>
                             </div>
                           </div>
@@ -2662,9 +2686,14 @@ export const UsersAuditView: React.FC<UsersAuditViewProps> = ({
                 onChange={e => setEditMobile(e.target.value)}
                 placeholder="e.g. +91 98250 12345"
                 className={`w-full p-2.5 rounded-xl border text-xs font-mono ${
-                  isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-300 bg-white text-slate-900'
+                  isFieldBlank(editMobile)
+                    ? 'border-amber-500/60 ring-1 ring-amber-500/30 bg-amber-500/5 text-slate-900 dark:text-white'
+                    : isDarkMode ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-300 bg-white text-slate-900'
                 }`}
               />
+              {isFieldBlank(editMobile) && (
+                <p className="text-[10px] text-amber-500 font-medium mt-1">Please fill in phone number</p>
+              )}
             </div>
 
             {/* Reporting Manager */}

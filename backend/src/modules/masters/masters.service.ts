@@ -6,6 +6,7 @@ import path from 'path';
 import {
   MasterItemSchema,
   MasterItemBaseSchema,
+  MasterItemUpdateSchema,
   CustomerMasterSchema,
   CustomerMasterBaseSchema,
   VendorMasterSchema,
@@ -291,6 +292,10 @@ export class MastersService {
           name: m.name || m.description,
           itemType: m.item_type || (m.is_finished_goods ? 'Finished Good' : 'Raw Material'),
           category: m.category || '',
+          dimDiameter: m.dim_diameter !== null && m.dim_diameter !== undefined ? Number(m.dim_diameter) : null,
+          dimLength: m.dim_length !== null && m.dim_length !== undefined ? Number(m.dim_length) : null,
+          dimWidth: m.dim_width !== null && m.dim_width !== undefined ? Number(m.dim_width) : null,
+          dimThickness: m.dim_thickness !== null && m.dim_thickness !== undefined ? Number(m.dim_thickness) : null,
           description: m.description,
           partNo: m.part_no || '',
           unit: m.unit || 'Nos',
@@ -318,18 +323,22 @@ export class MastersService {
   }
 
   async createMaster(data: any, actorEmail?: string, actorRole?: string) {
-    // Determine auto-prefix if code not given
-    if (!data.code) {
-      const type = data.itemType || 'Raw Material';
-      const prefix = type === 'Raw Material' ? 'RM' :
-                     type === 'Finished Good' ? 'FG' :
-                     type === 'Semi-Finished' ? 'SF' :
-                     type === 'Consumable' ? 'CO' :
-                     type === 'Bought-Out' ? 'BO' : 'ITM';
-      data.code = await this.getNextMasterCode('ITEM', prefix);
+    const validated = MasterItemSchema.parse(data);
+
+    // Verify code uniqueness: return 409 "Item code already exists" if duplicate
+    const { data: existing } = await this.db
+      .from('masters')
+      .select('code')
+      .eq('code', validated.code)
+      .maybeSingle();
+
+    if (existing) {
+      const err: any = new Error('Item code already exists');
+      err.statusCode = 409;
+      err.errorCode = 'DUPLICATE_ITEM_CODE';
+      throw err;
     }
 
-    const validated = MasterItemSchema.parse(data);
     const id = validated.id || `m-${validated.code}`;
 
     const record = {
@@ -337,7 +346,11 @@ export class MastersService {
       code: validated.code,
       name: validated.name,
       item_type: validated.itemType,
-      category: validated.category || '',
+      category: validated.category,
+      dim_diameter: validated.dimDiameter ?? null,
+      dim_length: validated.dimLength ?? null,
+      dim_width: validated.dimWidth ?? null,
+      dim_thickness: validated.dimThickness ?? null,
       description: validated.description || validated.name,
       part_no: validated.partNo || validated.name,
       unit: validated.unit,
@@ -359,7 +372,18 @@ export class MastersService {
       updated_at: new Date().toISOString()
     };
 
-    const created = await this.executeInsert<any>('masters', record, 'Item Master');
+    let created: any;
+    try {
+      created = await this.executeInsert<any>('masters', record, 'Item Master');
+    } catch (err: any) {
+      if (err.code === '23505' || err.statusCode === 409) {
+        const dupErr: any = new Error('Item code already exists');
+        dupErr.statusCode = 409;
+        dupErr.errorCode = 'DUPLICATE_ITEM_CODE';
+        throw dupErr;
+      }
+      throw err;
+    }
 
     const item = {
       id: created.id,
@@ -367,6 +391,10 @@ export class MastersService {
       name: created.name || created.description,
       itemType: created.item_type,
       category: created.category,
+      dimDiameter: created.dim_diameter !== null && created.dim_diameter !== undefined ? Number(created.dim_diameter) : null,
+      dimLength: created.dim_length !== null && created.dim_length !== undefined ? Number(created.dim_length) : null,
+      dimWidth: created.dim_width !== null && created.dim_width !== undefined ? Number(created.dim_width) : null,
+      dimThickness: created.dim_thickness !== null && created.dim_thickness !== undefined ? Number(created.dim_thickness) : null,
       description: created.description,
       partNo: created.part_no,
       unit: created.unit,
@@ -394,7 +422,7 @@ export class MastersService {
       entityId: String(validated.code),
       afterState: { code: validated.code, name: validated.name, itemType: validated.itemType, unit: validated.unit },
       metadata: { details: `Item Master ${validated.code} (${validated.name}) created` }
-    }).catch(() => {});
+    }).catch(() => { });
 
     // Real-Time Push: new catalog item available to Stock Master views
     notificationsService.broadcastEvent('master_item_created', item);
@@ -402,14 +430,26 @@ export class MastersService {
   }
 
   async updateMaster(code: string, data: any) {
-    const validated = MasterItemBaseSchema.partial().parse(data);
+    if (data.code && data.code.trim().toUpperCase() !== code.trim().toUpperCase()) {
+      const err: any = new Error('Item code is immutable and cannot be changed');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const validated = MasterItemUpdateSchema.parse(data);
     const updateRecord: any = { updated_at: new Date().toISOString() };
     if (validated.name !== undefined) updateRecord.name = validated.name;
     if (validated.itemType !== undefined) {
       updateRecord.item_type = validated.itemType;
       updateRecord.is_finished_goods = validated.itemType === 'Finished Good';
     }
-    if (validated.category !== undefined) updateRecord.category = validated.category;
+    if (validated.category !== undefined) {
+      updateRecord.category = validated.category;
+      updateRecord.dim_diameter = validated.dimDiameter ?? null;
+      updateRecord.dim_length = validated.dimLength ?? null;
+      updateRecord.dim_width = validated.dimWidth ?? null;
+      updateRecord.dim_thickness = validated.dimThickness ?? null;
+    }
     if (validated.description !== undefined) updateRecord.description = validated.description;
     if (validated.partNo !== undefined) updateRecord.part_no = validated.partNo;
     if (validated.unit !== undefined) updateRecord.unit = validated.unit;
@@ -433,6 +473,31 @@ export class MastersService {
     if (validated.status !== undefined) updateRecord.status = validated.status;
 
     const updated = await this.executeUpdate<any>('masters', code, updateRecord, 'Item Master');
+    const item = {
+      id: updated.id,
+      code: updated.code,
+      name: updated.name || updated.description,
+      itemType: updated.item_type,
+      category: updated.category,
+      dimDiameter: updated.dim_diameter !== null && updated.dim_diameter !== undefined ? Number(updated.dim_diameter) : null,
+      dimLength: updated.dim_length !== null && updated.dim_length !== undefined ? Number(updated.dim_length) : null,
+      dimWidth: updated.dim_width !== null && updated.dim_width !== undefined ? Number(updated.dim_width) : null,
+      dimThickness: updated.dim_thickness !== null && updated.dim_thickness !== undefined ? Number(updated.dim_thickness) : null,
+      description: updated.description,
+      partNo: updated.part_no,
+      unit: updated.unit,
+      hsnCode: updated.hsn_code,
+      gstRate: Number(updated.gst_rate),
+      standardCost: Number(updated.standard_cost),
+      sellingPrice: Number(updated.selling_price),
+      minStock: Number(updated.min_stock),
+      maxStock: Number(updated.max_stock),
+      reorderLevel: Number(updated.reorder_level),
+      leadTimeDays: Number(updated.lead_time_days),
+      preferredVendor: updated.preferred_vendor,
+      defaultWarehouse: updated.default_warehouse,
+      status: updated.status
+    };
 
     await logAudit({
       actorEmail: 'masters@guruom.in',
@@ -440,10 +505,10 @@ export class MastersService {
       entityType: 'masters',
       entityId: code,
       metadata: { details: `Item Master ${code} updated` }
-    }).catch(() => {});
+    }).catch(() => { });
 
-    notificationsService.broadcastEvent('master_item_updated', updated);
-    return updated;
+    notificationsService.broadcastEvent('master_item_updated', item);
+    return item;
   }
 
   async deleteMaster(code: string, actorEmail?: string, actorRole?: string) {
@@ -460,7 +525,7 @@ export class MastersService {
       entityId: code,
       afterState: null,
       metadata: { details: `Item Master ${code} deleted` }
-    }).catch(() => {});
+    }).catch(() => { });
 
     notificationsService.broadcastEvent('master_item_deleted', { code });
     return result;
@@ -528,6 +593,7 @@ export class MastersService {
       name: validated.name,
       legal_name: validated.legalName || '',
       customer_type: validated.customerType,
+      contact: validated.mobile || validated.contactPerson || 'N/A',
       contact_person: validated.contactPerson,
       mobile: validated.mobile,
       email: validated.email || '',
@@ -587,7 +653,7 @@ export class MastersService {
       entityId: String(validated.code),
       afterState: { code: validated.code, name: validated.name, city: validated.city, state: validated.state, gstin: validated.gstin },
       metadata: { details: `Customer Master ${validated.code} (${validated.name}) created` }
-    }).catch(() => {});
+    }).catch(() => { });
 
     return result;
   }
@@ -633,7 +699,7 @@ export class MastersService {
       entityType: 'customer_masters',
       entityId: code,
       metadata: { details: `Customer Master ${code} updated` }
-    }).catch(() => {});
+    }).catch(() => { });
 
     notificationsService.broadcastEvent('customer_updated', updated);
     return updated;
@@ -653,7 +719,7 @@ export class MastersService {
       entityId: code,
       afterState: null,
       metadata: { details: `Customer Master ${code} deleted` }
-    }).catch(() => {});
+    }).catch(() => { });
 
     notificationsService.broadcastEvent('customer_deleted', { code });
     return result;
@@ -683,7 +749,7 @@ export class MastersService {
             code: v.code,
             name: v.name,
             legalName: v.legal_name || '',
-            vendorType: v.vendor_type || 'Supplier',
+            vendorType: v.vendor_type || '',
             vendorCategory: v.vendor_category || 'Raw Material',
             contactPerson: v.contact_person || '',
             mobile: v.mobile || v.contact || '',
@@ -733,6 +799,7 @@ export class MastersService {
       legal_name: validated.legalName || '',
       vendor_type: validated.vendorType,
       vendor_category: validated.vendorCategory,
+      contact: validated.mobile || validated.contactPerson || 'N/A',
       contact_person: validated.contactPerson,
       mobile: validated.mobile,
       email: validated.email || '',
@@ -752,8 +819,6 @@ export class MastersService {
       payment_terms: validated.paymentTerms,
       credit_days: validated.creditDays ?? 0,
       credit_limit: validated.creditLimit ?? 0,
-      process_type: validated.processType || '',
-      turnaround_time_days: validated.turnaroundTimeDays ?? 0,
       status: validated.status,
       notes: validated.notes || '',
       updated_at: new Date().toISOString()
@@ -785,8 +850,8 @@ export class MastersService {
       ifsc: created.ifsc,
       paymentTerms: created.payment_terms,
       creditDays: Number(created.credit_days),
-      processType: created.process_type,
-      turnaroundTimeDays: Number(created.turnaround_time_days),
+      processType: validated.processType || '',
+      turnaroundTimeDays: Number(validated.turnaroundTimeDays ?? 0),
       status: created.status,
       notes: created.notes
     };
@@ -799,7 +864,7 @@ export class MastersService {
       entityId: String(validated.code),
       afterState: { code: validated.code, name: validated.name, vendorType: validated.vendorType, vendorCategory: validated.vendorCategory, city: validated.city },
       metadata: { details: `Vendor Master ${validated.code} (${validated.name}) created` }
-    }).catch(() => {});
+    }).catch(() => { });
 
     return result;
   }
@@ -858,8 +923,6 @@ export class MastersService {
     if (validated.paymentTerms !== undefined) updateRecord.payment_terms = validated.paymentTerms;
     if (validated.creditDays !== undefined) updateRecord.credit_days = validated.creditDays;
     if (validated.creditLimit !== undefined) updateRecord.credit_limit = validated.creditLimit;
-    if (validated.processType !== undefined) updateRecord.process_type = validated.processType;
-    if (validated.turnaroundTimeDays !== undefined) updateRecord.turnaround_time_days = validated.turnaroundTimeDays;
     if (validated.status !== undefined) updateRecord.status = validated.status;
     if (validated.notes !== undefined) updateRecord.notes = validated.notes;
 
@@ -871,7 +934,7 @@ export class MastersService {
       entityType: 'vendor_masters',
       entityId: code,
       metadata: { details: `Vendor Master ${code} updated` }
-    }).catch(() => {});
+    }).catch(() => { });
 
     notificationsService.broadcastEvent('vendor_updated', updated);
     return {
@@ -894,7 +957,7 @@ export class MastersService {
       entityId: code,
       afterState: null,
       metadata: { details: `Vendor Master ${code} deleted` }
-    }).catch(() => {});
+    }).catch(() => { });
 
     notificationsService.broadcastEvent('vendor_deleted', { code });
     return result;
@@ -966,7 +1029,6 @@ export class MastersService {
       installation_date: validated.installationDate || '',
       capacity: validated.capacity ?? null,
       capacity_uom: validated.capacityUom || '',
-      operating_hours: validated.operatingHours,
       shift: validated.shift,
       status: validated.status,
       responsible_person: validated.responsiblePerson || '',
@@ -993,7 +1055,7 @@ export class MastersService {
       installationDate: created.installation_date,
       capacity: created.capacity ? Number(created.capacity) : undefined,
       capacityUom: created.capacity_uom,
-      operatingHours: Number(created.operating_hours),
+      operatingHours: Number(validated.operatingHours ?? 16),
       shift: created.shift,
       status: created.status,
       responsiblePerson: created.responsible_person,
@@ -1009,7 +1071,7 @@ export class MastersService {
       entityId: String(validated.code),
       afterState: { code: validated.code, name: validated.name, type: validated.type, department: validated.department, location: validated.location },
       metadata: { details: `Machine Master ${validated.code} (${validated.name}) created` }
-    }).catch(() => {});
+    }).catch(() => { });
 
     return result;
   }
@@ -1030,7 +1092,6 @@ export class MastersService {
     if (validated.installationDate !== undefined) updateRecord.installation_date = validated.installationDate;
     if (validated.capacity !== undefined) updateRecord.capacity = validated.capacity;
     if (validated.capacityUom !== undefined) updateRecord.capacity_uom = validated.capacityUom;
-    if (validated.operatingHours !== undefined) updateRecord.operating_hours = validated.operatingHours;
     if (validated.shift !== undefined) updateRecord.shift = validated.shift;
     if (validated.status !== undefined) {
       updateRecord.status = validated.status;
@@ -1047,7 +1108,7 @@ export class MastersService {
       entityType: 'machine_masters',
       entityId: code,
       metadata: { details: `Machine Master ${code} updated` }
-    }).catch(() => {});
+    }).catch(() => { });
 
     notificationsService.broadcastEvent('machine_updated', updated);
     return updated;
@@ -1067,7 +1128,7 @@ export class MastersService {
       entityId: code,
       afterState: null,
       metadata: { details: `Machine Master ${code} deleted` }
-    }).catch(() => {});
+    }).catch(() => { });
 
     notificationsService.broadcastEvent('machine_deleted', { code });
     return result;
@@ -1126,9 +1187,9 @@ export class MastersService {
 
     // Map user_role to internal auth role
     const internalRole = validated.userRole === 'Admin/Owner' ? 'SUPER ADMIN' :
-                         validated.userRole.includes('QC') ? 'QC_MANAGER' :
-                         validated.userRole.includes('Dispatch') ? 'DISPATCH_CLERK' :
-                         validated.userRole.includes('Accounts') ? 'FINANCE_MANAGER' : 'OPERATOR';
+      validated.userRole.includes('QC') ? 'QC_MANAGER' :
+        validated.userRole.includes('Dispatch') ? 'DISPATCH_CLERK' :
+          validated.userRole.includes('Accounts') ? 'FINANCE_MANAGER' : 'OPERATOR';
 
     const record = {
       id,
@@ -1163,7 +1224,7 @@ export class MastersService {
       entityId: String(validated.userId || id),
       afterState: { userId: validated.userId, fullName: validated.fullName, email: validated.email, userRole: validated.userRole, internalRole, department: validated.department },
       metadata: { details: `User ${validated.fullName} (${validated.email}) created with assigned role '${validated.userRole}' in department ${validated.department}` }
-    }).catch(() => {});
+    }).catch(() => { });
 
     return {
       id: created.id,
@@ -1213,7 +1274,7 @@ export class MastersService {
     if (!fs.existsSync(dataDir)) {
       try {
         fs.mkdirSync(dataDir, { recursive: true });
-      } catch (_) {}
+      } catch (_) { }
     }
     return path.join(dataDir, 'company_profile.json');
   }
@@ -1308,8 +1369,8 @@ export class MastersService {
       email: data.email || '',
       gstin: data.gstin || '',
       pan: data.pan || '',
-      state: data.state || 'Gujarat',
-      stateCode: data.stateCode || '24'
+      state: data.state || 'Pune',
+      stateCode: data.stateCode || '00'
     };
 
     // 1. Write to memory and disk immediately for zero-delay persistence
@@ -1349,7 +1410,7 @@ export class MastersService {
       entityId: 'company_profile',
       afterState: formatted,
       metadata: { details: `Company profile updated: ${formatted.legalName} (${formatted.gstin})` }
-    }).catch(() => {});
+    }).catch(() => { });
 
     return formatted;
   }

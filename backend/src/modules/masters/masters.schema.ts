@@ -10,6 +10,9 @@ export const PINCODE_REGEX = /^\d{6}$/;
 export const HSN_CODE_REGEX = /^\d{4,8}$/;
 export const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/i;
 export const BANK_ACCOUNT_REGEX = /^[0-9A-Za-z]{6,24}$/;
+export const ITEM_CODE_REGEX = /^[A-Z0-9\-_]+$/;
+export const ITEM_CATEGORIES = ['None', 'Round Bar', 'Plate', 'Angle'] as const;
+export type ItemCategory = (typeof ITEM_CATEGORIES)[number];
 
 export function isMaskedAccountNumber(val?: string | null): boolean {
   if (!val) return false;
@@ -111,16 +114,7 @@ export const VendorMasterBaseSchema = z.object({
   code: z.string().min(1, 'Vendor ID code is required'),
   name: z.string().min(1, 'Vendor name is required'),
   legalName: z.string().optional().default(''),
-  vendorType: z.enum([
-    'Supplier',
-    'Transporter',
-    'Subcontractor / Job Worker',
-    'ServiceProvider',
-    'EquipmentVendor',
-    'ProfessionalService',
-    'ManpowerProvider',
-    'Other'
-  ], { message: 'Please select a valid vendor type' }),
+  vendorType: z.string().optional().default(''),
   vendorCategory: z.enum([
     'Raw Material',
     'Components',
@@ -150,8 +144,7 @@ export const VendorMasterBaseSchema = z.object({
     .refine((val) => !val || isGstExemptValue(val) || GSTIN_REGEX.test(val.trim()), {
       message: 'Invalid GSTIN format (15 characters) or leave blank/exempt'
     }),
-  pan: z.string().min(1, 'PAN is mandatory for TDS compliance')
-    .regex(PAN_REGEX, 'PAN must be a valid 10-digit format (e.g. AAAFS1111A)'),
+  pan: z.string().optional().or(z.literal('')).refine((val) => !val || PAN_REGEX.test(val.trim()), { message: 'Invalid PAN format (10 characters alphanumeric, e.g. AAAFS1111A)' }),
   bankAccountName: z.string().min(1, 'Bank account name is required'),
   bankAccountNumber: z.string().min(1, 'Bank account number is required'),
   ifsc: z.string().min(1, 'IFSC code is required')
@@ -194,9 +187,172 @@ export const VendorMasterSchema = VendorMasterBaseSchema.refine((data) => {
 // ============================================================================
 // 3. ITEM MASTER SCHEMA
 // ============================================================================
+
+
+const isUpToTwoDecimals = (num: number): boolean => {
+  const parts = num.toString().split('.');
+  return parts.length <= 1 || parts[1].length <= 2;
+};
+
+const dimensionNumberSchema = z.preprocess(
+  (val) => {
+    if (val === null || val === undefined || val === '') return null;
+    const num = Number(val);
+    return isNaN(num) ? val : num;
+  },
+  z.number({ error: 'Dimension must be a valid number' })
+    .positive('Dimension must be a positive number')
+    .nullable()
+    .optional()
+);
+
+export function validateCategoryDimensions(
+  data: {
+    category?: string;
+    dimDiameter?: number | null;
+    dimLength?: number | null;
+    dimWidth?: number | null;
+    dimThickness?: number | null;
+  },
+  ctx: z.RefinementCtx
+) {
+  if (data.category === 'None') {
+    if (data.dimDiameter !== null && data.dimDiameter !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Diameter must be null or absent when category is None',
+        path: ['dimDiameter']
+      });
+    }
+    if (data.dimLength !== null && data.dimLength !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Length must be null or absent when category is None',
+        path: ['dimLength']
+      });
+    }
+    if (data.dimWidth !== null && data.dimWidth !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Width must be null or absent when category is None',
+        path: ['dimWidth']
+      });
+    }
+    if (data.dimThickness !== null && data.dimThickness !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Thickness must be null or absent when category is None',
+        path: ['dimThickness']
+      });
+    }
+  } else if (data.category === 'Round Bar') {
+    if (data.dimDiameter === null || data.dimDiameter === undefined || data.dimDiameter <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Diameter is required and must be a positive number for Round Bar',
+        path: ['dimDiameter']
+      });
+    } else if (!isUpToTwoDecimals(data.dimDiameter)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Diameter can have at most 2 decimal places',
+        path: ['dimDiameter']
+      });
+    }
+
+    if (data.dimLength === null || data.dimLength === undefined || data.dimLength <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Length is required and must be a positive number for Round Bar',
+        path: ['dimLength']
+      });
+    } else if (!isUpToTwoDecimals(data.dimLength)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Length can have at most 2 decimal places',
+        path: ['dimLength']
+      });
+    }
+
+    if (data.dimWidth !== null && data.dimWidth !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Width must be null for Round Bar',
+        path: ['dimWidth']
+      });
+    }
+
+    if (data.dimThickness !== null && data.dimThickness !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Thickness must be null for Round Bar',
+        path: ['dimThickness']
+      });
+    }
+  } else if (data.category === 'Plate' || data.category === 'Angle') {
+    if (data.dimDiameter !== null && data.dimDiameter !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Diameter must be null for ${data.category}`,
+        path: ['dimDiameter']
+      });
+    }
+
+    if (data.dimLength === null || data.dimLength === undefined || data.dimLength <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Length is required and must be a positive number for ${data.category}`,
+        path: ['dimLength']
+      });
+    } else if (!isUpToTwoDecimals(data.dimLength)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Length can have at most 2 decimal places',
+        path: ['dimLength']
+      });
+    }
+
+    if (data.dimWidth === null || data.dimWidth === undefined || data.dimWidth <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Width is required and must be a positive number for ${data.category}`,
+        path: ['dimWidth']
+      });
+    } else if (!isUpToTwoDecimals(data.dimWidth)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Width can have at most 2 decimal places',
+        path: ['dimWidth']
+      });
+    }
+
+    if (data.dimThickness === null || data.dimThickness === undefined || data.dimThickness <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Thickness is required and must be a positive number for ${data.category}`,
+        path: ['dimThickness']
+      });
+    } else if (!isUpToTwoDecimals(data.dimThickness)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Thickness can have at most 2 decimal places',
+        path: ['dimThickness']
+      });
+    }
+  }
+}
+
 export const MasterItemBaseSchema = z.object({
   id: z.string().optional(),
-  code: z.string().min(1, 'Item code is required'),
+  code: z.string()
+    .trim()
+    .min(1, 'Item code is required')
+    .max(100, 'Item code cannot exceed 100 characters')
+    .transform(val => val.toUpperCase())
+    .refine(val => val.length > 0, { message: 'Item code is required' })
+    .refine(val => ITEM_CODE_REGEX.test(val), {
+      message: 'Item code must contain only letters, numbers, hyphens, and underscores'
+    }),
   name: z.string().min(1, 'Item name is required'),
   itemType: z.enum([
     'Raw Material',
@@ -205,12 +361,18 @@ export const MasterItemBaseSchema = z.object({
     'Consumable',
     'Bought-Out',
     'Other'
-  ], { message: 'Please select a valid item type' }),
-  category: z.string().optional().default(''),
+  ] as const, { error: 'Please select a valid item type' }),
+  category: z.enum(ITEM_CATEGORIES, {
+    error: 'Category must be one of: None, Round Bar, Plate, Angle'
+  }),
+  dimDiameter: dimensionNumberSchema.default(null),
+  dimLength: dimensionNumberSchema.default(null),
+  dimWidth: dimensionNumberSchema.default(null),
+  dimThickness: dimensionNumberSchema.default(null),
   description: z.string().optional().default(''),
   partNo: z.string().optional().default(''),
-  unit: z.enum(['Nos', 'Kg', 'Meter', 'Litre', 'Set', 'Box'], {
-    message: 'Please select a valid Unit of Measure (UOM)'
+  unit: z.enum(['Nos', 'Kg', 'Meter', 'Litre', 'Set', 'Box'] as const, {
+    error: 'Please select a valid Unit of Measure (UOM)'
   }),
   hsnCode: z.string().min(1, 'HSN code is required')
     .regex(HSN_CODE_REGEX, 'HSN code must be 4 to 8 digits for GST invoicing'),
@@ -230,26 +392,74 @@ export const MasterItemBaseSchema = z.object({
   status: z.enum(['Active', 'Inactive']).default('Active')
 });
 
-export const MasterItemSchema = MasterItemBaseSchema.refine((data) => {
+export const MasterItemSchema = MasterItemBaseSchema.superRefine((data, ctx) => {
   // If Raw Material, Consumable, Bought-Out: standard_cost is required (> 0) and preferred_vendor is required
   if (['Raw Material', 'Consumable', 'Bought-Out'].includes(data.itemType)) {
-    return (data.standardCost !== undefined && data.standardCost > 0) &&
-           (data.preferredVendor !== undefined && data.preferredVendor.trim().length > 0);
+    if (data.standardCost === undefined || data.standardCost <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Standard Cost (₹) and Preferred Vendor are required for Raw Material, Consumable, and Bought-Out items',
+        path: ['standardCost']
+      });
+    }
+    if (!data.preferredVendor || data.preferredVendor.trim().length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Preferred Vendor is required for Raw Material, Consumable, and Bought-Out items',
+        path: ['preferredVendor']
+      });
+    }
   }
-  return true;
-}, {
-  message: 'Standard Cost (₹) and Preferred Vendor are required for Raw Material, Consumable, and Bought-Out items',
-  path: ['standardCost']
-}).refine((data) => {
+
   // If Finished Good: selling_price is required (> 0)
   if (data.itemType === 'Finished Good') {
-    return data.sellingPrice !== undefined && data.sellingPrice > 0;
+    if (data.sellingPrice === undefined || data.sellingPrice <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Selling Price (₹) is required for Finished Goods',
+        path: ['sellingPrice']
+      });
+    }
   }
-  return true;
-}, {
-  message: 'Selling Price (₹) is required for Finished Goods',
-  path: ['sellingPrice']
+
+  validateCategoryDimensions(data, ctx);
 });
+
+export const MasterItemUpdateSchema = MasterItemBaseSchema
+  .omit({ code: true })
+  .extend({
+    code: z.string().optional()
+  })
+  .superRefine((data, ctx) => {
+    if (data.itemType && ['Raw Material', 'Consumable', 'Bought-Out'].includes(data.itemType)) {
+      if (data.standardCost === undefined || data.standardCost <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Standard Cost (₹) and Preferred Vendor are required for Raw Material, Consumable, and Bought-Out items',
+          path: ['standardCost']
+        });
+      }
+      if (!data.preferredVendor || data.preferredVendor.trim().length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Preferred Vendor is required for Raw Material, Consumable, and Bought-Out items',
+          path: ['preferredVendor']
+        });
+      }
+    }
+
+    if (data.itemType === 'Finished Good') {
+      if (data.sellingPrice === undefined || data.sellingPrice <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Selling Price (₹) is required for Finished Goods',
+          path: ['sellingPrice']
+        });
+      }
+    }
+
+    validateCategoryDimensions(data, ctx);
+  });
 
 // ============================================================================
 // 4. MACHINE MASTER SCHEMA

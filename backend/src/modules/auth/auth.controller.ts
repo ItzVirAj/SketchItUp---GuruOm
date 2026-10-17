@@ -4,6 +4,7 @@ import { recordFailedLogin, clearFailedLogin } from '../../middleware/rateLimit'
 import { GeoLocationService } from '../../utils/geolocation';
 import { ENV } from '../../config/env';
 import { RBAC_ROLE_MATRIX, tryNormalizeRole } from '../../../../src/utils/rbacMatrix';
+import { ChangePasswordSchema } from './auth.schema';
 
 // Roles that may be assigned during user provisioning. Built from the canonical RBAC
 // matrix (keys + display labels) plus the legacy roles the users.role CHECK constraint
@@ -60,6 +61,7 @@ export class AuthController {
       return res.json({
         access_token: result.accessToken,
         user: result.user,
+        mustChangePassword: Boolean(result.user.mustChangePassword),
         risk_info: result.riskInfo
       });
     } catch (err: any) {
@@ -267,19 +269,28 @@ export class AuthController {
    */
   async changePassword(req: Request, res: Response) {
     const userId = req.user?.id;
-    const { oldPassword, newPassword } = req.body;
     const currentRefreshToken = req.cookies?.[REFRESH_COOKIE_NAME] || req.body?.refreshToken;
 
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required.' });
     }
 
-    if (!oldPassword || !newPassword) {
-      return res.status(400).json({ error: 'BadRequest', message: 'Current password and new password are required.' });
+    const parsed = ChangePasswordSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: 'BadRequest',
+        message: parsed.error.issues[0]?.message || 'Invalid password change payload.'
+      });
     }
 
+    const currentPassword = (parsed.data.currentPassword || parsed.data.oldPassword)!;
+    const newPassword = parsed.data.newPassword;
+
     try {
-      const result = await authService.changePassword(userId, oldPassword, newPassword, currentRefreshToken);
+      const result = await authService.changePassword(userId, currentPassword, newPassword, currentRefreshToken);
+      if (result.refreshToken) {
+        setRefreshTokenCookie(res, result.refreshToken, result.expiresAt);
+      }
       return res.json(result);
     } catch (err: any) {
       return res.status(400).json({ error: 'BadRequest', message: err.message });

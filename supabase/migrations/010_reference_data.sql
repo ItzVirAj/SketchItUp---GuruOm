@@ -1,67 +1,145 @@
 -- ============================================================================
--- Migration: 013_rbac_matrix_and_escalation.sql
--- Description: Complete Role-Based Access Control (RBAC) Matrix, Monetary
---              Approval Limits, Scoped Row-Level Rules, and Escalation Ledger.
+-- 010_reference_data.sql
+-- System reference data the application cannot run without. NO demo, test or
+-- company-specific records live here (no users, orders, items, customers, ...).
+--
+--   * roles / permissions / role_permission_grants  -> DB-driven RBAC
+--   * role_permissions                              -> module access matrix + approval limits
+--   * notification_rules                            -> catalogue of alertable events
+--
+-- Every insert is "seed once": ON CONFLICT DO NOTHING, so re-running this file
+-- never overwrites roles, limits or toggles you changed from the admin console.
+--
+-- The first login account is NOT created here. Run:
+--     npx tsx scripts/create-server-admin.ts
 -- ============================================================================
 
--- 1. Create role_permissions Table
-CREATE TABLE IF NOT EXISTS public.role_permissions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    role TEXT NOT NULL,
-    module TEXT NOT NULL,
-    access_level TEXT NOT NULL CHECK (access_level IN ('NO_ACCESS', 'VIEW_ONLY', 'CREATE_EDIT', 'FULL_APPROVE')),
-    approval_limit NUMERIC DEFAULT NULL, -- NULL indicates unlimited (or not applicable)
-    scope_rule TEXT DEFAULT 'ALL' CHECK (scope_rule IN ('ALL', 'OWN_RECORDS_ONLY', 'EMPLOYEE_MASTER_ONLY', 'QC_HOLDS_ONLY', 'NO_COMMERCIAL_EDIT')),
-    description TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_by TEXT DEFAULT 'SYSTEM',
-    UNIQUE (role, module)
-);
+-- ----------------------------------------------------------------------------
+-- Canonical roles (tier 0 = ServerAdmin ... tier 6 = Client)
+-- ----------------------------------------------------------------------------
+INSERT INTO public.roles (name, tier, description, is_system)
+VALUES 
+    ('ServerAdmin', 0, 'Platform Maker / Developer Team - Supreme Authority & Infrastructure Control', true),
+    ('Owner', 1, 'Owner / Managing Director - Executive Authority over Enterprise Operations', true),
+    ('Admin (System)', 2, 'System Administrator - Company User & Module Management', true),
+    ('Purchase Manager', 3, 'Head of Procurement & Vendor Relations (₹1,00,000 Sign-off Ceiling)', false),
+    ('Accountant', 3, 'Head of Finance, Billing & Statutory Accounting (₹50,000 Sign-off Ceiling)', false),
+    ('Production Planner', 3, 'Production Planning & Control (PPC) Head', false),
+    ('Quality Auditor', 3, 'Lead Quality Auditor (Pre-Delivery Inspection & Final Sign-off)', false),
+    ('Quality Inspector', 4, 'In-Process QC Inspector (Holds & Non-Conformance Reports)', false),
+    ('Store Keeper', 4, 'Inventory Executive (Goods Receipt & Material Issues)', false),
+    ('Dispatch Executive', 4, 'Logistics, Transport & Delivery Challan Dispatcher', false),
+    ('Sales/Order Desk', 4, 'Customer Orders & Commercial Proposal Desk', false),
+    ('Subcontractor Coordinator', 4, 'Job-Work & Outwork Operations Coordinator', false),
+    ('Shop Floor Supervisor', 4, 'Shopfloor Production Line Supervisor', false),
+    ('HR/Admin', 4, 'Personnel, Master Catalog & Employee Record Administrator', false),
+    ('Machine Operator', 5, 'Shopfloor Machine Operator & Technician', false),
+    ('Client', 6, 'External Customer Portal (View-only)', false)
+ON CONFLICT (name) DO NOTHING;
 
--- 2. Create or Upgrade pending_approvals Table
-DROP TABLE IF EXISTS public.pending_approvals CASCADE;
+-- ----------------------------------------------------------------------------
+-- Granular permission keys
+-- ----------------------------------------------------------------------------
+INSERT INTO public.permissions (key, category, description)
+VALUES
+    -- System & ServerAdmin Exclusive Capabilities
+    ('system:server_admin_vault', 'system', 'Access ServerAdmin Maker Console and platform infrastructure'),
+    ('system:raw_database_access', 'system', 'Execute direct administrative database routines and inspect raw tables'),
+    ('system:override_all_rules', 'system', 'Bypass monetary approval limits, holds, and state-machine transitions'),
+    ('system:manage_platform_tenants', 'system', 'Configure tenant isolation, storage buckets, and server environments'),
+    ('system:view_immutable_audit', 'system', 'Inspect complete append-only admin and security event audit vaults'),
+    ('system:manage_permission_overrides', 'system', 'Grant or revoke per-user granular permission overrides'),
+    ('system:force_password_reset', 'system', 'Invalidate active user sessions and issue one-time reset tokens'),
 
-CREATE TABLE IF NOT EXISTS public.pending_approvals (
-    id TEXT PRIMARY KEY,
-    title TEXT NOT NULL,
-    type TEXT NOT NULL, -- 'HIGH_VALUE_PO', 'HIGH_VALUE_PAYMENT', 'DISCOUNT_OVERRIDE', 'QC_HOLD_RELEASE', 'COMMERCIAL_OVERRIDE', 'CUSTOM'
-    entity_type TEXT NOT NULL, -- 'PO', 'ORDER', 'VENDOR_PAYMENT', 'JOB_CARD', 'CUSTOMER_INVOICE'
-    entity_id TEXT NOT NULL,
-    amount NUMERIC DEFAULT 0,
-    threshold_limit NUMERIC DEFAULT 0,
-    requested_by TEXT NOT NULL,
-    requested_by_role TEXT NOT NULL,
-    target_approver_role TEXT DEFAULT 'Owner',
-    status TEXT NOT NULL DEFAULT 'PENDING_OWNER_APPROVAL' CHECK (status IN ('PENDING_OWNER_APPROVAL', 'APPROVED', 'REJECTED', 'CANCELLED')),
-    details TEXT,
-    escalation_reason TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    resolved_at TIMESTAMPTZ,
-    resolved_by TEXT,
-    resolution_notes TEXT
-);
+    -- Administration & Users
+    ('admin:view_users', 'administration', 'View user accounts, credential status, and role assignments'),
+    ('admin:create_users', 'administration', 'Provision new user accounts with designated role'),
+    ('admin:edit_users', 'administration', 'Modify staff profile information, contact numbers, and departments'),
+    ('admin:assign_roles', 'administration', 'Change user roles adhering strictly to tier hierarchy rules'),
+    ('admin:manage_masters', 'administration', 'Create, edit, or delete items, customers, vendors, and machine masters'),
 
--- Indexes for fast query lookup
-CREATE INDEX IF NOT EXISTS idx_role_permissions_role_mod ON public.role_permissions (role, module);
-CREATE INDEX IF NOT EXISTS idx_pending_approvals_status ON public.pending_approvals (status);
-CREATE INDEX IF NOT EXISTS idx_pending_approvals_entity ON public.pending_approvals (entity_type, entity_id);
+    -- Orders & Commercials
+    ('orders:view', 'orders', 'View customer purchase orders and line-item details'),
+    ('orders:create_draft', 'orders', 'Create new customer order drafts from client PO'),
+    ('orders:confirm', 'orders', 'Confirm customer order drafts and initiate fulfillment pipeline'),
+    ('orders:edit_commercials', 'orders', 'Modify order pricing, discounts, and payment credit terms'),
+    ('orders:cancel', 'orders', 'Cancel active orders and release allocated stock'),
 
--- 3. Seed Exact Role-Permission Matrix
--- Roles:
--- 1. Owner: Order Mgmt=Full/Approve, Inventory=View, Production=View, Procurement=Full/Approve, Dispatch=View, Accounting=View, Masters=Full/Approve, Settings=Full/Approve, Approval Limit=Unlimited.
--- 2. Sales/Order Desk: Order Mgmt=Create/Edit, Inventory=View, Production=No Access, Procurement=No Access, Dispatch=View, Accounting=No Access, Masters=View, Settings=No Access.
--- 3. Production Planner: Order Mgmt=View (no commercial edit), Inventory=View, Production=Create/Edit, Procurement=No Access, Dispatch=View, Accounting=No Access, Masters=View, Settings=No Access.
--- 4. Shop Floor Supervisor: Production=Create/Edit (job cards, raises NCRs), Order Mgmt=No Access, others=No Access/View.
--- 5. Quality Inspector: Production=Create/Edit (specifically place/clear QC holds), others=No Access.
--- 6. Store Keeper: Inventory=Create/Edit (GRN, material issue, stock counts), Procurement=View, others=View/No Access.
--- 7. Purchase Manager: Procurement=Full/Approve, Masters=Create/Edit, Approval Limit=₹1,00,000 (PO above this escalates to Owner).
--- 8. Dispatch Executive: Dispatch=Create/Edit (cannot edit order commercial terms), others=View/No Access.
--- 9. Accountant: Accounting=Full/Approve (invoicing, payments, GST filing), Approval Limit=₹50,000 (vendor payments above this escalate to Owner).
--- 10. HR/Admin: Masters=Create/Edit (scoped ONLY to Employee Master — must not see other masters even at View level), Settings=View, others=No Access.
--- 11. Machine Operator: Production=Create/Edit (scoped to only their own assigned job/route card entries), others=No Access.
--- 12. Admin (System): Full/Approve on everything, Unlimited.
+    -- Inventory & Stores
+    ('inventory:view', 'inventory', 'View inventory balances, bin locations, and stock ledger'),
+    ('inventory:create_grn', 'inventory', 'Record Goods Receipt Notes (GRN) and update batch stock'),
+    ('inventory:adjust_stock', 'inventory', 'Perform physical inventory reconciliation and balance write-offs'),
 
+    -- Production & Shopfloor
+    ('production:view', 'production', 'View job cards, route cards, and live machine status'),
+    ('production:create_job_card', 'production', 'Generate and release production job cards for orders'),
+    ('production:log_output', 'production', 'Log hourly stage output, completed quantities, and scrap scrap rates'),
+
+    -- Procurement
+    ('procurement:view', 'procurement', 'View purchase requisitions, RFQs, and purchase orders'),
+    ('procurement:create_po', 'procurement', 'Draft and issue purchase orders to vendors'),
+    ('procurement:approve_high_value', 'procurement', 'Approve purchase orders exceeding role standard monetary ceilings'),
+
+    -- Quality Control (QC & PDI)
+    ('qc:view', 'qc', 'View QC in-process inspection queues and PDI inspection logs'),
+    ('qc:log_inspection', 'qc', 'Record inspection parameters, pass/fail status, and upload test reports'),
+    ('qc:place_hold', 'qc', 'Place quality hold or raise Non-Conformance Reports (NCR) on defective lots'),
+    ('qc:release_hold', 'qc', 'Clear quality holds and authorize rework or release'),
+
+    -- Dispatch & Logistics
+    ('dispatch:view', 'dispatch', 'View delivery schedules, pending shipments, and outbound challans'),
+    ('dispatch:create_challan', 'dispatch', 'Generate statutory delivery challans for outbound goods'),
+    ('dispatch:confirm_delivery', 'dispatch', 'Mark consignments delivered with Proof-of-Delivery (POD) documentation'),
+
+    -- Accounting & Invoicing
+    ('finance:view', 'finance', 'View sales invoices, vendor bills, and statutory ledger'),
+    ('finance:generate_invoice', 'finance', 'Generate GST e-invoices for dispatched delivery challans'),
+    ('finance:record_payment', 'finance', 'Record client payment receipts and vendor remittance entries'),
+    ('finance:approve_high_value', 'finance', 'Authorize high-value vendor disbursements above standard limits')
+ON CONFLICT (key) DO NOTHING;
+
+-- ----------------------------------------------------------------------------
+-- Role -> permission grants
+-- ----------------------------------------------------------------------------
+-- Map ServerAdmin Role to ALL Permissions (Unrestricted Full Grant)
+INSERT INTO public.role_permission_grants (role_id, permission_id)
+SELECT r.id, p.id
+FROM public.roles r
+CROSS JOIN public.permissions p
+WHERE r.name = 'ServerAdmin'
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- Map Owner & Admin (System) Roles to All Operational & Executive Permissions
+INSERT INTO public.role_permission_grants (role_id, permission_id)
+SELECT r.id, p.id
+FROM public.roles r
+JOIN public.permissions p ON p.category != 'system' OR p.key IN ('system:view_immutable_audit', 'system:manage_permission_overrides', 'system:force_password_reset')
+WHERE r.name IN ('Owner', 'Admin (System)')
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- Map Department Heads & Staff Permissions
+INSERT INTO public.role_permission_grants (role_id, permission_id)
+SELECT r.id, p.id
+FROM public.roles r
+JOIN public.permissions p ON (
+    (r.name = 'Purchase Manager' AND (p.category IN ('procurement', 'inventory') OR p.key IN ('admin:view_users', 'orders:view'))) OR
+    (r.name = 'Accountant' AND (p.category IN ('finance', 'orders', 'dispatch') OR p.key IN ('admin:view_users', 'dispatch:view', 'dispatch:create_challan'))) OR
+    (r.name = 'Production Planner' AND (p.category IN ('production', 'inventory') OR p.key IN ('orders:view', 'qc:view', 'dispatch:view'))) OR
+    (r.name = 'Quality Auditor' AND (p.category = 'qc' OR p.key IN ('production:view', 'orders:view', 'dispatch:view', 'dispatch:create_challan'))) OR
+    (r.name = 'Quality Inspector' AND (p.category = 'qc' OR p.key IN ('production:view', 'production:log_output'))) OR
+    (r.name = 'Store Keeper' AND (p.category = 'inventory' OR p.key IN ('procurement:view', 'production:view', 'dispatch:view', 'dispatch:create_challan'))) OR
+    (r.name = 'Dispatch Executive' AND (p.category = 'dispatch' OR p.key IN ('orders:view', 'inventory:view', 'dispatch:view', 'dispatch:create_challan', 'dispatch:confirm_delivery'))) OR
+    (r.name = 'Sales/Order Desk' AND (p.category = 'orders' OR p.key IN ('inventory:view', 'dispatch:view'))) OR
+    (r.name = 'Subcontractor Coordinator' AND (p.category IN ('production', 'inventory') OR p.key IN ('orders:view', 'dispatch:view', 'dispatch:create_challan'))) OR
+    (r.name = 'Shop Floor Supervisor' AND (p.category = 'production' OR p.key IN ('inventory:view', 'qc:view'))) OR
+    (r.name = 'HR/Admin' AND (p.category = 'administration' OR p.key IN ('system:view_immutable_audit', 'admin:view_users', 'admin:create_users', 'admin:edit_users', 'admin:manage_masters'))) OR
+    (r.name = 'Machine Operator' AND p.key IN ('production:view', 'production:log_output'))
+)
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- ----------------------------------------------------------------------------
+-- Module access matrix (view / create-edit / approve, with monetary limits)
+-- ----------------------------------------------------------------------------
 INSERT INTO public.role_permissions (role, module, access_level, approval_limit, scope_rule, description)
 VALUES
   -- 1. Owner
@@ -207,33 +285,19 @@ VALUES
   ('Admin (System)', 'settings', 'FULL_APPROVE', NULL, 'ALL', 'IT Admin full root access'),
   ('Admin (System)', 'approvals', 'FULL_APPROVE', NULL, 'ALL', 'IT Admin full root access'),
   ('Admin (System)', 'reports', 'FULL_APPROVE', NULL, 'ALL', 'IT Admin full root access')
-ON CONFLICT (role, module) DO UPDATE SET
-  access_level = EXCLUDED.access_level,
-  approval_limit = EXCLUDED.approval_limit,
-  scope_rule = EXCLUDED.scope_rule,
-  description = EXCLUDED.description,
-  updated_at = NOW();
+ON CONFLICT (role, module) DO NOTHING;
 
--- 4. Enable Row Level Security (RLS)
-ALTER TABLE public.role_permissions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.pending_approvals ENABLE ROW LEVEL SECURITY;
-
--- 5. RLS Policies
-DROP POLICY IF EXISTS "role_permissions_select_policy" ON public.role_permissions;
-CREATE POLICY "role_permissions_select_policy" ON public.role_permissions
-    FOR SELECT TO authenticated, anon USING (true);
-
-DROP POLICY IF EXISTS "role_permissions_admin_write" ON public.role_permissions;
-CREATE POLICY "role_permissions_admin_write" ON public.role_permissions
-    FOR ALL TO authenticated
-    USING (
-        auth.jwt() ->> 'role' IN ('Owner', 'Admin (System)', 'SUPER ADMIN') OR
-        EXISTS (
-            SELECT 1 FROM public.users 
-            WHERE id = auth.uid() AND role IN ('Owner', 'Admin (System)', 'SUPER ADMIN')
-        )
-    );
-
-DROP POLICY IF EXISTS "pending_approvals_all_policy" ON public.pending_approvals;
-CREATE POLICY "pending_approvals_all_policy" ON public.pending_approvals
-    FOR ALL TO authenticated, anon USING (true);
+-- ----------------------------------------------------------------------------
+-- Notification event catalogue (recipients are configured in the admin console)
+-- ----------------------------------------------------------------------------
+INSERT INTO public.notification_rules (id, name, description, enabled, severity) VALUES
+('critical_error', 'Critical System & Infrastructure Errors', 'Automated alerts for uncaught exceptions or database outages', true, 'CRITICAL'),
+('production_failure', 'Shopfloor Production Job Failure', 'Machine breakdowns, tool damage or operator job rejections', true, 'CRITICAL'),
+('pdi_failure', 'PDI & Quality Inspection Failure', 'Pre-Delivery Inspection non-conformance defects', true, 'HIGH'),
+('order_delayed', 'Customer Order Schedule Delay', 'PO delivery date overdue or dispatch hold', true, 'HIGH'),
+('inventory_shortage', 'Raw Material / SKU Shortage Alert', 'Stock level dropping below reorder point or negative available', true, 'HIGH'),
+('invoice_generated', 'Customer Invoice Issued', 'Commercial invoice generated for customer dispatch', true, 'INFO'),
+('payment_received', 'Customer Payment Received', 'Payment receipt logged against outstanding invoice', true, 'INFO'),
+('dispatch_failed', 'Outward Dispatch Transport Exception', 'Challan transit delay or delivery vehicle breakdown', true, 'HIGH'),
+('approval_required', 'Pending Management Approval', 'Purchase order or credit limit requiring sign-off', true, 'MEDIUM')
+ON CONFLICT (id) DO NOTHING;

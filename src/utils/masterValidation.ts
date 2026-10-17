@@ -130,6 +130,32 @@ export const ITEM_UOMS = [
   'Box'
 ] as const;
 
+export { ITEM_CATEGORIES, type ItemCategory } from '../types/console';
+
+export const ITEM_CODE_REGEX = /^[A-Z0-9\-_]+$/;
+
+export function formatItemDimensions(item?: {
+  category?: string;
+  dimDiameter?: number | null;
+  dimLength?: number | null;
+  dimWidth?: number | null;
+  dimThickness?: number | null;
+} | null): string {
+  if (!item || !item.category) return '';
+  const cat = item.category.trim().toLowerCase();
+  if (cat === 'none') return '';
+  if (cat === 'round bar') {
+    if (item.dimDiameter != null && item.dimLength != null) {
+      return `Ø${item.dimDiameter} x ${item.dimLength}`;
+    }
+  } else if (cat === 'plate' || cat === 'angle') {
+    if (item.dimLength != null && item.dimWidth != null && item.dimThickness != null) {
+      return `${item.dimLength} x ${item.dimWidth} x ${item.dimThickness}`;
+    }
+  }
+  return '';
+}
+
 export const GST_RATES = [0, 5, 12, 18, 28] as const;
 
 export const PAYMENT_TERMS = [
@@ -289,3 +315,37 @@ export function maskBankAccount(accountNo?: string | null): string {
   const lastFour = trimmed.slice(-4);
   return `•••• •••• •••• ${lastFour}`;
 }
+
+// ============================================================================
+// Vendor Master Form Validation Schema (Zod)
+// ============================================================================
+export const VendorFormSchema = z.object({
+  code: z.string().min(1, 'Vendor ID is required'),
+  name: z.string().min(1, 'Vendor name is required'),
+  legalName: z.string().optional().default(''),
+  vendorType: z.string().optional().default(''),
+  vendorCategory: z.string().optional().default('Raw Material'),
+  contactPerson: z.string().optional().default(''),
+  mobile: z.string().regex(INDIAN_MOBILE_REGEX, 'Mobile must be a valid 10-digit Indian number').optional().or(z.literal('')),
+  email: z.string().email('Please enter a valid email address').optional().or(z.literal('')),
+  billingAddress: z.string().optional().default(''),
+  shippingAddress: z.string().optional().default(''),
+  city: z.string().optional().default(''),
+  state: z.string().optional().default('Maharashtra'),
+  pincode: z.string().optional().default(''),
+  gstin: z.string().optional().default(''),
+  pan: z.string().optional().default(''),
+  bankAccountName: z.string().optional().default(''),
+  bankAccountNumber: z.string().optional().default(''),
+  ifsc: z.string().optional().default(''),
+  paymentTerms: z.string().optional().default('Net 30'),
+  creditDays: z.number().optional().default(30),
+  creditLimit: z.number().optional().default(500000),
+  processType: z.string().optional(),
+  turnaroundTimeDays: z.number().optional(),
+  status: z.enum(['Active', 'Inactive']).default('Active'),
+  notes: z.string().optional().default('')
+});
+
+export type VendorFormData = z.infer<typeof VendorFormSchema>;
+

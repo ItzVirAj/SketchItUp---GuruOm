@@ -45,8 +45,10 @@ interface MetricsViewProps {
   invoices?: any[];
   payables?: any[];
   productionLogs?: any[];
+  machines?: any[];
   isDarkMode?: boolean;
   onNavigate?: (view: ConsoleView) => void;
+  onRefresh?: () => Promise<void> | void;
 }
 
 interface DailyTrend {
@@ -62,6 +64,33 @@ interface DailyTrend {
   onTimeDeliveryRate: number;
 }
 
+const parseItemTimestamp = (item: any): number => {
+  if (!item) return 0;
+  const raw = item.createdAt || item.date || item.poDate || item.invoiceDate || item.inspectedAt || item.loggedTimestamp || item.timestamp || item.targetDate || item.id;
+  if (!raw) return 0;
+  if (typeof raw === 'number') return raw > 0 ? raw : 0;
+  const str = String(raw).trim();
+  if (/^\d{10,13}$/.test(str)) {
+    const num = parseInt(str, 10);
+    if (!isNaN(num) && num > 0) return num;
+  }
+  const idMatch = str.match(/(?:ord|inv|jc|dsp|qc)-(\d{10,13})/i);
+  if (idMatch) {
+    const num = parseInt(idMatch[1], 10);
+    if (!isNaN(num) && num > 0) return num;
+  }
+  const ddmmyyyy = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (ddmmyyyy) {
+    const day = parseInt(ddmmyyyy[1], 10);
+    const month = parseInt(ddmmyyyy[2], 10) - 1;
+    const year = parseInt(ddmmyyyy[3], 10);
+    const parsed = new Date(year, month, day).getTime();
+    if (!isNaN(parsed) && parsed > 0) return parsed;
+  }
+  const parsed = new Date(str).getTime();
+  return isNaN(parsed) ? 0 : parsed;
+};
+
 export const MetricsView: React.FC<MetricsViewProps> = ({
   orders = [],
   stock = [],
@@ -71,8 +100,10 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
   invoices = [],
   payables = [],
   productionLogs = [],
+  machines = [],
   isDarkMode = true,
-  onNavigate
+  onNavigate,
+  onRefresh
 }) => {
   const { accent, isGreen, isBlue, isCrystal } = useAccentTheme();
   const [days, setDays] = useState<number>(30);
@@ -85,80 +116,182 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
 
   // Compute live aggregates from client props
   const computedMetrics = useMemo(() => {
+    // 1. Orders
     const openOrders = orders.filter(o => o.status !== 'CLOSED' && o.status !== 'CANCELLED');
     const openOrderBookValue = openOrders.reduce((sum, o) => sum + (Number(o.grossAmount) || 0), 0);
-    const avgOrderValue = orders.length > 0 ? Math.round(openOrderBookValue / Math.max(openOrders.length, 1)) : 85000;
+    const avgOrderValue = orders.length > 0
+      ? Math.round(orders.reduce((sum, o) => sum + (Number(o.grossAmount) || 0), 0) / orders.length)
+      : 0;
 
-    const activeJCs = jobCards.filter(j => j.status === 'IN_PROGRESS' || j.status === 'IN_PRODUCTION' || j.status === 'RUNNING').length || 14;
-    const passQc = qcItems.filter(q => q.qcStatus === 'PASS').length;
-    const qcPassRate = qcItems.length > 0 ? Number(((passQc / qcItems.length) * 100).toFixed(1)) : 98.4;
-    const qcHoldCount = qcItems.filter(q => q.qcStatus === 'QC_HOLD' || q.qcStatus === 'REWORK').length;
+    // 2. Production & Machines
+    const activeJCs = jobCards.filter(j =>
+      j.status === 'IN_PROGRESS' || j.status === 'IN_PRODUCTION' || j.status === 'RUNNING' || j.jobStatus === 'IN_PROGRESS'
+    ).length;
 
-    const shortagesCount = stock.filter(s => s.status === 'SHORTAGE' || s.status === 'CRITICAL' || (s.available ?? 0) < 0).length;
-    const overdueReceivables = invoices.filter(i => i.status === 'OVERDUE').reduce((acc, i) => acc + (Number(i.amount) || 0), 0);
-    const pendingDispatches = dispatches.filter(d => d.status === 'PENDING' || d.status === 'IN_TRANSIT').length;
+    const assignedMachines = new Set(
+      jobCards
+        .filter(j => j.status === 'IN_PROGRESS' || j.status === 'IN_PRODUCTION' || j.status === 'RUNNING' || j.jobStatus === 'IN_PROGRESS')
+        .map(j => j.machine)
+        .filter(Boolean)
+    );
+    const totalMachinesCount = machines.filter(m => m.status !== 'Inactive').length || machines.length || (activeJCs > 0 ? activeJCs : 1);
+    const activeMachinesCount = assignedMachines.size > 0 ? assignedMachines.size : (activeJCs > 0 ? Math.min(activeJCs, totalMachinesCount) : 0);
+    const machineUtilization = totalMachinesCount > 0 ? Number(((activeMachinesCount / totalMachinesCount) * 100).toFixed(1)) : 0;
+
+    // 3. Quality & Inspections
+    const totalQc = qcItems.length;
+    const passQc = qcItems.filter(q => q.qcStatus === 'PASS' || q.qcStatus === 'PASSED').length;
+    const qcPassRate = totalQc > 0 ? Number(((passQc / totalQc) * 100).toFixed(1)) : (jobCards.length > 0 ? 100 : 0);
+    const qcHoldCount = qcItems.filter(q => q.qcStatus === 'QC_HOLD' || q.qcStatus === 'REJECTED' || q.qcStatus === 'REWORK').length;
+    const firstPassYield = qcPassRate;
+
+    // 4. Inventory Shortages
+    const shortagesCount = stock.filter(s => s.status === 'SHORTAGE' || s.status === 'CRITICAL' || (s.available != null && Number(s.available) < 0)).length;
+
+    // 5. Invoices & Receivables
+    const totalInvoicedValue = invoices.reduce((sum, i) => sum + (Number(i.totalAmount || i.amount) || 0), 0);
+    const overdueReceivables = invoices.filter(i => i.status === 'OVERDUE').reduce((acc, i) => acc + (Number(i.balanceAmount ?? i.totalAmount ?? i.amount) || 0), 0);
+    const monthlyRevenueRunrate = totalInvoicedValue > 0 ? totalInvoicedValue : openOrderBookValue;
+
+    // 6. Dispatches & OTIF
+    const pendingDispatches = dispatches.filter(d => d.status === 'PENDING' || d.status === 'IN_TRANSIT' || d.status === 'DISPATCH_READY').length;
+    const evaluatedDispatches = dispatches.filter(d => d.status === 'DELIVERED' || d.status === 'DISPATCHED');
+    let onTimeCount = 0;
+    evaluatedDispatches.forEach(d => {
+      const linkedOrder = orders.find(o => o.poNo === d.orderPo);
+      if (!linkedOrder || !linkedOrder.deliveryDate) {
+        onTimeCount++;
+      } else {
+        const dTime = parseItemTimestamp(d);
+        const promisedTime = new Date(linkedOrder.deliveryDate).getTime();
+        if (dTime <= promisedTime) {
+          onTimeCount++;
+        }
+      }
+    });
+    const otifRate = evaluatedDispatches.length > 0
+      ? Number(((onTimeCount / evaluatedDispatches.length) * 100).toFixed(1))
+      : (orders.length > 0 ? 100 : 0);
 
     return {
       openOrderBookValue,
       avgOrderValue,
       openOrdersCount: openOrders.length,
       activeJCs,
+      activeMachinesCount,
+      totalMachinesCount,
+      machineUtilization,
+      totalQc,
+      passQc,
       qcPassRate,
       qcHoldCount,
+      firstPassYield,
       shortagesCount,
       overdueReceivables,
       pendingDispatches,
-      monthlyRevenueRunrate: Math.round(openOrderBookValue * 0.45) || 2450000,
-      machineUtilization: 88.6,
-      otifRate: 96.2,
-      firstPassYield: 97.8
+      monthlyRevenueRunrate,
+      otifRate
     };
-  }, [orders, stock, jobCards, qcItems, dispatches, invoices]);
+  }, [orders, stock, jobCards, qcItems, dispatches, invoices, machines]);
 
-  // Fetch API trends data
+  // Compute live trends data strictly from overall website data
   const fetchMetricsData = async (selectedDays: number) => {
     setIsLoading(true);
-    try {
-      const res = await fetch(`/api/v1/metrics/history?days=${selectedDays}`, {
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include'
-      });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.data && Array.isArray(json.data) && json.data.length > 0) {
-          setHistoryData(json.data);
-          setLastRefreshed(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-          return;
-        }
+    if (onRefresh) {
+      try {
+        await onRefresh();
+      } catch (err) {
+        console.warn('onRefresh error:', err);
       }
-    } catch (err) {
-      console.warn('Could not fetch server metrics, using synthesized client dataset:', err);
-    } finally {
-      setIsLoading(false);
     }
 
-    // Client synthesized fallback anchored to real metrics
-    const fallback: DailyTrend[] = [];
+    const trends: DailyTrend[] = [];
     const now = new Date();
-    for (let i = selectedDays - 1; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(now.getDate() - i);
-      const wave = Math.sin((selectedDays - i) * 0.4);
-      fallback.push({
-        date: d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }),
-        revenue: Math.round(computedMetrics.avgOrderValue * (0.85 + 0.35 * wave)),
-        openOrderCount: Math.max(3, Math.round(computedMetrics.openOrdersCount + 3 * wave)),
-        avgOrderValue: computedMetrics.avgOrderValue,
-        topCustomer: 'Tata Motors Ltd',
-        rejectionRate: Number((2.1 - 0.5 * wave).toFixed(1)),
-        activeJobCards: Math.max(4, Math.round(computedMetrics.activeJCs + 2 * Math.cos(i * 0.5))),
-        dispatchedQty: Math.round(180 + 75 * wave),
+    const msPerDay = 86400000;
+    const startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate() - selectedDays + 1).getTime();
+
+    for (let i = 0; i < selectedDays; i++) {
+      const dayStart = startTime + i * msPerDay;
+      const dayEnd = dayStart + msPerDay;
+      const dateObj = new Date(dayStart);
+      const label = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+
+      // Invoices or orders recorded on this exact day
+      const dayInvoices = invoices.filter(inv => {
+        const t = parseItemTimestamp(inv);
+        return t >= dayStart && t < dayEnd;
+      });
+      const dayOrders = orders.filter(o => {
+        const t = parseItemTimestamp(o);
+        return t >= dayStart && t < dayEnd;
+      });
+
+      const dayRevenue = dayInvoices.length > 0
+        ? dayInvoices.reduce((sum, inv) => sum + (Number(inv.totalAmount || inv.amount) || 0), 0)
+        : dayOrders.reduce((sum, o) => sum + (Number(o.grossAmount) || 0), 0);
+
+      // Orders active up to this day
+      const ordersUpToDay = orders.filter(o => {
+        const t = parseItemTimestamp(o);
+        return (t === 0 || t <= dayEnd) && o.status !== 'CANCELLED';
+      });
+      const openOrderCount = ordersUpToDay.filter(o => o.status !== 'CLOSED').length;
+      const avgOrderVal = ordersUpToDay.length > 0
+        ? Math.round(ordersUpToDay.reduce((sum, o) => sum + (Number(o.grossAmount) || 0), 0) / ordersUpToDay.length)
+        : 0;
+
+      // Real top customer from actual orders up to this day
+      const customerTotals: Record<string, number> = {};
+      ordersUpToDay.forEach(o => {
+        if (o.customerName) {
+          customerTotals[o.customerName] = (customerTotals[o.customerName] || 0) + (Number(o.grossAmount) || 0);
+        }
+      });
+      const topCustomer = Object.entries(customerTotals).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
+
+      // Real QC rejection rate on or up to this day
+      const qcUpToDay = qcItems.filter(q => {
+        const t = parseItemTimestamp(q);
+        return t === 0 || t <= dayEnd;
+      });
+      const rejectedCount = qcUpToDay.filter(q => q.qcStatus === 'REJECTED' || q.qcStatus === 'QC_HOLD').length;
+      const rejectionRate = qcUpToDay.length > 0
+        ? Number(((rejectedCount / qcUpToDay.length) * 100).toFixed(1))
+        : 0;
+
+      // Real active job cards on this day
+      const activeJCs = jobCards.filter(j => {
+        const t = parseItemTimestamp(j);
+        return (t === 0 || t <= dayEnd) && (j.status === 'IN_PROGRESS' || j.status === 'IN_PRODUCTION' || j.status === 'SCHEDULED' || j.jobStatus === 'IN_PROGRESS');
+      }).length;
+
+      // Real dispatched qty on this day
+      const dayDispatches = dispatches.filter(d => {
+        const t = parseItemTimestamp(d);
+        return t >= dayStart && t < dayEnd;
+      });
+      const dispatchedQty = dayDispatches.reduce((sum, d) => {
+        const lineQty = d.lines?.reduce((s: number, l: any) => s + (Number(l.qty) || 0), 0) || 0;
+        return sum + (lineQty || 1);
+      }, 0);
+
+      trends.push({
+        date: label,
+        revenue: dayRevenue,
+        openOrderCount,
+        avgOrderValue: avgOrderVal,
+        topCustomer,
+        rejectionRate,
+        activeJobCards: activeJCs,
+        dispatchedQty,
         inventoryShortages: computedMetrics.shortagesCount,
-        onTimeDeliveryRate: Number((95.5 + 2.0 * wave).toFixed(1)),
+        onTimeDeliveryRate: computedMetrics.otifRate
       });
     }
-    setHistoryData(fallback);
+
+    setHistoryData(trends);
     setLastRefreshed(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    setIsLoading(false);
   };
 
   useEffect(() => {
@@ -173,11 +306,11 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
       code: 'MTR-FIN-01',
       name: 'Open Order Book Value',
       category: 'FINANCIAL' as const,
-      valueStr: fmtCurrency(computedMetrics.openOrderBookValue || 3450000),
+      valueStr: fmtCurrency(computedMetrics.openOrderBookValue),
       targetStr: '₹3,000,000+',
-      trend: 'UP' as const,
-      trendPct: '+14.2%',
-      status: 'HEALTHY' as const,
+      trend: computedMetrics.openOrderBookValue > 0 ? 'UP' as const : 'STABLE' as const,
+      trendPct: `${computedMetrics.openOrdersCount} Active POs`,
+      status: computedMetrics.openOrderBookValue > 0 ? 'HEALTHY' as const : 'OPTIMAL' as const,
       description: 'Cumulative monetary valuation of active confirmed customer POs in factory pipeline.',
       viewKey: 'orders' as ConsoleView
     },
@@ -187,21 +320,21 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
       category: 'FINANCIAL' as const,
       valueStr: fmtCurrency(computedMetrics.monthlyRevenueRunrate),
       targetStr: '₹2,000,000+',
-      trend: 'UP' as const,
-      trendPct: '+8.6%',
-      status: 'OPTIMAL' as const,
-      description: 'Projected monthly billing based on confirmed order delivery schedules.',
+      trend: computedMetrics.monthlyRevenueRunrate > 0 ? 'UP' as const : 'STABLE' as const,
+      trendPct: `${invoices.length} Invoices Issued`,
+      status: computedMetrics.monthlyRevenueRunrate > 0 ? 'OPTIMAL' as const : 'ACTIVE' as const,
+      description: 'Projected monthly billing based on confirmed order delivery schedules and invoiced amounts.',
       viewKey: 'invoices' as ConsoleView
     },
     {
       code: 'MTR-ORD-03',
       name: 'Active Customer POs',
       category: 'PRODUCTION' as const,
-      valueStr: `${computedMetrics.openOrdersCount || 18} Orders`,
+      valueStr: `${computedMetrics.openOrdersCount} Orders`,
       targetStr: '15-25 POs',
       trend: 'STABLE' as const,
-      trendPct: '0.0%',
-      status: 'ACTIVE' as const,
+      trendPct: `${orders.length} Total POs`,
+      status: computedMetrics.openOrdersCount > 0 ? 'ACTIVE' as const : 'HEALTHY' as const,
       description: 'Total live purchase orders in machining and inspection cycles.',
       viewKey: 'orders' as ConsoleView
     },
@@ -211,9 +344,9 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
       category: 'PRODUCTION' as const,
       valueStr: `${computedMetrics.activeJCs} Active`,
       targetStr: '12-20 JCs',
-      trend: 'UP' as const,
-      trendPct: '+5.1%',
-      status: 'HEALTHY' as const,
+      trend: computedMetrics.activeJCs > 0 ? 'UP' as const : 'STABLE' as const,
+      trendPct: `${jobCards.length} Total JCs`,
+      status: computedMetrics.activeJCs > 0 ? 'HEALTHY' as const : 'OPTIMAL' as const,
       description: 'Live CNC turning, VMC, and subcontracted route cards being processed.',
       viewKey: 'production' as ConsoleView
     },
@@ -223,9 +356,9 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
       category: 'PRODUCTION' as const,
       valueStr: `${computedMetrics.machineUtilization}%`,
       targetStr: '≥ 85.0%',
-      trend: 'UP' as const,
-      trendPct: '+3.4%',
-      status: 'OPTIMAL' as const,
+      trend: computedMetrics.machineUtilization >= 80 ? 'UP' as const : 'STABLE' as const,
+      trendPct: `${computedMetrics.activeMachinesCount}/${computedMetrics.totalMachinesCount} Machines Engaged`,
+      status: computedMetrics.machineUtilization >= 85 ? 'OPTIMAL' as const : computedMetrics.machineUtilization >= 50 ? 'HEALTHY' as const : 'WARNING' as const,
       description: 'Operational spindle availability and runtime efficiency across shopfloor machines.',
       viewKey: 'production' as ConsoleView
     },
@@ -235,9 +368,9 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
       category: 'QUALITY' as const,
       valueStr: `${computedMetrics.qcPassRate}%`,
       targetStr: '≥ 98.0%',
-      trend: 'UP' as const,
-      trendPct: '+0.8%',
-      status: computedMetrics.qcPassRate >= 98 ? 'OPTIMAL' as const : 'WARNING' as const,
+      trend: computedMetrics.qcPassRate >= 95 ? 'UP' as const : 'DOWN' as const,
+      trendPct: `${computedMetrics.passQc}/${computedMetrics.totalQc || 1} Passed Lots`,
+      status: computedMetrics.qcPassRate >= 98 ? 'OPTIMAL' as const : computedMetrics.qcPassRate >= 90 ? 'HEALTHY' as const : 'WARNING' as const,
       description: 'Percentage of manufactured parts passing stage inspection on the first iteration.',
       viewKey: 'qc' as ConsoleView
     },
@@ -271,9 +404,9 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
       category: 'DISPATCH' as const,
       valueStr: `${computedMetrics.otifRate}%`,
       targetStr: '≥ 95.0%',
-      trend: 'UP' as const,
-      trendPct: '+1.7%',
-      status: 'OPTIMAL' as const,
+      trend: computedMetrics.otifRate >= 90 ? 'UP' as const : 'STABLE' as const,
+      trendPct: `${dispatches.length} Challans Evaluated`,
+      status: computedMetrics.otifRate >= 95 ? 'OPTIMAL' as const : 'WARNING' as const,
       description: 'Orders dispatched on or prior to client committed delivery date.',
       viewKey: 'dispatch' as ConsoleView
     },
@@ -289,7 +422,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
       description: 'Invoices beyond client payment credit cycle awaiting settlement.',
       viewKey: 'invoices' as ConsoleView
     }
-  ], [computedMetrics]);
+  ], [computedMetrics, invoices.length, orders.length, jobCards.length, dispatches.length]);
 
   const filteredRegistry = useMemo(() => {
     return metricsRegistry.filter(m => {
@@ -401,31 +534,26 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
-            {/* Timeframe Selector */}
-            <div className={`flex items-center p-1 rounded-xl border ${
-              isDarkMode
-                ? 'bg-black/40 border-white/10'
-                : isCrystal
-                  ? 'bg-slate-200/60 border-slate-300/80'
-                  : 'bg-black/15 border-white/20'
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            {/* Timeframe Selector Pill Toggle */}
+            <div className={`p-1 rounded-full border backdrop-blur-md flex items-center gap-1 ${
+              !isDarkMode && isCrystal
+                ? 'border-slate-300/80 bg-slate-200/50'
+                : isDarkMode ? 'border-white/15 bg-white/[0.06]' : 'border-white/25 bg-white/20'
             }`}>
               {[7, 30, 90].map(d => (
                 <button
                   key={d}
+                  type="button"
                   onClick={() => setDays(d)}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  className={`flex items-center justify-center px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     days === d
-                      ? isDarkMode
-                        ? 'bg-white text-slate-950 shadow-xs'
-                        : isCrystal
-                          ? 'bg-slate-950 text-white shadow-xs'
-                          : 'bg-white text-slate-950 shadow-xs'
-                      : isDarkMode
-                        ? 'text-slate-300 hover:text-white'
-                        : isCrystal
-                          ? 'text-slate-700 hover:text-slate-950'
-                          : 'text-white/80 hover:text-white'
+                      ? !isDarkMode && isCrystal
+                        ? 'bg-slate-950 text-white shadow-xs'
+                        : 'bg-white text-slate-900 shadow-sm'
+                      : !isDarkMode && isCrystal
+                        ? 'text-slate-600 hover:text-slate-900'
+                        : isDarkMode ? 'text-white/70 hover:text-white' : 'text-white/90 hover:text-white'
                   }`}
                 >
                   {d}D
@@ -433,36 +561,30 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
               ))}
             </div>
 
+            {/* Refresh Action Button */}
             <button
+              type="button"
               onClick={() => fetchMetricsData(days)}
               disabled={isLoading}
-              title="Refresh Telemetry"
-              className={`p-2.5 rounded-xl border transition-all flex items-center gap-1.5 text-xs font-bold cursor-pointer ${
-                isDarkMode
-                  ? 'bg-white/10 hover:bg-white/15 border-white/15 text-white'
-                  : isCrystal
-                    ? 'bg-white hover:bg-slate-50 border-slate-300/80 text-slate-800 shadow-2xs'
-                    : 'bg-white/20 hover:bg-white/30 border-white/25 text-white shadow-2xs'
+              title="Refresh Live Telemetry"
+              className={`inline-flex h-11 items-center gap-2 rounded-full border text-xs font-semibold transition-all cursor-pointer active:scale-95 shadow-sm disabled:opacity-50 px-4 backdrop-blur-md ${
+                !isDarkMode && isCrystal
+                  ? 'border-slate-300/80 bg-white/80 hover:bg-white text-slate-700'
+                  : 'border-white/20 bg-white/10 hover:bg-white/15 text-white'
               }`}
             >
-              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">{lastRefreshed}</span>
             </button>
 
+            {/* Export CSV CTA Button */}
             <button
+              type="button"
               onClick={exportCSV}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-md transition-all active:scale-95 cursor-pointer ${
-                isDarkMode
-                  ? 'bg-white hover:bg-slate-100 text-slate-950'
-                  : isCrystal
-                    ? 'bg-slate-950 hover:bg-slate-900 text-white'
-                    : isGreen
-                      ? 'bg-white hover:bg-emerald-50 text-[#065F46]'
-                      : 'bg-white hover:bg-slate-50 text-[#155dfc]'
-              }`}
+              className="flex h-11 shrink-0 items-center gap-2 rounded-full px-5 text-xs font-bold transition-all active:scale-[0.96] cursor-pointer shadow-lg bg-[#181920] hover:bg-[#252730] text-white border border-white/10"
             >
-              <Download className="w-4 h-4 stroke-[2.5]" />
-              <span>Export CSV</span>
+              <Download className="w-4 h-4 text-white" />
+              <span className="text-white">Export CSV</span>
             </button>
           </div>
         </div>
@@ -482,11 +604,11 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
           </div>
           <div className="mt-3">
             <div className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-              {fmtCurrency(computedMetrics.openOrderBookValue || 3450000)}
+              {fmtCurrency(computedMetrics.openOrderBookValue)}
             </div>
             <div className="flex items-center gap-1.5 mt-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
               <TrendingUp className="w-3.5 h-3.5" />
-              <span>+14.2% from last month</span>
+              <span>{computedMetrics.openOrdersCount} active customer POs</span>
             </div>
           </div>
         </div>
@@ -507,7 +629,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
             </div>
             <div className="flex items-center gap-1.5 mt-1 text-xs text-blue-600 dark:text-blue-400 font-medium">
               <Activity className="w-3.5 h-3.5" />
-              <span>{computedMetrics.activeJCs} Active Job Cards running</span>
+              <span>{computedMetrics.activeJCs} Active Job Cards running ({computedMetrics.activeMachinesCount}/{computedMetrics.totalMachinesCount} machines)</span>
             </div>
           </div>
         </div>
@@ -567,43 +689,31 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
               <span className="text-xs font-normal text-slate-400">({days} Day Rolling Window)</span>
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Live progression curves queried directly by the AI Owner Copilot for predictive forecasting.
+              Live progression curves queried directly from overall factory operations data.
             </p>
           </div>
 
-          <div className={`flex items-center p-1 rounded-xl border ${
-            isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200/80 bg-slate-200/50 shadow-inner'
+          <div className={`p-1 rounded-full border flex items-center gap-1 ${
+            isDarkMode ? 'border-white/15 bg-white/[0.06]' : 'border-slate-300/80 bg-slate-200/50'
           }`}>
-            <button
-              onClick={() => setChartMetric('revenue')}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                chartMetric === 'revenue'
-                  ? isDarkMode ? 'bg-white/15 text-white shadow-xs border border-white/10' : 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              Revenue & Orders
-            </button>
-            <button
-              onClick={() => setChartMetric('quality')}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                chartMetric === 'quality'
-                  ? isDarkMode ? 'bg-white/15 text-white shadow-xs border border-white/10' : 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              Quality & Rejection %
-            </button>
-            <button
-              onClick={() => setChartMetric('velocity')}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                chartMetric === 'velocity'
-                  ? isDarkMode ? 'bg-white/15 text-white shadow-xs border border-white/10' : 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              Dispatch & Output
-            </button>
+            {[
+              { key: 'revenue', label: 'Revenue & Orders' },
+              { key: 'quality', label: 'Quality & Rejection %' },
+              { key: 'velocity', label: 'Dispatch & Output' },
+            ].map(m => (
+              <button
+                key={m.key}
+                type="button"
+                onClick={() => setChartMetric(m.key as any)}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                  chartMetric === m.key
+                    ? isDarkMode ? 'bg-white text-slate-900 shadow-sm' : 'bg-slate-950 text-white shadow-xs'
+                    : isDarkMode ? 'text-white/70 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                {m.label}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -705,17 +815,17 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
 
           <div className="flex flex-wrap items-center gap-3">
             {/* Category Filter Pills */}
-            <div className={`flex items-center p-1 rounded-xl border ${
-              isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200/80 bg-slate-200/50 shadow-inner'
+            <div className={`p-1 rounded-full border flex items-center gap-1 ${
+              isDarkMode ? 'border-white/15 bg-white/[0.06]' : 'border-slate-300/80 bg-slate-200/50'
             }`}>
               {(['all', 'FINANCIAL', 'PRODUCTION', 'QUALITY', 'INVENTORY', 'DISPATCH'] as const).map(cat => (
                 <button
                   key={cat}
                   onClick={() => setActiveTab(cat)}
-                  className={`px-2.5 py-1 text-xs font-bold rounded-lg capitalize transition-all cursor-pointer ${
+                  className={`px-3.5 py-1.5 text-xs font-semibold rounded-full capitalize transition-all cursor-pointer ${
                     activeTab === cat
-                      ? isDarkMode ? 'bg-white/15 text-white shadow-xs border border-white/10' : 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      ? isDarkMode ? 'bg-white text-slate-900 shadow-sm' : 'bg-slate-950 text-white shadow-xs'
+                      : isDarkMode ? 'text-white/70 hover:text-white' : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   {cat === 'all' ? 'All' : cat.toLowerCase()}
@@ -725,16 +835,16 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
 
             {/* Search Input */}
             <div className="relative min-w-[200px]">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search metrics..."
-                className={`w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border outline-none transition-all ${
+                className={`w-full pl-9 pr-4 py-2 text-xs rounded-full border outline-none transition-all ${
                   isDarkMode
-                    ? 'bg-slate-950/60 border-slate-800 text-white placeholder-slate-500 focus:border-blue-500'
-                    : 'bg-white border-slate-200 text-slate-900 placeholder-slate-400 focus:border-blue-500 shadow-sm'
+                    ? 'bg-slate-950/60 border-slate-800 text-white placeholder-slate-500 focus:border-slate-400'
+                    : 'bg-white border-slate-200 text-slate-900 placeholder-slate-400 focus:border-slate-400 shadow-sm'
                 }`}
               />
             </div>
@@ -822,10 +932,10 @@ export const MetricsView: React.FC<MetricsViewProps> = ({
                     {onNavigate && (
                       <button
                         onClick={() => onNavigate(m.viewKey)}
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                        className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all shadow-xs cursor-pointer ${
                           isDarkMode
-                            ? 'bg-slate-800 hover:bg-slate-700 text-slate-300'
-                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                            ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
                         }`}
                       >
                         <span>View</span>

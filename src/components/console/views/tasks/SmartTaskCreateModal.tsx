@@ -169,10 +169,10 @@ export const SmartTaskCreateModal: React.FC<SmartTaskCreateModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl border text-xs font-semibold transition-ui cursor-pointer active:scale-95 ${
+            className={`inline-flex h-11 items-center justify-center px-6 rounded-full border text-xs font-bold transition-all cursor-pointer active:scale-95 ${
               isDarkMode
-                ? 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border-white/10'
-                : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+                ? 'text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border-white/10'
+                : 'border-slate-300 text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50'
             }`}
           >
             Cancel
@@ -181,7 +181,11 @@ export const SmartTaskCreateModal: React.FC<SmartTaskCreateModalProps> = ({
             type="button"
             onClick={handleSubmit}
             disabled={!isValid || isSubmitting}
-            className="flex h-10 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-5 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`flex h-11 items-center justify-center gap-2 rounded-full px-6 text-xs font-bold transition-all active:scale-[0.96] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-md ${
+              isDarkMode
+                ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-white/10'
+                : 'bg-[#181920] hover:bg-[#252730] text-white shadow-black/20'
+            }`}
           >
             {isSubmitting ? 'Scheduling…' : isEdit ? 'Save Changes' : 'Schedule Task'}
           </button>

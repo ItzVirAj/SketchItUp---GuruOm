@@ -656,6 +656,7 @@ export interface MasterItem {
   dimThickness?: number | null;
   description: string;
   partNo?: string;
+  grade?: string;
   unit: 'Nos' | 'Kg' | 'Meter' | 'Litre' | 'Set' | 'Box' | string; // uom*
   hsnCode: string; // 4-8 digit
   gstRate?: number; // 0, 5, 12, 18, 28
@@ -740,8 +741,8 @@ export interface MachineMaster {
   code: string; // MCH-####
   name: string; // machine_name* (unique, e.g. VMC-01)
   type: 'Cutting' | 'Welding' | 'CNC Turning' | 'CNC Machining' | 'Conventional Machining' | 'Grinding' | 'Inspection-CMM' | 'Other' | string;
-  department: string; // department*
-  location: string; // location*
+  department?: string;
+  location?: string;
   manufacturer?: string;
   model?: string;
   serialNumber?: string;
@@ -856,6 +857,7 @@ export interface BillOfMaterials {
   bomCode: string;
   parentPartCode: string;
   parentPartName: string;
+  parentGrade?: string;
   revision: string;
   yieldPercentage: number;
   batchSize: number;

@@ -236,10 +236,10 @@ export const MeetingsView: React.FC<MeetingsViewProps> = ({
               <button
                 type="button"
                 onClick={() => meetingModal.open()}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold shadow-md active:scale-[0.96] transition-ui cursor-pointer"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-950 border border-slate-200/80 text-xs font-bold shadow-md active:scale-[0.96] transition-ui cursor-pointer"
               >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Schedule</span>
+                <Plus className="w-3.5 h-3.5 text-slate-950" />
+                <span className="text-slate-950">Schedule</span>
               </button>
             )}
           </div>
@@ -337,18 +337,10 @@ export const MeetingsView: React.FC<MeetingsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => meetingModal.open()}
-                  className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
-                    isDarkMode
-                      ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
-                      : isCrystal
-                        ? 'bg-slate-950 hover:bg-slate-900 text-white shadow-[0_4px_16px_rgba(0,0,0,0.15)]'
-                        : isGreen
-                          ? 'bg-white hover:bg-emerald-50 text-[#065F46] shadow-[0_4px_16px_rgba(0,0,0,0.15)]'
-                          : 'bg-white hover:bg-slate-50 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
-                  }`}
+                  className="flex h-11 shrink-0 items-center gap-2 rounded-full px-5 text-xs font-bold transition-all active:scale-[0.96] cursor-pointer shadow-md bg-white hover:bg-slate-100 text-slate-950 border border-slate-200/80"
                 >
-                  <Plus className="h-4 w-4 stroke-[3]" />
-                  <span>Schedule Meeting</span>
+                  <Plus className="h-4 w-4 stroke-[3] text-slate-950" />
+                  <span className="text-slate-950">Schedule Meeting</span>
                 </button>
               )}
             </div>
@@ -965,7 +957,11 @@ const MeetingFormModal: React.FC<MeetingFormModalProps> = ({
             type="button"
             onClick={() => onSubmit({ title, agenda, section, meetingLink, location, startTime, endTime, attendeeUserIds })}
             disabled={!isValid || isSubmitting}
-            className="min-h-[42px] px-6 py-2 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-white font-extrabold text-xs shadow-[0_8px_20px_var(--accent-shadow)] cursor-pointer transition-ui disabled:opacity-50 disabled:cursor-not-allowed active:scale-96"
+            className={`min-h-[42px] px-6 py-2 rounded-xl font-extrabold text-xs cursor-pointer transition-ui disabled:opacity-50 disabled:cursor-not-allowed active:scale-96 ${
+              isDarkMode
+                ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-[0_8px_20px_rgba(255,255,255,0.15)]'
+                : 'bg-[#181920] hover:bg-[#252730] text-white shadow-[0_8px_20px_rgba(0,0,0,0.25)]'
+            }`}
           >
             {isSubmitting ? 'Saving…' : isEdit ? 'Save Changes' : 'Schedule Meeting'}
           </button>

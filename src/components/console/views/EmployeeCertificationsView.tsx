@@ -260,10 +260,10 @@ export const EmployeeCertificationsView: React.FC<EmployeeCertificationsViewProp
             <button
               type="button"
               onClick={handleOpenAssignModal}
-              className="flex h-9 items-center gap-1.5 px-3 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold shadow-sm active:scale-95 transition-transform cursor-pointer"
+              className="flex h-9 items-center gap-1.5 px-3 rounded-xl bg-white hover:bg-slate-100 text-slate-950 border border-slate-200/80 text-xs font-bold shadow-sm active:scale-95 transition-transform cursor-pointer"
             >
-              <Plus className="w-4 h-4" />
-              <span>Assign</span>
+              <Plus className="w-4 h-4 text-slate-950" />
+              <span className="text-slate-950">Assign</span>
             </button>
           )}
         </div>
@@ -396,16 +396,10 @@ export const EmployeeCertificationsView: React.FC<EmployeeCertificationsViewProp
                   id="assign-cert-btn"
                   type="button"
                   onClick={handleOpenAssignModal}
-                  className={`flex h-11 shrink-0 items-center gap-2 rounded-full px-5 text-xs font-bold transition-all active:scale-[0.96] cursor-pointer shadow-lg ${
-                    !isDarkMode && isCrystal
-                      ? 'bg-slate-950 hover:bg-slate-800 text-white shadow-slate-900/20'
-                      : isDarkMode
-                        ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
-                        : 'bg-white hover:bg-blue-50 text-blue-700 shadow-blue-900/30'
-                  }`}
+                  className="flex h-11 shrink-0 items-center gap-2 rounded-full px-5 text-xs font-bold transition-all active:scale-[0.96] cursor-pointer shadow-md bg-white hover:bg-slate-100 text-slate-950 border border-slate-200/80"
                 >
-                  <Plus className="w-4 h-4" />
-                  <span>Assign Certificate</span>
+                  <Plus className="w-4 h-4 text-slate-950" />
+                  <span className="text-slate-950">Assign Certificate</span>
                 </button>
               )}
             </div>

@@ -887,7 +887,11 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                   <button
                     type="submit"
                     disabled={isSaving}
-                    className="w-1/2 sm:w-auto flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-6 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer disabled:opacity-50"
+                    className={`w-1/2 sm:w-auto flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl px-6 text-xs font-extrabold transition-ui active:scale-[0.96] cursor-pointer disabled:opacity-50 ${
+                      isDarkMode
+                        ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-[0_8px_20px_rgba(255,255,255,0.15)]'
+                        : 'bg-[#181920] hover:bg-[#252730] text-white shadow-[0_8px_20px_rgba(0,0,0,0.25)]'
+                    }`}
                   >
                     {isSaving ? (
                       <>

@@ -864,7 +864,11 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                   {!isPaid && Number(bill.balanceAmount) > 0 ? (
                     <button
                       onClick={() => handleOpenDisburseModal(bill)}
-                      className="w-full py-2.5 rounded-full bg-[#5B75F8] hover:bg-[#435BE8] text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-blue-500/20 cursor-pointer active:scale-[0.98]"
+                      className={`w-full py-2.5 rounded-full font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-[0.98] ${
+                        isDarkMode
+                          ? 'bg-slate-100 hover:bg-white text-slate-950'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-900 border border-slate-300/80'
+                      }`}
                     >
                       <CreditCard className="w-3.5 h-3.5" />
                       <span>Disburse Funds (₹{Number(bill.balanceAmount).toLocaleString('en-IN')})</span>
@@ -1041,10 +1045,10 @@ export const PayablesView: React.FC<PayablesViewProps> = ({
                     {bill.status !== 'PAID' && Number(bill.balanceAmount) > 0 && (
                       <button
                         onClick={() => handleOpenDisburseModal(bill)}
-                        className={`px-4 py-1.5 rounded-full text-xs font-bold shadow-sm transition-all cursor-pointer active:scale-95 ${
+                        className={`px-4 py-1.5 rounded-full text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-95 ${
                           isDarkMode
-                            ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-white/10'
-                            : 'bg-[#155dfc] hover:bg-blue-700 text-white shadow-blue-500/20'
+                            ? 'bg-slate-100 hover:bg-white text-slate-950'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-900 border border-slate-300/80'
                         }`}
                       >
                         Disburse Funds

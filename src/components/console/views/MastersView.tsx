@@ -363,15 +363,16 @@ export const MastersView: React.FC<MastersViewProps> = ({
   const [iDimThickness, setIDimThickness] = useState('');
   const [iDescription, setIDescription] = useState('');
   const [iPartNo, setIPartNo] = useState('');
+  const [iGrade, setIGrade] = useState('');
   const [iUnit, setIUnit] = useState<string>('Nos');
   const [iHsnCode, setIHsnCode] = useState('8483');
   const [iGstRate, setIGstRate] = useState<number>(18);
-  const [iStandardCost, setIStandardCost] = useState<number>(100);
-  const [iSellingPrice, setISellingPrice] = useState<number>(0);
-  const [iMinStock, setIMinStock] = useState<number>(50);
-  const [iMaxStock, setIMaxStock] = useState<number>(500);
-  const [iReorderLevel, setIReorderLevel] = useState<number>(100);
-  const [iLeadTimeDays, setILeadTimeDays] = useState<number>(7);
+  const [iStandardCost, setIStandardCost] = useState<number | string>(100);
+  const [iSellingPrice, setISellingPrice] = useState<number | string>(0);
+  const [iMinStock, setIMinStock] = useState<number | string>(50);
+  const [iMaxStock, setIMaxStock] = useState<number | string>(500);
+  const [iReorderLevel, setIReorderLevel] = useState<number | string>(100);
+  const [iLeadTimeDays, setILeadTimeDays] = useState<number | string>(7);
   const [iPreferredVendor, setIPreferredVendor] = useState('');
   const [iDefaultWarehouse, setIDefaultWarehouse] = useState('Main Raw Material Store');
   const [iStatus, setIStatus] = useState<'Active' | 'Inactive'>('Active');
@@ -381,9 +382,9 @@ export const MastersView: React.FC<MastersViewProps> = ({
   // ----------------------------------------------------
   const [mCode, setMCode] = useState('');
   const [mName, setMName] = useState('');
-  const [mType, setMType] = useState<string>('CNC Machining');
-  const [mDepartment, setMDepartment] = useState('Machine Shop');
-  const [mLocation, setMLocation] = useState('Bay 1 — Machine Shop');
+  const [mType, setMType] = useState<string>('');
+  const [mDepartment, setMDepartment] = useState('');
+  const [mLocation, setMLocation] = useState('');
   const [mManufacturer, setMManufacturer] = useState('');
   const [mModel, setMModel] = useState('');
   const [mSerialNumber, setMSerialNumber] = useState('');
@@ -555,6 +556,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
     setIDimThickness('');
     setIDescription('');
     setIPartNo('');
+    setIGrade('');
     setIUnit('Nos');
     setIHsnCode('8483');
     setIGstRate(18);
@@ -596,6 +598,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
 
     setIDescription(item.description || item.name || '');
     setIPartNo(item.partNo || '');
+    setIGrade(item.grade || item.partNo || '');
     setIUnit(item.unit || 'Nos');
     setIHsnCode(item.hsnCode || '8483');
     setIGstRate(item.gstRate ?? 18);
@@ -617,9 +620,9 @@ export const MastersView: React.FC<MastersViewProps> = ({
     const nextCode = generateNextCode(machines.map(m => m.code), 'MCH');
     setMCode(nextCode);
     setMName('');
-    setMType('CNC Machining');
-    setMDepartment('Machine Shop');
-    setMLocation('Bay 1 — Machine Shop');
+    setMType('');
+    setMDepartment('');
+    setMLocation('');
     setMManufacturer('');
     setMModel('');
     setMSerialNumber('');
@@ -639,9 +642,9 @@ export const MastersView: React.FC<MastersViewProps> = ({
     setEditingMachine(m);
     setMCode(m.code);
     setMName(m.name);
-    setMType(m.type || 'CNC Machining');
-    setMDepartment(m.department || 'Machine Shop');
-    setMLocation(m.location || 'Bay 1 — Machine Shop');
+    setMType(m.type || '');
+    setMDepartment(m.department || '');
+    setMLocation(m.location || '');
     setMManufacturer(m.manufacturer || '');
     setMModel(m.model || '');
     setMSerialNumber(m.serialNumber || '');
@@ -706,11 +709,11 @@ export const MastersView: React.FC<MastersViewProps> = ({
     if (newType === 'Finished Good') {
       setIStandardCost(0);
       setIPreferredVendor('');
-      if (iSellingPrice === 0) setISellingPrice(1500);
+      if (Number(iSellingPrice) === 0) setISellingPrice(1500);
       setIDefaultWarehouse('Finished Goods Yard');
     } else {
       setISellingPrice(0);
-      if (iStandardCost === 0) setIStandardCost(100);
+      if (Number(iStandardCost) === 0) setIStandardCost(100);
       setIDefaultWarehouse('Main Raw Material Store');
     }
   };
@@ -966,14 +969,14 @@ export const MastersView: React.FC<MastersViewProps> = ({
     }
 
     if (['Raw Material', 'Consumable', 'Bought-Out'].includes(iItemType)) {
-      if (iStandardCost <= 0) {
+      if (Number(iStandardCost) <= 0) {
         errors.standardCost = `Standard Cost is required for ${iItemType}`;
       }
       if (!iPreferredVendor.trim()) {
         errors.preferredVendor = `Preferred Vendor is required for ${iItemType}`;
       }
     } else if (iItemType === 'Finished Good') {
-      if (iSellingPrice <= 0) {
+      if (Number(iSellingPrice) <= 0) {
         errors.sellingPrice = 'Selling Price (₹) is required for Finished Goods';
       }
     }
@@ -999,7 +1002,8 @@ export const MastersView: React.FC<MastersViewProps> = ({
       dimWidth: numWidth,
       dimThickness: numThickness,
       description: iDescription.trim() || iName.trim(),
-      partNo: iPartNo.trim() || iName.trim(),
+      partNo: iGrade.trim() || iPartNo.trim() || iName.trim(),
+      grade: iGrade.trim(),
       unit: iUnit,
       hsnCode: iHsnCode.trim(),
       gstRate: Number(iGstRate),
@@ -1040,14 +1044,22 @@ export const MastersView: React.FC<MastersViewProps> = ({
     e.preventDefault();
     const errors: Record<string, string> = {};
 
+    const cleanCode = mCode.trim().toUpperCase();
+    if (!cleanCode) {
+      errors.code = 'Machine ID is required';
+    } else if (!editingMachine && machines.some(m => m.code.toUpperCase() === cleanCode)) {
+      errors.code = `Machine with ID "${cleanCode}" already exists`;
+    }
+
     if (!mName.trim()) {
       errors.name = 'Machine Name is mandatory and must be unique (e.g. VMC-01)';
     } else if (machines.some(m => m.code !== (editingMachine?.code || '') && m.name.toLowerCase() === mName.trim().toLowerCase())) {
       errors.name = `Machine "${mName.trim()}" already exists. Name must be unique.`;
     }
 
-    if (!mDepartment.trim()) errors.department = 'Department is mandatory';
-    if (!mLocation.trim()) errors.location = 'Shop floor location is mandatory';
+    if (!mType.trim()) {
+      errors.type = 'Machine Type is required (e.g. CNC Machining, Laser Cutting)';
+    }
 
     if (mCapacity !== undefined && mCapacity > 0 && !mCapacityUom.trim()) {
       errors.capacityUom = 'Capacity UOM is required when capacity is specified';
@@ -1063,7 +1075,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
     }
 
     const newMachine: MachineMaster = {
-      code: mCode,
+      code: cleanCode,
       name: mName.trim().toUpperCase(),
       type: mType,
       department: mDepartment.trim(),
@@ -1083,10 +1095,9 @@ export const MastersView: React.FC<MastersViewProps> = ({
     };
 
     if (editingMachine && onUpdateMachine) {
-      onUpdateMachine(mCode, newMachine);
+      onUpdateMachine(cleanCode, newMachine);
     } else if (onAddMachine) {
-      const { code, ...restMachine } = newMachine;
-      onAddMachine(restMachine as any);
+      onAddMachine(newMachine);
     }
 
     setEditingMachine(null);
@@ -2375,13 +2386,13 @@ export const MastersView: React.FC<MastersViewProps> = ({
                       <h3 className={`text-xs font-bold font-sans mt-0.5 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                         {item.name || item.description}
                       </h3>
-                      {item.partNo && (
-                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">Part: {item.partNo}</div>
+                      {(item.grade || item.partNo) && (
+                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">Grade: {item.grade || item.partNo}</div>
                       )}
                     </div>
 
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className={`px-2 py-0.5 rounded-md text-[9px] font-mono font-bold uppercase border ${
+                    <div className="flex items-center gap-1.5 shrink-0 flex-nowrap">
+                      <span className={`inline-flex items-center whitespace-nowrap px-2 py-0.5 rounded-md text-[9px] font-mono font-bold uppercase border ${
                         item.itemType === 'Finished Good' || item.isFinishedGoods
                           ? isDarkMode ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' : 'bg-purple-50 text-purple-700 border-purple-200'
                           : item.itemType === 'Raw Material'
@@ -2514,7 +2525,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
                   }`}>
                     <th className="py-4 px-5">Item Code</th>
                     <th className="py-4 px-5">Item Name / Part Description</th>
-                    <th className="py-4 px-5">Type & Category</th>
+                    <th className="py-4 px-5 whitespace-nowrap">Type & Category</th>
                     <th className="py-4 px-5">Size</th>
                     <th className="py-4 px-5">HSN & GST%</th>
                     <th className="py-4 px-5">UOM</th>
@@ -2549,8 +2560,8 @@ export const MastersView: React.FC<MastersViewProps> = ({
                           <div className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{item.name || item.description}</div>
                           {item.partNo && <div className={`text-[11px] font-mono mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Part: {item.partNo}</div>}
                         </td>
-                        <td className="py-4 px-5">
-                          <span className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
+                        <td className="py-4 px-5 whitespace-nowrap">
+                          <span className={`inline-flex items-center whitespace-nowrap px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold uppercase border ${
                             item.itemType === 'Finished Good' || item.isFinishedGoods
                               ? isDarkMode ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' : 'bg-purple-50 text-purple-700 border-purple-200'
                               : item.itemType === 'Raw Material'
@@ -2559,7 +2570,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
                           }`}>
                             {item.itemType || (item.isFinishedGoods ? 'Finished Good' : 'Raw Material')}
                           </span>
-                          {item.category && item.category !== 'None' && <div className={`text-[10px] mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{item.category}</div>}
+                          {item.category && item.category !== 'None' && <div className={`text-[10px] mt-1 whitespace-nowrap ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{item.category}</div>}
                         </td>
                         <td className="py-4 px-5 font-mono">
                           {formatItemDimensions(item) ? (
@@ -2926,40 +2937,33 @@ export const MastersView: React.FC<MastersViewProps> = ({
         title={editingCustomer ? "Edit Customer Master" : "New Customer Master"}
         subtitle={editingCustomer ? `Edit Master: ${cCode} • Indian GSTIN & Credit Terms` : `Auto ID: ${cCode} • Indian GSTIN & Credit Terms Engine`}
         footer={
-          <div className="flex items-center justify-between gap-3 w-full">
+          <div className="flex items-center justify-end gap-3 w-full">
             <button
               type="button"
-              onClick={handleDevFillCustomer}
-              className="px-3.5 py-2 rounded-xl border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 font-mono text-xs font-bold flex items-center gap-1.5 transition-ui cursor-pointer shadow-sm"
-              title="DEV ONLY: Populate random compliant dev data for all fields"
+              onClick={() => {
+                addCustomerModal.close();
+                setEditingCustomer(null);
+              }}
+              className={`h-11 px-5 rounded-full text-xs font-bold transition-all cursor-pointer inline-flex items-center justify-center ${
+                isDarkMode 
+                  ? 'text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10' 
+                  : 'text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-300'
+              }`}
             >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Dev: Auto-Fill All</span>
+              Cancel
             </button>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  addCustomerModal.close();
-                  setEditingCustomer(null);
-                }}
-                className={`px-4 py-2.5 rounded-xl font-bold transition-ui cursor-pointer ${
-                  isDarkMode 
-                    ? 'text-slate-400 hover:text-white hover:bg-slate-800' 
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
-                }`}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                form="save-customer-form"
-                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-blue-500/25 hover:scale-[1.02] active:scale-[0.96] transition-ui cursor-pointer"
-              >
-                <Check className="w-4 h-4" />
-                <span>{editingCustomer ? 'Update Customer Master' : 'Save Customer Master'}</span>
-              </button>
-            </div>
+            <button
+              type="submit"
+              form="save-customer-form"
+              className={`h-11 px-6 rounded-full font-bold text-xs inline-flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.96] cursor-pointer ${
+                isDarkMode
+                  ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-white/10'
+                  : 'bg-[#181920] hover:bg-[#252730] text-white shadow-black/20'
+              }`}
+            >
+              <Check className="w-4 h-4" />
+              <span>{editingCustomer ? 'Update Customer Master' : 'Save Customer Master'}</span>
+            </button>
           </div>
         }
       >
@@ -3120,28 +3124,9 @@ export const MastersView: React.FC<MastersViewProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className={`block text-[11px] font-mono font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                    GSTIN (15 Chars)
-                  </label>
-                  {!cGstExempt && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const randomGst = generateDevGstin(cState);
-                        setCGstin(randomGst);
-                        if (!cPan) {
-                          setCPan(randomGst.slice(2, 12));
-                        }
-                      }}
-                      className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 transition-colors flex items-center gap-1 cursor-pointer"
-                      title="DEV ONLY: Generate random 15-char compliant GSTIN"
-                    >
-                      <Sparkles className="w-3 h-3" />
-                      <span>Dev: Auto-Gen 15-Char GSTIN</span>
-                    </button>
-                  )}
-                </div>
+                <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  GSTIN (15 Chars)
+                </label>
                 <input
                   type="text"
                   maxLength={15}
@@ -3425,40 +3410,33 @@ export const MastersView: React.FC<MastersViewProps> = ({
         title={editingVendor ? "Edit Vendor Master" : "New Vendor Master"}
         subtitle={editingVendor ? `Edit Master: ${vCode} • Mandatory TDS PAN, Bank Encryption & Subcontractor Rules` : `Auto ID: ${vCode} • Mandatory TDS PAN, Bank Encryption & Subcontractor Rules`}
         footer={
-          <div className="flex items-center justify-between gap-3 w-full">
+          <div className="flex items-center justify-end gap-3 w-full">
             <button
               type="button"
-              onClick={handleDevFillVendor}
-              className="px-3.5 py-2 rounded-xl border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 font-mono text-xs font-bold flex items-center gap-1.5 transition-ui cursor-pointer shadow-sm"
-              title="DEV ONLY: Populate random compliant dev data for all vendor fields"
+              onClick={() => {
+                addVendorModal.close();
+                setEditingVendor(null);
+              }}
+              className={`h-11 px-5 rounded-full text-xs font-bold transition-all cursor-pointer inline-flex items-center justify-center ${
+                isDarkMode 
+                  ? 'text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10' 
+                  : 'text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-300'
+              }`}
             >
-              <Sparkles className="w-4 h-4" />
-              <span>Dev: Auto-Fill All</span>
+              Cancel
             </button>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  addVendorModal.close();
-                  setEditingVendor(null);
-                }}
-                className={`px-4 py-2.5 rounded-xl font-bold transition-ui cursor-pointer ${
-                  isDarkMode 
-                    ? 'text-slate-400 hover:text-white hover:bg-slate-800' 
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
-                }`}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                form="save-vendor-form"
-                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-indigo-500/25 hover:scale-[1.02] active:scale-[0.96] transition-ui cursor-pointer"
-              >
-                <Check className="w-4 h-4" />
-                <span>{editingVendor ? 'Update Vendor Master' : 'Save Vendor Master'}</span>
-              </button>
-            </div>
+            <button
+              type="submit"
+              form="save-vendor-form"
+              className={`h-11 px-6 rounded-full font-bold text-xs inline-flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.96] cursor-pointer ${
+                isDarkMode
+                  ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-white/10'
+                  : 'bg-[#181920] hover:bg-[#252730] text-white shadow-black/20'
+              }`}
+            >
+              <Check className="w-4 h-4" />
+              <span>{editingVendor ? 'Update Vendor Master' : 'Save Vendor Master'}</span>
+            </button>
           </div>
         }
       >
@@ -3739,32 +3717,15 @@ export const MastersView: React.FC<MastersViewProps> = ({
                 <label className={`text-[11px] font-mono font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                   GSTIN (15-char)
                 </label>
-                <div className="flex items-center gap-2">
-                  {!vGstExempt && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const randomGst = generateDevGstin(vState);
-                        setVGstin(randomGst);
-                        if (!vPan) setVPan(randomGst.slice(2, 12));
-                      }}
-                      className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 transition-colors flex items-center gap-1 cursor-pointer"
-                      title="DEV ONLY: Generate random 15-char compliant GSTIN"
-                    >
-                      <Sparkles className="w-3 h-3" />
-                      <span>Dev: Auto-Gen</span>
-                    </button>
-                  )}
-                  <label className="flex items-center gap-1.5 text-[10px] text-amber-600 dark:text-amber-400 font-mono font-semibold cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={vGstExempt} 
-                      onChange={(e) => setVGstExempt(e.target.checked)}
-                      className="rounded text-amber-600 focus:ring-0 cursor-pointer"
-                    />
-                    <span>GST-exempt</span>
-                  </label>
-                </div>
+                <label className="flex items-center gap-1.5 text-[10px] text-amber-600 dark:text-amber-400 font-mono font-semibold cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={vGstExempt} 
+                    onChange={(e) => setVGstExempt(e.target.checked)}
+                    className="rounded text-amber-600 focus:ring-0 cursor-pointer"
+                  />
+                  <span>GST-exempt</span>
+                </label>
               </div>
               <input
                 type="text"
@@ -3984,10 +3945,10 @@ export const MastersView: React.FC<MastersViewProps> = ({
                 addItemModal.close();
                 setEditingItem(null);
               }}
-              className={`px-4 py-2.5 rounded-xl font-bold transition-ui cursor-pointer ${
+              className={`h-11 px-5 rounded-full text-xs font-bold transition-all cursor-pointer inline-flex items-center justify-center ${
                 isDarkMode 
-                  ? 'text-slate-400 hover:text-white hover:bg-slate-800' 
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
+                  ? 'text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10' 
+                  : 'text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-300'
               }`}
             >
               Cancel
@@ -3995,7 +3956,11 @@ export const MastersView: React.FC<MastersViewProps> = ({
             <button
               type="submit"
               form="save-item-form"
-              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-500/25 hover:scale-[1.02] active:scale-[0.96] transition-ui cursor-pointer"
+              className={`h-11 px-6 rounded-full font-bold text-xs inline-flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.96] cursor-pointer ${
+                isDarkMode
+                  ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-white/10'
+                  : 'bg-[#181920] hover:bg-[#252730] text-white shadow-black/20'
+              }`}
             >
               <Check className="w-4 h-4" />
               <span>{editingItem ? 'Update Item Master' : 'Save Item Master'}</span>
@@ -4080,13 +4045,13 @@ export const MastersView: React.FC<MastersViewProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                Part / Drawing No
+                Grade
               </label>
               <input
                 type="text"
-                placeholder="e.g. DWG-2026-B"
-                value={iPartNo}
-                onChange={(e) => setIPartNo(e.target.value)}
+                placeholder="e.g. EN8, SS304, MS, EN19"
+                value={iGrade}
+                onChange={(e) => setIGrade(e.target.value)}
                 className={`w-full p-2.5 rounded-xl border ${
                   isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
                 }`}
@@ -4351,9 +4316,19 @@ export const MastersView: React.FC<MastersViewProps> = ({
                   </label>
                   <input
                     type="number"
+                    step="any"
                     min={0}
+                    placeholder="0.00"
                     value={iStandardCost}
-                    onChange={(e) => setIStandardCost(Number(e.target.value))}
+                    onChange={(e) => {
+                      setIStandardCost(e.target.value);
+                      if (formErrors.standardCost) {
+                        setFormErrors(prev => {
+                          const { standardCost, ...rest } = prev;
+                          return rest;
+                        });
+                      }
+                    }}
                     className={`w-full p-2 rounded-xl border text-xs font-mono font-bold ${
                       formErrors.standardCost 
                         ? 'border-rose-500 ring-1 ring-rose-500' 
@@ -4372,9 +4347,19 @@ export const MastersView: React.FC<MastersViewProps> = ({
                   </label>
                   <input
                     type="number"
+                    step="any"
                     min={0}
+                    placeholder="0.00"
                     value={iSellingPrice}
-                    onChange={(e) => setISellingPrice(Number(e.target.value))}
+                    onChange={(e) => {
+                      setISellingPrice(e.target.value);
+                      if (formErrors.sellingPrice) {
+                        setFormErrors(prev => {
+                          const { sellingPrice, ...rest } = prev;
+                          return rest;
+                        });
+                      }
+                    }}
                     className={`w-full p-2 rounded-xl border text-xs font-mono font-bold ${
                       formErrors.sellingPrice 
                         ? 'border-rose-500 ring-1 ring-rose-500' 
@@ -4419,9 +4404,10 @@ export const MastersView: React.FC<MastersViewProps> = ({
               </label>
               <input
                 type="number"
+                step="any"
                 min={0}
                 value={iReorderLevel}
-                onChange={(e) => setIReorderLevel(Number(e.target.value))}
+                onChange={(e) => setIReorderLevel(e.target.value)}
                 className={`w-full p-2.5 rounded-xl border font-mono ${
                   isDarkMode ? 'bg-slate-800 border-slate-700 text-amber-400 font-bold' : 'bg-slate-50 border-slate-300 text-amber-700 font-bold focus:bg-white'
                 }`}
@@ -4433,9 +4419,10 @@ export const MastersView: React.FC<MastersViewProps> = ({
               </label>
               <input
                 type="number"
+                step="any"
                 min={0}
                 value={iMinStock}
-                onChange={(e) => setIMinStock(Number(e.target.value))}
+                onChange={(e) => setIMinStock(e.target.value)}
                 className={`w-full p-2.5 rounded-xl border font-mono ${
                   isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
                 }`}
@@ -4447,9 +4434,10 @@ export const MastersView: React.FC<MastersViewProps> = ({
               </label>
               <input
                 type="number"
+                step="any"
                 min={0}
                 value={iMaxStock}
-                onChange={(e) => setIMaxStock(Number(e.target.value))}
+                onChange={(e) => setIMaxStock(e.target.value)}
                 className={`w-full p-2.5 rounded-xl border font-mono ${
                   isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
                 }`}
@@ -4461,9 +4449,10 @@ export const MastersView: React.FC<MastersViewProps> = ({
               </label>
               <input
                 type="number"
+                step="any"
                 min={0}
                 value={iLeadTimeDays}
-                onChange={(e) => setILeadTimeDays(Number(e.target.value))}
+                onChange={(e) => setILeadTimeDays(e.target.value)}
                 className={`w-full p-2.5 rounded-xl border font-mono ${
                   isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
                 }`}
@@ -4558,7 +4547,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
                   <span className="font-mono text-base font-bold text-emerald-500 dark:text-emerald-400">
                     {viewingItem.code}
                   </span>
-                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase border ${
+                  <span className={`inline-flex items-center whitespace-nowrap px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase border ${
                     viewingItem.itemType === 'Finished Good' || viewingItem.isFinishedGoods
                       ? isDarkMode ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' : 'bg-purple-50 text-purple-700 border-purple-200'
                       : viewingItem.itemType === 'Raw Material'
@@ -4726,10 +4715,10 @@ export const MastersView: React.FC<MastersViewProps> = ({
                 addMachineModal.close();
                 setEditingMachine(null);
               }}
-              className={`px-4 py-2.5 rounded-xl font-bold transition-ui cursor-pointer ${
+              className={`h-11 px-5 rounded-full text-xs font-bold transition-all cursor-pointer inline-flex items-center justify-center ${
                 isDarkMode 
-                  ? 'text-slate-400 hover:text-white hover:bg-slate-800' 
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
+                  ? 'text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10' 
+                  : 'text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-300'
               }`}
             >
               Cancel
@@ -4737,7 +4726,11 @@ export const MastersView: React.FC<MastersViewProps> = ({
             <button
               type="submit"
               form="save-machine-form"
-              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#5B75F8] to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-amber-500/25 hover:scale-[1.02] active:scale-[0.96] transition-ui cursor-pointer"
+              className={`h-11 px-6 rounded-full font-bold text-xs inline-flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.96] cursor-pointer ${
+                isDarkMode
+                  ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-white/10'
+                  : 'bg-[#181920] hover:bg-[#252730] text-white shadow-black/20'
+              }`}
             >
               <Check className="w-4 h-4" />
               <span>{editingMachine ? 'Update Machine Master' : 'Save Machine Master'}</span>
@@ -4751,16 +4744,34 @@ export const MastersView: React.FC<MastersViewProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                {editingMachine ? 'Machine ID' : 'Machine ID (Auto)'}
+                Machine ID <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
+                required
+                readOnly={!!editingMachine}
+                disabled={!!editingMachine}
+                placeholder="e.g. MCH-0001 or CNC-01"
                 value={mCode}
-                readOnly
+                onChange={(e) => {
+                  const cleaned = e.target.value.toUpperCase().replace(/[^A-Z0-9_\-]/g, '');
+                  setMCode(cleaned);
+                  if (formErrors.code) {
+                    setFormErrors(prev => {
+                      const { code, ...rest } = prev;
+                      return rest;
+                    });
+                  }
+                }}
                 className={`w-full p-2.5 rounded-xl border font-mono font-bold ${
-                  isDarkMode ? 'bg-slate-800/80 border-slate-700 text-amber-400' : 'bg-slate-100 border-slate-200 text-amber-600'
+                  formErrors.code
+                    ? 'border-rose-500 ring-1 ring-rose-500'
+                    : isDarkMode
+                      ? editingMachine ? 'bg-slate-800/80 border-slate-700 text-slate-400' : 'bg-slate-800 border-slate-700 text-amber-400'
+                      : editingMachine ? 'bg-slate-100 border-slate-200 text-slate-500' : 'bg-slate-50 border-slate-300 text-amber-600 focus:bg-white'
                 }`}
               />
+              {formErrors.code && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.code}</p>}
             </div>
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
@@ -4784,15 +4795,31 @@ export const MastersView: React.FC<MastersViewProps> = ({
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                 Machine Type <span className="text-rose-500">*</span>
               </label>
-              <select
+              <input
+                type="text"
+                list="machine-types-list"
+                required
+                placeholder="e.g. CNC Machining, Laser Cutting, Press Brake"
                 value={mType}
-                onChange={(e) => setMType(e.target.value)}
+                onChange={(e) => {
+                  setMType(e.target.value);
+                  if (formErrors.type) {
+                    setFormErrors(prev => {
+                      const { type, ...rest } = prev;
+                      return rest;
+                    });
+                  }
+                }}
                 className={`w-full p-2.5 rounded-xl border ${
-                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                  formErrors.type
+                    ? 'border-rose-500 ring-1 ring-rose-500'
+                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
                 }`}
-              >
-                {MACHINE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
+              />
+              <datalist id="machine-types-list">
+                {MACHINE_TYPES.map(t => <option key={t} value={t} />)}
+              </datalist>
+              {formErrors.type && <p className="text-[10px] text-rose-500 font-medium mt-0.5">{formErrors.type}</p>}
             </div>
           </div>
 
@@ -4800,35 +4827,45 @@ export const MastersView: React.FC<MastersViewProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                Department <span className="text-rose-500">*</span>
+                Department
               </label>
               <input
                 type="text"
-                required
                 placeholder="e.g. Machine Shop, Fabrication"
                 value={mDepartment}
-                onChange={(e) => setMDepartment(e.target.value)}
+                onChange={(e) => {
+                  setMDepartment(e.target.value);
+                  if (formErrors.department) {
+                    setFormErrors(prev => {
+                      const { department, ...rest } = prev;
+                      return rest;
+                    });
+                  }
+                }}
                 className={`w-full p-2.5 rounded-xl border ${
-                  formErrors.department 
-                    ? 'border-rose-500 ring-1 ring-rose-500' 
-                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
                 }`}
               />
             </div>
             <div>
               <label className={`block text-[11px] font-mono font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                Location on Shop Floor <span className="text-rose-500">*</span>
+                Location on Shop Floor
               </label>
               <input
                 type="text"
-                required
                 placeholder="e.g. Bay 1, Line 2"
                 value={mLocation}
-                onChange={(e) => setMLocation(e.target.value)}
+                onChange={(e) => {
+                  setMLocation(e.target.value);
+                  if (formErrors.location) {
+                    setFormErrors(prev => {
+                      const { location, ...rest } = prev;
+                      return rest;
+                    });
+                  }
+                }}
                 className={`w-full p-2.5 rounded-xl border ${
-                  formErrors.location 
-                    ? 'border-rose-500 ring-1 ring-rose-500' 
-                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                  isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
                 }`}
               />
             </div>
@@ -4838,6 +4875,7 @@ export const MastersView: React.FC<MastersViewProps> = ({
               </label>
               <input
                 type="number"
+                step="any"
                 min={0}
                 value={mHourlyCost}
                 onChange={(e) => setMHourlyCost(Number(e.target.value))}

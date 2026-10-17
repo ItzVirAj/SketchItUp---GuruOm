@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { 
   Truck, 
   Plus, 
@@ -67,6 +68,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
 }) => {
   const { accent, isGreen, isBlue, isCrystal } = useAccentTheme();
   const canPerformCta = useCanPerformCta();
+  const location = useLocation();
   // URL-driven modal hooks
   const createChallanModal = useUrlModal('issue-delivery-challan');
   const deliveryModal = useUrlModal('record-delivery');
@@ -136,6 +138,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
 
   const preselectHandled = useRef<string | null>(null);
   useEffect(() => {
+    if (!location.pathname.startsWith('/quality-dispatch/dispatch')) return;
     if (!preselectedOrderPo || preselectHandled.current === preselectedOrderPo) return;
     preselectHandled.current = preselectedOrderPo;
     setOrderPo(preselectedOrderPo);
@@ -145,7 +148,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({
     }
     createChallanModal.open({ orderPo: preselectedOrderPo });
     onDispatchModalOpened?.();
-  }, [preselectedOrderPo, orders]);
+  }, [preselectedOrderPo, orders, location.pathname]);
 
   const [transporter, setTransporter] = useState('');
   const [vehicleNo, setVehicleNo] = useState('');

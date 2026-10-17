@@ -67,10 +67,15 @@ export function CommandCentrePage({
   };
 
   return (
-    <div className="command-centre-page" data-theme={undefined}>
+    <div className="command-centre-page">
       <header className="cc-page-header">
         <div>
-          <h1>Good morning, {firstName}. Here is the live operating picture.</h1>
+          <h1
+            className="text-xl sm:text-2xl font-medium tracking-tight text-slate-900 dark:text-white font-mono"
+            style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 500 }}
+          >
+            Good morning, {firstName}. Here is the live operating picture.
+          </h1>
         </div>
         <div className="cc-header-actions">
           <button type="button" className="cc-icon-button" aria-label="Search Command Centre" title="Search Command Centre" onClick={() => document.getElementById('cc-search')?.focus()}><Search size={17} /></button>

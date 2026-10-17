@@ -283,10 +283,10 @@ export const TasksView: React.FC<TasksViewProps> = ({
               <button
                 type="button"
                 onClick={() => taskModal.open()}
-                className="flex h-9 items-center gap-1.5 px-3 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold shadow-sm active:scale-95 transition-transform cursor-pointer"
+                className="flex h-9 items-center gap-1.5 px-3 rounded-xl bg-white hover:bg-slate-100 text-slate-950 border border-slate-200/80 text-xs font-bold shadow-sm active:scale-95 transition-transform cursor-pointer"
               >
-                <Plus className="w-4 h-4" />
-                <span>Assign</span>
+                <Plus className="w-4 h-4 text-slate-950" />
+                <span className="text-slate-950">Assign</span>
               </button>
             )}
           </div>
@@ -474,16 +474,10 @@ export const TasksView: React.FC<TasksViewProps> = ({
                 <button
                   type="button"
                   onClick={() => taskModal.open()}
-                  className={`flex h-11 shrink-0 items-center gap-2 rounded-full px-5 text-xs font-bold transition-all active:scale-[0.96] cursor-pointer shadow-lg ${
-                    !isDarkMode && isCrystal
-                      ? 'bg-slate-950 hover:bg-slate-800 text-white shadow-slate-900/20'
-                      : isDarkMode
-                        ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
-                        : 'bg-white hover:bg-blue-50 text-blue-700 shadow-blue-900/30'
-                  }`}
+                  className="flex h-11 shrink-0 items-center gap-2 rounded-full px-5 text-xs font-bold transition-all active:scale-[0.96] cursor-pointer shadow-md bg-white hover:bg-slate-100 text-slate-950 border border-slate-200/80"
                 >
-                  <Plus className="w-4 h-4" />
-                  <span>Assign Task</span>
+                  <Plus className="w-4 h-4 text-slate-950" />
+                  <span className="text-slate-950">Assign Task</span>
                 </button>
               )}
             </div>
@@ -1304,8 +1298,10 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl border text-xs font-semibold transition-ui cursor-pointer active:scale-95 ${
-              isDarkMode ? 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border-white/10' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+            className={`inline-flex h-11 items-center justify-center px-6 rounded-full border text-xs font-bold transition-all cursor-pointer active:scale-95 ${
+              isDarkMode
+                ? 'text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border-white/10'
+                : 'border-slate-300 text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50'
             }`}
           >
             Cancel
@@ -1314,7 +1310,11 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
             type="button"
             onClick={() => onSubmit({ title, description, section, priority, dueDate, assigneeUserIds })}
             disabled={!isValid || isSubmitting}
-            className="flex h-10 items-center justify-center gap-2 rounded-xl bg-[var(--accent-primary)] px-5 text-xs font-extrabold text-white shadow-[0_8px_20px_var(--accent-shadow)] transition-ui hover:bg-[var(--accent-hover)] active:scale-[0.96] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`flex h-11 items-center justify-center gap-2 rounded-full px-6 text-xs font-bold transition-all active:scale-[0.96] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-md ${
+              isDarkMode
+                ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-white/10'
+                : 'bg-[#181920] hover:bg-[#252730] text-white shadow-black/20'
+            }`}
           >
             {isSubmitting ? 'Saving…' : isEdit ? 'Save Changes' : 'Assign Task'}
           </button>

@@ -3,6 +3,23 @@ import { apiClient } from '../lib/apiClient';
 import { InAppNotification } from '../services/notificationService';
 import { playAlertSound, isNotificationSoundEnabled, setNotificationSoundEnabled } from '../lib/notificationSound';
 
+const DISMISSED_BEFORE_KEY = 'notif_dismissed_before';
+
+function getDismissedBefore(): number {
+  const raw = localStorage.getItem(DISMISSED_BEFORE_KEY);
+  return raw ? parseInt(raw, 10) : 0;
+}
+
+function setDismissedBefore(ts: number) {
+  localStorage.setItem(DISMISSED_BEFORE_KEY, String(ts));
+}
+
+function filterDismissed(notifications: InAppNotification[]): InAppNotification[] {
+  const cutoff = getDismissedBefore();
+  if (!cutoff) return notifications;
+  return notifications.filter((n) => new Date(n.created_at).getTime() > cutoff);
+}
+
 export function useInAppNotifications() {
   const [notifications, setNotifications] = useState<InAppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
@@ -24,8 +41,9 @@ export function useInAppNotifications() {
       setIsLoading(true);
       const res = await apiClient.get<{ data: InAppNotification[] }>('/notifications');
       if (res?.data) {
-        setNotifications(res.data);
-        setUnreadCount(res.data.filter((n: InAppNotification) => !n.is_read).length);
+        const filtered = filterDismissed(res.data);
+        setNotifications(filtered);
+        setUnreadCount(filtered.filter((n: InAppNotification) => !n.is_read).length);
       }
     } catch (e) {
       console.warn('Error fetching notifications via REST:', e);
@@ -46,6 +64,10 @@ export function useInAppNotifications() {
     const handleNotification = (event: MessageEvent) => {
       try {
         const newNotif = JSON.parse(event.data) as InAppNotification;
+        // Only add if created after the last clearAll timestamp
+        const cutoff = getDismissedBefore();
+        if (cutoff && new Date(newNotif.created_at).getTime() <= cutoff) return;
+
         setNotifications((prev) => {
           // Check for duplicate ID
           if (prev.some((n) => n.id === newNotif.id)) return prev;
@@ -71,11 +93,18 @@ export function useInAppNotifications() {
       }
     };
 
+    const handleNotificationsCleared = () => {
+      setDismissedBefore(Date.now());
+      setNotifications([]);
+      setUnreadCount(0);
+    };
+
     try {
       eventSource = new EventSource(streamUrl, { withCredentials: true });
       eventSourceRef.current = eventSource;
 
       eventSource.addEventListener('notification', handleNotification);
+      eventSource.addEventListener('notifications_cleared', handleNotificationsCleared);
       eventSource.addEventListener('user_security_sync', handleSecuritySync);
 
       eventSource.onerror = (err) => {
@@ -88,6 +117,7 @@ export function useInAppNotifications() {
     return () => {
       if (eventSource) {
         eventSource.removeEventListener('notification', handleNotification);
+        eventSource.removeEventListener('notifications_cleared', handleNotificationsCleared);
         eventSource.removeEventListener('user_security_sync', handleSecuritySync);
         eventSource.close();
       }
@@ -119,6 +149,11 @@ export function useInAppNotifications() {
   };
 
   const clearAll = async () => {
+    // Stamp the current time in localStorage so dismissed notifications
+    // are filtered out on every future load, even after a server restart.
+    const now = Date.now();
+    setDismissedBefore(now);
+
     setNotifications([]);
     setUnreadCount(0);
 

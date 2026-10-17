@@ -81,7 +81,7 @@ interface OrderDetailViewProps {
   onNavigateToCreateJobCard?: (orderPo: string) => void;
   onCancelOrder?: (orderId: string) => void;
   onNavigateToPDI?: (orderPo?: string, jobNo?: string) => void;
-  onNavigateToDispatch?: () => void;
+  onNavigateToDispatch?: (orderPo?: string) => void;
   onNavigateToCreateInvoice?: (orderPo: string, challanNo?: string) => void;
   onCompletePDI?: (orderId: string, payload: any) => Promise<any> | void;
   onGenerateInvoice?: (orderId: string, invoiceData: any) => Promise<any> | void;

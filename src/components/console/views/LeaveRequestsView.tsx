@@ -90,7 +90,7 @@ export const LeaveRequestsView: React.FC<LeaveRequestsViewProps> = ({
   // Form modal
   const formModal = useUrlModal('leave-request-form');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [leaveType, setLeaveType] = useState<LeaveType>('CASUAL');
+  const [leaveType, setLeaveType] = useState<LeaveType | ''>('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [reason, setReason] = useState('');
@@ -155,12 +155,12 @@ export const LeaveRequestsView: React.FC<LeaveRequestsViewProps> = ({
   }, [currentList]);
 
   const handleSubmit = async () => {
-    if (!startDate || !endDate) return;
+    if (!leaveType || !startDate || !endDate || !reason.trim()) return;
     setIsSubmitting(true);
     try {
-      await onCreateLeaveRequest({ leaveType, startDate, endDate, reason: reason.trim() || undefined });
+      await onCreateLeaveRequest({ leaveType, startDate, endDate, reason: reason.trim() });
       formModal.close();
-      setLeaveType('CASUAL');
+      setLeaveType('');
       setStartDate('');
       setEndDate('');
       setReason('');
@@ -188,7 +188,7 @@ export const LeaveRequestsView: React.FC<LeaveRequestsViewProps> = ({
     }
   };
 
-  const isValid = startDate && endDate && new Date(endDate) >= new Date(startDate);
+  const isValid = Boolean(leaveType) && Boolean(startDate) && Boolean(endDate) && new Date(endDate) >= new Date(startDate) && reason.trim().length > 0;
   const requestedDays = calculateDays(startDate, endDate);
 
   return (
@@ -212,10 +212,10 @@ export const LeaveRequestsView: React.FC<LeaveRequestsViewProps> = ({
           <button
             type="button"
             onClick={() => formModal.open()}
-            className="flex h-9 items-center gap-1.5 px-3 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold shadow-sm active:scale-95 transition-transform cursor-pointer"
+            className="flex h-9 items-center gap-1.5 px-3 rounded-xl bg-white hover:bg-slate-100 text-slate-950 text-xs font-bold shadow-sm active:scale-95 transition-transform cursor-pointer border border-slate-200/80"
           >
-            <Plus className="w-4 h-4" />
-            <span>Apply</span>
+            <Plus className="w-4 h-4 text-slate-950" />
+            <span className="text-slate-950">Apply</span>
           </button>
         </div>
 
@@ -345,16 +345,10 @@ export const LeaveRequestsView: React.FC<LeaveRequestsViewProps> = ({
               <button
                 type="button"
                 onClick={() => formModal.open()}
-                className={`flex h-11 shrink-0 items-center gap-2 rounded-full px-5 text-xs font-bold transition-all active:scale-[0.96] cursor-pointer shadow-lg ${
-                  !isDarkMode && isCrystal
-                    ? 'bg-slate-950 hover:bg-slate-800 text-white shadow-slate-900/20'
-                    : isDarkMode
-                      ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
-                      : 'bg-white hover:bg-blue-50 text-blue-700 shadow-blue-900/30'
-                }`}
+                className="flex h-11 shrink-0 items-center gap-2 rounded-full px-5 text-xs font-bold transition-all active:scale-[0.96] cursor-pointer shadow-md bg-white hover:bg-slate-100 text-slate-950 border border-slate-200/80"
               >
-                <Plus className="w-4 h-4" />
-                <span>Apply for Leave</span>
+                <Plus className="w-4 h-4 text-slate-950" />
+                <span className="text-slate-950">Apply for Leave</span>
               </button>
             </div>
           </div>
@@ -699,37 +693,33 @@ export const LeaveRequestsView: React.FC<LeaveRequestsViewProps> = ({
         isOpen={formModal.isOpen}
         onClose={() => formModal.close()}
         title="Apply for Leave / Time Off"
-        maxWidth="max-w-lg"
+        maxWidth="lg"
+        isDarkMode={isDarkMode}
       >
         <div className="space-y-4">
           <div>
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Leave Type
+            <label className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+              Leave Type <span className="text-rose-500">*</span>
             </label>
-            <div className="grid grid-cols-2 gap-2 mt-1.5">
+            <select
+              value={leaveType}
+              onChange={(e) => setLeaveType(e.target.value as LeaveType)}
+              className={inputCls}
+              required
+            >
+              <option value="" disabled>-- Select Leave Type (Mandatory) --</option>
               {(Object.keys(LEAVE_TYPE_META) as LeaveType[]).map((type) => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => setLeaveType(type)}
-                  className={`p-2.5 rounded-xl text-xs font-bold border text-left transition-all cursor-pointer ${
-                    leaveType === type
-                      ? 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)] shadow-sm'
-                      : isDarkMode
-                      ? 'bg-black/30 border-white/10 text-slate-300 hover:border-white/30'
-                      : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-400'
-                  }`}
-                >
+                <option key={type} value={type}>
                   {LEAVE_TYPE_META[type].label}
-                </button>
+                </option>
               ))}
-            </div>
+            </select>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                Start Date
+              <label className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Start Date <span className="text-rose-500">*</span>
               </label>
               <input
                 type="date"
@@ -740,8 +730,8 @@ export const LeaveRequestsView: React.FC<LeaveRequestsViewProps> = ({
               />
             </div>
             <div>
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                End Date
+              <label className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                End Date <span className="text-rose-500">*</span>
               </label>
               <input
                 type="date"
@@ -755,7 +745,13 @@ export const LeaveRequestsView: React.FC<LeaveRequestsViewProps> = ({
 
           {startDate && endDate && (
             <div className={`p-3 rounded-xl border text-xs font-mono flex items-center justify-between ${
-              isValid ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+              isValid
+                ? isDarkMode
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                  : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                : isDarkMode
+                  ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                  : 'bg-rose-50 text-rose-800 border-rose-200'
             }`}>
               <span>Requested Duration:</span>
               <span className="font-bold">{isValid ? `${requestedDays} working days` : 'Invalid Date Range'}</span>
@@ -763,8 +759,8 @@ export const LeaveRequestsView: React.FC<LeaveRequestsViewProps> = ({
           )}
 
           <div>
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Reason / Justification (Optional)
+            <label className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+              Reason / Justification <span className="text-rose-500">*</span>
             </label>
             <textarea
               rows={3}
@@ -772,14 +768,17 @@ export const LeaveRequestsView: React.FC<LeaveRequestsViewProps> = ({
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               className={inputCls}
+              required
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-white/10">
+          <div className={`flex items-center justify-end gap-2 pt-3 border-t ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
             <button
               type="button"
               onClick={() => formModal.close()}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition-colors cursor-pointer"
+              className={`px-4 py-2.5 rounded-full text-xs font-bold transition-colors cursor-pointer ${
+                isDarkMode ? 'text-slate-400 hover:text-white border border-white/10' : 'text-slate-700 hover:text-slate-900 border border-slate-300 bg-white hover:bg-slate-50'
+              }`}
             >
               Cancel
             </button>
@@ -787,7 +786,11 @@ export const LeaveRequestsView: React.FC<LeaveRequestsViewProps> = ({
               type="button"
               disabled={!isValid || isSubmitting}
               onClick={handleSubmit}
-              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] transition-all disabled:opacity-50 cursor-pointer"
+              className={`px-5 py-2.5 rounded-full text-xs font-bold transition-all disabled:opacity-40 cursor-pointer active:scale-95 shadow-sm ${
+                isDarkMode
+                  ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-white/10'
+                  : 'bg-[#181920] hover:bg-[#252730] text-white shadow-black/20'
+              }`}
             >
               {isSubmitting ? 'Submitting...' : 'Submit Request'}
             </button>
@@ -800,13 +803,14 @@ export const LeaveRequestsView: React.FC<LeaveRequestsViewProps> = ({
         isOpen={Boolean(decideTarget)}
         onClose={() => setDecideTarget(null)}
         title={decideTarget?.status === 'APPROVED' ? 'Approve Leave Request' : 'Reject Leave Request'}
-        maxWidth="max-w-md"
+        maxWidth="md"
+        isDarkMode={isDarkMode}
       >
         <div className="space-y-4">
           <div className={`p-4 rounded-xl border ${
             decideTarget?.status === 'APPROVED' 
-              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
-              : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+              ? isDarkMode ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+              : isDarkMode ? 'bg-rose-500/10 border-rose-500/20 text-rose-400' : 'bg-rose-50 border-rose-200 text-rose-800'
           }`}>
             <p className="text-xs leading-relaxed">
               You are about to <span className="font-bold uppercase">{decideTarget?.status}</span> the leave request for{' '}
@@ -815,7 +819,7 @@ export const LeaveRequestsView: React.FC<LeaveRequestsViewProps> = ({
           </div>
 
           <div>
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
+            <label className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
               Decision Note (Optional)
             </label>
             <textarea
@@ -827,11 +831,13 @@ export const LeaveRequestsView: React.FC<LeaveRequestsViewProps> = ({
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-white/10">
+          <div className={`flex items-center justify-end gap-2 pt-3 border-t ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
             <button
               type="button"
               onClick={() => setDecideTarget(null)}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition-colors cursor-pointer"
+              className={`px-4 py-2 rounded-full text-xs font-bold transition-colors cursor-pointer ${
+                isDarkMode ? 'text-slate-400 hover:text-white border border-white/10' : 'text-slate-700 hover:text-slate-900 border border-slate-300 bg-white hover:bg-slate-50'
+              }`}
             >
               Cancel
             </button>
@@ -839,10 +845,10 @@ export const LeaveRequestsView: React.FC<LeaveRequestsViewProps> = ({
               type="button"
               disabled={isDeciding}
               onClick={handleConfirmDecision}
-              className={`px-5 py-2.5 rounded-xl text-xs font-bold text-white transition-all cursor-pointer ${
+              className={`px-5 py-2.5 rounded-full text-xs font-bold transition-all cursor-pointer shadow-sm ${
                 decideTarget?.status === 'APPROVED'
-                  ? 'bg-emerald-600 hover:bg-emerald-500'
-                  : 'bg-rose-600 hover:bg-rose-500'
+                  ? isDarkMode ? 'bg-white hover:bg-slate-100 text-slate-950' : 'bg-[#181920] hover:bg-[#252730] text-white'
+                  : 'bg-rose-600 hover:bg-rose-500 text-white'
               }`}
             >
               {isDeciding ? 'Saving...' : `Confirm ${decideTarget?.status}`}

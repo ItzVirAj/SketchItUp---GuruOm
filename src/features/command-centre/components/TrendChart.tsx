@@ -32,9 +32,27 @@ interface TrendDatum {
 }
 
 const chartConfig = {
-  invoiced: { label: 'Invoiced', color: 'var(--cc-accent)' },
-  collected: { label: 'Collected', color: 'var(--cc-success)' },
-  previousInvoiced: { label: 'Previous period', color: 'var(--cc-faint)' },
+  invoiced: {
+    label: 'Invoiced',
+    theme: {
+      light: '#2563eb',
+      dark: '#60a5fa',
+    },
+  },
+  collected: {
+    label: 'Collected',
+    theme: {
+      light: '#10b981',
+      dark: '#34d399',
+    },
+  },
+  previousInvoiced: {
+    label: 'Previous Period',
+    theme: {
+      light: '#94a3b8',
+      dark: '#64748b',
+    },
+  },
 } satisfies ChartConfig;
 
 export function TrendChart({ selected, comparison, granularity }: TrendChartProps) {
@@ -49,71 +67,97 @@ export function TrendChart({ selected, comparison, granularity }: TrendChartProp
 
   return (
     <ChartContainer
-      className="cc-trend-recharts"
+      className="cc-trend-recharts h-[280px] w-full"
       config={chartConfig}
       role="img"
       aria-label="Invoiced and collected trend comparing selected and previous periods"
       tabIndex={0}
     >
-      <RechartsAreaChart data={chartData} margin={{ top: 10, right: 12, bottom: 2, left: 2 }}>
-        <CartesianGrid vertical={false} stroke="var(--cc-border)" strokeDasharray="3 5" />
+      <RechartsAreaChart data={chartData} margin={{ top: 12, right: 12, bottom: 4, left: 4 }}>
+        <defs>
+          <linearGradient id="fillInvoiced" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="var(--color-invoiced)" stopOpacity={0.3} />
+            <stop offset="95%" stopColor="var(--color-invoiced)" stopOpacity={0.0} />
+          </linearGradient>
+          <linearGradient id="fillCollected" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="var(--color-collected)" stopOpacity={0.2} />
+            <stop offset="95%" stopColor="var(--color-collected)" stopOpacity={0.0} />
+          </linearGradient>
+        </defs>
+
+        <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-slate-200/60 dark:stroke-slate-800/60" />
+
         <XAxis
           dataKey="period"
           tickLine={false}
           axisLine={false}
-          tickMargin={9}
+          tickMargin={8}
           minTickGap={24}
           tickFormatter={(value: string) => formatPeriodLabel(value, granularity)}
         />
+
         <YAxis
           tickLine={false}
           axisLine={false}
-          tickMargin={7}
-          width={54}
+          tickMargin={8}
+          width={58}
           tickFormatter={(value: number) => formatCurrency(value)}
         />
+
         <ChartTooltip
-          cursor={{ stroke: 'var(--cc-accent)', strokeDasharray: '4 4', strokeOpacity: 0.7 }}
-          content={(
+          cursor={{ stroke: 'var(--color-invoiced)', strokeDasharray: '3 3', strokeOpacity: 0.35 }}
+          content={
             <ChartTooltipContent
               labelFormatter={(value) => formatPeriodLabel(String(value), granularity)}
-              formatter={(value, name) => (
-                <div className="flex min-w-[148px] items-center justify-between gap-4">
-                  <span className="text-muted-foreground">{String(name)}</span>
-                  <span className="text-foreground font-medium tabular-nums">{formatCurrency(Number(value))}</span>
-                </div>
-              )}
+              formatter={(value, name) => {
+                const key = String(name);
+                const cfg = chartConfig[key as keyof typeof chartConfig];
+                return (
+                  <div className="flex w-full min-w-[150px] items-center justify-between gap-3 text-xs">
+                    <span className="text-slate-500 dark:text-slate-400 font-medium">
+                      {cfg?.label || key}
+                    </span>
+                    <span className="font-semibold tabular-nums text-slate-900 dark:text-white">
+                      {formatCurrency(Number(value))}
+                    </span>
+                  </div>
+                );
+              }}
             />
-          )}
+          }
         />
-        <ChartLegend content={<ChartLegendContent />} />
+
+        <ChartLegend content={<ChartLegendContent className="pt-3 text-xs font-medium" />} />
+
         <Area
           type="monotone"
           dataKey="invoiced"
-          name="Invoiced"
+          name="invoiced"
           stroke="var(--color-invoiced)"
-          fill="var(--color-invoiced)"
-          fillOpacity={0.1}
-          strokeWidth={2.25}
+          fill="url(#fillInvoiced)"
+          strokeWidth={2}
           dot={false}
-          activeDot={{ r: 4, strokeWidth: 2, fill: 'var(--cc-surface)' }}
+          activeDot={{ r: 4, strokeWidth: 2, fill: 'var(--color-invoiced)' }}
         />
-        <Line
+
+        <Area
           type="monotone"
           dataKey="collected"
-          name="Collected"
+          name="collected"
           stroke="var(--color-collected)"
-          strokeWidth={1.8}
+          fill="url(#fillCollected)"
+          strokeWidth={2}
           dot={false}
-          activeDot={{ r: 4, strokeWidth: 2, fill: 'var(--cc-surface)' }}
+          activeDot={{ r: 4, strokeWidth: 2, fill: 'var(--color-collected)' }}
         />
+
         <Line
           type="monotone"
           dataKey="previousInvoiced"
-          name="Previous period"
+          name="previousInvoiced"
           stroke="var(--color-previousInvoiced)"
           strokeWidth={1.5}
-          strokeDasharray="5 5"
+          strokeDasharray="4 4"
           connectNulls={false}
           dot={false}
           activeDot={false}

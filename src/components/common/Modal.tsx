@@ -78,7 +78,7 @@ export const Modal: React.FC<ModalProps> = ({
   headerRight,
   footer,
   maxWidth = '2xl',
-  isDarkMode = true,
+  isDarkMode: isDarkModeProp,
   closeOnBackdropClick = true,
   closeOnEsc = true,
   children,
@@ -89,6 +89,10 @@ export const Modal: React.FC<ModalProps> = ({
   containerClassName = '',
   hideCloseButton = false
 }) => {
+  const isDarkMode = isDarkModeProp !== undefined
+    ? isDarkModeProp
+    : (typeof document !== 'undefined' ? document.documentElement.classList.contains('dark') : true);
+
   useBodyScrollLock(isOpen);
   const modalContentRef = useRef<HTMLDivElement>(null);
   const isMouseDownOnBackdrop = useRef<boolean>(false);

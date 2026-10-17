@@ -363,11 +363,12 @@ export class NotificationsService {
 
   async clearAllNotifications() {
     try {
-      await this.db.from('notifications').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await this.db.from('notifications').delete().gt('created_at', '1970-01-01T00:00:00Z');
     } catch (err) {
       logger.warn('Database clearAllNotifications fallback:', err);
     }
     SEED_NOTIFICATIONS.length = 0;
+    this.broadcastEvent('notifications_cleared', { timestamp: new Date().toISOString() });
     return { success: true };
   }
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { 
   FileCheck, 
   Search, 
@@ -93,6 +94,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
 }) => {
   const { accent, isGreen, isBlue, isCrystal } = useAccentTheme();
   const canPerformCta = useCanPerformCta();
+  const location = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
@@ -332,6 +334,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
   // Preselection logic
   const preselectHandled = React.useRef<string | null>(null);
   React.useEffect(() => {
+    if (!location.pathname.startsWith('/finance/invoices')) return;
     const key = preselectedDispatchNo || preselectedOrderPo;
     if (!key || preselectHandled.current === key) return;
     preselectHandled.current = key;
@@ -387,7 +390,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
         onInvoiceModalOpened?.();
       }
     }
-  }, [preselectedDispatchNo, preselectedOrderPo, dispatches, orders, masters, invoices.length, onInvoiceModalOpened, createInvoiceModal]);
+  }, [preselectedDispatchNo, preselectedOrderPo, dispatches, orders, masters, invoices.length, onInvoiceModalOpened, createInvoiceModal, location.pathname]);
 
   // Selected Dispatch Metadata
   const selectedDispatch = useMemo(() => {

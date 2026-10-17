@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Plus,
   Download,
   Search,
   ChevronRight,
+  ChevronDown,
   ShoppingCart,
   CheckCircle2,
   Clock,
@@ -49,6 +50,178 @@ interface OrdersViewProps {
   onNavigateToMasters?: () => void;
 }
 
+interface FgPartComboboxProps {
+  value: string;
+  onChange: (code: string) => void;
+  finishedGoodsMasters: MasterItem[];
+  isDarkMode?: boolean;
+}
+
+const FgPartCombobox: React.FC<FgPartComboboxProps> = ({
+  value,
+  onChange,
+  finishedGoodsMasters,
+  isDarkMode
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const selectedMaster = useMemo(() => {
+    if (!value || value === 'CUSTOM') return null;
+    return finishedGoodsMasters.find(m => m.code === value || m.id === value);
+  }, [value, finishedGoodsMasters]);
+
+  const filteredMasters = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return finishedGoodsMasters;
+    return finishedGoodsMasters.filter(m =>
+      (m.code && m.code.toLowerCase().includes(q)) ||
+      (m.name && m.name.toLowerCase().includes(q)) ||
+      (m.description && m.description.toLowerCase().includes(q)) ||
+      (m.partNo && m.partNo.toLowerCase().includes(q))
+    );
+  }, [finishedGoodsMasters, searchQuery]);
+
+  const displayValue = isOpen
+    ? searchQuery
+    : (selectedMaster
+      ? `${selectedMaster.code} — ${selectedMaster.name || selectedMaster.description || selectedMaster.partNo || ''}`
+      : (value === 'CUSTOM' ? 'Custom / Ad-hoc Part' : (value || '')));
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      <div className="relative">
+        <Search className={`absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none ${isDarkMode ? 'text-slate-500' : 'text-slate-400'
+          }`} />
+        <input
+          type="text"
+          value={displayValue}
+          onFocus={() => {
+            setIsOpen(true);
+            setSearchQuery('');
+          }}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            if (!isOpen) setIsOpen(true);
+          }}
+          placeholder="Search FG by code, name, or drawing #..."
+          className={`w-full h-9 pl-8 pr-16 rounded-xl border text-xs font-mono outline-none transition-ui ${isDarkMode
+              ? 'bg-[#18181B] border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30'
+              : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 shadow-xs'
+            }`}
+        />
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+          {value ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange('');
+                setSearchQuery('');
+                setIsOpen(false);
+              }}
+              className="p-1 rounded-md text-slate-400 hover:text-rose-400 hover:bg-slate-700/20 transition-colors cursor-pointer"
+              title="Clear selection"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsOpen(prev => !prev)}
+              className="p-1 text-slate-400 hover:text-slate-300 cursor-pointer"
+            >
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {isOpen && (
+        <div className={`absolute z-50 left-0 right-0 mt-1 rounded-xl border shadow-xl overflow-hidden max-h-60 overflow-y-auto ${isDarkMode
+            ? 'bg-[#18181B] border-slate-700 shadow-black/60 divide-y divide-slate-800'
+            : 'bg-white border-slate-200 shadow-slate-300/50 divide-y divide-slate-100'
+          }`}>
+          {filteredMasters.length > 0 ? (
+            filteredMasters.map(m => {
+              const isSelected = value === m.code;
+              const rate = m.sellingPrice || m.saleRate || m.standardCost || 0;
+              return (
+                <button
+                  key={m.code || m.id}
+                  type="button"
+                  onMouseDown={() => {
+                    onChange(m.code);
+                    setIsOpen(false);
+                    setSearchQuery('');
+                  }}
+                  className={`w-full text-left px-3 py-2 text-xs transition-colors flex items-center justify-between gap-2 cursor-pointer ${isSelected
+                      ? isDarkMode ? 'bg-indigo-600/20 text-indigo-300' : 'bg-indigo-50 text-indigo-700 font-semibold'
+                      : isDarkMode ? 'hover:bg-slate-800/80 text-slate-200' : 'hover:bg-slate-50 text-slate-800'
+                    }`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono font-bold text-[11px] text-indigo-400">
+                        {m.code}
+                      </span>
+                      {m.partNo && (
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          ({m.partNo})
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] truncate text-slate-400 dark:text-slate-300">
+                      {m.name || m.description || 'Finished Good'}
+                    </div>
+                  </div>
+                  {rate > 0 && (
+                    <span className="shrink-0 text-[10px] font-mono font-bold text-emerald-500">
+                      ₹{rate}
+                    </span>
+                  )}
+                </button>
+              );
+            })
+          ) : (
+            <div className={`px-3 py-2.5 text-center text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              No finished goods matching "{searchQuery}"
+            </div>
+          )}
+
+          {/* Option for custom part */}
+          <button
+            type="button"
+            onMouseDown={() => {
+              onChange('CUSTOM_ITEM');
+              setIsOpen(false);
+              setSearchQuery('');
+            }}
+            className={`w-full text-left px-3 py-2 text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer ${value === 'CUSTOM'
+                ? isDarkMode ? 'bg-indigo-600/20 text-indigo-300' : 'bg-indigo-50 text-indigo-700'
+                : isDarkMode ? 'hover:bg-slate-800/80 text-indigo-400' : 'hover:bg-slate-50 text-indigo-600'
+              }`}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>+ Custom / Ad-hoc Part</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const OrdersView: React.FC<OrdersViewProps> = ({
   orders,
   qcQueue = [],
@@ -71,9 +244,9 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
 
   // Filter masters to only finished goods items for Customer Purchase Orders
   const finishedGoodsMasters = useMemo(() => {
-    const fg = masters.filter(m => 
-      m.isFinishedGoods === true || 
-      m.itemType === 'Finished Good' || 
+    const fg = masters.filter(m =>
+      m.isFinishedGoods === true ||
+      m.itemType === 'Finished Good' ||
       m.itemType === 'Finished Goods' ||
       m.category === 'FINISHED_GOODS' ||
       (m.category && m.category.toLowerCase().includes('finished')) ||
@@ -104,53 +277,64 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
   const [creditOverrideReason, setCreditOverrideReason] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
 
+  const createEmptyLine = () => ({
+    id: `line_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    itemCode: '',
+    itemDescription: '',
+    custPartNo: '',
+    orderQty: '',
+    unit: 'Nos',
+    rate: '',
+    drawingRevision: ''
+  });
+
   // Line items state - indexed to Master Items
   const [lines, setLines] = useState<Array<{
+    id?: string;
     itemCode: string;
     itemDescription: string;
     custPartNo: string;
-    orderQty: number;
+    orderQty: number | string;
     unit: string;
-    rate: number;
+    rate: number | string;
     drawingRevision: string;
-  }>>(() => {
-    return [
-      {
-        itemCode: 'ITEM-0002',
-        itemDescription: 'Boom Bracket Sub-assembly',
-        custPartNo: 'DWG-BRK-2026',
-        orderQty: 100,
-        unit: 'Nos',
-        rate: 1850,
-        drawingRevision: 'REV-A'
-      }
-    ];
-  });
+  }>>(() => [createEmptyLine()]);
 
   const handleSelectItemForLine = (index: number, code: string) => {
+    if (!code) {
+      setLines(prev => prev.map((line, i) => i === index ? {
+        ...line,
+        itemCode: '',
+        itemDescription: '',
+        custPartNo: '',
+        rate: ''
+      } : line));
+      return;
+    }
+
     if (code === 'CUSTOM_ITEM') {
       setLines(prev => prev.map((line, i) => i === index ? {
         ...line,
         itemCode: 'CUSTOM',
-        itemDescription: line.itemDescription || 'Custom Special Component',
+        itemDescription: line.itemDescription || '',
         custPartNo: line.custPartNo || '',
         unit: line.unit || 'Nos',
-        rate: line.rate || 100
+        rate: line.rate || ''
       } : line));
       return;
     }
 
     const found = masters.find(m => m.code === code || m.id === code);
     if (found) {
-      const defaultRate = Number(found.sellingPrice || found.saleRate || (found.standardCost ? found.standardCost : 100));
+      const defaultRate = Number(found.sellingPrice || found.saleRate || (found.standardCost ? found.standardCost : 0));
       setLines(prev => prev.map((line, i) => i === index ? {
         ...line,
         itemCode: found.code,
         itemDescription: found.name || found.description || found.partNo || '',
         custPartNo: found.partNo || found.code,
         unit: found.unit || 'Nos',
-        rate: defaultRate > 0 ? defaultRate : (line.rate || 100),
-        drawingRevision: line.drawingRevision || 'REV-A'
+        rate: defaultRate > 0 ? defaultRate : '',
+        drawingRevision: line.drawingRevision || ''
       } : line));
     } else {
       updateLineItem(index, 'itemCode', code);
@@ -158,36 +342,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
   };
 
   const addLineItem = () => {
-    const pool = finishedGoodsMasters.length > 0 ? finishedGoodsMasters : masters;
-    const availableMaster = pool[lines.length % Math.max(1, pool.length)];
-    if (availableMaster) {
-      const defaultRate = Number(availableMaster.sellingPrice || availableMaster.saleRate || (availableMaster.standardCost ? availableMaster.standardCost : 100));
-      setLines(prev => [
-        ...prev,
-        {
-          itemCode: availableMaster.code,
-          itemDescription: availableMaster.name || availableMaster.description || availableMaster.partNo || '',
-          custPartNo: availableMaster.partNo || availableMaster.code,
-          orderQty: 50,
-          unit: availableMaster.unit || 'Nos',
-          rate: defaultRate > 0 ? defaultRate : 100,
-          drawingRevision: 'REV-A'
-        }
-      ]);
-    } else {
-      setLines(prev => [
-        ...prev,
-        {
-          itemCode: `ITEM-000${prev.length + 1}`,
-          itemDescription: 'NEW COMPONENT PART',
-          custPartNo: '',
-          orderQty: 50,
-          unit: 'Nos',
-          rate: 100,
-          drawingRevision: 'REV-A'
-        }
-      ]);
-    }
+    setLines(prev => [...prev, createEmptyLine()]);
   };
 
   const removeLineItem = (index: number) => {
@@ -259,7 +414,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
       partDescription: firstLine.itemDescription,
       drawingRevision: firstLine.drawingRevision,
       orderedQty: totalOrderQty,
-      rate: firstLine.rate,
+      rate: Number(firstLine.rate) || 0,
       grossAmount: totalCalculatedGross,
       netAmount: totalCalculatedGross * 1.18,
       status: 'PO_RECEIVED',
@@ -295,6 +450,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
     };
 
     onCreateOrder(orderPayload);
+    resetCreateOrderForm();
     createOrderModal.close();
   };
 
@@ -608,9 +764,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
 
           <div
             title="Order Cancelled — Workflow terminated"
-            className={`w-full h-1.5 rounded-full overflow-hidden ${
-              isDarkMode ? 'bg-white/10' : 'bg-slate-100'
-            }`}
+            className={`w-full h-1.5 rounded-full overflow-hidden ${isDarkMode ? 'bg-white/10' : 'bg-slate-100'
+              }`}
           >
             <div
               className="h-full rounded-full bg-rose-500/80 transition-all"
@@ -639,12 +794,10 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
           <div className="flex items-center justify-between gap-2">
             <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-tight border ${prog.badgeBg}`}>
               <span className="relative flex h-1.5 w-1.5 shrink-0">
-                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                  prog.isQcRejected ? 'bg-rose-400' : (prog.isQcHold || prog.isPdiHold) ? 'bg-amber-400' : prog.badgeDot
-                }`} />
-                <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${
-                  prog.isQcRejected ? 'bg-rose-500' : (prog.isQcHold || prog.isPdiHold) ? 'bg-amber-500' : prog.badgeDot
-                }`} />
+                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${prog.isQcRejected ? 'bg-rose-400' : (prog.isQcHold || prog.isPdiHold) ? 'bg-amber-400' : prog.badgeDot
+                  }`} />
+                <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${prog.isQcRejected ? 'bg-rose-500' : (prog.isQcHold || prog.isPdiHold) ? 'bg-amber-500' : prog.badgeDot
+                  }`} />
               </span>
               <span className="truncate max-w-[140px] font-semibold">{prog.statusLabel}</span>
             </div>
@@ -661,7 +814,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
             {ORDER_PROGRESSION_STEPS.map((step, idx) => {
               const isPassed = idx < prog.activeStepIndex;
               const isCurrent = idx === prog.activeStepIndex;
-              
+
               let segmentColor = isDarkMode ? 'bg-white/10' : 'bg-slate-200/80';
               if (isPassed) {
                 segmentColor = prog.activeStepIndex >= 7 ? 'bg-emerald-500' : 'bg-blue-600/80 dark:bg-blue-500/80';
@@ -691,12 +844,10 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
         <div className="flex items-center justify-between gap-2">
           <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium tracking-tight border ${prog.badgeBg}`}>
             <span className="relative flex h-1.5 w-1.5 shrink-0">
-              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                prog.isQcRejected ? 'bg-rose-400' : (prog.isQcHold || prog.isPdiHold) ? 'bg-amber-400' : prog.badgeDot
-              }`} />
-              <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${
-                prog.isQcRejected ? 'bg-rose-500' : (prog.isQcHold || prog.isPdiHold) ? 'bg-amber-500' : prog.badgeDot
-              }`} />
+              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${prog.isQcRejected ? 'bg-rose-400' : (prog.isQcHold || prog.isPdiHold) ? 'bg-amber-400' : prog.badgeDot
+                }`} />
+              <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${prog.isQcRejected ? 'bg-rose-500' : (prog.isQcHold || prog.isPdiHold) ? 'bg-amber-500' : prog.badgeDot
+                }`} />
             </span>
             <span className="truncate max-w-[150px] font-medium">{prog.statusLabel}</span>
           </div>
@@ -710,9 +861,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
 
         <div
           title={`Stage ${prog.activeStepIndex + 1}/8: ${prog.statusLabel} (${stagePct}% complete)`}
-          className={`w-full h-1.5 rounded-full overflow-hidden ${
-            isDarkMode ? 'bg-white/10' : 'bg-slate-100'
-          }`}
+          className={`w-full h-1.5 rounded-full overflow-hidden ${isDarkMode ? 'bg-white/10' : 'bg-slate-100'
+            }`}
         >
           <div
             className={`h-full rounded-full ${progressBg} transition-[width] duration-500 ease-out`}
@@ -730,27 +880,20 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
   const dispatchReadyCount = orders.filter(o => o.status === 'READY_TO_DISPATCH' || o.stage === 'READY_TO_DISPATCH' || o.status === 'DISPATCHED').length;
   const cancelledCount = orders.filter(o => (o.status || '').toUpperCase() === 'CANCELLED' || (o.stage || '').toUpperCase() === 'CANCELLED' || normalizeOrderState(o.stage) === 'CANCELLED' || normalizeOrderState(o.status) === 'CANCELLED').length;
 
-  const openNewOrderModal = () => {
+  const resetCreateOrderForm = () => {
     setValidationError(null);
-    setNewPoNo(`PO-2026-${Math.floor(100 + Math.random() * 900)}`);
-    if (customers.length > 0) {
-      const defaultCust = customers[0];
-      setSelectedCustomerCode(defaultCust.code);
-      setNewCustomer(defaultCust.name);
-      if (defaultCust.name.toLowerCase().includes('mahindra') || defaultCust.notes?.toLowerCase().includes('overdue') || (defaultCust as any).isOverdue) {
-        setIsCustomerCreditHeld(true);
-      } else {
-        setIsCustomerCreditHeld(false);
-        setCreditOverrideBy('');
-        setCreditOverrideReason('');
-      }
-    } else {
-      setSelectedCustomerCode('');
-      setNewCustomer('');
-      setIsCustomerCreditHeld(false);
-      setCreditOverrideBy('');
-      setCreditOverrideReason('');
-    }
+    setNewPoNo('');
+    setSelectedCustomerCode('');
+    setNewCustomer('');
+    setIsCustomerCreditHeld(false);
+    setCreditOverrideBy('');
+    setCreditOverrideReason('');
+    setNewRemark('');
+    setLines([createEmptyLine()]);
+  };
+
+  const openNewOrderModal = () => {
+    resetCreateOrderForm();
     createOrderModal.open();
   };
 
@@ -776,9 +919,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
 
           <button
             onClick={openNewOrderModal}
-            className={`min-h-[44px] px-3.5 py-2 rounded-xl text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer shrink-0 active:scale-[0.96] transition-transform font-mono ${
-              isDarkMode ? 'bg-[#181920] hover:bg-[#252730]' : 'bg-[#155dfc] hover:bg-blue-600'
-            }`}
+            className={`min-h-[44px] px-3.5 py-2 rounded-xl text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer shrink-0 active:scale-[0.96] transition-transform font-mono ${isDarkMode ? 'bg-[#181920] hover:bg-[#252730]' : 'bg-[#155dfc] hover:bg-blue-600'
+              }`}
           >
             <Plus className="w-4 h-4" />
             <span>New PO</span>
@@ -817,9 +959,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
         </div>
 
         {/* Mobile Full-Width Search Input */}
-        <div className={`flex items-center gap-2 px-3.5 py-2.5 rounded-2xl border text-xs min-h-[44px] ${
-          isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-        }`}>
+        <div className={`flex items-center gap-2 px-3.5 py-2.5 rounded-2xl border text-xs min-h-[44px] ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          }`}>
           <Search className="w-4 h-4 text-slate-400 shrink-0" />
           <input
             type="text"
@@ -854,11 +995,10 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
               <button
                 key={stage.id}
                 onClick={() => setStatusFilter(stage.id)}
-                className={`min-h-[36px] px-3 py-1 rounded-xl text-xs font-bold font-mono shrink-0 transition-ui border cursor-pointer ${
-                  isSelected
+                className={`min-h-[36px] px-3 py-1 rounded-xl text-xs font-bold font-mono shrink-0 transition-ui border cursor-pointer ${isSelected
                     ? `${stage.active} shadow-xs border-transparent scale-105`
                     : `${stage.idle}`
-                }`}
+                  }`}
               >
                 {stage.label}
               </button>
@@ -872,8 +1012,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
       {/* ========================================================================= */}
       <div className="hidden md:block space-y-4">
         {/* Apple macOS Frosted Header & Integrated Metrics */}
-        <section className={`relative isolate overflow-hidden rounded-2xl border transition-all duration-300 ${
-          isDarkMode
+        <section className={`relative isolate overflow-hidden rounded-2xl border transition-all duration-300 ${isDarkMode
             ? isCrystal
               ? 'border-white/10 bg-gradient-to-b from-[#181C24] via-[#10131A] to-[#0A0C10] text-white shadow-[0_16px_44px_rgba(0,0,0,0.6)]'
               : isGreen
@@ -884,7 +1023,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
               : isGreen
                 ? 'border-emerald-600/30 bg-gradient-to-b from-[#0A7E58] via-[#086B4A] to-[#044F36] text-white shadow-[0_16px_40px_rgba(10,126,88,0.22)]'
                 : 'border-[#155dfc]/30 bg-gradient-to-b from-[#1b64ff] via-[#155dfc] to-[#0f52dc] text-white shadow-[0_16px_40px_rgba(21,93,252,0.25)]'
-        }`}>
+          }`}>
           {/* Light-scheme only: whisper-faint drafting grid for crystal theme */}
           {!isDarkMode && isCrystal && (
             <div
@@ -896,20 +1035,18 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 px-6 py-6 sm:py-7">
             <div className="min-w-0 space-y-1.5">
               <div className="flex items-center gap-2.5">
-                <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wide ${
-                  isDarkMode
+                <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wide ${isDarkMode
                     ? 'bg-white/10 border border-white/15 text-white'
                     : isCrystal
                       ? 'bg-slate-900/[0.06] border border-slate-900/10 text-slate-800 shadow-xs'
                       : 'bg-white/20 border border-white/30 backdrop-blur-md text-white shadow-xs'
-                }`}>
-                  <span className={`h-2 w-2 rounded-full animate-pulse ${
-                    isCrystal && !isDarkMode
+                  }`}>
+                  <span className={`h-2 w-2 rounded-full animate-pulse ${isCrystal && !isDarkMode
                       ? 'bg-emerald-500'
                       : isGreen
                         ? 'bg-emerald-400'
                         : 'bg-sky-400'
-                  }`} />
+                    }`} />
                   <span>Active Order Book</span>
                 </span>
                 <span className={`text-sm font-semibold ${isCrystal && !isDarkMode ? 'text-slate-400' : 'text-white/80'}`}>•</span>
@@ -929,28 +1066,26 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
 
             <button
               onClick={openNewOrderModal}
-              className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 self-start sm:self-auto ${
-                isDarkMode
+              className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer shrink-0 self-start sm:self-auto ${isDarkMode
                   ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
                   : isCrystal
                     ? 'bg-slate-950 hover:bg-slate-800 text-white shadow-[0_4px_16px_rgba(0,0,0,0.12)]'
                     : isGreen
                       ? 'bg-white hover:bg-emerald-50/90 text-[#065F46] shadow-[0_4px_16px_rgba(0,0,0,0.12)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.18)]'
                       : 'bg-white hover:bg-blue-50/90 text-[#155dfc] shadow-[0_4px_16px_rgba(0,0,0,0.12)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.18)]'
-              }`}
+                }`}
             >
               <Plus className="h-4 w-4 stroke-[3]" />
               <span>New Purchase Order</span>
             </button>
           </div>
 
-          <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t ${
-            isDarkMode
+          <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t ${isDarkMode
               ? 'border-white/10 bg-gradient-to-b from-black/40 to-black/70 backdrop-blur-md'
               : isCrystal
                 ? 'border-slate-200/80 bg-slate-50/70 backdrop-blur-sm'
                 : 'border-white/20 bg-white/[0.06] backdrop-blur-sm'
-          }`}>
+            }`}>
             {[
               {
                 label: 'Pipeline Value',
@@ -1003,33 +1138,29 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
               return (
                 <div
                   key={metric.label}
-                  className={`flex items-center gap-4 px-6 py-5 transition-all ${
-                    index > 0
+                  className={`flex items-center gap-4 px-6 py-5 transition-all ${index > 0
                       ? isDarkMode
                         ? 'lg:border-l border-white/10'
                         : isCrystal
                           ? 'lg:border-l border-slate-200/80'
                           : 'lg:border-l border-white/20'
                       : ''
-                  }`}
+                    }`}
                 >
                   <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${metric.iconBg} ${metric.iconColor}`}>
                     <MetricIcon className="h-5 w-5 stroke-[2.5]" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className={`text-xs font-bold uppercase tracking-wider ${
-                      isCrystal && !isDarkMode ? 'text-slate-500' : 'text-white/85'
-                    }`}>
+                    <div className={`text-xs font-bold uppercase tracking-wider ${isCrystal && !isDarkMode ? 'text-slate-500' : 'text-white/85'
+                      }`}>
                       {metric.label}
                     </div>
-                    <div className={`text-2xl sm:text-[26px] font-black tracking-tight tabular-nums my-0.5 leading-tight ${
-                      isCrystal && !isDarkMode ? 'text-slate-950' : 'text-white'
-                    }`}>
+                    <div className={`text-2xl sm:text-[26px] font-black tracking-tight tabular-nums my-0.5 leading-tight ${isCrystal && !isDarkMode ? 'text-slate-950' : 'text-white'
+                      }`}>
                       {metric.value}
                     </div>
-                    <div className={`text-xs font-medium truncate ${
-                      isCrystal && !isDarkMode ? 'text-slate-600' : 'text-white/90'
-                    }`}>
+                    <div className={`text-xs font-medium truncate ${isCrystal && !isDarkMode ? 'text-slate-600' : 'text-white/90'
+                      }`}>
                       {metric.detail}
                     </div>
                   </div>
@@ -1040,31 +1171,27 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
         </section>
 
         {/* Apple macOS Style Pro Command Deck / Filters */}
-        <div className={`rounded-2xl border p-3.5 space-y-3 transition-all backdrop-blur-xl ${
-          isDarkMode
+        <div className={`rounded-2xl border p-3.5 space-y-3 transition-all backdrop-blur-xl ${isDarkMode
             ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#090a0d] to-[#020204] shadow-[0_8px_28px_rgba(0,0,0,0.5),inset_0_1px_0_0_rgba(255,255,255,0.06)]'
             : 'border-slate-200 bg-white shadow-xs'
-        }`}>
+          }`}>
           {/* Top Tier: Apple Segmented Stage Filter Rail */}
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className={`inline-flex items-center p-1 rounded-xl border text-xs ${
-              isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200/80 bg-slate-200/50 shadow-inner'
-            }`}>
+            <div className={`inline-flex items-center p-1 rounded-xl border text-xs ${isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200/80 bg-slate-200/50 shadow-inner'
+              }`}>
               <button
                 type="button"
                 onClick={() => setStatusFilter('ALL')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  statusFilter === 'ALL'
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${statusFilter === 'ALL'
                     ? isDarkMode ? 'bg-white/15 text-white shadow-xs border border-white/10' : 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
+                  }`}
               >
                 <span>All Orders</span>
-                <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
-                  statusFilter === 'ALL'
+                <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${statusFilter === 'ALL'
                     ? isDarkMode ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-800'
                     : isDarkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-300/60 text-slate-600'
-                }`}>
+                  }`}>
                   {orders.length}
                 </span>
               </button>
@@ -1072,18 +1199,16 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
               <button
                 type="button"
                 onClick={() => setStatusFilter('IN_PRODUCTION')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  statusFilter === 'IN_PRODUCTION'
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${statusFilter === 'IN_PRODUCTION'
                     ? isDarkMode ? 'bg-white/15 text-white shadow-xs border border-white/10' : 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
+                  }`}
               >
                 <span>In Production</span>
-                <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
-                  statusFilter === 'IN_PRODUCTION'
+                <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${statusFilter === 'IN_PRODUCTION'
                     ? isDarkMode ? 'bg-blue-500/30 text-blue-300' : 'bg-blue-50 text-blue-700'
                     : isDarkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-300/60 text-slate-600'
-                }`}>
+                  }`}>
                   {inProdCount}
                 </span>
               </button>
@@ -1091,18 +1216,16 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
               <button
                 type="button"
                 onClick={() => setStatusFilter('QC_INSPECTION')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  statusFilter === 'QC_INSPECTION'
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${statusFilter === 'QC_INSPECTION'
                     ? isDarkMode ? 'bg-white/15 text-white shadow-xs border border-white/10' : 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
+                  }`}
               >
                 <span>QC Gate</span>
-                <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
-                  statusFilter === 'QC_INSPECTION'
+                <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${statusFilter === 'QC_INSPECTION'
                     ? isDarkMode ? 'bg-orange-500/30 text-orange-300' : 'bg-orange-50 text-orange-700'
                     : isDarkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-300/60 text-slate-600'
-                }`}>
+                  }`}>
                   {qcGateCount}
                 </span>
               </button>
@@ -1110,18 +1233,16 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
               <button
                 type="button"
                 onClick={() => setStatusFilter('READY_TO_DISPATCH')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  statusFilter === 'READY_TO_DISPATCH'
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${statusFilter === 'READY_TO_DISPATCH'
                     ? isDarkMode ? 'bg-white/15 text-white shadow-xs border border-white/10' : 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
+                  }`}
               >
                 <span>Ready to Dispatch</span>
-                <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
-                  statusFilter === 'READY_TO_DISPATCH'
+                <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${statusFilter === 'READY_TO_DISPATCH'
                     ? isDarkMode ? 'bg-purple-500/30 text-purple-300' : 'bg-purple-50 text-purple-700'
                     : isDarkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-300/60 text-slate-600'
-                }`}>
+                  }`}>
                   {dispatchReadyCount}
                 </span>
               </button>
@@ -1130,18 +1251,16 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setStatusFilter('CANCELLED')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    statusFilter === 'CANCELLED'
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${statusFilter === 'CANCELLED'
                       ? isDarkMode ? 'bg-white/15 text-white shadow-xs border border-white/10' : 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
+                    }`}
                 >
                   <span>Cancelled</span>
-                  <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
-                    statusFilter === 'CANCELLED'
+                  <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${statusFilter === 'CANCELLED'
                       ? isDarkMode ? 'bg-rose-500/30 text-rose-300' : 'bg-rose-50 text-rose-700'
-                    : isDarkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-300/60 text-slate-600'
-                  }`}>
+                      : isDarkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-300/60 text-slate-600'
+                    }`}>
                     {cancelledCount}
                   </span>
                 </button>
@@ -1172,11 +1291,10 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
           {/* Bottom Tier: Spotlight Search & Granular Controls */}
           <div className="flex items-center gap-2.5 flex-wrap">
             {/* Apple Spotlight Search Input */}
-            <div className={`flex h-10 min-w-[280px] flex-1 items-center gap-2.5 rounded-xl border px-3 transition-all ${
-              isDarkMode
+            <div className={`flex h-10 min-w-[280px] flex-1 items-center gap-2.5 rounded-xl border px-3 transition-all ${isDarkMode
                 ? 'border-white/10 bg-black/60 text-white focus-within:border-white/30 focus-within:bg-black/90'
                 : 'border-slate-200/90 bg-white text-slate-900 shadow-2xs focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-200/60'
-            }`}>
+              }`}>
               <Search className="h-4 w-4 shrink-0 text-slate-400" />
               <input
                 type="text"
@@ -1199,9 +1317,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
             <select
               value={subTypeFilter}
               onChange={(e) => setSubTypeFilter(e.target.value)}
-              className={`h-10 rounded-xl border px-3 text-xs font-semibold outline-none cursor-pointer transition-all ${
-                isDarkMode ? 'border-white/10 bg-black/60 text-slate-200 hover:bg-black/80' : 'border-slate-200/90 bg-white text-slate-700 shadow-2xs hover:bg-slate-50'
-              }`}
+              className={`h-10 rounded-xl border px-3 text-xs font-semibold outline-none cursor-pointer transition-all ${isDarkMode ? 'border-white/10 bg-black/60 text-slate-200 hover:bg-black/80' : 'border-slate-200/90 bg-white text-slate-700 shadow-2xs hover:bg-slate-50'
+                }`}
             >
               <option value="ALL">All Types ({orders.length})</option>
               <option value="FRESH_PO">Fresh POs ({orders.filter(o => (o.subType || 'FRESH_PO') === 'FRESH_PO').length})</option>
@@ -1213,9 +1330,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className={`h-10 rounded-xl border px-3 text-xs font-semibold outline-none cursor-pointer transition-all ${
-                isDarkMode ? 'border-white/10 bg-black/60 text-slate-200 hover:bg-black/80' : 'border-slate-200/90 bg-white text-slate-700 shadow-2xs hover:bg-slate-50'
-              }`}
+              className={`h-10 rounded-xl border px-3 text-xs font-semibold outline-none cursor-pointer transition-all ${isDarkMode ? 'border-white/10 bg-black/60 text-slate-200 hover:bg-black/80' : 'border-slate-200/90 bg-white text-slate-700 shadow-2xs hover:bg-slate-50'
+                }`}
             >
               <option value="ALL">All 8 Stages</option>
               <option value="PO_RECEIVED">1. PO Confirmed</option>
@@ -1237,9 +1353,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                 setSortField(field as any);
                 setSortDirection(dir as any);
               }}
-              className={`h-10 rounded-xl border px-3 text-xs font-semibold outline-none cursor-pointer transition-all ${
-                isDarkMode ? 'border-white/10 bg-black/60 text-slate-200 hover:bg-black/80' : 'border-slate-200/90 bg-white text-slate-700 shadow-2xs hover:bg-slate-50'
-              }`}
+              className={`h-10 rounded-xl border px-3 text-xs font-semibold outline-none cursor-pointer transition-all ${isDarkMode ? 'border-white/10 bg-black/60 text-slate-200 hover:bg-black/80' : 'border-slate-200/90 bg-white text-slate-700 shadow-2xs hover:bg-slate-50'
+                }`}
             >
               <option value="RECENCY_DESC">Sort: Recent Orders</option>
               <option value="RECENCY_ASC">Sort: Oldest Orders First</option>
@@ -1251,27 +1366,24 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
             </select>
 
             {/* Apple Segmented View Toggle */}
-            <div className={`flex h-10 items-center rounded-xl border p-0.5 ${
-              isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200/90 bg-slate-200/70 shadow-inner'
-            }`}>
+            <div className={`flex h-10 items-center rounded-xl border p-0.5 ${isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200/90 bg-slate-200/70 shadow-inner'
+              }`}>
               <button
                 onClick={() => setViewMode('table')}
-                className={`flex h-8.5 w-9 items-center justify-center rounded-lg transition-all cursor-pointer ${
-                  viewMode === 'table'
+                className={`flex h-8.5 w-9 items-center justify-center rounded-lg transition-all cursor-pointer ${viewMode === 'table'
                     ? isDarkMode ? 'bg-white/15 text-white shadow-2xs' : 'bg-white text-slate-900 shadow-2xs'
                     : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-                }`}
+                  }`}
                 title="Table View"
               >
                 <List className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setViewMode('grid')}
-                className={`flex h-8.5 w-9 items-center justify-center rounded-lg transition-all cursor-pointer ${
-                  viewMode === 'grid'
+                className={`flex h-8.5 w-9 items-center justify-center rounded-lg transition-all cursor-pointer ${viewMode === 'grid'
                     ? isDarkMode ? 'bg-white/15 text-white shadow-2xs' : 'bg-white text-slate-900 shadow-2xs'
                     : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-                }`}
+                  }`}
                 title="Grid View"
               >
                 <LayoutGrid className="w-4 h-4" />
@@ -1325,9 +1437,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
               <div
                 key={ord.id}
                 onClick={() => onSelectOrder(ord)}
-                className={`p-4 rounded-2xl border space-y-3 cursor-pointer shadow-2xs active:scale-[0.96] transition-ui ${
-                  isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
-                }`}
+                className={`p-4 rounded-2xl border space-y-3 cursor-pointer shadow-2xs active:scale-[0.96] transition-ui ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+                  }`}
               >
                 {/* Header: PO Number + Type Pill */}
                 <div className="flex items-center justify-between gap-2">
@@ -1340,11 +1451,10 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                         Cancelled
                       </span>
                     ) : (
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-semibold tracking-tight border shrink-0 ${
-                        subType === 'BLANKET_CALLOFF'
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-semibold tracking-tight border shrink-0 ${subType === 'BLANKET_CALLOFF'
                           ? 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30'
                           : 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30'
-                      }`}>
+                        }`}>
                         {subType === 'BLANKET_CALLOFF' ? 'Blanket' : 'Fresh PO'}
                       </span>
                     )}
@@ -1422,21 +1532,18 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
       {/* ========================================================================= */}
       <div className="hidden md:block">
         {viewMode === 'table' ? (
-          <div className={`overflow-hidden rounded-3xl border transition-all ${
-            isDarkMode
+          <div className={`overflow-hidden rounded-3xl border transition-all ${isDarkMode
               ? 'border-white/[0.08] bg-gradient-to-b from-[#111318] via-[#08090c] to-[#010203] shadow-[0_20px_50px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]'
               : 'border-slate-200 bg-white shadow-xs'
-          }`}>
+            }`}>
             {/* Table Queue Header Bar */}
-            <div className={`flex items-center justify-between border-b px-6 py-4.5 transition-all ${
-              isDarkMode
+            <div className={`flex items-center justify-between border-b px-6 py-4.5 transition-all ${isDarkMode
                 ? 'border-white/[0.08] bg-gradient-to-r from-black/60 via-black/30 to-black/60'
                 : 'border-slate-200 bg-white'
-            }`}>
+              }`}>
               <div className="flex items-center gap-3.5">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-2xl shadow-xs ${
-                  isDarkMode ? 'bg-white/10 text-white border border-white/10' : 'bg-slate-900 text-white shadow-2xs'
-                }`}>
+                <div className={`flex h-10 w-10 items-center justify-center rounded-2xl shadow-xs ${isDarkMode ? 'bg-white/10 text-white border border-white/10' : 'bg-slate-900 text-white shadow-2xs'
+                  }`}>
                   <ShoppingCart className="h-5 w-5 stroke-[2]" />
                 </div>
                 <div>
@@ -1450,20 +1557,18 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
               </div>
 
               <div className="flex items-center gap-2.5">
-                <span className={`hidden lg:inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1 text-xs font-mono font-bold tracking-tight ${
-                  isDarkMode
+                <span className={`hidden lg:inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1 text-xs font-mono font-bold tracking-tight ${isDarkMode
                     ? 'border-white/10 bg-black/60 text-slate-300'
                     : 'border-slate-200/90 bg-white text-slate-700 shadow-2xs'
-                }`}>
+                  }`}>
                   <span className="text-slate-400 font-normal">Pipeline:</span>
                   <span className="text-slate-900 dark:text-white font-black">₹{totalActiveValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                 </span>
 
-                <span className={`rounded-full border px-3 py-1 font-mono text-xs font-bold tracking-tight ${
-                  isDarkMode
+                <span className={`rounded-full border px-3 py-1 font-mono text-xs font-bold tracking-tight ${isDarkMode
                     ? 'border-white/10 bg-black/60 text-slate-300'
                     : 'border-slate-200 bg-white text-slate-700 shadow-2xs'
-                }`}>
+                  }`}>
                   {sortedOrders.length} records
                 </span>
               </div>
@@ -1472,11 +1577,10 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse font-sans">
                 <thead>
-                  <tr className={`border-b text-[11px] font-bold uppercase tracking-wider transition-all ${
-                    isDarkMode
+                  <tr className={`border-b text-[11px] font-bold uppercase tracking-wider transition-all ${isDarkMode
                       ? 'border-white/[0.07] bg-gradient-to-b from-black/80 to-black/60 text-slate-400'
                       : 'border-slate-200/90 bg-gradient-to-b from-slate-100/90 to-slate-50/90 text-slate-600'
-                  }`}>
+                    }`}>
                     <th
                       onClick={() => {
                         if (sortField === 'RECENCY') {
@@ -1540,16 +1644,14 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                     <th className="py-4 px-6 text-center">Action</th>
                   </tr>
                 </thead>
-                <tbody className={`divide-y transition-colors ${
-                  isDarkMode ? 'divide-white/[0.05]' : 'divide-slate-200/80'
-                }`}>
+                <tbody className={`divide-y transition-colors ${isDarkMode ? 'divide-white/[0.05]' : 'divide-slate-200/80'
+                  }`}>
                   {sortedOrders.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="py-20 text-center">
                         <div className="flex flex-col items-center justify-center gap-3">
-                          <div className={`w-14 h-14 rounded-3xl flex items-center justify-center ${
-                            isDarkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-100 text-slate-400'
-                          }`}>
+                          <div className={`w-14 h-14 rounded-3xl flex items-center justify-center ${isDarkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-100 text-slate-400'
+                            }`}>
                             <ShoppingCart className="w-7 h-7 opacity-40" />
                           </div>
                           <div>
@@ -1586,30 +1688,27 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                         <tr
                           key={ord.id}
                           onClick={() => onSelectOrder(ord)}
-                          className={`group cursor-pointer transition-all ${
-                            isDarkMode
+                          className={`group cursor-pointer transition-all ${isDarkMode
                               ? 'even:bg-white/[0.015] hover:bg-gradient-to-r hover:from-white/[0.06] hover:via-white/[0.02] hover:to-transparent'
                               : 'even:bg-slate-50/50 hover:bg-gradient-to-r hover:from-blue-500/[0.05] hover:via-indigo-500/[0.03] hover:to-transparent'
-                          }`}
+                            }`}
                         >
                           <td className="py-4.5 px-6">
                             <div className="flex items-center gap-3.5">
-                              <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 shadow-2xs ${
-                                prog.isCancelled
+                              <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 shadow-2xs ${prog.isCancelled
                                   ? isDarkMode ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30' : 'bg-rose-50 text-rose-600 border border-rose-200'
                                   : subType === 'BLANKET_CALLOFF'
-                                  ? isDarkMode ? 'bg-purple-500/15 text-purple-300 border border-purple-500/20' : 'bg-purple-50 text-purple-700 border border-purple-200'
-                                  : isDarkMode ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-blue-50 text-blue-600 border border-blue-200/70'
-                              }`}>
+                                    ? isDarkMode ? 'bg-purple-500/15 text-purple-300 border border-purple-500/20' : 'bg-purple-50 text-purple-700 border border-purple-200'
+                                    : isDarkMode ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-blue-50 text-blue-600 border border-blue-200/70'
+                                }`}>
                                 <ShoppingCart className="w-5 h-5 stroke-[2]" />
                               </div>
                               <div className="min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <span className={`font-mono text-sm tracking-tight ${
-                                    prog.isCancelled
+                                  <span className={`font-mono text-sm tracking-tight ${prog.isCancelled
                                       ? 'line-through opacity-70 text-slate-400 font-bold'
                                       : 'text-slate-900 dark:text-white font-black'
-                                  }`}>
+                                    }`}>
                                     {ord.poNo}
                                   </span>
                                   {prog.isCancelled ? (
@@ -1617,13 +1716,12 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                                       Cancelled
                                     </span>
                                   ) : (
-                                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border ${
-                                      subType === 'BLANKET_CALLOFF'
+                                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border ${subType === 'BLANKET_CALLOFF'
                                         ? isDarkMode ? 'bg-purple-500/15 text-purple-300 border-purple-500/30' : 'bg-purple-50 text-purple-700 border-purple-200'
                                         : subType === 'AMENDMENT'
                                           ? isDarkMode ? 'bg-amber-500/15 text-amber-300 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-200'
                                           : isDarkMode ? 'bg-blue-500/15 text-blue-400 border-blue-500/30' : 'bg-blue-50 text-blue-700 border-blue-200'
-                                    }`}>
+                                      }`}>
                                       {subType === 'BLANKET_CALLOFF' ? 'Blanket Call-off' : subType === 'AMENDMENT' ? 'Amendment' : 'Fresh PO'}
                                     </span>
                                   )}
@@ -1650,9 +1748,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                             </div>
                             <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                               {hasCreditHold ? (
-                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                                  isDarkMode ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
-                                }`}>
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${isDarkMode ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
+                                  }`}>
                                   <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
                                   <span>Credit Hold {ord.creditHoldOverrideBy ? '(Overridden)' : '(Blocked)'}</span>
                                 </span>
@@ -1693,11 +1790,10 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                           <td className="py-4.5 px-6 text-center">
                             <button
                               type="button"
-                              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shadow-2xs active:scale-95 cursor-pointer ${
-                                isDarkMode
+                              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shadow-2xs active:scale-95 cursor-pointer ${isDarkMode
                                   ? 'border border-white/10 bg-white/10 text-white hover:bg-blue-600 hover:border-transparent'
                                   : 'border border-slate-200/90 bg-white text-slate-700 hover:bg-[#155dfc] hover:text-white hover:border-transparent hover:shadow-xs'
-                              }`}
+                                }`}
                             >
                               <span>Inspect</span>
                               <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
@@ -1719,11 +1815,10 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                 <div
                   key={ord.id}
                   onClick={() => onSelectOrder(ord)}
-                  className={`group cursor-pointer space-y-3.5 rounded-3xl border p-5 transition-all backdrop-blur-xl ${
-                    isDarkMode 
-                      ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#08090c] to-[#020204] hover:border-white/20 shadow-[0_8px_24px_rgba(0,0,0,0.5)]' 
+                  className={`group cursor-pointer space-y-3.5 rounded-3xl border p-5 transition-all backdrop-blur-xl ${isDarkMode
+                      ? 'border-white/10 bg-gradient-to-b from-[#111318] via-[#08090c] to-[#020204] hover:border-white/20 shadow-[0_8px_24px_rgba(0,0,0,0.5)]'
                       : 'border-slate-200/90 bg-gradient-to-b from-white via-slate-50/50 to-slate-100/30 hover:border-slate-300 shadow-[0_8px_24px_rgba(15,23,42,0.04)] hover:shadow-[0_12px_32px_rgba(15,23,42,0.08)]'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -1769,7 +1864,10 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
       {/* ========================================================================= */}
       <Modal
         isOpen={createOrderModal.isOpen}
-        onClose={() => createOrderModal.close()}
+        onClose={() => {
+          createOrderModal.close();
+          resetCreateOrderForm();
+        }}
         isDarkMode={isDarkMode}
         maxWidth="4xl"
         icon={<Plus className="w-5 h-5" />}
@@ -1777,9 +1875,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
         subtitle="Stage 1 Precondition: Customer Master Indexing & Credit Check"
         footer={
           <>
-            <div className={`flex items-center justify-between px-4 py-2.5 rounded-xl font-mono border shadow-xs ${
-              isDarkMode ? 'bg-[#09090B] border-slate-800' : 'bg-slate-50 border-slate-200'
-            }`}>
+            <div className={`flex items-center justify-between px-4 py-2.5 rounded-xl font-mono border shadow-xs ${isDarkMode ? 'bg-[#09090B] border-slate-800' : 'bg-slate-50 border-slate-200'
+              }`}>
               <span className={`text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Total Gross:</span>
               <span className="font-black text-emerald-500 dark:text-emerald-400 text-sm ml-3">
                 ₹{totalCalculatedGross.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
@@ -1789,12 +1886,14 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={() => createOrderModal.close()}
-                className={`min-h-[42px] px-4 py-2 rounded-xl text-xs font-bold transition-ui cursor-pointer ${
-                  isDarkMode 
-                    ? 'text-slate-300 hover:text-white bg-slate-800/60 hover:bg-slate-800 border border-slate-750' 
+                onClick={() => {
+                  createOrderModal.close();
+                  resetCreateOrderForm();
+                }}
+                className={`min-h-[42px] px-4 py-2 rounded-xl text-xs font-bold transition-ui cursor-pointer ${isDarkMode
+                    ? 'text-slate-300 hover:text-white bg-slate-800/60 hover:bg-slate-800 border border-slate-750'
                     : 'border border-slate-300 text-slate-700 hover:bg-slate-100 hover:text-slate-900'
-                }`}
+                  }`}
               >
                 Cancel
               </button>
@@ -1823,19 +1922,17 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
         <form id="create-po-form" onSubmit={handleCreateSubmit} className="space-y-5 text-xs font-sans">
 
           {/* Sub-Type Selection - Fresh PO or Blanket Call-Off */}
-          <div className={`p-1.5 rounded-xl border grid grid-cols-2 gap-1.5 ${
-            isDarkMode ? 'bg-[#09090B] border-slate-800' : 'bg-slate-100 border-slate-200'
-          }`}>
+          <div className={`p-1.5 rounded-xl border grid grid-cols-2 gap-1.5 ${isDarkMode ? 'bg-[#09090B] border-slate-800' : 'bg-slate-100 border-slate-200'
+            }`}>
             {(['FRESH_PO', 'BLANKET_CALLOFF'] as OrderSubType[]).map(type => (
               <button
                 key={type}
                 type="button"
                 onClick={() => setNewSubType(type)}
-                className={`py-2 px-3 rounded-lg text-xs font-bold transition-ui cursor-pointer ${
-                  newSubType === type
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-black'
+                className={`py-2 px-3 rounded-lg text-xs font-bold transition-ui cursor-pointer ${newSubType === type
+                    ? 'bg-[#181920] hover:bg-[#252730] text-white shadow-md shadow-black/20 font-black'
                     : (isDarkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50' : 'text-slate-600 hover:text-slate-900 hover:bg-white')
-                }`}
+                  }`}
               >
                 {type === 'FRESH_PO' ? 'Fresh Customer PO' : 'Blanket Call-Off'}
               </button>
@@ -1844,9 +1941,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
 
           {/* Blanket PO Specific Inputs */}
           {newSubType === 'BLANKET_CALLOFF' && (
-            <div className={`p-4 rounded-xl border grid grid-cols-1 sm:grid-cols-2 gap-3.5 ${
-              isDarkMode ? 'bg-purple-950/20 border-purple-500/30 text-purple-200' : 'bg-purple-50/80 border-purple-200 text-purple-900'
-            }`}>
+            <div className={`p-4 rounded-xl border grid grid-cols-1 sm:grid-cols-2 gap-3.5 ${isDarkMode ? 'bg-purple-950/20 border-purple-500/30 text-purple-200' : 'bg-purple-50/80 border-purple-200 text-purple-900'
+              }`}>
               <div>
                 <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? 'text-purple-300' : 'text-purple-800'}`}>
                   Standing Blanket PO #
@@ -1856,9 +1952,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                   placeholder="e.g. BPO-2026-TATA-01"
                   value={newBlanketPoId}
                   onChange={(e) => setNewBlanketPoId(e.target.value)}
-                  className={`w-full p-2.5 rounded-xl border text-xs font-medium outline-none transition-ui ${
-                    isDarkMode ? 'bg-[#09090B] border-purple-500/40 text-white focus:border-purple-400' : 'bg-white border-purple-300 text-slate-900 focus:border-purple-600'
-                  }`}
+                  className={`w-full p-2.5 rounded-xl border text-xs font-medium outline-none transition-ui ${isDarkMode ? 'bg-[#09090B] border-purple-500/40 text-white focus:border-purple-400' : 'bg-white border-purple-300 text-slate-900 focus:border-purple-600'
+                    }`}
                 />
               </div>
               <div>
@@ -1867,11 +1962,12 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                 </label>
                 <input
                   type="number"
+                  step="any"
+                  min="0"
                   value={newBlanketBalance}
-                  onChange={(e) => setNewBlanketBalance(Number(e.target.value))}
-                  className={`w-full p-2.5 rounded-xl border text-xs font-medium outline-none transition-ui ${
-                    isDarkMode ? 'bg-[#09090B] border-purple-500/40 text-white focus:border-purple-400' : 'bg-white border-purple-300 text-slate-900 focus:border-purple-600'
-                  }`}
+                  onChange={(e) => setNewBlanketBalance(e.target.value as any)}
+                  className={`w-full p-2.5 rounded-xl border text-xs font-medium outline-none transition-ui ${isDarkMode ? 'bg-[#09090B] border-purple-500/40 text-white focus:border-purple-400' : 'bg-white border-purple-300 text-slate-900 focus:border-purple-600'
+                    }`}
                 />
               </div>
             </div>
@@ -1879,9 +1975,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
 
           {/* Customer Master Check & Indexing */}
           {customers.length === 0 ? (
-            <div className={`p-4 rounded-xl border ${
-              isDarkMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-300' : 'bg-amber-50 border-amber-300 text-amber-900'
-            }`}>
+            <div className={`p-4 rounded-xl border ${isDarkMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-300' : 'bg-amber-50 border-amber-300 text-amber-900'
+              }`}>
               <div className="flex items-center gap-2 font-bold text-xs">
                 <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
                 <span>No Customer Master Found</span>
@@ -1913,9 +2008,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                   value={newPoNo}
                   onChange={(e) => setNewPoNo(e.target.value)}
                   placeholder="e.g. PO-2026-901"
-                  className={`h-11 w-full rounded-xl border px-3 text-xs font-medium outline-none transition-ui ${
-                    isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white shadow-xs'
-                  }`}
+                  className={`h-11 w-full rounded-xl border px-3 text-xs font-medium outline-none transition-ui ${isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white shadow-xs'
+                    }`}
                 />
               </div>
               <div>
@@ -1941,9 +2035,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                   required
                   value={selectedCustomerCode}
                   onChange={(e) => handleSelectCustomer(e.target.value)}
-                  className={`h-11 w-full rounded-xl border px-3 text-xs font-medium outline-none transition-ui ${
-                    isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white shadow-xs'
-                  }`}
+                  className={`h-11 w-full rounded-xl border px-3 text-xs font-medium outline-none transition-ui ${isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white shadow-xs'
+                    }`}
                 >
                   <option value="">Select registered customer from Master...</option>
                   {customers.map(c => (
@@ -1958,9 +2051,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
 
           {/* Hard Precondition Alert: 90-Day Customer Credit Hold */}
           {isCustomerCreditHeld && (
-            <div className={`p-4 rounded-xl border shadow-sm ${
-              isDarkMode ? 'bg-rose-950/25 border-rose-500/40 text-rose-200' : 'bg-rose-50 border-rose-300 text-rose-900'
-            }`}>
+            <div className={`p-4 rounded-xl border shadow-sm ${isDarkMode ? 'bg-rose-950/25 border-rose-500/40 text-rose-200' : 'bg-rose-50 border-rose-300 text-rose-900'
+              }`}>
               <div className="flex items-center gap-2 font-bold text-xs text-rose-400">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>Customer on 90-Day Credit Overdue Hold</span>
@@ -1980,9 +2072,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                     placeholder="e.g. sachin.owner / superadmin"
                     value={creditOverrideBy}
                     onChange={(e) => setCreditOverrideBy(e.target.value)}
-                    className={`w-full p-2.5 rounded-xl border text-xs font-medium outline-none ${
-                      isDarkMode ? 'bg-[#09090B] border-rose-500/50 text-white focus:border-rose-400' : 'bg-white border-rose-300 text-slate-900 focus:border-rose-500'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl border text-xs font-medium outline-none ${isDarkMode ? 'bg-[#09090B] border-rose-500/50 text-white focus:border-rose-400' : 'bg-white border-rose-300 text-slate-900 focus:border-rose-500'
+                      }`}
                   />
                 </div>
                 <div>
@@ -1994,9 +2085,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                     placeholder="e.g. 50% advance received via RTGS"
                     value={creditOverrideReason}
                     onChange={(e) => setCreditOverrideReason(e.target.value)}
-                    className={`w-full p-2.5 rounded-xl border text-xs font-medium outline-none ${
-                      isDarkMode ? 'bg-[#09090B] border-rose-500/50 text-white focus:border-rose-400' : 'bg-white border-rose-300 text-slate-900 focus:border-rose-500'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl border text-xs font-medium outline-none ${isDarkMode ? 'bg-[#09090B] border-rose-500/50 text-white focus:border-rose-400' : 'bg-white border-rose-300 text-slate-900 focus:border-rose-500'
+                      }`}
                   />
                 </div>
               </div>
@@ -2013,9 +2103,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                 type="date"
                 value={newPoDate}
                 onChange={(e) => setNewPoDate(e.target.value)}
-                className={`h-11 w-full rounded-xl border px-3 text-xs font-medium outline-none transition-ui ${
-                  isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white shadow-xs'
-                }`}
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-medium outline-none transition-ui ${isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white shadow-xs'
+                  }`}
               />
             </div>
             <div>
@@ -2026,9 +2115,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                 type="date"
                 value={newDeliveryDate}
                 onChange={(e) => setNewDeliveryDate(e.target.value)}
-                className={`h-11 w-full rounded-xl border px-3 text-xs font-medium outline-none transition-ui ${
-                  isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white shadow-xs'
-                }`}
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-medium outline-none transition-ui ${isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white shadow-xs'
+                  }`}
               />
             </div>
             <div>
@@ -2038,9 +2126,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
               <select
                 value={newTaxCategory}
                 onChange={(e) => setNewTaxCategory(e.target.value)}
-                className={`h-11 w-full rounded-xl border px-3 text-xs font-medium outline-none transition-ui ${
-                  isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white shadow-xs'
-                }`}
+                className={`h-11 w-full rounded-xl border px-3 text-xs font-medium outline-none transition-ui ${isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-indigo-500 focus:bg-white shadow-xs'
+                  }`}
               >
                 <option value="GST 18%">GST 18% (Standard Engineering)</option>
                 <option value="GST 12%">GST 12% (Machined Castings)</option>
@@ -2057,9 +2144,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                 <span className={`text-xs font-black uppercase tracking-wide ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                   Order Line Items
                 </span>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
-                  isDarkMode ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-                }`}>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${isDarkMode ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                  }`}>
                   {lines.length} {lines.length === 1 ? 'part' : 'parts'}
                 </span>
               </div>
@@ -2079,19 +2165,17 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
 
                 return (
                   <div
-                    key={idx}
-                    className={`p-3.5 sm:p-4 rounded-2xl border transition-ui relative ${
-                      isDarkMode
+                    key={line.id || idx}
+                    className={`p-3.5 sm:p-4 rounded-2xl border transition-ui relative ${isDarkMode
                         ? 'bg-[#09090B] border-slate-800 hover:border-slate-700/80 shadow-xs'
                         : 'bg-slate-50/80 border-slate-200 hover:border-slate-300 shadow-xs'
-                    }`}
+                      }`}
                   >
                     {/* Item Header */}
                     <div className="flex items-center justify-between gap-2 mb-3 pb-2.5 border-b border-slate-200/70 dark:border-slate-800">
                       <div className="flex items-center gap-2">
-                        <span className={`w-5 h-5 rounded-full text-[10px] font-mono font-bold flex items-center justify-center ${
-                          isDarkMode ? 'bg-indigo-500/20 text-indigo-300' : 'bg-indigo-100 text-indigo-700'
-                        }`}>
+                        <span className={`w-5 h-5 rounded-full text-[10px] font-mono font-bold flex items-center justify-center ${isDarkMode ? 'bg-indigo-500/20 text-indigo-300' : 'bg-indigo-100 text-indigo-700'
+                          }`}>
                           {idx + 1}
                         </span>
                         <span className="font-bold text-xs text-slate-800 dark:text-slate-200">
@@ -2103,7 +2187,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                         <div className="text-right font-mono">
                           <span className="text-[10px] text-slate-400 mr-1.5 uppercase font-medium">Line Total:</span>
                           <span className="font-black text-xs text-emerald-600 dark:text-emerald-400">
-                            ₹{lineGross.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                            ₹{lineGross.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
                         </div>
                         <button
@@ -2121,28 +2205,17 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
 
                     {/* Form Inputs Grid - Responsive Full-Width */}
                     <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
-                      {/* Master FG Part Dropdown */}
+                      {/* Master FG Part Searchbox */}
                       <div className="sm:col-span-6">
                         <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                          Master FG Part Code
+                          Finished Goods Part (Search Master)
                         </label>
-                        <select
+                        <FgPartCombobox
                           value={line.itemCode}
-                          onChange={(e) => handleSelectItemForLine(idx, e.target.value)}
-                          className={`w-full h-9 p-2 rounded-xl border text-xs font-mono outline-none transition-ui ${
-                            isDarkMode
-                              ? 'bg-[#18181B] border-slate-700 text-white focus:border-indigo-500'
-                              : 'bg-white border-slate-300 text-slate-900 focus:border-indigo-500 shadow-xs'
-                          }`}
-                        >
-                          <option value="">-- Choose FG Part from Master --</option>
-                          {finishedGoodsMasters.map(m => (
-                            <option key={m.code || m.id} value={m.code}>
-                              {m.code} - {m.name || m.description || m.partNo}
-                            </option>
-                          ))}
-                          <option value="CUSTOM_ITEM">+ Custom / Ad-hoc Part</option>
-                        </select>
+                          onChange={(code) => handleSelectItemForLine(idx, code)}
+                          finishedGoodsMasters={finishedGoodsMasters}
+                          isDarkMode={isDarkMode}
+                        />
                       </div>
 
                       {/* Description */}
@@ -2155,11 +2228,10 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                           value={line.itemDescription}
                           onChange={(e) => updateLineItem(idx, 'itemDescription', e.target.value)}
                           placeholder="e.g. CNC Shaft Bushing"
-                          className={`w-full h-9 px-2.5 rounded-xl border text-xs outline-none transition-ui ${
-                            isDarkMode
+                          className={`w-full h-9 px-2.5 rounded-xl border text-xs outline-none transition-ui ${isDarkMode
                               ? 'bg-[#18181B] border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500'
                               : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 shadow-xs'
-                          }`}
+                            }`}
                         />
                       </div>
 
@@ -2173,11 +2245,10 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                           value={line.custPartNo}
                           onChange={(e) => updateLineItem(idx, 'custPartNo', e.target.value)}
                           placeholder="e.g. DWG-8802"
-                          className={`w-full h-9 px-2.5 rounded-xl border text-xs font-mono outline-none transition-ui ${
-                            isDarkMode
+                          className={`w-full h-9 px-2.5 rounded-xl border text-xs font-mono outline-none transition-ui ${isDarkMode
                               ? 'bg-[#18181B] border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500'
                               : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 shadow-xs'
-                          }`}
+                            }`}
                         />
                       </div>
 
@@ -2191,11 +2262,10 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                           value={line.drawingRevision}
                           onChange={(e) => updateLineItem(idx, 'drawingRevision', e.target.value)}
                           placeholder="01"
-                          className={`w-full h-9 px-2.5 rounded-xl border text-xs font-mono text-center outline-none transition-ui ${
-                            isDarkMode
+                          className={`w-full h-9 px-2.5 rounded-xl border text-xs font-mono text-center outline-none transition-ui ${isDarkMode
                               ? 'bg-[#18181B] border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500'
                               : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 shadow-xs'
-                          }`}
+                            }`}
                         />
                       </div>
 
@@ -2206,14 +2276,15 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                         </label>
                         <input
                           type="number"
-                          min="1"
+                          step="any"
+                          min="0"
+                          placeholder="e.g. 100"
                           value={line.orderQty}
-                          onChange={(e) => updateLineItem(idx, 'orderQty', Number(e.target.value))}
-                          className={`w-full h-9 px-2.5 rounded-xl border text-xs font-mono text-right outline-none transition-ui ${
-                            isDarkMode
+                          onChange={(e) => updateLineItem(idx, 'orderQty', e.target.value)}
+                          className={`w-full h-9 px-2.5 rounded-xl border text-xs font-mono text-right outline-none transition-ui ${isDarkMode
                               ? 'bg-[#18181B] border-slate-700 text-white focus:border-indigo-500'
                               : 'bg-white border-slate-300 text-slate-900 focus:border-indigo-500 shadow-xs'
-                          }`}
+                            }`}
                         />
                       </div>
 
@@ -2225,20 +2296,32 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                         <input
                           type="number"
                           min="0"
-                          step="0.5"
+                          step="any"
+                          placeholder="0.00"
                           value={line.rate}
-                          onChange={(e) => updateLineItem(idx, 'rate', Number(e.target.value))}
-                          className={`w-full h-9 px-2.5 rounded-xl border text-xs font-mono text-right outline-none transition-ui ${
-                            isDarkMode
+                          onChange={(e) => updateLineItem(idx, 'rate', e.target.value)}
+                          className={`w-full h-9 px-2.5 rounded-xl border text-xs font-mono text-right outline-none transition-ui ${isDarkMode
                               ? 'bg-[#18181B] border-slate-700 text-white focus:border-indigo-500'
                               : 'bg-white border-slate-300 text-slate-900 focus:border-indigo-500 shadow-xs'
-                          }`}
+                            }`}
                         />
                       </div>
                     </div>
                   </div>
                 );
               })}
+
+              {/* Add Part Line button displayed below order line items */}
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={addLineItem}
+                  className="px-3 py-1.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 hover:text-indigo-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-ui border border-indigo-500/20"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Part Line</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -2252,9 +2335,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
               placeholder="e.g. VCI Anti-rust polybag packing with Mill TC inspection report attached"
               value={newRemark}
               onChange={(e) => setNewRemark(e.target.value)}
-              className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-ui ${
-                isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white shadow-xs'
-              }`}
+              className={`h-11 w-full rounded-xl border px-3 text-xs outline-none transition-ui ${isDarkMode ? 'bg-[#09090B] border-slate-700/80 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white shadow-xs'
+                }`}
             />
           </div>
 

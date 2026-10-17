@@ -1103,21 +1103,27 @@ export const QCView: React.FC<QCViewProps> = ({
       {/* ========================================================================= */}
       {inspectModal.isOpen && inspectingItem && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-md font-sans overflow-y-auto">
-          <div className="relative w-full max-w-lg max-h-[92vh] sm:max-h-[90vh] flex flex-col rounded-t-2xl sm:rounded-2xl border border-white/10 bg-[#181920] text-white shadow-[0_24px_60px_rgba(0,0,0,0.85)] backdrop-blur-2xl transition-all overflow-hidden font-sans">
+          <div className={`relative w-full max-w-lg max-h-[92vh] sm:max-h-[90vh] flex flex-col rounded-t-2xl sm:rounded-2xl border transition-all overflow-hidden font-sans ${
+            isDarkMode 
+              ? 'border-white/10 bg-[#181920] text-white shadow-[0_24px_60px_rgba(0,0,0,0.85)]' 
+              : 'border-slate-200 bg-white text-slate-900 shadow-[0_24px_60px_rgba(0,0,0,0.15)]'
+          }`}>
             {/* Mobile Grab Handle */}
             <div className="pt-2.5 pb-0 block sm:hidden">
-              <div className="w-10 h-1 bg-white/20 rounded-full mx-auto" />
+              <div className={`w-10 h-1 rounded-full mx-auto ${isDarkMode ? 'bg-white/20' : 'bg-slate-300'}`} />
             </div>
 
             {/* Modal Window Header */}
-            <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-white/10 bg-[#181920] shrink-0">
+            <div className={`flex items-center justify-between px-5 sm:px-6 py-4 border-b shrink-0 ${
+              isDarkMode ? 'border-white/10 bg-[#181920]' : 'border-slate-200 bg-slate-50/70'
+            }`}>
               <div className="flex items-center gap-3">
                 <div className={`flex h-10 w-10 items-center justify-center rounded-xl shrink-0 ${
                   qcDecision === 'PASS'
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                    ? isDarkMode ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-emerald-50 text-emerald-600 border border-emerald-200'
                     : qcDecision === 'QC_HOLD'
-                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                    : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                    ? isDarkMode ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-amber-50 text-amber-600 border border-amber-200'
+                    : isDarkMode ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-rose-50 text-rose-600 border border-rose-200'
                 }`}>
                   {qcDecision === 'PASS' ? (
                     <ShieldCheck className="w-5 h-5 stroke-[2]" />
@@ -1128,10 +1134,10 @@ export const QCView: React.FC<QCViewProps> = ({
                   )}
                 </div>
                 <div>
-                  <h3 className="font-bold text-base tracking-tight text-white">
+                  <h3 className={`font-bold text-base tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                     Record QC Metrology Audit
                   </h3>
-                  <p className="text-xs text-white/60">
+                  <p className={`text-xs ${isDarkMode ? 'text-white/60' : 'text-slate-500'}`}>
                     Drawing compliance & dimensional tolerances
                   </p>
                 </div>
@@ -1142,7 +1148,9 @@ export const QCView: React.FC<QCViewProps> = ({
                   setInspectingItem(null);
                   inspectModal.close();
                 }} 
-                className="rounded-full p-2 text-white/60 hover:bg-white/10 hover:text-white transition-all cursor-pointer"
+                className={`rounded-full p-2 transition-all cursor-pointer ${
+                  isDarkMode ? 'text-white/60 hover:bg-white/10 hover:text-white' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700'
+                }`}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1151,28 +1159,34 @@ export const QCView: React.FC<QCViewProps> = ({
             <form onSubmit={handleInspectSave} className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
               
               {/* Batch Metadata Card */}
-              <div className="p-4 rounded-2xl border border-white/[0.08] bg-white/[0.04] space-y-2">
+              <div className={`p-4 rounded-2xl border space-y-2 ${
+                isDarkMode ? 'border-white/[0.08] bg-white/[0.04]' : 'border-slate-200 bg-slate-50'
+              }`}>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-white font-mono">{inspectingItem.jobNo}</span>
+                  <span className={`font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{inspectingItem.jobNo}</span>
                   {inspectingItem.orderPo && (
-                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-white/10 text-white/90 border border-white/15">
+                    <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${
+                      isDarkMode ? 'bg-white/10 text-white/90 border-white/15' : 'bg-white text-slate-700 border-slate-200 shadow-2xs'
+                    }`}>
                       PO: {inspectingItem.orderPo}
                     </span>
                   )}
                 </div>
-                <div className="text-xs font-semibold text-white/90">
-                  <span className="font-bold text-white">{inspectingItem.partCode}</span>
+                <div className={`text-xs font-semibold ${isDarkMode ? 'text-white/90' : 'text-slate-700'}`}>
+                  <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{inspectingItem.partCode}</span>
                   {inspectingItem.partDescription && ` — ${inspectingItem.partDescription}`}
                 </div>
-                <div className="flex items-center justify-between text-xs text-white/60 pt-2 border-t border-white/10">
+                <div className={`flex items-center justify-between text-xs pt-2 border-t ${
+                  isDarkMode ? 'text-white/60 border-white/10' : 'text-slate-500 border-slate-200'
+                }`}>
                   <span>Inspection Batch Quantity:</span>
-                  <span className="font-bold text-emerald-400 tabular-nums">{inspectingItem.qty} NOS</span>
+                  <span className="font-bold text-emerald-500 dark:text-emerald-400 tabular-nums">{inspectingItem.qty} NOS</span>
                 </div>
               </div>
 
               {/* Inspection Decision Buttons (Apple HIG Radio Cards) */}
               <div className="space-y-2">
-                <label className="block text-xs font-semibold text-white/60">
+                <label className={`block text-xs font-semibold ${isDarkMode ? 'text-white/60' : 'text-slate-600'}`}>
                   Inspection Decision *
                 </label>
                 <div className="grid grid-cols-3 gap-2.5 text-xs">
@@ -1183,13 +1197,17 @@ export const QCView: React.FC<QCViewProps> = ({
                       onClick={() => setQcDecision('PASS')}
                       className={`p-3 rounded-2xl border transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer ${
                         qcDecision === 'PASS' 
-                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-xs ring-1 ring-emerald-500/30 font-bold' 
-                          : 'bg-white/[0.03] border-white/10 text-white/60 hover:text-white hover:bg-white/[0.06]'
+                          ? isDarkMode
+                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-xs ring-1 ring-emerald-500/30 font-bold'
+                            : 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-xs ring-1 ring-emerald-400 font-bold'
+                          : isDarkMode
+                            ? 'bg-white/[0.03] border-white/10 text-white/60 hover:text-white hover:bg-white/[0.06]'
+                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                       }`}
                     >
-                      <CheckCircle2 className="w-5 h-5 text-emerald-400 stroke-[2]" />
+                      <CheckCircle2 className="w-5 h-5 text-emerald-500 dark:text-emerald-400 stroke-[2]" />
                       <span className="font-semibold text-xs">Pass QC</span>
-                      <span className="text-[10px] text-emerald-400/80 font-medium">Approved</span>
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400/80 font-medium">Approved</span>
                     </button>
                   )}
 
@@ -1199,13 +1217,17 @@ export const QCView: React.FC<QCViewProps> = ({
                     onClick={() => setQcDecision('QC_HOLD')}
                     className={`p-3 rounded-2xl border transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer ${
                       qcDecision === 'QC_HOLD' 
-                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-xs ring-1 ring-amber-500/30 font-bold' 
-                        : 'bg-white/[0.03] border-white/10 text-white/60 hover:text-white hover:bg-white/[0.06]'
+                        ? isDarkMode
+                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-xs ring-1 ring-amber-500/30 font-bold'
+                          : 'bg-amber-50 text-amber-800 border-amber-300 shadow-xs ring-1 ring-amber-400 font-bold'
+                        : isDarkMode
+                          ? 'bg-white/[0.03] border-white/10 text-white/60 hover:text-white hover:bg-white/[0.06]'
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                     }`}
                   >
-                    <Clock className="w-5 h-5 text-amber-400 stroke-[2]" />
+                    <Clock className="w-5 h-5 text-amber-500 dark:text-amber-400 stroke-[2]" />
                     <span className="font-semibold text-xs">QC Hold</span>
-                    <span className="text-[10px] text-amber-400/80 font-medium">Quarantine</span>
+                    <span className="text-[10px] text-amber-600 dark:text-amber-400/80 font-medium">Quarantine</span>
                   </button>
 
                   {/* REJECT */}
@@ -1215,13 +1237,17 @@ export const QCView: React.FC<QCViewProps> = ({
                       onClick={() => setQcDecision('REJECTED')}
                       className={`p-3 rounded-2xl border transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer ${
                         qcDecision === 'REJECTED' 
-                          ? 'bg-rose-500/20 text-rose-300 border-rose-500/50 shadow-xs ring-1 ring-rose-500/30 font-bold' 
-                          : 'bg-white/[0.03] border-white/10 text-white/60 hover:text-white hover:bg-white/[0.06]'
+                          ? isDarkMode
+                            ? 'bg-rose-500/20 text-rose-300 border-rose-500/50 shadow-xs ring-1 ring-rose-500/30 font-bold'
+                            : 'bg-rose-50 text-rose-800 border-rose-300 shadow-xs ring-1 ring-rose-400 font-bold'
+                          : isDarkMode
+                            ? 'bg-white/[0.03] border-white/10 text-white/60 hover:text-white hover:bg-white/[0.06]'
+                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                       }`}
                     >
-                      <XCircle className="w-5 h-5 text-rose-400 stroke-[2]" />
+                      <XCircle className="w-5 h-5 text-rose-500 dark:text-rose-400 stroke-[2]" />
                       <span className="font-semibold text-xs">Reject</span>
-                      <span className="text-[10px] text-rose-400/80 font-medium">Defect</span>
+                      <span className="text-[10px] text-rose-600 dark:text-rose-400/80 font-medium">Defect</span>
                     </button>
                   )}
                 </div>
@@ -1229,7 +1255,7 @@ export const QCView: React.FC<QCViewProps> = ({
 
               {/* Quick Tap Defect / Verification Chips */}
               <div className="space-y-1.5">
-                <span className="text-xs font-semibold text-white/60 block">
+                <span className={`text-xs font-semibold block ${isDarkMode ? 'text-white/60' : 'text-slate-600'}`}>
                   Quick Remarks Preset:
                 </span>
                 <div className="flex flex-wrap gap-1.5">
@@ -1248,7 +1274,11 @@ export const QCView: React.FC<QCViewProps> = ({
                       onClick={() => {
                         setQcNotes(prev => prev ? `${prev}, ${preset}` : preset);
                       }}
-                      className="px-3 py-1 rounded-full text-xs font-medium border border-white/10 bg-white/[0.06] text-white hover:bg-white/15 transition-all cursor-pointer"
+                      className={`px-3 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer ${
+                        isDarkMode
+                          ? 'border-white/10 bg-white/[0.06] text-white hover:bg-white/15'
+                          : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200/70'
+                      }`}
                     >
                       + {preset}
                     </button>
@@ -1258,7 +1288,7 @@ export const QCView: React.FC<QCViewProps> = ({
 
               {/* Remarks Textarea */}
               <div>
-                <label className="block text-xs font-semibold text-white/60 mb-1.5">
+                <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-white/60' : 'text-slate-600'}`}>
                   Inspector Remarks & Notes
                 </label>
                 <textarea
@@ -1266,30 +1296,36 @@ export const QCView: React.FC<QCViewProps> = ({
                   value={qcNotes}
                   onChange={(e) => setQcNotes(e.target.value)}
                   placeholder="Record drawing compliance, surface finish, dimensional tolerances..."
-                  className="w-full rounded-xl border border-white/15 bg-white/[0.05] text-white placeholder-white/40 px-3.5 py-2.5 text-xs outline-none transition-all focus:border-white/40"
+                  className={`w-full rounded-xl border px-3.5 py-2.5 text-xs outline-none transition-all ${
+                    isDarkMode 
+                      ? 'border-white/15 bg-white/[0.05] text-white placeholder-white/40 focus:border-white/40' 
+                      : 'border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-slate-500 shadow-2xs'
+                  }`}
                 />
               </div>
 
               {/* Submit Buttons */}
-              <div className="pt-3.5 border-t border-white/10 flex items-center justify-end gap-2.5 shrink-0">
+              <div className={`pt-3.5 border-t flex items-center justify-end gap-2.5 shrink-0 ${
+                isDarkMode ? 'border-white/10' : 'border-slate-200'
+              }`}>
                 <button 
                   type="button" 
                   onClick={() => {
                     setInspectingItem(null);
                     inspectModal.close();
                   }} 
-                  className="flex-1 sm:flex-initial px-5 py-2 rounded-full border border-white/15 bg-white/[0.06] text-white hover:bg-white/15 text-xs font-semibold cursor-pointer transition-all"
+                  className={`flex-1 sm:flex-initial px-5 py-2 rounded-full border text-xs font-semibold cursor-pointer transition-all ${
+                    isDarkMode
+                      ? 'border-white/15 bg-white/[0.06] text-white hover:bg-white/15'
+                      : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
                 >
                   Cancel
                 </button>
                 {canPerformCta('UPLOAD_QC_REPORT') && (
                   <button 
                     type="submit" 
-                    className={`flex-1 sm:flex-initial px-6 py-2 rounded-full text-xs font-bold cursor-pointer shadow-md transition-all active:scale-[0.96] ${
-                      isDarkMode
-                        ? 'bg-[#181920] hover:bg-[#252730] text-white border border-white/25'
-                        : 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/20'
-                    }`}
+                    className="flex-1 sm:flex-initial px-6 py-2 rounded-full text-xs font-bold cursor-pointer shadow-lg shadow-black/20 transition-all active:scale-[0.96] bg-[#181920] hover:bg-[#252730] text-white border border-black dark:border-white/20"
                   >
                     Save QC Audit ({qcDecision})
                   </button>

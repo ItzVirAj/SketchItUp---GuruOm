@@ -70,7 +70,6 @@ import { useEmployeeCertifications } from '../../hooks/useEmployeeCertifications
 import { useAnnouncements } from '../../hooks/useAnnouncements';
 import { useEmployees } from '../../hooks/useEmployees';
 import { fetchOrderById, receiveOutworkReturn } from '../../services/supabaseServices';
-import { triggerOrderDelayed } from '../../services/notificationService';
 import { toast } from '../../context/ToastContext';
 import { getCanonicalPathForView } from '../../utils/navigationConfig';
 
@@ -378,48 +377,6 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, []);
 
-  // 24-Hour Delivery Deadline & Schedule Delay Watcher
-  const alertedDelayOrdersRef = useRef<Set<string>>(new Set());
-
-  useEffect(() => {
-    if (!orders || orders.length === 0) return;
-
-    const checkOrderDeadlines = () => {
-      const now = Date.now();
-      const next24h = now + 24 * 60 * 60 * 1000;
-
-      orders.forEach((order) => {
-        if (!order.deliveryDate) return;
-        const status = (order.status || order.stage || '').toUpperCase();
-        const isDispatchedOrDone = [
-          'PARTIALLY_DISPATCHED',
-          'DISPATCHED',
-          'IN_TRANSIT',
-          'DELIVERED',
-          'CLOSED',
-          'CANCELLED',
-          'PAID'
-        ].includes(status);
-
-        if (isDispatchedOrDone) return;
-
-        const targetTime = new Date(order.deliveryDate).getTime();
-        // If target delivery date is within the next 24 hours or already overdue
-        if (targetTime <= next24h && !alertedDelayOrdersRef.current.has(order.id || order.poNo)) {
-          alertedDelayOrdersRef.current.add(order.id || order.poNo);
-          triggerOrderDelayed(
-            order.id || order.poNo,
-            order.poNo,
-            order.customerName
-          ).catch(() => { });
-        }
-      });
-    };
-
-    checkOrderDeadlines();
-    const interval = setInterval(checkOrderDeadlines, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [orders]);
 
   // URL History Sync Effect
   useEffect(() => {
@@ -441,6 +398,46 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
         navigate('/operations/orders', { replace: true });
         setCurrentView('orders');
       } else if (path.startsWith('/operations/orders/')) {
+        const sp = new URLSearchParams(location.search);
+        const modal = sp.get('modal');
+        if (modal === 'create-job-card' || modal === 'bulk-release-job-cards') {
+          const rawId = path.replace('/operations/orders/', '');
+          const orderPo = sp.get('orderPo') || rawId;
+          setCurrentView('production');
+          navigate(`/operations/production?modal=${modal}&orderPo=${encodeURIComponent(orderPo)}`, { replace: true });
+          return;
+        }
+        if (modal === 'inspect-pdi' || modal === 'reinspect-pdi') {
+          const rawId = path.replace('/operations/orders/', '');
+          const orderPo = sp.get('orderPo') || rawId;
+          const jobNo = sp.get('jobNo') || '';
+          setCurrentView('pdi');
+          const p = new URLSearchParams({ modal });
+          if (orderPo) p.set('orderPo', orderPo);
+          if (jobNo) p.set('jobNo', jobNo);
+          navigate(`/quality-dispatch/pdi-inspection?${p.toString()}`, { replace: true });
+          return;
+        }
+        if (modal === 'issue-delivery-challan' || modal === 'generate-challan') {
+          const rawId = path.replace('/operations/orders/', '');
+          const orderPo = sp.get('orderPo') || rawId;
+          setCurrentView('dispatch');
+          const p = new URLSearchParams({ modal: 'issue-delivery-challan' });
+          if (orderPo) p.set('orderPo', orderPo);
+          navigate(`/quality-dispatch/dispatch-logistics?${p.toString()}`, { replace: true });
+          return;
+        }
+        if (modal === 'create-invoice' || modal === 'generate-invoice') {
+          const rawId = path.replace('/operations/orders/', '');
+          const orderPo = sp.get('orderPo') || rawId;
+          const dispatchNo = sp.get('dispatchNo') || sp.get('challanNo') || '';
+          setCurrentView('invoices');
+          const p = new URLSearchParams({ modal: 'create-invoice' });
+          if (orderPo) p.set('orderPo', orderPo);
+          if (dispatchNo) p.set('dispatchNo', dispatchNo);
+          navigate(`/finance/invoices-payments?${p.toString()}`, { replace: true });
+          return;
+        }
         const rawId = path.replace('/operations/orders/', '');
         if (rawId) {
           const matched = orders.find(o => o.id === rawId || o.poNo === rawId);
@@ -791,23 +788,39 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
                       handleUpdateOrder(orderId, updates);
                     }}
                     onNavigateToCreateJobCard={(orderPo) => {
-                      setPendingJobCardOrderPo(orderPo);
-                      handleNavigateView('production');
+                      const targetPo = orderPo || selectedOrderId || '';
+                      const matchedOrder = orders.find(o => o.poNo === targetPo || o.id === targetPo);
+                      const lineCount = (matchedOrder?.lines || []).length;
+                      const modalName = lineCount > 1 ? 'bulk-release-job-cards' : 'create-job-card';
+                      setPendingJobCardOrderPo(targetPo);
+                      setCurrentView('production');
+                      navigate(`/operations/production?modal=${modalName}&orderPo=${encodeURIComponent(targetPo)}`);
                     }}
                     onNavigateToCreateInvoice={(orderPo, challanNo) => {
                       setPendingInvoiceOrderPo(orderPo);
                       setPendingInvoiceDispatchNo(challanNo || null);
-                      handleNavigateView('invoices');
+                      setCurrentView('invoices');
+                      const p = new URLSearchParams({ modal: 'create-invoice' });
+                      if (orderPo) p.set('orderPo', orderPo);
+                      if (challanNo) p.set('dispatchNo', challanNo);
+                      navigate(`/finance/invoices-payments?${p.toString()}`);
                     }}
                     onCancelOrder={handleCancelOrder}
                     onNavigateToPDI={(orderPo, jobNo) => {
                       setPendingPdiOrderPo(orderPo || null);
                       setPendingPdiJobNo(jobNo || null);
-                      handleNavigateView('pdi');
+                      setCurrentView('pdi');
+                      const p = new URLSearchParams({ modal: 'inspect-pdi' });
+                      if (orderPo) p.set('orderPo', orderPo);
+                      if (jobNo) p.set('jobNo', jobNo);
+                      navigate(`/quality-dispatch/pdi-inspection?${p.toString()}`);
                     }}
                     onNavigateToDispatch={(orderPo) => {
                       setPendingDispatchOrderPo(orderPo || null);
-                      handleNavigateView('dispatch');
+                      setCurrentView('dispatch');
+                      const p = new URLSearchParams({ modal: 'issue-delivery-challan' });
+                      if (orderPo) p.set('orderPo', orderPo);
+                      navigate(`/quality-dispatch/dispatch-logistics?${p.toString()}`);
                     }}
                     onCompletePDI={async (orderId, payload) => {
                       if (dynamicFetchedOrder && (dynamicFetchedOrder.id === orderId || dynamicFetchedOrder.poNo === orderId)) {
@@ -974,8 +987,10 @@ export const ConsoleContainer: React.FC<ConsoleContainerProps> = ({ onSignOut })
                     invoices={invoices}
                     payables={payables}
                     productionLogs={productionLogs}
+                    machines={machines}
                     isDarkMode={isDarkMode}
                     onNavigate={(view) => handleNavigateView(view)}
+                    onRefresh={handleSync}
                   />
                 )}
 

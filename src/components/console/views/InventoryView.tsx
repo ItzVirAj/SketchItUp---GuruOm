@@ -2157,7 +2157,9 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             </div>
 
             {/* Category Filter Pills (Apple Segmented Control) */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+            <div className={`p-1 rounded-xl border flex items-center gap-1.5 overflow-x-auto scrollbar-none ${
+              isDarkMode ? 'border-white/10 bg-black/60' : 'border-slate-200/80 bg-slate-200/50 shadow-inner'
+            }`}>
               {INVENTORY_CATEGORIES.map(cat => {
                 const count = categoryCounts[cat.key] ?? 0;
                 const isSelected = adjustCategoryFilter === cat.key;
@@ -2169,17 +2171,21 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                       setAdjustCategoryFilter(cat.key);
                       if (!isItemPickerOpen) setIsItemPickerOpen(true);
                     }}
-                    className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
                       isSelected
-                        ? 'bg-[var(--accent-primary)] text-white shadow-xs scale-[1.02]'
+                        ? isDarkMode 
+                          ? 'bg-white/15 text-white shadow-xs border border-white/10' 
+                          : 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
                         : isDarkMode
-                          ? 'bg-white/[0.05] text-slate-400 hover:text-white hover:bg-white/[0.08] border border-white/[0.05]'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80 border border-slate-200/60'
+                          ? 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/40'
                     }`}
                   >
                     <span>{cat.label}</span>
-                    <span className={`px-1 rounded text-[9px] ${
-                      isSelected ? 'bg-black/20 text-white' : isDarkMode ? 'bg-white/10 text-slate-400' : 'bg-slate-200 text-slate-700'
+                    <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-mono ${
+                      isSelected 
+                        ? (isDarkMode ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-800')
+                        : (isDarkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-300/60 text-slate-600')
                     }`}>
                       {count}
                     </span>
@@ -2498,9 +2504,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                       key={reason}
                       type="button"
                       onClick={() => setAdjustReason(reason)}
-                      className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                      className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold transition-all cursor-pointer border ${
                         isMatch
-                          ? 'bg-[var(--accent-primary)] text-white shadow-xs'
+                          ? isDarkMode 
+                            ? 'bg-white/15 text-white border-white/20 shadow-xs'
+                            : 'bg-white text-slate-900 border-slate-200/90 shadow-xs'
                           : isDarkMode
                             ? 'bg-white/[0.05] text-slate-400 hover:text-white border border-white/[0.06]'
                             : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80 border border-slate-200'
@@ -2544,10 +2552,10 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             <button
               type="submit"
               disabled={!selectedStockForAdjust}
-              className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-xs cursor-pointer shadow-lg shadow-[var(--accent-shadow)] transition-all active:scale-[0.97] ${
+              className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-xs cursor-pointer shadow-lg shadow-black/20 transition-all active:scale-[0.97] ${
                 !selectedStockForAdjust
                   ? 'opacity-40 cursor-not-allowed bg-slate-500 text-white'
-                  : 'bg-[var(--accent-primary)] hover:brightness-110 text-white hover:scale-[1.01]'
+                  : 'bg-[#181920] hover:bg-[#252730] text-white hover:scale-[1.01]'
               }`}
             >
               <CheckCircle2 className="w-4 h-4" />

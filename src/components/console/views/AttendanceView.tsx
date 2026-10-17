@@ -300,10 +300,10 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({
                 type="button"
                 onClick={() => handleAction('in')}
                 disabled={isProcessing}
-                className="flex h-9 items-center gap-1.5 px-3 rounded-xl bg-[var(--accent-primary)] text-white text-xs font-bold shadow-sm active:scale-95 transition-transform cursor-pointer disabled:opacity-50"
+                className="flex h-9 items-center gap-1.5 px-3 rounded-xl bg-white hover:bg-slate-100 text-slate-950 border border-slate-200/80 text-xs font-bold shadow-sm active:scale-95 transition-transform cursor-pointer disabled:opacity-50"
               >
-                <LogIn className="w-3.5 h-3.5" />
-                <span>Punch In</span>
+                <LogIn className="w-3.5 h-3.5 text-slate-950" />
+                <span className="text-slate-950">Punch In</span>
               </button>
             )}
             {canCheckOut && (
@@ -311,10 +311,10 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({
                 type="button"
                 onClick={() => handleAction('out')}
                 disabled={isProcessing}
-                className="flex h-9 items-center gap-1.5 px-3 rounded-xl bg-rose-600 text-white text-xs font-bold shadow-sm active:scale-95 transition-transform cursor-pointer disabled:opacity-50"
+                className="flex h-9 items-center gap-1.5 px-3 rounded-xl bg-white hover:bg-slate-100 text-slate-950 border border-slate-200/80 text-xs font-bold shadow-sm active:scale-95 transition-transform cursor-pointer disabled:opacity-50"
               >
-                <LogOut className="w-3.5 h-3.5" />
-                <span>Punch Out</span>
+                <LogOut className="w-3.5 h-3.5 text-slate-950" />
+                <span className="text-slate-950">Punch Out</span>
               </button>
             )}
           </div>
@@ -451,14 +451,10 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(true)}
-                  className={`flex h-11 shrink-0 items-center gap-2 rounded-full border px-4 text-xs font-semibold shadow-xs transition-all active:scale-[0.98] cursor-pointer backdrop-blur-md ${
-                    !isDarkMode && isCrystal
-                      ? 'border-slate-300/80 bg-white/80 hover:bg-white text-slate-700'
-                      : 'border-white/20 bg-white/10 hover:bg-white/15 text-white'
-                  }`}
+                  className="flex h-11 shrink-0 items-center gap-2 rounded-full border border-slate-200/80 bg-white hover:bg-slate-100 text-slate-950 px-5 text-xs font-bold shadow-md transition-all active:scale-[0.96] cursor-pointer"
                 >
-                  <Plus className="w-4 h-4" />
-                  <span>Mark Attendance</span>
+                  <Plus className="w-4 h-4 text-slate-950" />
+                  <span className="text-slate-950">Mark Attendance</span>
                 </button>
               )}
 
@@ -466,30 +462,20 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({
                 type="button"
                 onClick={() => handleAction('in')}
                 disabled={!canCheckIn || isProcessing}
-                className={`flex h-11 shrink-0 items-center gap-2 rounded-full px-5 text-xs font-bold transition-all active:scale-[0.96] cursor-pointer shadow-lg disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none ${
-                  !isDarkMode && isCrystal
-                    ? 'bg-slate-950 hover:bg-slate-800 text-white shadow-slate-900/20'
-                    : isDarkMode
-                      ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-black/40'
-                      : 'bg-white hover:bg-blue-50 text-blue-700 shadow-blue-900/30'
-                }`}
+                className="flex h-11 shrink-0 items-center gap-2 rounded-full px-5 text-xs font-bold transition-all active:scale-[0.96] cursor-pointer shadow-md disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none bg-white hover:bg-slate-100 text-slate-950 border border-slate-200/80"
               >
-                <LogIn className="w-4 h-4" />
-                <span>{isProcessing ? 'Punching…' : 'Check In'}</span>
+                <LogIn className="w-4 h-4 text-slate-950" />
+                <span className="text-slate-950">{isProcessing ? 'Punching…' : 'Check In'}</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => handleAction('out')}
                 disabled={!canCheckOut || isProcessing}
-                className={`flex h-11 shrink-0 items-center gap-2 rounded-full border px-4 text-xs font-semibold shadow-xs transition-all active:scale-[0.98] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none backdrop-blur-md ${
-                  !isDarkMode && isCrystal
-                    ? 'border-slate-300/80 bg-white/80 hover:bg-white text-slate-700'
-                    : 'border-white/20 bg-white/10 hover:bg-white/15 text-white'
-                }`}
+                className="flex h-11 shrink-0 items-center gap-2 rounded-full px-5 text-xs font-bold transition-all active:scale-[0.96] cursor-pointer shadow-md disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none bg-white hover:bg-slate-100 text-slate-950 border border-slate-200/80"
               >
-                <LogOut className="w-4 h-4" />
-                <span>Check Out</span>
+                <LogOut className="w-4 h-4 text-slate-950" />
+                <span className="text-slate-950">Check Out</span>
               </button>
             </div>
           </div>
@@ -1035,18 +1021,26 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({
             />
           </div>
 
-          <div className="flex justify-end gap-3 pt-3 border-t border-white/10">
+          <div className={`flex items-center justify-end gap-3 pt-3 border-t ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
             <button
               type="button"
               onClick={() => setIsModalOpen(false)}
-              className="px-4 py-2 rounded-xl text-xs font-bold bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 cursor-pointer"
+              className={`px-5 py-2.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                isDarkMode
+                  ? 'text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10'
+                  : 'text-slate-700 hover:text-slate-900 border border-slate-300 bg-white hover:bg-slate-50'
+              }`}
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isProcessing}
-              className="px-4 py-2 rounded-xl text-xs font-bold bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-white shadow-sm cursor-pointer disabled:opacity-50"
+              className={`px-6 py-2.5 rounded-full text-xs font-bold transition-all disabled:opacity-40 cursor-pointer active:scale-95 shadow-sm ${
+                isDarkMode
+                  ? 'bg-white hover:bg-slate-100 text-slate-950 shadow-white/10'
+                  : 'bg-[#181920] hover:bg-[#252730] text-white shadow-black/20'
+              }`}
             >
               {isProcessing ? 'Saving…' : 'Save Record'}
             </button>

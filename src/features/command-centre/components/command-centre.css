@@ -91,13 +91,258 @@
 .cc-secondary-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 12px; }
 .cc-breakdown-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .cc-live-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-.cc-trend-card, .cc-attention-card, .cc-funnel-card, .cc-heatmap-card, .cc-pipeline-card, .cc-table-card, .cc-breakdown-grid .cc-card, .cc-live-grid .cc-card { padding: 18px; }
+.cc-trend-card, .cc-attention-card, .cc-pipeline-card, .cc-table-card, .cc-breakdown-grid .cc-card, .cc-live-grid .cc-card { padding: 18px; }
 .cc-card-header { justify-content: space-between; gap: 12px; margin-bottom: 15px; }
 .cc-card-header h2 { font-size: 14px; letter-spacing: -.025em; margin: 0; font-weight: 700; }
 .cc-card-header p { color: var(--cc-muted); font-size: 11px; margin: 5px 0 0; line-height: 1.4; }
 .cc-card-header > svg, .cc-card-header > div + svg { color: var(--cc-faint); flex: 0 0 auto; }
 .cc-inline-link { color: var(--cc-muted); background: transparent; border: 0; font: inherit; font-size: 11px; font-weight: 650; cursor: pointer; display: inline-flex; gap: 5px; align-items: center; white-space: nowrap; }
 .cc-inline-link span { font-size: 15px; line-height: 1; }
+
+.cc-meter-card,
+.cc-funnel-card {
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 380px;
+}
+
+.cc-meter-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.cc-meter-header-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.cc-meter-header h2 {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+  margin: 0;
+  color: var(--cc-ink);
+}
+
+.cc-meter-header p {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--cc-muted);
+  margin: 0;
+  font-weight: 400;
+}
+
+.cc-meter-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 9999px;
+  background: var(--cc-accent-soft, rgba(37, 99, 235, 0.08));
+  color: var(--cc-accent, #2563eb);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  border: 1px solid rgba(37, 99, 235, 0.16);
+  cursor: pointer;
+  transition: all 0.16s ease;
+  white-space: nowrap;
+}
+
+.cc-meter-action:hover {
+  background: rgba(37, 99, 235, 0.14);
+  border-color: rgba(37, 99, 235, 0.28);
+  transform: translateY(-0.5px);
+}
+
+:global(.dark) .cc-meter-action,
+.dark .cc-meter-action {
+  background: rgba(59, 130, 246, 0.14);
+  color: #60a5fa;
+  border-color: rgba(59, 130, 246, 0.28);
+}
+
+:global(.dark) .cc-meter-action:hover,
+.dark .cc-meter-action:hover {
+  background: rgba(59, 130, 246, 0.22);
+  border-color: rgba(59, 130, 246, 0.40);
+}
+
+.cc-meter-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+}
+
+.cc-donut-card {
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  min-height: 380px;
+}
+
+.cc-donut-header {
+  margin-bottom: 18px;
+}
+
+.cc-donut-header h2 {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+  margin: 0;
+  color: var(--cc-ink);
+}
+
+.cc-donut-header p {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--cc-muted);
+  margin: 4px 0 0 0;
+  font-weight: 400;
+}
+
+.cc-donut-body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 4px 0;
+}
+
+.cc-donut-footer {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--cc-border);
+  width: 100%;
+}
+
+.cc-segmented-control {
+  display: flex;
+  width: 100%;
+  min-height: 38px;
+  padding: 3px;
+  border-radius: 11px;
+  background: var(--cc-surface-strong);
+  gap: 3px;
+}
+
+.cc-segmented-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 7px 14px;
+  border: 0;
+  background: transparent;
+  color: var(--cc-muted);
+  font-size: 13px;
+  font-weight: 550;
+  letter-spacing: -0.01em;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.18s cubic-bezier(0.16, 1, 0.3, 1), color 0.15s ease, box-shadow 0.18s ease;
+  user-select: none;
+}
+
+.cc-segmented-btn:hover {
+  color: var(--cc-ink);
+}
+
+.cc-segmented-btn.is-active {
+  background: var(--cc-surface);
+  color: var(--cc-ink);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 1px rgba(0, 0, 0, 0.04);
+}
+
+.dark .cc-segmented-btn.is-active {
+  background: #252830;
+  color: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.cc-quality-card {
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  min-height: 380px;
+}
+
+.cc-quality-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.cc-quality-header-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.cc-quality-header h2 {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+  margin: 0;
+  color: var(--cc-ink);
+}
+
+.cc-quality-header p {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--cc-muted);
+  margin: 0;
+  font-weight: 400;
+}
+
+.cc-quality-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--cc-surface-strong);
+  color: var(--cc-muted);
+  flex-shrink: 0;
+  border: 1px solid var(--cc-border);
+}
+
+.cc-quality-waffle-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0;
+  width: 100%;
+}
+
+.cc-quality-footer {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--cc-border);
+  width: 100%;
+}
 
 .cc-trend-wrap { position: relative; min-height: 280px; }
 .cc-trend-recharts { width: 100%; height: 280px !important; aspect-ratio: auto; display: block; }

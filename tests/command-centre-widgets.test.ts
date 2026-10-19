@@ -5,6 +5,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { KpiCard } from '../src/features/command-centre/components/KpiCard';
 import { TrendChart } from '../src/features/command-centre/components/TrendChart';
 import { WidgetState } from '../src/features/command-centre/components/WidgetState';
+import { OrderToCashMeterCard } from '../src/features/command-centre/components/OrderToCashMeterCard';
+import { QualityWaffleCard } from '../src/features/command-centre/components/QualityWaffleCard';
+import { TaskCalendarCard } from '../src/features/command-centre/components/TaskCalendarCard';
 
 afterEach(() => cleanup());
 
@@ -52,5 +55,52 @@ describe('Command Centre widget states', () => {
     const chart = screen.getByRole('img', { name: /invoiced and collected trend/i });
     expect(chart).toBeTruthy();
     expect(chart.getAttribute('data-chart')).toContain('chart-');
+  });
+
+  it('renders the order-to-cash usage meter with stages and limit', () => {
+    render(React.createElement(OrderToCashMeterCard, {
+      status: 'success',
+      availability: 'supported',
+      reason: null,
+      onRetry: () => undefined,
+      stages: [
+        { key: 'po_received', label: 'PO received', count: 12 },
+        { key: 'confirmed', label: 'Confirmed', count: 14 },
+        { key: 'in_production', label: 'In production', count: 18 }
+      ]
+    }));
+    expect(screen.getByText('Order to cash')).toBeTruthy();
+    expect(screen.getByText('Pipeline capacity')).toBeTruthy();
+    expect(screen.getByText('Open orders')).toBeTruthy();
+    expect(screen.getByText('Confirmed')).toBeTruthy();
+    expect(screen.getByText('In production')).toBeTruthy();
+    expect(screen.queryByText('PO received')).toBeNull();
+  });
+
+  it('renders the quality waffle chart with QC and PDI breakdowns', () => {
+    render(React.createElement(QualityWaffleCard, {
+      status: 'success',
+      availability: 'supported',
+      reason: null,
+      onRetry: () => undefined,
+      quality: {
+        qc: { PASS: 25, REJECT: 2, HOLD: 3 },
+        pdi: { PASS: 20, REJECT: 1, HOLD: 2 }
+      }
+    }));
+    expect(screen.getByText('Quality gate')).toBeTruthy();
+    expect(screen.getAllByText('Passed').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('On Hold').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Rejected').length).toBeGreaterThan(0);
+    expect(screen.getByRole('tab', { name: 'QC Gate' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'PDI Gate' })).toBeTruthy();
+  });
+
+  it('renders the task calendar card with agenda list and interactive controls', () => {
+    render(React.createElement(TaskCalendarCard));
+    expect(screen.getByText('Calendar with agenda list')).toBeTruthy();
+    expect(screen.getByTitle('Add Task in HR module')).toBeTruthy();
+    expect(screen.getByLabelText('Previous month')).toBeTruthy();
+    expect(screen.getByLabelText('Next month')).toBeTruthy();
   });
 });

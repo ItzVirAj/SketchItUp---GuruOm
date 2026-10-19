@@ -4,10 +4,8 @@ import {
   Boxes,
   CalendarDays,
   ChevronDown,
-  ClipboardCheck,
   CreditCard,
   Factory,
-  FileCheck2,
   PackageCheck,
   PanelTop,
   RefreshCw,
@@ -20,10 +18,14 @@ import { ConsoleView, SystemUser } from '../../../types/console';
 import { useCommandCentreData } from '../hooks/useCommandCentreData';
 import { CommandCentreGranularity, CommandCentreRangeInput, InsightFeedItem } from '../types';
 import { formatDateRange, formatRelativeTime, formatNumber } from '../utils/formatters';
-import { Funnel, Heatmap, PipelineStrip, QualityRing, RankedList, VendorList } from './OperationsCharts';
+import { RankedList, VendorList } from './OperationsCharts';
 import { ApprovalList, ActivityList, DispatchList, InsightList, RecentOrders } from './FeedWidgets';
 import { KpiCard } from './KpiCard';
 import { TrendChart } from './TrendChart';
+import { OperationsDonutCard } from './OperationsDonutCard';
+import { OrderToCashMeterCard } from './OrderToCashMeterCard';
+import { QualityWaffleCard } from './QualityWaffleCard';
+import { TaskCalendarCard } from './TaskCalendarCard';
 import { WidgetState } from './WidgetState';
 import './command-centre.css';
 
@@ -112,28 +114,38 @@ export function CommandCentrePage({
             {data.trend?.series.value && <TrendChart selected={data.trend.series.value.selected} comparison={data.trend.series.value.comparison} granularity={granularity} />}
           </WidgetState>
         </article>
-        <article className="cc-card cc-attention-card">
-          <div className="cc-card-header"><div><h2>Needs attention</h2><p>Deterministic signals from the live records.</p></div><ShieldCheck size={18} aria-hidden="true" /></div>
-          <WidgetState status={states.feeds.status} error={states.feeds.error} availability={data.feeds?.insights.availability} reason={data.feeds?.insights.reason} onRetry={() => void retry('feeds')} emptyMessage="Nothing needs attention in this range.">
-            {data.feeds?.insights.value && <InsightList items={data.feeds.insights.value} onOpen={openInsight} />}
-          </WidgetState>
-        </article>
+        <OperationsDonutCard
+          operations={data.operations}
+          summary={data.summary}
+          onNavigate={openView}
+        />
       </section>
 
       <section className="cc-secondary-grid">
-        <article className="cc-card cc-funnel-card"><div className="cc-card-header"><div><h2>Order to cash</h2><p>Where work is moving through the operating pipeline.</p></div><button type="button" className="cc-inline-link" onClick={() => openView('orders')}>Open orders <ArrowIcon /></button></div><WidgetState status={states.operations.status} error={states.operations.error} availability={data.operations?.funnel.availability} reason={data.operations?.funnel.reason} onRetry={() => void retry('operations')} emptyMessage="No orders entered this range.">{data.operations?.funnel.value && <Funnel stages={data.operations.funnel.value} onStage={stage => openStage(stage.key, openView)} />}</WidgetState></article>
-        <article className="cc-card cc-heatmap-card"><div className="cc-card-header"><div><h2>Production tempo</h2><p>Completed operations by weekday and time bucket.</p></div><Factory size={18} aria-hidden="true" /></div><WidgetState status={states.operations.status} error={states.operations.error} availability={data.operations?.productionHeatmap.availability} reason={data.operations?.productionHeatmap.reason} onRetry={() => void retry('operations')} emptyMessage="No completed operation timestamps in this range.">{data.operations?.productionHeatmap.value && <Heatmap cells={data.operations.productionHeatmap.value} />}</WidgetState></article>
+        <OrderToCashMeterCard
+          stages={data.operations?.funnel.value}
+          availability={data.operations?.funnel.availability}
+          reason={data.operations?.funnel.reason}
+          status={states.operations.status}
+          error={states.operations.error}
+          onRetry={() => void retry('operations')}
+          onOpenOrders={openView}
+          summary={data.summary}
+        />
+        <QualityWaffleCard
+          quality={data.operations?.quality.value}
+          status={states.operations.status}
+          availability={data.operations?.quality.availability}
+          reason={data.operations?.quality.reason}
+          onRetry={() => void retry('operations')}
+        />
       </section>
 
-      <section className="cc-insight-band"><div><span className="cc-band-mark"><ClipboardCheck size={16} /></span><div><h2>Operational pulse</h2><p>Every stage is anchored to Owner OS records. Open a stage to continue the existing workflow.</p></div></div><div className="cc-band-stat"><strong className="tabular-nums">{formatNumber(data.operations?.pipeline.value?.reduce((sum, stage) => sum + stage.count, 0))}</strong><span>records in pipeline</span></div></section>
-
       <section className="cc-breakdown-grid">
-        <article className="cc-card"><div className="cc-card-header"><div><h2>Quality gate</h2><p>QC and PDI outcomes, no inferred pass rates.</p></div><FileCheck2 size={18} aria-hidden="true" /></div><WidgetState status={states.operations.status} error={states.operations.error} availability={data.operations?.quality.availability} reason={data.operations?.quality.reason} onRetry={() => void retry('operations')} emptyMessage="No QC or PDI records in this range.">{data.operations?.quality.value && <QualityRing quality={data.operations.quality.value} />}</WidgetState></article>
+        <TaskCalendarCard onNavigate={openView} />
         <article className="cc-card"><div className="cc-card-header"><div><h2>Vendor bills</h2><p>Outstanding balance by current status.</p></div><CreditCard size={18} aria-hidden="true" /></div><WidgetState status={states.operations.status} error={states.operations.error} availability={data.operations?.vendors.availability} reason={data.operations?.vendors.reason} onRetry={() => void retry('operations')} emptyMessage="No vendor bills in this range.">{data.operations?.vendors.value && <VendorList items={data.operations.vendors.value} />}</WidgetState></article>
         <article className="cc-card"><div className="cc-card-header"><div><h2>Inventory pressure</h2><p>Items at or below their reorder level.</p></div><Boxes size={18} aria-hidden="true" /></div><WidgetState status={states.operations.status} error={states.operations.error} availability={data.operations?.inventory.availability} reason={data.operations?.inventory.reason} onRetry={() => void retry('operations')} emptyMessage="No items are below reorder level.">{data.operations?.inventory.value && <RankedList items={data.operations.inventory.value} />}</WidgetState></article>
       </section>
-
-      <section className="cc-card cc-pipeline-card"><div className="cc-card-header"><div><h2>Operations pipeline</h2><p>Stage counts for orders received in this range.</p></div><button type="button" className="cc-inline-link" onClick={() => openView('metrics')}>View metrics <ArrowIcon /></button></div><WidgetState status={states.operations.status} error={states.operations.error} availability={data.operations?.pipeline.availability} reason={data.operations?.pipeline.reason} onRetry={() => void retry('operations')} emptyMessage="No pipeline records in this range.">{data.operations?.pipeline.value && <PipelineStrip stages={data.operations.pipeline.value} />}</WidgetState></section>
 
       <section className="cc-card cc-table-card"><div className="cc-card-header"><div><h2>Recent orders</h2><p>{search ? `Filtering by “${search}”` : 'Latest order records from the selected range.'}</p></div><button type="button" className="cc-inline-link" onClick={() => openView('orders')}>All orders <ArrowIcon /></button></div><WidgetState status={states.feeds.status} error={states.feeds.error} availability={data.feeds?.orders.availability} reason={data.feeds?.orders.reason} onRetry={() => void retry('feeds')} emptyMessage="No orders have been recorded in this range.">{data.feeds?.orders.value && <RecentOrders items={data.feeds.orders.value.filter(item => !search || `${item.poNo} ${item.customer}`.toLowerCase().includes(search.toLowerCase()))} onOpen={onSelectOrder} />}</WidgetState></section>
 
